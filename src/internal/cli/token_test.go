@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -639,9 +640,23 @@ func TestDoctorChecksAndFixesTokenFilePerms(t *testing.T) {
 		err := root.Execute()
 		return out.String(), errOut.String(), err
 	}
+	// The exit status the SSH half of the sandbox earns on its own, with the
+	// token file owner-only: a loose token file must not change it.
+	_ = os.Chmod(npmrc, 0o600)
+	_, _, baseline := doctor()
+	_ = os.Chmod(npmrc, 0o644)
 	out, _, err := doctor()
-	if err == nil || !strings.Contains(out, "=== auth tokens ===") || !strings.Contains(out, "✗ npm: "+npmrc) {
-		t.Errorf("doctor did not flag a group-readable .npmrc (err %v):\n%s", err, out)
+	if !strings.Contains(out, "=== auth tokens ===") || !strings.Contains(out, "✗ npm: "+npmrc) {
+		t.Errorf("doctor did not flag a group-readable .npmrc:\n%s", out)
+	}
+	if (err == nil) != (baseline == nil) {
+		t.Errorf("a loose token file changed the doctor's exit (%v, was %v): it warns unless --strict", err, baseline)
+	}
+	if !strings.Contains(out, "--strict makes it fail") {
+		t.Errorf("the warning does not say how to make it fatal:\n%s", out)
+	}
+	if _, _, err := doctor("--strict"); !errors.Is(err, errNotClean) {
+		t.Errorf("doctor --strict passed with a group-readable .npmrc: %v", err)
 	}
 	js, _, _ := doctor("--json")
 	var doc map[string]any

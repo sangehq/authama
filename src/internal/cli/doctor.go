@@ -16,7 +16,8 @@ import (
 
 // newDoctorCmd is the native (engine-free) doctor verb: diagnose deps, perms,
 // agent, known_hosts, and manifest-vs-disk drift/hygiene. Exits non-zero when the
-// report is not clean, matching v1.
+// SSH report is not clean, matching v1; the token-file check warns, and fails
+// only under --strict.
 func newDoctorCmd() *cobra.Command {
 	var fix, jsonOut, strict bool
 	cmd := &cobra.Command{
@@ -64,8 +65,15 @@ func newDoctorCmd() *cobra.Command {
 				}
 				_, _ = fmt.Fprintln(out, rep.Format())
 				writeDoctorTokens(out, findings)
+				if tokFailed && !strict {
+					_, _ = fmt.Fprintln(out, "note: a token file others can read is a warning here (doctor --fix tightens it); "+
+						"--strict makes it fail, as it does in CI.")
+				}
 			}
-			if !rep.OK() || tokFailed {
+			// The token check is new in 4.0. A machine whose doctor passed on
+			// 3.x must still pass on 4.0, so a loose token file warns, and fails
+			// only under --strict, the CI mode.
+			if !rep.OK() || tokFailed && strict {
 				return errNotClean
 			}
 			return nil
@@ -74,7 +82,7 @@ func newDoctorCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&fix, "fix", false, "auto-fix perms first")
 	cmd.Flags().BoolVar(&jsonOut, "json", false, "machine-readable output (scripting)")
 	cmd.Flags().BoolVar(&strict, "strict", false,
-		"treat every dangling-key state as a failure, not only the blocking ones (for CI)")
+		"for CI: treat every dangling-key state as a failure, not only the blocking ones, and fail on a token file others can read")
 	return cmd
 }
 
