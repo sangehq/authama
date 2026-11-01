@@ -3,9 +3,10 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"os"
+	"strings"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/platform"
 
 	"github.com/spf13/cobra"
@@ -58,7 +59,9 @@ func silent(err error) bool {
 // Execute runs the root command and is the only place in the binary that maps
 // an outcome to an exit code.
 func Execute() {
-	err := newRootCmd().Execute()
+	root := newRootCmd()
+	completeAs(root, os.Args)
+	err := root.Execute()
 	if err == nil {
 		return
 	}
@@ -98,4 +101,25 @@ func confirmChange(c *cobra.Command, summary string, yes bool) error {
 		_, _ = fmt.Fprintln(c.OutOrStdout(), summary)
 	}
 	return confirmOrAbort(c, "Proceed?", false)
+}
+
+// completeAs names the generated completion script for the binary it was asked
+// of. Cobra keys the script on the root's name, so without this `sshmgr
+// completion zsh` emitted `compdef _authama authama`, and the sshmgr
+// compatibility binary installed with no completion at all. Only the
+// completion command is renamed: help and messages keep teaching authama.
+func completeAs(root *cobra.Command, args []string) {
+	if len(args) < 2 || args[1] != "completion" {
+		return
+	}
+	// Either separator: argv[0] is a Windows path on Windows, whatever the
+	// filepath package of the build that reads it.
+	name := args[0][strings.LastIndexAny(args[0], `/\`)+1:]
+	name = strings.TrimSuffix(name, ".exe")
+	for _, known := range brand.Commands() {
+		if name == known {
+			root.Use = name
+			return
+		}
+	}
 }

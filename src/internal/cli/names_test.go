@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -9,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -278,5 +279,27 @@ func TestNoMessageTeachesTheOldSpelling(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Each binary's completion script registers under its own name, so the
+// sshmgr compatibility binary completes too.
+func TestCompletionIsNamedForTheBinary(t *testing.T) {
+	for _, c := range []struct{ argv0, want string }{
+		{"/usr/local/bin/authama", "authama"},
+		{"/usr/local/bin/sshmgr", "sshmgr"},
+		{`C:\bin\sshmgr.exe`, "sshmgr"},
+		{"/tmp/go-build/exe/main", "authama"},
+	} {
+		root := newRootCmd()
+		completeAs(root, []string{c.argv0, "completion", "zsh"})
+		if root.Name() != c.want {
+			t.Errorf("%s completion: root named %q, want %q", c.argv0, root.Name(), c.want)
+		}
+	}
+	root := newRootCmd()
+	completeAs(root, []string{"/usr/local/bin/sshmgr", "ssh", "list"})
+	if root.Name() != "authama" {
+		t.Errorf("a non-completion run renamed the root to %q", root.Name())
 	}
 }
