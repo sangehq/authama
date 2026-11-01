@@ -95,7 +95,7 @@ authama token shell-aliases --install    # rewrites the atm block to call autham
 | `… install` / `update` | `token shell-aliases --install` | |
 | `… remove` | `token shell-aliases --uninstall` | |
 | `… print` | `token shell-aliases --print` | |
-| `--file`, `--login`, `--no-backup`, `--quiet` | the same | |
+| aliases `--file`, `--login`, `--no-backup`, `--quiet` | `token shell-aliases` with the same flags | |
 | `--command CMD` | - | dropped: the aliases always call `authama` |
 | `.atm.bak` | `.authama.bak` | |
 | Docker dev container | `Dockerfile` + `compose.yaml` at the repo root, `make docker-shell` | its home defaults to `./.authama-home`, not your `$HOME` |
