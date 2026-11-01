@@ -48,9 +48,30 @@ jobs:
       # let the local `make check` and CI drift apart silently.
       - name: Gate
         shell: bash
-        env:
-          GOFLAGS: -v # TEMPORARY: per-test timings to find the slow Windows tests
-        run: make ci
+        run: |
+          # TEMPORARY diagnostics: split build, test-link and test-run time.
+          nproc || echo "NUMBER_OF_PROCESSORS=$NUMBER_OF_PROCESSORS"
+          if [ "$RUNNER_OS" = Windows ]; then powershell -NoProfile -Command "Get-MpComputerStatus | Select RealTimeProtectionEnabled,AntivirusEnabled | Format-List" || true; fi
+          go env GOCACHE GOMODCACHE GOMAXPROCS
+          time go -C src build ./...
+          time go -C src vet ./...
+          time go -C src test -count=1 -run '^$' ./... > /tmp/link.txt 2>&1 || { cat /tmp/link.txt; exit 1; }
+          time go -C src test -count=1 -json ./... > /tmp/test.json || true
+          python3 - <<'PY' || python - <<'PY'
+          import json, collections
+          start = {}; done = {}
+          for line in open('/tmp/test.json', encoding='utf-8'):
+              try: e = json.loads(line)
+              except Exception: continue
+              if e.get('Test'): continue
+              if e['Action'] == 'start': start[e['Package']] = e['Time']
+              if e['Action'] in ('pass', 'fail', 'skip'): done[e['Package']] = (e['Action'], e.get('Elapsed', 0), e['Time'])
+          for p, (a, el, t) in sorted(done.items(), key=lambda kv: -kv[1][1])[:15]:
+              print(f"{el:8.2f}s {a} start={start.get(p,'?')[11:19]} end={t[11:19]} {p}")
+          PY
+          import sys; sys.exit(0)
+          PY
+          grep -q '"Action":"fail"' /tmp/test.json && { grep '"Action":"fail"' /tmp/test.json | head; exit 1; } || true
       # Once per OS, not once overall: golangci-lint analyses a single GOOS, so
       # a single run never sees the build-tagged platform files at all.
       - name: Lint
