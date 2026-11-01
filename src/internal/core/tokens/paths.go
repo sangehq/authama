@@ -24,7 +24,10 @@ func (h Host) env(k string) string {
 	return h.Getenv(k)
 }
 
-// expandUser is Path.expanduser for a leading "~".
+// expandUser is Path(p).expanduser(): a leading "~" becomes the home, and the
+// result is cleaned the way pathlib normalises it, so on Windows an override
+// written with forward slashes (NPM_CONFIG_USERCONFIG=C:/x/.npmrc) uses the
+// native separator like every other path this package returns.
 func (h Host) expandUser(p string) string {
 	if p == "~" {
 		return h.Home
@@ -32,7 +35,7 @@ func (h Host) expandUser(p string) string {
 	if strings.HasPrefix(p, "~/") || strings.HasPrefix(p, `~\`) {
 		return filepath.Join(h.Home, p[2:])
 	}
-	return p
+	return filepath.Clean(p)
 }
 
 // PathOverrideVars are the variables the native tools read to relocate their
