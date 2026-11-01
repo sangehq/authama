@@ -32,7 +32,7 @@ func (t *tui) envForTest() tokensvc.Env { return tokenMenu{t}.tokenEnv() }
 
 func TestTheTUIStoresATokenInTheSandbox(t *testing.T) {
 	tt, buf, b := tokenTUI(t, true,
-		"token set", tokens.NPM, "registry.npmjs.org", "@org", "SECRET_ONE",
+		"token set", tokens.NPM, "npm public registry  (registry.npmjs.org)", "@org", "SECRET_ONE",
 		"token list", "q")
 	tt.run()
 	out := buf.String()
@@ -58,7 +58,7 @@ func TestTheTUIStoresATokenInTheSandbox(t *testing.T) {
 }
 
 func TestTheTUIWritesNothingWhenTheSaveIsDeclined(t *testing.T) {
-	tt, buf, _ := tokenTUI(t, false, "token set", tokens.NPM, "registry.npmjs.org", "", "SECRET_ONE", "q")
+	tt, buf, _ := tokenTUI(t, false, "token set", tokens.NPM, "npm public registry  (registry.npmjs.org)", "", "SECRET_ONE", "q")
 	tt.run()
 	if _, err := os.Stat(tt.envForTest().TargetPath(tokens.NPM, "")); err == nil {
 		t.Errorf("a declined save wrote .npmrc:\n%s", buf.String())
@@ -68,21 +68,55 @@ func TestTheTUIWritesNothingWhenTheSaveIsDeclined(t *testing.T) {
 	}
 }
 
-func TestTheTUIRefusesAComposerServiceWithMoreThanOneSecret(t *testing.T) {
-	svc := ""
-	for n, m := range tokens.LoadCatalogServices() {
-		if !tokens.IsTokenMechanism(m) && m != "http-basic" {
-			svc = n
-			break
-		}
+func readTokenFile(t *testing.T, tt *tui, target string) string {
+	t.Helper()
+	body, err := os.ReadFile(tt.envForTest().TargetPath(target, ""))
+	if err != nil {
+		t.Fatalf("%s was not written: %v", target, err)
 	}
-	if svc == "" {
-		t.Skip("the catalog has no multi-secret service")
-	}
-	tt, buf, _ := tokenTUI(t, true, "token set", tokens.Composer, svc, "q")
+	return string(body)
+}
+
+// auth-token-manager's menu stored the Composer mechanisms its CLI refused:
+// a Bitbucket consumer key and secret, and custom headers.
+func TestTheTUIStoresComposerPairsAndHeaders(t *testing.T) {
+	tt, buf, _ := tokenTUI(t, true,
+		"token set", tokens.Composer, "bitbucket  (bitbucket.org)", "Cloud  (bitbucket.org)", "KEY_ONE", "SECRET_PAIR", "q")
 	tt.run()
-	if !strings.Contains(buf.String(), "takes more than one secret") {
-		t.Errorf("want a refusal for %s:\n%s", svc, buf.String())
+	if body := readTokenFile(t, tt, tokens.Composer); !strings.Contains(body, "bitbucket-oauth") ||
+		!strings.Contains(body, "KEY_ONE") || !strings.Contains(body, "SECRET_PAIR") {
+		t.Fatalf("bitbucket-oauth not stored:\n%s\n--- screen\n%s", body, buf.String())
+	}
+	tt2, buf2, _ := tokenTUI(t, true,
+		"token set", tokens.Composer, "generic-headers", "repo.acme.test", "API-TOKEN: SECRET_H, X-Team: a", "q")
+	tt2.run()
+	if body := readTokenFile(t, tt2, tokens.Composer); !strings.Contains(body, "custom-headers") ||
+		!strings.Contains(body, "API-TOKEN: SECRET_H") || !strings.Contains(body, "X-Team: a") {
+		t.Fatalf("custom-headers not stored:\n%s\n--- screen\n%s", body, buf2.String())
+	}
+}
+
+// A self-hosted GitHub needs its host in composer.json's github-domains, or
+// Composer never uses the token; the menu says so, as auth-token-manager did.
+func TestTheTUIRemindsAboutSelfHostedComposerDomains(t *testing.T) {
+	tt, buf, _ := tokenTUI(t, true,
+		"token set", tokens.Composer, "github  (github.com)", "Self-hosted / Enterprise (custom URL)",
+		"https://git.acme.test/", "SECRET_GHE", "q")
+	tt.run()
+	if body := readTokenFile(t, tt, tokens.Composer); !strings.Contains(body, `"git.acme.test"`) {
+		t.Fatalf("the typed URL was not trimmed to a host:\n%s", body)
+	}
+	if !strings.Contains(buf.String(), `add git.acme.test to "github-domains"`) {
+		t.Errorf("want the github-domains reminder:\n%s", buf.String())
+	}
+}
+
+func TestTheTUIAsksForAHostWhenTheProviderHasNoCloud(t *testing.T) {
+	tt, buf, _ := tokenTUI(t, true,
+		"token set", tokens.Git, "Gitea / Forgejo / Codeberg", "http://gitea.acme.test/", "me", "SECRET_G", "q")
+	tt.run()
+	if body := readTokenFile(t, tt, tokens.Git); !strings.Contains(body, "me:SECRET_G@gitea.acme.test") {
+		t.Fatalf("git credential not stored for the typed host:\n%s\n--- screen\n%s", body, buf.String())
 	}
 }
 
@@ -99,6 +133,24 @@ func seedNPM(t *testing.T, tt *tui) string {
 		t.Fatalf("seeded inventory = %+v", items)
 	}
 	return items[0].Target + ": " + items[0].Host
+}
+
+// Replacing an installed entry keeps its tool, host and user name (Enter
+// keeps it) and asks only for the new secret: auth-token-manager's "Edit".
+func TestTheTUIReplacesAnInstalledToken(t *testing.T) {
+	tt, buf, _ := tokenTUI(t, true)
+	set := tokens.NewSet()
+	set.Apply(tokens.Git, "", "github.com", tokens.Credential{Username: "me", Password: "SECRET_OLD"})
+	env := tt.envForTest()
+	if _, err := env.WriteTarget(set, tokens.Git, env.TargetPath(tokens.Git, "")); err != nil {
+		t.Fatal(err)
+	}
+	tt.pr = &scriptPrompter{answers: []string{"token set", "Replace git: github.com (me)", "", "SECRET_NEW", "q"}, confirm: true}
+	tt.run()
+	body := readTokenFile(t, tt, tokens.Git)
+	if !strings.Contains(body, "me:SECRET_NEW@github.com") || strings.Contains(body, "SECRET_OLD") {
+		t.Fatalf("replace did not rotate the secret:\n%s\n--- screen\n%s", body, buf.String())
+	}
 }
 
 func TestTheTUIDeletesAToken(t *testing.T) {
