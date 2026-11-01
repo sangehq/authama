@@ -1,11 +1,11 @@
 # Configuration
 
-Everything lives in the **manifest** (`~/.config/ssh-manager/manifest.json`) - the single
+Everything SSH lives in the **manifest** (`~/.config/ssh-manager/manifest.json`) - the single
 source of truth. You never hand-edit ssh-manager's part of `~/.ssh/config`; you edit the
 manifest (or use the `host`/`profile` verbs) and re-render. A JSON Schema for the
 manifest and inventory lives in `src/config/schema/` (and matches the Go models in `src/internal/core`,
 which reject unknown keys). See [installation.md](installation.md) for how the home
-is resolved.
+is resolved. Auth tokens have their own config, described [below](#auth-tokens).
 
 ## ssh-manager owns only a marked block of `~/.ssh/config`
 
@@ -343,7 +343,7 @@ or `shared`.
 
 Secrets/refs (age recipient, per-host provider tokens) live
 in `~/.config/ssh-manager/.env`, read by `internal/util/secrets`. A committed `.env-example` documents
-the shape with empty values, and `sshmgr init` seeds your `.env` from it. The
+the shape with empty values, and `authama init` seeds your `.env` from it. The
 `.env` is **never** committed (it's gitignored, mode 0600) and is **excluded from
 the encrypted bundle**.
 
@@ -366,18 +366,45 @@ token (the provider falls back to the manual paste path). Note: a literal token
 that itself begins with `cmd:` would be treated as a command - real OAuth/PAT
 tokens never do, but if needed, fetch such a value via `cmd:` instead.
 
+## <a name="auth-tokens"></a>Auth tokens
+
+The token config is a separate file, so the manifest stays about SSH. It names
+environment variables, never secrets: `authama token sync` reads the variables
+and writes each tool's credential file. It is found in this order:
+
+1. `--config FILE`
+2. `$SSH_MANAGER_TOKENS_CONFIG`
+3. `./authama-tokens.json` (a project's own)
+4. `<home>/tokens.json` (`authama token scaffold` writes a starter one)
+5. auth-token-manager's locations, read with a deprecation notice until
+   `authama token adopt-legacy` moves the file: `$AUTH_TOKEN_MANAGER_CONFIG`,
+   `$COMPOSER_AUTH_CONFIG`, `./auth-token-manager.json`,
+   `~/.config/auth-token-manager.json`
+6. otherwise a built-in default: `GH_TOKEN` as Composer's github.com token
+
+The file's shape, each entry kind, and `_settings.docker_creds_store` (`login`
+or `refuse` for registries Docker keeps in a credential store) are in
+[`token`](tools/tokens.md). The files it writes are the tools' own, at their
+usual paths, honouring `COMPOSER_HOME`, `NPM_CONFIG_USERCONFIG`,
+`DOCKER_CONFIG`, `NETRC` and `XDG_CONFIG_HOME` (and `APPDATA` on Windows).
+
 ## Operation history
 
 Every command that changes something is recorded in `~/.config/ssh-manager/log/history.db`, beside
-`audit.log`. `sshmgr history` reads it. Set `SSH_MANAGER_HISTORY=0` to record nothing; `audit.log` is
+`audit.log`. `authama history` reads it; token writes and removals are recorded too,
+with the target and host but never the value. Set `SSH_MANAGER_HISTORY=0` to record nothing; `audit.log` is
 written either way. See [`history`](tools/history.md).
 
 ## Dev mode
 
 `--dev-root <dir>` (or `$SSHMGR_DEV_ROOT`) points the whole tool at a scratch
 directory: `<dir>/ssh` stands in for `~/.ssh` and `<dir>/config` for the config
-home. It is one root rather than two overrides, so a run cannot end up reading a
-sandbox and writing your real tree. See
+home, and `<dir>/home` for your home directory, where the token commands write
+`auth.json`, `.npmrc` and the rest. The tools' own path variables
+(`COMPOSER_HOME`, `NPM_CONFIG_USERCONFIG`, `DOCKER_CONFIG`, `NETRC`,
+`XDG_CONFIG_HOME`, `APPDATA`) are ignored in dev mode, and `docker login` is
+refused, since it would write outside the sandbox. It is one root rather than
+several overrides, so a run cannot end up reading a sandbox and writing your real tree. See
 [Work against a sandbox](recipes/dev-mode.md).
 
 ---
