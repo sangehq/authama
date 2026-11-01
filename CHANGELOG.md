@@ -6,13 +6,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [3.6.1] - 2026-11-01
+
 ### Changed
 
 - **The repository is now `simtabi/authama`** (was `simtabi/ssh-manager`), and the Go module path follows it:
-  `github.com/simtabi/authama/src/v3`. `go install github.com/simtabi/authama/src/v3/cmd/authama@latest`
-  (or `.../cmd/sshmgr`) once the next release is tagged; v3.6.0 and earlier still resolve only under the old
+  `github.com/simtabi/authama/src/v3`, so `go install github.com/simtabi/authama/src/v3/cmd/authama@latest`
+  (or `.../cmd/sshmgr`) works from this release on; v3.6.0 and earlier still resolve only under the old
   path. GitHub redirects the old URLs, so existing clones, the installers' old raw URLs and release
   download links keep working. Both binaries, the config home and the Windows install folder are unchanged.
+
+### Fixed
+
+- **Releases publish the Scoop manifest without breaking the bucket's branch protection.** v3.6.0's release
+  failed pushing straight to `simtabi/scoop-bucket`'s `master`, which requires a pull request; the manifest now
+  goes to an `sshmgr-X.Y.Z` branch and is merged by pull request. The release body and provenance
+  attestation steps now run even when GoReleaser fails after publishing - v3.6.0 shipped without an
+  attestation because of that failure.
 
 ## [3.6.0] - 2026-11-01
 
@@ -949,7 +959,8 @@ manifest - reproducible output, profile-based isolation, and safety guarantees
   Windows, plus CodeQL, secret scanning (gitleaks), and pre-commit. Releases
   build and attach artifacts to a GitHub Release on a `v*` tag.
 
-[Unreleased]: https://github.com/simtabi/authama/compare/v3.6.0...HEAD
+[Unreleased]: https://github.com/simtabi/authama/compare/v3.6.1...HEAD
+[3.6.1]: https://github.com/simtabi/authama/compare/v3.6.0...v3.6.1
 [3.6.0]: https://github.com/simtabi/authama/compare/v3.5.0...v3.6.0
 [3.5.0]: https://github.com/simtabi/authama/compare/v3.4.0...v3.5.0
 [3.4.0]: https://github.com/simtabi/authama/compare/v3.2.0...v3.4.0

@@ -210,6 +210,15 @@ scoops:
       name: scoop-bucket
       # Write deploy key on simtabi/scoop-bucket (secret SCOOP_BUCKET_DEPLOY_KEY): reaches that
       # one repository only, and is the only credential used for it.
+      # The bucket's default branch requires a pull request and, unlike the tap, lets no
+      # deploy key bypass it: v3.6.0 failed here pushing to master (GH013), after every asset
+      # was uploaded, which skipped the provenance attestation. The manifest goes to its own
+      # branch instead, which the rule does not cover, and is merged into master by a pull
+      # request (docs/release.md). GoReleaser's git client never opens one itself - with
+      # `git.url` set it pushes and returns before reading `pull_request` (checked against
+      # internal/pipe/scoop at v2.18) - and the only credential for the bucket is this deploy
+      # key, which cannot call the API.
+      branch: 'sshmgr-{{ .Version }}'
       git:
         url: git@github.com:simtabi/scoop-bucket.git
         private_key: '{{ envOrDefault "SCOOP_BUCKET_DEPLOY_KEY" "" }}'
