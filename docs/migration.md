@@ -24,7 +24,7 @@ Nothing you have stops working.
 | `~/.ssh` | managed-block markers, `known_hosts` tags | unchanged, so a v3 tree reconciles with no diff |
 | `vm` ProxyCommand | `sshmgr vm proxy …` | unchanged; `sshmgr` stays installed for it |
 | Go module | `github.com/simtabi/ssh-manager/src/v3` | unchanged |
-| Install | `install.sh`, Homebrew, Scoop, winget, deb/rpm/apk | the same packages now install both binaries |
+| Install | `install.sh`, `install.ps1`, release archives | the same installers and archives now carry both binaries (so do the Homebrew, Scoop, winget and deb/rpm/apk packages, once [release](release.md) publishes them) |
 
 Behaviour changes to know about:
 
@@ -99,7 +99,7 @@ authama token shell-aliases --install    # rewrites the atm block to call autham
 | `--command CMD` | - | dropped: the aliases always call `authama` |
 | `.atm.bak` | `.authama.bak` | |
 | Docker dev container | `Dockerfile` + `compose.yaml` at the repo root, `make docker-shell` | its home defaults to `./.authama-home`, not your `$HOME` |
-| pip / `.pyz` install | a static binary: `install.sh`, `install.ps1`, Homebrew, Scoop, winget, deb/rpm/apk | |
+| pip / `.pyz` install | a static binary: `install.sh`, `install.ps1`, `go install`, release archives | see [installation](installation.md) |
 | `tests/test_no_install.py` | not applicable | it checked the Python package ran without `rich`/`questionary` installed; a static Go binary has no optional runtime dependencies to be missing |
 
 ### Deliberate differences

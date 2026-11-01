@@ -29,8 +29,7 @@ authama doctor
 ```
 
 Windows: `irm https://raw.githubusercontent.com/simtabi/ssh-manager/main/src/scripts/install.ps1 | iex`. Also
-`go install github.com/simtabi/ssh-manager/src/v3/cmd/authama@latest`, Homebrew, Scoop, winget, a deb/rpm/apk
-package, or a binary from [Releases](https://github.com/simtabi/ssh-manager/releases). Every path, and where
+`go install github.com/simtabi/ssh-manager/src/v3/cmd/authama@latest`, or a binary from [Releases](https://github.com/simtabi/ssh-manager/releases). Every path, and where
 per-user state lives, is in [docs/installation.md](docs/installation.md).
 
 ## Quick start guide and usage
