@@ -16,7 +16,10 @@ before:
   hooks:
     - go -C src mod tidy
 
-# One pure-Go binary cross-compiled to the full OS/arch matrix. CGO is disabled
+# Two pure-Go binaries cross-compiled to the full OS/arch matrix: authama
+# (Authentication Access Manager) and sshmgr, the same program under the name
+# v3 shipped, kept so existing scripts, aliases and the ProxyCommand lines
+# `vm` writes keep working. CGO is disabled
 # so every target is a static, portable binary; -trimpath makes builds
 # reproducible and -s -w strips debug info for smaller artifacts.
 builds:
@@ -55,17 +58,57 @@ builds:
       - -X github.com/simtabi/ssh-manager/src/v3/internal/version.Commit={{ .Commit }}
       - -X github.com/simtabi/ssh-manager/src/v3/internal/version.Date={{ .CommitDate }}
 
+  - id: authama
+    dir: src
+    main: ./cmd/authama
+    binary: authama
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64 # 64-bit x86
+      - arm64 # 64-bit ARM (Apple silicon, Graviton, RPi 64-bit)
+      - arm # 32-bit ARM (RPi, etc.)
+      - "386" # 32-bit x86
+    goarm:
+      - "6"
+      - "7"
+    ignore:
+      # macOS ships only amd64 + arm64.
+      - { goos: darwin, goarch: arm }
+      - { goos: darwin, goarch: "386" }
+      # 32-bit ARM is uncommon / unsupported on Windows.
+      - { goos: windows, goarch: arm }
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    ldflags:
+      - -s -w
+      - -X github.com/simtabi/ssh-manager/src/v3/internal/version.Version={{ .Version }}
+      - -X github.com/simtabi/ssh-manager/src/v3/internal/version.Commit={{ .Commit }}
+      - -X github.com/simtabi/ssh-manager/src/v3/internal/version.Date={{ .CommitDate }}
+
 # A single macOS universal binary (amd64 + arm64) alongside the per-arch ones.
 universal_binaries:
   - id: sshmgr
     ids: [sshmgr]
     name_template: sshmgr
     replace: false
+  - id: authama
+    ids: [authama]
+    name_template: authama
+    replace: false
 
 # All artifacts use one flat, versionless, Go-style naming scheme:
 #   sshmgr_<os>_<arch>[.ext]  with darwin → macos, e.g.
 #   sshmgr_macos_arm64, sshmgr_linux_amd64, sshmgr_windows_386.exe,
 #   sshmgr_macos_universal, sshmgr_linux_armv7.
+# The bare authama binaries follow the same scheme (authama_macos_arm64, ...).
+# The tar.gz/zip archives keep the sshmgr_ name, so v3 download URLs and the
+# package managers' asset names are unchanged, and carry both binaries.
 # The release tag carries the version. install scripts reconstruct these names.
 archives:
   - id: binary
@@ -75,8 +118,15 @@ archives:
       sshmgr_{{- if eq .Os "darwin" }}macos{{ else }}{{ .Os }}{{ end }}_
       {{- if eq .Arch "all" }}universal{{ else if eq .Arch "arm" }}armv{{ .Arm }}{{ else }}{{ .Arch }}{{ end }}
 
+  - id: binary-authama
+    ids: [authama]
+    formats: [binary]
+    name_template: >-
+      authama_{{- if eq .Os "darwin" }}macos{{ else }}{{ .Os }}{{ end }}_
+      {{- if eq .Arch "all" }}universal{{ else if eq .Arch "arm" }}armv{{ .Arm }}{{ else }}{{ .Arch }}{{ end }}
+
   - id: archive
-    ids: [sshmgr]
+    ids: [sshmgr, authama]
     name_template: *name
     format_overrides:
       - goos: windows
@@ -92,12 +142,12 @@ archives:
 # Native Linux packages (nfpm operates on the Linux builds only).
 nfpms:
   - id: sshmgr
-    ids: [sshmgr]
+    ids: [sshmgr, authama]
     package_name: sshmgr
     vendor: Simtabi LLC
     homepage: "https://opensource.simtabi.com/products/simtabi/ssh-manager"
     maintainer: "Imani Manyara <imani@simtabi.com>"
-    description: "Profile-based SSH key and config lifecycle manager."
+    description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
     license: MIT
     formats: [deb, rpm, apk]
     bindir: /usr/bin
@@ -140,14 +190,15 @@ homebrew_casks:
         url: git@github.com:simtabi/homebrew-tap.git
         private_key: '{{ envOrDefault "HOMEBREW_TAP_DEPLOY_KEY" "" }}'
     directory: Casks
+    binaries: [authama, sshmgr]
     homepage: "https://opensource.simtabi.com/products/simtabi/ssh-manager"
-    description: "Profile-based SSH key and config lifecycle manager."
+    description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
     hooks:
       post:
         install: |
           if OS.mac?
             system_command "/usr/bin/xattr",
-              args: ["-dr", "com.apple.quarantine", "#{staged_path}/sshmgr"],
+              args: ["-dr", "com.apple.quarantine", "#{staged_path}/sshmgr", "#{staged_path}/authama"],
               sudo: false
           end
 
@@ -164,7 +215,7 @@ scoops:
         private_key: '{{ envOrDefault "SCOOP_BUCKET_DEPLOY_KEY" "" }}'
     directory: bucket
     homepage: "https://opensource.simtabi.com/products/simtabi/ssh-manager"
-    description: "Profile-based SSH key and config lifecycle manager."
+    description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
     license: MIT
     # Scoop publishes on its own switch: SKIP_SCOOP, else SKIP_WINDOWS_PKGS, else skipped. `or` takes the
     # first non-empty value, so a variable CI sets to empty falls through instead of publishing
@@ -180,8 +231,8 @@ winget:
     ids: [archive]
     license: MIT
     homepage: "https://opensource.simtabi.com/products/simtabi/ssh-manager"
-    short_description: "Profile-based SSH key and config lifecycle manager."
-    description: "Profile-based SSH key and config lifecycle manager."
+    short_description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
+    description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
     publisher_url: "https://simtabi.com"
     release_notes_url: "https://github.com/simtabi/ssh-manager/releases/tag/{{ .Tag }}"
     repository:
