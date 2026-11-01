@@ -18,6 +18,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Documentation
 
+- **[release](docs/release.md#homebrew-and-scoop)**: the Scoop manifest no longer needs a manual pull request.
+  The bucket's workflow opens and merges the `sshmgr-X.Y.Z` branch the release pushes.
 - **[migration](docs/migration.md#history-audit)** records an audit of every tag, release note and commit
   of sshmgr and auth-token-manager against this release, with what was restored and what was dropped on
   purpose.

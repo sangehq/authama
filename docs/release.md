@@ -68,18 +68,15 @@ request. Both manifests download from this repository's release assets.
   one bypass actor, so the cask is committed to `main` directly. A release without
   `HOMEBREW_TAP_DEPLOY_KEY` skips it.
 - **Scoop:** the bucket requires a pull request on `master` and has no bypass actor,
-  so GoReleaser pushes the manifest to the branch `sshmgr-X.Y.Z` instead. After the
-  release, open and merge that branch:
-
-  ```sh
-  gh pr create -R simtabi/scoop-bucket --base master --head sshmgr-X.Y.Z \
-    --title "Scoop update for sshmgr version vX.Y.Z" --body "Release vX.Y.Z"
-  gh pr merge <number> -R simtabi/scoop-bucket --merge --delete-branch
-  ```
-
-  GoReleaser cannot open this pull request itself: with a git deploy key it only
-  pushes, and opening a pull request needs an API token for the bucket, which no
-  secret provides.
+  so GoReleaser pushes the manifest to the branch `sshmgr-X.Y.Z` instead. The
+  bucket's own workflow, `.github/workflows/auto-merge-manifest.yml`, runs on every
+  push to an `sshmgr-*` or `authama-*` branch: it opens the pull request with its
+  `GITHUB_TOKEN`, waits for the checks, and merges it, deleting the branch. Nothing
+  is left to do by hand, and `master` stays protected. It relies on "Allow GitHub
+  Actions to create and approve pull requests", enabled for the simtabi
+  organization and for the bucket. If a check fails, the pull request stays open
+  for a person to look at; merge it with `gh pr merge <number> -R
+  simtabi/scoop-bucket --merge --delete-branch` once it is fixed.
 
 The release body and the provenance attestation run even if GoReleaser fails after
 publishing, so a late publisher failure no longer leaves a release unattested.
