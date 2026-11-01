@@ -144,7 +144,7 @@ func newTokenListCmd() *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&asJSON, "json", false, "print the list as JSON")
 	cmd.Flags().BoolVar(&reveal, "reveal", false, "show the secret values (asks first; --yes when not at a terminal)")
-	cmd.Flags().BoolVar(&yes, "yes", false, "reveal without asking")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "reveal without asking")
 	targetsFlag(cmd, &targets, "only these tools")
 	cmd.Flags().StringVar(&project, "project", "", "read the project's auth.json and .npmrc instead of the user ones")
 	return cmd
@@ -201,10 +201,10 @@ func newTokenSetCmd() *cobra.Command {
 			"  " + brand.Command + " token set --target npm --server npm.pkg.github.com --scope @acme" + "\n" +
 			"  " + brand.Command + " token set --target git --server github.com --username octocat",
 		Short: "Add or replace one token in its tool's credential file (the secret is read from stdin or a hidden prompt)",
-		Long: "Adds one credential, or replaces the one already saved for that host. --service\n" +
-			"picks a Composer service (see `token providers`); " +
-			"otherwise give --target. Token tools read a token; http-basic, docker, git and\n" +
-			"netrc also need --username and read a password or token. The secret is read\n" +
+		Long: "Adds one credential, or replaces the one already saved for that host (so it is\n" +
+			"also how a token is rotated or edited). --service picks a Composer service (see\n" +
+			"`token providers`); otherwise give --target. Token tools read a token; http-basic,\n" +
+			"docker, git and netrc also need --username and read a password or token. The secret is read\n" +
 			"from standard input when it is piped, else from a prompt that does not echo; it\n" +
 			"is never a flag, so it stays out of shell history and the process list.",
 		Args: cobra.NoArgs,
@@ -405,7 +405,10 @@ func newTokenCopyCmd() *cobra.Command {
 		Use:     "copy TARGET HOST",
 		Example: "  " + brand.Command + " token copy npm registry.npmjs.org",
 		Short:   "Copy one installed token to the clipboard without printing it",
-		Args:    cobra.ExactArgs(2),
+		Long: "Puts HOST's secret from TARGET's credential file on the clipboard, through\n" +
+			"pbcopy, wl-copy, xclip, xsel or clip, and prints only what it copied. Nothing\n" +
+			"is written to the terminal, the history or a file.",
+		Args: cobra.ExactArgs(2),
 		RunE: func(c *cobra.Command, args []string) error {
 			target := args[0]
 			if err := checkTarget(target); err != nil {
@@ -679,7 +682,12 @@ func newTokenAuditCmd() *cobra.Command {
 		Example: "  " + brand.Command + " token audit" + "\n" +
 			"  " + brand.Command + " token audit --project . --target composer",
 		Short: "Check the credential files are owner-only and .gitignore covers them; write nothing",
-		Args:  cobra.NoArgs,
+		Long: "For each tool (all five, the --target ones, or those a --config uses): is its\n" +
+			"file there, and is it owner-only? With --project, the project's auth.json and\n" +
+			".npmrc, and whether the project's .gitignore covers every secret file. Exits\n" +
+			"non-zero when anything needs fixing; `" + brand.Command + " doctor --fix` tightens the modes.\n" +
+			"`token status` is the read-only overview that never fails.",
+		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			sel, err := checkTargets(targets)
 			if err != nil {

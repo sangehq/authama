@@ -40,7 +40,7 @@ func (e Env) Checkup(set *tokens.Set, project string) (out []Finding, failed boo
 		}
 		out = append(out, Finding{lvl, t, fmt.Sprintf("%s: %s  perms=%s", t, path, permString(path))})
 		if !ok {
-			out = append(out, Finding{"warn", t, "world/group-readable — re-render to fix."})
+			out = append(out, Finding{"warn", t, "world/group-readable — `doctor --fix` (or chmod 600) makes it owner-only."})
 			failed = true
 		}
 		if t == tokens.Composer {

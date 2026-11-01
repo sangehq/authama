@@ -77,7 +77,7 @@ func newTokenShowCmd() *cobra.Command {
 	cmd.Flags().StringVar(&project, "project", "", "read the project's auth.json or .npmrc instead of the user one")
 	cmd.Flags().BoolVar(&asJSON, "json", false, "print the entry as JSON (the same fields as token list --json)")
 	cmd.Flags().BoolVar(&reveal, "reveal", false, "show the secret value (asks first; --yes when not at a terminal)")
-	cmd.Flags().BoolVar(&yes, "yes", false, "reveal without asking")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "reveal without asking")
 	return cmd
 }
 
