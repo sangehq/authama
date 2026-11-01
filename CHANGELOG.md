@@ -8,6 +8,35 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Auth token management, merged from auth-token-manager.** The new `token` group builds the credential
+  files Composer (`auth.json`), npm (`.npmrc`), Docker (`config.json`), git (`.git-credentials`) and curl
+  (`.netrc`) read, from a config that names environment variables: `sync` (with `--preview` and
+  `--exports`), `store`, `inventory` (`--reveal` asks first), `clip`, `forget`, `checkup`, `skeleton`,
+  `scaffold`, `services`, `adopt-legacy` and `shell-aliases`. Ported from
+  simtabi/auth-token-manager@20dda1e2c56ee23a87c0768edb6fadbd0c298227: rendering is checked byte-for-byte
+  against golden files from the Python code, and its pytest suite is ported to Go. Files are written
+  atomically at `0600` and merged with what is there; a malformed file, a value that could inject a second
+  credential, or a malformed host is refused rather than written. A Docker registry kept in a credential
+  store is logged in (`docker login --password-stdin`) or refused, set by `--creds-store-mode` or
+  `_settings.docker_creds_store`; with no terminal and no setting it refuses. Token writes appear in
+  `history` and `audit.log` without the secret. `--dev-root` sandboxes every token file. See
+  [docs/tools/tokens.md](docs/tools/tokens.md) and the [migration guide](docs/migration.md).
+- **A new name: Authentication Access Manager, `authama`.** The binary is `authama`; `sshmgr` still ships
+  beside it as the same program. SSH commands are grouped under `authama ssh` (the top-level spellings still
+  work, hidden from help); `version`, `doctor`, `init`, `migrate`, `tui`, `history`, `serve`, `ssh` and
+  `token` are the top level. Command names are distinct and prefix matching is off, held by a test. The
+  module path, config home, `SSH_MANAGER_*` variables, managed-block markers and `known_hosts` tags are
+  unchanged. Completion scripts are named for the binary that generates them.
+- **Auth tokens in the TUI and the web UI.** The TUI gains an *Auth tokens* group (list, check, clip,
+  store, sync, forget); `serve` gains a Tokens page listing installed tokens (never their secrets) with a
+  previewed forget and sync.
+- **`token shell-aliases`** installs `atm`, `atm-ui`, `atm-doctor` and `atm-init`, now calling `authama`.
+- **A Go dev container.** `Dockerfile` and `compose.yaml` at the root, with `make docker-shell`,
+  `docker-run` and `docker-down`. Its home is `./.authama-home` (`AUTHAMA_DEV_HOME`), never your real one.
+- **Releases and installers carry both binaries.** GoReleaser builds `authama` and `sshmgr` into every
+  archive and package; `install.sh` and `install.ps1` install both, verify each checksum, and honour
+  `AUTHAMA_INSTALL_DIR` (and the old `SSHMGR_INSTALL_DIR`).
+
 - **The web UI makes changes, each previewed first.** Profiles, hosts and VM hosts can be added, edited
   and deleted from the pages; a declared key no host uses can be deleted; and `~/.ssh/config` can be
   re-rendered. A preview runs the change for real on a throwaway copy of the home that holds no
@@ -63,6 +92,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **`doctor` checks token-file modes** and fails on a credential file others can read; `--fix` tightens
+  it, and `--json` adds a `tokens` object. A machine that passed before may now fail until fixed.
+- **`ui` is deprecated.** It was an alias of `serve`; it still starts the web UI, hidden from help, with a
+  notice naming `serve` (web) and `tui` (terminal), since `ui` no longer says which.
+- **Messages teach the new spellings** (`authama ssh deploy …`), so scripts that parse message text may
+  need updating.
 - **Commands no longer hold the lock while they wait for your answer.** `reconcile`, `keygen`, `key delete`,
   `key regen-pub`, `host apply`, `clean` and `import` used to take the lock first and keep it while the question sat
   on screen, so every other sshmgr command waited for as long as you took. They now ask first, then take the lock

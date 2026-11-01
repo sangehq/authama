@@ -1,7 +1,8 @@
 # Getting started
 
 A first run end to end: from an empty machine to a deployed key, and what each
-step is actually doing.
+step is actually doing, then the auth tokens your package managers and git need.
+SSH commands live under `authama ssh`; tokens under `authama token`.
 
 ## The mental model
 
@@ -88,6 +89,27 @@ job or a CI step there is nobody to answer, so commands proceed — declining on
 their own would turn every existing script into a silent no-op, which is not
 safer than running, only harder to diagnose. Pass `--yes` there anyway: it says
 so explicitly instead of relying on the absence of a terminal.
+
+## Auth tokens
+
+The second feature writes the credential files Composer, npm, Docker, git and
+curl read. Its config names environment variables, never the secrets themselves:
+
+```sh
+authama token scaffold              # a starter ~/.config/ssh-manager/tokens.json
+$EDITOR ~/.config/ssh-manager/tokens.json
+export GH_TOKEN=$(op read op://Private/GitHub/token)   # or set it in CI
+authama token sync --preview        # what would be written, secrets masked
+authama token sync                  # write auth.json, .npmrc, ... (0600, merged)
+authama token inventory             # what is installed now
+```
+
+One token without a config: `authama token store --target git --server github.com
+--username you` reads it from a hidden prompt. `authama token checkup` (and
+`authama doctor`) confirm every file is owner-only. Try any of it first with
+`--dev-root ./sandbox`, which keeps every file in the sandbox. Coming from
+auth-token-manager, run `authama token adopt-legacy`; see the
+[migration guide](migration.md) and [`token`](tools/tokens.md).
 
 ## Passphrases
 
