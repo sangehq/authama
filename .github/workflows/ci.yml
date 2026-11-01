@@ -49,14 +49,34 @@ jobs:
       - name: Gate
         shell: bash
         run: |
-          # TEMPORARY diagnostics: icacls cost and count, then the real gate, timed.
+          # TEMPORARY diagnostics: warm per-package and per-test timings, then cold compile cost.
           T="$RUNNER_TEMP"
-          if [ "$RUNNER_OS" = Windows ]; then
-            powershell -NoProfile -Command '$f = Join-Path $env:RUNNER_TEMP "acl.txt"; Set-Content $f x; $u = $env:USERNAME; $one = Measure-Command { 1..20 | % { icacls $f /inheritance:r | Out-Null; icacls $f /grant:r "${u}:F" | Out-Null; icacls $f /remove:g Everyone | Out-Null; icacls $f /remove:g "Authenticated Users" | Out-Null; icacls $f /remove:g Users | Out-Null; icacls $f /remove:g "BUILTIN\Users" | Out-Null } }; $two = Measure-Command { 1..20 | % { icacls $f /inheritance:r /grant:r "${u}:F" | Out-Null; icacls $f /remove:g Everyone "Authenticated Users" Users "BUILTIN\Users" | Out-Null } }; "six-call SetPerms x20: $($one.TotalMilliseconds) ms"; "two-call SetPerms x20: $($two.TotalMilliseconds) ms"; icacls $f /inheritance:r /grant:r "${u}:F"; "exit $LASTEXITCODE"; icacls $f /remove:g Everyone "Authenticated Users" Users "BUILTIN\Users"; "exit $LASTEXITCODE"; icacls $f'
-            export SSHMGR_DIAG_ICACLS_LOG="$T/icacls.log"
-          fi
-          time make ci
-          if [ -f "$T/icacls.log" ]; then echo "SetPerms calls: $(wc -l < "$T/icacls.log")"; fi
+          go env GOCACHE GOMAXPROCS
+          time go -C src build ./...
+          time go -C src vet ./...
+          time go -C src test -count=1 -json ./... > "$T/test.json" || true
+          python3 - "$T/test.json" <<'PY'
+          import json, sys
+          start = {}; done = {}; tests = []
+          for line in open(sys.argv[1], encoding='utf-8'):
+              try: e = json.loads(line)
+              except Exception: continue
+              if e['Action'] in ('pass', 'fail') and e.get('Test') and '/' not in e['Test']:
+                  tests.append((e.get('Elapsed', 0), e['Package'].split('/')[-1], e['Test']))
+              if e.get('Test'): continue
+              if e['Action'] == 'start': start[e['Package']] = e['Time']
+              if e['Action'] in ('pass', 'fail', 'skip'): done[e['Package']] = (e['Action'], e.get('Elapsed', 0), e['Time'])
+          for p, (a, el, t) in sorted(done.items(), key=lambda kv: -kv[1][1])[:15]:
+              print(f"PKG {el:8.2f}s {a} start={start.get(p,'?')[11:19]} end={t[11:19]} {p}")
+          for el, p, t in sorted(tests, reverse=True)[:25]:
+              print(f"TEST {el:8.2f}s {p} {t}")
+          print("TESTS", len(tests), "SUM", round(sum(x[0] for x in tests), 1))
+          PY
+          if grep -q '"Action":"fail"' "$T/test.json"; then grep '"Action":"fail"' "$T/test.json" | head; exit 1; fi
+          echo "== cold cache: build, then compile and link every test binary without running"
+          export GOCACHE="$T/coldcache"
+          time go -C src build ./...
+          time go -C src test -count=1 -run '^$' ./... > "$T/link.txt" 2>&1 || { cat "$T/link.txt"; exit 1; }
       # Once per OS, not once overall: golangci-lint analyses a single GOOS, so
       # a single run never sees the build-tagged platform files at all.
       - name: Lint
