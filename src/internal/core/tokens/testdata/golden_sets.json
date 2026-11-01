@@ -1,0 +1,122 @@
+{
+ "mixed": [
+  {
+   "target": "composer",
+   "host": "github.com",
+   "kind": "token",
+   "mechanism": "github-oauth",
+   "token": "ghp_x"
+  },
+  {
+   "target": "composer",
+   "host": "repo.magento.com",
+   "kind": "basic",
+   "mechanism": "http-basic",
+   "username": "pub",
+   "password": "pri"
+  },
+  {
+   "target": "composer",
+   "host": "bitbucket.org",
+   "kind": "pair",
+   "mechanism": "bitbucket-oauth",
+   "key": "k",
+   "secret": "s"
+  },
+  {
+   "target": "composer",
+   "host": "r.example.org",
+   "kind": "headers",
+   "mechanism": "custom-headers",
+   "headers": [
+    "A: b",
+    "Café: ☃ 😀"
+   ]
+  },
+  {
+   "target": "npm",
+   "host": "https://npm.pkg.github.com/",
+   "kind": "token",
+   "token": "t1",
+   "scope": "@org",
+   "always_auth": true
+  },
+  {
+   "target": "npm",
+   "host": "registry.npmjs.org",
+   "kind": "token",
+   "token": "t2"
+  },
+  {
+   "target": "docker",
+   "host": "ghcr.io",
+   "kind": "basic",
+   "username": "u",
+   "password": "p:w"
+  },
+  {
+   "target": "git",
+   "host": "github.com",
+   "kind": "basic",
+   "username": "me@x",
+   "password": "p/w:?#[]@!$&'()*+,;= %~"
+  },
+  {
+   "target": "git",
+   "host": "http://git.acme:8443/org/",
+   "kind": "basic",
+   "username": "u",
+   "password": "p"
+  },
+  {
+   "target": "netrc",
+   "host": "api.heroku.com",
+   "kind": "basic",
+   "username": "l",
+   "password": "k"
+  }
+ ],
+ "replace": [
+  {
+   "target": "composer",
+   "host": "github.com",
+   "kind": "token",
+   "mechanism": "github-oauth",
+   "token": "old"
+  },
+  {
+   "target": "composer",
+   "host": "github.com",
+   "kind": "token",
+   "mechanism": "github-oauth",
+   "token": "new"
+  },
+  {
+   "target": "npm",
+   "host": "registry.npmjs.org",
+   "kind": "token",
+   "token": "n"
+  },
+  {
+   "target": "git",
+   "host": "GitHub.com",
+   "kind": "basic",
+   "username": "u",
+   "password": "p"
+  },
+  {
+   "target": "netrc",
+   "host": "h1",
+   "kind": "basic",
+   "username": "u",
+   "password": "p"
+  },
+  {
+   "target": "docker",
+   "host": "docker.io",
+   "kind": "basic",
+   "username": "u",
+   "password": "p"
+  }
+ ]
+}

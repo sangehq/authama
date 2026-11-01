@@ -1,0 +1,9 @@
+{
+  "_help": "Docker config.json registry logins. Each host uses 'user_env'+'pass_env'; rendered as base64 user:password under 'auths'. This file stores ENV VAR NAMES, not secrets — safe to commit. Delete the hosts you don't use. Writes MERGE into an existing config.json, preserving credHelpers / credsStore / proxies.",
+  "docker": {
+    "ghcr.io":             { "user_env": "GH_USER", "pass_env": "GH_TOKEN" },
+    "docker.io":           { "user_env": "DOCKERHUB_USER", "pass_env": "DOCKERHUB_TOKEN" },
+    "registry.gitlab.com": { "user_env": "GITLAB_USER", "pass_env": "GITLAB_TOKEN" },
+    "quay.io":             { "user_env": "QUAY_USER", "pass_env": "QUAY_TOKEN" }
+  }
+}
