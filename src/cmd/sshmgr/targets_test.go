@@ -54,18 +54,22 @@ func TestEveryDeclaredReleaseTargetCompiles(t *testing.T) {
 			name += "v" + fields[2]
 		}
 		t.Run(name, func(t *testing.T) {
-			// Both binaries ship: authama, and sshmgr for compatibility.
-			for _, pkg := range []string{"./cmd/authama", "./cmd/sshmgr"} {
-				cmd := exec.Command("go", "build", "-o", os.DevNull, pkg)
-				cmd.Dir = moduleRoot
-				cmd.Env = append(os.Environ(),
-					"GOOS="+goos, "GOARCH="+goarch, "CGO_ENABLED=0")
-				if len(fields) > 2 {
-					cmd.Env = append(cmd.Env, "GOARM="+fields[2])
-				}
-				if out, err := cmd.CombinedOutput(); err != nil {
-					t.Errorf("%s: %s is a declared release target and does not build:\n%s", pkg, name, out)
-				}
+			// Targets are independent, and each spends most of its time in a
+			// single-threaded link, so they run side by side. Ten serial targets
+			// times two binaries took 4m43s on a macOS runner, against the e2e
+			// package's 5-minute budget.
+			t.Parallel()
+			// Both binaries ship: authama, and sshmgr for compatibility. One
+			// invocation builds both, so their shared packages compile once.
+			cmd := exec.Command("go", "build", "-o", t.TempDir(), "./cmd/authama", "./cmd/sshmgr")
+			cmd.Dir = moduleRoot
+			cmd.Env = append(os.Environ(),
+				"GOOS="+goos, "GOARCH="+goarch, "CGO_ENABLED=0")
+			if len(fields) > 2 {
+				cmd.Env = append(cmd.Env, "GOARM="+fields[2])
+			}
+			if out, err := cmd.CombinedOutput(); err != nil {
+				t.Errorf("%s is a declared release target and authama or sshmgr does not build:\n%s", name, out)
 			}
 		})
 		checked++
