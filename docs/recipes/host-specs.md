@@ -1,6 +1,6 @@
 # Host specs: add or update many hosts at once
 
-`sshmgr host apply` takes hosts as one-line specs and upserts them into a
+`authama ssh host apply` takes hosts as one-line specs and upserts them into a
 profile:
 
 ```text
@@ -17,15 +17,15 @@ profile:
 ## One host
 
 ```sh
-sshmgr host apply adelsaiq dani-prd-web-00 206.189.185.129 ploi web
+authama ssh host apply clientco web-01 203.0.113.21 ploi web
 ```
 
 ## Many hosts
 
 ```sh
-sshmgr host apply adelsaiq \
-  --host "dani-prd-web-00 206.189.185.129 ploi web" \
-  --host "dani-prd-db-00  137.184.219.1   ploi db" \
+authama ssh host apply clientco \
+  --host "web-01 203.0.113.21 ploi web" \
+  --host "db-01  203.0.113.22 ploi db" \
   --tag prd --reconcile
 ```
 
@@ -33,23 +33,23 @@ Or keep them in a file and re-run it whenever an IP changes:
 
 ```text
 # hosts.txt
-dani-prd-web-00 206.189.185.129 ploi web
-dani-prd-db-00  137.184.219.1   ploi db
+web-01 203.0.113.21 ploi web
+db-01  203.0.113.22 ploi db
 bastion         203.0.113.5:2222 admin
 ```
 
 ```sh
-sshmgr host apply adelsaiq -f hosts.txt --dry-run   # preview
-sshmgr host apply adelsaiq -f hosts.txt --reconcile # apply, then mint keys
-cat hosts.txt | sshmgr host apply adelsaiq -f -     # from stdin
+authama ssh host apply clientco -f hosts.txt --dry-run   # preview
+authama ssh host apply clientco -f hosts.txt --reconcile # apply, then mint keys
+cat hosts.txt | authama ssh host apply clientco -f -     # from stdin
 ```
 
 A JSON array works too, of spec strings or objects:
 
 ```json
 [
-  "dani-prd-web-00 206.189.185.129 ploi web",
-  {"alias": "dani-prd-db-00", "host": "137.184.219.1", "user": "ploi", "role": "db", "tags": ["prd"]}
+  "web-01 203.0.113.21 ploi web",
+  {"alias": "db-01", "host": "203.0.113.22", "user": "ploi", "role": "db", "tags": ["prd"]}
 ]
 ```
 
@@ -58,7 +58,7 @@ A JSON array works too, of spec strings or objects:
 - A new alias is added exactly as `host add` would add it.
 - An existing alias gets its hostname, user and (if given) port set, as `host
   edit` would. The role and any `--tag` are merged into its tags; `host apply`
-  never removes one. Use `sshmgr host edit <profile> <alias> --untag TAG` for that,
+  never removes one. Use `authama ssh host edit <profile> <alias> --untag TAG` for that,
   or `--tag` there to replace the whole list.
 - Each host is reported `added`, `updated` (with what changed) or `unchanged`.
   Running the same specs again reports everything unchanged.

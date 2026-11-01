@@ -83,7 +83,7 @@ func newProfileCmd() *cobra.Command {
 				}
 			}
 			_, _ = fmt.Fprintf(c.OutOrStdout(), "added profile %s (no hosts yet - add one with "+
-				"`sshmgr host add %s <alias>`)\n", args[0], args[0])
+				"`authama ssh host add %s <alias>`)\n", args[0], args[0])
 			return applyManifestEdit(c, p)
 		},
 	}
@@ -144,7 +144,7 @@ func newProfileCmd() *cobra.Command {
 			}
 			// Changing key_scope or key_name changes which key each host resolves
 			// to, and that key may not exist yet.
-			_, _ = fmt.Fprintf(c.OutOrStdout(), "edited profile %s (run `sshmgr reconcile` to mint any key "+
+			_, _ = fmt.Fprintf(c.OutOrStdout(), "edited profile %s (run `authama ssh reconcile` to mint any key "+
 				"this now points at)\n", args[0])
 			if err := applyManifestEdit(c, p); err != nil {
 				return err

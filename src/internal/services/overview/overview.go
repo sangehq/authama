@@ -52,7 +52,7 @@ func Rows(p paths.Paths, m *manifest.Manifest, now time.Time) []Row {
 	// Counts, or the first-run state. "none yet" plus the command that creates
 	// one is the whole of what a new user needs from this screen.
 	if m == nil {
-		rows = append(rows, Row{Label: "manifest", Value: "none yet", Fix: "sshmgr init"})
+		rows = append(rows, Row{Label: "manifest", Value: "none yet", Fix: "authama init"})
 	} else {
 		rows = append(rows, Row{Label: "manifest", Value: manifestCounts(m)})
 	}
@@ -64,7 +64,7 @@ func Rows(p paths.Paths, m *manifest.Manifest, now time.Time) []Row {
 			rows = append(rows, Row{Label: "rendered", Value: "config in sync"})
 		} else {
 			rows = append(rows, Row{
-				Label: "rendered", Value: "drifted from the manifest", Fix: "sshmgr reconcile"})
+				Label: "rendered", Value: "drifted from the manifest", Fix: "authama ssh reconcile"})
 		}
 		rows = append(rows, pinRow(rep, m))
 	}
@@ -72,20 +72,20 @@ func Rows(p paths.Paths, m *manifest.Manifest, now time.Time) []Row {
 	if n := len(rep.PermIssues); n > 0 {
 		rows = append(rows, Row{
 			Label: "perms", Value: fmt.Sprintf("%s with the wrong mode", plural(n, "path", "paths")),
-			Fix: "sshmgr doctor --fix"})
+			Fix: "authama doctor --fix"})
 	}
 	if !rep.Dangling.OK() {
 		rows = append(rows, Row{
 			Label: "keys", Value: fmt.Sprintf("%s need attention", plural(len(rep.Dangling.Findings), "key", "keys")),
-			Fix: "sshmgr doctor"})
+			Fix: "authama doctor"})
 	}
 	if !rep.Preflight.OK() {
 		rows = append(rows, Row{
-			Label: "deps", Value: "a required OpenSSH tool is missing", Fix: "sshmgr doctor"})
+			Label: "deps", Value: "a required OpenSSH tool is missing", Fix: "authama doctor"})
 	}
 	if rep.StrandedLegacyHome != "" {
 		rows = append(rows, Row{
-			Label: "legacy", Value: "an old config home is still on disk", Fix: "sshmgr migrate"})
+			Label: "legacy", Value: "an old config home is still on disk", Fix: "authama migrate"})
 	}
 
 	// Expiry last: it is a schedule rather than a fault, and it is the one row
@@ -93,7 +93,7 @@ func Rows(p paths.Paths, m *manifest.Manifest, now time.Time) []Row {
 	if m != nil {
 		if due := notifier.New(p, m).Banner(now); due != "" {
 			rows = append(rows, Row{
-				Label: "rotation", Value: firstLine(due), Fix: "sshmgr rotate"})
+				Label: "rotation", Value: firstLine(due), Fix: "authama ssh rotate"})
 		}
 	}
 	return rows
@@ -114,7 +114,7 @@ func pinRow(rep doctor.Report, m *manifest.Manifest) Row {
 		return Row{
 			Label: "pins",
 			Value: fmt.Sprintf("%d of %d pinned", total-unpinned, total),
-			Fix:   "sshmgr knownhosts pin",
+			Fix:   "authama ssh knownhosts pin",
 		}
 	}
 }

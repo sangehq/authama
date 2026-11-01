@@ -118,6 +118,48 @@ func (p Paths) LockFile() string     { return filepath.Join(p.StateDir(), ".lock
 func (p Paths) ExpiryCache() string  { return filepath.Join(p.StateDir(), "expiry-cache.json") }
 func (p Paths) NotifyCache() string  { return filepath.Join(p.StateDir(), "notify-cache.json") }
 
+// Tokens is the token config: which env vars build which registry credential.
+// It holds variable names, never secrets.
+func (p Paths) Tokens() string { return filepath.Join(p.ConfigDir, "tokens.json") }
+
+// TokenHome is the directory the token targets (~/.npmrc, ~/.docker, ...)
+// resolve under: the real home, or in dev mode the sandbox's "home" subtree,
+// so a sandboxed token write can never reach a real credential file.
+func (p Paths) TokenHome(get Getenv) string {
+	if p.IsDev() {
+		return filepath.Join(p.DevRoot, DevHomeDir)
+	}
+	return home(resolve(get))
+}
+
+// Contains reports whether path is at or below the sandbox root, after
+// resolving symlinks in the part of path that exists. Outside dev mode every
+// path qualifies.
+func (p Paths) Contains(path string) bool {
+	if !p.IsDev() {
+		return true
+	}
+	return within(resolveExisting(p.DevRoot), resolveExisting(path))
+}
+
+// resolveExisting resolves symlinks in the longest existing prefix of path
+// and re-attaches the rest.
+func resolveExisting(path string) string {
+	path = filepath.Clean(path)
+	rest := ""
+	for cur := path; ; {
+		if r, err := filepath.EvalSymlinks(cur); err == nil {
+			return filepath.Join(r, rest)
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			return path
+		}
+		rest = filepath.Join(filepath.Base(cur), rest)
+		cur = parent
+	}
+}
+
 // LegacyHomes are pre-rename / pre-XDG home locations in priority order: the
 // "sshmgr" sibling of the standard home (pre-rename OS-standard dir) and the
 // original dot-home ~/.sshmgr. Mirrors facade._legacy_homes.
@@ -157,6 +199,8 @@ const DevRootEnv = "SSHMGR_DEV_ROOT"
 const (
 	DevSSHDir    = "ssh"
 	DevConfigDir = "config"
+	// DevHomeDir stands in for $HOME for the token targets.
+	DevHomeDir = "home"
 )
 
 // ResolveDev builds the layout for a sandboxed run: one root, holding both the

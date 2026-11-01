@@ -1,20 +1,20 @@
 # `serve`
 
-`sshmgr serve` opens a web UI for one sshmgr home in a browser on this machine. It shows everything,
-and makes the everyday manifest changes, each previewed before it is made.
+`authama serve` opens a web UI for one authama home in a browser on this machine. It shows everything,
+and makes the everyday manifest and auth-token changes, each previewed before it is made.
 
 ## Starting it
 
 ```sh
-sshmgr serve                 # 127.0.0.1:7822, opens a browser
-sshmgr serve --no-open       # print the address only
-sshmgr --dev-root ./scratch serve
+authama serve                 # 127.0.0.1:7822, opens a browser
+authama serve --no-open       # print the address only
+authama --dev-root ./scratch serve
 ```
 
 It prints an address like this:
 
 ```text
-sshmgr web UI: http://127.0.0.1:7822/?token=…
+Authentication Access Manager web UI: http://127.0.0.1:7822/?token=…
 reading /Users/you/.config/ssh-manager (read-only)
 press Ctrl-C to stop
 ```
@@ -29,13 +29,14 @@ when that port is taken.
 
 | Page | Shows |
 |---|---|
-| Overview | the rows the `sshmgr` menu prints at the top, each problem with the command that fixes it; counts; keys due for rotation; recent changes |
+| Overview | the rows the `authama tui` menu prints at the top, each problem with the command that fixes it; counts; keys due for rotation; recent changes |
 | Profiles | each profile's category, key scope, key store, and host and key counts |
 | Hosts | every host by profile. A host's page shows its manifest entry, its deployments, the block rendered into `~/.ssh/config`, and the host keys pinned for it |
 | Keys | every key with its fingerprint and expiry. A key's page shows where the key is deployed and every operation that touched it |
 | Snapshots | every snapshot. A snapshot's page diffs it against `~/.ssh` now or against another snapshot |
 | History | the [`history`](history.md), filtered the same way. An operation's page shows its events and the manifest before and after |
-| Doctor, Audit | the reports `sshmgr doctor` and `sshmgr audit` print |
+| Tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret) and the token audit, as `authama token list` and `authama token audit` print, and which token config is in use |
+| Doctor, Audit | the reports `authama doctor` and `authama ssh audit` print |
 
 ## Changes
 
@@ -43,40 +44,47 @@ These changes can be made from the pages:
 
 | Change | Where | The same as |
 |---|---|---|
-| Add a profile | Profiles | `sshmgr profile add` |
-| Change a profile's key scope | Profiles | `sshmgr profile edit --key-scope --key-name` |
-| Delete a profile | Profiles | `sshmgr profile delete --yes` |
-| Delete a profile and its key files | Profiles, ticking *and its key files* | `sshmgr profile delete --purge --yes` |
-| Move a profile to a category | Profiles | `sshmgr profile edit --category` |
-| Add a host, or a VM host | Hosts | `sshmgr host add`, `sshmgr vm add` |
-| Add or update hosts from specs | Hosts | `sshmgr host apply --host … --yes` |
-| Create a VM host's Docker context | the host's page | `sshmgr vm docker-context` |
-| Edit a host's hostname, user, port or tags | the host's page | `sshmgr host edit` |
-| Delete a host and its pins | the host's page | `sshmgr host delete --yes` |
-| Delete a declared key that no host uses | Keys | `sshmgr key delete --yes` |
-| Re-render `~/.ssh/config` | Overview | `sshmgr config render --yes` |
-| Reconcile: mint missing keys, record keys on disk, render | Overview | `sshmgr reconcile --yes --no-pin` |
-| Mint a profile's or host's missing keys | Keys | `sshmgr keygen <target> --no-pin --yes` |
-| Add a key, optionally wired to a host | Keys | `sshmgr key add` |
-| Prune old snapshots | Snapshots | `sshmgr snapshots prune --keep` |
-| Restore a snapshot | the snapshot's page | `sshmgr snapshots restore <id> --yes` |
-| Fix file modes | Doctor | `sshmgr doctor --fix` |
-| Write an editable `providers.json` | Doctor | `sshmgr providers --export` |
-| Remove stale pins and records, optionally adopting pins first | Doctor | `sshmgr clean --yes [--adopt]` |
-| Write an encrypted bundle | Snapshots | `sshmgr bundle [--keep]` |
-| Send the desktop alert, if one is due | Audit | `sshmgr audit --notify` |
-| Send a test notification | Audit | `sshmgr notify test` |
+| Add a profile | Profiles | `authama ssh profile add` |
+| Change a profile's key scope | Profiles | `authama ssh profile edit --key-scope --key-name` |
+| Delete a profile | Profiles | `authama ssh profile delete --yes` |
+| Delete a profile and its key files | Profiles, ticking *and its key files* | `authama ssh profile delete --purge --yes` |
+| Move a profile to a category | Profiles | `authama ssh profile edit --category` |
+| Add a host, or a VM host | Hosts | `authama ssh host add`, `authama ssh vm add` |
+| Add or update hosts from specs | Hosts | `authama ssh host apply --host … --yes` |
+| Create a VM host's Docker context | the host's page | `authama ssh vm docker-context` |
+| Edit a host's hostname, user, port or tags | the host's page | `authama ssh host edit` |
+| Delete a host and its pins | the host's page | `authama ssh host delete --yes` |
+| Delete a declared key that no host uses | Keys | `authama ssh key delete --yes` |
+| Re-render `~/.ssh/config` | Overview | `authama ssh config render --yes` |
+| Reconcile: mint missing keys, record keys on disk, render | Overview | `authama ssh reconcile --yes --no-pin` |
+| Mint a profile's or host's missing keys | Keys | `authama ssh keygen <target> --no-pin --yes` |
+| Add a key, optionally wired to a host | Keys | `authama ssh key add` |
+| Prune old snapshots | Snapshots | `authama ssh snapshots prune --keep` |
+| Restore a snapshot | the snapshot's page | `authama ssh snapshots restore <id> --yes` |
+| Fix file modes | Doctor | `authama doctor --fix` |
+| Write an editable `providers.json` | Doctor | `authama ssh providers --export` |
+| Remove stale pins and records, optionally adopting pins first | Doctor | `authama ssh clean --yes [--adopt]` |
+| Write an encrypted bundle | Snapshots | `authama ssh bundle [--keep]` |
+| Send the desktop alert, if one is due | Audit | `authama ssh audit --notify` |
+| Send a test notification | Audit | `authama ssh notify test` |
+| Remove an installed token | Tokens | `authama token delete <target> <host>` |
+| Write the token config's credential files | Tokens | `authama token apply` (a Docker registry in a credential store follows `_settings.docker_creds_store`, and is refused when it is unset, since a page cannot prompt) |
+
+The token apply resolves secrets from the environment `authama serve` was started
+in, so a variable set in another terminal is not seen. Storing, revealing and
+copying a token stay in the terminal (`token set`, `token list --reveal`,
+`token copy`): a page never receives or shows a secret.
 
 Each change takes two steps:
 
 1. **Preview.** The change runs for real against a private, throwaway copy of the home. The copy
    holds the config files, plus the files from `~/.ssh` that a snapshot may hold: config,
    `known_hosts` and public keys. No private key is copied. The page shows the command line it
-   stands for, what sshmgr would say, and a diff of every file the change would write.
-2. **Confirm.** sshmgr takes the lock, then previews the change again. If the new preview differs
+   stands for, what authama would say, and a diff of every file the change would write.
+2. **Confirm.** authama takes the lock, then previews the change again. If the new preview differs
    from the one you saw, the change isn't made: someone else may have changed the home since
    (a CLI command, the menu, another tab). The page shows the new preview to confirm instead.
-   Otherwise sshmgr snapshots `~/.ssh`, makes the change, releases the lock, and links to the
+   Otherwise authama ssh snapshots `~/.ssh`, makes the change, releases the lock, and links to the
    change in the [`history`](history.md), where it shows with source `web`.
 
 The lock is held only while a change is checked and made, never while you read a preview.
@@ -96,7 +104,7 @@ new directory. The copy holds them only as placeholders, so the preview lists ea
 would remove or create, by path, without its contents. That list is bound to the confirmation too.
 
 **Deleting a profile's key files** always writes an encrypted backup of `~/.ssh` and the config
-first, as the CLI does, so it needs `SSH_MANAGER_AGE_RECIPIENT` set where `sshmgr serve` runs, and
+first, as the CLI does, so it needs `SSH_MANAGER_AGE_RECIPIENT` set where `authama serve` runs, and
 `age` installed. There is no `--no-key-backup` on the web.
 
 **Changes with effects outside the copy.** Prune and fix list what they would do outside the copied
@@ -111,8 +119,8 @@ snapshot, and the page shows the diff against `~/.ssh` now. The confirmation nam
 file. Confirming snapshots `~/.ssh` first, then restores. A snapshot that still holds private keys
 is refused here, as its page refuses to open it.
 
-**Exports download.** The hosts page offers the flat `ssh_config` (`sshmgr config export --flat`)
-and the Termius CSV (`sshmgr termius export`, with or without git hosts) as downloads. Nothing is
+**Exports download.** The hosts page offers the flat `ssh_config` (`authama ssh config export --flat`)
+and the Termius CSV (`authama ssh termius export`, with or without git hosts) as downloads. Nothing is
 written to the home, so `--read-only` keeps them.
 
 ## Jobs
@@ -126,11 +134,11 @@ A key's page offers each as a **job**:
 
 | Job | Where | The same as |
 |---|---|---|
-| Deploy a key to every host that uses it | the key's page | `sshmgr deploy <profile/key> --yes` |
-| Rotate a key | the key's page | `sshmgr rotate <profile/key> --yes` |
-| Roll a key back to its predecessor | the key's page | `sshmgr rollback <profile/key> --yes` |
-| Rotate a profile's keys, or every key | Profiles | `sshmgr rotate <profile> --yes`, `sshmgr rotate --all --yes` |
-| Restore an encrypted bundle from `dist/` | Snapshots | `sshmgr restore <bundle> --yes` |
+| Deploy a key to every host that uses it | the key's page | `authama ssh deploy <profile/key> --yes` |
+| Rotate a key | the key's page | `authama ssh rotate <profile/key> --yes` |
+| Roll a key back to its predecessor | the key's page | `authama ssh rollback <profile/key> --yes` |
+| Rotate a profile's keys, or every key | Profiles | `authama ssh rotate <profile> --yes`, `authama ssh rotate --all --yes` |
+| Restore an encrypted bundle from `dist/` | Snapshots | `authama ssh restore <bundle> --yes` |
 
 - **Not in dev mode.** Deploy, rotate and rollback reach real servers, so under `--dev-root` the key
   and profile pages say so instead of offering them, as the CLI refuses them. A bundle restore is
@@ -141,14 +149,14 @@ A key's page offers each as a **job**:
   `BatchMode=yes`, so a target that needs a password fails at once, with a note to deploy it from a
   terminal. A terminal is where the CLI still asks.
 - **Rotate asks you to paste a key.** A target that takes the key by hand, such as a panel, pauses
-  the job with the new public key shown for copying. Confirm once it is pasted; sshmgr then logs in
+  the job with the new public key shown for copying. Confirm once it is pasted; authama then logs in
   with it to prove it. Rotate writes an encrypted backup first, so it needs
   `SSH_MANAGER_AGE_RECIPIENT`.
 - **Rotating many keys** reviews the keys it will rotate, then rotates each a host uses in turn. A
   key that fails is left as it was, and the rest go on. Cancel stops before the next key.
 - **Restoring a bundle** decrypts with the identity file in `SSH_MANAGER_AGE_IDENTITY_FILE`, as set
-  where `sshmgr serve` runs; the web takes no identity and no passphrase. Only a bundle in the config
-  home's `dist/`, named as `sshmgr bundle` names them, can be restored here.
+  where `authama serve` runs; the web takes no identity and no passphrase. Only a bundle in the config
+  home's `dist/`, named as `authama ssh bundle` names them, can be restored here.
 - **Cancel** stops a job at its next step, never inside one. A rotate waiting on you is answered no.
 
 Some changes are terminal-only:
@@ -167,9 +175,9 @@ Some changes are terminal-only:
 ## What it will not do
 
 - **Hold the lock while you read.** It holds the lock only while it checks and makes a change you
-  confirmed. The `sshmgr` menu now does the same.
+  confirmed. The `authama tui` menu now does the same.
 - **Open a snapshot that holds private keys.** A snapshot written before private keys were left out
-  is listed but never opened. `sshmgr snapshots prune --keep 0` removes it.
+  is listed but never opened. `authama ssh snapshots prune --keep 0` removes it.
 - **Show private keys.** Pages read public keys, `known_hosts` and config only.
 - **Create the history from a page view.** A page reads `log/history.db` if it exists. Only a change
   creates the database or imports into it, and only while it holds the lock.

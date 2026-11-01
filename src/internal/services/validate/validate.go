@@ -84,7 +84,7 @@ func (s *Service) validateOne(profile, keyName, priv string) KeyCheck {
 		// here is not what it offers, and is usually the key from before the
 		// profile moved to 1Password.
 		issues = append(issues, "a private key file is on disk, but this profile keeps its keys in "+
-			"1Password - ssh will not use it. Run `sshmgr rotate "+profile+"/"+keyName+
+			"1Password - ssh will not use it. Run `authama ssh rotate "+profile+"/"+keyName+
 			"` to generate the key in 1Password")
 	case inOP:
 		// expected: the private key is in 1Password
@@ -146,7 +146,7 @@ func (s *Service) checkOnePassword(profile, keyName, pubText string) (issues, no
 	it, err := s.op.Get(vault, keyName)
 	switch {
 	case errors.Is(err, opstore.ErrNotFound):
-		return []string{fmt.Sprintf("no item %q in 1Password vault %q - run `sshmgr reconcile` "+
+		return []string{fmt.Sprintf("no item %q in 1Password vault %q - run `authama ssh reconcile` "+
 			"to create it", keyName, vault)}, nil
 	case err != nil:
 		return nil, []string{"1Password item not checked: " + err.Error()}

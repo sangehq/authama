@@ -12,8 +12,8 @@ func TestParseHostSpec(t *testing.T) {
 		port       int
 		bad        bool
 	}{
-		{in: "dani-prd-web-00 206.189.185.129 ploi web", host: "206.189.185.129", role: "web"},
-		{in: "db 137.184.219.1 ploi", host: "137.184.219.1"},
+		{in: "web-01 203.0.113.21 ploi web", host: "203.0.113.21", role: "web"},
+		{in: "db 203.0.113.22 ploi", host: "203.0.113.22"},
 		{in: "b 10.0.0.5:2222 admin", host: "10.0.0.5", port: 2222},
 		{in: "v6 2001:db8::1 root", host: "2001:db8::1"},
 		{in: "v6p [2001:db8::1]:2200 root", host: "2001:db8::1", port: 2200},
@@ -41,7 +41,7 @@ func TestParseHostSpec(t *testing.T) {
 }
 
 func TestParseHostSpecsTextAndJSON(t *testing.T) {
-	text := "# servers\n\ndani-prd-web-00 206.189.185.129 ploi web  # web\ndani-prd-db-00 137.184.219.1 ploi db\n"
+	text := "# servers\n\nweb-01 203.0.113.21 ploi web  # web\ndb-01 203.0.113.22 ploi db\n"
 	s, err := ParseHostSpecs(strings.NewReader(text))
 	if err != nil || len(s) != 2 || s[1].Role != "db" {
 		t.Fatalf("text: %v %+v", err, s)

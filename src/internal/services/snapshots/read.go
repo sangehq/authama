@@ -14,7 +14,7 @@ import (
 // ErrHoldsKeyMaterial refuses to open a snapshot written before private keys
 // were excluded. Reading it to show a diff would put a private key on a page.
 var ErrHoldsKeyMaterial = errors.New("this snapshot predates key exclusion and holds private keys, so it is not opened; " +
-	"remove it once you no longer need it: sshmgr snapshots prune --keep 0")
+	"remove it once you no longer need it: authama ssh snapshots prune --keep 0")
 
 // maxReadBytes caps what Files reads from one member. Everything a snapshot
 // holds is config text; a member larger than this is not something to diff.

@@ -1,15 +1,24 @@
 <#
 .SYNOPSIS
-  sshmgr installer for Windows.
+  Authentication Access Manager installer for Windows.
+
+.DESCRIPTION
+  Installs authama.exe and sshmgr.exe - the same program under the name v3
+  shipped, kept for scripts and aliases. A release from before authama existed
+  installs sshmgr.exe alone.
 
 .EXAMPLE
   irm https://raw.githubusercontent.com/simtabi/ssh-manager/main/src/scripts/install.ps1 | iex
 
 .EXAMPLE
-  # Pin a version / custom dir (env vars are prefixed with the uppercased binary name)
-  $env:SSHMGR_VERSION = 'v0.1.0'; irm https://.../install.ps1 | iex
+  # Pin a version / custom dir (AUTHAMA_*, or the v3 names SSHMGR_*)
+  $env:AUTHAMA_VERSION = 'v0.1.0'; irm https://.../install.ps1 | iex
 #>
 #Requires -Version 5
+# Progress lines go to the host, not the pipeline: this runs as `irm | iex`, where
+# anything written to the output stream would be echoed back as a result.
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
+  Justification = 'Installer progress for an interactive irm | iex run')]
 [CmdletBinding()]
 param(
   [string]$Version,
@@ -19,15 +28,14 @@ param(
 $ErrorActionPreference = 'Stop'
 $owner   = 'simtabi'
 $repo    = 'ssh-manager'
-$binBase = 'sshmgr'
-$binary  = 'sshmgr.exe'
+$binBase = 'authama'
+$compat  = 'sshmgr'
 
-# Per-project env-var prefix, derived so it stays a valid identifier for any
-# project name (uppercase, non-alnum -> '_'). Keyed off the binary name so it
-# matches the POSIX installer (e.g. sshmgr -> SSHMGR).
-$prefix = ($binBase.ToUpper() -replace '[^A-Z0-9]', '_')
-if (-not $Version)    { $Version    = [Environment]::GetEnvironmentVariable("${prefix}_VERSION") }
-if (-not $InstallDir) { $InstallDir = [Environment]::GetEnvironmentVariable("${prefix}_INSTALL_DIR") }
+# AUTHAMA_*, else the v3 names SSHMGR_*, matching the POSIX installer.
+foreach ($prefix in 'AUTHAMA', 'SSHMGR') {
+  if (-not $Version)    { $Version    = [Environment]::GetEnvironmentVariable("${prefix}_VERSION") }
+  if (-not $InstallDir) { $InstallDir = [Environment]::GetEnvironmentVariable("${prefix}_INSTALL_DIR") }
+}
 
 # Go-style GOARCH, matching the release artifact names.
 switch ($env:PROCESSOR_ARCHITECTURE) {
@@ -67,36 +75,42 @@ if (-not $Version) {
 }
 if ($Version -notlike 'v*') { $Version = "v$Version" }
 
-# Bare, ready-to-run executable: sshmgr_windows_<arch>.exe.
-$asset = "${binBase}_windows_${arch}.exe"
+# Bare, ready-to-run executables: <name>_windows_<arch>.exe.
 $base  = "https://github.com/$owner/$repo/releases/download/$Version"
 $tmp   = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid())
 New-Item -ItemType Directory -Path $tmp | Out-Null
+$installed = @()
 
 try {
-  Write-Host "Downloading $asset ($Version) ..."
-  $exe = Join-Path $tmp $asset
-  Invoke-WebRequest "$base/$asset" -OutFile $exe
-
   $sums = Join-Path $tmp 'checksums.txt'
   $haveSums = $true
   try { Invoke-WebRequest "$base/checksums.txt" -OutFile $sums } catch { $haveSums = $false; Write-Warning 'checksums.txt not found; skipping verification.' }
-  if ($haveSums) {
-    # Anchored on the whole filename field, not a substring. checksums.txt lists
-    # the binary, its archive and the archive's SBOM, so a bare name like
-    # "sshmgr_macos_arm64" appears in three lines; -First 1 on an unanchored match
-    # would compare the download against whichever hash came first in the file.
-    # That happens to be harmless for the .exe names this script asks for and for
-    # nothing else, which is not a property to rest a checksum gate on.
-    $line = Select-String -Path $sums -Pattern ('\s' + [regex]::Escape($asset) + '$') | Select-Object -First 1
-    if (-not $line) { throw "no checksum entry for $asset" }
-    $want = (($line.Line -split '\s+')[0]).ToLower()
-    $got  = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
-    if ($got -ne $want) { throw "checksum mismatch for $asset" }
-  }
 
   New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-  Copy-Item $exe (Join-Path $InstallDir $binary) -Force
+  foreach ($name in $compat, $binBase) {
+    $asset = "${name}_windows_${arch}.exe"
+    $exe = Join-Path $tmp $asset
+    Write-Host "Downloading $asset ($Version) ..."
+    try { Invoke-WebRequest "$base/$asset" -OutFile $exe }
+    catch {
+      if ($name -eq $compat) { throw "$Version has no $asset" }
+      Write-Host "note: $Version predates $binBase; installing $compat only."
+      continue
+    }
+    if ($haveSums) {
+      # Anchored on the whole filename field, not a substring. checksums.txt lists
+      # the binary, its archive and the archive's SBOM, so a bare name like
+      # "sshmgr_macos_arm64" appears in three lines; -First 1 on an unanchored match
+      # would compare the download against whichever hash came first in the file.
+      $line = Select-String -Path $sums -Pattern ('\s' + [regex]::Escape($asset) + '$') | Select-Object -First 1
+      if (-not $line) { throw "no checksum entry for $asset" }
+      $want = (($line.Line -split '\s+')[0]).ToLower()
+      $got  = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
+      if ($got -ne $want) { throw "checksum mismatch for $asset" }
+    }
+    Copy-Item $exe (Join-Path $InstallDir "$name.exe") -Force
+    $installed += $name
+  }
 }
 finally {
   Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
@@ -110,5 +124,5 @@ if (($userPath -split ';') -notcontains $InstallDir) {
 }
 $env:Path += ";$InstallDir"
 
-& (Join-Path $InstallDir $binary) version
-Write-Host "Installed $binBase to $InstallDir\$binary"
+& (Join-Path $InstallDir "$($installed[-1]).exe") version
+foreach ($name in $installed) { Write-Host "Installed $name to $InstallDir\$name.exe" }

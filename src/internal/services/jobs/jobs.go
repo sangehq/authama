@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/history"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/mutation"
 	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
@@ -160,7 +161,7 @@ const keep = 50
 type ErrBusy struct{ ID, Command string }
 
 func (e ErrBusy) Error() string {
-	return "sshmgr " + e.Command + " is still running; one change runs at a time"
+	return brand.Line(e.Command) + " is still running; one change runs at a time"
 }
 
 // Start runs run as a job on p, under the lock, as one operation in the

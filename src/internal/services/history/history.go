@@ -69,7 +69,7 @@ const TimeFormat = "2006-01-02T15:04:05Z"
 
 // ErrNewerSchema reports a database written by a newer sshmgr. It is opened
 // read-only rather than migrated down, and never written.
-var ErrNewerSchema = errors.New("the history database was written by a newer sshmgr; it is open read-only")
+var ErrNewerSchema = errors.New("the history database was written by a newer authama; it is open read-only")
 
 // Store is an open history database.
 type Store struct {

@@ -17,7 +17,7 @@ const exportJSON = `{
     "legacy": {"hosts": [
       {"alias": "box", "hostname": "box.example", "user": "me", "port": 2222, "key_name": "legacy-ed25519", "tags": ["prod", "eu,west"]}]},
     "simtabi": {"category": "orgs", "hosts": [
-      {"alias": "oribi-web", "hostname": "143.198.186.131", "user": "ploi", "key_name": "simtabi_oribi-web-ed25519"},
+      {"alias": "oribi-web", "hostname": "203.0.113.23", "user": "ploi", "key_name": "simtabi_oribi-web-ed25519"},
       {"alias": "devbox", "hostname": "devbox", "user": "imani", "key_name": "simtabi_devbox-ed25519",
        "vm": {"hypervisor": "vmpal", "name": "Ubuntu"}}]}
   }

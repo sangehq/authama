@@ -42,7 +42,7 @@ func TestPreviewThenApplyMakesTheChange(t *testing.T) {
 
 	rec := c.change("/changes/preview", addHost("db"))
 	body := rec.Body.String()
-	if rec.Code != http.StatusOK || !strings.Contains(body, "config/manifest.json") || !strings.Contains(body, "sshmgr host add work db") {
+	if rec.Code != http.StatusOK || !strings.Contains(body, "config/manifest.json") || !strings.Contains(body, "authama ssh host add work db") {
 		t.Fatalf("preview: %d\n%s", rec.Code, body)
 	}
 	if after, _ := os.ReadFile(p.Manifest()); string(after) != string(before) {
@@ -249,6 +249,13 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(p.DistDir(), "ssh-manager-20261001-100000.age"), []byte("x"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	// An installed token, for the token page to offer forgetting. Its file
+	// is a temp one: the variable npm itself reads moves it there.
+	npmrc := filepath.Join(t.TempDir(), ".npmrc")
+	if err := os.WriteFile(npmrc, []byte("//registry.npmjs.org/:_authToken=x\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("NPM_CONFIG_USERCONFIG", npmrc)
 	var openable string
 	for _, s := range snapshots.List(p.SnapshotsDir()) {
 		if !snapshots.HoldsKeyMaterial(s) {
@@ -259,7 +266,7 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 		t.Fatal("the changes above took no snapshot to offer a restore of")
 	}
 	for _, page := range []string{"/", "/profiles", "/hosts", "/hosts/gh", "/hosts/devbox", "/keys", "/snapshots",
-		"/snapshots/" + openable, "/keys/" + fixtureKey(t, c), "/doctor", "/audit"} {
+		"/snapshots/" + openable, "/keys/" + fixtureKey(t, c), "/doctor", "/audit", "/tokens"} {
 		for _, m := range action.FindAllStringSubmatch(c.get(page).Body.String(), -1) {
 			seen[m[1]] = true
 			_, change := actionFields[m[1]]

@@ -33,11 +33,12 @@ func TestEveryPageRenders(t *testing.T) {
 		"/history":                              "host add",
 		"/history/" + opID:                      "host.add",
 		"/history/" + opID[:8]:                  "Manifest",
-		"/doctor":                               "sshmgr doctor",
+		"/doctor":                               "authama doctor",
 		"/audit":                                "Deployments",
 		"/about/licenses":                       "Permission is hereby granted",
+		"/tokens":                               "authama token list",
 	}
-	if len(pages) < 13 {
+	if len(pages) < 14 {
 		t.Fatal("the page list shrank")
 	}
 	for path, want := range pages {

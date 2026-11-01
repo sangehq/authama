@@ -18,7 +18,7 @@ func newBundleCmd() *cobra.Command {
 	var keep int
 	cmd := &cobra.Command{
 		Use:   "bundle",
-		Short: "Encrypted backup of keys + state",
+		Short: "Write an encrypted backup of keys + state (read back with restore)",
 		Long: "Encrypted backup of keys + state.\n\n" +
 			"Old bundles are kept, not pruned: they are encrypted, and silently deleting the\n" +
 			"only copy of a key would be worse than letting them accumulate. Pass --keep to\n" +
@@ -75,7 +75,7 @@ func newRestoreCmd() *cobra.Command {
 	var yes bool
 	cmd := &cobra.Command{
 		Use:   "restore <bundle.age>",
-		Short: "Decrypt and lay keys back",
+		Short: "Restore keys + state from an encrypted bundle (see bundle)",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			if err := confirmOrAbort(c, "Restore ~/.ssh from this bundle? (current tree is snapshotted first)", yes); err != nil {

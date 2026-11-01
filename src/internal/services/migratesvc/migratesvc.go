@@ -50,7 +50,7 @@ func Migrate(p paths.Paths, force bool, stamp string) (Result, error) {
 	}
 	if !force {
 		return Result{}, fmt.Errorf("both %s and %s exist - inspect them, then re-run "+
-			"`sshmgr migrate --force` to back up the current home and replace it with the legacy one",
+			"`authama migrate --force` to back up the current home and replace it with the legacy one",
 			legacy, home)
 	}
 	backup := filepath.Join(filepath.Dir(home), filepath.Base(home)+".replaced-"+stamp)

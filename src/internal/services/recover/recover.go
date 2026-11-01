@@ -28,7 +28,7 @@ func Script(p paths.Paths, m *manifest.Manifest, selector string) (string, error
 		return string(fixkeysScript), nil
 	}
 	if m == nil {
-		return "", fmt.Errorf("no manifest - run `sshmgr init` first")
+		return "", fmt.Errorf("no manifest - run `authama init` first")
 	}
 	ref, err := m.ResolveKeySelector(selector)
 	if err != nil {
@@ -37,7 +37,7 @@ func Script(p paths.Paths, m *manifest.Manifest, selector string) (string, error
 	keyName := ref.KeyName
 	pubPath := m.KeyPath(p.SSHDir, ref) + ".pub"
 	if !exists(pubPath) {
-		return "", fmt.Errorf("public key not found for %q - run `sshmgr reconcile` first", ref)
+		return "", fmt.Errorf("public key not found for %q - run `authama ssh reconcile` first", ref)
 	}
 	b, err := os.ReadFile(pubPath)
 	if err != nil {

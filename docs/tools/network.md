@@ -19,13 +19,13 @@ Add `requires_vpn` (and optionally `vpn_name`) to the host in the manifest:
 `view <alias>` then shows a reminder, and any unreachable network action names the
 VPN (and links its `vpn_url` if set).
 
-## `sshmgr net [selector]`
+## `authama ssh net [selector]`
 
 Shows the connection status of every host (filter by alias, profile, or key), plus
 a VPN/tunnel indicator:
 
 ```sh
-sshmgr net
+authama ssh net
 # PROFILE  HOST        ADDRESS              STATUS     NOTE
 # work     hpc         hpc.example.edu:443   ○ offline  needs VPN (Campus VPN)
 # personal github.com  github.com:22        ● online
@@ -51,7 +51,7 @@ anything.
 - As a backstop, every underlying `ssh` / `ssh-copy-id` call is bounded by a hard
   timeout, so no network operation can hang indefinitely.
 
-So if you forget the VPN, `sshmgr rotate work_hpc-ed25519` returns in a few
+So if you forget the VPN, `authama ssh rotate work_hpc-ed25519` returns in a few
 seconds with *"cannot rotate - ... requires a VPN (Campus VPN); connect it and retry"*
 rather than wedging your terminal.
 

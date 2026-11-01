@@ -1,0 +1,30 @@
+{
+  "_help": "Composer auth.json / COMPOSER_AUTH. Map each host to a known 'service' (run `authama token providers`) OR an explicit 'type'. Token services use 'env'; http-basic uses 'user_env'+'pass_env'; bitbucket uses 'key_env'+'secret_env'; custom-headers uses 'headers' with ${VAR}. This file stores ENV VAR NAMES, not secrets — safe to commit. Delete the hosts you don't use. For self-hosted GitLab / GitHub Enterprise, also add the host to gitlab-domains / github-domains in your composer.json `config`.",
+  "composer": {
+    "github.com":          { "service": "github", "env": "GH_TOKEN" },
+    "github.example.com":  { "service": "github-enterprise", "env": "GHE_TOKEN" },
+    "gitlab.com":          { "service": "gitlab", "env": "GITLAB_TOKEN" },
+    "gitlab.example.org":  { "service": "gitlab-oauth", "env": "GITLAB_OAUTH_TOKEN" },
+    "bitbucket.org":       { "service": "bitbucket", "key_env": "BB_KEY", "secret_env": "BB_SECRET" },
+    "gitea.example.org":   { "service": "gitea", "user_env": "GITEA_USER", "pass_env": "GITEA_TOKEN" },
+    "codeberg.org":        { "service": "codeberg", "env": "CODEBERG_TOKEN" },
+    "code.example.org":    { "service": "forgejo", "env": "FORGEJO_TOKEN" },
+    "dev.azure.com":       { "service": "azure-devops", "user_env": "ADO_USER", "pass_env": "ADO_PAT" },
+    "git.sr.ht":           { "service": "sourcehut", "user_env": "SRHT_USER", "pass_env": "SRHT_TOKEN" },
+    "repo.packagist.com":  { "service": "private-packagist", "user_env": "PACKAGIST_USER", "pass_env": "PACKAGIST_TOKEN" },
+    "packagist.com":       { "service": "packagist", "user_env": "PACKAGIST_COM_USER", "pass_env": "PACKAGIST_COM_TOKEN" },
+    "satis.example.org":   { "service": "satis", "user_env": "SATIS_USER", "pass_env": "SATIS_PASS" },
+    "repo.repman.io":      { "service": "repman", "user_env": "REPMAN_USER", "pass_env": "REPMAN_TOKEN" },
+    "packeton.example.org":{ "service": "packeton", "user_env": "PACKETON_USER", "pass_env": "PACKETON_TOKEN" },
+    "example.jfrog.io":    { "service": "artifactory", "user_env": "ARTIFACTORY_USER", "pass_env": "ARTIFACTORY_TOKEN" },
+    "dl.cloudsmith.io":    { "service": "cloudsmith", "user_env": "CLOUDSMITH_USER", "pass_env": "CLOUDSMITH_TOKEN" },
+    "nexus.example.org":   { "service": "nexus", "user_env": "NEXUS_USER", "pass_env": "NEXUS_PASS" },
+    "php.fury.io":         { "service": "gemfury", "user_env": "GEMFURY_USER", "pass_env": "GEMFURY_TOKEN" },
+    "composer.unlock.sh":  { "service": "unlock-sh", "user_env": "UNLOCK_USER", "pass_env": "UNLOCK_TOKEN" },
+    "repo.magento.com":    { "service": "magento", "user_env": "MAGENTO_PUBLIC", "pass_env": "MAGENTO_PRIVATE" },
+    "nova.laravel.com":    { "service": "laravel-nova", "user_env": "NOVA_USERNAME", "pass_env": "NOVA_LICENSE" },
+    "spark.laravel.com":   { "service": "laravel-spark", "user_env": "SPARK_USERNAME", "pass_env": "SPARK_LICENSE" },
+    "bearer.example.org":  { "service": "generic-token", "env": "BEARER_TOKEN" },
+    "headers.example.org": { "service": "generic-headers", "headers": ["API-TOKEN: ${MY_API_TOKEN}", "X-Org: acme"] }
+  }
+}

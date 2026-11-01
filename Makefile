@@ -1,4 +1,4 @@
-# sshmgr - dev front door. Run from the repo root:  make <target>
+# authama (Authentication Access Manager; formerly sshmgr) - dev front door. Run from the repo root:  make <target>
 #
 # Pure Go: no venv, no interpreter, no bootstrap step. `make build` is enough to
 # get a working binary, and every other target works off the toolchain already
@@ -10,8 +10,11 @@
 # module, so it lands in build/ at the root: that is where you look for the
 # binary, and it stays one directory rather than one per module.
 MODULE  := src
-BIN     := build/sshmgr
-PKG     := ./cmd/sshmgr
+BIN     := build/authama
+PKG     := ./cmd/authama
+# The compatibility build: the same program under its v3 name.
+COMPAT_BIN := build/sshmgr
+COMPAT_PKG := ./cmd/sshmgr
 # A release carries two tags on the same commit, and this matches the first:
 #
 #   v3.0.1      the release. GoReleaser, the installers and `git describe` use
@@ -31,7 +34,7 @@ VERSION := $(shell git describe --tags --match 'v[0-9]*' --always --dirty 2>/dev
 LDFLAGS := -s -w -X github.com/simtabi/ssh-manager/src/v3/internal/version.Version=$(VERSION)
 GO      := go -C $(MODULE)
 
-.PHONY: help build build-all test vet fmt fmt-check lint lint-all ci check ci-linux e2e feature-check \
+.PHONY: help build build-all test vet fmt fmt-check lint lint-all ci check ci-linux e2e feature-check docker-shell docker-run docker-down \
         cross dist clean doctor reconcile render rotate bundle tabler-check tabler-update tabler-vendor
 
 help:  ## list targets
@@ -52,7 +55,8 @@ help:  ## list targets
 build: clean ## compile the binary into a freshly emptied build/ (FORCE=1 to rebuild deps too)
 	@mkdir -p build
 	$(GO) build $(if $(FORCE),-a,) -trimpath -ldflags '$(LDFLAGS)' -o ../$(BIN) $(PKG)
-	@echo "built $(BIN)  ->  $$(./$(BIN) version)"
+	$(GO) build $(if $(FORCE),-a,) -trimpath -ldflags '$(LDFLAGS)' -o ../$(COMPAT_BIN) $(COMPAT_PKG)
+	@echo "built $(BIN) and $(COMPAT_BIN)  ->  $$(./$(BIN) version)"
 
 build-all: ## compile every package (what CI gated on before `ci` existed)
 	$(GO) build ./...
@@ -105,6 +109,24 @@ ci-linux: ## run the CI gate inside a linux container (needs docker)
 	docker run --rm -v "$(CURDIR)":/w -w /w golang:$(GOVERSION) \
 		sh -c 'apt-get -qq update >/dev/null && apt-get -qq install -y openssh-client >/dev/null && \
 		       go -C $(MODULE) build ./... && go -C $(MODULE) vet ./... && go -C $(MODULE) test ./...'
+
+# The dev container (Dockerfile + compose.yaml). Its home is ./.authama-home,
+# not yours, unless AUTHAMA_DEV_HOME says otherwise.
+COMPOSE := docker compose
+
+docker-shell: ## build + start the dev container and open a shell in it
+	@command -v docker >/dev/null 2>&1 || { echo "docker is not installed"; exit 1; }
+	@mkdir -p $${AUTHAMA_DEV_HOME:-.authama-home}
+	$(COMPOSE) up -d --build
+	$(COMPOSE) exec authama bash
+
+docker-run: ## run one command in the dev container: make docker-run ARGS="token list"
+	@mkdir -p $${AUTHAMA_DEV_HOME:-.authama-home}
+	$(COMPOSE) up -d --build
+	$(COMPOSE) exec authama authama $(ARGS)
+
+docker-down: ## stop and remove the dev container
+	$(COMPOSE) down
 
 # Tagged out of the ordinary suite: it mints six real keypairs and does an age
 # round trip. It builds its own binary, so it does not depend on `build`.
@@ -174,13 +196,13 @@ doctor: build ## verify environment (FIX=1 to auto-fix perms first)
 	$(BIN) doctor $(if $(FIX),--fix,)
 
 reconcile: build ## make ~/.ssh match the manifest
-	$(BIN) reconcile
+	$(BIN) ssh reconcile
 
 render: build ## re-render config from the manifest
-	$(BIN) config render
+	$(BIN) ssh config render
 
 rotate: build ## rotate a key:  make rotate KEY=<profile/key>
-	$(BIN) rotate $(KEY)
+	$(BIN) ssh rotate $(KEY)
 
 bundle: build ## encrypted backup
-	$(BIN) bundle
+	$(BIN) ssh bundle

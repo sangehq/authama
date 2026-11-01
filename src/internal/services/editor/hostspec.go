@@ -15,7 +15,7 @@ import (
 )
 
 // HostSpec is one compact host declaration: `<alias> <host>[:port] <user> [role]`,
-// e.g. `dani-prd-web-00 206.189.185.129 ploi web`. The role, when given, is
+// e.g. `web-01 203.0.113.21 ploi web`. The role, when given, is
 // stored as a tag. Port 0 means "not given": 22 on add, unchanged on update.
 type HostSpec struct {
 	Alias    string   `json:"alias"`

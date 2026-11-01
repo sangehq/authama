@@ -52,7 +52,7 @@ func newHostCmd() *cobra.Command {
 			// The block renders now; the key it points at does not exist until
 			// something mints it, so say so rather than leaving ssh to report it
 			// as a permission denial.
-			_, _ = fmt.Fprintf(c.OutOrStdout(), "added host %s to %s (run `sshmgr reconcile` to mint its "+
+			_, _ = fmt.Fprintf(c.OutOrStdout(), "added host %s to %s (run `authama ssh reconcile` to mint its "+
 				"key)\n", args[1], args[0])
 			return applyManifestEdit(c, p)
 		},
@@ -60,7 +60,7 @@ func newHostCmd() *cobra.Command {
 	add.Flags().StringVarP(&hostname, "hostname", "H", "", "host to connect to")
 	add.Flags().StringVarP(&user, "user", "u", "", "ssh user")
 	add.Flags().IntVarP(&port, "port", "p", 22, "ssh port")
-	add.Flags().StringVar(&provider, "provider", "", "deployment adapter for this host (see 'sshmgr providers')")
+	add.Flags().StringVar(&provider, "provider", "", "deployment adapter for this host (see 'authama ssh providers')")
 	add.Flags().StringVar(&tokenEnv, "token-env", "", "env var holding the provider API token (e.g. GH_TOKEN_WORK)")
 	add.Flags().StringVar(&keyName, "key-name", "", "use this key instead of the derived <profile>_<alias>-<algo> name")
 	add.Flags().StringArrayVar(&tags, "tag", nil, "repeatable")
@@ -102,7 +102,7 @@ func newHostCmd() *cobra.Command {
 			_, _ = fmt.Fprintf(c.OutOrStdout(), "edited host %s\n", args[1])
 			if c.Flags().Changed("key-name") {
 				_, _ = fmt.Fprintln(c.OutOrStdout(), "  the key it now names may not exist yet - "+
-					"run `sshmgr reconcile` to mint it")
+					"run `authama ssh reconcile` to mint it")
 			}
 			if err := applyManifestEdit(c, p); err != nil {
 				return err
@@ -118,7 +118,7 @@ func newHostCmd() *cobra.Command {
 	edit.Flags().StringVarP(&eHostname, "hostname", "H", "", "host to connect to")
 	edit.Flags().StringVarP(&eUser, "user", "u", "", "ssh user")
 	edit.Flags().IntVarP(&ePort, "port", "p", 22, "ssh port")
-	edit.Flags().StringVar(&eProvider, "provider", "", "deployment adapter for this host (see 'sshmgr providers')")
+	edit.Flags().StringVar(&eProvider, "provider", "", "deployment adapter for this host (see 'authama ssh providers')")
 	edit.Flags().StringVar(&eTokenEnv, "token-env", "", "env var holding the provider API token (e.g. GH_TOKEN_WORK)")
 	edit.Flags().StringVar(&eKeyName, "key-name", "", "use this key instead of the derived <profile>_<alias>-<algo> name")
 	edit.Flags().StringVar(&eProxy, "proxy", "", proxyFlagHelp+`; "none" removes it`)

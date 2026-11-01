@@ -1,6 +1,8 @@
-// Command sshmgr is the ssh-manager binary: a profile-based SSH key and config
-// lifecycle manager. As of v2 it is a single self-contained Go program with no
-// interpreter - every verb is native Go.
+// Command sshmgr is the compatibility build of authama (cmd/authama): the same
+// program under the name v1-v3 shipped as, so existing scripts, rendered
+// ProxyCommand lines (`sshmgr vm proxy`) and scheduled notifications keep
+// working. Its SSH verbs are accepted at the top level as well as under `ssh`.
+// The end-to-end and invariant tests live in this package and build it.
 package main
 
 import (

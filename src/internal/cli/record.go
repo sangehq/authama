@@ -106,6 +106,10 @@ func recordCommands(root *cobra.Command) {
 
 func scopeFor(c *cobra.Command, args []string) mutation.Scope {
 	name := strings.TrimSpace(strings.TrimPrefix(c.CommandPath(), c.Root().Name()))
+	// `ssh deploy` and the hidden top-level `deploy` are one command, and the
+	// history, its --command filter and every operation recorded before the
+	// group existed all spell it without the group.
+	name = strings.TrimPrefix(name, sshGroup+" ")
 	source := history.SourceCLI
 	if name == "" || name == "tui" {
 		name, source = "tui", history.SourceTUI

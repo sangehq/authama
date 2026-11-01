@@ -13,10 +13,10 @@ import (
 
 const fixture = `{
   "version": 1,
-  "defaults": {"git": {"profile": "imanimanyara", "orgs": {"adelsaiq": "dannielagumo"}}},
+  "defaults": {"git": {"profile": "imanimanyara", "orgs": {"clientco": "example-user"}}},
   "profiles": {
     "imanimanyara": {"hosts": [{"alias": "github-imanimanyara", "hostname": "github.com", "user": "git", "key_name": "imanimanyara_github-ed25519"}]},
-    "dannielagumo": {"hosts": [{"alias": "github-dannielagumo", "hostname": "github.com", "user": "git", "key_name": "dannielagumo_github-ed25519"}]},
+    "example-user": {"hosts": [{"alias": "github-example-user", "hostname": "github.com", "user": "git", "key_name": "example-user_github-ed25519"}]},
     "unc": {"hosts": [{"alias": "unc", "hostname": "sc.its.unc.edu", "user": "git", "key_name": "unc_git-ed25519"}]}
   }
 }`
@@ -47,7 +47,7 @@ func TestParse(t *testing.T) {
 		{"git@github.com:laranail/emojis.git", true, "ssh", "laranail", "emojis", ""},
 		{"ssh://git@github.com/laranail/emojis.git", true, "ssh", "laranail", "emojis", ""},
 		{"git@github-imanimanyara:simtabi/pheg.git", true, "profile", "simtabi", "pheg", "imanimanyara"},
-		{"git@github-dannielagumo:adelsaiq/app.git", true, "profile", "adelsaiq", "app", "dannielagumo"},
+		{"git@github-example-user:clientco/app.git", true, "profile", "clientco", "app", "example-user"},
 		// Not GitHub: an alias for another host, an unknown alias, GitLab.
 		{"git@unc:group/project.git", false, "", "", "", ""},
 		{"git@github-nobody:simtabi/x.git", false, "", "", "", ""},
@@ -75,7 +75,7 @@ func TestURLFor(t *testing.T) {
 	if _, err := URLFor(m, "profile", "simtabi", "pheg", "unc"); err == nil {
 		t.Error("a profile with no github.com host has no alias to use")
 	}
-	noGit := load(t, strings.Replace(fixture, `"defaults": {"git": {"profile": "imanimanyara", "orgs": {"adelsaiq": "dannielagumo"}}},`, "", 1))
+	noGit := load(t, strings.Replace(fixture, `"defaults": {"git": {"profile": "imanimanyara", "orgs": {"clientco": "example-user"}}},`, "", 1))
 	if _, err := URLFor(noGit, "ssh", "simtabi", "pheg", ""); err == nil || !strings.Contains(err.Error(), "defaults.git.profile") {
 		t.Errorf("ssh mode without a bound key: %v", err)
 	}
@@ -99,10 +99,10 @@ func (f *fakeGit) SetOrigin(_, url string) error { f.set = url; return nil }
 
 func TestUseProvesTheURLBeforeRewriting(t *testing.T) {
 	m := load(t, fixture)
-	g := &fakeGit{origin: "https://github.com/adelsaiq/app.git"}
+	g := &fakeGit{origin: "https://github.com/clientco/app.git"}
 	ch, err := Use(g, m, "/r", "profile", "", false)
-	if err != nil || !ch.Applied || g.set != "git@github-dannielagumo:adelsaiq/app.git" {
-		t.Fatalf("ch=%+v err=%v set=%q: adelsaiq maps to dannielagumo", ch, err, g.set)
+	if err != nil || !ch.Applied || g.set != "git@github-example-user:clientco/app.git" {
+		t.Fatalf("ch=%+v err=%v set=%q: clientco maps to example-user", ch, err, g.set)
 	}
 
 	g = &fakeGit{origin: "https://github.com/simtabi/pheg.git", lsErr: errors.New("Permission denied (publickey)")}
@@ -132,7 +132,7 @@ func TestUseDryRunAndNoOps(t *testing.T) {
 		t.Errorf("no origin: %+v", ch)
 	}
 	g = &fakeGit{origin: "https://github.com/simtabi/pheg.git"}
-	if ch, err := Use(g, m, "/r", "profile", "dannielagumo", true); err != nil || ch.To != "git@github-dannielagumo:simtabi/pheg.git" {
+	if ch, err := Use(g, m, "/r", "profile", "example-user", true); err != nil || ch.To != "git@github-example-user:simtabi/pheg.git" {
 		t.Errorf("--profile overrides the owner map: %+v %v", ch, err)
 	}
 }

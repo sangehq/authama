@@ -1,6 +1,9 @@
 # Feature catalog
 
-The complete, tested surface of ssh-manager. Every row is exercised by the test suite:
+The complete, tested surface of authama (Authentication Access Manager): SSH
+management under `authama ssh`, auth tokens under `authama token`, and the
+shared commands at the top level. SSH verbs are listed by their short name
+(`reconcile` is `authama ssh reconcile`; the top-level spelling still works). Every row is exercised by the test suite:
 **U** = unit tests (`go test ./...`), **E** = end-to-end smoke (`make e2e`), **F** =
 per-command feature check (`make feature-check`, which exercises every command in
 a sandbox). Run all three with `make test e2e feature-check`.
@@ -19,8 +22,8 @@ when the profile has a category.
 | `init --force` | Overwrite the seed files with fresh defaults, **in place** (no backup). | U·F |
 | `init --force --backup` | Same, but first copy the old files into `~/.config/ssh-manager/.state/init-backup-<ts>/`. | U·F |
 | `migrate [--force] [-y]` | Move a legacy `~/.sshmgr` to the **resolved** home (`$SSH_MANAGER_HOME` override-aware; auto-migration handles the simple case on any command; this resolves the stranded both-exist case `doctor` warns about - `--force` backs up the current home and replaces it). | U |
-| `doctor` | Verify the environment: deps, perms, agent, known_hosts, ≤1-old-key invariant, config drift, orphan/duplicate keys, alias collisions. Prints the **resolved home**, `~/.ssh`, and the active provider-catalog source; warns about a stranded legacy home. | U·E·F |
-| `doctor --fix` | Re-assert canonical perms on every tool-managed path (`~/.ssh` tree + home secrets). | U·F |
+| `doctor` | Verify the environment: deps, perms, agent, known_hosts, ≤1-old-key invariant, config drift, orphan/duplicate keys, alias collisions, and the modes of the token credential files (a loose one is a warning; `--strict` fails on it). Prints the **resolved home**, `~/.ssh`, and the active provider-catalog source; warns about a stranded legacy home. | U·E·F |
+| `doctor --fix` | Re-assert canonical perms on every tool-managed path (`~/.ssh` tree + home secrets + token credential files). | U·F |
 | `doctor --json` | Machine-readable report for scripting/monitoring. | U |
 | `doctor --strict` | Treat every dangling-key state as a failure, not only the blocking ones (for CI). | U |
 | `version` / `--version` | Print the version. | F |
@@ -46,7 +49,7 @@ project-local mode. See [installation.md](installation.md) for the full layout.
 | `termius export [--out PATH\|-] [--skip ALIAS] [--include-git] [--open]` | Write a Termius CSV import (group = profile, label = alias) and list the key to attach to each host; `--open` opens Termius on macOS. | U·F |
 | `termius keys [ALIAS] [--clear-after DUR] [--clear] [--print] [--include-git] [--skip ALIAS]` | The CSV carries no keys: list each host's Termius key label and key path, or copy one host's private key to the clipboard (never printed unless `--print`) with the label to paste into Keychain → New Key. `--include-git` widens the list; a named git host is found without it. | U·F |
 | `import [path] [--force] [--dry-run] [-y]` | Onboard an existing `~/.ssh` (adopt keys + hosts) into the manifest + inventory. Refuses to replace a non-empty manifest without `--force` (which backs it up first). | U·F |
-| `diff` | Preview manifest vs. on-disk reality (config + which keys are missing/present). | U·F |
+| `diff` | Preview manifest vs. on-disk reality (config + which keys are missing/present); what `reconcile` would change. `config check` is the exit-code-only version. | U·F |
 
 ## Keys
 
@@ -64,14 +67,14 @@ project-local mode. See [installation.md](installation.md) for the full layout.
 |---|---|---|
 | `show <profile\|alias\|profile/key>` | Everything about one thing at once: the manifest entry, the key files and their modes, the rendered config block, and the pins. An auth failure is usually a disagreement between those four, and this is where you see it. | U |
 | `list [--profile/--provider/--type/--tag]` | Filterable tree across profiles. | U·E·F |
-| `view <profile\|alias>` | Resolved host config + key + deployment status; shows a **VPN reminder** for `requires_vpn` hosts. | U·F |
+| `view <profile\|alias>` | The connect view (compare `show`, the inventory view): resolved host config + key + deployment status; shows a **VPN reminder** for `requires_vpn` hosts. | U·F |
 | `validate [key\|profile]` | Check each keypair: both parse, public key is *derived from* the private (`ssh-keygen -y`), perms correct; encrypted keys are noted not failed. Exit ≠0 on failure. | U·E·F |
 | `providers [--export [--force]]` | List the active provider catalog (your `<home>/providers.json` if present, else the shipped default) + whether each credential is set. `--export` writes an editable copy into the home. | U·E·F |
 | `net [selector]` | Per-host connection status + a VPN/tunnel indicator. Exit ≠0 if a `requires_vpn` host is unreachable. | U·F |
 | `expiry` | Per-key rotation-age table (ok / due_soon / overdue), from each key's stored `expires_on`. | U·E·F |
 | `audit [--notify]` | Where each key is deployed + expiry + hygiene + recent activity (optionally fire a desktop alert). | U·E·F |
-| `serve [--addr/--port/--allow-remote/--allow-host/--read-only/--no-open/--token-file]` | The web UI on `127.0.0.1:7822`: overview, profiles, hosts, keys, snapshots and their diffs, history, doctor, audit. Makes the everyday changes, each previewed on a throwaway copy and made only if nothing moved since: profiles and hosts (one at a time or from specs), categories, deletes with or without key files, reconcile, keygen, key add, render, clean, prune, snapshot restore, bundles, doctor `--fix`, Docker contexts, notifications. Runs deploy, rotate (one key or many), rollback and bundle restore as jobs, with their output streamed. Downloads the flat `ssh_config` and the Termius CSV. Signs in with the token in the printed address. | U |
-| `history [--host/--profile/--key/--since/--until/--command/--source/--limit/--json]`, `history show <op>` | Every change sshmgr has made, newest first, from `log/history.db`: command, result, snapshot, audit events, and the manifest before and after. The first run imports `audit.log`, the inventory's dates and the snapshots. | U |
+| `serve [--addr/--port/--allow-remote/--allow-host/--read-only/--no-open/--token-file]` | The web UI on `127.0.0.1:7822`: overview, profiles, hosts, keys, auth tokens, snapshots and their diffs, history, doctor, audit. Makes the everyday changes, each previewed on a throwaway copy and made only if nothing moved since: profiles and hosts (one at a time or from specs), categories, deletes with or without key files, reconcile, keygen, key add, render, clean, prune, snapshot restore, bundles, doctor `--fix`, Docker contexts, notifications, token sync and forget. Runs deploy, rotate (one key or many), rollback and bundle restore as jobs, with their output streamed. Downloads the flat `ssh_config` and the Termius CSV. Signs in with the token in the printed address. | U |
+| `history [--host/--profile/--key/--since/--until/--command/--source/--limit/--json]`, `history show <op>` | Every change authama has made (SSH or token), newest first, from `log/history.db`: command, result, snapshot, audit events, and the manifest before and after. The first run imports `audit.log`, the inventory's dates and the snapshots. | U |
 
 ## Deploy, rotate, network/VPN
 
@@ -118,10 +121,40 @@ bounded SSH-level reachability probe first, so a down or VPN-gated host (includi
 | `vm add PROFILE ALIAS --hypervisor H --vm NAME -u USER [--key-name] [-y]` | Add a local VM as a host; its address is resolved at connect time through `ProxyCommand "<sshmgr>" vm proxy ALIAS`. | U·F |
 | `vm docker-context ALIAS` | Create or update a Docker context `ssh://ALIAS` for a VM host. | U·F |
 | `notify install\|test [-y]` | Scheduled desktop expiry reminders (launchd / systemd-user-or-cron / schtasks). | U·F |
-| `tui` (or a bare `sshmgr` on a terminal) | Interactive arrow-key UI over the whole facade. | U |
+| `tui` (or a bare `authama` on a terminal) | Interactive arrow-key UI over the whole facade, SSH and auth tokens. | U |
 
 Cross-cutting flags: `--yes`/`-y` on destructive verbs (with `--revoke` on deletes);
 `--passphrase` on key generation (a plain flag: leaving it off is the "no" answer).
+
+## Auth tokens
+
+`authama token …` builds the credential files Composer, npm, Docker, git and curl
+read, from a config that names environment variables and never holds a secret.
+Ported from auth-token-manager; see [tools/tokens.md](tools/tokens.md) and the
+[migration guide](migration.md).
+
+| Command | What it does | Tests |
+|---|---|---|
+| `token apply [--target]... [--config] [--project] [--source] [--creds-store-mode] [--no-env-hint]` | Resolve the config from the environment and write each tool's file: `auth.json`, `.npmrc`, `.docker/config.json`, `.git-credentials`, `.netrc`. Atomic, owner-only, merged into what is there (other entries kept), a refused malformed file left untouched. | U·E·F |
+| `token apply --dry-run` / `--exports` | The resolved credentials as masked JSON, or `COMPOSER_AUTH` as a shell export; nothing written. | U·F |
+| `token set --target\|--service --server [--username] [--scope] [--project]` | Add one token, or replace the one for that host (how a token is rotated or edited), from stdin or a hidden prompt. | U·E·F |
+| `token list [--target]... [--project] [--json] [--reveal [-y]]` | What is installed, secrets masked unless revealed. | U·E·F |
+| `token show TARGET HOST [--project] [--json] [--reveal [-y]]` | One installed entry in full: tool, host, kind, user, file. | U·E |
+| `token status [--config] [--project] [--json]` | Which config is used and why, each file and its mode, entries per tool and how many resolve now, with the variables `apply` would skip. Never fails. | U·E |
+| `token copy TARGET HOST [--project]` | Copy one token to the clipboard without printing it. | U·F |
+| `token delete TARGET HOST [--project] [-y]` | Delete one token from its file; asks first at a terminal. | U·E·F |
+| `token audit [--target]... [--config] [--project]` | Owner-only modes and `.gitignore` coverage; writes nothing; non-zero when something needs fixing. | U·E·F |
+| `token examples [--target]... [--project] [--json]` | Each file's shape with placeholder values. | U·F |
+| `token init [FILE] [--target]...` | A starter config, never over an existing file. | U·F |
+| `token providers` | The Composer services a config can name, and the well-known npm, Docker and git hosts. | U·F |
+| `token import [FILE] [--dry-run]` | Copy an auth-token-manager (or any) token config to `tokens.json`, after parsing it. | U·F |
+| `token shell-aliases [--install\|--uninstall\|--print] [--file] [--login] [--no-backup] [--quiet]` | The `atm`, `atm-ui`, `atm-doctor`, `atm-init` aliases. | U·F |
+
+Docker registries kept in a credential store are logged in with
+`docker login --password-stdin` or refused, never written inline where Docker
+would ignore them. Values that could inject a second credential (a newline in a
+token, whitespace in a host) are refused before anything is written. Under
+`--dev-root` every file lands in the sandbox and `docker login` is refused.
 
 ## Providers
 
@@ -151,6 +184,9 @@ script a silent no-op.
   moment they appear.
 - **Snapshot before mutate** - every mutating command backs up `~/.ssh` first.
 - The `.env` is gitignored, 0600, and excluded from the encrypted bundle.
+- **Token files are owner-only** (0600) from the moment they are written, secrets are
+  never printed unless `--reveal` is confirmed, and history records which file and host
+  changed, never the value.
 
 ---
 

@@ -176,7 +176,7 @@ func checkVM(profile string, h Host) error {
 	}
 	if h.VM.Hypervisor == HypervisorOrbStack || h.VM.Hypervisor == HypervisorPodman {
 		return fmt.Errorf("%s/%s: %s runs its own SSH access and keys, so it cannot be a host; "+
-			"use sshmgr vm docker-context for Docker", profile, h.Alias, h.VM.Hypervisor)
+			"use authama ssh vm docker-context for Docker", profile, h.Alias, h.VM.Hypervisor)
 	}
 	if strings.TrimSpace(h.VM.Name) == "" {
 		return fmt.Errorf("%s/%s: vm.name is empty", profile, h.Alias)

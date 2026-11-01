@@ -1,8 +1,8 @@
 # bundle / restore - encrypted backup & migration
 
 ```sh
-sshmgr bundle [--recipient age1...] [--output DIR] [--keep N]
-sshmgr restore <bundle.age> [--identity age-identity.txt]
+authama ssh bundle [--recipient age1...] [--output DIR] [--keep N]
+authama ssh restore <bundle.age> [--identity age-identity.txt]
 ```
 
 Uses **age** (X25519 + ChaCha20-Poly1305) - modern, single-binary, far simpler
@@ -17,7 +17,7 @@ than GPG. Install it first: `brew install age` (macOS) / `apt install age` (Linu
   included and its keys stay in 1Password
 - `manifest.json`, `inventory.json`, `providers.json`
 
-It does not carry the files sshmgr renders from the manifest: a category's
+It does not carry the files authama renders from the manifest: a category's
 `profiles/<category>/config` and any legacy `profiles/<profile>/known_hosts`.
 `restore` rebuilds them from the restored manifest, so a bundle cannot plant a
 config that `~/.ssh/config` Includes. An older bundle that carries them still
@@ -59,14 +59,14 @@ and destroying the old.
 
 `restore` snapshots `~/.ssh` first (reversible), decrypts, lays the keys back
 down, re-asserts perms (700/600/644), and re-renders the config from the restored
-manifest so `~/.ssh` is immediately usable. Then `sshmgr load <profile>` to add
+manifest so `~/.ssh` is immediately usable. Then `authama ssh load <profile>` to add
 keys to the agent.
 
 ```sh
 export SSH_MANAGER_AGE_RECIPIENT=age1ql3z7hjy54pw3hyww5ayyfg7z...
-sshmgr bundle -o ~/Backups            # writes ~/Backups/ssh-manager-<stamp>.age (+ sidecars)
+authama ssh bundle -o ~/Backups            # writes ~/Backups/ssh-manager-<stamp>.age (+ sidecars)
 # ... new machine ...
-sshmgr restore ~/Backups/ssh-manager-<stamp>.age -i age-identity.txt
+authama ssh restore ~/Backups/ssh-manager-<stamp>.age -i age-identity.txt
 ```
 
 ---

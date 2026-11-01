@@ -72,7 +72,7 @@ func newSnapshotsCmd() *cobra.Command {
 			// but the user should know what is sitting there.
 			if legacy > 0 {
 				_, _ = fmt.Fprintf(out, "\n%d snapshot(s) predate key exclusion and contain unencrypted private keys.\n"+
-					"Remove them once you no longer need them: sshmgr snapshots prune --keep 0\n", legacy)
+					"Remove them once you no longer need them: authama ssh snapshots prune --keep 0\n", legacy)
 			}
 			return nil
 		},
@@ -86,7 +86,7 @@ func newSnapshotsCmd() *cobra.Command {
 			"Snapshots hold config, known_hosts and public keys - never private keys, since\n" +
 			"they are plaintext archives taken on every mutating command. Restoring puts those\n" +
 			"files back and leaves everything else on disk untouched, so a key minted after the\n" +
-			"snapshot survives the rollback. Use `sshmgr bundle` for encrypted key backups.",
+			"snapshot survives the rollback. Use `authama ssh bundle` for encrypted key backups.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			if err := confirmOrAbort(c, "Restore ~/.ssh config from a snapshot? (private keys are left as they are)", yes); err != nil {

@@ -48,7 +48,7 @@ func (r *Rotator) rotateOnePassword(profile, keyName string, hosts []manifest.Ho
 	curPriv := filepath.Join(pdir, keyName)
 	curPub := curPriv + ".pub"
 	if !exists(curPub) {
-		return RotateReport{}, fmt.Errorf("key not present: %s - run `sshmgr reconcile` first", curPub)
+		return RotateReport{}, fmt.Errorf("key not present: %s - run `authama ssh reconcile` first", curPub)
 	}
 	report := RotateReport{KeyName: keyName}
 	if fp, err := r.ks.Fingerprint(curPub); err == nil {

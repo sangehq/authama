@@ -4,11 +4,11 @@ The case profiles exist for: one hostname, two identities, and neither able to
 authenticate as the other.
 
 ```sh
-sshmgr profile add personal
-sshmgr profile add work
-sshmgr host add personal github-personal -H github.com -u git --provider github
-sshmgr host add work     github-work     -H github.com -u git --provider github
-sshmgr reconcile
+authama ssh profile add personal
+authama ssh profile add work
+authama ssh host add personal github-personal -H github.com -u git --provider github
+authama ssh host add work     github-work     -H github.com -u git --provider github
+authama ssh reconcile
 ```
 
 That mints two keys and writes two `Host` blocks against the same hostname, each
@@ -37,9 +37,9 @@ Or make it automatic for a whole directory, in `~/.gitconfig`:
 Deploy both public keys and confirm which key each alias resolves to:
 
 ```sh
-sshmgr deploy personal_github-ed25519
-sshmgr deploy work_github-ed25519
-sshmgr config show github-work        # ssh -G for that alias
+authama ssh deploy personal_github-ed25519
+authama ssh deploy work_github-ed25519
+authama ssh config show github-work        # ssh -G for that alias
 ```
 
 Full manifest reference: [Configuration](../configuration.md).

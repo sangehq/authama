@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/core/hypervisor"
 	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/dockerctx"
@@ -25,7 +26,7 @@ func newVMCmd() *cobra.Command {
 		Long: "A VM's IP changes, so a VM host renders ProxyCommand \"<sshmgr>\" vm proxy <alias>:\n" +
 			"each connection asks the hypervisor for the VM's current address. Supported:\n" +
 			strings.Join(manifest.Hypervisors, ", ") + ". OrbStack and Podman run their own SSH and keys;\n" +
-			"they are listed, and get a Docker context, but sshmgr does not take their keys over.",
+			"they are listed, and get a Docker context, but authama does not take their keys over.",
 	}
 	cmd.AddCommand(newVMListCmd(), newVMAddCmd(), newVMProxyCmd(), newVMDockerContextCmd())
 	return cmd
@@ -83,7 +84,7 @@ func newVMAddCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(2),
 		RunE: func(c *cobra.Command, args []string) error {
 			if hv == manifest.HypervisorOrbStack || hv == manifest.HypervisorPodman {
-				return fmt.Errorf("%s manages its own SSH access and keys; use `sshmgr vm docker-context` instead of a host", hv)
+				return fmt.Errorf("%s manages its own SSH access and keys; use `authama ssh vm docker-context` instead of a host", hv)
 			}
 			if err := confirmChange(c, fmt.Sprintf("vm add records %s as a %s VM host and re-renders ~/.ssh/config.",
 				args[1], hv), yes); err != nil {
@@ -105,13 +106,13 @@ func newVMAddCmd() *cobra.Command {
 			if err := editor.New(p).AddHost(args[0], alias, f); err != nil {
 				return err
 			}
-			_, _ = fmt.Fprintf(c.OutOrStdout(), "added VM host %s to %s (%s %q); run `sshmgr reconcile` to mint its key, "+
+			_, _ = fmt.Fprintf(c.OutOrStdout(), "added VM host %s to %s (%s %q); run `authama ssh reconcile` to mint its key, "+
 				"then install the public key in the guest\n", alias, args[0], hv, vmName)
 			return applyManifestEdit(c, p)
 		},
 	}
 	c.Flags().StringVar(&hv, "hypervisor", "", strings.Join(manifest.Hypervisors, ", "))
-	c.Flags().StringVar(&vmName, "vm", "", "the VM's name as the hypervisor lists it (see 'sshmgr vm list')")
+	c.Flags().StringVar(&vmName, "vm", "", "the VM's name as the hypervisor lists it (see 'authama ssh vm list')")
 	c.Flags().StringVarP(&user, "user", "u", "", "guest user")
 	c.Flags().StringVar(&keyName, "key-name", "", "use this key instead of the derived <profile>_<alias>-<algo> name")
 	c.Flags().BoolVarP(&yes, "yes", "y", false, "add without confirming (implied when there is no terminal)")
@@ -154,7 +155,7 @@ func newVMProxyCmd() *cobra.Command {
 			ep, err := d.Address(h.VM.Name)
 			if err != nil && !errors.Is(err, hypervisor.ErrOwnKeys) {
 				// Stopped: start it and wait for an address. ssh shows this on stderr.
-				_, _ = fmt.Fprintf(c.ErrOrStderr(), "sshmgr: %v; starting %s %q\n", err, d.Name(), h.VM.Name)
+				_, _ = fmt.Fprintf(c.ErrOrStderr(), brand.Command+": %v; starting %s %q\n", err, d.Name(), h.VM.Name)
 				if serr := d.Start(h.VM.Name); serr != nil {
 					return fmt.Errorf("start %q: %w", h.VM.Name, serr)
 				}

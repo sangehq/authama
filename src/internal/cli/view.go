@@ -17,7 +17,7 @@ import (
 func newViewCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "view <profile|alias>",
-		Short: "Resolved host config + key + deployment status",
+		Short: "One host as ssh will use it: resolved config, key and deployment status (the connect view)",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			p, err := resolvePaths(c)

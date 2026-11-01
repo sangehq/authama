@@ -131,7 +131,7 @@ func reportRemaining(out io.Writer, audit keyaudit.Report) {
 	if len(rest) == 0 {
 		return
 	}
-	_, _ = fmt.Fprintf(out, "\n%d dangling key(s) left alone (they involve key files; see `sshmgr doctor`):\n", len(rest))
+	_, _ = fmt.Fprintf(out, "\n%d dangling key(s) left alone (they involve key files; see `authama doctor`):\n", len(rest))
 	for _, f := range rest {
 		_, _ = fmt.Fprintf(out, "  %s  %s\n", f.State, f.Subject)
 	}

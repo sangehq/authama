@@ -641,7 +641,7 @@ var managedHostOptions = map[string]string{
 	"hostname":           `set "hostname" instead`,
 	"user":               `set "user" instead`,
 	"port":               `set "port" instead`,
-	"userknownhostsfile": `pin host keys with sshmgr knownhosts pin instead (sshmgr keeps every pin in ~/.ssh/known_hosts)`,
+	"userknownhostsfile": `pin host keys with authama ssh knownhosts pin instead (sshmgr keeps every pin in ~/.ssh/known_hosts)`,
 }
 
 // ManagedHostOption reports whether a raw_options key duplicates a line the
@@ -669,12 +669,12 @@ func RawOptionOverlaps(m *Manifest) []string {
 					// No managed Port line is written at the default, so this
 					// one does apply - but sshmgr's own pinning and deploys read
 					// the field and would talk to port 22.
-					out = append(out, fmt.Sprintf("%s/%s: raw_options %q is the port ssh uses, but sshmgr "+
+					out = append(out, fmt.Sprintf("%s/%s: raw_options %q is the port ssh uses, but authama "+
 						"reads the port field and would pin and deploy on 22 - move it to \"port\" instead",
 						pname, h.Alias, k))
 					continue
 				}
-				out = append(out, fmt.Sprintf("%s/%s: raw_options %q duplicates a line sshmgr writes "+
+				out = append(out, fmt.Sprintf("%s/%s: raw_options %q duplicates a line authama writes "+
 					"for every host, so ssh never uses it - remove it and %s",
 					pname, h.Alias, k, use))
 			}
@@ -1336,7 +1336,7 @@ func Load(path string) (*Manifest, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("manifest not found: %s (run: sshmgr init)", path)
+			return nil, fmt.Errorf("manifest not found: %s (run: authama init)", path)
 		}
 		return nil, fmt.Errorf("manifest could not be read: %s: %w", path, err)
 	}

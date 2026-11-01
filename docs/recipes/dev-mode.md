@@ -4,16 +4,16 @@
 render config and pin hosts without touching the tree you actually use.
 
 ```sh
-sshmgr --dev-root ./sandbox init
-sshmgr --dev-root ./sandbox reconcile
-sshmgr --dev-root ./sandbox doctor
+authama --dev-root ./sandbox init
+authama --dev-root ./sandbox ssh reconcile
+authama --dev-root ./sandbox doctor
 ```
 
 Or set it once for a shell:
 
 ```sh
 export SSHMGR_DEV_ROOT=./sandbox
-sshmgr reconcile
+authama ssh reconcile
 ```
 
 The flag wins over the variable, so a shell left in dev mode cannot redirect a
@@ -40,7 +40,7 @@ it overwrites a key you use.
 Every command announces it, on stderr:
 
 ```
-sshmgr: dev mode - writing under /path/to/sandbox, not /Users/you/.ssh
+authama: dev mode - writing under /path/to/sandbox, not /Users/you/.ssh
 ```
 
 and the interactive menu leads with it:

@@ -6,14 +6,14 @@ public keys that went missing or wrong.
 See what a batch would do before it does it:
 
 ```sh
-sshmgr rotate --all --dry-run
+authama ssh rotate --all --dry-run
 ```
 
 Rotate by category, profile, host alias or key, in any mix:
 
 ```sh
-sshmgr rotate --category clients
-sshmgr rotate simtabi github-imanimanyara
+authama ssh rotate --category clients
+authama ssh rotate simtabi github-imanimanyara
 ```
 
 The batch asks once, writes one backup, then rotates each key with the usual
@@ -24,12 +24,12 @@ To rebuild `.pub` files from the keys they belong to (from the private key, or
 from the vault item for a 1Password profile):
 
 ```sh
-sshmgr key regen-pub --all --dry-run
-sshmgr key regen-pub --all
+authama ssh key regen-pub --all --dry-run
+authama ssh key regen-pub --all
 ```
 
 A `.pub` reported as `rewritten` was a different key, so redeploy anything you
-set up from it: `sshmgr deploy <key>`.
+set up from it: `authama ssh deploy <key>`.
 
 Full reference: [`rotate`](../tools/rotate.md#rotating-a-batch) ·
 [`key regen-pub`](../tools/validate.md).

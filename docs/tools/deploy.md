@@ -1,11 +1,11 @@
 # deploy - install a public key on its target(s)
 
 ```sh
-sshmgr deploy <key> [target]
+authama ssh deploy <key> [target]
 ```
 
 - `<key>` is a key name (e.g. `work_hpc-ed25519`). The key must already be minted
-  (`sshmgr reconcile` or `sshmgr keygen`).
+  (`authama ssh reconcile` or `authama ssh keygen`).
 - `[target]` is an optional host alias. Omitted → deploy to **every** host that
   uses the key (one for `per_service`, all for a `shared` profile key).
 
@@ -43,10 +43,10 @@ server's `authorized_keys` / the account's key list.
 ## Examples
 
 ```sh
-sshmgr deploy work_hpc-ed25519            # ssh-copy-id to hpc.example.edu:443
-sshmgr deploy personal_github-ed25519     # gh ssh-key add (or manual if no token)
-sshmgr deploy shareddemo_all-ed25519      # fans out to every host in the profile
-sshmgr audit                              # see what's deployed where
+authama ssh deploy work_hpc-ed25519            # ssh-copy-id to hpc.example.edu:443
+authama ssh deploy personal_github-ed25519     # gh ssh-key add (or manual if no token)
+authama ssh deploy shareddemo_all-ed25519      # fans out to every host in the profile
+authama ssh audit                              # see what's deployed where
 ```
 
 ---

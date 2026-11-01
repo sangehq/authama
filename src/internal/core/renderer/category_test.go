@@ -18,7 +18,7 @@ const categorizedJSON = `{
       {"alias": "github-imani", "hostname": "github.com", "user": "git", "key_name": "imani_github-ed25519"}]},
     "legacy": {"hosts": [
       {"alias": "box", "hostname": "box.example", "user": "me", "key_name": "legacy-ed25519"}]},
-    "adelsaiq": {"category": "clients", "hosts": [
+    "clientco": {"category": "clients", "hosts": [
       {"alias": "github-danniela", "hostname": "github.com", "user": "git", "key_name": "imani_github-ed25519"}]}
   }
 }`
@@ -60,7 +60,7 @@ func TestCategoriesRenderIntoTheirOwnIncludedFiles(t *testing.T) {
 	if !strings.Contains(internal, "IdentityFile ~/.ssh/profiles/internal/personal/imani_github-ed25519\n") {
 		t.Errorf("category file has the wrong IdentityFile:\n%s", internal)
 	}
-	if strings.Contains(internal, "Host *") || strings.Contains(internal, "adelsaiq") {
+	if strings.Contains(internal, "Host *") || strings.Contains(internal, "clientco") {
 		t.Errorf("a category file holds only its own profiles and no Host *:\n%s", internal)
 	}
 }
@@ -136,11 +136,11 @@ func TestMatchAllKeepsIncludesGlobalUnderAForeignHostBlock(t *testing.T) {
 	foreign := "Host somewhere-else\n    User nobody\n\n"
 	composed := ComposeRootConfig(foreign, out[RootConfig])
 
-	if got := identity(t, composed); !strings.HasSuffix(got, "/profiles/clients/adelsaiq/imani_github-ed25519") {
+	if got := identity(t, composed); !strings.HasSuffix(got, "/profiles/clients/clientco/imani_github-ed25519") {
 		t.Errorf("with Match all, the client alias should resolve its key; ssh -G gave %q", got)
 	}
 	bare := strings.Replace(composed, "Match all\n", "", 1)
-	if got := identity(t, bare); strings.Contains(got, "adelsaiq") {
+	if got := identity(t, bare); strings.Contains(got, "clientco") {
 		t.Errorf("without Match all the Include should be scoped to the foreign Host; "+
 			"ssh resolved %q, so the line may no longer be needed", got)
 	}

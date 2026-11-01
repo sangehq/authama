@@ -96,7 +96,7 @@ func TestRegenerateCreatesRewritesAndLeavesAlone(t *testing.T) {
 	if got["work_a-ed25519"].Action != Created || got["work_b-ed25519"].Action != Rewritten {
 		t.Fatalf("results = %+v", got)
 	}
-	if !strings.Contains(got["work_b-ed25519"].Detail, "sshmgr deploy") {
+	if !strings.Contains(got["work_b-ed25519"].Detail, "authama ssh deploy") {
 		t.Errorf("a rewritten .pub should point at redeploying: %q", got["work_b-ed25519"].Detail)
 	}
 	bPubAfter, _ := os.ReadFile(b + ".pub")

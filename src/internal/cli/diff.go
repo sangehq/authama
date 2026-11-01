@@ -17,7 +17,7 @@ import (
 func newDiffCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "diff",
-		Short: "Preview manifest vs. on-disk reality",
+		Short: "Preview what reconcile would change (manifest vs. ~/.ssh)",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			p, err := resolvePaths(c)

@@ -55,6 +55,12 @@ func icaclsCommands(path, owner string) (required [][]string, optional [][]strin
 // the actual enforcement happens through icacls on write. Mirrors
 // v1's windows layer (perms_ok).
 func windowsPermsOK(path string) bool {
+	return WindowsPermsOK(path)
+}
+
+// WindowsPermsOK is windowsPermsOK, exported so callers can test their
+// Windows branch on any host.
+func WindowsPermsOK(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }

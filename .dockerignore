@@ -1,0 +1,14 @@
+# Keep the build context to what the image needs (src/; see the Dockerfile COPYs).
+# Unlike .gitignore, bare patterns match only at the root - hence **/.
+.git
+.github
+.claude
+.authama-home
+build
+docs
+**/.DS_Store
+.env
+.env.*
+Dockerfile
+compose.yaml
+.dockerignore

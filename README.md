@@ -1,27 +1,35 @@
-# simtabi/ssh-manager
+# Authentication Access Manager (`authama`)
 
-<!-- Three badges, not the usual four: sshmgr ships as a static binary and has no
+<!-- Three badges, not the usual four: authama ships as a static binary and has no
      package-registry release, so a registry-version badge would have no target. -->
 [![Tests](https://img.shields.io/github/actions/workflow/status/simtabi/ssh-manager/ci.yml?branch=main&label=tests)](https://github.com/simtabi/ssh-manager/actions/workflows/ci.yml)
 [![Static analysis](https://img.shields.io/github/actions/workflow/status/simtabi/ssh-manager/codeql.yml?branch=main&label=codeql)](https://github.com/simtabi/ssh-manager/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> Profile-based SSH key and config lifecycle manager: one manifest is the source
-> of truth, and `~/.ssh` is reproducible output.
+> SSH keys and config, and package-manager / git auth tokens, in one tool.
 
-A single static binary (`sshmgr`) with no runtime dependencies. macOS, Linux and
-Windows are all first-class; OpenSSH is the only requirement.
+Two features in a single static binary with no runtime dependencies:
+
+- **SSH management** (`authama ssh …`) - profile-based key and config lifecycle:
+  one manifest is the source of truth, and `~/.ssh` is reproducible output.
+- **Auth token management** (`authama token …`) - the credential files Composer,
+  npm, Docker, git and curl read, built from a config that names environment
+  variables, never secrets.
+
+macOS, Linux and Windows are all first-class; OpenSSH is the only requirement
+for the SSH side. `sshmgr`, the v3 name, ships alongside `authama` as the same
+program, so existing scripts keep working. Coming from sshmgr v3 or
+auth-token-manager? See the [migration guide](docs/migration.md).
 
 ## Install
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/simtabi/ssh-manager/main/src/scripts/install.sh | bash
-sshmgr doctor
+authama doctor
 ```
 
 Windows: `irm https://raw.githubusercontent.com/simtabi/ssh-manager/main/src/scripts/install.ps1 | iex`. Also
-`go install github.com/simtabi/ssh-manager/src/v3/cmd/sshmgr@latest`, or a binary from
-[Releases](https://github.com/simtabi/ssh-manager/releases). Every path, and where
+`go install github.com/simtabi/ssh-manager/src/v3/cmd/authama@latest`, or a binary from [Releases](https://github.com/simtabi/ssh-manager/releases). Every path, and where
 per-user state lives, is in [docs/installation.md](docs/installation.md).
 
 ## Quick start guide and usage
@@ -32,28 +40,44 @@ per-user state lives, is in [docs/installation.md](docs/installation.md).
 mints anything:
 
 ```sh
-sshmgr init                  # create ~/.config/ssh-manager (dirs, perms, seed files)
-sshmgr profile add work
-sshmgr host add work gh -H github.com -u git      # or edit manifest.json directly
-sshmgr host apply work web1 203.0.113.10 deploy web   # add-or-update from a compact spec
-sshmgr import ~/.ssh/config                        # or onboard an existing setup
+authama init                      # create ~/.config/ssh-manager (dirs, perms, seed files)
+authama ssh profile add work
+authama ssh host add work gh -H github.com -u git      # or edit manifest.json directly
+authama ssh host apply work web1 203.0.113.10 deploy web   # add-or-update from a compact spec
+authama ssh import ~/.ssh/config                       # or onboard an existing setup
 ```
 
 ### Usage
 
-Build `~/.ssh` from the manifest:
+SSH - build `~/.ssh` from the manifest, and get a key onto its target:
 
 ```sh
-sshmgr reconcile --dry-run   # preview: what would be minted, what would be written
-sshmgr reconcile             # build ~/.ssh from the manifest
-sshmgr config check          # confirm the file matches the manifest (exit != 0 on drift)
+authama ssh reconcile --dry-run   # preview: what would be minted, what would be written
+authama ssh reconcile             # build ~/.ssh from the manifest
+authama ssh config check          # confirm the file matches the manifest (exit != 0 on drift)
+authama ssh deploy work_gh-ed25519    # ssh-copy-id, gh, glab, a REST API, or manual
+authama ssh validate                  # every keypair parses and the halves match
 ```
 
-Get a key onto its target:
+Auth tokens:
 
 ```sh
-sshmgr deploy work_gh-ed25519    # ssh-copy-id, gh, glab, a REST API, or manual
-sshmgr validate                  # every keypair parses and the halves match
+authama token init                # a starter tokens.json (env var names, no secrets)
+GH_TOKEN=$(op read op://Private/GitHub/token) authama token apply   # write auth.json, .npmrc, …
+authama token set --target npm --server registry.npmjs.org        # or one token, from a hidden prompt
+authama token list                # what is installed, secrets masked
+authama token show npm registry.npmjs.org   # one entry in full
+authama token status              # which config, which files, which variables are missing
+authama token audit               # owner-only modes, .gitignore coverage
+```
+
+Both:
+
+```sh
+authama doctor                    # SSH health and token-file modes; --fix repairs modes
+authama tui                       # an interactive menu over both
+authama serve                     # a web UI on this machine, with previewed changes
+authama history                   # every change made, SSH or token
 ```
 
 The full walkthrough is in [Getting started](docs/getting-started.md); everything
@@ -67,12 +91,15 @@ else is in the [documentation index](#documentation).
 - [Getting started](docs/getting-started.md) — first run, from `init` to a deployed key.
 - [Configuration](docs/configuration.md) — the manifest, profiles, hosts, `.env`, environment variables.
 - [Architecture](docs/architecture.md) — packages, key flows, and why the v2 layout is what it is.
+- [Migration](docs/migration.md) — from sshmgr v3 and from auth-token-manager, with a feature-parity table.
 - [Release](docs/release.md) — the tag-driven GoReleaser flow.
 
 ### Reference
 
+- [Command reference](docs/reference/cli.md) — every command and subcommand with its flags, aliases and examples, generated from the binary (a test keeps it current), plus a "which command do I want" table.
 - [Feature catalog](docs/features.md) — every command, what it does, and how it is tested.
-- [`doctor`](docs/tools/doctor.md) — what it checks, `--fix`, `--json`, `--strict`.
+- [`token`](docs/tools/tokens.md) — auth tokens: apply, set, list, show, status, copy, delete, audit, import; per tool: [Composer](docs/tools/tokens/composer.md), [npm](docs/tools/tokens/npm.md), [Docker](docs/tools/tokens/docker.md), [git](docs/tools/tokens/git.md), [netrc](docs/tools/tokens/netrc.md).
+- [`doctor`](docs/tools/doctor.md) — what it checks (SSH and token files), `--fix`, `--json`, `--strict`.
 - [`deploy`](docs/tools/deploy.md) — installing a public key on its target.
 - [`providers`](docs/tools/providers.md) — the adapter catalog and how to extend it.
 - [VPS keys](docs/tools/vps.md) — cloud account keys and server keys.
@@ -85,8 +112,8 @@ else is in the [documentation index](#documentation).
 - [`net`](docs/tools/network.md) — reachability and VPN-gated hosts.
 - [`validate`](docs/tools/validate.md) — keypair integrity checks.
 - [`bundle`](docs/tools/bundle.md) — encrypted backup and restore.
-- [`history`](docs/tools/history.md) — every change sshmgr has made, filtered by host, profile or key.
-- [`serve`](docs/tools/serve.md) — the web UI: overview, hosts, keys, snapshots and history in a browser, with previewed changes.
+- [`history`](docs/tools/history.md) — every change authama has made, filtered by host, profile or key.
+- [`serve`](docs/tools/serve.md) — the web UI: overview, hosts, keys, snapshots, auth tokens and history in a browser, with previewed changes.
 - [`recover`](docs/tools/recover.md) — break-glass when you are locked out.
 - [`tui`](docs/tools/tui.md) — the interactive menu.
 
@@ -109,6 +136,7 @@ else is in the [documentation index](#documentation).
 - [Back up, and restore onto a new machine](docs/recipes/back-up-and-restore.md) — the only path that recovers the same keys.
 - [Recover from a locked-out server](docs/recipes/recover-from-lockout.md) — break-glass with no working SSH.
 - [Run it in CI](docs/recipes/run-in-ci.md) — non-interactive, sandboxed, failing loudly.
+- [Develop in a container](docs/installation.md#dev-container) — `make docker-shell`, with a scoped home so tokens never reach your real files.
 
 ## Community
 

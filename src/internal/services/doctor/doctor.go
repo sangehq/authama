@@ -110,7 +110,7 @@ func (r Report) Format() string {
 	if r.StrandedLegacyHome != "" {
 		lines = append(lines, fmt.Sprintf("WARNING: a legacy home %s was NOT migrated "+
 			"(the standard home already existed). Compare the two, then run "+
-			"`sshmgr migrate --force` (backs up the current home and replaces it with "+
+			"`authama migrate --force` (backs up the current home and replaces it with "+
 			"the legacy one).", r.StrandedLegacyHome))
 	}
 	lines = append(lines, "agent: "+r.AgentStatus)
@@ -120,10 +120,10 @@ func (r Report) Format() string {
 	for _, issue := range r.StaleProxy {
 		if strings.Contains(issue, "cloudflared") {
 			lines = append(lines, "proxy: "+issue+" - install it (`brew install cloudflared`), then "+
-				"`sshmgr config render`")
+				"`authama ssh config render`")
 			continue
 		}
-		lines = append(lines, "vm proxy: "+issue+" - run `sshmgr config render`")
+		lines = append(lines, "vm proxy: "+issue+" - run `authama ssh config render`")
 	}
 	for _, t := range r.NeededTools {
 		lines = append(lines, "MISSING tool: "+t)
@@ -138,7 +138,7 @@ func (r Report) Format() string {
 		for _, h := range r.UnpinnedHosts {
 			lines = append(lines, "  "+h)
 		}
-		lines = append(lines, "  -> run: sshmgr knownhosts pin --all   "+
+		lines = append(lines, "  -> run: authama ssh knownhosts pin --all   "+
 			"(VPN-gated hosts: connect the VPN first)")
 	}
 	if len(r.AliasCollisions) > 0 {
@@ -150,7 +150,7 @@ func (r Report) Format() string {
 		lines = append(lines, "  -> give each host a distinct, profile-prefixed alias")
 	}
 	if len(r.ShadowedHosts) > 0 {
-		lines = append(lines, "WARNING: a block above sshmgr's managed block matches a managed "+
+		lines = append(lines, "WARNING: a block above authama's managed block matches a managed "+
 			"alias - ssh applies the FIRST value it finds, so the manifest does not apply:")
 		for _, s := range r.ShadowedHosts {
 			lines = append(lines, "  "+s)
@@ -158,7 +158,7 @@ func (r Report) Format() string {
 		lines = append(lines, "  -> "+configsvc.ShadowFix)
 	}
 	if len(r.RawOptionOverlaps) > 0 {
-		lines = append(lines, "raw_options that duplicate a field sshmgr manages:")
+		lines = append(lines, "raw_options that duplicate a field authama manages:")
 		for _, s := range r.RawOptionOverlaps {
 			lines = append(lines, "  "+s)
 		}
@@ -736,7 +736,7 @@ func neededTools(m *manifest.Manifest) []string {
 	}
 	if m.Defaults.Git != nil {
 		if _, err := exec.LookPath("git"); err != nil {
-			out = append(out, "git (defaults.git is set, and `sshmgr git` runs it)")
+			out = append(out, "git (defaults.git is set, and `authama ssh git` runs it)")
 		}
 	}
 	return out

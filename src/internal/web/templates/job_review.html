@@ -1,6 +1,6 @@
 {{define "content"}}{{with .Data}}
 {{template "page_header" "Review the job"}}
-{{if .Busy}}<div class="alert alert-warning" role="alert">{{icon "alert-triangle"}}<span class="ms-1"><code>sshmgr {{.Busy.Command}}</code> is still running, and one change runs at a time. <a href="/jobs/{{.Busy.ID}}">Watch it</a>, and start this one when it ends.</span></div>{{end}}
+{{if .Busy}}<div class="alert alert-warning" role="alert">{{icon "alert-triangle"}}<span class="ms-1"><code>{{cmdline .Busy.Command}}</code> is still running, and one change runs at a time. <a href="/jobs/{{.Busy.ID}}">Watch it</a>, and start this one when it ends.</span></div>{{end}}
 <div class="card mb-3">
   <div class="card-body">
     <p class="mb-1 text-secondary">The same as running</p>

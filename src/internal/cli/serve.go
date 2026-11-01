@@ -15,6 +15,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/platform"
 	"github.com/simtabi/ssh-manager/src/v3/internal/version"
 	"github.com/simtabi/ssh-manager/src/v3/internal/web"
@@ -41,9 +42,8 @@ func newServeCmd() *cobra.Command {
 		tokenFile   string
 	)
 	cmd := &cobra.Command{
-		Use:     "serve",
-		Aliases: []string{"ui"},
-		Short:   "Open the web UI on this machine",
+		Use:   "serve",
+		Short: "Open the web UI on this machine",
 		Long: "Open the web UI on this machine: an overview, the profiles, hosts and keys, the\n" +
 			"snapshots, the operation history, and the doctor and audit reports.\n\n" +
 			"Changes - adding, editing and deleting profiles, hosts and keys, and re-rendering\n" +
@@ -106,7 +106,7 @@ func newServeCmd() *cobra.Command {
 			if bound != pinnedPort && pinnedPort != 0 {
 				_, _ = fmt.Fprintf(out, "port %d is in use; listening on %d instead\n", pinnedPort, bound)
 			}
-			_, _ = fmt.Fprintf(out, "sshmgr web UI: %s\n", url)
+			_, _ = fmt.Fprintf(out, "%s web UI: %s\n", brand.Name, url)
 			mode := "changes are previewed before they are made"
 			if readOnly {
 				mode = "read-only"

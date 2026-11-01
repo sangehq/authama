@@ -15,7 +15,7 @@ func exportHome(t *testing.T) (dir string, before map[string]string) {
 	t.Helper()
 	p := editHome(t)
 	run(t, "profile", "add", "simtabi", "--category", "orgs")
-	run(t, "host", "add", "simtabi", "oribi-web", "-H", "143.198.186.131", "-u", "ploi")
+	run(t, "host", "add", "simtabi", "oribi-web", "-H", "203.0.113.23", "-u", "ploi")
 	run(t, "profile", "add", "me")
 	run(t, "host", "add", "me", "github-me", "-H", "github.com", "-u", "git")
 	before = map[string]string{}
@@ -135,7 +135,7 @@ func TestTermiusExportWritesTheCSVAndListsKeys(t *testing.T) {
 	if !strings.HasPrefix(string(b), "Groups,Label,Tags,Hostname/IP,Protocol,Port,Username,Password\n") {
 		t.Errorf("not the Termius template header:\n%s", b)
 	}
-	if !strings.Contains(string(b), "simtabi,oribi-web,,143.198.186.131,ssh,22,ploi,\n") {
+	if !strings.Contains(string(b), "simtabi,oribi-web,,203.0.113.23,ssh,22,ploi,\n") {
 		t.Errorf("oribi-web row missing:\n%s", b)
 	}
 	if strings.Contains(string(b), "github-me") {

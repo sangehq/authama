@@ -1,0 +1,9 @@
+{
+  "_help": "npm .npmrc registry tokens. Each host uses 'env' (the env var holding the registry auth token). Optional 'scope' binds an @scope to this registry (e.g. GitHub Packages); optional 'always_auth': true. This file stores ENV VAR NAMES, not secrets — safe to commit. Delete the hosts you don't use. Writes MERGE into an existing .npmrc, preserving your other settings.",
+  "npm": {
+    "registry.npmjs.org":                       { "env": "NPM_TOKEN" },
+    "npm.pkg.github.com":                        { "env": "GH_TOKEN", "scope": "@your-org" },
+    "gitlab.example.org/api/v4/packages/npm":    { "env": "GITLAB_NPM_TOKEN", "scope": "@team" },
+    "example.jfrog.io/artifactory/api/npm/npm":  { "env": "ARTIFACTORY_NPM_TOKEN" }
+  }
+}

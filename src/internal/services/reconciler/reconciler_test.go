@@ -237,8 +237,8 @@ const dupNameJSON = `{
   "profiles": {
     "personal": {"key_scope": "per_service", "hosts": [
       {"alias": "gh-personal", "hostname": "github.com", "user": "git", "key_name": "imani_github-ed25519"}]},
-    "adelsaiq": {"key_scope": "per_service", "hosts": [
-      {"alias": "gh-adelsaiq", "hostname": "gitlab.com", "user": "git", "key_name": "imani_github-ed25519"}]}
+    "clientco": {"key_scope": "per_service", "hosts": [
+      {"alias": "gh-clientco", "hostname": "gitlab.com", "user": "git", "key_name": "imani_github-ed25519"}]}
   }
 }`
 
@@ -263,7 +263,7 @@ func TestOverwriteIsScopedToOneProfile(t *testing.T) {
 		}
 		return string(b)
 	}
-	personalBefore, adelsaiqBefore := read("personal"), read("adelsaiq")
+	personalBefore, clientcoBefore := read("personal"), read("clientco")
 
 	// Both keys are reported for confirmation, each naming its own profile.
 	existing, err := New(p, &m, inv, false).ExistingKeys("")
@@ -277,7 +277,7 @@ func TestOverwriteIsScopedToOneProfile(t *testing.T) {
 	for _, ref := range existing {
 		profiles[ref.Profile] = true
 	}
-	if !profiles["personal"] || !profiles["adelsaiq"] {
+	if !profiles["personal"] || !profiles["clientco"] {
 		t.Errorf("both profiles' keys should be offered separately: %v", existing)
 	}
 
@@ -293,11 +293,11 @@ func TestOverwriteIsScopedToOneProfile(t *testing.T) {
 	if read("personal") == personalBefore {
 		t.Error("the confirmed key was not regenerated")
 	}
-	if read("adelsaiq") != adelsaiqBefore {
+	if read("clientco") != clientcoBefore {
 		t.Fatal("confirming one profile's key destroyed the same-named key in another profile")
 	}
 	// The untouched profile keeps its archive slot empty: nothing was replaced.
-	if _, err := os.Stat(filepath.Join(ssh, "profiles", "adelsaiq", "old")); err == nil {
+	if _, err := os.Stat(filepath.Join(ssh, "profiles", "clientco", "old")); err == nil {
 		t.Error("a key that was never overwritten should have no archived predecessor")
 	}
 }
@@ -426,7 +426,7 @@ func TestOverwritingAKeyLeavesOneInventoryRecordPerPath(t *testing.T) {
 		t.Fatal(err)
 	}
 	const personalPath = "~/.ssh/profiles/personal/imani_github-ed25519"
-	const adelsaiqPath = "~/.ssh/profiles/adelsaiq/imani_github-ed25519"
+	const clientcoPath = "~/.ssh/profiles/clientco/imani_github-ed25519"
 	recordFor := func(path string) (string, inventory.KeyRecord) {
 		t.Helper()
 		var fps []string
@@ -443,7 +443,7 @@ func TestOverwritingAKeyLeavesOneInventoryRecordPerPath(t *testing.T) {
 		return fps[0], rec
 	}
 	personalBefore, _ := recordFor(personalPath)
-	adelsaiqBefore, _ := recordFor(adelsaiqPath)
+	clientcoBefore, _ := recordFor(clientcoPath)
 
 	if _, err := New(p, &m, inv, false).Mint("", "",
 		map[manifest.KeyRef]bool{{Profile: "personal", KeyName: "imani_github-ed25519"}: true}); err != nil {
@@ -454,8 +454,8 @@ func TestOverwritingAKeyLeavesOneInventoryRecordPerPath(t *testing.T) {
 	if personalAfter == personalBefore {
 		t.Error("the overwritten key kept its old fingerprint")
 	}
-	adelsaiqAfter, _ := recordFor(adelsaiqPath)
-	if adelsaiqAfter != adelsaiqBefore {
+	clientcoAfter, _ := recordFor(clientcoPath)
+	if clientcoAfter != clientcoBefore {
 		t.Error("pruning one profile's record disturbed the same-named key in another")
 	}
 	// Two live keys plus the overwritten one, whose record followed it to old/.

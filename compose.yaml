@@ -1,0 +1,48 @@
+# Containerised dev environment for authama (Authentication Access Manager).
+#
+#   make docker-shell          # build + start + drop into a shell inside
+#   make docker-run ARGS=…     # one-off invocation inside, e.g. ARGS="token list"
+#   make docker-down           # stop & remove
+#
+# Configuration: set the AUTHAMA_* variables below in your shell or in .env
+# (gitignored). Every one has a working default.
+#
+# The one important mount is the container user's home. It defaults to
+# ./.authama-home in this checkout (gitignored), NOT your host home: a dev
+# container that writes ~/.npmrc, ~/.docker/config.json, ~/.netrc,
+# ~/.git-credentials or auth.json should not touch the real ones unless you
+# ask it to. auth-token-manager's container defaulted to $HOME; that default
+# is deliberately not carried over. Point AUTHAMA_DEV_HOME at a directory to
+# choose another. Directories, not single files, are mounted because the tool
+# writes atomically by rename, and renaming over a single-file bind mount fails
+# with EBUSY.
+
+name: authama
+
+services:
+  authama:
+    build:
+      context: .
+      args:
+        GO_VERSION: ${AUTHAMA_GO_VERSION:-1.26}
+        UID: ${AUTHAMA_UID:-1000}
+        GID: ${AUTHAMA_GID:-1000}
+    image: ${AUTHAMA_IMAGE:-authama:dev}
+    container_name: ${AUTHAMA_CONTAINER_NAME:-authama-dev}
+    hostname: ${AUTHAMA_CONTAINER_NAME:-authama-dev}
+    init: true          # PID 1 that reaps zombies and forwards signals
+    restart: ${AUTHAMA_RESTART:-unless-stopped}
+    stdin_open: true
+    tty: true
+    environment:
+      TERM: ${TERM:-xterm-256color}
+    volumes:
+      - ${AUTHAMA_DEV_HOME:-./.authama-home}:/home/dev
+      - .:/workspace
+    # --- security hardening -------------------------------------------------
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: ${AUTHAMA_PIDS_LIMIT:-512}
+    # no ports, no privileged flags, non-root user baked into the image

@@ -93,7 +93,7 @@ func TestDeriveKeyNameFromRealAliases(t *testing.T) {
 		{"personal", "github", "personal_github-ed25519"},
 		// A profile reduces to one token: the underscore is the profile
 		// separator, so a dash inside it would make the name ambiguous.
-		{"ad-elsaiq", "github", "adelsaiq_github-ed25519"},
+		{"client-co", "github", "clientco_github-ed25519"},
 	}
 	for _, c := range cases {
 		got, err := DeriveKeyName(c.profile, c.alias, "ed25519")

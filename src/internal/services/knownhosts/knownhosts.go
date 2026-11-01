@@ -455,7 +455,7 @@ func (r InitReport) Format() string {
 		tail = "; unreachable (pin later): " + strings.Join(unreachable, ", ")
 	}
 	lines = append(lines, fmt.Sprintf("  pinned %d host(s)%s", pinned, tail))
-	lines = append(lines, "  review fingerprints above; use `sshmgr knownhosts pin` to confirm-before-trust.")
+	lines = append(lines, "  review fingerprints above; use `authama ssh knownhosts pin` to confirm-before-trust.")
 	return strings.Join(lines, "\n")
 }
 

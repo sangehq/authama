@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/core/expiry"
 	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/history"
@@ -92,7 +93,12 @@ func funcs(a *assetSet) template.FuncMap {
 		"asset":  a.url,
 		"sprite": func() template.HTML { return a.sprite },
 		"icon":   iconHTML,
-		"when":   func(t time.Time) string { return t.UTC().Format("2006-01-02 15:04 UTC") },
+		// The product name and the command line for a recorded verb, from
+		// the one place they are decided.
+		"brandName":    func() string { return brand.Name },
+		"brandCommand": func() string { return brand.Command },
+		"cmdline":      brand.Line,
+		"when":         func(t time.Time) string { return t.UTC().Format("2006-01-02 15:04 UTC") },
 		"stamp": func(s string) string {
 			if t, err := time.Parse(history.TimeFormat, s); err == nil {
 				return t.UTC().Format("2006-01-02 15:04:05 UTC")
@@ -302,7 +308,7 @@ func (s *Server) renderError(w http.ResponseWriter, r *http.Request, status int,
 
 func (s *Server) renderUnauthorized(w http.ResponseWriter, r *http.Request) {
 	s.renderError(w, r, http.StatusUnauthorized, "Sign-in link required",
-		"Open the address `sshmgr serve` printed when it started. It carries a one-time token that signs this browser in.")
+		"Open the address `authama serve` printed when it started. It carries a one-time token that signs this browser in.")
 }
 
 // serveAsset answers /assets/{hash}/{path...}. A stale hash is a 404, not the

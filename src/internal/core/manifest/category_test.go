@@ -13,7 +13,7 @@ const categorizedManifest = `{
   "profiles": {
     "personal": {"category": "internal", "hosts": [
       {"alias": "github-imani", "hostname": "github.com", "user": "git", "key_name": "imani_github-ed25519"}]},
-    "adelsaiq": {"category": "clients", "hosts": [
+    "clientco": {"category": "clients", "hosts": [
       {"alias": "github-danniela", "hostname": "github.com", "user": "git", "key_name": "imani_github-ed25519"}]},
     "simtabi": {"category": "internal", "hosts": [
       {"alias": "github-simtabi", "hostname": "github.com", "user": "git", "key_name": "simtabi_github-ed25519"}]},
@@ -29,7 +29,7 @@ func TestCategorizedProfilesResolveOneDirectoryDeeper(t *testing.T) {
 	}
 	cases := []struct{ profile, key, want string }{
 		{"personal", "imani_github-ed25519", "~/.ssh/profiles/internal/personal/imani_github-ed25519"},
-		{"adelsaiq", "imani_github-ed25519", "~/.ssh/profiles/clients/adelsaiq/imani_github-ed25519"},
+		{"clientco", "imani_github-ed25519", "~/.ssh/profiles/clients/clientco/imani_github-ed25519"},
 		// No category: the flat layout every pre-category manifest relies on.
 		{"legacy", "legacy-ed25519", "~/.ssh/profiles/legacy/legacy-ed25519"},
 		// Undeclared profile: flat, never a panic or an empty segment.
@@ -41,8 +41,8 @@ func TestCategorizedProfilesResolveOneDirectoryDeeper(t *testing.T) {
 		}
 	}
 	sshDir := filepath.Join(t.TempDir(), ".ssh")
-	got := m.KeyPath(sshDir, KeyRef{Profile: "adelsaiq", KeyName: "imani_github-ed25519"})
-	want := filepath.Join(sshDir, "profiles", "clients", "adelsaiq", "imani_github-ed25519")
+	got := m.KeyPath(sshDir, KeyRef{Profile: "clientco", KeyName: "imani_github-ed25519"})
+	want := filepath.Join(sshDir, "profiles", "clients", "clientco", "imani_github-ed25519")
 	if got != want {
 		t.Errorf("KeyPath = %q, want %q", got, want)
 	}
@@ -82,7 +82,7 @@ func TestCategoryValidation(t *testing.T) {
 		"slash":          `{"version":1,"profiles":{"p":{"category":"a/b","hosts":[]}}}`,
 		"clashes with an uncategorized profile": `{"version":1,"profiles":{
 			"clients":{"hosts":[]},
-			"adelsaiq":{"category":"clients","hosts":[]}}}`,
+			"clientco":{"category":"clients","hosts":[]}}}`,
 		"profile named config": `{"version":1,"profiles":{"config":{"category":"internal","hosts":[]}}}`,
 	}
 	for name, doc := range bad {
@@ -104,8 +104,8 @@ func TestGlobProfileTreeSeesBothLayoutsAndNotArchives(t *testing.T) {
 		"profiles/work/a.pub",                 // flat
 		"profiles/work/old/a.pub",             // flat archive - not a category
 		"profiles/work/.staging/a.pub",        // flat staging - not a category
-		"profiles/clients/adelsaiq/b.pub",     // categorized
-		"profiles/clients/adelsaiq/old/b.pub", // categorized archive - too deep
+		"profiles/clients/clientco/b.pub",     // categorized
+		"profiles/clients/clientco/old/b.pub", // categorized archive - too deep
 	} {
 		p := filepath.Join(ssh, filepath.FromSlash(rel))
 		if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
@@ -123,10 +123,10 @@ func TestGlobProfileTreeSeesBothLayoutsAndNotArchives(t *testing.T) {
 		}
 		return strings.Join(out, ",")
 	}
-	if got, want := rels(GlobProfileTree(ssh, "*.pub")), "profiles/clients/adelsaiq/b.pub,profiles/work/a.pub"; got != want {
+	if got, want := rels(GlobProfileTree(ssh, "*.pub")), "profiles/clients/clientco/b.pub,profiles/work/a.pub"; got != want {
 		t.Errorf("*.pub = %s, want %s", got, want)
 	}
-	if got, want := rels(GlobProfileTree(ssh, "old")), "profiles/clients/adelsaiq/old,profiles/work/old"; got != want {
+	if got, want := rels(GlobProfileTree(ssh, "old")), "profiles/clients/clientco/old,profiles/work/old"; got != want {
 		t.Errorf("old = %s, want %s", got, want)
 	}
 }

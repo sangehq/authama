@@ -308,10 +308,10 @@ func TestExpiryTableNamesKeysByProfile(t *testing.T) {
 	var out bytes.Buffer
 	writeExpiryTable(&out, []expiry.Status{
 		{KeyName: "imani_github-ed25519", Profile: "personal", State: expiry.OK},
-		{KeyName: "imani_github-ed25519", Profile: "adelsaiq", State: expiry.OK},
+		{KeyName: "imani_github-ed25519", Profile: "clientco", State: expiry.OK},
 	})
 	got := out.String()
-	for _, want := range []string{"personal/imani_github-ed25519", "adelsaiq/imani_github-ed25519"} {
+	for _, want := range []string{"personal/imani_github-ed25519", "clientco/imani_github-ed25519"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("expiry table missing %q:\n%s", want, got)
 		}

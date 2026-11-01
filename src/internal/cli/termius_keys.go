@@ -53,7 +53,7 @@ func systemClipboardWrite(text string) error {
 }
 
 // termiusKeyLabel is the label to give the key in Termius: the key file's
-// basename (adelsaiq_dani-prd-db-00-ed25519), so the keychain entry says which
+// basename (clientco_db-01-ed25519), so the keychain entry says which
 // file it came from.
 func termiusKeyLabel(k renderer.TermiusKey) string {
 	return strings.TrimSuffix(filepath.Base(k.KeyFile), ".pub")
@@ -73,9 +73,9 @@ func newTermiusKeysCmd() *cobra.Command {
 			"exported host with the label to use and the key file. With an ALIAS it copies that\n" +
 			"host's private key to the clipboard (pbcopy, wl-copy/xclip/xsel, or clip) and prints\n" +
 			"the label; the key itself is never printed unless --print is given.",
-		Example: "  sshmgr termius keys\n" +
-			"  sshmgr termius keys dani-prd-db-00 --clear-after 60s\n" +
-			"  sshmgr termius keys --clear",
+		Example: "  authama ssh termius keys\n" +
+			"  authama ssh termius keys db-01 --clear-after 60s\n" +
+			"  authama ssh termius keys --clear",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			out := c.OutOrStdout()
@@ -114,7 +114,7 @@ func newTermiusKeysCmd() *cobra.Command {
 				}
 			}
 			if key == nil {
-				return fmt.Errorf("no exported host %q (not in the manifest, or left out by --skip; see `sshmgr termius keys --include-git`)", args[0])
+				return fmt.Errorf("no exported host %q (not in the manifest, or left out by --skip; see `authama ssh termius keys --include-git`)", args[0])
 			}
 			if key.Agent != "" {
 				return fmt.Errorf("%s uses a key in 1Password; add it to Termius from 1Password, there is no file to copy", args[0])
@@ -141,14 +141,14 @@ func newTermiusKeysCmd() *cobra.Command {
 				"Label = the label above, click Private key and paste, leave Certificate empty, Save.\n"+
 				"Then on the host's SSH key selection pick that key and click Continue & Save.")
 			if clearAfter > 0 {
-				_, _ = fmt.Fprintf(out, "\nclearing the clipboard in %s (Ctrl-C keeps it; then run `sshmgr termius keys --clear`)...\n", clearAfter)
+				_, _ = fmt.Fprintf(out, "\nclearing the clipboard in %s (Ctrl-C keeps it; then run `authama ssh termius keys --clear`)...\n", clearAfter)
 				clipboardSleep(clearAfter)
 				if err := clipboardWrite(""); err != nil {
 					return err
 				}
 				_, _ = fmt.Fprintln(out, "clipboard cleared")
 			} else {
-				_, _ = fmt.Fprintln(out, "\nWhen done: sshmgr termius keys --clear")
+				_, _ = fmt.Fprintln(out, "\nWhen done: authama ssh termius keys --clear")
 			}
 			return nil
 		},
@@ -178,5 +178,5 @@ func listTermiusKeys(w io.Writer, keys []renderer.TermiusKey) {
 		}
 		_, _ = fmt.Fprintf(w, "%-*s  %-*s  %s\n", aw, k.Label, lw, termiusKeyLabel(k), where)
 	}
-	_, _ = fmt.Fprintln(w, "\nCopy one host's key and label: sshmgr termius keys <HOST>")
+	_, _ = fmt.Fprintln(w, "\nCopy one host's key and label: authama ssh termius keys <HOST>")
 }

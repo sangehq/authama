@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <meta name="csrf-token" content="{{.CSRF}}">
-<title>{{.Title}} · sshmgr</title>
+<title>{{.Title}} · {{brandName}}</title>
 <script src="{{asset "vendor/tabler/tabler-theme.min.js"}}"></script>
 <link rel="stylesheet" href="{{asset "vendor/tabler/tabler.min.css"}}">
 <link rel="stylesheet" href="{{asset "app.css"}}">
@@ -16,7 +16,7 @@
 <div class="page">
   <header class="navbar navbar-expand-md d-print-none">
     <div class="container-xl">
-      <a class="navbar-brand navbar-brand-autodark me-3" href="/">{{icon "terminal-2"}}<span class="ms-2">sshmgr</span></a>
+      <a class="navbar-brand navbar-brand-autodark me-3" href="/">{{icon "terminal-2"}}<span class="ms-2">{{brandName}}</span></a>
       {{if .Authed}}
       <nav class="me-auto" aria-label="Main">
         <ul class="navbar-nav flex-row flex-wrap">
@@ -28,6 +28,7 @@
           {{template "navlink" (navItem . "history" "/history" "history" "History")}}
           {{template "navlink" (navItem . "doctor" "/doctor" "stethoscope" "Doctor")}}
           {{template "navlink" (navItem . "audit" "/audit" "shield-check" "Audit")}}
+          {{template "navlink" (navItem . "tokens" "/tokens" "lock" "Tokens")}}
         </ul>
       </nav>
       {{end}}
@@ -52,7 +53,7 @@
     <footer class="footer footer-transparent d-print-none">
       <div class="container-xl">
         <ul class="list-inline list-inline-dots mb-0 text-secondary">
-          <li class="list-inline-item">sshmgr {{.Version}}</li>
+          <li class="list-inline-item">{{brandCommand}} {{.Version}}</li>
           {{if .Authed}}<li class="list-inline-item">home <code>{{.Home}}</code></li>{{end}}
           {{if .ReadOnly}}<li class="list-inline-item">{{icon "lock"}} read-only</li>{{end}}
           <li class="list-inline-item"><a class="link-secondary" href="/about/licenses">Third-party licences</a></li>

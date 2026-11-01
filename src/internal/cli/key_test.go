@@ -66,7 +66,7 @@ func TestKeyTableShowsStateAndDanglingNotes(t *testing.T) {
 func TestKeyTableEmptyTellsYouWhatToRun(t *testing.T) {
 	var out bytes.Buffer
 	writeKeyTable(&out, nil)
-	if !strings.Contains(out.String(), "sshmgr key add") {
+	if !strings.Contains(out.String(), "authama ssh key add") {
 		t.Errorf("an empty table should point at the command that fixes it: %q", out.String())
 	}
 }

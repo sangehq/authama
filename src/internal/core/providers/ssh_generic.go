@@ -141,7 +141,7 @@ func unattendedHint(t Target) string {
 		return ""
 	}
 	return " (nothing can answer a password prompt here; if " + t.Alias +
-		" needs a password, run `sshmgr deploy` in a terminal)"
+		" needs a password, run `authama ssh deploy` in a terminal)"
 }
 
 func (g GenericSSH) Verify(t Target) bool {

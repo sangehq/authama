@@ -87,8 +87,8 @@ func (r Result) Format() string {
 	for _, ref := range r.UnwiredKeys {
 		lines = append(lines, fmt.Sprintf("  %s is now UNWIRED: its profile still declares it, but no "+
 			"host uses it.", ref))
-		lines = append(lines, fmt.Sprintf("    wire it with `sshmgr host edit <profile> <alias> "+
-			"--key-name %s`, or remove it with `sshmgr key delete %s --purge`.", keyNameOf(ref), ref))
+		lines = append(lines, fmt.Sprintf("    wire it with `authama ssh host edit <profile> <alias> "+
+			"--key-name %s`, or remove it with `authama ssh key delete %s --purge`.", keyNameOf(ref), ref))
 	}
 	for _, ref := range r.OrphanedKeys {
 		lines = append(lines, fmt.Sprintf("  %s left the manifest with the host: only that host named "+
@@ -100,7 +100,7 @@ func (r Result) Format() string {
 		lines = append(lines, "  re-run with --purge to delete them (doctor reports them as orphaned until then).")
 	}
 	for _, dir := range r.UnmanagedLeft {
-		lines = append(lines, "  left "+dir+" in place: it still holds files sshmgr did not create.")
+		lines = append(lines, "  left "+dir+" in place: it still holds files authama did not create.")
 	}
 	return strings.Join(lines, "\n")
 }

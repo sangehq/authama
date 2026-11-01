@@ -67,7 +67,7 @@ func (r *ReconcileResult) Format() string {
 		lines = append(lines, fmt.Sprintf("  mint %s: %s  %s  (needs-redeploy)", verb, m.KeyName, m.Fingerprint))
 		if m.Fallback != "" {
 			lines = append(lines, fmt.Sprintf("    no security key answered: this is a software %s key, not a hardware one; "+
-				"insert the key and run `sshmgr rotate %s` to replace it", m.Fallback, m.KeyName))
+				"insert the key and run `authama ssh rotate %s` to replace it", m.Fallback, m.KeyName))
 		}
 	}
 	if len(r.Minted) == 0 {
@@ -445,7 +445,7 @@ func (r *Reconciler) misplaced(ref manifest.KeyRef, priv string) string {
 func (r *Reconciler) mintInOnePassword(ref manifest.KeyRef, pub string, overwrite bool) (keystore.GenResult, error) {
 	if overwrite {
 		return keystore.GenResult{}, fmt.Errorf("key %s is kept in 1Password; replace it with "+
-			"`sshmgr rotate %s`, which stages, deploys and verifies the new key first", ref, ref)
+			"`authama ssh rotate %s`, which stages, deploys and verifies the new key first", ref, ref)
 	}
 	vault := r.m.Profiles[ref.Profile].OPVault
 	it, err := r.op.Get(vault, ref.KeyName)

@@ -81,7 +81,7 @@ func TestTheBinaryReportsItsVersionAndExitsZero(t *testing.T) {
 		if code != 0 {
 			t.Errorf("%v exited %d: %s%s", args, code, out, errOut)
 		}
-		if !strings.Contains(out, "sshmgr") || len(strings.TrimSpace(out)) < len("sshmgr 0") {
+		if !strings.Contains(out, "authama") || len(strings.TrimSpace(out)) < len("authama 0") {
 			t.Errorf("%v printed %q, want a version line", args, out)
 		}
 	}
@@ -94,7 +94,9 @@ func TestTheBinaryReportsItsVersionAndExitsZero(t *testing.T) {
 	if code != 0 {
 		t.Errorf("the bare command exited %d, want 0 with help", code)
 	}
-	for _, verb := range []string{"reconcile", "doctor", "rotate", "bundle"} {
+	// The SSH verbs live under `ssh` now (their old spellings are hidden), so
+	// the help names the two features and the shared verbs.
+	for _, verb := range []string{"ssh", "token", "doctor", "serve"} {
 		if !strings.Contains(out, verb) {
 			t.Errorf("help does not mention %q:\n%s", verb, out)
 		}
@@ -125,7 +127,7 @@ func TestFailuresExitOneAndExplainThemselvesOnStderr(t *testing.T) {
 		if strings.Contains(stdout, tc.want) {
 			t.Errorf("%v wrote its error to stdout:\n%s", tc.args, stdout)
 		}
-		if !strings.HasPrefix(strings.TrimSpace(stderr), "sshmgr:") {
+		if !strings.HasPrefix(strings.TrimSpace(stderr), "authama:") {
 			t.Errorf("%v stderr = %q, want the tool to name itself", tc.args, stderr)
 		}
 	}
@@ -192,7 +194,7 @@ func TestADeclinedConfirmationExitsOneAndSaysNothingExtra(t *testing.T) {
 	if code != 1 {
 		t.Errorf("declining exited %d, want 1", code)
 	}
-	if strings.Contains(stderr, "sshmgr:") {
+	if strings.Contains(stderr, "authama:") || strings.Contains(stderr, "sshmgr:") {
 		t.Errorf("an abort printed an error line: %q", stderr)
 	}
 	if !strings.Contains(stdout, "[y/N]") {
@@ -239,7 +241,40 @@ func TestDoctorJSONIsMachineReadable(t *testing.T) {
 		}
 	}
 	// Errors never contaminate the document.
-	if strings.Contains(out, "sshmgr:") {
+	if strings.Contains(out, "authama:") || strings.Contains(out, "sshmgr:") {
 		t.Errorf("a diagnostic leaked into the JSON payload:\n%s", out)
+	}
+}
+
+// cmd/authama is the primary binary and cmd/sshmgr its compatibility build.
+// They are one program: the same version line, the same groups, and both
+// accept the v3 top-level SSH spellings.
+func TestTheAuthamaAndSshmgrBinariesAreOneProgram(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds a binary")
+	}
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("no go toolchain to build with")
+	}
+	run, _ := sshmgr(t)
+	bin := filepath.Join(t.TempDir(), "authama")
+	if runtime.GOOS == "windows" {
+		bin += ".exe"
+	}
+	if out, err := exec.Command("go", "build", "-o", bin, "../authama").CombinedOutput(); err != nil {
+		t.Fatalf("building cmd/authama: %v\n%s", err, out)
+	}
+	for _, args := range [][]string{{"version"}, {"ssh", "--help"}, {"token", "--help"}, {"list", "--help"}} {
+		want, _, wc := run("", args...)
+		cmd := exec.Command(bin, args...)
+		cmd.Env = append(os.Environ(), "HOME="+t.TempDir())
+		got, err := cmd.Output()
+		if err != nil || wc != 0 {
+			t.Errorf("%v: authama %v, sshmgr exit %d", args, err, wc)
+			continue
+		}
+		if string(got) != want {
+			t.Errorf("%v differs:\nauthama: %s\nsshmgr:  %s", args, got, want)
+		}
 	}
 }

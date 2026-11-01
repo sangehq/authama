@@ -205,7 +205,7 @@ func TestMissingWarnsButStrictFails(t *testing.T) {
 	if !rep.OK() {
 		t.Error("a tree whose only fault is an unminted key should still pass")
 	}
-	if rep.Findings[0].Fix != "sshmgr reconcile" {
+	if rep.Findings[0].Fix != "authama ssh reconcile" {
 		t.Errorf("missing should point at the command that mints it: %q", rep.Findings[0].Fix)
 	}
 	if audit(t, f, true).OK() {
@@ -409,15 +409,15 @@ const categorizedManifestJSON = `{
   "profiles": {
     "work": {"key_scope": "per_service",
       "hosts": [{"alias": "gh", "hostname": "github.com", "user": "git", "key_name": "work_gh-ed25519"}]},
-    "adelsaiq": {"category": "clients", "key_scope": "per_service",
+    "clientco": {"category": "clients", "key_scope": "per_service",
       "hosts": [{"alias": "gh-client", "hostname": "github.com", "user": "git", "key_name": "client_gh-ed25519"}]}
   }
 }`
 
 func TestCategorizedKeyInPlaceIsTracked(t *testing.T) {
 	f := newFixtureFrom(t, categorizedManifestJSON)
-	f.writeKey(t, "clients/adelsaiq", "client_gh-ed25519", true)
-	f.record(t, "SHA256:client", "~/.ssh/profiles/clients/adelsaiq/client_gh-ed25519")
+	f.writeKey(t, "clients/clientco", "client_gh-ed25519", true)
+	f.record(t, "SHA256:client", "~/.ssh/profiles/clients/clientco/client_gh-ed25519")
 
 	rep := audit(t, f, false)
 	if got := subjects(rep, Untracked); len(got) != 0 {
@@ -452,7 +452,7 @@ func TestKeyMovedIntoACategoryByHandIsReportedWhereItIs(t *testing.T) {
 	if len(missing) != 1 {
 		t.Fatalf("missing = %v, want the one moved key", subjects(rep, Missing))
 	}
-	if strings.Contains(missing[0].Fix, "sshmgr reconcile") && !strings.Contains(missing[0].Fix, "do not reconcile") {
+	if strings.Contains(missing[0].Fix, "authama ssh reconcile") && !strings.Contains(missing[0].Fix, "do not reconcile") {
 		t.Errorf("a moved key must not be fixed by reconcile: %q", missing[0].Fix)
 	}
 	if !strings.Contains(missing[0].Detail, "profiles/internal/work/work_gh-ed25519") {

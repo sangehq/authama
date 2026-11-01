@@ -34,7 +34,7 @@ func TestStaleProxiesReportsOnlyMissingSshmgrPaths(t *testing.T) {
 	if base.OK() {
 		t.Error("a stale ProxyCommand must fail the verdict")
 	}
-	if !strings.Contains((Report{StaleProxy: got}).Format(), "sshmgr config render") {
+	if !strings.Contains((Report{StaleProxy: got}).Format(), "authama ssh config render") {
 		t.Error("the report must say how to fix it")
 	}
 }

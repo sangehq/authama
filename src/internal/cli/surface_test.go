@@ -7,6 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 )
 
 // The command surface, checked against the implementation it was ported from.
@@ -218,12 +220,79 @@ var goOnly = map[string]string{
 	"clean --dry-run":        "D1",
 	"clean --adopt":          "D1",
 	"rotate --no-key-backup": "as keygen",
+
+	// The token group (4.0.0): auth-token-manager's CLI, ported. Each verb is
+	// one of its flags-as-actions; see docs/tools/tokens.md for the mapping.
+	"token list":                      "tokens - atm --list: what the credential files hold, masked",
+	"token list --json":               "tokens - atm --list --json",
+	"token list --reveal":             "tokens - atm --show-secrets",
+	"token list --yes":                "tokens - atm --yes: reveal without asking",
+	"token list --target":             "tokens - atm --target",
+	"token list --project":            "tokens - atm --project",
+	"token set":                       "tokens - atm --add",
+	"token set --target":              "tokens - atm --target",
+	"token set --service":             "tokens - atm --service",
+	"token set --server":              "tokens - atm --host, renamed: ssh's --host is a host alias, not a server",
+	"token set --username":            "tokens - atm --username",
+	"token set --scope":               "tokens - atm --scope",
+	"token set --project":             "tokens - atm --project",
+	"token set --creds-store-mode":    "tokens - docker credential stores: docker login or refuse (security fix)",
+	"token delete":                    "tokens - atm --remove",
+	"token delete --project":          "tokens - atm --project",
+	"token delete --yes":              "tokens - confirmation at a terminal, as every ssh delete asks",
+	"token copy":                      "tokens - atm --copy",
+	"token copy --project":            "tokens - atm --project",
+	"token apply":                     "tokens - atm's default action: resolve the config and write the files",
+	"token apply --config":            "tokens - atm --config",
+	"token apply --target":            "tokens - atm --target",
+	"token apply --project":           "tokens - atm --project",
+	"token apply --source":            "tokens - atm --source",
+	"token apply --exports":           "tokens - atm --env, renamed so env is not a verb with two meanings",
+	"token apply --dry-run":           "tokens - atm --stdout, masked; named like reconcile --dry-run and host apply --dry-run",
+	"token apply --no-env-hint":       "tokens - atm --no-env-hint",
+	"token apply --creds-store-mode":  "tokens - docker credential stores: docker login or refuse (security fix)",
+	"token examples":                  "tokens - atm --template",
+	"token examples --project":        "tokens - atm --template --project",
+	"token examples --target":         "tokens - atm --target",
+	"token examples --json":           "tokens - atm --template --stdout, masked JSON",
+	"token init":                      "tokens - atm --init",
+	"token init --target":             "tokens - atm --init --target",
+	"token providers":                 "tokens - atm --services, plus the catalog's known registries and git hosts",
+	"token audit":                     "tokens - atm --doctor",
+	"token audit --config":            "tokens - atm --config with --doctor",
+	"token audit --target":            "tokens - atm --target with --doctor",
+	"token audit --project":           "tokens - atm --project with --doctor",
+	"token import":                    "tokens - move an auth-token-manager (or any named) config to tokens.json",
+	"token import --dry-run":          "tokens - check the config parses and where it would go, as ssh import --dry-run",
+	"token show":                      "tokens - one entry of token list in full (new: a complete token manager inspects one entry)",
+	"token show --project":            "tokens - atm --project",
+	"token show --json":               "tokens - as token list --json, one object",
+	"token show --reveal":             "tokens - atm --show-secrets, for one entry",
+	"token show --yes":                "tokens - reveal without asking, as token list --yes",
+	"token status":                    "tokens - new: config in use, file paths, modes, counts and unset variables, read-only",
+	"token status --config":           "tokens - atm --config",
+	"token status --project":          "tokens - atm --project",
+	"token status --json":             "tokens - machine-readable status",
+	"token shell-aliases":             "tokens - atm-aliases: the atm shell aliases",
+	"token shell-aliases --install":   "tokens - atm-aliases install",
+	"token shell-aliases --uninstall": "tokens - atm-aliases remove",
+	"token shell-aliases --print":     "tokens - atm-aliases print",
+	"token shell-aliases --file":      "tokens - atm-aliases --file",
+	"token shell-aliases --login":     "tokens - atm-aliases --login",
+	"token shell-aliases --no-backup": "tokens - atm-aliases --no-backup",
+	"token shell-aliases --quiet":     "tokens - atm-aliases --quiet",
 }
 
-// walk collects the tree as "parent child" -> long flag names.
+// walk collects the tree as "parent child" -> long flag names. The ssh group
+// is walked as if its verbs were top-level, which they were in v1 and still
+// are as hidden spellings: v1's "config check" is "ssh config check" now.
 func walk(c *cobra.Command, prefix string, out map[string][]string) {
 	for _, sub := range c.Commands() {
 		if sub.Hidden || sub.Name() == "help" || sub.Name() == "completion" {
+			continue
+		}
+		if !c.HasParent() && sub.Name() == sshGroup {
+			walk(sub, prefix, out)
 			continue
 		}
 		name := strings.TrimSpace(prefix + " " + sub.Name())
@@ -246,7 +315,7 @@ func TestTheCommandSurfaceMatchesTheOneItReplaced(t *testing.T) {
 	// Groups exist only to hold subcommands; v1 had them as sub-apps
 	// with no flags of their own.
 	groups := map[string]bool{"config": true, "profile": true, "host": true,
-		"notify": true, "snapshots": true, "knownhosts": true, "key": true}
+		"notify": true, "snapshots": true, "knownhosts": true, "key": true, "token": true}
 
 	// 1. Everything v1 had, Go still has - verb and flag.
 	for verb, want := range v1Surface {
@@ -381,7 +450,7 @@ func TestFlagUsageHasNoBackticks(t *testing.T) {
 // verb is an error rather than a silent no-op.
 func TestTheRootAnswersVersionAndRejectsAnUnknownVerb(t *testing.T) {
 	editHome(t)
-	if out := run(t, "--version"); !strings.Contains(out, "sshmgr") {
+	if out := run(t, "--version"); !strings.Contains(out, brand.Command) {
 		t.Errorf("--version printed %q", out)
 	}
 	if _, err := runErr(t, "no-such-verb"); err == nil {

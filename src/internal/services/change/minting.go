@@ -31,7 +31,7 @@ import (
 // errOnePassword refuses a change that would mint in 1Password: a preview
 // mints for real, and in a vault that is an item a person would have to
 // delete by hand.
-var errOnePassword = errors.New("keys kept in 1Password are minted from the terminal: run the command shown above with sshmgr")
+var errOnePassword = errors.New("keys kept in 1Password are minted from the terminal: run the command shown above with authama")
 
 func refuseOnePassword(m *manifest.Manifest, profiles ...string) error {
 	if len(profiles) == 0 {
@@ -189,7 +189,7 @@ func KeyAdd(profile, name, keyType, host string) Change {
 				_, _ = fmt.Fprintf(out, "wired to host %s\n", host)
 			} else {
 				_, _ = fmt.Fprintf(out, "UNWIRED: no host uses %s yet. Wire it with:\n"+
-					"  sshmgr host edit %s <alias> --key-name %s\n", ref, profile, name)
+					"  authama ssh host edit %s <alias> --key-name %s\n", ref, profile, name)
 			}
 			return ApplyManifestEdit(out, p)
 		},

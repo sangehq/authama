@@ -1,7 +1,8 @@
 # Getting started
 
 A first run end to end: from an empty machine to a deployed key, and what each
-step is actually doing.
+step is actually doing, then the auth tokens your package managers and git need.
+SSH commands live under `authama ssh`; tokens under `authama token`.
 
 ## The mental model
 
@@ -17,35 +18,35 @@ The manifest is the single source of truth. `~/.ssh` is **generated output**:
 ## First run
 
 ```sh
-sshmgr init                  # create ~/.config/ssh-manager (dirs, perms, seed files)
+authama init                  # create ~/.config/ssh-manager (dirs, perms, seed files)
 ```
 
 `init` seeds an **empty** manifest. Add profiles and hosts before `reconcile`
 mints anything — three ways, whichever suits:
 
 ```sh
-sshmgr profile add work
-sshmgr host add work gh -H github.com -u git      # or edit manifest.json directly
-sshmgr host apply work web1 203.0.113.10 deploy web   # add-or-update from a compact spec
+authama ssh profile add work
+authama ssh host add work gh -H github.com -u git      # or edit manifest.json directly
+authama ssh host apply work web1 203.0.113.10 deploy web   # add-or-update from a compact spec
 ```
 
 `host apply` takes `<alias> <host>[:port] <user> [role]` and adds the host if
 it is new or updates it if not, so the same line can be re-run. Many at once:
 
 ```sh
-sshmgr host apply work \
+authama ssh host apply work \
   --host "web1 203.0.113.10 deploy web" \
   --host "db1  203.0.113.11 deploy db" --reconcile
-sshmgr host apply work -f hosts.txt     # one spec per line, # comments, - for stdin
-sshmgr import ~/.ssh/config                        # or onboard an existing setup
+authama ssh host apply work -f hosts.txt     # one spec per line, # comments, - for stdin
+authama ssh import ~/.ssh/config                        # or onboard an existing setup
 ```
 
 Then build the tree:
 
 ```sh
-sshmgr reconcile --dry-run   # preview: what would be minted, what would be written
-sshmgr reconcile             # build ~/.ssh from the manifest
-sshmgr config check          # confirm the file matches the manifest (exit != 0 on drift)
+authama ssh reconcile --dry-run   # preview: what would be minted, what would be written
+authama ssh reconcile             # build ~/.ssh from the manifest
+authama ssh config check          # confirm the file matches the manifest (exit != 0 on drift)
 ```
 
 At this point every declared key exists at `~/.ssh/profiles/<profile>/<key>`
@@ -59,9 +60,9 @@ on disk; its private key lives in a 1Password vault
 ## Getting a key onto its target
 
 ```sh
-sshmgr deploy work_gh-ed25519    # ssh-copy-id, gh, glab, a REST API, or manual
-sshmgr validate                  # every keypair parses and the halves match
-sshmgr doctor                    # deps, perms, agent, pins, drift
+authama ssh deploy work_gh-ed25519    # ssh-copy-id, gh, glab, a REST API, or manual
+authama ssh validate                  # every keypair parses and the halves match
+authama doctor                    # deps, perms, agent, pins, drift
 ```
 
 `deploy` picks its method from the host's provider. Where there is no API — a
@@ -71,11 +72,11 @@ than pretending to have done it.
 ## Living with it
 
 ```sh
-sshmgr list --type vcs         # filterable view across profiles
-sshmgr show gh                 # manifest, key files, rendered config and pins, reconciled
-sshmgr expiry                  # per-key rotation age
-sshmgr rotate work_gh-ed25519  # zero-downtime staged rotation
-sshmgr notify install          # scheduled reminders before keys come due
+authama ssh list --type vcs         # filterable view across profiles
+authama ssh show gh                 # manifest, key files, rendered config and pins, reconciled
+authama ssh expiry                  # per-key rotation age
+authama ssh rotate work_gh-ed25519  # zero-downtime staged rotation
+authama ssh notify install          # scheduled reminders before keys come due
 ```
 
 **Every verb that changes `~/.ssh` asks first.** `reconcile` shows its dry run as
@@ -88,6 +89,28 @@ job or a CI step there is nobody to answer, so commands proceed — declining on
 their own would turn every existing script into a silent no-op, which is not
 safer than running, only harder to diagnose. Pass `--yes` there anyway: it says
 so explicitly instead of relying on the absence of a terminal.
+
+## Auth tokens
+
+The second feature writes the credential files Composer, npm, Docker, git and
+curl read. Its config names environment variables, never the secrets themselves:
+
+```sh
+authama token init                  # a starter ~/.config/ssh-manager/tokens.json
+$EDITOR ~/.config/ssh-manager/tokens.json
+export GH_TOKEN=$(op read op://Private/GitHub/token)   # or set it in CI
+authama token status                # which variables are still missing
+authama token apply --dry-run       # what would be written, secrets masked
+authama token apply                 # write auth.json, .npmrc, ... (0600, merged)
+authama token list                  # what is installed now
+```
+
+One token without a config: `authama token set --target git --server github.com
+--username you` reads it from a hidden prompt. `authama token audit` (and
+`authama doctor`) confirm every file is owner-only. Try any of it first with
+`--dev-root ./sandbox`, which keeps every file in the sandbox. Coming from
+auth-token-manager, run `authama token import`; see the
+[migration guide](migration.md) and [`token`](tools/tokens.md).
 
 ## Passphrases
 

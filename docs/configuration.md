@@ -1,11 +1,11 @@
 # Configuration
 
-Everything lives in the **manifest** (`~/.config/ssh-manager/manifest.json`) - the single
+Everything SSH lives in the **manifest** (`~/.config/ssh-manager/manifest.json`) - the single
 source of truth. You never hand-edit ssh-manager's part of `~/.ssh/config`; you edit the
 manifest (or use the `host`/`profile` verbs) and re-render. A JSON Schema for the
 manifest and inventory lives in `src/config/schema/` (and matches the Go models in `src/internal/core`,
 which reject unknown keys). See [installation.md](installation.md) for how the home
-is resolved.
+is resolved. Auth tokens have their own config, described [below](#auth-tokens).
 
 ## ssh-manager owns only a marked block of `~/.ssh/config`
 
@@ -125,8 +125,8 @@ guarantees each alias offers only its own key and trusts only its own host keys.
 }
 ```
 
-Hosts need not be written by hand: `sshmgr host add|edit` change one field set at a
-time, and `sshmgr host apply <profile> <alias> <host>[:port] <user> [role]` (or many
+Hosts need not be written by hand: `authama ssh host add|edit` change one field set at a
+time, and `authama ssh host apply <profile> <alias> <host>[:port] <user> [role]` (or many
 with `--host`/`-f`) adds or updates `alias`, `hostname`, `user`, `port` and `tags` in one
 step. See [Host specs](recipes/host-specs.md).
 
@@ -144,9 +144,9 @@ step. See [Host specs](recipes/host-specs.md).
 | `global_options` | `{}` | ssh options emitted under `Host *` (e.g. `AddKeysToAgent`, macOS `UseKeychain`) |
 | `key_comment` | `{profile}/{alias} {date}` | comment template for new keys (see [Key comments](#key-comments)) |
 | `onepassword_agent` | platform default | the 1Password SSH agent socket for `key_store: 1password` profiles (see [Key stores](#key-stores)) |
-| `git.mode` | `profile` | default GitHub remote mode for `sshmgr git use`: `profile`, `ssh` or `https` |
+| `git.mode` | `profile` | default GitHub remote mode for `authama ssh git use`: `profile`, `ssh` or `https` |
 | `git.profile` | unset | the default identity: its GitHub key is bound to a rendered `Host github.com` (ssh mode), and it is used for owners `git.orgs` does not list. Unset, no `Host github.com` is rendered. The block is rendered once: in the profile's category file (`profiles/<category>/config`) when it has a category, otherwise in the root block; skipped if a host is already aliased `github.com` |
-| `git.orgs` | `{}` | GitHub owner → profile, for `sshmgr git` (see [tools/git.md](tools/git.md)) |
+| `git.orgs` | `{}` | GitHub owner → profile, for `authama ssh git` (see [tools/git.md](tools/git.md)) |
 
 All three `git` fields are optional and the key is omitted when unset, so a manifest without them renders
 and saves exactly as before. `ssh` mode needs `git.profile`, and no host may use the alias `github.com`
@@ -154,8 +154,8 @@ while it is set.
 
 ### `vm`
 
-A host with `vm` is a local VM. sshmgr renders `ProxyCommand "<sshmgr>" vm proxy <alias>` for it (one of
-the two ProxyCommands sshmgr writes, with `proxy` below; `raw_options` still may not set one), and resolves the
+A host with `vm` is a local VM. authama renders `ProxyCommand "<sshmgr>" vm proxy <alias>` for it (one of
+the two ProxyCommands authama writes, with `proxy` below; `raw_options` still may not set one), and resolves the
 VM's address through its hypervisor on each connection.
 
 ```jsonc
@@ -169,7 +169,7 @@ SSH and are not hosts); `name` is the VM as the hypervisor lists it, spaces allo
 
 ### `proxy`
 
-A host with `proxy: {"kind": "cloudflared"}` is reached through Cloudflare Access. sshmgr renders
+A host with `proxy: {"kind": "cloudflared"}` is reached through Cloudflare Access. authama renders
 `ProxyCommand "<cloudflared>" access ssh --hostname %h`, so `ssh <alias>` signs in through the browser and
 reaches the host with no SSH port open to the internet. `hostname` is the Access hostname.
 
@@ -178,7 +178,7 @@ reaches the host with no SSH port open to the internet. `hostname` is the Access
  "proxy": {"kind": "cloudflared"}}
 ```
 
-Set it with `sshmgr host add|edit ... --proxy cloudflared` (`--proxy none` removes it). A host is a VM or
+Set it with `authama ssh host add|edit ... --proxy cloudflared` (`--proxy none` removes it). A host is a VM or
 proxied, not both. `doctor` reports a proxied host when `cloudflared` is not installed, and the Termius
 export skips it (Termius ignores ProxyCommand). See
 [Reach a server through Cloudflare Access](recipes/cloudflare-access.md).
@@ -191,7 +191,7 @@ web-panel/manual entry). `token_env` overrides which env var that host's adapter
 reads for its credential - so several accounts on one provider stay separate. See
 [tools/providers.md](tools/providers.md) and [tools/vps.md](tools/vps.md).
 
-Mark a host that's only reachable over a VPN with `requires_vpn: true` (and an optional `vpn_name`); `sshmgr net` and every network action then warn you to connect the VPN instead of hanging. See [tools/network.md](tools/network.md).
+Mark a host that's only reachable over a VPN with `requires_vpn: true` (and an optional `vpn_name`); `authama ssh net` and every network action then warn you to connect the VPN instead of hanging. See [tools/network.md](tools/network.md).
 
 ## Profiles model identity, not technology - everything lives under the profile
 
@@ -207,7 +207,7 @@ keys, and nothing else - and nothing crosses profiles:
   not one per profile. Identity isolation comes from `IdentityFile` plus a
   per-host `IdentitiesOnly yes`, not from where the trust store lives. A
   host key trusted as `personal` is **not** trusted as `simtabi` - even on the
-  same `github.com` host. Pin host keys with `sshmgr knownhosts pin --all`.
+  same `github.com` host. Pin host keys with `authama ssh knownhosts pin --all`.
 
 ## Categories
 
@@ -223,8 +223,8 @@ manifest that uses no categories renders exactly as before.
 | It may not share a name with an uncategorized profile | Both would own `profiles/<name>/`. |
 | A categorized profile may not be named `config` or `old` | `profiles/<category>/config` is the category's file; `.../old/` is a rotation archive. |
 
-Set it with `sshmgr profile add <name> --category <c>` or
-`sshmgr profile edit <name> --category <c>`. The edit moves the key directory and
+Set it with `authama ssh profile add <name> --category <c>` or
+`authama ssh profile edit <name> --category <c>`. The edit moves the key directory and
 updates the inventory. See [Group profiles into categories](recipes/group-profiles-into-categories.md).
 
 ## Key stores
@@ -272,7 +272,7 @@ Two rules are enforced when the manifest loads:
 
 The store is per profile, not per host, so the hosts sharing a key cannot
 disagree about where it lives. To move a profile into 1Password, set
-`key_store` and run `sshmgr rotate` on each key: it generates the new key in the
+`key_store` and run `authama ssh rotate` on each key: it generates the new key in the
 vault and archives the old key file to `old/`. See
 [Keep keys in 1Password](recipes/keep-keys-in-1password.md).
 
@@ -288,16 +288,16 @@ Exactly one underscore (the profile prefix); the remainder is kebab-case. Names
 are **stable** (never carry a date - that lives in the key comment + inventory).
 Hardware keys end `-ed25519-sk`.
 
-When a key's type is a hardware one (`ed25519-sk`, `ecdsa-sk`) and no security key answers, sshmgr mints the
+When a key's type is a hardware one (`ed25519-sk`, `ecdsa-sk`) and no security key answers, authama mints the
 software equivalent (`ed25519`) at the same path rather than failing, so a machine without the device can still
 connect. It says so in three places: the key's comment ends `(sk-fallback)`, the inventory records the software
-type, and `reconcile` or `rotate` prints a line naming the key. Insert the security key and `sshmgr rotate <key>`
+type, and `reconcile` or `rotate` prints a line naming the key. Insert the security key and `authama ssh rotate <key>`
 to replace it with a hardware one.
 
 ## Key comments
 
 The comment is the free text after the key in its `.pub` (`ssh-keygen -l` prints it, and servers and panels
-show it next to the key). sshmgr writes it once, when it mints the key, from a template: the profile's
+show it next to the key). authama writes it once, when it mints the key, from a template: the profile's
 `key_comment`, else `defaults.key_comment`, else `{profile}/{alias} {date}`, which is what every release before
 the field wrote.
 
@@ -310,13 +310,13 @@ the field wrote.
 | `{device}` | this machine's short host name, lowercased (`mbp.local` → `mbp`) |
 
 ```sh
-sshmgr profile add oribi --key-comment 'imani-{device}-{date}'   # imani-mbp-2026-10-27
-sshmgr profile edit oribi --key-comment ''                         # back to defaults.key_comment
+authama ssh profile add oribi --key-comment 'imani-{device}-{date}'   # imani-mbp-2026-10-27
+authama ssh profile edit oribi --key-comment ''                         # back to defaults.key_comment
 ```
 
 A changed template applies to keys minted from then on, by `reconcile`, `key add` or `rotate`; an existing key
 keeps the comment it was made with. An unknown placeholder or a control character is refused when the manifest
-loads. A key in 1Password carries no comment from sshmgr: 1Password generates it.
+loads. A key in 1Password carries no comment from authama: 1Password generates it.
 
 ## Unmodeled ssh options - `raw_options`
 
@@ -343,7 +343,7 @@ or `shared`.
 
 Secrets/refs (age recipient, per-host provider tokens) live
 in `~/.config/ssh-manager/.env`, read by `internal/util/secrets`. A committed `.env-example` documents
-the shape with empty values, and `sshmgr init` seeds your `.env` from it. The
+the shape with empty values, and `authama init` seeds your `.env` from it. The
 `.env` is **never** committed (it's gitignored, mode 0600) and is **excluded from
 the encrypted bundle**.
 
@@ -366,18 +366,45 @@ token (the provider falls back to the manual paste path). Note: a literal token
 that itself begins with `cmd:` would be treated as a command - real OAuth/PAT
 tokens never do, but if needed, fetch such a value via `cmd:` instead.
 
+## <a name="auth-tokens"></a>Auth tokens
+
+The token config is a separate file, so the manifest stays about SSH. It names
+environment variables, never secrets: `authama token apply` reads the variables
+and writes each tool's credential file. It is found in this order:
+
+1. `--config FILE`
+2. `$SSH_MANAGER_TOKENS_CONFIG`
+3. `./authama-tokens.json` (a project's own)
+4. `<home>/tokens.json` (`authama token init` writes a starter one)
+5. auth-token-manager's locations, read with a deprecation notice until
+   `authama token import` moves the file: `$AUTH_TOKEN_MANAGER_CONFIG`,
+   `$COMPOSER_AUTH_CONFIG`, `./auth-token-manager.json`,
+   `~/.config/auth-token-manager.json`
+6. otherwise a built-in default: `GH_TOKEN` as Composer's github.com token
+
+The file's shape, each entry kind, and `_settings.docker_creds_store` (`login`
+or `refuse` for registries Docker keeps in a credential store) are in
+[`token`](tools/tokens.md). The files it writes are the tools' own, at their
+usual paths, honouring `COMPOSER_HOME`, `NPM_CONFIG_USERCONFIG`,
+`DOCKER_CONFIG`, `NETRC` and `XDG_CONFIG_HOME` (and `APPDATA` on Windows).
+
 ## Operation history
 
 Every command that changes something is recorded in `~/.config/ssh-manager/log/history.db`, beside
-`audit.log`. `sshmgr history` reads it. Set `SSH_MANAGER_HISTORY=0` to record nothing; `audit.log` is
+`audit.log`. `authama history` reads it; token writes and removals are recorded too,
+with the target and host but never the value. Set `SSH_MANAGER_HISTORY=0` to record nothing; `audit.log` is
 written either way. See [`history`](tools/history.md).
 
 ## Dev mode
 
 `--dev-root <dir>` (or `$SSHMGR_DEV_ROOT`) points the whole tool at a scratch
 directory: `<dir>/ssh` stands in for `~/.ssh` and `<dir>/config` for the config
-home. It is one root rather than two overrides, so a run cannot end up reading a
-sandbox and writing your real tree. See
+home, and `<dir>/home` for your home directory, where the token commands write
+`auth.json`, `.npmrc` and the rest. The tools' own path variables
+(`COMPOSER_HOME`, `NPM_CONFIG_USERCONFIG`, `DOCKER_CONFIG`, `NETRC`,
+`XDG_CONFIG_HOME`, `APPDATA`) are ignored in dev mode, and `docker login` is
+refused, since it would write outside the sandbox. It is one root rather than
+several overrides, so a run cannot end up reading a sandbox and writing your real tree. See
 [Work against a sandbox](recipes/dev-mode.md).
 
 ---

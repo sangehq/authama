@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/version"
 )
 
@@ -17,7 +18,7 @@ func TestVersionCommand(t *testing.T) {
 	if err := root.Execute(); err != nil {
 		t.Fatalf("version command errored: %v", err)
 	}
-	want := "sshmgr " + version.Version + "\n"
+	want := brand.Command + " " + version.Version + "\n"
 	if out.String() != want {
 		t.Fatalf("version output = %q, want %q", out.String(), want)
 	}
@@ -51,7 +52,7 @@ func TestUnknownCommandIsReportedBeforeItsFlags(t *testing.T) {
 	}
 	// And a near miss still gets cobra's suggestion.
 	for _, args := range [][]string{{"termus", "export", "--open"}, {"termus"}} {
-		if _, err := runErr(t, args...); err == nil || !strings.Contains(err.Error(), "Did you mean this?\n\ttermius") {
+		if _, err := runErr(t, args...); err == nil || !strings.Contains(err.Error(), "Did you mean this?\n\tssh termius") {
 			t.Errorf("%v: a typo should suggest the command: %v", args, err)
 		}
 	}

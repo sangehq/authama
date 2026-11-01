@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/overview"
 	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
@@ -51,7 +52,7 @@ func (r bannerRow) String() string {
 // commit and date stamped in; a dev build says so rather than printing a version
 // that no release ever carried.
 func buildLine() string {
-	parts := []string{"sshmgr " + version.Version, runtime.GOOS + "/" + runtime.GOARCH}
+	parts := []string{brand.Command + " " + version.Version, runtime.GOOS + "/" + runtime.GOARCH}
 	switch {
 	case version.Date != "" && version.Commit != "":
 		parts = append(parts, "built "+shortDate(version.Date)+" from "+version.Commit)

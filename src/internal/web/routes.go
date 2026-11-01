@@ -30,6 +30,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /history/{op}", h.handleOp)
 	mux.HandleFunc("GET /doctor", h.handleDoctor)
 	mux.HandleFunc("GET /audit", h.handleAudit)
+	mux.HandleFunc("GET /tokens", h.handleTokens)
 	mux.HandleFunc("GET /exports/{name}", h.handleExport)
 	mux.HandleFunc("GET /about/licenses", h.handleLicences)
 	if !s.opts.ReadOnly {
@@ -45,7 +46,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			s.renderError(w, r, http.StatusMethodNotAllowed, "Not a change",
-				"Changes are made from the forms on these pages, or with the sshmgr command.")
+				"Changes are made from the forms on these pages, or with the authama command.")
 			return
 		}
 		s.renderError(w, r, http.StatusNotFound, "Not found", "There is no page at this address.")
@@ -67,10 +68,10 @@ type pages struct{ s *Server }
 // anything else is a 500 with the message, which is the CLI's own wording.
 func (h pages) fail(w http.ResponseWriter, r *http.Request, err error) {
 	if errors.Is(err, ErrNotFound) {
-		h.s.renderError(w, r, http.StatusNotFound, "Not found", "Nothing by that name is in this sshmgr home.")
+		h.s.renderError(w, r, http.StatusNotFound, "Not found", "Nothing by that name is in this authama home.")
 		return
 	}
-	h.s.renderError(w, r, http.StatusInternalServerError, "Could not read the sshmgr home", err.Error())
+	h.s.renderError(w, r, http.StatusInternalServerError, "Could not read the authama home", err.Error())
 }
 
 func (h pages) handleOverview(w http.ResponseWriter, r *http.Request) {
@@ -225,6 +226,15 @@ func (h pages) handleDoctor(w http.ResponseWriter, r *http.Request) {
 		OK     bool
 		Report string
 	}{rep.OK(), rep.Format()}))
+}
+
+func (h pages) handleTokens(w http.ResponseWriter, r *http.Request) {
+	v, err := h.s.opts.Engine.Tokens()
+	if err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	h.s.render(w, http.StatusOK, "tokens", h.s.newView(r, "tokens", "Auth tokens", v))
 }
 
 func (h pages) handleAudit(w http.ResponseWriter, r *http.Request) {

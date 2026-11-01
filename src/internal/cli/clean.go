@@ -20,7 +20,7 @@ func newCleanCmd() *cobra.Command {
 		Short: "Remove stale known_hosts pins, stale records and write residue",
 		Long: "Remove stale known_hosts pins, stale inventory records and write residue.\n\n" +
 			"--adopt first tags the untagged pins that match a manifest host, putting\n" +
-			"them under sshmgr's management so they are pruned when their host goes\n" +
+			"them under authama's management so they are pruned when their host goes\n" +
 			"away. It is opt-in: an untagged pin is presumed to be yours.",
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
@@ -44,6 +44,6 @@ func newCleanCmd() *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "report what would change, touch nothing")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "clean without confirming (implied when there is no terminal)")
-	cmd.Flags().BoolVar(&adopt, "adopt", false, "put untagged pins matching a manifest host under sshmgr's management")
+	cmd.Flags().BoolVar(&adopt, "adopt", false, "put untagged pins matching a manifest host under authama's management")
 	return cmd
 }

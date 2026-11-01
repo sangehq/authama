@@ -14,8 +14,10 @@ within a few business days and will keep you updated on remediation progress.
 
 ## Scope notes for this project
 
-`ssh-manager` manages SSH private keys and config. A few invariants are
-security-load-bearing - please flag any regression in these:
+`ssh-manager` (the `authama` binary, also installed as `sshmgr`) manages SSH
+private keys and config, and the auth-token files package managers and git
+read. A few invariants are security-load-bearing - please flag any regression
+in these:
 
 - **Secrets never touch git.** Private keys live in `~/.ssh`; the per-user home
   (the OS-standard config dir, e.g. `~/.config/ssh-manager`) holds `.env`,
@@ -41,6 +43,26 @@ security-load-bearing - please flag any regression in these:
   trusted host key ever bleeds across identities (even on a shared host).
 - **The encrypted bundle never contains `.env`** (it holds the age recipient
   refs that unlock the bundle).
+- **Token files are owner-only and written atomically.** `auth.json`, `.npmrc`,
+  Docker's `config.json`, `.git-credentials` and `.netrc` are written to a temp
+  file at `0600` and renamed into place; `doctor` warns on a looser mode (`doctor --strict` and `token audit` fail on it) and
+  `doctor --fix` tightens it.
+- **The token config holds no secrets.** It names environment variables; the
+  values are read at run time and written only to the tools' own files.
+- **Secrets are not printed or recorded.** `token list` masks them unless
+  `--reveal` is confirmed, `token copy` copies without printing, `token apply`
+  does not echo `COMPOSER_AUTH`, and the audit log and history record the target
+  and host, never the value. The web UI never receives or shows a token.
+- **No credential injection.** `.npmrc`, `.netrc` and the git credential store
+  have no quoting, so a newline or whitespace in a value could add a second
+  credential. Such values, and malformed hosts, are refused before any write.
+- **Docker credential stores are respected.** A registry Docker keeps in a
+  credential helper is logged in with `docker login --password-stdin` (the
+  token on stdin, never argv) or refused; a non-interactive run with no setting
+  refuses.
+- **Dev mode cannot reach real credentials.** Under `--dev-root` every token file
+  maps into the sandbox, the tools' path variables are ignored, and `docker
+  login` is refused.
 
 ## Supported versions
 

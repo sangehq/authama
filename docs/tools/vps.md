@@ -55,14 +55,14 @@ have several accounts on one provider.
 
 ```sh
 # a host that represents your provider account (or a specific droplet)
-sshmgr host add work do-account --hostname cloud.digitalocean.com \
+authama ssh host add work do-account --hostname cloud.digitalocean.com \
     --user root --provider digitalocean
-sshmgr reconcile                       # mints work_do-account-ed25519 + shows its config
+authama ssh reconcile                       # mints work_do-account-ed25519 + shows its config
 
-sshmgr deploy work_do-account-ed25519  # ADD: POST the public key to the DO account
-sshmgr view do-account                 # see it recorded as deployed
-sshmgr rotate work_do-account-ed25519  # ROTATE: add new -> verify via API -> remove old
-sshmgr host delete work do-account     # REMOVE: prompts to revoke (DELETE the key) + prune
+authama ssh deploy work_do-account-ed25519  # ADD: POST the public key to the DO account
+authama ssh view do-account                 # see it recorded as deployed
+authama ssh rotate work_do-account-ed25519  # ROTATE: add new -> verify via API -> remove old
+authama ssh host delete work do-account     # REMOVE: prompts to revoke (DELETE the key) + prune
 ```
 
 Without a token the provider **degrades to the dashboard URL** (it prints where
@@ -90,10 +90,10 @@ For a **live** server, the key lives in its `~/.ssh/authorized_keys`. Use the
 host you can already reach:
 
 ```sh
-sshmgr host add development web1 --hostname 203.0.113.10 --user deploy   # provider defaults to generic-ssh
-sshmgr reconcile
-sshmgr deploy development_web1-ed25519   # ADD via ssh-copy-id
-sshmgr rotate development_web1-ed25519   # ROTATE: stage -> ssh-copy-id new -> verify login -> revoke old
+authama ssh host add development web1 --hostname 203.0.113.10 --user deploy   # provider defaults to generic-ssh
+authama ssh reconcile
+authama ssh deploy development_web1-ed25519   # ADD via ssh-copy-id
+authama ssh rotate development_web1-ed25519   # ROTATE: stage -> ssh-copy-id new -> verify login -> revoke old
 ```
 
 **Removal is hardened** (it edits the file that controls who can log in): before
@@ -146,14 +146,14 @@ or as a first-class adapter in `src/internal/core/providers/cloud.go`.
 
 If you can't SSH in at all, get to the server another way - your provider's
 **web/recovery console** (DigitalOcean Recovery Console, GCP serial/browser SSH,
-Hetzner console, ...) - and use `sshmgr recover`:
+Hetzner console, ...) - and use `authama ssh recover`:
 
 ```sh
 # Tailored snippet: re-add ONE specific key to authorized_keys. Paste into the console.
-sshmgr recover work_web1-ed25519
+authama ssh recover work_web1-ed25519
 
 # No argument: the full interactive recovery tool (list/add/remove/fix-perms/diagnose).
-sshmgr recover
+authama ssh recover
 ```
 
 `recover <key>` prints a self-contained `sh` snippet (the key's public half
@@ -180,13 +180,13 @@ Every feature of the original standalone VPS key tool has a home in ssh-manager:
 | `rename_key` | `rename` (+ auto on re-deploy) |
 | `delete_key` | `remove` (matched by key body) |
 | `GenericSpec` + `config.json` `extra_providers` (no-code provider) | `kind: "rest"` + `rest` block in `providers.json` (`src/internal/core/providers/cloud.go`, `GenericRest`) |
-| `available_providers` (which tokens are set) | `sshmgr providers` |
+| `available_providers` (which tokens are set) | `authama ssh providers` |
 | `KEY_TYPES`, `_split_key_line`, `_looks_like_base64`, `key_body`, `same_key`, `is_valid_public_key`, `count_keys`, `add/remove_key_from_text` | `internal/core/authkeys` (stricter: validates the base64 wire type, and bounds the length prefix in 64-bit arithmetic so a crafted line cannot wrap it) |
 | `Server` read/write `authorized_keys` (backup, atomic, lockout guard) | `internal/core/providers/ssh_generic.go` (`generic-ssh`) |
-| `Server.fix_permissions` | `fixkeys.sh` menu **4. fix permissions** (shipped + emitted by `sshmgr recover`) |
+| `Server.fix_permissions` | `fixkeys.sh` menu **4. fix permissions** (shipped + emitted by `authama ssh recover`) |
 | Account-keys interactive menu | `deploy` / `rotate` / `remove` / `rename` + `tui` |
 | Server-keys interactive menu | `generic-ssh` deploy/revoke + the `recover` recovery tool |
-| `fixkeys.sh` (paste-into-console recovery) | shipped as package data; `sshmgr recover [key]` |
+| `fixkeys.sh` (paste-into-console recovery) | shipped as package data; `authama ssh recover [key]` |
 | `.env.example` tokens | `.env-example` (DIGITALOCEAN_TOKEN / VULTR_API_KEY / HCLOUD_TOKEN / LINODE_TOKEN / SCW_SECRET_KEY + SCW_PROJECT_ID) |
 | `requirements.txt` (`requests`) | none - stdlib `urllib` (smaller supply-chain surface) |
 

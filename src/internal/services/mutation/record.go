@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/history"
 	"github.com/simtabi/ssh-manager/src/v3/internal/util/log"
 	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
@@ -275,5 +276,5 @@ func warn(err error) {
 		return
 	}
 	warned = true
-	_, _ = fmt.Fprintf(os.Stderr, "sshmgr: WARNING: the operation history was not recorded (%v); audit.log still was\n", err)
+	_, _ = fmt.Fprintf(os.Stderr, brand.Command+": WARNING: the operation history was not recorded (%v); audit.log still was\n", err)
 }

@@ -163,7 +163,7 @@ func BannerLines(states []Status) []string {
 		// to more than one profile.
 		selector := s.Ref()
 		lines = append(lines, fmt.Sprintf(
-			"⚠ %s %s (%s) - run: sshmgr rotate %s", selector, when, exp, selector))
+			"⚠ %s %s (%s) - run: authama ssh rotate %s", selector, when, exp, selector))
 	}
 	return lines
 }

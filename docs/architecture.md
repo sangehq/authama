@@ -2,14 +2,17 @@
 
 ```mermaid
 flowchart TD
-    MAIN[cmd/sshmgr · thin entrypoint] --> CLI[internal/cli · the cobra tree]
-    CLI --> SVC[internal/services<br/>reconciler · deployer · rotator · bundler ·<br/>notifier · editor · doctor · lifecycle · …]
-    CLI --> CORE[internal/core<br/>manifest · renderer · inventory · key · expiry · providers]
+    MAIN[cmd/authama · cmd/sshmgr · thin entrypoints] --> CLI[internal/cli · the cobra tree]
+    CLI --> SVC[internal/services<br/>reconciler · deployer · rotator · bundler ·<br/>notifier · editor · doctor · lifecycle · tokensvc · …]
+    CLI --> WEB[internal/web · the serve UI]
+    WEB --> SVC
+    CLI --> CORE[internal/core<br/>manifest · renderer · inventory · key · expiry · providers · tokens]
     SVC --> CORE
     SVC --> PLAT[internal/platform<br/>build-tagged OS predicates]
     SVC --> UTIL[internal/util<br/>fs · perms · lock · log · paths · secrets · netcheck]
     CORE -->|single source of truth| MAN[(manifest.json)]
     SVC -->|generated output| SSH[(~/.ssh)]
+    SVC -->|token files| TOK[(auth.json · .npmrc · .docker/config.json ·<br/>.git-credentials · .netrc)]
 ```
 
 There is no facade. `internal/cli` is where composition happens, and it is a
@@ -27,20 +30,26 @@ at the root and not one per module.
 ```
 src/                # THE GO MODULE. go.mod is here, so every `go` command runs
                     #   here - the Makefile uses `go -C src` for exactly this.
-  cmd/sshmgr/       # thin entrypoint; calls internal/cli and nothing else
+  cmd/authama/      # thin entrypoint; calls internal/cli and nothing else
+  cmd/sshmgr/       # the same, under the v3 name; also holds the repo-wide
+                    #   invariant tests (layering, hygiene, e2e)
   internal/
     cli/            # the cobra tree, one file per verb. The ONLY package that
                     #   imports cobra, and the only place services are composed.
                     #   exit.go owns the exit-code contract; mutate.go the guard.
+    brand/          # the names: display name, command, legacy command
     core/           # pure domain: manifest, renderer, inventory, key, expiry,
-                    #   authkeys, providers (adapters + the embedded catalog)
+                    #   authkeys, providers (adapters + the embedded catalog),
+                    #   tokens (the five credential formats; no I/O)
     services/       # use-cases, one concern each: reconciler, configsvc, importer,
                     #   deployer, rotator, notifier, bundler, editor, knownhosts,
                     #   query, keystore, agent, preflight, doctor, snapshots,
                     #   validate, recover, initsvc, migratesvc, netstat, keyaudit,
-                    #   keysvc, lifecycle
+                    #   keysvc, lifecycle, tokensvc (token I/O), change (the
+                    #   web UI's previewable changes), history, jobs, …
     platform/       # build-tagged OS predicates and terminal handling
                     #   (*_darwin.go, *_linux.go, *_windows.go, *_other.go)
+    web/            # serve: routes, templates, the preview/confirm engine
     util/           # fs, perms, lock, log, paths, secrets, netcheck, scheduler,
                     #   homeperms, askpass, httpjson, desktop
   config/           # the shipped example manifest/inventory, the providers
@@ -52,7 +61,7 @@ src/                # THE GO MODULE. go.mod is here, so every `go` command runs
   .golangci.yml
 build/              # everything build-related, and the only place anything is
                     #   generated. targets.txt (the release matrix) is the one
-                    #   tracked file; build/sshmgr is `make build` output and
+                    #   tracked file; build/authama and build/sshmgr are `make build` output and
                     #   build/dist/ is GoReleaser's. `make clean` empties it.
 docs/  README.md  CHANGELOG.md  LICENSE  Makefile  .github/
 ```
@@ -70,6 +79,34 @@ that - while writing into the repo-root `build/`.
 One third-party dependency: `github.com/spf13/cobra`. That is asserted, not
 aspirational - there is nowhere for a presentation or HTTP library to hide.
 
+## Auth tokens
+
+The token feature follows the same layering as the SSH side:
+
+- `internal/core/tokens` is pure. It turns a config and the current file text
+  into new file text (render, merge, read back, remove), validates targets and
+  values, and carries the Composer service catalog and the starter templates.
+  Its rendering is checked byte-for-byte against golden files produced by the
+  Python auth-token-manager it was ported from.
+- `internal/services/tokensvc` does the I/O: finding the config, reading and
+  writing the five files atomically at 0600, `docker login` for registries in a
+  credential store, `.gitignore` checks, the shell-alias block, and audit and
+  history records that name the target and host but never the secret. Its `Env`
+  is built once per command; in dev mode it maps every path into the sandbox
+  and hides the tools' own path variables, so a test or a `--dev-root` run
+  cannot reach the real files.
+- `internal/cli/token.go`, `token_more.go` and `tui_tokens.go` are the `token`
+  group and the TUI's Auth tokens menu; `internal/services/change/tokens.go` and
+  the web Tokens page make delete and apply previewable like every other web change.
+- `doctor` reads token-file modes through `tokensvc`, warns on a loose one (fails
+  under `--strict`) and repairs them with `--fix`.
+- `docs/reference/cli.md` is generated from the command tree, and a test fails
+  when it is stale or when a command has no example that parses.
+
+Names (`Authentication Access Manager`, `authama`, `sshmgr`) come from
+`internal/brand`, so a rename is one edit. The module path, the config home and
+the `SSH_MANAGER_*` variables deliberately did not change.
+
 ## Key flows
 
 ### Home + config resolution (manifest first; user, else shipped default)
@@ -86,7 +123,7 @@ flowchart TD
     OV --> R
     R --> MANI{manifest.json in home?}
     MANI -- yes --> SRC[use it: single source of truth]
-    MANI -- no --> EI[error: run sshmgr init]
+    MANI -- no --> EI[error: run authama init]
     R --> CAT{providers.json in home?}
     CAT -- yes --> UC[user catalog]
     CAT -- no --> SP[shipped package catalog<br/>always accurate]
@@ -106,7 +143,7 @@ flowchart LR
 
 ### Web UI: preview, confirm, or run as a job
 
-`sshmgr serve` (`internal/web`) reads the home through one `Engine`, and makes changes through two
+`authama serve` (`internal/web`) reads the home through one `Engine`, and makes changes through two
 services that the CLI's own code paths sit behind:
 
 ```mermaid
@@ -282,7 +319,7 @@ profile and silently one directory too high for a categorized one.
 
 A key file on disk is only as safe as the disk, and every copy of `~/.ssh` (a
 backup, a bundle, a laptop) carries it. With `key_store: 1password` the private
-key is generated inside 1Password and never read back: sshmgr writes only the
+key is generated inside 1Password and never read back: authama writes only the
 public half, and ssh reaches the key through the 1Password agent, selected by
 that `.pub` with `IdentitiesOnly`. Rotation, the part people skip, stays one
 command, and the vault keeps every predecessor in its Archive.

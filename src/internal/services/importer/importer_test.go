@@ -79,7 +79,7 @@ func TestInferProviderAndProfileFromIdentity(t *testing.T) {
 	cases := []struct{ path, profile, category string }{
 		{"~/.ssh/profiles/simtabi/k", "simtabi", ""},
 		{"~/.ssh/id_ed25519", "imported", ""},
-		{"~/.ssh/profiles/clients/adelsaiq/k", "adelsaiq", "clients"},
+		{"~/.ssh/profiles/clients/clientco/k", "clientco", "clients"},
 		// A flat profile's rotation archive is three deep too, but not a category.
 		{"~/.ssh/profiles/work/old/k", "work", ""},
 	}

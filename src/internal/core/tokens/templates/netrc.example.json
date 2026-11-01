@@ -1,0 +1,7 @@
+{
+  "_help": "~/.netrc machine logins (machine HOST login USER password PASS). Each host uses 'user_env'+'pass_env'. Used by curl, many HTTP clients, Heroku, etc. (~/_netrc on Windows). This file stores ENV VAR NAMES, not secrets — safe to commit. Delete the hosts you don't use. Writes MERGE into an existing .netrc, preserving entries for other machines.",
+  "netrc": {
+    "api.heroku.com": { "user_env": "HEROKU_USER", "pass_env": "HEROKU_API_KEY" },
+    "api.example.com": { "user_env": "API_USER", "pass_env": "API_TOKEN" }
+  }
+}

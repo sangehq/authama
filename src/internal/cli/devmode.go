@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
 )
 
@@ -53,7 +54,7 @@ func resolvePaths(c *cobra.Command) (paths.Paths, error) {
 	}
 	if c != nil {
 		_, _ = fmt.Fprintf(c.ErrOrStderr(),
-			"sshmgr: dev mode - writing under %s, not %s\n", p.DevRoot, paths.Resolve(nil, "", "").SSHDir)
+			brand.Command+": dev mode - writing under %s, not %s\n", p.DevRoot, paths.Resolve(nil, "", "").SSHDir)
 	}
 	return p, nil
 }

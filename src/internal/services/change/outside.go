@@ -103,7 +103,7 @@ func ProfileCategory(name, category string) Change {
 				_, _ = fmt.Fprintf(out, "%s: %s %s (was %s); %d inventory record(s) updated\n",
 					name, verb, res.To, res.From, res.RecordsUpdated)
 			}
-			_, _ = fmt.Fprintf(out, "edited profile %s (run `sshmgr reconcile` to mint any key "+
+			_, _ = fmt.Fprintf(out, "edited profile %s (run `authama ssh reconcile` to mint any key "+
 				"this now points at)\n", name)
 			if err := ApplyManifestEdit(out, p); err != nil {
 				return err
@@ -151,7 +151,7 @@ func ProfilePurge(name string) Change {
 func backupReady() error {
 	if os.Getenv("SSH_MANAGER_AGE_RECIPIENT") == "" {
 		return errors.New("this needs an encrypted backup first, and SSH_MANAGER_AGE_RECIPIENT is not set: " +
-			"set it to an age recipient (age-keygen -o <identity>) and restart sshmgr serve")
+			"set it to an age recipient (age-keygen -o <identity>) and restart authama serve")
 	}
 	if _, err := exec.LookPath("age"); err != nil {
 		return errors.New("this needs an encrypted backup first, and age is not installed")
