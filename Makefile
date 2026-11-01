@@ -138,8 +138,14 @@ docker-down: ## stop and remove the dev container
 
 # Tagged out of the ordinary suite: it mints six real keypairs and does an age
 # round trip. It builds its own binary, so it does not depend on `build`.
+#
+# The timeout covers a cold cross-compile of every declared release target
+# (TestEveryDeclaredReleaseTargetCompiles). In parallel that is still 3-4 minutes
+# on a 3-core hosted runner with an empty build cache (macos-latest: 3m46s), so
+# 300s left about a minute of headroom; 600s is a hang detector, not a budget.
+# The CI job keeps its own 15-minute limit.
 e2e: ## end-to-end smoke in a throwaway sandbox
-	$(GO) test -tags e2e -count=1 -timeout 300s ./cmd/sshmgr/
+	$(GO) test -tags e2e -count=1 -timeout 600s ./cmd/sshmgr/
 
 # The per-command assertions live in internal/cli/commands_test.go now, so they
 # run in the ordinary suite. Kept as a target because the docs and the shipping
