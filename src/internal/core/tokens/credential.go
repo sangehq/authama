@@ -108,7 +108,7 @@ func (s *Set) Len(target string) int { return len(s.Entries(target)) }
 func (s *Set) Remove(target, host string) bool {
 	kept := s.entries[:0:0]
 	for _, e := range s.entries {
-		if !(e.Target == target && e.Host == host) {
+		if e.Target != target || e.Host != host {
 			kept = append(kept, e)
 		}
 	}

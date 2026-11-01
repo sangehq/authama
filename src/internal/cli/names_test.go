@@ -259,7 +259,7 @@ func TestNoMessageTeachesTheOldSpelling(t *testing.T) {
 		rel, _ := filepath.Rel(root, path)
 		rel = filepath.ToSlash(rel)
 		if keep[rel] || strings.HasSuffix(rel, "_test.go") ||
-			!(strings.HasSuffix(rel, ".go") || strings.HasSuffix(rel, ".html")) {
+			!strings.HasSuffix(rel, ".go") && !strings.HasSuffix(rel, ".html") {
 			return nil
 		}
 		b, err := os.ReadFile(path)

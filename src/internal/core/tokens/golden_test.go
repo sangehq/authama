@@ -207,14 +207,14 @@ func TestConfigResolutionMatchesThePythonTool(t *testing.T) {
 			t.Fatal(err)
 		}
 		s := cfg.Resolve(get)
-		if !reflect.DeepEqual(s.Warnings, c.Warnings) && !(len(s.Warnings) == 0 && len(c.Warnings) == 0) {
+		if !reflect.DeepEqual(s.Warnings, c.Warnings) && (len(s.Warnings) != 0 || len(c.Warnings) != 0) {
 			t.Errorf("config %d warnings:\n got: %q\nwant: %q", i, s.Warnings, c.Warnings)
 		}
 		got := map[string]string{}
 		for _, tgt := range s.Targets() {
 			got[tgt], _ = s.Render(tgt, "", false)
 		}
-		if !reflect.DeepEqual(got, c.Renders) && !(len(got) == 0 && len(c.Renders) == 0) {
+		if !reflect.DeepEqual(got, c.Renders) && (len(got) != 0 || len(c.Renders) != 0) {
 			t.Errorf("config %d renders:\n got: %q\nwant: %q", i, got, c.Renders)
 		}
 	}

@@ -247,7 +247,7 @@ func TestInventoryDescribesAndDecodesDocker(t *testing.T) {
 	installAll(t, e)
 	for _, it := range e.Inventory("", false) {
 		if it.Target == tokens.Composer && it.Host == "github.com" &&
-			!(strings.Contains(it.Description, "GitHub") && strings.Contains(it.Description, "Composer")) {
+			(!strings.Contains(it.Description, "GitHub") || !strings.Contains(it.Description, "Composer")) {
 			t.Fatal(it.Description)
 		}
 		if it.Target == tokens.Docker {
