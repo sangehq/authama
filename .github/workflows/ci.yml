@@ -49,29 +49,34 @@ jobs:
       - name: Gate
         shell: bash
         run: |
-          # TEMPORARY diagnostics: split build, test-link and test-run time.
-          nproc || echo "NUMBER_OF_PROCESSORS=$NUMBER_OF_PROCESSORS"
-          if [ "$RUNNER_OS" = Windows ]; then powershell -NoProfile -Command "Get-MpComputerStatus | Select RealTimeProtectionEnabled,AntivirusEnabled | Format-List" || true; fi
-          go env GOCACHE GOMODCACHE GOMAXPROCS
+          # TEMPORARY diagnostics: warm per-package and per-test timings, then cold compile cost.
+          T="$RUNNER_TEMP"
+          go env GOCACHE GOMAXPROCS
           time go -C src build ./...
           time go -C src vet ./...
-          time go -C src test -count=1 -run '^$' ./... > /tmp/link.txt 2>&1 || { cat /tmp/link.txt; exit 1; }
-          time go -C src test -count=1 -json ./... > /tmp/test.json || true
-          python3 - <<'PY' || python - <<'PY'
-          import json, collections
-          start = {}; done = {}
-          for line in open('/tmp/test.json', encoding='utf-8'):
+          time go -C src test -count=1 -json ./... > "$T/test.json" || true
+          python3 - "$T/test.json" <<'PY'
+          import json, sys
+          start = {}; done = {}; tests = []
+          for line in open(sys.argv[1], encoding='utf-8'):
               try: e = json.loads(line)
               except Exception: continue
+              if e['Action'] in ('pass', 'fail') and e.get('Test') and '/' not in e['Test']:
+                  tests.append((e.get('Elapsed', 0), e['Package'].split('/')[-1], e['Test']))
               if e.get('Test'): continue
               if e['Action'] == 'start': start[e['Package']] = e['Time']
               if e['Action'] in ('pass', 'fail', 'skip'): done[e['Package']] = (e['Action'], e.get('Elapsed', 0), e['Time'])
           for p, (a, el, t) in sorted(done.items(), key=lambda kv: -kv[1][1])[:15]:
-              print(f"{el:8.2f}s {a} start={start.get(p,'?')[11:19]} end={t[11:19]} {p}")
+              print(f"PKG {el:8.2f}s {a} start={start.get(p,'?')[11:19]} end={t[11:19]} {p}")
+          for el, p, t in sorted(tests, reverse=True)[:25]:
+              print(f"TEST {el:8.2f}s {p} {t}")
+          print("TESTS", len(tests), "SUM", round(sum(x[0] for x in tests), 1))
           PY
-          import sys; sys.exit(0)
-          PY
-          grep -q '"Action":"fail"' /tmp/test.json && { grep '"Action":"fail"' /tmp/test.json | head; exit 1; } || true
+          if grep -q '"Action":"fail"' "$T/test.json"; then grep '"Action":"fail"' "$T/test.json" | head; exit 1; fi
+          echo "== cold cache: build, then compile and link every test binary without running"
+          export GOCACHE="$T/coldcache"
+          time go -C src build ./...
+          time go -C src test -count=1 -run '^$' ./... > "$T/link.txt" 2>&1 || { cat "$T/link.txt"; exit 1; }
       # Once per OS, not once overall: golangci-lint analyses a single GOOS, so
       # a single run never sees the build-tagged platform files at all.
       - name: Lint
