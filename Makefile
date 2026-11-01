@@ -61,8 +61,8 @@ build: clean ## compile the binary into a freshly emptied build/ (FORCE=1 to reb
 build-all: ## compile every package (what CI gated on before `ci` existed)
 	$(GO) build ./...
 
-test: ## run the unit suite
-	$(GO) test ./...
+test: ## run the unit suite (TESTFLAGS=... to pass more, e.g. -run or -count=1)
+	$(GO) test $(TESTFLAGS) ./...
 
 vet: ## go vet
 	$(GO) vet ./...
@@ -91,6 +91,14 @@ lint-all: ## lint every GOOS - one run only sees one, so build-tagged files hide
 # it: CI gets golangci-lint from a pinned action that also annotates the diff,
 # and folding it in here would silently drop both the pin and the cache.
 ci: fmt-check build-all vet test ## the gate CI runs (lint runs there as its own step)
+
+# The gate runs the tests; it never replays a cached result. Caching would also
+# cost more than it saves here: before storing a result, go test hashes every
+# file and directory the test binary touched, and the cli tests touch thousands
+# (each spawned tool is a PATH x PATHEXT search on Windows). On windows-latest
+# that bookkeeping alone took ~6.5 minutes after internal/cli had already passed,
+# which is what pushed the job to its 15-minute timeout. -count=1 skips it.
+ci: TESTFLAGS += -count=1
 
 check: ci lint ## everything: the CI gate plus lint, for humans
 
