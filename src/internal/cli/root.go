@@ -97,6 +97,7 @@ func newRootCmd() *cobra.Command {
 		c.Hidden = true
 		root.AddCommand(c)
 	}
+	applyExamples(root, "")
 	recordCommands(root)
 	return root
 }
