@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/keyaudit"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/keysvc"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/query"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/services/keyaudit"
+	"github.com/simtabi/authama/src/v3/internal/services/keysvc"
+	"github.com/simtabi/authama/src/v3/internal/services/query"
 )
 
 // The table is where a dangling key becomes visible, so every state a row can

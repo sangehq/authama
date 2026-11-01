@@ -1,4 +1,4 @@
-module github.com/simtabi/ssh-manager/src/v3
+module github.com/simtabi/authama/src/v3
 
 go 1.26.0
 

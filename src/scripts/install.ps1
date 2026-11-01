@@ -8,7 +8,7 @@
   installs sshmgr.exe alone.
 
 .EXAMPLE
-  irm https://raw.githubusercontent.com/simtabi/ssh-manager/main/src/scripts/install.ps1 | iex
+  irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex
 
 .EXAMPLE
   # Pin a version / custom dir (AUTHAMA_*, or the v3 names SSHMGR_*)
@@ -27,7 +27,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $owner   = 'simtabi'
-$repo    = 'ssh-manager'
+$repo    = 'authama'
+# The install folder keeps the repository's old name, so an upgrade lands where
+# the previous install (and the user PATH entry it added) already is.
+$dirName = 'ssh-manager'
 $binBase = 'authama'
 $compat  = 'sshmgr'
 
@@ -45,7 +48,7 @@ switch ($env:PROCESSOR_ARCHITECTURE) {
   default { throw "unsupported architecture: $($env:PROCESSOR_ARCHITECTURE)" }
 }
 
-if (-not $InstallDir) { $InstallDir = Join-Path $env:LOCALAPPDATA "Programs\$repo" }
+if (-not $InstallDir) { $InstallDir = Join-Path $env:LOCALAPPDATA "Programs\$dirName" }
 
 if (-not $Version) {
   try {

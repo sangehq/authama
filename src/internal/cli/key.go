@@ -8,15 +8,15 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/inventory"
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
-	"github.com/simtabi/ssh-manager/src/v3/internal/platform"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/editor"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/keyaudit"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/keysvc"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/lifecycle"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/pubkeys"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/reconciler"
+	"github.com/simtabi/authama/src/v3/internal/core/inventory"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/platform"
+	"github.com/simtabi/authama/src/v3/internal/services/editor"
+	"github.com/simtabi/authama/src/v3/internal/services/keyaudit"
+	"github.com/simtabi/authama/src/v3/internal/services/keysvc"
+	"github.com/simtabi/authama/src/v3/internal/services/lifecycle"
+	"github.com/simtabi/authama/src/v3/internal/services/pubkeys"
+	"github.com/simtabi/authama/src/v3/internal/services/reconciler"
 )
 
 // newKeyCmd is the key lifecycle verb. A key used to exist only as a property of

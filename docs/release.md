@@ -2,7 +2,7 @@
 
 Tag-driven. A `v*` tag builds a static binary per OS/arch and attaches them,
 with checksums, to a GitHub Release. Install the binary, or build from source
-with `go install github.com/simtabi/ssh-manager/src/v3/cmd/sshmgr@latest`.
+with `go install github.com/simtabi/authama/src/v3/cmd/sshmgr@latest`.
 
 ## Two tags per release
 
@@ -39,7 +39,7 @@ matching native one per OS. The binary version comes from the tag via ldflags
    binaries and archives, the deb/rpm/apk packages, per-archive SBOMs,
    `checksums.txt`, and a signed build-provenance attestation. Verify any
    downloaded artifact with
-   `gh attestation verify <file> --repo simtabi/ssh-manager`.
+   `gh attestation verify <file> --repo simtabi/authama`.
 
 > There is no cosign signature. Provenance attestation is the org default and is
 > what `release.yml` produces; a `signs:` block would be added against a named
@@ -49,12 +49,12 @@ matching native one per OS. The binary version comes from the tag via ldflags
 
 1. Make the repo public and enable Issues.
 2. Set the metadata:
-   `gh repo edit simtabi/ssh-manager --homepage "https://opensource.simtabi.com/products/simtabi/ssh-manager"`,
+   `gh repo edit simtabi/authama --homepage "https://opensource.simtabi.com/products/simtabi/ssh-manager"`,
    topics `oss ssh ssh-keys ssh-config key-rotation cli go`.
 3. Create the `release` GitHub Environment (`release.yml` runs in it).
 4. Green on macOS, Linux and Windows: `make check`, `make e2e`, `make feature-check`.
 5. After the tag lands, confirm the published artifact installs:
-   `curl -fsSL https://raw.githubusercontent.com/simtabi/ssh-manager/main/src/scripts/install.sh | bash -s vX.Y.Z && authama version`.
+   `curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash -s vX.Y.Z && authama version`.
 
 ## Channels still to wire (need external setup)
 

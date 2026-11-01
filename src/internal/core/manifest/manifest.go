@@ -17,8 +17,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/key"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/fs"
+	"github.com/simtabi/authama/src/v3/internal/core/key"
+	"github.com/simtabi/authama/src/v3/internal/util/fs"
 )
 
 const (

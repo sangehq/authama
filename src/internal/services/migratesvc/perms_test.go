@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/v3/internal/util/paths"
 )
 
 // Both move paths preserve the source's modes, so a legacy home created under a

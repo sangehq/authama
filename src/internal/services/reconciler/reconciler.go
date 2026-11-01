@@ -15,16 +15,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/inventory"
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/configsvc"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/keystore"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/opstore"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/fs"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/homeperms"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/log"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/perms"
+	"github.com/simtabi/authama/src/v3/internal/core/inventory"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/services/configsvc"
+	"github.com/simtabi/authama/src/v3/internal/services/keystore"
+	"github.com/simtabi/authama/src/v3/internal/services/opstore"
+	"github.com/simtabi/authama/src/v3/internal/util/fs"
+	"github.com/simtabi/authama/src/v3/internal/util/homeperms"
+	"github.com/simtabi/authama/src/v3/internal/util/log"
+	"github.com/simtabi/authama/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/v3/internal/util/perms"
 )
 
 // MintedKey is one key generated during reconcile/keygen.

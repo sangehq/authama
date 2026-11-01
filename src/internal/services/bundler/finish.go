@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
-	"github.com/simtabi/ssh-manager/src/v3/internal/platform"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/configsvc"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/homeperms"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/perms"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/platform"
+	"github.com/simtabi/authama/src/v3/internal/services/configsvc"
+	"github.com/simtabi/authama/src/v3/internal/util/homeperms"
+	"github.com/simtabi/authama/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/v3/internal/util/perms"
 )
 
 // FinishRestore re-asserts perms on the restored tree and config-home secrets,

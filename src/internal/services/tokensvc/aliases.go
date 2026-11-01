@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/tokens"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/fs"
+	"github.com/simtabi/authama/src/v3/internal/core/tokens"
+	"github.com/simtabi/authama/src/v3/internal/util/fs"
 )
 
 // AliasBackupSuffix names the copy of a startup file taken before an edit.

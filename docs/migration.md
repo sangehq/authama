@@ -23,7 +23,7 @@ Nothing you have stops working.
 | Variables | `SSH_MANAGER_*`, `SSHMGR_DEV_ROOT` | unchanged |
 | `~/.ssh` | managed-block markers, `known_hosts` tags | unchanged, so a v3 tree reconciles with no diff |
 | `vm` ProxyCommand | `sshmgr vm proxy …` | unchanged; `sshmgr` stays installed for it |
-| Go module | `github.com/simtabi/ssh-manager/src/v3` | unchanged |
+| Repository and Go module | `github.com/simtabi/ssh-manager`, module `github.com/simtabi/ssh-manager/src/v3` | `github.com/simtabi/authama`, module `github.com/simtabi/authama/src/v3`. GitHub redirects the old repository URLs, so old clones, release downloads and the old `install.sh`/`install.ps1` URLs keep working; `go install` needs the new path for releases after v3.6.0 |
 | Install | `install.sh`, `install.ps1`, release archives | the same installers and archives now carry both binaries (so do the Homebrew, Scoop, winget and deb/rpm/apk packages, once [release](release.md) publishes them) |
 
 Behaviour changes to know about:

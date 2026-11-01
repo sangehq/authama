@@ -68,7 +68,7 @@ docs/  README.md  CHANGELOG.md  LICENSE  Makefile  .github/
 
 Package paths below are written relative to the module, so `internal/cli` is
 `src/internal/cli` on disk; the Go import path is
-`github.com/simtabi/ssh-manager/src/v3/internal/cli`.
+`github.com/simtabi/authama/src/v3/internal/cli`.
 
 Two paths deliberately cross that boundary, and both are commented where they
 occur. GoReleaser runs from the repo root with `builds[].dir: src`, because its

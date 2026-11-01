@@ -36,7 +36,7 @@ account. `--profile` overrides the mapping for one run.
 ```text
 $ authama ssh git status ~/Artisan/projects/opensource/simtabi/packages/*
 .../pheg      https    simtabi/pheg      profile=imanimanyara (by owner)
-.../sshmgr    profile  simtabi/ssh-manager  profile=imanimanyara
+.../sshmgr    profile  simtabi/authama  profile=imanimanyara
 .../notes     -  no origin
 ```
 

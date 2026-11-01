@@ -15,10 +15,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
-	"github.com/simtabi/ssh-manager/src/v3/internal/platform"
-	"github.com/simtabi/ssh-manager/src/v3/internal/version"
-	"github.com/simtabi/ssh-manager/src/v3/internal/web"
+	"github.com/simtabi/authama/src/v3/internal/brand"
+	"github.com/simtabi/authama/src/v3/internal/platform"
+	"github.com/simtabi/authama/src/v3/internal/version"
+	"github.com/simtabi/authama/src/v3/internal/web"
 )
 
 // Seams for tests: the sandbox and CI cannot always bind a socket, and a test

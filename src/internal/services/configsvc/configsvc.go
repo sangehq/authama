@@ -11,9 +11,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/renderer"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/fs"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/core/renderer"
+	"github.com/simtabi/authama/src/v3/internal/util/fs"
 )
 
 const (

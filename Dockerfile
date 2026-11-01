@@ -18,7 +18,7 @@ FROM golang:${GO_VERSION}
 
 LABEL org.opencontainers.image.title="authama-dev" \
       org.opencontainers.image.description="Authentication Access Manager: SSH keys and config, and auth tokens - dev container" \
-      org.opencontainers.image.source="https://github.com/simtabi/ssh-manager" \
+      org.opencontainers.image.source="https://github.com/simtabi/authama" \
       org.opencontainers.image.licenses="MIT"
 
 ENV DEBIAN_FRONTEND=noninteractive

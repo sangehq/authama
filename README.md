@@ -2,8 +2,8 @@
 
 <!-- Three badges, not the usual four: authama ships as a static binary and has no
      package-registry release, so a registry-version badge would have no target. -->
-[![Tests](https://img.shields.io/github/actions/workflow/status/simtabi/ssh-manager/ci.yml?branch=main&label=tests)](https://github.com/simtabi/ssh-manager/actions/workflows/ci.yml)
-[![Static analysis](https://img.shields.io/github/actions/workflow/status/simtabi/ssh-manager/codeql.yml?branch=main&label=codeql)](https://github.com/simtabi/ssh-manager/actions/workflows/codeql.yml)
+[![Tests](https://img.shields.io/github/actions/workflow/status/simtabi/authama/ci.yml?branch=main&label=tests)](https://github.com/simtabi/authama/actions/workflows/ci.yml)
+[![Static analysis](https://img.shields.io/github/actions/workflow/status/simtabi/authama/codeql.yml?branch=main&label=codeql)](https://github.com/simtabi/authama/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 > SSH keys and config, and package-manager / git auth tokens, in one tool.
@@ -24,12 +24,12 @@ auth-token-manager? See the [migration guide](docs/migration.md).
 ## Install
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/simtabi/ssh-manager/main/src/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash
 authama doctor
 ```
 
-Windows: `irm https://raw.githubusercontent.com/simtabi/ssh-manager/main/src/scripts/install.ps1 | iex`. Also
-`go install github.com/simtabi/ssh-manager/src/v3/cmd/authama@latest`, or a binary from [Releases](https://github.com/simtabi/ssh-manager/releases). Every path, and where
+Windows: `irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex`. Also
+`go install github.com/simtabi/authama/src/v3/cmd/authama@latest`, or a binary from [Releases](https://github.com/simtabi/authama/releases). Every path, and where
 per-user state lives, is in [docs/installation.md](docs/installation.md).
 
 ## Quick start guide and usage

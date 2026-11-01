@@ -8,9 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/expiry"
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/notifier"
+	"github.com/simtabi/authama/src/v3/internal/core/expiry"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/services/notifier"
 )
 
 // newExpiryCmd is the native expiry verb: per-key rotation-age table.

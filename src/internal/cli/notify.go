@@ -8,11 +8,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
-	"github.com/simtabi/ssh-manager/src/v3/internal/platform"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/notifier"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/scheduler"
+	"github.com/simtabi/authama/src/v3/internal/brand"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/platform"
+	"github.com/simtabi/authama/src/v3/internal/services/notifier"
+	"github.com/simtabi/authama/src/v3/internal/util/scheduler"
 )
 
 // newNotifyCmd is the native notify verb group: install the scheduled expiry

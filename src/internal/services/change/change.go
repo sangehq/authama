@@ -30,10 +30,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/history"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/mutation"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/snapshots"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/v3/internal/services/history"
+	"github.com/simtabi/authama/src/v3/internal/services/mutation"
+	"github.com/simtabi/authama/src/v3/internal/services/snapshots"
+	"github.com/simtabi/authama/src/v3/internal/util/paths"
 )
 
 // ErrStale reports a confirmation made against a preview that no longer

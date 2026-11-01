@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
+	"github.com/simtabi/authama/src/v3/internal/brand"
 )
 
 // commandExamples are the --help examples for the commands that do not set

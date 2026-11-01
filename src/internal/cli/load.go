@@ -6,9 +6,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
-	"github.com/simtabi/ssh-manager/src/v3/internal/platform"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/agent"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/platform"
+	"github.com/simtabi/authama/src/v3/internal/services/agent"
 )
 
 // newLoadCmd is the native load verb: add a profile's keys to the ssh-agent

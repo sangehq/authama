@@ -5,9 +5,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/inventory"
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/deployer"
+	"github.com/simtabi/authama/src/v3/internal/core/inventory"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/services/deployer"
 )
 
 // newDeployCmd is the native deploy verb: install a key's public half on its

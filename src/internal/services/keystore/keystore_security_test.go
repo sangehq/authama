@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/askpass"
+	"github.com/simtabi/authama/src/v3/internal/util/askpass"
 )
 
 // TestMain mirrors cmd/sshmgr: when ssh-keygen executes this binary as its

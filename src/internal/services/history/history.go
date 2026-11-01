@@ -33,7 +33,7 @@ import (
 
 	_ "modernc.org/sqlite" // registers the "sqlite" driver
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/log"
+	"github.com/simtabi/authama/src/v3/internal/util/log"
 )
 
 //go:embed migrations/*.sql

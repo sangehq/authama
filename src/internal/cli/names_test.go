@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
+	"github.com/simtabi/authama/src/v3/internal/brand"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"

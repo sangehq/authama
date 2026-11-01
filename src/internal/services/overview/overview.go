@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
-	"github.com/simtabi/ssh-manager/src/v3/internal/platform"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/doctor"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/notifier"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/platform"
+	"github.com/simtabi/authama/src/v3/internal/services/doctor"
+	"github.com/simtabi/authama/src/v3/internal/services/notifier"
+	"github.com/simtabi/authama/src/v3/internal/util/paths"
 )
 
 // Row is one line of the state block. A row with a fix is a problem; Fix is

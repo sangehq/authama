@@ -21,13 +21,13 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/inventory"
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/configsvc"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/editor"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/keysvc"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/knownhosts"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/v3/internal/core/inventory"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/services/configsvc"
+	"github.com/simtabi/authama/src/v3/internal/services/editor"
+	"github.com/simtabi/authama/src/v3/internal/services/keysvc"
+	"github.com/simtabi/authama/src/v3/internal/services/knownhosts"
+	"github.com/simtabi/authama/src/v3/internal/util/paths"
 )
 
 // Options are the destructive opt-ins. Both default off: a delete that only

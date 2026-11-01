@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/platform"
+	"github.com/simtabi/authama/src/v3/internal/platform"
 )
 
 // Getenv is an env lookup, injectable for tests. nil means os.Getenv.

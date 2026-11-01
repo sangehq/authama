@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
 )
 
 // Agent adds private keys to the running ssh-agent.

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/editor"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/mutation"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/v3/internal/services/editor"
+	"github.com/simtabi/authama/src/v3/internal/services/mutation"
+	"github.com/simtabi/authama/src/v3/internal/util/paths"
 )
 
 // W2: a command that asks a person must not hold the lock while they read,

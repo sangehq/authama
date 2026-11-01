@@ -6,8 +6,8 @@ import (
 	"io"
 	"path/filepath"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/snapshots"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/v3/internal/services/snapshots"
+	"github.com/simtabi/authama/src/v3/internal/util/paths"
 )
 
 // SnapshotRestore is `sshmgr snapshots restore <id> --yes`: put back the

@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/tokens"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/fs"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/log"
+	"github.com/simtabi/authama/src/v3/internal/core/tokens"
+	"github.com/simtabi/authama/src/v3/internal/util/fs"
+	"github.com/simtabi/authama/src/v3/internal/util/log"
 )
 
 // Config file names and variables.

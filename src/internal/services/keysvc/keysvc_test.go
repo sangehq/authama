@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/inventory"
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/keystore"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/query"
+	"github.com/simtabi/authama/src/v3/internal/core/inventory"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/services/keystore"
+	"github.com/simtabi/authama/src/v3/internal/services/query"
 )
 
 // work/work_gh-ed25519  - wired to a host, on disk, recorded, deployed

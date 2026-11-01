@@ -11,13 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/expiry"
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/inventory"
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/keyaudit"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/desktop"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/fs"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/v3/internal/core/expiry"
+	"github.com/simtabi/authama/src/v3/internal/core/inventory"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/services/keyaudit"
+	"github.com/simtabi/authama/src/v3/internal/util/desktop"
+	"github.com/simtabi/authama/src/v3/internal/util/fs"
+	"github.com/simtabi/authama/src/v3/internal/util/paths"
 )
 
 // Notifier computes and fires the reminders.
