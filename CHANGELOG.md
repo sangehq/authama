@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [3.6.0] - 2026-11-01
+
 ### Added
 
 - **Auth token management, merged from auth-token-manager.** The new `token` group builds the credential
@@ -939,7 +941,8 @@ manifest - reproducible output, profile-based isolation, and safety guarantees
   Windows, plus CodeQL, secret scanning (gitleaks), and pre-commit. Releases
   build and attach artifacts to a GitHub Release on a `v*` tag.
 
-[Unreleased]: https://github.com/simtabi/ssh-manager/compare/v3.5.0...HEAD
+[Unreleased]: https://github.com/simtabi/ssh-manager/compare/v3.6.0...HEAD
+[3.6.0]: https://github.com/simtabi/ssh-manager/compare/v3.5.0...v3.6.0
 [3.5.0]: https://github.com/simtabi/ssh-manager/compare/v3.4.0...v3.5.0
 [3.4.0]: https://github.com/simtabi/ssh-manager/compare/v3.2.0...v3.4.0
 [3.2.0]: https://github.com/simtabi/ssh-manager/compare/v3.1.1...v3.2.0
