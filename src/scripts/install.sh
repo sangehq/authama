@@ -7,8 +7,8 @@
 # ProxyCommand lines `authama ssh vm` writes. A release from before authama
 # existed installs sshmgr alone.
 #
-#   curl -fsSL https://raw.githubusercontent.com/simtabi/ssh-manager/main/src/scripts/install.sh | bash
-#   curl -fsSL https://raw.githubusercontent.com/simtabi/ssh-manager/main/src/scripts/install.sh | bash -s v0.1.0
+#   curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash -s v0.1.0
 #
 # Windows users: use scripts/install.ps1 (irm ... | iex) or download the bare
 # authama_windows_<arch>.exe / sshmgr_windows_<arch>.exe from the releases page.
@@ -16,7 +16,7 @@
 set -euo pipefail
 
 OWNER="simtabi"
-REPO="ssh-manager"
+REPO="authama"
 BINARY="authama"
 COMPAT="sshmgr"
 
