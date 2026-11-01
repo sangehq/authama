@@ -49,7 +49,7 @@ only speaks SSH, or a server that pulls with a key.
    ssh -T git@github-simtabi      # Hi simtabi-bot! ...
    ```
 
-Use the alias in remotes: `git@github-simtabi:simtabi/ssh-manager.git`.
+Use the alias in remotes: `git@github-simtabi:simtabi/authama.git`.
 
 ## Rotate it
 

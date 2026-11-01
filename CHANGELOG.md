@@ -6,6 +6,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **The repository is now `simtabi/authama`** (was `simtabi/ssh-manager`), and the Go module path follows it:
+  `github.com/simtabi/authama/src/v3`. `go install github.com/simtabi/authama/src/v3/cmd/authama@latest`
+  (or `.../cmd/sshmgr`) once the next release is tagged; v3.6.0 and earlier still resolve only under the old
+  path. GitHub redirects the old URLs, so existing clones, the installers' old raw URLs and release
+  download links keep working. Both binaries, the config home and the Windows install folder are unchanged.
+
 ## [3.6.0] - 2026-11-01
 
 ### Added
@@ -941,13 +949,13 @@ manifest - reproducible output, profile-based isolation, and safety guarantees
   Windows, plus CodeQL, secret scanning (gitleaks), and pre-commit. Releases
   build and attach artifacts to a GitHub Release on a `v*` tag.
 
-[Unreleased]: https://github.com/simtabi/ssh-manager/compare/v3.6.0...HEAD
-[3.6.0]: https://github.com/simtabi/ssh-manager/compare/v3.5.0...v3.6.0
-[3.5.0]: https://github.com/simtabi/ssh-manager/compare/v3.4.0...v3.5.0
-[3.4.0]: https://github.com/simtabi/ssh-manager/compare/v3.2.0...v3.4.0
-[3.2.0]: https://github.com/simtabi/ssh-manager/compare/v3.1.1...v3.2.0
-[3.1.1]: https://github.com/simtabi/ssh-manager/compare/v3.1.0...v3.1.1
-[3.1.0]: https://github.com/simtabi/ssh-manager/compare/v3.0.0...v3.1.0
-[3.0.0]: https://github.com/simtabi/ssh-manager/compare/v2.0.0...v3.0.0
-[2.0.0]: https://github.com/simtabi/ssh-manager/compare/v0.1.0...v2.0.0
-[0.1.0]: https://github.com/simtabi/ssh-manager/releases/tag/v0.1.0
+[Unreleased]: https://github.com/simtabi/authama/compare/v3.6.0...HEAD
+[3.6.0]: https://github.com/simtabi/authama/compare/v3.5.0...v3.6.0
+[3.5.0]: https://github.com/simtabi/authama/compare/v3.4.0...v3.5.0
+[3.4.0]: https://github.com/simtabi/authama/compare/v3.2.0...v3.4.0
+[3.2.0]: https://github.com/simtabi/authama/compare/v3.1.1...v3.2.0
+[3.1.1]: https://github.com/simtabi/authama/compare/v3.1.0...v3.1.1
+[3.1.0]: https://github.com/simtabi/authama/compare/v3.0.0...v3.1.0
+[3.0.0]: https://github.com/simtabi/authama/compare/v2.0.0...v3.0.0
+[2.0.0]: https://github.com/simtabi/authama/compare/v0.1.0...v2.0.0
+[0.1.0]: https://github.com/simtabi/authama/releases/tag/v0.1.0

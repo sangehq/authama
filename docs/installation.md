@@ -27,7 +27,7 @@ macOS, Linux and Windows are all first-class, each validated on its own CI runne
 From a release binary:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/simtabi/ssh-manager/main/src/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash
 authama doctor          # verify deps, perms, agent, known_hosts, drift, token-file modes
 ```
 
@@ -39,14 +39,14 @@ release older than authama it installs `sshmgr` alone.
 On Windows:
 
 ```powershell
-irm https://raw.githubusercontent.com/simtabi/ssh-manager/main/src/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex
 ```
 
 With the Go toolchain:
 
 ```sh
-go install github.com/simtabi/ssh-manager/src/v3/cmd/authama@latest
-go install github.com/simtabi/ssh-manager/src/v3/cmd/sshmgr@latest   # the compat name, if you want it
+go install github.com/simtabi/authama/src/v3/cmd/authama@latest
+go install github.com/simtabi/authama/src/v3/cmd/sshmgr@latest   # the compat name, if you want it
 ```
 
 `cmd/authama` exists from the first release that ships it; before then, use
@@ -66,7 +66,7 @@ To build the current `main` instead of the last release — useful for a fix tha
 has landed but not shipped — name the branch:
 
 ```sh
-go install github.com/simtabi/ssh-manager/src/v3/cmd/authama@main
+go install github.com/simtabi/authama/src/v3/cmd/authama@main
 ```
 
 Go turns that into a pseudo-version (`v3.0.0-20260806193200-60ce5f9c4ee6`) and
@@ -74,14 +74,14 @@ the binary reports it, so a build from a branch is still identifiable. It needs
 no tag and no release, which also makes it the way in when a release is pending.
 
 Or download the binary for your platform from
-[Releases](https://github.com/simtabi/ssh-manager/releases) and put it on `PATH`.
+[Releases](https://github.com/simtabi/authama/releases) and put it on `PATH`.
 Every artifact is checksummed and carries a build-provenance attestation
-(`gh attestation verify <file> --repo simtabi/ssh-manager`).
+(`gh attestation verify <file> --repo simtabi/authama`).
 
 ## From a clone
 
 ```sh
-git clone https://github.com/simtabi/ssh-manager && cd ssh-manager
+git clone https://github.com/simtabi/authama && cd ssh-manager
 make build                # -> build/authama and build/sshmgr
 ./build/authama doctor
 ```

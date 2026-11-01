@@ -76,7 +76,7 @@ requires it; it's the *alias* that selects the identity):
 
 ```sh
 git remote set-url origin git@github-personal:me/my-repo.git
-git remote set-url origin git@github-simtabi:simtabi/ssh-manager.git
+git remote set-url origin git@github-simtabi:simtabi/authama.git
 # or, to rewrite a host globally for one account, use git's insteadOf:
 git config --global url."git@github-simtabi:simtabi/".insteadOf "git@github.com:simtabi/"
 ```
