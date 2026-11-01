@@ -108,9 +108,12 @@ const (
 	groupInspect = "Inspect"
 	groupChange  = "Change ~/.ssh"
 	groupRecover = "Recover"
+	// groupTokens is the token feature's corner of the menu. It is last so the
+	// SSH entries keep the numbers people learned before it existed.
+	groupTokens = "Auth tokens"
 )
 
-var menuGroups = []string{groupInspect, groupChange, groupRecover}
+var menuGroups = []string{groupInspect, groupChange, groupRecover, groupTokens}
 
 type menuItem struct {
 	group   string
@@ -139,6 +142,22 @@ var tuiMenu = []menuItem{
 	{groupChange, "Rotate a key", "rotate", "rotate", true, nil},
 
 	{groupRecover, "Snapshots - list and restore", "snapshots", "snapshots", true, nil},
+
+	{groupTokens, "List installed tokens", "token inventory", "tok_inventory", false, nil},
+	{groupTokens, "Check the token files", "token checkup", "tok_checkup", false, nil},
+	{groupTokens, "Copy a token to the clipboard", "token clip", "tok_clip", false, nil},
+	{groupTokens, "Store a token", "token store", "tok_store", true, nil},
+	{groupTokens, "Sync tokens from the config", "token sync", "tok_sync", true, nil},
+	{groupTokens, "Forget a token", "token forget", "tok_forget", true, nil},
+}
+
+// shownVerb is the command an entry prints beside it: SSH entries under their
+// `ssh` group, token entries as they are.
+func shownVerb(m menuItem) string {
+	if m.group == groupTokens {
+		return m.verb
+	}
+	return sshGroup + " " + m.verb
 }
 
 // menuWidth is the label column, sized to the longest label so the verb column
@@ -159,7 +178,7 @@ func (t *tui) writeMenu() {
 	width := menuWidth()
 	for _, group := range menuGroups {
 		header := "  " + group
-		if group == groupChange {
+		if group == groupChange || group == groupTokens {
 			header += "   (each one asks before it writes)"
 		}
 		t.print(header)
@@ -168,7 +187,7 @@ func (t *tui) writeMenu() {
 				continue
 			}
 			// %2d so 10+ entries stay aligned with single digits.
-			_, _ = fmt.Fprintf(t.out, "  %2d  %-*s  %s\n", i+1, width, m.label, m.verb)
+			_, _ = fmt.Fprintf(t.out, "  %2d  %-*s  %s\n", i+1, width, m.label, shownVerb(m))
 		}
 		t.print("")
 	}
@@ -197,7 +216,12 @@ func lookupMenu(answer string) (menuItem, bool) {
 		}
 		return menuItem{}, false
 	}
+	// What the menu shows (`ssh list`) and the v3 spelling (`list`) both work.
+	a = strings.TrimSpace(strings.TrimPrefix(a, sshGroup+" "))
 	for _, m := range tuiMenu {
+		if m.group == groupTokens && a == strings.TrimPrefix(m.verb, tokenGroup+" ") {
+			continue // a bare `store` is not a menu answer; `token store` is
+		}
 		if a == m.verb || a == strings.ToLower(m.label) {
 			return m, true
 		}
@@ -312,6 +336,8 @@ func (t *tui) dispatch(handler string) {
 		t.rotate()
 	case "snapshots":
 		t.snapshots()
+	default:
+		t.tokenAction(handler)
 	}
 }
 

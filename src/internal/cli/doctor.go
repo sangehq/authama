@@ -1,13 +1,17 @@
 package cli
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/spf13/cobra"
 
 	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
 	"github.com/simtabi/ssh-manager/src/v3/internal/platform"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/doctor"
+	"github.com/simtabi/ssh-manager/src/v3/internal/services/tokensvc"
 )
 
 // newDoctorCmd is the native (engine-free) doctor verb: diagnose deps, perms,
@@ -17,7 +21,7 @@ func newDoctorCmd() *cobra.Command {
 	var fix, jsonOut, strict bool
 	cmd := &cobra.Command{
 		Use:   "doctor",
-		Short: "Diagnose deps, perms, agent, known_hosts, drift, dangling keys",
+		Short: "Diagnose deps, perms, agent, known_hosts, drift, dangling keys, and token-file perms",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			p, err := resolvePaths(c)
@@ -40,16 +44,28 @@ func newDoctorCmd() *cobra.Command {
 				}
 			}
 			rep := svc.Run(strict)
+			// The token files (auth.json, .npmrc, docker's config.json, the git
+			// credential store, .netrc) hold secrets, so the doctor checks them
+			// for owner-only perms too; --fix tightens them.
+			tokEnv := tokensvc.NewEnv(p, tokenGetenv, tokenLookup, "")
+			findings, tokFailed, tokFixed := tokEnv.HomeFiles(fix)
 			if jsonOut {
 				b, err := rep.JSON()
 				if err != nil {
 					return err
 				}
+				if b, err = withTokens(b, findings, tokFailed); err != nil {
+					return err
+				}
 				_, _ = fmt.Fprintln(out, string(b))
 			} else {
+				for _, f := range tokFixed {
+					_, _ = fmt.Fprintln(out, "fixed perms:", f)
+				}
 				_, _ = fmt.Fprintln(out, rep.Format())
+				writeDoctorTokens(out, findings)
 			}
-			if !rep.OK() {
+			if !rep.OK() || tokFailed {
 				return errNotClean
 			}
 			return nil
@@ -60,4 +76,51 @@ func newDoctorCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&strict, "strict", false,
 		"treat every dangling-key state as a failure, not only the blocking ones (for CI)")
 	return cmd
+}
+
+func writeDoctorTokens(w io.Writer, fs []tokensvc.Finding) {
+	_, _ = fmt.Fprintln(w, "\n=== auth tokens ===")
+	if len(fs) == 0 {
+		_, _ = fmt.Fprintln(w, "no token files installed")
+		return
+	}
+	printFindings(w, fs)
+}
+
+// withTokens adds a "tokens" member to the doctor's JSON object, keeping the
+// SSH report's keys and their order as they were: {"ok": ..., "findings": [...]}.
+func withTokens(report []byte, fs []tokensvc.Finding, failed bool) ([]byte, error) {
+	type finding struct {
+		Level  string `json:"level"`
+		Target string `json:"target"`
+		Text   string `json:"text"`
+	}
+	view := struct {
+		OK       bool      `json:"ok"`
+		Findings []finding `json:"findings"`
+	}{OK: !failed, Findings: []finding{}}
+	for _, f := range fs {
+		view.Findings = append(view.Findings, finding(f))
+	}
+	tok, err := json.Marshal(view)
+	if err != nil {
+		return nil, err
+	}
+	trimmed := bytes.TrimRight(report, " \t\r\n")
+	if len(trimmed) < 2 || trimmed[len(trimmed)-1] != '}' {
+		return nil, fmt.Errorf("doctor: the report is not a JSON object")
+	}
+	var compact bytes.Buffer
+	spliced := append(append(append([]byte{}, trimmed[:len(trimmed)-1]...), []byte(`,"tokens":`)...), tok...)
+	spliced = append(spliced, '}')
+	if !bytes.Contains(report, []byte("\n")) {
+		if err := json.Compact(&compact, spliced); err != nil {
+			return nil, err
+		}
+		return compact.Bytes(), nil
+	}
+	if err := json.Indent(&compact, spliced, "", "  "); err != nil {
+		return nil, err
+	}
+	return compact.Bytes(), nil
 }

@@ -146,20 +146,7 @@ func newTokenInventoryCmd() *cobra.Command {
 			if reveal {
 				note(c, "revealing secrets — they will print to your terminal.")
 			}
-			tw := tabwriter.NewWriter(c.OutOrStdout(), 0, 0, 2, ' ', 0)
-			_, _ = fmt.Fprintln(tw, "TOOL\tHOST\tWHAT\tUSER\tSECRET\tFILE")
-			for _, it := range items {
-				user := emDash(it.Username)
-				secret := "—"
-				switch {
-				case reveal:
-					secret = emDash(it.Secret)
-				case it.SecretPresent:
-					secret = "••••••••"
-				}
-				_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", it.Target, it.Host, it.Description, user, secret, it.File)
-			}
-			return tw.Flush()
+			return writeTokenTable(c.OutOrStdout(), items, reveal)
 		},
 	}
 	cmd.Flags().BoolVar(&asJSON, "json", false, "print the list as JSON")
@@ -168,6 +155,23 @@ func newTokenInventoryCmd() *cobra.Command {
 	targetsFlag(cmd, &targets, "only these tools")
 	cmd.Flags().StringVar(&project, "project", "", "read the project's auth.json and .npmrc instead of the user ones")
 	return cmd
+}
+
+// writeTokenTable prints installed tokens, secrets masked unless revealed.
+func writeTokenTable(w io.Writer, items []tokens.Installed, reveal bool) error {
+	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+	_, _ = fmt.Fprintln(tw, "TOOL\tHOST\tWHAT\tUSER\tSECRET\tFILE")
+	for _, it := range items {
+		secret := "—"
+		switch {
+		case reveal:
+			secret = emDash(it.Secret)
+		case it.SecretPresent:
+			secret = "••••••••"
+		}
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", it.Target, it.Host, it.Description, emDash(it.Username), secret, it.File)
+	}
+	return tw.Flush()
 }
 
 func emDash(s string) string {
@@ -244,7 +248,7 @@ func newTokenStoreCmd() *cobra.Command {
 				return errors.New("nothing to save: the credential is incomplete")
 			}
 			mutation.LockForMutation(env.Paths)
-			return writeTokenTargets(c, env, set, []string{target}, project, mode, nil)
+			return writeTokenTargets(cliTokenIO(c), env, set, []string{target}, project, mode, nil)
 		},
 	}
 	cmd.Flags().StringVar(&target, "target", "", "the tool: npm, docker, git or netrc (Composer uses --service)")
@@ -282,12 +286,29 @@ func readTokenSecret(c *cobra.Command, label string) (string, error) {
 	return s, nil
 }
 
+// tokenIO is where a token write reports, and who answers its one question
+// (whether to hand credential-store registries to docker login). The CLI and
+// the TUI each build one, so the write itself is shared.
+type tokenIO struct {
+	out, errw io.Writer
+	// ask is nil when nobody can answer: the docker question then refuses.
+	ask func(prompt string) bool
+}
+
+func cliTokenIO(c *cobra.Command) tokenIO {
+	tio := tokenIO{out: c.OutOrStdout(), errw: c.ErrOrStderr()}
+	if stdinIsTerminal() {
+		tio.ask = func(prompt string) bool { return confirm(c, prompt) }
+	}
+	return tio
+}
+
 // writeTokenTargets writes each target's entries and says where.
-func writeTokenTargets(c *cobra.Command, env tokensvc.Env, set *tokens.Set, targets []string, project, mode string, cfg *tokens.Config) error {
+func writeTokenTargets(tio tokenIO, env tokensvc.Env, set *tokens.Set, targets []string, project, mode string, cfg *tokens.Config) error {
 	for _, t := range targets {
 		dest := env.TargetPath(t, project)
 		if t == tokens.Docker {
-			m, err := dockerMode(c, set, dest, mode, cfg)
+			m, err := dockerMode(tio, set, dest, mode, cfg)
 			if err != nil {
 				return err
 			}
@@ -296,13 +317,13 @@ func writeTokenTargets(c *cobra.Command, env tokensvc.Env, set *tokens.Set, targ
 				return err
 			}
 			for _, w := range res.Warnings {
-				note(c, "  %s", w)
+				_, _ = fmt.Fprintf(tio.errw, "  %s\n", w)
 			}
 			for _, h := range res.LoggedIn {
-				say(c, "✓ stored docker: %s with docker login", h)
+				_, _ = fmt.Fprintf(tio.out, "✓ stored docker: %s with docker login\n", h)
 			}
 			if len(res.Written) > 0 {
-				say(c, "✓ wrote docker → %s", dest)
+				_, _ = fmt.Fprintf(tio.out, "✓ wrote docker → %s\n", dest)
 			}
 			continue
 		}
@@ -310,9 +331,9 @@ func writeTokenTargets(c *cobra.Command, env tokensvc.Env, set *tokens.Set, targ
 		if err != nil {
 			return err
 		}
-		say(c, "✓ wrote %s → %s", t, dest)
+		_, _ = fmt.Fprintf(tio.out, "✓ wrote %s → %s\n", t, dest)
 		for _, w := range warns {
-			note(c, "  %s", w)
+			_, _ = fmt.Fprintf(tio.errw, "  %s\n", w)
 		}
 	}
 	return nil
@@ -320,8 +341,8 @@ func writeTokenTargets(c *cobra.Command, env tokensvc.Env, set *tokens.Set, targ
 
 // dockerMode settles what to do with registries Docker keeps in a credential
 // store: the flag, then the config's _settings.docker_creds_store, then a
-// question at a terminal; without one, refuse and warn.
-func dockerMode(c *cobra.Command, set *tokens.Set, dest, flag string, cfg *tokens.Config) (string, error) {
+// question when someone can answer; without one, refuse and warn.
+func dockerMode(tio tokenIO, set *tokens.Set, dest, flag string, cfg *tokens.Config) (string, error) {
 	if flag != "" {
 		return flag, nil
 	}
@@ -334,10 +355,10 @@ func dockerMode(c *cobra.Command, set *tokens.Set, dest, flag string, cfg *token
 			return m, nil
 		}
 	}
-	if !tokensvc.HasDockerDelegation(set, dest) || !stdinIsTerminal() {
+	if tio.ask == nil || !tokensvc.HasDockerDelegation(set, dest) {
 		return tokensvc.DockerRefuse, nil
 	}
-	if confirm(c, "Docker keeps these registries in a credential store, so an inline auth would be ignored.\n"+
+	if tio.ask("Docker keeps these registries in a credential store, so an inline auth would be ignored.\n" +
 		"Store them with `docker login --password-stdin` instead? (no skips them)") {
 		return tokensvc.DockerLogin, nil
 	}
@@ -413,18 +434,19 @@ func newTokenClipCmd() *cobra.Command {
 
 // loadTokenConfig finds and reads the token config, saying where it came
 // from when that is a legacy location or the built-in default.
-func loadTokenConfig(c *cobra.Command, env tokensvc.Env, explicit string) (*tokens.Config, error) {
+func loadTokenConfig(errw io.Writer, env tokensvc.Env, explicit string) (*tokens.Config, error) {
+	note := func(format string, a ...any) { _, _ = fmt.Fprintf(errw, format+"\n", a...) }
 	src, err := env.FindConfig(explicit)
 	if err != nil {
 		return nil, err
 	}
 	if src.Path == "" {
-		note(c, "note: no token config found — using the built-in default (GitHub for Composer from $GH_TOKEN); "+
+		note("note: no token config found — using the built-in default (GitHub for Composer from $GH_TOKEN); "+
 			"`%s token scaffold` writes one.", brand.Command)
 		return tokensvc.Builtin(), nil
 	}
 	if src.Legacy {
-		note(c, "deprecated: reading the auth-token-manager config %s; run `%s token adopt-legacy` to move it to %s.",
+		note("deprecated: reading the auth-token-manager config %s; run `%s token adopt-legacy` to move it to %s.",
 			src.Path, brand.Command, env.Paths.Tokens())
 	}
 	return tokensvc.LoadConfig(src.Path)
@@ -459,7 +481,7 @@ func newTokenSyncCmd() *cobra.Command {
 					return err
 				}
 			}
-			cfg, err := loadTokenConfig(c, env, config)
+			cfg, err := loadTokenConfig(c.ErrOrStderr(), env, config)
 			if err != nil {
 				return err
 			}
@@ -491,7 +513,7 @@ func newTokenSyncCmd() *cobra.Command {
 				return nil
 			}
 			mutation.LockForMutation(env.Paths)
-			if err := writeTokenTargets(c, env, set, chosen, project, mode, cfg); err != nil {
+			if err := writeTokenTargets(cliTokenIO(c), env, set, chosen, project, mode, cfg); err != nil {
 				return err
 			}
 			if sel[tokens.Composer] || len(sel) == 0 && set.Len(tokens.Composer) > 0 {
@@ -593,7 +615,7 @@ func newTokenSkeletonCmd() *cobra.Command {
 				return nothingToWrite(sel)
 			}
 			mutation.LockForMutation(env.Paths)
-			if err := writeTokenTargets(c, env, set, write, project, tokensvc.DockerRefuse, nil); err != nil {
+			if err := writeTokenTargets(cliTokenIO(c), env, set, write, project, tokensvc.DockerRefuse, nil); err != nil {
 				return err
 			}
 			note(c, "NOTE: placeholders are not valid credentials — replace them.")
@@ -724,14 +746,14 @@ func newTokenCheckupCmd() *cobra.Command {
 				set.Add(tokens.Credential{Target: t, Host: "-", Kind: tokens.KindToken, Token: "-"})
 			}
 			if len(sel) == 0 && config != "" {
-				cfg, err := loadTokenConfig(c, env, config)
+				cfg, err := loadTokenConfig(c.ErrOrStderr(), env, config)
 				if err != nil {
 					return err
 				}
 				set = cfg.Resolve(env.Lookup)
 			}
 			findings, failed := env.Checkup(orderedSet(set), project)
-			printFindings(c, findings)
+			printFindings(c.OutOrStdout(), findings)
 			if failed {
 				return errNotClean
 			}
@@ -755,22 +777,23 @@ func orderedSet(s *tokens.Set) *tokens.Set {
 	return out
 }
 
-func printFindings(c *cobra.Command, fs []tokensvc.Finding) {
+func printFindings(w io.Writer, fs []tokensvc.Finding) {
+	line := func(format string, a ...any) { _, _ = fmt.Fprintf(w, format+"\n", a...) }
 	for _, f := range fs {
 		switch f.Level {
 		case "ok":
-			say(c, "✓ %s", f.Text)
+			line("✓ %s", f.Text)
 		case "absent":
-			say(c, "· %s", f.Text)
+			line("· %s", f.Text)
 		case "note":
-			say(c, "    note: %s", f.Text)
+			line("    note: %s", f.Text)
 		default:
 			if f.Target != "" && !strings.HasPrefix(f.Text, f.Target+":") {
-				say(c, "    WARN: %s", f.Text)
+				line("    WARN: %s", f.Text)
 			} else if f.Target != "" {
-				say(c, "✗ %s", f.Text)
+				line("✗ %s", f.Text)
 			} else {
-				say(c, "WARN: %s", f.Text)
+				line("WARN: %s", f.Text)
 			}
 		}
 	}

@@ -100,3 +100,30 @@ func permString(path string) string {
 	}
 	return fmt.Sprintf("0o%o", fi.Mode().Perm())
 }
+
+// HomeFiles is the doctor's view of the token files: each per-user target
+// file that exists, and whether it is owner-only. With fix, a file that is
+// not is chmod'ed to SecretMode first (inside the sandbox in dev mode), and
+// fixed names it. The project-scoped .gitignore check stays in Checkup: the
+// doctor runs from any directory and has no project to judge.
+func (e Env) HomeFiles(fix bool) (out []Finding, failed bool, fixed []string) {
+	for _, t := range tokens.Targets() {
+		path := e.TargetPath(t, "")
+		if !exists(path) {
+			continue
+		}
+		if fix && !ownerOnly(path) && e.Guard(path) == nil {
+			if err := perms.SetPerms(path, SecretMode); err == nil {
+				fixed = append(fixed, path)
+			}
+		}
+		if ownerOnly(path) {
+			out = append(out, Finding{"ok", t, fmt.Sprintf("%s: %s  perms=%s", t, path, permString(path))})
+			continue
+		}
+		out = append(out, Finding{"warn", t, fmt.Sprintf("%s: %s  perms=%s — group/world-readable (doctor --fix, or chmod 600)",
+			t, path, permString(path))})
+		failed = true
+	}
+	return out, failed, fixed
+}

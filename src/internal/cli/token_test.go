@@ -615,3 +615,51 @@ func TestTokenSyncReadsALegacyConfigWithANotice(t *testing.T) {
 		t.Errorf("the legacy config was not used:\n%s", out)
 	}
 }
+
+// --- the doctor's token section ------------------------------------------
+
+func TestDoctorChecksAndFixesTokenFilePerms(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX modes")
+	}
+	b := tokenSandbox(t)
+	npmrc := filepath.Join(b.home, ".npmrc")
+	if err := os.MkdirAll(b.home, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(npmrc, []byte("//registry.npmjs.org/:_authToken=x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	doctor := func(args ...string) (string, string, error) {
+		root := newRootCmd()
+		var out, errOut bytes.Buffer
+		root.SetOut(&out)
+		root.SetErr(&errOut)
+		root.SetArgs(append([]string{"--dev-root", b.root, "doctor"}, args...))
+		err := root.Execute()
+		return out.String(), errOut.String(), err
+	}
+	out, _, err := doctor()
+	if err == nil || !strings.Contains(out, "=== auth tokens ===") || !strings.Contains(out, "✗ npm: "+npmrc) {
+		t.Errorf("doctor did not flag a group-readable .npmrc (err %v):\n%s", err, out)
+	}
+	js, _, _ := doctor("--json")
+	var doc map[string]any
+	if err := json.Unmarshal([]byte(js), &doc); err != nil {
+		t.Fatalf("doctor --json no longer parses: %v\n%s", err, js)
+	}
+	tok, _ := doc["tokens"].(map[string]any)
+	if tok == nil || tok["ok"] != false {
+		t.Errorf("doctor --json tokens = %v", doc["tokens"])
+	}
+	if _, ok := doc["perm_issues"]; !ok {
+		t.Error("the SSH report's keys are gone from doctor --json")
+	}
+	out, _, _ = doctor("--fix")
+	if fi, _ := os.Stat(npmrc); fi.Mode().Perm() != 0o600 {
+		t.Errorf("doctor --fix left .npmrc at %o:\n%s", fi.Mode().Perm(), out)
+	}
+	if !strings.Contains(out, "✓ npm: "+npmrc) {
+		t.Errorf("after --fix:\n%s", out)
+	}
+}
