@@ -1,5 +1,5 @@
 {
-  "_help": "Composer auth.json / COMPOSER_AUTH. Map each host to a known 'service' (run `authama token services`) OR an explicit 'type'. Token services use 'env'; http-basic uses 'user_env'+'pass_env'; bitbucket uses 'key_env'+'secret_env'; custom-headers uses 'headers' with ${VAR}. This file stores ENV VAR NAMES, not secrets — safe to commit. Delete the hosts you don't use. For self-hosted GitLab / GitHub Enterprise, also add the host to gitlab-domains / github-domains in your composer.json `config`.",
+  "_help": "Composer auth.json / COMPOSER_AUTH. Map each host to a known 'service' (run `authama token providers`) OR an explicit 'type'. Token services use 'env'; http-basic uses 'user_env'+'pass_env'; bitbucket uses 'key_env'+'secret_env'; custom-headers uses 'headers' with ${VAR}. This file stores ENV VAR NAMES, not secrets — safe to commit. Delete the hosts you don't use. For self-hosted GitLab / GitHub Enterprise, also add the host to gitlab-domains / github-domains in your composer.json `config`.",
   "composer": {
     "github.com":          { "service": "github", "env": "GH_TOKEN" },
     "github.example.com":  { "service": "github-enterprise", "env": "GHE_TOKEN" },

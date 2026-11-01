@@ -13,7 +13,7 @@ import (
 func newRecoverCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "recover [[profile/]key]",
-		Short: "Break-glass recovery snippet / fixkeys tool",
+		Short: "Print a break-glass snippet for regaining access when a key is lost",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			keyName := ""

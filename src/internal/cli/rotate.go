@@ -194,7 +194,7 @@ func newRollbackCmd() *cobra.Command {
 	var yes bool
 	cmd := &cobra.Command{
 		Use:   "rollback <[profile/]key>",
-		Short: "Restore the previous key",
+		Short: "Undo a rotation: put a key's previous version back",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			key := args[0]

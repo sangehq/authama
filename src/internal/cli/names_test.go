@@ -23,8 +23,10 @@ import (
 //   - cobra's prefix matching stays off: `authama ssh ro` is an error, never a
 //     guess between rotate and rollback;
 //   - siblings' names and aliases are unique and at least two edits apart;
-//   - no word names a command in both the ssh and token subtrees, or names a
-//     top-level command and a token command;
+//   - a word that names a command in both the ssh and token subtrees, or a
+//     top-level command and a token command, means the same kind of thing in
+//     both and is listed in sharedVerbs with that meaning; any other overlap
+//     is one word with two meanings, and fails;
 //   - a deprecated spelling (Deprecated set) is hidden and says what to use;
 //   - every other hidden top-level command is the v1 spelling of an ssh verb, with
 //     the same subcommands and flags, so the two can never drift apart.
@@ -34,6 +36,23 @@ import (
 // break every v1 script, so they are listed here with the reason they differ.
 var prefixPairs = map[string]string{
 	"key/keygen": "key manages the registry; keygen generates a key file (v1 names)",
+}
+
+// sharedVerbs are the words the ssh and token groups (or the top level and
+// the token group) both use, each with the one meaning it has everywhere. A
+// user who knows `ssh list` can guess `token list`; a word that did something
+// else in the other group would be a trap, so a new overlap must be added
+// here, with the meaning, or renamed.
+var sharedVerbs = map[string]string{
+	"list":      "print the items of a kind, one line each (ssh list / key list / vm list / token list)",
+	"show":      "everything about one named item (ssh show / config show / token show)",
+	"delete":    "remove one named item (host, profile, key, token), asking first at a terminal",
+	"apply":     "add or update items from a declarative source (host specs / the token config)",
+	"init":      "create starting state without clobbering what exists (home / known_hosts / token config)",
+	"import":    "bring in what another tool or an older layout already holds (~/.ssh / an auth-token-manager config)",
+	"audit":     "a read-only hygiene report over everything of a kind (keys / token files)",
+	"providers": "the catalog of services the group knows how to talk to (SSH key hosts / token services and registries)",
+	"status":    "a read-only summary of current state (git checkouts' remotes / the token setup)",
 }
 
 func names(c *cobra.Command) []string { return append([]string{c.Name()}, c.Aliases...) }
@@ -148,12 +167,22 @@ func TestTheCommandNamesAreDistinct(t *testing.T) {
 			top[n] = c.CommandPath()
 		}
 	}
+	shared := map[string]bool{}
 	for n, where := range tokenNames {
-		if other, ok := sshNames[n]; ok {
-			t.Errorf("%q is both %s and %s: one word, two meanings", n, where, other)
+		for _, other := range []string{sshNames[n], top[n]} {
+			if other == "" {
+				continue
+			}
+			if _, ok := sharedVerbs[n]; ok {
+				shared[n] = true
+				continue
+			}
+			t.Errorf("%q is both %s and %s: one word, two meanings (rename one, or add it to sharedVerbs with the meaning both share)", n, where, other)
 		}
-		if other, ok := top[n]; ok {
-			t.Errorf("%q is both %s and %s", n, where, other)
+	}
+	for n := range sharedVerbs {
+		if !shared[n] {
+			t.Errorf("sharedVerbs lists %q, which the token group and the ssh group (or the top level) no longer share; remove it", n)
 		}
 	}
 	if len(tokenNames) == 0 || len(sshNames) == 0 {
@@ -225,11 +254,11 @@ func TestBrandTopLevelIsTheVisibleRoot(t *testing.T) {
 		t.Errorf("visible top level %v, brand.TopLevel %v", got, want)
 	}
 	for in, out := range map[string]string{
-		"reconcile":   "authama ssh reconcile",
-		"host add":    "authama ssh host add",
-		"init":        "authama init",
-		"token store": "authama token store",
-		"":            "authama",
+		"reconcile": "authama ssh reconcile",
+		"host add":  "authama ssh host add",
+		"init":      "authama init",
+		"token set": "authama token set",
+		"":          "authama",
 	} {
 		if g := brand.Line(in); g != out {
 			t.Errorf("brand.Line(%q) = %q, want %q", in, g, out)

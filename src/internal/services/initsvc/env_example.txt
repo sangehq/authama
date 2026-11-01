@@ -52,7 +52,7 @@ SCW_PROJECT_ID=          # Scaleway: the project these keys belong to
 
 # auth tokens (authama token ...)
 # The token commands read their variables from the process environment, not from
-# this file: export them in your shell or CI, or pass `authama token sync --source FILE`.
+# this file: export them in your shell or CI, or pass `authama token apply --source FILE`.
 #   SSH_MANAGER_TOKENS_CONFIG   the token config, if not ./authama-tokens.json or <home>/tokens.json
 #   GH_TOKEN, NPM_TOKEN, ...    whatever variable names your token config uses
 # The dev container's home is set with AUTHAMA_DEV_HOME (default ./.authama-home) when

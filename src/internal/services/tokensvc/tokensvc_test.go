@@ -514,21 +514,21 @@ func TestConfigDiscoveryOrder(t *testing.T) {
 	}
 }
 
-func TestAdoptLegacyCopiesOnceAndKeepsTheOriginal(t *testing.T) {
+func TestImportCopiesOnceAndKeepsTheOriginal(t *testing.T) {
 	e, dir := sandbox(t)
-	if _, _, err := e.AdoptLegacy(); !errors.Is(err, ErrNoLegacyConfig) {
+	if _, _, err := e.Import("", false); !errors.Is(err, ErrNoLegacyConfig) {
 		t.Fatal(err)
 	}
 	legacy := filepath.Join(dir, LegacyConfigName)
 	put(t, legacy, `{"npm":{"registry.npmjs.org":{"env":"NPM_TOKEN"}}}`)
-	from, to, err := e.AdoptLegacy()
+	from, to, err := e.Import("", false)
 	if err != nil || from != legacy || to != e.Paths.Tokens() {
 		t.Fatal(from, to, err)
 	}
 	if !strings.Contains(read(t, to), "NPM_TOKEN") || !exists(legacy) {
 		t.Fatal("not adopted")
 	}
-	if _, _, err := e.AdoptLegacy(); err == nil {
+	if _, _, err := e.Import("", false); err == nil {
 		t.Fatal("overwrote tokens.json")
 	}
 }
@@ -639,5 +639,24 @@ func TestDevModeRefusesDockerLogin(t *testing.T) {
 	t.Cleanup(func() { DockerLoginRunner = orig })
 	if _, err := e.SyncDocker(set(basic(tokens.Docker, "ghcr.io", "u", "pw")), p, DockerLogin); err == nil {
 		t.Fatal("docker login ran in dev mode")
+	}
+}
+
+func TestImportANamedFileWithADryRunFirst(t *testing.T) {
+	e, dir := sandbox(t)
+	team := filepath.Join(dir, "team.json")
+	put(t, team, `{"git":{"github.com":{"user_env":"U","pass_env":"P"}}}`)
+	if _, to, err := e.Import(team, true); err != nil || exists(to) {
+		t.Fatalf("dry run: %v, wrote %v", err, exists(to))
+	}
+	if _, _, err := e.Import(filepath.Join(dir, "absent.json"), false); err == nil {
+		t.Fatal("a missing file was imported")
+	}
+	from, to, err := e.Import(team, false)
+	if err != nil || from != team || !strings.Contains(read(t, to), "pass_env") {
+		t.Fatal(from, to, err)
+	}
+	if _, _, err := e.Import(to, false); err == nil {
+		t.Fatal("imported tokens.json onto itself")
 	}
 }

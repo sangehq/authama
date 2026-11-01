@@ -21,10 +21,10 @@ import (
 // tokenEnv reads the environment the server runs in, as the CLI does.
 func tokenEnv(p paths.Paths) tokensvc.Env { return tokensvc.NewEnv(p, nil, nil, "") }
 
-// TokenForget is `authama token forget <target> <host>`.
-func TokenForget(target, host string) Change {
+// TokenDelete is `authama token delete <target> <host>`.
+func TokenDelete(target, host string) Change {
 	return Change{
-		Command: "token forget", Args: []string{target, host}, NoSnapshot: true,
+		Command: "token delete", Args: []string{target, host}, NoSnapshot: true,
 		Effects: func(p paths.Paths) ([]string, error) {
 			if !tokens.IsTarget(target) {
 				return nil, fmt.Errorf("unknown target %q", target)
@@ -54,11 +54,11 @@ func TokenForget(target, host string) Change {
 	}
 }
 
-// TokenSync is `authama token sync` with no terminal to ask: the token config
+// TokenApply is `authama token apply` with no terminal to ask: the token config
 // is resolved from the server's environment and every tool's file is merged.
 // A registry docker keeps in a credential store is handled as the config's
 // _settings.docker_creds_store says, and refused when it says nothing.
-func TokenSync() Change {
+func TokenApply() Change {
 	plan := func(p paths.Paths) (tokensvc.Env, *tokens.Set, *tokens.Config, error) {
 		env := tokenEnv(p)
 		cfg, _, err := env.ResolveConfig("")
@@ -68,7 +68,7 @@ func TokenSync() Change {
 		set := cfg.Resolve(env.Lookup)
 		if set.Len("") == 0 {
 			return env, nil, nil, errors.New("no credentials resolved — set the env vars named in the token config " +
-				"where the server runs, or add one with `authama token store`")
+				"where the server runs, or add one with `authama token set`")
 		}
 		return env, set, cfg, nil
 	}
@@ -84,7 +84,7 @@ func TokenSync() Change {
 		return m, nil
 	}
 	return Change{
-		Command: "token sync", NoSnapshot: true,
+		Command: "token apply", NoSnapshot: true,
 		Effects: func(p paths.Paths) ([]string, error) {
 			env, set, cfg, err := plan(p)
 			if err != nil {

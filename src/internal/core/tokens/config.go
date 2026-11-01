@@ -363,7 +363,7 @@ func TargetTemplate(target string) (*Config, error) {
 // StarterHelp heads a config scaffolded for chosen targets.
 const StarterHelp = "Token config — maps each host to how its credential is built from the " +
 	"environment, grouped by TARGET tool. Stores ENV VAR NAMES, not secrets. " +
-	"See `authama token skeleton` for a reference and `authama token services` for " +
+	"See `authama token examples` for a reference and `authama token providers` for " +
 	"Composer services. Delete the hosts you don't use."
 
 // StarterConfig assembles a config from the per-target templates.

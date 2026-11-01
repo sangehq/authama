@@ -44,9 +44,9 @@ func newTokenCmd() *cobra.Command {
 		Args: cobra.ArbitraryArgs,
 		RunE: groupHelp,
 	}
-	cmd.AddCommand(newTokenInventoryCmd(), newTokenStoreCmd(), newTokenForgetCmd(),
-		newTokenClipCmd(), newTokenSyncCmd(), newTokenSkeletonCmd(), newTokenScaffoldCmd(),
-		newTokenServicesCmd(), newTokenCheckupCmd(), newTokenAdoptLegacyCmd(),
+	cmd.AddCommand(newTokenListCmd(), newTokenShowCmd(), newTokenStatusCmd(), newTokenSetCmd(),
+		newTokenDeleteCmd(), newTokenCopyCmd(), newTokenApplyCmd(), newTokenExamplesCmd(),
+		newTokenInitCmd(), newTokenProvidersCmd(), newTokenAuditCmd(), newTokenImportCmd(),
 		newTokenShellAliasesCmd())
 	return cmd
 }
@@ -95,14 +95,17 @@ func say(c *cobra.Command, format string, a ...any) {
 	_, _ = fmt.Fprintf(c.OutOrStdout(), format+"\n", a...)
 }
 
-// --- inventory -----------------------------------------------------------
+// --- list --------------------------------------------------------------
 
-func newTokenInventoryCmd() *cobra.Command {
+func newTokenListCmd() *cobra.Command {
 	var asJSON, reveal, yes bool
 	var targets []string
 	var project string
 	cmd := &cobra.Command{
-		Use:   "inventory",
+		Use: "list",
+		Example: "  " + brand.Command + " token list" + "\n" +
+			"  " + brand.Command + " token list --target npm --target git" + "\n" +
+			"  " + brand.Command + " token list --project . --json",
 		Short: "List the tokens installed in the credential files (secrets masked)",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
@@ -114,17 +117,7 @@ func newTokenInventoryCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if reveal && !yes {
-				if stdinIsTerminal() {
-					reveal = confirm(c, "Reveal the actual secret values to your terminal?")
-					if !reveal {
-						note(c, "keeping secrets masked.")
-					}
-				} else {
-					note(c, "refusing to print secrets non-interactively — re-run with --yes.")
-					reveal = false
-				}
-			}
+			reveal = mayReveal(c, reveal, yes)
 			var items []tokens.Installed
 			for _, it := range env.Inventory(project, reveal) {
 				if len(sel) == 0 || sel[it.Target] {
@@ -157,6 +150,23 @@ func newTokenInventoryCmd() *cobra.Command {
 	return cmd
 }
 
+// mayReveal settles --reveal: --yes, or a yes at a terminal; never without
+// one, so a pipe or a log never receives a secret by accident.
+func mayReveal(c *cobra.Command, reveal, yes bool) bool {
+	if !reveal || yes {
+		return reveal
+	}
+	if !stdinIsTerminal() {
+		note(c, "refusing to print secrets non-interactively — re-run with --yes.")
+		return false
+	}
+	if confirm(c, "Reveal the actual secret values to your terminal?") {
+		return true
+	}
+	note(c, "keeping secrets masked.")
+	return false
+}
+
 // writeTokenTable prints installed tokens, secrets masked unless revealed.
 func writeTokenTable(w io.Writer, items []tokens.Installed, reveal bool) error {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
@@ -181,14 +191,18 @@ func emDash(s string) string {
 	return s
 }
 
-// --- store ---------------------------------------------------------------
+// --- set -----------------------------------------------------------------
 
-func newTokenStoreCmd() *cobra.Command {
+func newTokenSetCmd() *cobra.Command {
 	var target, service, server, username, scope, project, mode string
 	cmd := &cobra.Command{
-		Use:   "store",
-		Short: "Save one token into its tool's credential file (the secret is read from stdin or a hidden prompt)",
-		Long: "Saves one credential. --service picks a Composer service (see `token services`);\n" +
+		Use: "set",
+		Example: "  printf %s \"$GH_TOKEN\" | " + brand.Command + " token set --service github --server github.com" + "\n" +
+			"  " + brand.Command + " token set --target npm --server npm.pkg.github.com --scope @acme" + "\n" +
+			"  " + brand.Command + " token set --target git --server github.com --username octocat",
+		Short: "Add or replace one token in its tool's credential file (the secret is read from stdin or a hidden prompt)",
+		Long: "Adds one credential, or replaces the one already saved for that host. --service\n" +
+			"picks a Composer service (see `token providers`); " +
 			"otherwise give --target. Token tools read a token; http-basic, docker, git and\n" +
 			"netrc also need --username and read a password or token. The secret is read\n" +
 			"from standard input when it is piped, else from a prompt that does not echo; it\n" +
@@ -199,7 +213,7 @@ func newTokenStoreCmd() *cobra.Command {
 			if service != "" {
 				m, ok := tokens.LoadCatalogServices()[service]
 				if !ok {
-					return fmt.Errorf("unknown service %q (see `%s token services`)", service, brand.Command)
+					return fmt.Errorf("unknown service %q (see `%s token providers`)", service, brand.Command)
 				}
 				target, mech = tokens.Composer, m
 			} else {
@@ -210,7 +224,7 @@ func newTokenStoreCmd() *cobra.Command {
 					return err
 				}
 				if target == tokens.Composer {
-					return errors.New("a Composer token needs --service (see `" + brand.Command + " token services`)")
+					return errors.New("a Composer token needs --service (see `" + brand.Command + " token providers`)")
 				}
 			}
 			if strings.TrimSpace(server) == "" {
@@ -252,7 +266,7 @@ func newTokenStoreCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&target, "target", "", "the tool: npm, docker, git or netrc (Composer uses --service)")
-	cmd.Flags().StringVar(&service, "service", "", "a Composer service, e.g. github or gitlab (see token services)")
+	cmd.Flags().StringVar(&service, "service", "", "a Composer service, e.g. github or gitlab (see token providers)")
 	cmd.Flags().StringVar(&server, "server", "", "the registry or git server, e.g. github.com or registry.npmjs.org")
 	cmd.Flags().StringVar(&username, "username", "", "the user name, for http-basic, docker, git and netrc")
 	cmd.Flags().StringVar(&scope, "scope", "", "npm only: bind an @org scope to this registry")
@@ -336,14 +350,20 @@ func dockerMode(tio tokenIO, set *tokens.Set, dest, flag string, cfg *tokens.Con
 	return tokensvc.DockerRefuse, nil
 }
 
-// --- forget / clip -------------------------------------------------------
+// --- delete / copy -------------------------------------------------------
 
-func newTokenForgetCmd() *cobra.Command {
+func newTokenDeleteCmd() *cobra.Command {
 	var project string
+	var yes bool
 	cmd := &cobra.Command{
-		Use:   "forget TARGET HOST",
+		Use:   "delete TARGET HOST",
 		Short: "Delete one installed token from its tool's credential file",
-		Args:  cobra.ExactArgs(2),
+		Long: "Removes the entry for HOST from TARGET's credential file; entries for other\n" +
+			"hosts are kept. At a terminal it asks first (--yes skips the question); without\n" +
+			"one it goes ahead, as every other delete does.",
+		Example: "  " + brand.Command + " token delete npm registry.npmjs.org\n" +
+			"  " + brand.Command + " token delete composer github.com --project . --yes",
+		Args: cobra.ExactArgs(2),
 		RunE: func(c *cobra.Command, args []string) error {
 			target := args[0]
 			if err := checkTarget(target); err != nil {
@@ -353,8 +373,16 @@ func newTokenForgetCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			mutation.LockForMutation(env.Paths)
 			host := tokens.CanonicalHost(target, args[1])
+			if _, found := env.Find(target, host, project); !found {
+				return fmt.Errorf("nothing removed — %s: %s not found", target, host)
+			}
+			if !yes && stdinIsTerminal() &&
+				!confirm(c, fmt.Sprintf("Delete the %s token for %s from %s?", target, host, env.TargetPath(target, project))) {
+				say(c, "Kept it.")
+				return nil
+			}
+			mutation.LockForMutation(env.Paths)
 			ok, err := env.Forget(target, host, project)
 			if err != nil {
 				return err
@@ -367,15 +395,17 @@ func newTokenForgetCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&project, "project", "", "edit the project's auth.json or .npmrc instead of the user one")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the confirmation prompt")
 	return cmd
 }
 
-func newTokenClipCmd() *cobra.Command {
+func newTokenCopyCmd() *cobra.Command {
 	var project string
 	cmd := &cobra.Command{
-		Use:   "clip TARGET HOST",
-		Short: "Copy one installed token to the clipboard without printing it",
-		Args:  cobra.ExactArgs(2),
+		Use:     "copy TARGET HOST",
+		Example: "  " + brand.Command + " token copy npm registry.npmjs.org",
+		Short:   "Copy one installed token to the clipboard without printing it",
+		Args:    cobra.ExactArgs(2),
 		RunE: func(c *cobra.Command, args []string) error {
 			target := args[0]
 			if err := checkTarget(target); err != nil {
@@ -401,7 +431,7 @@ func newTokenClipCmd() *cobra.Command {
 	return cmd
 }
 
-// --- sync ----------------------------------------------------------------
+// --- apply ---------------------------------------------------------------
 
 // loadTokenConfig finds and reads the token config, saying where it came
 // from when that is a legacy location or the built-in default.
@@ -412,24 +442,28 @@ func loadTokenConfig(errw io.Writer, env tokensvc.Env, explicit string) (*tokens
 	}
 	if src.Path == "" {
 		_, _ = fmt.Fprintf(errw, "note: no token config found — using the built-in default (GitHub for Composer "+
-			"from $GH_TOKEN); `%s token scaffold` writes one.\n", brand.Command)
+			"from $GH_TOKEN); `%s token init` writes one.\n", brand.Command)
 	} else if src.Legacy {
-		_, _ = fmt.Fprintf(errw, "deprecated: reading the auth-token-manager config %s; run `%s token adopt-legacy` "+
+		_, _ = fmt.Fprintf(errw, "deprecated: reading the auth-token-manager config %s; run `%s token import` "+
 			"to move it to %s.\n", src.Path, brand.Command, env.Paths.Tokens())
 	}
 	return cfg, nil
 }
 
-func newTokenSyncCmd() *cobra.Command {
+func newTokenApplyCmd() *cobra.Command {
 	var config, project, source, mode string
 	var targets []string
-	var exports, preview, noHint bool
+	var exports, dryRun, noHint bool
 	cmd := &cobra.Command{
-		Use:   "sync",
+		Use: "apply",
+		Example: "  " + brand.Command + " token apply" + "\n" +
+			"  " + brand.Command + " token apply --dry-run --target composer" + "\n" +
+			"  " + brand.Command + " token apply --source .env --project ." + "\n" +
+			"  eval \"$(" + brand.Command + " token apply --exports)\"",
 		Short: "Resolve the token config from the environment and write each tool's credential file",
 		Long: "Reads the token config, fills each entry from the environment variables it names,\n" +
 			"and merges the result into each tool's file - entries for other hosts are kept.\n" +
-			"--preview prints what would be written, secrets masked; --exports prints\n" +
+			"--dry-run prints what would be written, secrets masked; --exports prints\n" +
 			"COMPOSER_AUTH as a shell export for CI instead of writing anything.",
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
@@ -459,9 +493,9 @@ func newTokenSyncCmd() *cobra.Command {
 			}
 			if set.Len("") == 0 {
 				return errors.New("no credentials resolved — set the env vars named in your config " +
-					"(or use --source), or add one with `" + brand.Command + " token store`")
+					"(or use --source), or add one with `" + brand.Command + " token set`")
 			}
-			if preview {
+			if dryRun {
 				say(c, "%s", set.RedactedJSON(sel))
 				return nil
 			}
@@ -486,7 +520,7 @@ func newTokenSyncCmd() *cobra.Command {
 			}
 			if sel[tokens.Composer] || len(sel) == 0 && set.Len(tokens.Composer) > 0 {
 				if !noHint {
-					note(c, "\nFor CI, `%s token sync --exports` prints COMPOSER_AUTH as a shell export.", brand.Command)
+					note(c, "\nFor CI, `%s token apply --exports` prints COMPOSER_AUTH as a shell export.", brand.Command)
 				}
 			}
 			return nil
@@ -497,7 +531,7 @@ func newTokenSyncCmd() *cobra.Command {
 	cmd.Flags().StringVar(&project, "project", "", "write the project's auth.json and .npmrc instead of the user ones")
 	cmd.Flags().StringVar(&source, "source", "", "load VAR=value lines from this env file first (set variables win)")
 	cmd.Flags().BoolVar(&exports, "exports", false, "print COMPOSER_AUTH as a shell export instead of writing files")
-	cmd.Flags().BoolVar(&preview, "preview", false, "print the resolved credentials as JSON, secrets masked; write nothing")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print the resolved credentials as JSON, secrets masked; write nothing")
 	cmd.Flags().BoolVar(&noHint, "no-env-hint", false, "do not print the CI hint after writing Composer's file")
 	dockerModeFlag(cmd, &mode)
 	return cmd
@@ -526,14 +560,17 @@ func nothingToWrite(sel map[string]bool) error {
 	return fmt.Errorf("nothing to write%s — no credentials resolved for it", scope)
 }
 
-// --- skeleton ------------------------------------------------------------
+// --- examples ------------------------------------------------------------
 
-func newTokenSkeletonCmd() *cobra.Command {
+func newTokenExamplesCmd() *cobra.Command {
 	var project string
 	var targets []string
-	var preview bool
+	var asJSON bool
 	cmd := &cobra.Command{
-		Use:   "skeleton",
+		Use: "examples",
+		Example: "  " + brand.Command + " token examples --target docker" + "\n" +
+			"  " + brand.Command + " token examples --json" + "\n" +
+			"  " + brand.Command + " token examples --project ./demo",
 		Short: "Show what each tool's credential file looks like, with placeholder values",
 		Long: "Prints every tool's file filled with placeholders, and writes nothing. With\n" +
 			"--project it writes the project-scoped ones (auth.json, .npmrc) into that\n" +
@@ -550,7 +587,7 @@ func newTokenSkeletonCmd() *cobra.Command {
 				return err
 			}
 			set := tokens.Template()
-			if preview {
+			if asJSON {
 				say(c, "%s", set.RedactedJSON(sel))
 				return nil
 			}
@@ -592,16 +629,18 @@ func newTokenSkeletonCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&project, "project", "", "write the placeholder auth.json and .npmrc into this directory")
 	targetsFlag(cmd, &targets, "only these tools")
-	cmd.Flags().BoolVar(&preview, "preview", false, "print the placeholders as JSON, masked, instead of as files")
+	cmd.Flags().BoolVar(&asJSON, "json", false, "print the placeholders as JSON, masked, instead of as files")
 	return cmd
 }
 
-// --- scaffold / services / adopt-legacy ----------------------------------
+// --- init / providers / import -----------------------------------------
 
-func newTokenScaffoldCmd() *cobra.Command {
+func newTokenInitCmd() *cobra.Command {
 	var targets []string
 	cmd := &cobra.Command{
-		Use:   "scaffold [FILE]",
+		Use: "init [FILE]",
+		Example: "  " + brand.Command + " token init" + "\n" +
+			"  " + brand.Command + " token init --target composer --target npm ./authama-tokens.json",
 		Short: "Write a starter token config (never over an existing file)",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -622,7 +661,7 @@ func newTokenScaffoldCmd() *cobra.Command {
 				return err
 			}
 			say(c, "%s", msg)
-			say(c, "Edit it, then run `%s token sync`.", brand.Command)
+			say(c, "Edit it, then run `%s token apply`.", brand.Command)
 			return nil
 		},
 	}
@@ -630,74 +669,15 @@ func newTokenScaffoldCmd() *cobra.Command {
 	return cmd
 }
 
-func newTokenServicesCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "services",
-		Short: "List the Composer services a token config can name, and what each needs",
-		Args:  cobra.NoArgs,
-		RunE: func(c *cobra.Command, _ []string) error {
-			needs := map[string]string{
-				"http-basic":      "user_env + pass_env",
-				"bitbucket-oauth": "key_env + secret_env",
-				"custom-headers":  "headers (with ${VAR})",
-			}
-			svcs := tokens.LoadCatalogServices()
-			names := make([]string, 0, len(svcs))
-			for n := range svcs {
-				names = append(names, n)
-			}
-			sort.Strings(names)
-			tw := tabwriter.NewWriter(c.OutOrStdout(), 0, 0, 2, ' ', 0)
-			_, _ = fmt.Fprintln(tw, "SERVICE\tMECHANISM\tNEEDS")
-			for _, n := range names {
-				need := needs[svcs[n]]
-				if need == "" {
-					need = "env"
-				}
-				_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\n", n, svcs[n], need)
-			}
-			if err := tw.Flush(); err != nil {
-				return err
-			}
-			say(c, "\nOther targets (npm/docker/git/netrc) take host + env refs directly — no service catalog needed.")
-			return nil
-		},
-	}
-}
+// --- audit ---------------------------------------------------------------
 
-func newTokenAdoptLegacyCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "adopt-legacy",
-		Short: "Copy an auth-token-manager config to tokens.json, so the old locations stop being read",
-		Args:  cobra.NoArgs,
-		RunE: func(c *cobra.Command, _ []string) error {
-			env, err := tokenEnv(c)
-			if err != nil {
-				return err
-			}
-			mutation.LockForMutation(env.Paths)
-			from, to, err := env.AdoptLegacy()
-			if errors.Is(err, tokensvc.ErrNoLegacyConfig) {
-				say(c, "No auth-token-manager config found; nothing to adopt.")
-				return nil
-			}
-			if err != nil {
-				return err
-			}
-			say(c, "✓ copied %s → %s", from, to)
-			say(c, "The old file is left in place; delete it once you are happy with the new one.")
-			return nil
-		},
-	}
-}
-
-// --- checkup -------------------------------------------------------------
-
-func newTokenCheckupCmd() *cobra.Command {
+func newTokenAuditCmd() *cobra.Command {
 	var config, project string
 	var targets []string
 	cmd := &cobra.Command{
-		Use:   "checkup",
+		Use: "audit",
+		Example: "  " + brand.Command + " token audit" + "\n" +
+			"  " + brand.Command + " token audit --project . --target composer",
 		Short: "Check the credential files are owner-only and .gitignore covers them; write nothing",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
@@ -773,11 +753,14 @@ func newTokenShellAliasesCmd() *cobra.Command {
 	var install, uninstall, print, login, noBackup, quiet bool
 	var file string
 	cmd := &cobra.Command{
-		Use:   "shell-aliases",
+		Use: "shell-aliases",
+		Example: "  " + brand.Command + " token shell-aliases" + "\n" +
+			"  " + brand.Command + " token shell-aliases --install" + "\n" +
+			"  eval \"$(" + brand.Command + " token shell-aliases --print)\"",
 		Short: "Show, install or remove the atm shell aliases (atm, atm-ui, atm-doctor, atm-init)",
 		Long: "The aliases auth-token-manager installed, pointed at this tool: atm runs\n" +
-			"`" + brand.Command + " token`, atm-ui the menu, atm-doctor `token checkup`,\n" +
-			"atm-init `token scaffold`. They live in a marked block in your shell's rc file,\n" +
+			"`" + brand.Command + " token`, atm-ui the menu, atm-doctor `token audit`,\n" +
+			"atm-init `token init`. They live in a marked block in your shell's rc file,\n" +
 			"which --install replaces (an auth-token-manager block included) and --uninstall\n" +
 			"removes. Without a flag it reports what the file holds.",
 		Args: cobra.NoArgs,

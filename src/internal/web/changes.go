@@ -53,8 +53,8 @@ var actionFields = map[string][]string{
 	"snapshots-restore": {"id"},
 	"notify-test":       {},
 	"audit-notify":      {},
-	"token-forget":      {"target", "host"},
-	"token-sync":        {},
+	"token-delete":      {"target", "host"},
+	"token-apply":       {},
 }
 
 // nameRe is what a profile, alias or key name may be on the web: the
@@ -339,7 +339,7 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch = change.NotifyTest()
 	case "audit-notify":
 		ch = change.AuditNotify()
-	case "token-forget":
+	case "token-delete":
 		target := strings.TrimSpace(f.Get("target"))
 		if !tokens.IsTarget(target) {
 			errs = append(errs, badForm("target must be one of %s", strings.Join(tokens.Targets(), ", ")))
@@ -348,9 +348,9 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		if host == "" {
 			errs = append(errs, badForm("host is required"))
 		}
-		ch = change.TokenForget(target, host)
-	case "token-sync":
-		ch = change.TokenSync()
+		ch = change.TokenDelete(target, host)
+	case "token-apply":
+		ch = change.TokenApply()
 	}
 	return ch, errors.Join(errs...)
 }

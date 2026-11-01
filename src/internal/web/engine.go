@@ -567,11 +567,11 @@ type TokensView struct {
 	Items    []tokens.Installed
 	Findings []tokensvc.Finding
 	Failed   bool
-	Config   string // the token config `token sync` would read, or "" for the built-in default
+	Config   string // the token config `token apply` would read, or "" for the built-in default
 	Legacy   bool
 }
 
-// Tokens is `authama token inventory` and `authama token checkup` as data.
+// Tokens is `authama token list` and `authama token audit` as data.
 // The secrets never leave the service: Inventory is asked not to reveal them,
 // and the view drops them again in case it ever does.
 func (e AppEngine) Tokens() (TokensView, error) {

@@ -85,7 +85,7 @@ func (b *tokenBox) read(t *testing.T, rel string) string {
 
 func (b *tokenBox) inventory(t *testing.T, args ...string) []tokens.Installed {
 	t.Helper()
-	out, errOut, err := b.streams(t, "", append([]string{"inventory", "--json"}, args...)...)
+	out, errOut, err := b.streams(t, "", append([]string{"list", "--json"}, args...)...)
 	if err != nil {
 		t.Fatalf("inventory --json: %v\n%s", err, errOut)
 	}
@@ -128,19 +128,19 @@ func (b *tokenBox) project(t *testing.T) string {
 	return p
 }
 
-// --- store / inventory / forget / clip (test_cli_actions.py) -------------
+// --- set / list / delete / copy (test_cli_actions.py) -------------
 
-func TestTokenStoreGitFromStdin(t *testing.T) {
+func TestTokenSetGitFromStdin(t *testing.T) {
 	b := tokenSandbox(t)
-	b.ok(t, "ghp_secret\n", "store", "--target", "git", "--server", "github.com", "--username", "octocat")
+	b.ok(t, "ghp_secret\n", "set", "--target", "git", "--server", "github.com", "--username", "octocat")
 	if got := b.read(t, ".git-credentials"); !strings.Contains(got, "octocat:ghp_secret@github.com") {
 		t.Errorf(".git-credentials = %q", got)
 	}
 }
 
-func TestTokenStoreComposerViaService(t *testing.T) {
+func TestTokenSetComposerViaService(t *testing.T) {
 	b := tokenSandbox(t)
-	b.ok(t, "ghp_composer\n", "store", "--service", "github", "--server", "github.com")
+	b.ok(t, "ghp_composer\n", "set", "--service", "github", "--server", "github.com")
 	data, err := os.ReadFile(b.file(t, tokens.Composer))
 	if err != nil {
 		t.Fatal(err)
@@ -157,9 +157,9 @@ func TestTokenStoreComposerViaService(t *testing.T) {
 	}
 }
 
-func TestTokenStoreNPMWithScope(t *testing.T) {
+func TestTokenSetNPMWithScope(t *testing.T) {
 	b := tokenSandbox(t)
-	b.ok(t, "npmtok\n", "store", "--target", "npm", "--server", "npm.pkg.github.com", "--scope", "@org")
+	b.ok(t, "npmtok\n", "set", "--target", "npm", "--server", "npm.pkg.github.com", "--scope", "@org")
 	got := b.read(t, ".npmrc")
 	if !strings.Contains(got, "@org:registry") || !strings.Contains(got, "npmtok") {
 		t.Errorf(".npmrc = %q", got)
@@ -168,7 +168,7 @@ func TestTokenStoreNPMWithScope(t *testing.T) {
 
 // ATM exited 2 for these; every failure exits 1 here (Execute), so the test
 // is that each is refused and wrote nothing.
-func TestTokenStoreRefusesIncompleteRequests(t *testing.T) {
+func TestTokenSetRefusesIncompleteRequests(t *testing.T) {
 	b := tokenSandbox(t)
 	for _, tc := range []struct {
 		stdin string
@@ -183,7 +183,7 @@ func TestTokenStoreRefusesIncompleteRequests(t *testing.T) {
 		{"x\n", []string{"--target", "npm", "--server", "r", "--creds-store-mode", "maybe"}, "--creds-store-mode must be"},
 		{"x\n", []string{"--target", "nope", "--server", "r"}, `unknown target "nope"`},
 	} {
-		out, err := b.run(t, tc.stdin, append([]string{"store"}, tc.args...)...)
+		out, err := b.run(t, tc.stdin, append([]string{"set"}, tc.args...)...)
 		if err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Errorf("%v: err = %v, want %q\n%s", tc.args, err, tc.want, out)
 		}
@@ -196,54 +196,54 @@ func TestTokenStoreRefusesIncompleteRequests(t *testing.T) {
 	}
 }
 
-func TestTokenInventoryAndForget(t *testing.T) {
+func TestTokenListAndForget(t *testing.T) {
 	b := tokenSandbox(t)
-	b.ok(t, "SECRET_ONE\n", "store", "--target", "git", "--server", "github.com", "--username", "u")
-	b.ok(t, "SECRET_TWO\n", "store", "--target", "git", "--server", "gitlab.com", "--username", "u")
-	out := b.ok(t, "", "inventory")
+	b.ok(t, "SECRET_ONE\n", "set", "--target", "git", "--server", "github.com", "--username", "u")
+	b.ok(t, "SECRET_TWO\n", "set", "--target", "git", "--server", "gitlab.com", "--username", "u")
+	out := b.ok(t, "", "list")
 	if !strings.Contains(out, "github.com") || !strings.Contains(out, "gitlab.com") {
 		t.Errorf("inventory:\n%s", out)
 	}
 	if strings.Contains(out, "SECRET_ONE") || strings.Contains(out, "SECRET_TWO") {
 		t.Errorf("inventory printed a secret:\n%s", out)
 	}
-	b.ok(t, "", "forget", "git", "github.com")
-	out = b.ok(t, "", "inventory")
+	b.ok(t, "", "delete", "git", "github.com")
+	out = b.ok(t, "", "list")
 	if !strings.Contains(out, "gitlab.com") || strings.Contains(out, "github.com") {
 		t.Errorf("after forget:\n%s", out)
 	}
 }
 
-func TestTokenInventoryRevealNeedsYesWithoutATerminal(t *testing.T) {
+func TestTokenListRevealNeedsYesWithoutATerminal(t *testing.T) {
 	b := tokenSandbox(t)
-	b.ok(t, "ghp_TOPSECRET\n", "store", "--service", "github", "--server", "github.com")
-	if out := b.ok(t, "", "inventory"); strings.Contains(out, "ghp_TOPSECRET") {
+	b.ok(t, "ghp_TOPSECRET\n", "set", "--service", "github", "--server", "github.com")
+	if out := b.ok(t, "", "list"); strings.Contains(out, "ghp_TOPSECRET") {
 		t.Errorf("masked by default:\n%s", out)
 	}
-	out := b.ok(t, "", "inventory", "--reveal")
+	out := b.ok(t, "", "list", "--reveal")
 	if strings.Contains(out, "ghp_TOPSECRET") || !strings.Contains(out, "--yes") {
 		t.Errorf("--reveal without a terminal or --yes:\n%s", out)
 	}
-	if out := b.ok(t, "", "inventory", "--reveal", "--yes"); !strings.Contains(out, "ghp_TOPSECRET") {
+	if out := b.ok(t, "", "list", "--reveal", "--yes"); !strings.Contains(out, "ghp_TOPSECRET") {
 		t.Errorf("--reveal --yes:\n%s", out)
 	}
 }
 
-func TestTokenInventoryRevealAsksAtATerminal(t *testing.T) {
+func TestTokenListRevealAsksAtATerminal(t *testing.T) {
 	b := tokenSandbox(t)
-	b.ok(t, "ghp_TTY\n", "store", "--service", "github", "--server", "github.com")
+	b.ok(t, "ghp_TTY\n", "set", "--service", "github", "--server", "github.com")
 	stdinIsTerminal = func() bool { return true }
-	if out := b.ok(t, "n\n", "inventory", "--reveal"); strings.Contains(out, "ghp_TTY") {
+	if out := b.ok(t, "n\n", "list", "--reveal"); strings.Contains(out, "ghp_TTY") {
 		t.Errorf("declined, still revealed:\n%s", out)
 	}
-	if out := b.ok(t, "y\n", "inventory", "--reveal"); !strings.Contains(out, "ghp_TTY") {
+	if out := b.ok(t, "y\n", "list", "--reveal"); !strings.Contains(out, "ghp_TTY") {
 		t.Errorf("accepted, not revealed:\n%s", out)
 	}
 }
 
-func TestTokenInventoryJSON(t *testing.T) {
+func TestTokenListJSON(t *testing.T) {
 	b := tokenSandbox(t)
-	b.ok(t, "ghp_x\n", "store", "--service", "github", "--server", "github.com")
+	b.ok(t, "ghp_x\n", "set", "--service", "github", "--server", "github.com")
 	items := b.inventory(t)
 	if len(items) != 1 || items[0].Host != "github.com" || items[0].Secret != "" || !items[0].SecretPresent {
 		t.Fatalf("inventory --json = %+v", items)
@@ -253,62 +253,62 @@ func TestTokenInventoryJSON(t *testing.T) {
 	}
 }
 
-func TestTokenInventoryEmptyAndFiltered(t *testing.T) {
+func TestTokenListEmptyAndFiltered(t *testing.T) {
 	b := tokenSandbox(t)
-	if out := b.ok(t, "", "inventory"); !strings.Contains(out, "No tokens installed") {
+	if out := b.ok(t, "", "list"); !strings.Contains(out, "No tokens installed") {
 		t.Errorf("empty inventory:\n%s", out)
 	}
-	if out, _, _ := b.streams(t, "", "inventory", "--json"); strings.TrimSpace(out) != "[]" {
+	if out, _, _ := b.streams(t, "", "list", "--json"); strings.TrimSpace(out) != "[]" {
 		t.Errorf("empty --json = %q, want []", out)
 	}
-	b.ok(t, "tok1\n", "store", "--target", "git", "--server", "github.com", "--username", "me")
-	b.ok(t, "tok2\n", "store", "--target", "npm", "--server", "registry.npmjs.org")
+	b.ok(t, "tok1\n", "set", "--target", "git", "--server", "github.com", "--username", "me")
+	b.ok(t, "tok2\n", "set", "--target", "npm", "--server", "registry.npmjs.org")
 	items := b.inventory(t, "--target", "git")
 	if len(items) != 1 || items[0].Target != "git" {
 		t.Errorf("--target git = %+v", items)
 	}
 }
 
-func TestTokenClipCopiesWithoutPrinting(t *testing.T) {
+func TestTokenCopyCopiesWithoutPrinting(t *testing.T) {
 	b := tokenSandbox(t)
 	var got string
 	clipboardWrite = func(s string) error { got = s; return nil }
-	b.ok(t, "ghp_COPYME\n", "store", "--service", "github", "--server", "github.com")
-	out := b.ok(t, "", "clip", "composer", "github.com")
+	b.ok(t, "ghp_COPYME\n", "set", "--service", "github", "--server", "github.com")
+	out := b.ok(t, "", "copy", "composer", "github.com")
 	if got != "ghp_COPYME" {
 		t.Errorf("clipboard got %q", got)
 	}
 	if strings.Contains(out, "ghp_COPYME") {
 		t.Errorf("clip printed the secret:\n%s", out)
 	}
-	if _, err := b.run(t, "", "clip", "git", "absent.example"); err == nil {
+	if _, err := b.run(t, "", "copy", "git", "absent.example"); err == nil {
 		t.Error("clip of an absent token succeeded")
 	}
 }
 
-func TestTokenForgetRefusals(t *testing.T) {
+func TestTokenDeleteRefusals(t *testing.T) {
 	b := tokenSandbox(t)
-	if _, err := b.run(t, "", "forget", "nope", "host"); err == nil || !strings.Contains(err.Error(), "unknown target") {
+	if _, err := b.run(t, "", "delete", "nope", "host"); err == nil || !strings.Contains(err.Error(), "unknown target") {
 		t.Errorf("unknown target: %v", err)
 	}
-	if _, err := b.run(t, "", "forget", "git", "absent.example"); err == nil || !strings.Contains(err.Error(), "not found") {
+	if _, err := b.run(t, "", "delete", "git", "absent.example"); err == nil || !strings.Contains(err.Error(), "not found") {
 		t.Errorf("absent host: %v", err)
 	}
 }
 
-// --- sync / skeleton / scaffold / services (test_writers.py) -------------
+// --- apply / examples / init / providers (test_writers.py) -------------
 
-func TestTokenSkeletonPreviewIsRedacted(t *testing.T) {
+func TestTokenExamplesPreviewIsRedacted(t *testing.T) {
 	b := tokenSandbox(t)
-	out := b.ok(t, "", "skeleton", "--preview")
+	out := b.ok(t, "", "examples", "--json")
 	if !strings.Contains(out, "composer") || !strings.Contains(out, "********") {
-		t.Errorf("skeleton --preview:\n%s", out)
+		t.Errorf("examples --json:\n%s", out)
 	}
 }
 
-func TestTokenSkeletonPrintsAndWritesNothing(t *testing.T) {
+func TestTokenExamplesPrintsAndWritesNothing(t *testing.T) {
 	b := tokenSandbox(t)
-	out := b.ok(t, "", "skeleton")
+	out := b.ok(t, "", "examples")
 	if !strings.Contains(out, "<github-personal-access-token>") {
 		t.Errorf("skeleton did not print the placeholders:\n%s", out)
 	}
@@ -319,10 +319,10 @@ func TestTokenSkeletonPrintsAndWritesNothing(t *testing.T) {
 	}
 }
 
-func TestTokenSkeletonProjectWritesOnlyProjectTargets(t *testing.T) {
+func TestTokenExamplesProjectWritesOnlyProjectTargets(t *testing.T) {
 	b := tokenSandbox(t)
 	proj := b.project(t)
-	out := b.ok(t, "", "skeleton", "--project", proj)
+	out := b.ok(t, "", "examples", "--project", proj)
 	for _, f := range []string{"auth.json", ".npmrc"} {
 		if _, err := os.Stat(filepath.Join(proj, f)); err != nil {
 			t.Errorf("%s not written: %v", f, err)
@@ -338,46 +338,46 @@ func TestTokenSkeletonProjectWritesOnlyProjectTargets(t *testing.T) {
 	}
 	proj2 := filepath.Join(b.root, "proj2")
 	_ = os.MkdirAll(proj2, 0o700)
-	b.ok(t, "", "skeleton", "--project", proj2, "--target", "composer")
+	b.ok(t, "", "examples", "--project", proj2, "--target", "composer")
 	if _, err := os.Stat(filepath.Join(proj2, "auth.json")); err != nil {
 		t.Errorf("--target composer: %v", err)
 	}
 }
 
-func TestTokenSyncTargetWithNothingResolved(t *testing.T) {
+func TestTokenApplyTargetWithNothingResolved(t *testing.T) {
 	b := tokenSandbox(t)
 	b.env["GH_TOKEN"] = "ghp_x"
 	cfg := b.config(t, `{"composer":{"github.com":{"service":"github","env":"GH_TOKEN"}}}`)
-	_, err := b.run(t, "", "sync", "--config", cfg, "--target", "docker")
+	_, err := b.run(t, "", "apply", "--config", cfg, "--target", "docker")
 	if err == nil || !strings.Contains(err.Error(), "nothing to write for docker") {
 		t.Errorf("err = %v", err)
 	}
 }
 
-func TestTokenSyncExportsForANonComposerTarget(t *testing.T) {
+func TestTokenApplyExportsForANonComposerTarget(t *testing.T) {
 	b := tokenSandbox(t)
 	b.env["NPM_TOKEN"] = "tok"
 	cfg := b.config(t, `{"npm":{"registry.npmjs.org":{"env":"NPM_TOKEN"}}}`)
-	out := b.ok(t, "", "sync", "--config", cfg, "--exports")
+	out := b.ok(t, "", "apply", "--config", cfg, "--exports")
 	if strings.Contains(out, "wrote") || !strings.Contains(out, "no env channel") {
 		t.Errorf("sync --exports:\n%s", out)
 	}
 }
 
-func TestTokenServices(t *testing.T) {
+func TestTokenProviders(t *testing.T) {
 	b := tokenSandbox(t)
-	if out := b.ok(t, "", "services"); !strings.Contains(out, "github") {
+	if out := b.ok(t, "", "providers"); !strings.Contains(out, "github") {
 		t.Errorf("services:\n%s", out)
 	}
 }
 
-func TestTokenSyncWritesProjectTargets(t *testing.T) {
+func TestTokenApplyWritesProjectTargets(t *testing.T) {
 	b := tokenSandbox(t)
 	b.env["GH_TOKEN"], b.env["NPM_TOKEN"] = "ghp_real", "npm_real"
 	proj := b.project(t)
 	cfg := b.config(t, `{"composer":{"github.com":{"service":"github","env":"GH_TOKEN"}},`+
 		`"npm":{"registry.npmjs.org":{"env":"NPM_TOKEN"}}}`)
-	out := b.ok(t, "", "sync", "--config", cfg, "--project", proj, "--no-env-hint")
+	out := b.ok(t, "", "apply", "--config", cfg, "--project", proj, "--no-env-hint")
 	auth, err := os.ReadFile(filepath.Join(proj, "auth.json"))
 	if err != nil || !strings.Contains(string(auth), "ghp_real") {
 		t.Errorf("auth.json: %v %s", err, auth)
@@ -396,10 +396,10 @@ func TestTokenSyncWritesProjectTargets(t *testing.T) {
 	}
 }
 
-func TestTokenSyncWithNothingResolvedFails(t *testing.T) {
+func TestTokenApplyWithNothingResolvedFails(t *testing.T) {
 	b := tokenSandbox(t)
 	cfg := b.config(t, `{"composer":{"github.com":{"service":"github","env":"GH_TOKEN"}}}`)
-	out, err := b.run(t, "", "sync", "--config", cfg)
+	out, err := b.run(t, "", "apply", "--config", cfg)
 	if err == nil || !strings.Contains(err.Error(), "no credentials resolved") {
 		t.Errorf("err = %v", err)
 	}
@@ -409,25 +409,25 @@ func TestTokenSyncWithNothingResolvedFails(t *testing.T) {
 	}
 }
 
-func TestTokenCheckup(t *testing.T) {
+func TestTokenAudit(t *testing.T) {
 	b := tokenSandbox(t)
-	if out := b.ok(t, "", "checkup"); !strings.Contains(out, "composer") {
+	if out := b.ok(t, "", "audit"); !strings.Contains(out, "composer") {
 		t.Errorf("checkup with nothing written:\n%s", out)
 	}
 	if runtime.GOOS == "windows" {
 		return
 	}
-	b.ok(t, "ghp_x\n", "store", "--service", "github", "--server", "github.com")
+	b.ok(t, "ghp_x\n", "set", "--service", "github", "--server", "github.com")
 	if err := os.Chmod(b.file(t, tokens.Composer), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	out, err := b.run(t, "", "checkup", "--target", "composer")
+	out, err := b.run(t, "", "audit", "--target", "composer")
 	if err == nil || !strings.Contains(out, "WARN") {
 		t.Errorf("a world-readable auth.json: err %v\n%s", err, out)
 	}
 }
 
-func TestTokenSyncSourceLoadsTheEnvFile(t *testing.T) {
+func TestTokenApplySourceLoadsTheEnvFile(t *testing.T) {
 	b := tokenSandbox(t)
 	proj := b.project(t)
 	envf := filepath.Join(b.root, ".env")
@@ -435,25 +435,25 @@ func TestTokenSyncSourceLoadsTheEnvFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg := b.config(t, `{"composer":{"github.com":{"service":"github","env":"GH_TOKEN"}}}`)
-	b.ok(t, "", "sync", "--config", cfg, "--source", envf, "--project", proj, "--no-env-hint")
+	b.ok(t, "", "apply", "--config", cfg, "--source", envf, "--project", proj, "--no-env-hint")
 	if got, _ := os.ReadFile(filepath.Join(proj, "auth.json")); !strings.Contains(string(got), "test-secret-not-real") {
 		t.Errorf("auth.json = %s", got)
 	}
 }
 
-func TestTokenScaffoldNeverOverwrites(t *testing.T) {
+func TestTokenInitNeverOverwrites(t *testing.T) {
 	b := tokenSandbox(t)
 	_ = os.MkdirAll(b.root, 0o700)
 	dest := filepath.Join(b.root, "new.json")
-	b.ok(t, "", "scaffold", dest)
+	b.ok(t, "", "init", dest)
 	if _, err := os.Stat(dest); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := b.run(t, "", "scaffold", dest); err == nil {
+	if _, err := b.run(t, "", "init", dest); err == nil {
 		t.Error("scaffold overwrote an existing config")
 	}
 	one := filepath.Join(b.root, "one.json")
-	out := b.ok(t, "", "scaffold", one, "--target", "composer")
+	out := b.ok(t, "", "init", one, "--target", "composer")
 	data, _ := os.ReadFile(one)
 	var doc map[string]any
 	if err := json.Unmarshal(data, &doc); err != nil {
@@ -464,13 +464,13 @@ func TestTokenScaffoldNeverOverwrites(t *testing.T) {
 	}
 }
 
-func TestTokenSyncExportIsOneUnwrappedLine(t *testing.T) {
+func TestTokenApplyExportIsOneUnwrappedLine(t *testing.T) {
 	b := tokenSandbox(t)
 	long := "ghp_" + strings.Repeat("x", 150)
 	b.env["GH_TOKEN"] = long
 	b.env["SHELL"] = "/bin/bash"
 	cfg := b.config(t, `{"composer":{"github.com":{"service":"github","env":"GH_TOKEN"}}}`)
-	out := b.ok(t, "", "sync", "--config", cfg, "--exports")
+	out := b.ok(t, "", "apply", "--config", cfg, "--exports")
 	found := false
 	for _, l := range strings.Split(out, "\n") {
 		if strings.HasPrefix(l, "export COMPOSER_AUTH=") || strings.HasPrefix(l, "$env:COMPOSER_AUTH") || strings.HasPrefix(l, "set ") {
@@ -482,18 +482,18 @@ func TestTokenSyncExportIsOneUnwrappedLine(t *testing.T) {
 	}
 }
 
-func TestTokenSyncPreviewHonoursTarget(t *testing.T) {
+func TestTokenApplyPreviewHonoursTarget(t *testing.T) {
 	b := tokenSandbox(t)
 	b.env["GH_TOKEN"], b.env["NPM_TOKEN"] = "ghp_x", "npm_x"
 	cfg := b.config(t, `{"composer":{"github.com":{"service":"github","env":"GH_TOKEN"}},`+
 		`"npm":{"registry.npmjs.org":{"env":"NPM_TOKEN"}}}`)
-	out := b.ok(t, "", "sync", "--config", cfg, "--preview", "--target", "npm")
+	out := b.ok(t, "", "apply", "--config", cfg, "--dry-run", "--target", "npm")
 	if !strings.Contains(out, `"npm"`) || strings.Contains(out, `"composer"`) || strings.Contains(out, "npm_x") {
-		t.Errorf("--preview --target npm:\n%s", out)
+		t.Errorf("--dry-run --target npm:\n%s", out)
 	}
 }
 
-func TestTokenSyncSummarisesAWallOfWarnings(t *testing.T) {
+func TestTokenApplySummarisesAWallOfWarnings(t *testing.T) {
 	b := tokenSandbox(t)
 	b.env["NPM_OK"] = "tok"
 	hosts := map[string]any{}
@@ -502,7 +502,7 @@ func TestTokenSyncSummarisesAWallOfWarnings(t *testing.T) {
 	}
 	raw, _ := json.Marshal(map[string]any{"git": hosts, "npm": map[string]any{"registry.npmjs.org": map[string]string{"env": "NPM_OK"}}})
 	cfg := b.config(t, string(raw))
-	out := b.ok(t, "", "sync", "--config", cfg, "--preview")
+	out := b.ok(t, "", "apply", "--config", cfg, "--dry-run")
 	if !strings.Contains(out, "skipped 8 config entries") || !strings.Contains(out, "git 8") || strings.Contains(out, "h3.example") {
 		t.Errorf("warning wall:\n%s", out)
 	}
@@ -511,7 +511,7 @@ func TestTokenSyncSummarisesAWallOfWarnings(t *testing.T) {
 // The docker credential-store handling (security fix): a registry Docker
 // keeps in a credsStore is refused with a warning unless login is chosen, and
 // docker login itself is never run in dev mode.
-func TestTokenStoreDockerRespectsACredentialStore(t *testing.T) {
+func TestTokenSetDockerRespectsACredentialStore(t *testing.T) {
 	b := tokenSandbox(t)
 	if err := os.MkdirAll(filepath.Join(b.home, ".docker"), 0o700); err != nil {
 		t.Fatal(err)
@@ -519,14 +519,14 @@ func TestTokenStoreDockerRespectsACredentialStore(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(b.home, ".docker", "config.json"), []byte(`{"credsStore":"desktop"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	out := b.ok(t, "pw\n", "store", "--target", "docker", "--server", "ghcr.io", "--username", "u")
+	out := b.ok(t, "pw\n", "set", "--target", "docker", "--server", "ghcr.io", "--username", "u")
 	if strings.Contains(b.read(t, ".docker/config.json"), "auths") && strings.Contains(b.read(t, ".docker/config.json"), "ghcr.io") {
 		t.Errorf("an inline auth was written despite the credential store:\n%s", b.read(t, ".docker/config.json"))
 	}
 	if !strings.Contains(out, "credsStore") || !strings.Contains(out, "--creds-store-mode login") {
 		t.Errorf("no warning about the credential store:\n%s", out)
 	}
-	if _, err := b.run(t, "pw\n", "store", "--target", "docker", "--server", "ghcr.io", "--username", "u", "--creds-store-mode", "login"); err == nil {
+	if _, err := b.run(t, "pw\n", "set", "--target", "docker", "--server", "ghcr.io", "--username", "u", "--creds-store-mode", "login"); err == nil {
 		t.Error("docker login ran inside a dev sandbox")
 	}
 }
@@ -596,9 +596,9 @@ func TestTokenShellAliasesRefusesAFileOutsideTheSandbox(t *testing.T) {
 	}
 }
 
-// --- config discovery: legacy locations and adopt-legacy -----------------
+// --- config discovery: legacy locations and import -----------------
 
-func TestTokenSyncReadsALegacyConfigWithANotice(t *testing.T) {
+func TestTokenApplyReadsALegacyConfigWithANotice(t *testing.T) {
 	b := tokenSandbox(t)
 	b.env["GH_TOKEN"] = "ghp_x"
 	legacy := filepath.Join(b.root, "legacy.json")
@@ -607,8 +607,8 @@ func TestTokenSyncReadsALegacyConfigWithANotice(t *testing.T) {
 		t.Fatal(err)
 	}
 	b.env["AUTH_TOKEN_MANAGER_CONFIG"] = legacy
-	out := b.ok(t, "", "sync", "--preview")
-	if !strings.Contains(out, "deprecated") || !strings.Contains(out, "adopt-legacy") {
+	out := b.ok(t, "", "apply", "--dry-run")
+	if !strings.Contains(out, "deprecated") || !strings.Contains(out, "import") {
 		t.Errorf("no deprecation notice:\n%s", out)
 	}
 	if !strings.Contains(out, "github.com") {
@@ -661,5 +661,145 @@ func TestDoctorChecksAndFixesTokenFilePerms(t *testing.T) {
 	}
 	if !strings.Contains(out, "✓ npm: "+npmrc) {
 		t.Errorf("after --fix:\n%s", out)
+	}
+}
+
+// --- show / status / import / delete's question (the commands a complete
+// token manager has beyond auth-token-manager's own) ----------------------
+
+func TestTokenShowOneEntryMaskedUnlessRevealed(t *testing.T) {
+	b := tokenSandbox(t)
+	b.ok(t, "SECRET_SHOW\n", "set", "--target", "git", "--server", "github.com", "--username", "octocat")
+	out := b.ok(t, "", "show", "git", "https://github.com/")
+	for _, want := range []string{"tool:", "git", "host:", "github.com", "octocat", "••••••••", "file:"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("show lacks %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "SECRET_SHOW") {
+		t.Fatalf("show printed the secret:\n%s", out)
+	}
+	if out := b.ok(t, "", "show", "git", "github.com", "--reveal"); strings.Contains(out, "SECRET_SHOW") {
+		t.Errorf("--reveal without a terminal or --yes printed the secret:\n%s", out)
+	}
+	if out := b.ok(t, "", "show", "git", "github.com", "--reveal", "--yes"); !strings.Contains(out, "SECRET_SHOW") {
+		t.Errorf("--reveal --yes did not reveal:\n%s", out)
+	}
+	js, _, err := b.streams(t, "", "show", "git", "github.com", "--json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var it tokens.Installed
+	if err := json.Unmarshal([]byte(js), &it); err != nil || it.Username != "octocat" || it.Secret != "" || !it.SecretPresent {
+		t.Errorf("show --json = %+v (%v)\n%s", it, err, js)
+	}
+	if _, err := b.run(t, "", "show", "git", "absent.example"); err == nil || !strings.Contains(err.Error(), "token list") {
+		t.Errorf("an absent entry: %v", err)
+	}
+}
+
+func TestTokenStatusReportsConfigFilesAndMissingVariables(t *testing.T) {
+	b := tokenSandbox(t)
+	out := b.ok(t, "", "status")
+	if !strings.Contains(out, "built-in default") || !strings.Contains(out, "absent") {
+		t.Errorf("status with nothing set up:\n%s", out)
+	}
+	if !strings.Contains(out, "skip composer:github.com") {
+		t.Errorf("status does not say the default entry is skipped for an unset GH_TOKEN:\n%s", out)
+	}
+	cfg := b.config(t, `{"npm":{"registry.npmjs.org":{"env":"NPM_TOKEN"}},"git":{"github.com":{"user_env":"GU","pass_env":"GP"}}}`)
+	b.env["NPM_TOKEN"] = "npm_x"
+	b.ok(t, "tok\n", "set", "--target", "npm", "--server", "registry.npmjs.org")
+	js, _, err := b.streams(t, "", "status", "--config", cfg, "--json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var st tokenStatus
+	if err := json.Unmarshal([]byte(js), &st); err != nil {
+		t.Fatalf("%v\n%s", err, js)
+	}
+	if st.Config.Path != cfg || st.Config.Builtin || len(st.Targets) != len(tokens.Targets()) {
+		t.Fatalf("status --json = %+v", st)
+	}
+	for _, r := range st.Targets {
+		switch r.Target {
+		case tokens.NPM:
+			if !r.Exists || r.Installed != 1 || r.Configured != 1 || r.Resolved != 1 {
+				t.Errorf("npm row = %+v", r)
+			}
+			if runtime.GOOS != "windows" && r.Mode != "0600" {
+				t.Errorf("npm mode = %s", r.Mode)
+			}
+		case tokens.Git:
+			if r.Configured != 1 || r.Resolved != 0 {
+				t.Errorf("git row = %+v", r)
+			}
+		}
+	}
+	if len(st.Warnings) != 1 || !strings.Contains(st.Warnings[0], "git:github.com") {
+		t.Errorf("warnings = %q", st.Warnings)
+	}
+	if strings.Contains(js, "npm_x") || strings.Contains(js, `"tok"`) {
+		t.Errorf("status leaked a secret:\n%s", js)
+	}
+}
+
+func TestTokenProvidersListsServicesAndHosts(t *testing.T) {
+	b := tokenSandbox(t)
+	out := b.ok(t, "", "providers")
+	for _, want := range []string{"SERVICE", "github", "http-basic", "ghcr.io", "registry.npmjs.org", "dev.azure.com"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("providers lacks %q:\n%s", want, out)
+		}
+	}
+}
+
+func TestTokenImportFromALegacyLocationOrAFile(t *testing.T) {
+	b := tokenSandbox(t)
+	if out := b.ok(t, "", "import"); !strings.Contains(out, "nothing to import") {
+		t.Errorf("import with nothing to import:\n%s", out)
+	}
+	_ = os.MkdirAll(b.root, 0o700)
+	team := filepath.Join(b.root, "team.json")
+	if err := os.WriteFile(team, []byte(`{"npm":{"registry.npmjs.org":{"env":"NPM_TOKEN"}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out := b.ok(t, "", "import", team, "--dry-run")
+	if !strings.Contains(out, "would copy") {
+		t.Errorf("--dry-run:\n%s", out)
+	}
+	if out := b.ok(t, "", "status"); !strings.Contains(out, "built-in default") {
+		t.Errorf("--dry-run wrote the config:\n%s", out)
+	}
+	if out := b.ok(t, "", "import", team); !strings.Contains(out, "✓ copied") {
+		t.Errorf("import FILE:\n%s", out)
+	}
+	if _, err := os.Stat(team); err != nil {
+		t.Error("import removed the original")
+	}
+	if _, err := b.run(t, "", "import", team); err == nil || !strings.Contains(err.Error(), "already exists") {
+		t.Errorf("a second import overwrote tokens.json: %v", err)
+	}
+	broken := filepath.Join(b.root, "broken.json")
+	_ = os.WriteFile(broken, []byte(`{not json`), 0o600)
+	b2 := tokenSandbox(t)
+	if _, err := b2.run(t, "", "import", broken); err == nil {
+		t.Error("a config that does not parse was imported")
+	}
+}
+
+func TestTokenDeleteAsksAtATerminal(t *testing.T) {
+	b := tokenSandbox(t)
+	b.ok(t, "SECRET_DEL\n", "set", "--target", "npm", "--server", "registry.npmjs.org")
+	stdinIsTerminal = func() bool { return true }
+	if out := b.ok(t, "n\n", "delete", "npm", "registry.npmjs.org"); !strings.Contains(out, "Kept it") {
+		t.Errorf("declined:\n%s", out)
+	}
+	if len(b.inventory(t)) != 1 {
+		t.Fatal("a declined delete removed the token")
+	}
+	b.ok(t, "", "delete", "npm", "registry.npmjs.org", "--yes")
+	if len(b.inventory(t)) != 0 {
+		t.Error("--yes did not delete")
 	}
 }

@@ -81,7 +81,7 @@ func TestTokenEndToEnd(t *testing.T) {
 	}
 
 	t.Run("sync writes the configured targets and prints no secret", func(t *testing.T) {
-		out := ok("authama", "", "token", "sync", "--config", cfg, "--no-env-hint")
+		out := ok("authama", "", "token", "apply", "--config", cfg, "--no-env-hint")
 		if strings.Contains(out, "SECRET_E2E") {
 			t.Errorf("sync printed a secret:\n%s", out)
 		}
@@ -91,11 +91,11 @@ func TestTokenEndToEnd(t *testing.T) {
 	})
 
 	t.Run("store reads the secret from stdin", func(t *testing.T) {
-		ok("authama", "SECRET_E2E_GIT\n", "token", "store", "--target", "git", "--server", "github.com", "--username", "octocat")
+		ok("authama", "SECRET_E2E_GIT\n", "token", "set", "--target", "git", "--server", "github.com", "--username", "octocat")
 	})
 
 	t.Run("inventory lists every entry and masks the secrets", func(t *testing.T) {
-		out := ok("authama", "", "token", "inventory")
+		out := ok("authama", "", "token", "list")
 		for _, want := range []string{"composer", "npm", "git", "github.com", "registry.npmjs.org"} {
 			if !strings.Contains(out, want) {
 				t.Errorf("inventory lacks %q:\n%s", want, out)
@@ -107,23 +107,23 @@ func TestTokenEndToEnd(t *testing.T) {
 	})
 
 	t.Run("the sshmgr compatibility binary reaches the same token group", func(t *testing.T) {
-		a := ok("authama", "", "token", "inventory", "--json")
-		s := ok("sshmgr", "", "token", "inventory", "--json")
+		a := ok("authama", "", "token", "list", "--json")
+		s := ok("sshmgr", "", "token", "list", "--json")
 		if a != s {
 			t.Errorf("authama and sshmgr disagree:\n%s\n---\n%s", a, s)
 		}
 	})
 
 	t.Run("checkup finds the files written with private modes", func(t *testing.T) {
-		ok("authama", "", "token", "checkup")
+		ok("authama", "", "token", "audit")
 	})
 
 	t.Run("forget removes one entry and leaves the rest", func(t *testing.T) {
-		if before := ok("authama", "", "token", "inventory", "--json"); !strings.Contains(before, "octocat") {
+		if before := ok("authama", "", "token", "list", "--json"); !strings.Contains(before, "octocat") {
 			t.Fatalf("the git entry is not listed before forget:\n%s", before)
 		}
-		ok("authama", "", "token", "forget", "git", "github.com")
-		out := ok("authama", "", "token", "inventory", "--json")
+		ok("authama", "", "token", "delete", "git", "github.com")
+		out := ok("authama", "", "token", "list", "--json")
 		if strings.Contains(out, "octocat") {
 			t.Errorf("git entry survived forget:\n%s", out)
 		}

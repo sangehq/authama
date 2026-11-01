@@ -16,25 +16,25 @@
           <td>{{orDash .Username}}</td>
           <td>{{if .SecretPresent}}<span class="badge badge-ok">set</span>{{else}}<span class="badge badge-warn">empty</span>{{end}}</td>
           <td class="text-break"><code>{{.File}}</code></td>
-          {{if not $.ReadOnly}}<td class="text-end">{{template "change_open" $}}<input type="hidden" name="action" value="token-forget"><input type="hidden" name="target" value="{{.Target}}"><input type="hidden" name="host" value="{{.Host}}"><button class="btn btn-sm btn-outline-danger" type="submit">Forget {{.Target}} {{.Host}}</button></form></td>{{end}}
+          {{if not $.ReadOnly}}<td class="text-end">{{template "change_open" $}}<input type="hidden" name="action" value="token-delete"><input type="hidden" name="target" value="{{.Target}}"><input type="hidden" name="host" value="{{.Host}}"><button class="btn btn-sm btn-outline-danger" type="submit">Delete {{.Target}} {{.Host}}</button></form></td>{{end}}
         </tr>
         {{end}}
       </tbody>
     </table>
   </div>
-  {{else}}<div class="card-body text-secondary">No tokens installed. Add one with <code>authama token store</code>, or sync the token config below.</div>{{end}}
+  {{else}}<div class="card-body text-secondary">No tokens installed. Add one with <code>authama token set</code>, or apply the token config below.</div>{{end}}
 </div>
 <div class="card mb-3">
-  <div class="card-header"><h2 class="card-title">Checkup</h2></div>
+  <div class="card-header"><h2 class="card-title">Audit</h2></div>
   <div class="card-body">
     {{if .Failed}}<div class="alert alert-warning" role="status">{{icon "alert-triangle"}}<span class="ms-1">A credential file is readable by others. <code>authama doctor --fix</code> makes it owner-only.</span></div>{{end}}
     <ul class="list-unstyled mb-0">{{range .Findings}}<li>{{if eq .Level "ok"}}✓{{else if eq .Level "warn"}}✗{{else}}·{{end}} {{.Text}}</li>{{end}}</ul>
   </div>
 </div>
-<p class="text-secondary">The same lists as <code>authama token inventory</code> and <code>authama token checkup</code>. Token config: {{if .Config}}<code>{{.Config}}</code>{{if .Legacy}} (an auth-token-manager location - <code>authama token adopt-legacy</code> moves it){{end}}{{else}}the built-in default (GitHub for Composer from <code>$GH_TOKEN</code>){{end}}. Secrets are read from the environment <code>authama serve</code> runs in, and never shown here: storing a token, revealing one or copying it stays in the terminal.</p>
+<p class="text-secondary">The same lists as <code>authama token list</code> and <code>authama token audit</code>. Token config: {{if .Config}}<code>{{.Config}}</code>{{if .Legacy}} (an auth-token-manager location - <code>authama token import</code> moves it){{end}}{{else}}the built-in default (GitHub for Composer from <code>$GH_TOKEN</code>){{end}}. Secrets are read from the environment <code>authama serve</code> runs in, and never shown here: storing a token, revealing one or copying it stays in the terminal.</p>
 {{if not $.ReadOnly}}
 <div class="d-flex flex-wrap gap-2">
-  {{template "change_open" $}}<input type="hidden" name="action" value="token-sync"><button type="submit" class="btn btn-primary">Preview syncing the token config</button></form>
+  {{template "change_open" $}}<input type="hidden" name="action" value="token-apply"><button type="submit" class="btn btn-primary">Preview applying the token config</button></form>
 </div>
 {{end}}
 {{end}}{{end}}

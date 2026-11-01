@@ -22,8 +22,8 @@ func FixedDockerMode(m string) DockerModeFunc {
 }
 
 // WriteAll writes each target's entries into its file, saying where on out and
-// warning on errw. Every front end writes through here, so `token store`,
-// `token sync`, the TUI and the web report a write the same way.
+// warning on errw. Every front end writes through here, so `token set`,
+// `token apply`, the TUI and the web report a write the same way.
 func (e Env) WriteAll(set *tokens.Set, targets []string, project string, mode DockerModeFunc, out, errw io.Writer) error {
 	for _, t := range targets {
 		dest := e.TargetPath(t, project)
@@ -59,7 +59,7 @@ func (e Env) WriteAll(set *tokens.Set, targets []string, project string, mode Do
 	return nil
 }
 
-// ResolveConfig finds the token config the way `token sync` does - explicit,
+// ResolveConfig finds the token config the way `token apply` does - explicit,
 // then $SSH_MANAGER_TOKENS_CONFIG, ./authama-tokens.json, tokens.json in the
 // config home, the legacy locations - and falls back to the built-in default.
 // note says which of the last two it used, for the caller to show.

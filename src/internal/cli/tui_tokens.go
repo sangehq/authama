@@ -55,22 +55,24 @@ func (t *tui) tokenAction(handler string) { tokenMenu{t}.run(handler) }
 
 func (t tokenMenu) run(handler string) {
 	switch handler {
-	case "tok_inventory":
-		t.tokInventory()
-	case "tok_checkup":
-		t.tokCheckup()
-	case "tok_clip":
-		t.tokClip()
-	case "tok_store":
-		t.tokStore()
-	case "tok_sync":
-		t.tokSync()
-	case "tok_forget":
-		t.tokForget()
+	case "tok_list":
+		t.tokList()
+	case "tok_audit":
+		t.tokAudit()
+	case "tok_copy":
+		t.tokCopy()
+	case "tok_set":
+		t.tokSet()
+	case "tok_apply":
+		t.tokApply()
+	case "tok_delete":
+		t.tokDelete()
+	case "tok_status":
+		t.tokStatus()
 	}
 }
 
-func (t tokenMenu) tokInventory() {
+func (t tokenMenu) tokList() {
 	items := t.tokenEnv().Inventory("", false)
 	if len(items) == 0 {
 		t.print("No tokens installed.")
@@ -79,7 +81,16 @@ func (t tokenMenu) tokInventory() {
 	_ = writeTokenTable(t.out, items, false)
 }
 
-func (t tokenMenu) tokCheckup() {
+func (t tokenMenu) tokStatus() {
+	st, err := buildTokenStatus(t.tokenEnv(), "", "")
+	if err != nil {
+		t.print("error: " + err.Error())
+		return
+	}
+	_ = printTokenStatus(t.out, st)
+}
+
+func (t tokenMenu) tokAudit() {
 	findings, _ := t.tokenEnv().Checkup(tokens.NewSet(), "")
 	printFindings(t.out, findings)
 }
@@ -109,7 +120,7 @@ func (t tokenMenu) pickInstalled(message string) (tokens.Installed, bool) {
 	return byLabel[choice], true
 }
 
-func (t tokenMenu) tokClip() {
+func (t tokenMenu) tokCopy() {
 	it, ok := t.pickInstalled("Copy which token")
 	if !ok {
 		return
@@ -126,8 +137,8 @@ func (t tokenMenu) tokClip() {
 	t.print(fmt.Sprintf("✓ copied %s: %s token to the clipboard", it.Target, it.Host))
 }
 
-func (t tokenMenu) tokForget() {
-	it, ok := t.pickInstalled("Forget which token")
+func (t tokenMenu) tokDelete() {
+	it, ok := t.pickInstalled("Delete which token")
 	if !ok {
 		return
 	}
@@ -148,7 +159,7 @@ func (t tokenMenu) tokForget() {
 	}
 }
 
-func (t tokenMenu) tokStore() {
+func (t tokenMenu) tokSet() {
 	choices := append(tokens.Targets(), tuiBack)
 	target, ok := t.pr.Select("Which tool", choices)
 	if !ok || target == tuiBack {
@@ -220,7 +231,7 @@ func (t tokenMenu) tokStore() {
 	}
 }
 
-func (t tokenMenu) tokSync() {
+func (t tokenMenu) tokApply() {
 	env := t.tokenEnv()
 	cfg, err := loadTokenConfig(t.out, env, "")
 	if err != nil {
@@ -232,7 +243,7 @@ func (t tokenMenu) tokSync() {
 		t.print("  " + w)
 	}
 	if set.Len("") == 0 {
-		t.print("no credentials resolved — set the env vars named in your config, or use Store a token")
+		t.print("no credentials resolved — set the env vars named in your config, or use Add or replace a token")
 		return
 	}
 	t.print(set.RedactedJSON(nil))

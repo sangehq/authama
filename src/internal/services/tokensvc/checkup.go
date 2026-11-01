@@ -11,7 +11,7 @@ import (
 	"github.com/simtabi/ssh-manager/src/v3/internal/util/perms"
 )
 
-// Finding is one line of the token checkup.
+// Finding is one line of the token audit.
 type Finding struct {
 	Level  string // ok | absent | warn | note
 	Target string

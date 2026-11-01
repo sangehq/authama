@@ -27,8 +27,8 @@ func DefaultAliases(command string) []Alias {
 	return []Alias{
 		{"atm", command + " token"},
 		{"atm-ui", command + " tui"},
-		{"atm-doctor", command + " token checkup"},
-		{"atm-init", command + " token scaffold"},
+		{"atm-doctor", command + " token audit"},
+		{"atm-init", command + " token init"},
 	}
 }
 

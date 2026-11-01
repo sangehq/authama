@@ -146,7 +146,7 @@ func (e Env) Forget(target, host, project string) (bool, error) {
 	if _, err := e.writeSecret(path, tokens.Purge(target, host, string(b))); err != nil {
 		return false, err
 	}
-	e.audit("token.forget", log.Field{Key: "target", Value: target},
+	e.audit("token.delete", log.Field{Key: "target", Value: target},
 		log.Field{Key: "host", Value: host}, log.Field{Key: "file", Value: path})
 	return true, nil
 }

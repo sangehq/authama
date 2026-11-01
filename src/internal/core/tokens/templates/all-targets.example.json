@@ -1,5 +1,5 @@
 {
-  "_help": "Token config \u2014 maps each host to how its credential is built from the environment, grouped by TARGET tool. Stores ENV VAR NAMES, not secrets, so it is safe to commit. Token entries use 'env'; http-basic/docker/git/netrc use 'user_env'+'pass_env'; bitbucket uses 'key_env'+'secret_env'; custom-headers uses 'headers' with ${VAR}. Composer entries may name a 'service' (run `authama token services`) instead of a 'type'. Per-tool starter templates live in the built-in templates \u2014 scaffold one with `authama token scaffold --target <tool>`. Delete the hosts you don't use.",
+  "_help": "Token config \u2014 maps each host to how its credential is built from the environment, grouped by TARGET tool. Stores ENV VAR NAMES, not secrets, so it is safe to commit. Token entries use 'env'; http-basic/docker/git/netrc use 'user_env'+'pass_env'; bitbucket uses 'key_env'+'secret_env'; custom-headers uses 'headers' with ${VAR}. Composer entries may name a 'service' (run `authama token providers`) instead of a 'type'. Per-tool starter templates live in the built-in templates \u2014 scaffold one with `authama token init --target <tool>`. Delete the hosts you don't use.",
   "composer": {
     "github.com": {
       "service": "github",

@@ -25,7 +25,7 @@ const (
 type ConfigSource struct {
 	Path string
 	// Legacy is set for an auth-token-manager location; the caller prints a
-	// deprecation notice pointing at `token adopt-legacy`.
+	// deprecation notice pointing at `token import`.
 	Legacy bool
 }
 
@@ -139,23 +139,39 @@ func (e Env) Scaffold(dest string, targets []string) (string, error) {
 	return fmt.Sprintf("wrote config from all-targets.example.json -> %s", dest), nil
 }
 
-// ErrNoLegacyConfig means there is no auth-token-manager config to adopt.
+// ErrNoLegacyConfig means there is no auth-token-manager config to import.
 var ErrNoLegacyConfig = errors.New("no auth-token-manager config found")
 
-// AdoptLegacy copies the first auth-token-manager config it finds to
-// <config home>/tokens.json, so the deprecated locations stop being read.
-// The old file is left in place; it is the user's to delete.
-func (e Env) AdoptLegacy() (from, to string, err error) {
-	to = e.Paths.Tokens()
-	var src string
-	for _, c := range e.legacyCandidates() {
+// firstFile is the first candidate that is a file, or "".
+func firstFile(cands []ConfigSource) string {
+	for _, c := range cands {
 		if isFile(c.Path) {
-			src = c.Path
-			break
+			return c.Path
+		}
+	}
+	return ""
+}
+
+// Import copies a token config to <config home>/tokens.json: from, when
+// given, else the first auth-token-manager config it finds, so the
+// deprecated locations stop being read. The file is parsed first, so a
+// broken one is refused rather than copied; the original is left in place,
+// and an existing tokens.json is never overwritten. With dryRun nothing is
+// written.
+func (e Env) Import(from string, dryRun bool) (src, to string, err error) {
+	to = e.Paths.Tokens()
+	src = firstFile(e.legacyCandidates())
+	if from != "" {
+		src = e.abs(from)
+		if !isFile(src) {
+			return src, to, fmt.Errorf("config file not found: %s", src)
 		}
 	}
 	if src == "" {
 		return "", to, ErrNoLegacyConfig
+	}
+	if src == to {
+		return src, to, fmt.Errorf("%s is already the token config", to)
 	}
 	if exists(to) {
 		return src, to, fmt.Errorf("%s already exists; merge %s into it by hand or move it aside", to, src)
@@ -164,10 +180,13 @@ func (e Env) AdoptLegacy() (from, to string, err error) {
 	if err != nil {
 		return src, to, err
 	}
+	if dryRun {
+		return src, to, e.Guard(to)
+	}
 	if err := e.SaveConfig(to, c); err != nil {
 		return src, to, err
 	}
-	e.audit("token.adopt-legacy", log.Field{Key: "from", Value: src}, log.Field{Key: "to", Value: to})
+	e.audit("token.import", log.Field{Key: "from", Value: src}, log.Field{Key: "to", Value: to})
 	return src, to, nil
 }
 

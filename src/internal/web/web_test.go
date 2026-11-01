@@ -36,7 +36,7 @@ func TestEveryPageRenders(t *testing.T) {
 		"/doctor":                               "authama doctor",
 		"/audit":                                "Deployments",
 		"/about/licenses":                       "Permission is hereby granted",
-		"/tokens":                               "authama token inventory",
+		"/tokens":                               "authama token list",
 	}
 	if len(pages) < 14 {
 		t.Fatal("the page list shrank")

@@ -32,8 +32,8 @@ func (t *tui) envForTest() tokensvc.Env { return tokenMenu{t}.tokenEnv() }
 
 func TestTheTUIStoresATokenInTheSandbox(t *testing.T) {
 	tt, buf, b := tokenTUI(t, true,
-		"token store", tokens.NPM, "registry.npmjs.org", "@org", "SECRET_ONE",
-		"token inventory", "q")
+		"token set", tokens.NPM, "registry.npmjs.org", "@org", "SECRET_ONE",
+		"token list", "q")
 	tt.run()
 	out := buf.String()
 	npmrc := tt.envForTest().TargetPath(tokens.NPM, "")
@@ -53,12 +53,12 @@ func TestTheTUIStoresATokenInTheSandbox(t *testing.T) {
 		t.Errorf("the secret reached the screen:\n%s", out)
 	}
 	if !strings.Contains(out, "TOOL") || !strings.Contains(out, "••••••••") {
-		t.Errorf("inventory should list the token masked:\n%s", out)
+		t.Errorf("list should show the token masked:\n%s", out)
 	}
 }
 
 func TestTheTUIWritesNothingWhenTheSaveIsDeclined(t *testing.T) {
-	tt, buf, _ := tokenTUI(t, false, "token store", tokens.NPM, "registry.npmjs.org", "", "SECRET_ONE", "q")
+	tt, buf, _ := tokenTUI(t, false, "token set", tokens.NPM, "registry.npmjs.org", "", "SECRET_ONE", "q")
 	tt.run()
 	if _, err := os.Stat(tt.envForTest().TargetPath(tokens.NPM, "")); err == nil {
 		t.Errorf("a declined save wrote .npmrc:\n%s", buf.String())
@@ -79,7 +79,7 @@ func TestTheTUIRefusesAComposerServiceWithMoreThanOneSecret(t *testing.T) {
 	if svc == "" {
 		t.Skip("the catalog has no multi-secret service")
 	}
-	tt, buf, _ := tokenTUI(t, true, "token store", tokens.Composer, svc, "q")
+	tt, buf, _ := tokenTUI(t, true, "token set", tokens.Composer, svc, "q")
 	tt.run()
 	if !strings.Contains(buf.String(), "takes more than one secret") {
 		t.Errorf("want a refusal for %s:\n%s", svc, buf.String())
@@ -101,16 +101,16 @@ func seedNPM(t *testing.T, tt *tui) string {
 	return items[0].Target + ": " + items[0].Host
 }
 
-func TestTheTUIForgetsAToken(t *testing.T) {
+func TestTheTUIDeletesAToken(t *testing.T) {
 	tt, buf, _ := tokenTUI(t, true)
 	label := seedNPM(t, tt)
-	tt.pr = &scriptPrompter{answers: []string{"token forget", label, "q"}, confirm: true}
+	tt.pr = &scriptPrompter{answers: []string{"token delete", label, "q"}, confirm: true}
 	tt.run()
 	if items := tt.envForTest().Inventory("", false); len(items) != 0 {
-		t.Errorf("forget left %+v:\n%s", items, buf.String())
+		t.Errorf("delete left %+v:\n%s", items, buf.String())
 	}
 	if !strings.Contains(buf.String(), "✓ removed "+label) {
-		t.Errorf("forget should confirm:\n%s", buf.String())
+		t.Errorf("delete should confirm:\n%s", buf.String())
 	}
 }
 
@@ -119,7 +119,7 @@ func TestTheTUICopiesATokenWithoutPrintingIt(t *testing.T) {
 	label := seedNPM(t, tt)
 	var got string
 	clipboardWrite = func(s string) error { got = s; return nil }
-	tt.pr = &scriptPrompter{answers: []string{"token clip", label, "q"}}
+	tt.pr = &scriptPrompter{answers: []string{"token copy", label, "q"}}
 	tt.run()
 	if got != "SECRET_TWO" {
 		t.Errorf("clipboard got %q", got)
@@ -130,42 +130,42 @@ func TestTheTUICopiesATokenWithoutPrintingIt(t *testing.T) {
 }
 
 func TestTheTUISyncsTheBuiltInConfigAfterAPreview(t *testing.T) {
-	tt, buf, b := tokenTUI(t, true, "token sync", "q")
+	tt, buf, b := tokenTUI(t, true, "token apply", "q")
 	b.env["GH_TOKEN"] = "SECRET_ONE"
 	tt.run()
 	out := buf.String()
 	auth := tt.envForTest().TargetPath(tokens.Composer, "")
 	body, err := os.ReadFile(auth)
 	if err != nil || !strings.Contains(string(body), "SECRET_ONE") {
-		t.Fatalf("sync did not write %s (%v):\n%s", auth, err, out)
+		t.Fatalf("apply did not write %s (%v):\n%s", auth, err, out)
 	}
 	if strings.Contains(out, "SECRET_ONE") {
 		t.Errorf("the preview showed the secret:\n%s", out)
 	}
 }
 
-func TestTheTUICheckupReportsTheTokenFiles(t *testing.T) {
+func TestTheTUIAuditReportsTheTokenFiles(t *testing.T) {
 	tt, buf, _ := tokenTUI(t, true)
 	seedNPM(t, tt)
-	tt.pr = &scriptPrompter{answers: []string{"token checkup", "q"}}
+	tt.pr = &scriptPrompter{answers: []string{"token audit", "q"}}
 	tt.run()
 	if !strings.Contains(buf.String(), "npm") {
-		t.Errorf("checkup should report npm:\n%s", buf.String())
+		t.Errorf("audit should report npm:\n%s", buf.String())
 	}
 }
 
 func TestTheMenuTakesTheGroupedSpellingsOnly(t *testing.T) {
 	for answer, want := range map[string]string{
-		"ssh list":        "list",
-		"list":            "list",
-		"token inventory": "token inventory",
+		"ssh list":   "list",
+		"list":       "list",
+		"token list": "token list",
 	} {
 		m, ok := lookupMenu(answer)
 		if !ok || m.verb != want {
 			t.Errorf("lookupMenu(%q) = %q, %v; want %q", answer, m.verb, ok, want)
 		}
 	}
-	for _, answer := range []string{"store", "inventory", "sync"} {
+	for _, answer := range []string{"set", "copy", "apply"} {
 		if m, ok := lookupMenu(answer); ok {
 			t.Errorf("a bare %q selected %q; token entries need their group", answer, m.verb)
 		}

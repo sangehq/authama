@@ -302,9 +302,9 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 		}, nil, nil},
 		{"notify test", []string{"notify", "test"}, change.NotifyTest(), nil, notifier, sameCalls},
 		{"audit notify", []string{"audit", "--notify"}, change.AuditNotify(), nil, notifier, nil},
-		{"token forget", []string{"token", "forget", "npm", "npm.example.com"},
-			change.TokenForget("npm", "npm.example.com"), nil, tokenSide(true), sameTokenFiles(".npmrc", "SECRET_A", "npm.example.com")},
-		{"token sync", []string{"token", "sync", "--no-env-hint"}, change.TokenSync(), nil, tokenSide(false),
+		{"token delete", []string{"token", "delete", "npm", "npm.example.com"},
+			change.TokenDelete("npm", "npm.example.com"), nil, tokenSide(true), sameTokenFiles(".npmrc", "SECRET_A", "npm.example.com")},
+		{"token apply", []string{"token", "apply", "--no-env-hint"}, change.TokenApply(), nil, tokenSide(false),
 			sameTokenFiles(filepath.Join("composer", "auth.json"), "SECRET_PARITY", "")},
 	}
 	if len(cases) != 27 {

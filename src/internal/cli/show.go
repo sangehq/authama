@@ -26,7 +26,7 @@ import (
 func newShowCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "show <profile|alias|profile/key>",
-		Short: "Everything about a profile, host or key: files, config, pins",
+		Short: "Everything about a profile, host or key: files, config blocks, pins (the inventory view)",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			selector := args[0]

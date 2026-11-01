@@ -143,12 +143,13 @@ var tuiMenu = []menuItem{
 
 	{groupRecover, "Snapshots - list and restore", "snapshots", "snapshots", true, nil},
 
-	{groupTokens, "List installed tokens", "token inventory", "tok_inventory", false, nil},
-	{groupTokens, "Check the token files", "token checkup", "tok_checkup", false, nil},
-	{groupTokens, "Copy a token to the clipboard", "token clip", "tok_clip", false, nil},
-	{groupTokens, "Store a token", "token store", "tok_store", true, nil},
-	{groupTokens, "Sync tokens from the config", "token sync", "tok_sync", true, nil},
-	{groupTokens, "Forget a token", "token forget", "tok_forget", true, nil},
+	{groupTokens, "List installed tokens", "token list", "tok_list", false, nil},
+	{groupTokens, "Token setup status", "token status", "tok_status", false, nil},
+	{groupTokens, "Audit the token files", "token audit", "tok_audit", false, nil},
+	{groupTokens, "Copy a token to the clipboard", "token copy", "tok_copy", false, nil},
+	{groupTokens, "Add or replace a token", "token set", "tok_set", true, nil},
+	{groupTokens, "Apply the token config", "token apply", "tok_apply", true, nil},
+	{groupTokens, "Delete a token", "token delete", "tok_delete", true, nil},
 }
 
 // shownVerb is the command an entry prints beside it: SSH entries under their
@@ -220,7 +221,7 @@ func lookupMenu(answer string) (menuItem, bool) {
 	a = strings.TrimSpace(strings.TrimPrefix(a, sshGroup+" "))
 	for _, m := range tuiMenu {
 		if m.group == groupTokens && a == strings.TrimPrefix(m.verb, tokenGroup+" ") {
-			continue // a bare `store` is not a menu answer; `token store` is
+			continue // a bare `set` is not a menu answer; `token set` is
 		}
 		if a == m.verb || a == strings.ToLower(m.label) {
 			return m, true
