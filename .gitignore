@@ -60,3 +60,6 @@ cleaned/
 # wrong working directory - would not be caught by them. This one is.
 build/dist/
 **/build/dist/
+
+# The dev container home (compose.yaml): token files the container writes.
+.authama-home/

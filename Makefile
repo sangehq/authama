@@ -34,7 +34,7 @@ VERSION := $(shell git describe --tags --match 'v[0-9]*' --always --dirty 2>/dev
 LDFLAGS := -s -w -X github.com/simtabi/ssh-manager/src/v3/internal/version.Version=$(VERSION)
 GO      := go -C $(MODULE)
 
-.PHONY: help build build-all test vet fmt fmt-check lint lint-all ci check ci-linux e2e feature-check \
+.PHONY: help build build-all test vet fmt fmt-check lint lint-all ci check ci-linux e2e feature-check docker-shell docker-run docker-down \
         cross dist clean doctor reconcile render rotate bundle tabler-check tabler-update tabler-vendor
 
 help:  ## list targets
@@ -109,6 +109,24 @@ ci-linux: ## run the CI gate inside a linux container (needs docker)
 	docker run --rm -v "$(CURDIR)":/w -w /w golang:$(GOVERSION) \
 		sh -c 'apt-get -qq update >/dev/null && apt-get -qq install -y openssh-client >/dev/null && \
 		       go -C $(MODULE) build ./... && go -C $(MODULE) vet ./... && go -C $(MODULE) test ./...'
+
+# The dev container (Dockerfile + compose.yaml). Its home is ./.authama-home,
+# not yours, unless AUTHAMA_DEV_HOME says otherwise.
+COMPOSE := docker compose
+
+docker-shell: ## build + start the dev container and open a shell in it
+	@command -v docker >/dev/null 2>&1 || { echo "docker is not installed"; exit 1; }
+	@mkdir -p $${AUTHAMA_DEV_HOME:-.authama-home}
+	$(COMPOSE) up -d --build
+	$(COMPOSE) exec authama bash
+
+docker-run: ## run one command in the dev container: make docker-run ARGS="token inventory"
+	@mkdir -p $${AUTHAMA_DEV_HOME:-.authama-home}
+	$(COMPOSE) up -d --build
+	$(COMPOSE) exec authama authama $(ARGS)
+
+docker-down: ## stop and remove the dev container
+	$(COMPOSE) down
 
 # Tagged out of the ordinary suite: it mints six real keypairs and does an age
 # round trip. It builds its own binary, so it does not depend on `build`.
