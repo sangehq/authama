@@ -3,7 +3,6 @@ package web
 import (
 	"errors"
 	"fmt"
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"io"
 	"net/http"
 	"net/url"
@@ -13,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/core/inventory"
 	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/bundler"

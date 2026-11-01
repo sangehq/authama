@@ -3,12 +3,12 @@ package mutation
 import (
 	"errors"
 	"fmt"
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"os"
 	"os/user"
 	"path/filepath"
 	"sync"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/history"
 	"github.com/simtabi/ssh-manager/src/v3/internal/util/log"
 	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"

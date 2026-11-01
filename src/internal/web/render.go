@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -14,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/core/expiry"
 	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/history"

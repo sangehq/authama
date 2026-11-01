@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"net"
 	"os"
 	"os/exec"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/platform"
 	"github.com/simtabi/ssh-manager/src/v3/internal/version"
 	"github.com/simtabi/ssh-manager/src/v3/internal/web"

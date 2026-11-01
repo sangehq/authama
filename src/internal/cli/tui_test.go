@@ -2,7 +2,6 @@ package cli
 
 import (
 	"bytes"
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -10,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
 )
 

@@ -3,8 +3,6 @@ package web
 import (
 	"errors"
 	"fmt"
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/tokens"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/tokensvc"
 	"os"
 	"path/filepath"
 	"sort"
@@ -15,6 +13,7 @@ import (
 	"github.com/simtabi/ssh-manager/src/v3/internal/core/inventory"
 	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
 	"github.com/simtabi/ssh-manager/src/v3/internal/core/renderer"
+	"github.com/simtabi/ssh-manager/src/v3/internal/core/tokens"
 	"github.com/simtabi/ssh-manager/src/v3/internal/platform"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/bundler"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/change"
@@ -26,6 +25,7 @@ import (
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/overview"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/query"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/snapshots"
+	"github.com/simtabi/ssh-manager/src/v3/internal/services/tokensvc"
 	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
 )
 

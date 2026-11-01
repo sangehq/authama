@@ -9,9 +9,9 @@ package mutation
 import (
 	"errors"
 	"fmt"
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"os"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/snapshots"
 	"github.com/simtabi/ssh-manager/src/v3/internal/util/lock"
 	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"

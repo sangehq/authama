@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"io"
 	"os"
 	"strconv"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/history"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/mutation"
 	"github.com/simtabi/ssh-manager/src/v3/internal/util/lock"

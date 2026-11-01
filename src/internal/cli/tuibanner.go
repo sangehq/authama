@@ -2,12 +2,12 @@ package cli
 
 import (
 	"fmt"
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"io"
 	"runtime"
 	"strings"
 	"time"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/overview"
 	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"

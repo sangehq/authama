@@ -3,7 +3,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"io"
 	"net"
 	"os"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/core/hypervisor"
 	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/dockerctx"

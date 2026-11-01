@@ -3,15 +3,15 @@ package web
 import (
 	"errors"
 	"fmt"
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/tokens"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
+	"github.com/simtabi/ssh-manager/src/v3/internal/core/tokens"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/change"
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/editor"
 	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
