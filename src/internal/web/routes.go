@@ -30,6 +30,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /history/{op}", h.handleOp)
 	mux.HandleFunc("GET /doctor", h.handleDoctor)
 	mux.HandleFunc("GET /audit", h.handleAudit)
+	mux.HandleFunc("GET /tokens", h.handleTokens)
 	mux.HandleFunc("GET /exports/{name}", h.handleExport)
 	mux.HandleFunc("GET /about/licenses", h.handleLicences)
 	if !s.opts.ReadOnly {
@@ -225,6 +226,15 @@ func (h pages) handleDoctor(w http.ResponseWriter, r *http.Request) {
 		OK     bool
 		Report string
 	}{rep.OK(), rep.Format()}))
+}
+
+func (h pages) handleTokens(w http.ResponseWriter, r *http.Request) {
+	v, err := h.s.opts.Engine.Tokens()
+	if err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	h.s.render(w, http.StatusOK, "tokens", h.s.newView(r, "tokens", "Auth tokens", v))
 }
 
 func (h pages) handleAudit(w http.ResponseWriter, r *http.Request) {

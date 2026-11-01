@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
+	"github.com/simtabi/ssh-manager/src/v3/internal/core/tokens"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -52,6 +53,8 @@ var actionFields = map[string][]string{
 	"snapshots-restore": {"id"},
 	"notify-test":       {},
 	"audit-notify":      {},
+	"token-forget":      {"target", "host"},
+	"token-sync":        {},
 }
 
 // nameRe is what a profile, alias or key name may be on the web: the
@@ -336,6 +339,18 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch = change.NotifyTest()
 	case "audit-notify":
 		ch = change.AuditNotify()
+	case "token-forget":
+		target := strings.TrimSpace(f.Get("target"))
+		if !tokens.IsTarget(target) {
+			errs = append(errs, badForm("target must be one of %s", strings.Join(tokens.Targets(), ", ")))
+		}
+		host := pl("host")
+		if host == "" {
+			errs = append(errs, badForm("host is required"))
+		}
+		ch = change.TokenForget(target, host)
+	case "token-sync":
+		ch = change.TokenSync()
 	}
 	return ch, errors.Join(errs...)
 }

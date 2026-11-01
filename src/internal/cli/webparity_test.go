@@ -190,6 +190,42 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 			t.Setenv("SSH_MANAGER_AGE_RECIPIENT", recipient)
 		}
 	}
+	// The token changes write outside the home. Each side gets its own token
+	// files, through the variables npm and Composer themselves read, so the
+	// two can be compared and neither reaches a real one.
+	tokenFiles := map[string]string{}
+	tokenSide := func(seed bool) func(t *testing.T, side string) {
+		return func(t *testing.T, side string) {
+			dir := t.TempDir()
+			t.Setenv("NPM_CONFIG_USERCONFIG", filepath.Join(dir, ".npmrc"))
+			t.Setenv("COMPOSER_HOME", filepath.Join(dir, "composer"))
+			t.Setenv("GH_TOKEN", "SECRET_PARITY")
+			tokenFiles[side] = dir
+			if seed {
+				body := "//registry.npmjs.org/:_authToken=SECRET_A\n//npm.example.com/:_authToken=SECRET_B\n"
+				if err := os.WriteFile(filepath.Join(dir, ".npmrc"), []byte(body), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+	}
+	// sameTokenFiles checks the web side's file holds what the change was for
+	// and lacks what it removed, then that both sides wrote the same bytes.
+	sameTokenFiles := func(want, holds, lacks string) func(t *testing.T) {
+		return func(t *testing.T) {
+			b, err := os.ReadFile(filepath.Join(tokenFiles["web"], want))
+			if err != nil || !strings.Contains(string(b), holds) || (lacks != "" && strings.Contains(string(b), lacks)) {
+				t.Errorf("the web side's %s should hold %q and not %q (%v):\n%s", want, holds, lacks, err, b)
+			}
+			for _, rel := range []string{".npmrc", filepath.Join("composer", "auth.json")} {
+				a, errA := os.ReadFile(filepath.Join(tokenFiles["cli"], rel))
+				w, errW := os.ReadFile(filepath.Join(tokenFiles["web"], rel))
+				if (errA == nil) != (errW == nil) || string(a) != string(w) {
+					t.Errorf("%s differs:\n--- cli (%v)\n%s--- web (%v)\n%s", rel, errA, a, errW, w)
+				}
+			}
+		}
+	}
 	notifier := stubs("terminal-notifier", "")
 	if runtime.GOOS != "darwin" {
 		notifier = stubs("notify-send", "")
@@ -266,8 +302,12 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 		}, nil, nil},
 		{"notify test", []string{"notify", "test"}, change.NotifyTest(), nil, notifier, sameCalls},
 		{"audit notify", []string{"audit", "--notify"}, change.AuditNotify(), nil, notifier, nil},
+		{"token forget", []string{"token", "forget", "npm", "npm.example.com"},
+			change.TokenForget("npm", "npm.example.com"), nil, tokenSide(true), sameTokenFiles(".npmrc", "SECRET_A", "npm.example.com")},
+		{"token sync", []string{"token", "sync", "--no-env-hint"}, change.TokenSync(), nil, tokenSide(false),
+			sameTokenFiles(filepath.Join("composer", "auth.json"), "SECRET_PARITY", "")},
 	}
-	if len(cases) != 25 {
+	if len(cases) != 27 {
 		t.Fatalf("%d cases; every change the web offers needs one", len(cases))
 	}
 	for _, tc := range cases {

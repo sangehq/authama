@@ -3,6 +3,8 @@ package web
 import (
 	"errors"
 	"fmt"
+	"github.com/simtabi/ssh-manager/src/v3/internal/core/tokens"
+	"github.com/simtabi/ssh-manager/src/v3/internal/services/tokensvc"
 	"os"
 	"path/filepath"
 	"sort"
@@ -51,6 +53,7 @@ type Engine interface {
 	Doctor() (doctor.Report, error)
 	Audit(now time.Time) (AuditView, error)
 	Export(name string, includeGit bool) (string, error)
+	Tokens() (TokensView, error)
 
 	// Preview runs a change on a private copy of the home; Apply makes it
 	// if a fresh preview under the lock still has the confirmed hash.
@@ -556,4 +559,30 @@ func (e AppEngine) Export(name string, includeGit bool) (string, error) {
 		return exp.CSV, nil
 	}
 	return "", ErrNotFound
+}
+
+// TokensView is the token page: what is installed, secrets masked, and the
+// checkup of the files that hold it.
+type TokensView struct {
+	Items    []tokens.Installed
+	Findings []tokensvc.Finding
+	Failed   bool
+	Config   string // the token config `token sync` would read, or "" for the built-in default
+	Legacy   bool
+}
+
+// Tokens is `authama token inventory` and `authama token checkup` as data.
+// The secrets never leave the service: Inventory is asked not to reveal them,
+// and the view drops them again in case it ever does.
+func (e AppEngine) Tokens() (TokensView, error) {
+	env := tokensvc.NewEnv(e.P, nil, nil, "")
+	v := TokensView{Items: env.Inventory("", false)}
+	for i := range v.Items {
+		v.Items[i].Secret = ""
+	}
+	v.Findings, v.Failed = env.Checkup(tokens.NewSet(), "")
+	if src, err := env.FindConfig(""); err == nil {
+		v.Config, v.Legacy = src.Path, src.Legacy
+	}
+	return v, nil
 }

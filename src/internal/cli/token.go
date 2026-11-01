@@ -303,40 +303,11 @@ func cliTokenIO(c *cobra.Command) tokenIO {
 	return tio
 }
 
-// writeTokenTargets writes each target's entries and says where.
+// writeTokenTargets writes each target's entries and says where. Docker's
+// credential-store question goes to whoever tio can ask.
 func writeTokenTargets(tio tokenIO, env tokensvc.Env, set *tokens.Set, targets []string, project, mode string, cfg *tokens.Config) error {
-	for _, t := range targets {
-		dest := env.TargetPath(t, project)
-		if t == tokens.Docker {
-			m, err := dockerMode(tio, set, dest, mode, cfg)
-			if err != nil {
-				return err
-			}
-			res, err := env.SyncDocker(set, dest, m)
-			if err != nil {
-				return err
-			}
-			for _, w := range res.Warnings {
-				_, _ = fmt.Fprintf(tio.errw, "  %s\n", w)
-			}
-			for _, h := range res.LoggedIn {
-				_, _ = fmt.Fprintf(tio.out, "✓ stored docker: %s with docker login\n", h)
-			}
-			if len(res.Written) > 0 {
-				_, _ = fmt.Fprintf(tio.out, "✓ wrote docker → %s\n", dest)
-			}
-			continue
-		}
-		warns, err := env.WriteTarget(set, t, dest)
-		if err != nil {
-			return err
-		}
-		_, _ = fmt.Fprintf(tio.out, "✓ wrote %s → %s\n", t, dest)
-		for _, w := range warns {
-			_, _ = fmt.Fprintf(tio.errw, "  %s\n", w)
-		}
-	}
-	return nil
+	ask := func(dest string) (string, error) { return dockerMode(tio, set, dest, mode, cfg) }
+	return env.WriteAll(set, targets, project, ask, tio.out, tio.errw)
 }
 
 // dockerMode settles what to do with registries Docker keeps in a credential
@@ -435,21 +406,18 @@ func newTokenClipCmd() *cobra.Command {
 // loadTokenConfig finds and reads the token config, saying where it came
 // from when that is a legacy location or the built-in default.
 func loadTokenConfig(errw io.Writer, env tokensvc.Env, explicit string) (*tokens.Config, error) {
-	note := func(format string, a ...any) { _, _ = fmt.Fprintf(errw, format+"\n", a...) }
-	src, err := env.FindConfig(explicit)
+	cfg, src, err := env.ResolveConfig(explicit)
 	if err != nil {
 		return nil, err
 	}
 	if src.Path == "" {
-		note("note: no token config found — using the built-in default (GitHub for Composer from $GH_TOKEN); "+
-			"`%s token scaffold` writes one.", brand.Command)
-		return tokensvc.Builtin(), nil
+		_, _ = fmt.Fprintf(errw, "note: no token config found — using the built-in default (GitHub for Composer "+
+			"from $GH_TOKEN); `%s token scaffold` writes one.\n", brand.Command)
+	} else if src.Legacy {
+		_, _ = fmt.Fprintf(errw, "deprecated: reading the auth-token-manager config %s; run `%s token adopt-legacy` "+
+			"to move it to %s.\n", src.Path, brand.Command, env.Paths.Tokens())
 	}
-	if src.Legacy {
-		note("deprecated: reading the auth-token-manager config %s; run `%s token adopt-legacy` to move it to %s.",
-			src.Path, brand.Command, env.Paths.Tokens())
-	}
-	return tokensvc.LoadConfig(src.Path)
+	return cfg, nil
 }
 
 func newTokenSyncCmd() *cobra.Command {
