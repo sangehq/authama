@@ -48,8 +48,6 @@ jobs:
       # let the local `make check` and CI drift apart silently.
       - name: Gate
         shell: bash
-        env:
-          GOFLAGS: -v # TEMPORARY: per-test timings to find the slow Windows tests
         run: make ci
       # Once per OS, not once overall: golangci-lint analyses a single GOOS, so
       # a single run never sees the build-tagged platform files at all.
