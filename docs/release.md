@@ -56,14 +56,33 @@ matching native one per OS. The binary version comes from the tag via ldflags
 5. After the tag lands, confirm the published artifact installs:
    `curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash -s vX.Y.Z && authama version`.
 
-## Channels still to wire (need external setup)
+## Homebrew and Scoop
 
-Homebrew cask, Scoop manifest, and Linux packages (deb/rpm/apk) are not yet in
-`release.yml`. GoReleaser publishes the cask and the Scoop manifest with the
-write deploy keys `HOMEBREW_TAP_DEPLOY_KEY` (on `simtabi/homebrew-tap`) and `SCOOP_BUCKET_DEPLOY_KEY` (on `simtabi/scoop-bucket`), each a repository secret that reaches its one repository and nothing else. The tap requires a pull request on `main`, with deploy keys
-as its one bypass actor. The keys are the only credentials for those two
-repositories: a release without `HOMEBREW_TAP_DEPLOY_KEY` skips the cask, and
-`TAP_GITHUB_TOKEN` is read only for the Winget pull request.
+GoReleaser publishes the cask and the Scoop manifest with the write deploy keys
+`HOMEBREW_TAP_DEPLOY_KEY` (on `simtabi/homebrew-tap`) and `SCOOP_BUCKET_DEPLOY_KEY`
+(on `simtabi/scoop-bucket`), each a repository secret that reaches its one
+repository and nothing else. `TAP_GITHUB_TOKEN` is read only for the Winget pull
+request. Both manifests download from this repository's release assets.
+
+- **Homebrew:** the tap requires a pull request on `main`, with deploy keys as its
+  one bypass actor, so the cask is committed to `main` directly. A release without
+  `HOMEBREW_TAP_DEPLOY_KEY` skips it.
+- **Scoop:** the bucket requires a pull request on `master` and has no bypass actor,
+  so GoReleaser pushes the manifest to the branch `sshmgr-X.Y.Z` instead. After the
+  release, open and merge that branch:
+
+  ```sh
+  gh pr create -R simtabi/scoop-bucket --base master --head sshmgr-X.Y.Z \
+    --title "Scoop update for sshmgr version vX.Y.Z" --body "Release vX.Y.Z"
+  gh pr merge <number> -R simtabi/scoop-bucket --merge --delete-branch
+  ```
+
+  GoReleaser cannot open this pull request itself: with a git deploy key it only
+  pushes, and opening a pull request needs an API token for the bucket, which no
+  secret provides.
+
+The release body and the provenance attestation run even if GoReleaser fails after
+publishing, so a late publisher failure no longer leaves a release unattested.
 
 ## GitHub Actions hygiene
 

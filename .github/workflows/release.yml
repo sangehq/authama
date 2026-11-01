@@ -111,7 +111,12 @@ jobs:
       # Set the body again from the same CHANGELOG section, so the release
       # carries its notes even if a GoReleaser change stops honouring
       # --release-notes - which is how v3.2.0 and v3.4.0 went out empty.
+      #
+      # This and the attestation run even when GoReleaser fails, provided it got as far as
+      # publishing: a failure in a late publisher (the Scoop push, for v3.6.0) used to skip
+      # both, leaving a published release with no provenance.
       - name: Set the release body from CHANGELOG.md
+        if: ${{ !cancelled() && hashFiles('build/dist/checksums.txt') != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release edit "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --notes-file "${RUNNER_TEMP}/release_notes.md"
@@ -120,6 +125,7 @@ jobs:
       # checksums file lists them all, so `gh attestation verify <file>
       # --repo <owner>/<repo>` works for any downloaded binary or archive.
       - name: Attest build provenance
+        if: ${{ !cancelled() && hashFiles('build/dist/checksums.txt') != '' }}
         uses: actions/attest-build-provenance@v4
         with:
           subject-checksums: build/dist/checksums.txt
