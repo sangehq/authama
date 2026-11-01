@@ -387,6 +387,9 @@ or `refuse` for registries Docker keeps in a credential store) are in
 [`token`](tools/tokens.md). The files it writes are the tools' own, at their
 usual paths, honouring `COMPOSER_HOME`, `NPM_CONFIG_USERCONFIG`,
 `DOCKER_CONFIG`, `NETRC` and `XDG_CONFIG_HOME` (and `APPDATA` on Windows).
+`$SSH_MANAGER_TOKENS_CATALOG` (or auth-token-manager's
+`$AUTH_TOKEN_MANAGER_CATALOG`) replaces the built-in service catalog; see
+[`token` › A custom catalog](tools/tokens.md#a-custom-catalog).
 
 ## Operation history
 

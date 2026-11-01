@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync/atomic"
 )
 
 //go:embed catalog.json
@@ -68,19 +69,62 @@ type Catalog struct {
 	DefaultConfig   string // the built-in minimal config, as JSON text
 }
 
-var theCatalog, catalogErr = parseCatalog(catalogJSON)
+var embeddedCatalog, catalogErr = parseCatalog(catalogJSON)
 
-// LoadCatalog returns the embedded catalog, or the reason it could not be
-// read; a test pins that it always can.
-func LoadCatalog() (*Catalog, error) { return theCatalog, catalogErr }
+// override is a catalog the user supplied in place of the embedded one (see
+// UseCatalog); nil means the embedded catalog is in use.
+var override atomic.Pointer[Catalog]
+
+func current() *Catalog {
+	if c := override.Load(); c != nil {
+		return c
+	}
+	return embeddedCatalog
+}
+
+// LoadCatalog returns the catalog in use: one installed by UseCatalog, or the
+// embedded one (a test pins that the embedded one always reads).
+func LoadCatalog() (*Catalog, error) {
+	if c := current(); c != nil {
+		return c, nil
+	}
+	return nil, catalogErr
+}
 
 // cat is the catalog for package-internal use; a broken embed is caught by
 // TestTheCatalogLoads, and every caller degrades to an empty catalog.
 func cat() *Catalog {
-	if theCatalog == nil {
-		return &Catalog{}
+	if c := current(); c != nil {
+		return c
 	}
-	return theCatalog
+	return &Catalog{}
+}
+
+// UseCatalog replaces the embedded catalog with text, a catalog.json the user
+// supplied (auth-token-manager read one from $AUTH_TOKEN_MANAGER_CATALOG), so
+// a new Composer service or provider can be added without a new build. Empty
+// text restores the embedded catalog. A catalog that does not parse, or names
+// a target this package cannot write, is refused and the current one is kept.
+func UseCatalog(text string) error {
+	if text == "" {
+		override.Store(nil)
+		return nil
+	}
+	c, err := parseCatalog(text)
+	if err != nil {
+		return err
+	}
+	if len(c.Targets) == 0 {
+		return fmt.Errorf("token catalog: no targets")
+	}
+	known := map[string]bool{Composer: true, NPM: true, Docker: true, Git: true, Netrc: true}
+	for _, t := range c.Targets {
+		if !known[t] {
+			return fmt.Errorf("token catalog: unknown target %q (choose from composer, npm, docker, git, netrc)", t)
+		}
+	}
+	override.Store(c)
+	return nil
 }
 
 func parseCatalog(text string) (*Catalog, error) {

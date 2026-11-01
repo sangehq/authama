@@ -41,8 +41,9 @@ func newTokenCmd() *cobra.Command {
 			"removes what is installed. Files are written atomically and owner-only.\n\n" +
 			"Config: --config, $" + tokensvc.ConfigEnv + ", ./" + tokensvc.LocalConfigName +
 			", or tokens.json in the config home.",
-		Args: cobra.ArbitraryArgs,
-		RunE: groupHelp,
+		Args:              cobra.ArbitraryArgs,
+		RunE:              groupHelp,
+		PersistentPreRunE: useTokenCatalog,
 	}
 	cmd.AddCommand(newTokenListCmd(), newTokenShowCmd(), newTokenStatusCmd(), newTokenSetCmd(),
 		newTokenDeleteCmd(), newTokenCopyCmd(), newTokenApplyCmd(), newTokenExamplesCmd(),
@@ -57,6 +58,28 @@ func tokenEnv(c *cobra.Command) (tokensvc.Env, error) {
 		return tokensvc.Env{}, err
 	}
 	return tokensvc.NewEnv(p, tokenGetenv, tokenLookup, ""), nil
+}
+
+// useTokenCatalog runs before every token command: it installs the catalog
+// $SSH_MANAGER_TOKENS_CATALOG (or auth-token-manager's
+// $AUTH_TOKEN_MANAGER_CATALOG) names, says so when the variable is the old one
+// or names no file, and refuses to go on with a catalog that does not load.
+func useTokenCatalog(c *cobra.Command, _ []string) error {
+	env, err := tokenEnv(c)
+	if err != nil {
+		return nil // the command itself reports a layout it cannot resolve
+	}
+	if err := env.Catalog.Err; err != nil {
+		return err
+	}
+	errw := c.ErrOrStderr()
+	if w := env.Catalog.Warning; w != "" {
+		_, _ = fmt.Fprintf(errw, "warning: %s.\n", w)
+	}
+	if env.Catalog.Legacy && env.Catalog.Path != "" {
+		_, _ = fmt.Fprintf(errw, "deprecated: $%s; set $%s instead.\n", env.Catalog.Var, tokensvc.CatalogEnv)
+	}
+	return nil
 }
 
 func checkTarget(t string) error {

@@ -135,6 +135,7 @@ commands) and `--list --json` (with and without secrets).
 | `AUTH_TOKEN_MANAGER_CONFIG`, `COMPOSER_AUTH_CONFIG`, `./auth-token-manager.json`, `~/.config/auth-token-manager.json` | still read, with a deprecation notice, after the new locations; `token import` moves the file | `TestTokenApplyReadsALegacyConfigWithANotice`, `TestTokenImportFromALegacyLocationOrAFile` |
 | `SHELL` (alias rc file, export syntax) | the same, plus PowerShell and cmd | `TestEnvExportShellVariants`, `TestDetectShellPowerShell` |
 | Windows owner-only ACL (`icacls`, `USERNAME`) | the same | `util/perms/windows_acl_test.go`, `TestOwnerOnlyAndPermsOnWindows` |
+| `AUTH_TOKEN_MANAGER_CATALOG` (a replacement `catalog.json`) | `SSH_MANAGER_TOKENS_CATALOG`; the old name is still read, with a deprecation notice | `TestTokenCatalogOverride` |
 | `ATM_DEBUG` (show the Python traceback) | dropped | Go errors are already one line; there is no traceback to show |
 | 0600 atomic writes | the same (owner-only ACL on Windows) | `TestTheTUIStoresATokenInTheSandbox`, E |
 
@@ -157,6 +158,8 @@ commands) and `--list --json` (with and without secrets).
 | `docs/configuration.md`, `docs/templates.md` | [`token` › The config / Templates](tools/tokens.md#the-config), [configuration](configuration.md#auth-tokens) | |
 | `docs/tools/{composer,npm,docker,git,netrc}.md` | [tools/tokens/](tools/tokens/composer.md) | |
 | `docs/tools/ui.md` | [`tui` › Auth tokens](tools/tui.md#auth-tokens), [`serve`](tools/serve.md) | |
+| Make targets `run`, `ui`, `services`, `aliases-*`, `docker-build`/`up`/`check`/`clean`, `venv`, `pyz`, `binary` | dropped | each is one `authama` command (`token apply`, `tui`, `token providers`, `token shell-aliases`); the container is `make docker-shell`/`docker-run`/`docker-down`; there is no venv or zipapp to build |
+| `.env.example` `ATM_*` container variables | `AUTHAMA_*` in `compose.yaml` (`ATM_AUTH_HOME` is `AUTHAMA_DEV_HOME`, `ATM_UBUNTU_VERSION` is `AUTHAMA_GO_VERSION`) | [installation](installation.md#dev-container) |
 | `docs/aliases.md` | [`token` › Shell aliases](tools/tokens.md#shell-aliases); the Make shortcuts are the repo's `make help` | |
 | `docs/container.md` | [installation › Dev container](installation.md#dev-container) | |
 | `docs/installation.md`, `release.md`, `shipping-checklist.md`, `architecture.md` | [installation](installation.md), [release](release.md), [architecture](architecture.md) | |
@@ -205,6 +208,53 @@ Each one fixes something auth-token-manager got wrong or left unsafe:
   home, with the tools' own path variables hidden.
 - **History.** Every token write and removal is recorded in `authama history`
   (without the secret).
+
+## History audit
+
+Before v3.6.1 was declared complete, every release of both tools was checked
+against it, not just the last one, so nothing added and later lost along the
+way went unnoticed. (November 2026, on `main` after v3.6.1.)
+
+**What was walked**
+
+- sshmgr / ssh-manager: all 445 commits and every tag (`v0.1.0`, `v1-final`,
+  `v2.0.0-rc.1`, `v2.0.0`, `v3.0.0` to `v3.6.1`), their release notes and
+  `CHANGELOG.md`. The Python CLI (v0.1.0 to v1-final) was read from source; for
+  every Go tag the full command tree (commands, aliases, flags, hidden or not)
+  was dumped from the binary and diffed against `main`. Environment variables,
+  JSON and YAML config keys, the provider catalog and both installers were
+  compared the same way.
+- auth-token-manager: all 43 commits on every branch and the v0.3.0 release
+  notes. Every `argparse` flag of the CLI and the aliases tool, every
+  environment variable it read, every Composer service and provider shortcut
+  in every revision of its catalog, every template, the container variables
+  and the Make targets were listed and matched to `authama token`.
+- The token commands were then run in a throwaway `HOME` (`token init`,
+  `apply`, `apply --dry-run`/`--exports`, `set` from stdin, `list [--json]`,
+  `delete -y`, `audit`, `status`, `providers`, `shell-aliases --print`): files
+  were written owner-only and nothing reached the real home.
+
+**Gaps found and fixed**
+
+| Missing | Since | Now |
+|---|---|---|
+| `--no-passphrase` on `keygen`, `reconcile`, `rotate` | dropped silently in 2.0.0 (the notes claimed the same command surface) | accepted again, hidden, as the spelling of the default; exclusive with `--passphrase` (`TestNoPassphraseIsAcceptedAndExclusive`, and `v1Surface` in `surface_test.go`) |
+| `$AUTH_TOKEN_MANAGER_CATALOG` (use a replacement catalog) | lost in the Go port, which embedded the catalog | `$SSH_MANAGER_TOKENS_CATALOG`, and the old name with a notice (`TestTokenCatalogOverride`) |
+
+**Confirmed present:** every other command, alias and flag of every Go tag (as
+`authama ssh …` or the hidden top-level spelling), every v1 Python command and
+flag, every `SSH_MANAGER_*`/`SSHMGR_*` variable, every config key, all 25
+providers, the installers' old `SSHMGR_*` variables, and every
+auth-token-manager flag, alias, service, provider and template in the tables
+above.
+
+**Dropped on purpose** (each recorded where it was decided): `knownhosts init
+--user` (one trust store, CHANGELOG 3.0.0, `v1Dropped`); the Python
+implementation and pip/pipx/zipapp packaging; rich tables (plain text now);
+pre-commit hooks and the `.build` harnesses; rendered config inside bundles
+(3.4.0); `ui` as a separate command (an alias of `serve`); cosign (see
+[release](release.md)); and from auth-token-manager, `ATM_DEBUG`, the Python
+library API, the aliases tool's `--command`, and the Make targets listed above.
 
 ## Removing auth-token-manager
 

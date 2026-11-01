@@ -43,6 +43,7 @@ func newRotateCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&all, "all", false, "rotate every key a host uses")
 	cmd.Flags().StringVar(&category, "category", "", "rotate every key in profiles of this category")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "list the keys that would rotate, and change nothing")
+	addNoPassphraseCompat(cmd)
 	return cmd
 }
 

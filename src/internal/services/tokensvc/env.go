@@ -31,6 +31,9 @@ type Env struct {
 	MacOS   bool
 	getenv  func(string) string
 	lookup  tokens.Lookup
+	// Catalog says where the token catalog came from when a variable
+	// replaced the embedded one; see CatalogEnv.
+	Catalog CatalogSource
 }
 
 // NewEnv builds the token environment for a resolved layout. getenv and
@@ -67,6 +70,7 @@ func NewEnv(p paths.Paths, getenv func(string) string, lookup tokens.Lookup, cwd
 			return getenv(k)
 		}
 	}
+	e.Catalog = useCatalog(e)
 	return e
 }
 

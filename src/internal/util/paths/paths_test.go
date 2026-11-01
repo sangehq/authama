@@ -245,6 +245,7 @@ func TestTheEnvironmentVariableNamesAreTheDocumentedOnes(t *testing.T) {
 		"SSH_MANAGER_OLD_KEY_MAX_AGE_DAYS": "when an archived predecessor is called stale",
 		"SSH_MANAGER_HISTORY":              "0 stops recording operations in log/history.db",
 		"SSH_MANAGER_TOKENS_CONFIG":        "the token config file, ahead of ./authama-tokens.json and <home>/tokens.json",
+		"SSH_MANAGER_TOKENS_CATALOG":       "a catalog.json replacing the built-in token services and providers",
 	}
 	found := readEnvNamesFromSource(t)
 	for name := range documented {
