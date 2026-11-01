@@ -61,8 +61,8 @@ build: clean ## compile the binary into a freshly emptied build/ (FORCE=1 to reb
 build-all: ## compile every package (what CI gated on before `ci` existed)
 	$(GO) build ./...
 
-test: ## run the unit suite
-	$(GO) test ./...
+test: ## run the unit suite (TESTFLAGS=... to pass more, e.g. -run or -count=1)
+	$(GO) test $(TESTFLAGS) ./...
 
 vet: ## go vet
 	$(GO) vet ./...
@@ -91,6 +91,14 @@ lint-all: ## lint every GOOS - one run only sees one, so build-tagged files hide
 # it: CI gets golangci-lint from a pinned action that also annotates the diff,
 # and folding it in here would silently drop both the pin and the cache.
 ci: fmt-check build-all vet test ## the gate CI runs (lint runs there as its own step)
+
+# The gate runs the tests; it never replays a cached result. Caching would also
+# cost more than it saves here: before storing a result, go test hashes every
+# file and directory the test binary touched, and the cli tests touch thousands
+# (each spawned tool is a PATH x PATHEXT search on Windows). On windows-latest
+# that bookkeeping alone took ~6.5 minutes after internal/cli had already passed,
+# which is what pushed the job to its 15-minute timeout. -count=1 skips it.
+ci: TESTFLAGS += -count=1
 
 check: ci lint ## everything: the CI gate plus lint, for humans
 
@@ -130,8 +138,14 @@ docker-down: ## stop and remove the dev container
 
 # Tagged out of the ordinary suite: it mints six real keypairs and does an age
 # round trip. It builds its own binary, so it does not depend on `build`.
+#
+# The timeout covers a cold cross-compile of every declared release target
+# (TestEveryDeclaredReleaseTargetCompiles). In parallel that is still 3-4 minutes
+# on a 3-core hosted runner with an empty build cache (macos-latest: 3m46s), so
+# 300s left about a minute of headroom; 600s is a hang detector, not a budget.
+# The CI job keeps its own 15-minute limit.
 e2e: ## end-to-end smoke in a throwaway sandbox
-	$(GO) test -tags e2e -count=1 -timeout 300s ./cmd/sshmgr/
+	$(GO) test -tags e2e -count=1 -timeout 600s ./cmd/sshmgr/
 
 # The per-command assertions live in internal/cli/commands_test.go now, so they
 # run in the ordinary suite. Kept as a target because the docs and the shipping
