@@ -80,7 +80,7 @@ func TestTokenEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Run("sync writes the configured targets and prints no secret", func(t *testing.T) {
+	t.Run("apply writes the configured targets and prints no secret", func(t *testing.T) {
 		out := ok("authama", "", "token", "apply", "--config", cfg, "--no-env-hint")
 		if strings.Contains(out, "SECRET_E2E") {
 			t.Errorf("sync printed a secret:\n%s", out)
@@ -90,11 +90,11 @@ func TestTokenEndToEnd(t *testing.T) {
 		}
 	})
 
-	t.Run("store reads the secret from stdin", func(t *testing.T) {
+	t.Run("set reads the secret from stdin", func(t *testing.T) {
 		ok("authama", "SECRET_E2E_GIT\n", "token", "set", "--target", "git", "--server", "github.com", "--username", "octocat")
 	})
 
-	t.Run("inventory lists every entry and masks the secrets", func(t *testing.T) {
+	t.Run("list lists every entry and masks the secrets", func(t *testing.T) {
 		out := ok("authama", "", "token", "list")
 		for _, want := range []string{"composer", "npm", "git", "github.com", "registry.npmjs.org"} {
 			if !strings.Contains(out, want) {
@@ -106,6 +106,22 @@ func TestTokenEndToEnd(t *testing.T) {
 		}
 	})
 
+	t.Run("show prints one entry, masked", func(t *testing.T) {
+		out := ok("authama", "", "token", "show", "git", "github.com")
+		if !strings.Contains(out, "octocat") || strings.Contains(out, "SECRET_E2E") {
+			t.Errorf("show should name the user and mask the secret:\n%s", out)
+		}
+	})
+
+	t.Run("status reports the files and never fails", func(t *testing.T) {
+		out := ok("authama", "", "token", "status", "--json")
+		for _, want := range []string{"composer", "git"} {
+			if !strings.Contains(out, want) {
+				t.Errorf("status lacks %q:\n%s", want, out)
+			}
+		}
+	})
+
 	t.Run("the sshmgr compatibility binary reaches the same token group", func(t *testing.T) {
 		a := ok("authama", "", "token", "list", "--json")
 		s := ok("sshmgr", "", "token", "list", "--json")
@@ -114,11 +130,11 @@ func TestTokenEndToEnd(t *testing.T) {
 		}
 	})
 
-	t.Run("checkup finds the files written with private modes", func(t *testing.T) {
+	t.Run("audit finds the files written with private modes", func(t *testing.T) {
 		ok("authama", "", "token", "audit")
 	})
 
-	t.Run("forget removes one entry and leaves the rest", func(t *testing.T) {
+	t.Run("delete removes one entry and leaves the rest", func(t *testing.T) {
 		if before := ok("authama", "", "token", "list", "--json"); !strings.Contains(before, "octocat") {
 			t.Fatalf("the git entry is not listed before forget:\n%s", before)
 		}

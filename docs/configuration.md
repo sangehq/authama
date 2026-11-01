@@ -369,15 +369,15 @@ tokens never do, but if needed, fetch such a value via `cmd:` instead.
 ## <a name="auth-tokens"></a>Auth tokens
 
 The token config is a separate file, so the manifest stays about SSH. It names
-environment variables, never secrets: `authama token sync` reads the variables
+environment variables, never secrets: `authama token apply` reads the variables
 and writes each tool's credential file. It is found in this order:
 
 1. `--config FILE`
 2. `$SSH_MANAGER_TOKENS_CONFIG`
 3. `./authama-tokens.json` (a project's own)
-4. `<home>/tokens.json` (`authama token scaffold` writes a starter one)
+4. `<home>/tokens.json` (`authama token init` writes a starter one)
 5. auth-token-manager's locations, read with a deprecation notice until
-   `authama token adopt-legacy` moves the file: `$AUTH_TOKEN_MANAGER_CONFIG`,
+   `authama token import` moves the file: `$AUTH_TOKEN_MANAGER_CONFIG`,
    `$COMPOSER_AUTH_CONFIG`, `./auth-token-manager.json`,
    `~/.config/auth-token-manager.json`
 6. otherwise a built-in default: `GH_TOKEN` as Composer's github.com token

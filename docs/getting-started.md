@@ -96,19 +96,20 @@ The second feature writes the credential files Composer, npm, Docker, git and
 curl read. Its config names environment variables, never the secrets themselves:
 
 ```sh
-authama token scaffold              # a starter ~/.config/ssh-manager/tokens.json
+authama token init                  # a starter ~/.config/ssh-manager/tokens.json
 $EDITOR ~/.config/ssh-manager/tokens.json
 export GH_TOKEN=$(op read op://Private/GitHub/token)   # or set it in CI
-authama token sync --preview        # what would be written, secrets masked
-authama token sync                  # write auth.json, .npmrc, ... (0600, merged)
-authama token inventory             # what is installed now
+authama token status                # which variables are still missing
+authama token apply --dry-run       # what would be written, secrets masked
+authama token apply                 # write auth.json, .npmrc, ... (0600, merged)
+authama token list                  # what is installed now
 ```
 
-One token without a config: `authama token store --target git --server github.com
---username you` reads it from a hidden prompt. `authama token checkup` (and
+One token without a config: `authama token set --target git --server github.com
+--username you` reads it from a hidden prompt. `authama token audit` (and
 `authama doctor`) confirm every file is owner-only. Try any of it first with
 `--dev-root ./sandbox`, which keeps every file in the sandbox. Coming from
-auth-token-manager, run `authama token adopt-legacy`; see the
+auth-token-manager, run `authama token import`; see the
 [migration guide](migration.md) and [`token`](tools/tokens.md).
 
 ## Passphrases

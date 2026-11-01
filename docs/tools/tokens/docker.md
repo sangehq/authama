@@ -35,7 +35,7 @@ to do instead:
 The mode comes from `--creds-store-mode`, else `_settings.docker_creds_store`
 in the token config, else a prompt at a terminal. Without a terminal and with no
 mode set, the registry is refused. `login` is refused under `--dev-root`,
-because it would reach the real store. The web UI's `token sync` uses the
+because it would reach the real store. The web UI's `token apply` uses the
 config setting and otherwise refuses.
 
 ## Merge

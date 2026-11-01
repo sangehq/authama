@@ -16,7 +16,7 @@ interpreter to keep current.
   so deployment falls back to plain `ssh` there.
 - Optional, each degrading to a manual path when absent: `age` and `age-keygen`
   (encrypted bundles), `gh` and `glab` (VCS key deployment), `age-plugin-yubikey`,
-  `docker` (only for `token sync` against a registry kept in a credential store).
+  `docker` (only for `token apply` against a registry kept in a credential store).
 
 The auth-token side needs nothing: it writes the tools' files itself.
 
@@ -96,7 +96,7 @@ For working on authama without a local Go toolchain, the repository root has a
 
 ```sh
 make docker-shell                       # a shell with Go, git, make and OpenSSH; authama and sshmgr built
-make docker-run ARGS="token inventory"  # one command
+make docker-run ARGS="token list"       # one command
 make docker-down
 ```
 
@@ -105,6 +105,16 @@ The container's home is `./.authama-home` (gitignored; override with
 reaches your `~/.npmrc` or `~/.docker`. Point `AUTHAMA_DEV_HOME` at `$HOME` only
 when that is what you mean. The container runs as an unprivileged `dev` user
 with no capabilities.
+
+Directories, not single files, are mounted: authama writes by atomic rename,
+which fails with `EBUSY` over a single-file bind mount. If you run into trouble:
+
+- **Files in the mounted home owned by the wrong user (Linux):** set
+  `AUTHAMA_UID` / `AUTHAMA_GID` to `id -u` / `id -g`, then rebuild.
+- **`token copy` fails inside the container:** there is no host clipboard. Use
+  `token show --reveal`, or run `copy` on the host.
+- **`docker compose` not found:** the Make targets use Compose v2;
+  `make COMPOSE=docker-compose docker-shell` uses the legacy binary.
 
 The `.env` and the rest of the per-user home are created by `authama init`, which
 seeds `.env` from the shipped `.env-example` at mode `0600`.
@@ -159,7 +169,7 @@ authama ssh reconcile --dry-run   # preview what would change
 authama ssh reconcile             # build ~/.ssh from the manifest (--passphrase to protect new keys)
 authama ssh config check          # confirm it's in sync (exit 0)
 authama ssh knownhosts init --all # pin every reachable host into the one ~/.ssh/known_hosts
-authama token scaffold            # optional: a starter token config, then `authama token sync`
+authama token init                # optional: a starter token config, then `authama token apply`
 ```
 
 `authama init` is safe to re-run: every run (re)creates the directory structure and

@@ -1,13 +1,13 @@
 # Composer target
 
-Writes Composer's `auth.json`, or the `COMPOSER_AUTH` export with `token sync --exports`.
+Writes Composer's `auth.json`, or the `COMPOSER_AUTH` export with `token apply --exports`.
 
 ## The two Composer facts that bite
 
 1. **Composer cannot read environment variables inside `auth.json`** - there is
    no `${VAR}` interpolation, so authama writes the resolved values.
 2. **A present `auth.json` overrides `COMPOSER_AUTH`.** A stale file silently
-   shadows the token you set in CI. `authama token checkup` and `authama doctor`
+   shadows the token you set in CI. `authama token audit` and `authama doctor`
    point it out.
 
 Composer reads auth from four places, later wins: `COMPOSER_AUTH` → global
@@ -26,7 +26,7 @@ Composer reads auth from four places, later wins: `COMPOSER_AUTH` → global
 | `custom-headers` | `{"host": ["API-TOKEN: …"]}` |
 | `forgejo-token` | `{"host": "TOKEN"}` |
 
-Name a `service` instead of a mechanism; `authama token services` lists them
+Name a `service` instead of a mechanism; `authama token providers` lists them
 (GitHub, GitHub Enterprise, GitLab, Bitbucket, Gitea, Forgejo, Codeberg, Azure
 DevOps, sourcehut, Private Packagist, Satis, Repman, Packeton, Artifactory,
 Cloudsmith, Nexus, Gemfury, unlock.sh, Magento, Laravel Nova and Spark, and two
@@ -44,13 +44,13 @@ the second a project-scoped file:
 
 ```sh
 GH_TOKEN=$(op read op://Simtabi/GitHub/token) \
-  authama token sync --target composer --project ~/code/simtabi-app
+  authama token apply --target composer --project ~/code/simtabi-app
 ```
 
 ## CI
 
 ```sh
-eval "$(GH_TOKEN=$TOKEN authama token sync --target composer --exports)"
+eval "$(GH_TOKEN=$TOKEN authama token apply --target composer --exports)"
 composer install --no-interaction
 ```
 

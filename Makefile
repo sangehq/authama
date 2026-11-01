@@ -120,7 +120,7 @@ docker-shell: ## build + start the dev container and open a shell in it
 	$(COMPOSE) up -d --build
 	$(COMPOSE) exec authama bash
 
-docker-run: ## run one command in the dev container: make docker-run ARGS="token inventory"
+docker-run: ## run one command in the dev container: make docker-run ARGS="token list"
 	@mkdir -p $${AUTHAMA_DEV_HOME:-.authama-home}
 	$(COMPOSE) up -d --build
 	$(COMPOSE) exec authama authama $(ARGS)

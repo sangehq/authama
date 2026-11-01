@@ -85,7 +85,7 @@ The token feature follows the same layering as the SSH side:
 
 - `internal/core/tokens` is pure. It turns a config and the current file text
   into new file text (render, merge, read back, remove), validates targets and
-  values, and carries the Composer service catalog and the skeleton templates.
+  values, and carries the Composer service catalog and the starter templates.
   Its rendering is checked byte-for-byte against golden files produced by the
   Python auth-token-manager it was ported from.
 - `internal/services/tokensvc` does the I/O: finding the config, reading and
@@ -95,10 +95,13 @@ The token feature follows the same layering as the SSH side:
   is built once per command; in dev mode it maps every path into the sandbox
   and hides the tools' own path variables, so a test or a `--dev-root` run
   cannot reach the real files.
-- `internal/cli/token.go` and `tui_tokens.go` are the `token` group and the
-  TUI's Auth tokens menu; `internal/services/change/tokens.go` and the web
-  Tokens page make forget and sync previewable like every other web change.
-- `doctor` reads token-file modes through `tokensvc` and repairs them with `--fix`.
+- `internal/cli/token.go`, `token_more.go` and `tui_tokens.go` are the `token`
+  group and the TUI's Auth tokens menu; `internal/services/change/tokens.go` and
+  the web Tokens page make delete and apply previewable like every other web change.
+- `doctor` reads token-file modes through `tokensvc`, warns on a loose one (fails
+  under `--strict`) and repairs them with `--fix`.
+- `docs/reference/cli.md` is generated from the command tree, and a test fails
+  when it is stale or when a command has no example that parses.
 
 Names (`Authentication Access Manager`, `authama`, `sshmgr`) come from
 `internal/brand`, so a rename is one edit. The module path, the config home and

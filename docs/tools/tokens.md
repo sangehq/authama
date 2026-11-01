@@ -9,41 +9,66 @@ The config names **environment variables, never secrets**, so it is safe to
 commit. Every write merges into the existing file, atomically, owner-only
 (`0600`, or a user-only ACL on Windows).
 
+Every command has a full entry, with all its flags and examples, in the
+[command reference](../reference/cli.md#authama-token).
+
 | Command | What it does |
 |---|---|
-| `token sync` | Resolve the config from the environment and write each tool's file. The everyday command, and the one CI runs. |
-| `token store` | Save one token. The secret comes from stdin or a hidden prompt, never an argument. |
-| `token inventory` | List installed tokens, secrets masked. `--reveal` shows them after asking (`--yes` without a terminal); `--json` for scripts. |
-| `token clip TARGET HOST` | Copy one token to the clipboard without printing it. |
-| `token forget TARGET HOST` | Delete one entry from its tool's file. |
-| `token checkup` | Check the files are owner-only and a project's `.gitignore` covers them. Writes nothing. |
-| `token skeleton` | Show what each tool's file looks like, with placeholder values. |
-| `token scaffold [FILE]` | Write a starter config, never over an existing file. |
-| `token services` | List the Composer services a config can name. |
-| `token adopt-legacy` | Copy an auth-token-manager config to `tokens.json`, so the old locations stop being read. |
-| `token shell-aliases` | Show, install or remove the `atm` shell aliases. |
+| [`token apply`](../reference/cli.md#authama-token-apply) | Resolve the config from the environment and write each tool's file. The everyday command, and the one CI runs. `--dry-run` shows the result masked and writes nothing; `--exports` prints `COMPOSER_AUTH` for CI. |
+| [`token set`](../reference/cli.md#authama-token-set) | Add one token, or replace the one saved for that host: this is also how you rotate or edit a token. The secret comes from stdin or a hidden prompt, never an argument. |
+| [`token list`](../reference/cli.md#authama-token-list) | List installed tokens, secrets masked. `--reveal` shows them after asking (`-y`/`--yes` without a terminal); `--json` for scripts. |
+| [`token show TARGET HOST`](../reference/cli.md#authama-token-show) | Everything about one entry: tool, host, kind, user, file. Masked unless `--reveal`. |
+| [`token status`](../reference/cli.md#authama-token-status) | Which config is in use and why, each tool's file and mode, and which variables `apply` would find unset. Never fails. |
+| [`token copy TARGET HOST`](../reference/cli.md#authama-token-copy) | Copy one token to the clipboard without printing it. |
+| [`token delete TARGET HOST`](../reference/cli.md#authama-token-delete) | Delete one entry from its tool's file. Asks first at a terminal (`-y` skips). |
+| [`token audit`](../reference/cli.md#authama-token-audit) | Check the files are owner-only and a project's `.gitignore` covers them. Writes nothing; exits non-zero when something needs fixing. |
+| [`token examples`](../reference/cli.md#authama-token-examples) | Show what each tool's file looks like, with placeholder values (`--json` for the masked JSON). |
+| [`token init [FILE]`](../reference/cli.md#authama-token-init) | Write a starter config from the templates, never over an existing file. |
+| [`token providers`](../reference/cli.md#authama-token-providers) | List the Composer services a config can name, and the well-known npm, Docker and git hosts. |
+| [`token import [FILE]`](../reference/cli.md#authama-token-import) | Copy an auth-token-manager (or any) token config to `tokens.json`, so the old location stops being read. `--dry-run` checks it. |
+| [`token shell-aliases`](../reference/cli.md#authama-token-shell-aliases) | Show, install or remove the `atm` shell aliases. |
 
 The targets are `composer`, `npm`, `docker`, `git` and `netrc`; each has a page:
 [Composer](tokens/composer.md) · [npm](tokens/npm.md) · [Docker](tokens/docker.md) ·
 [git](tokens/git.md) · [netrc](tokens/netrc.md).
 
+## How it works
+
+```
+  config (variable names) + environment  →  token apply  →  each tool's own file
+  or: token set / the menu  →  pick tool → provider → cloud or self-hosted → type the secret
+```
+
+authama writes the token into the file the tool itself reads (Composer
+`auth.json`, npm `.npmrc`, Docker `config.json`, `git-credentials`, `.netrc`), so
+you never edit those files by hand.
+
 ## Everyday use
 
 ```sh
-authama token scaffold                         # a starter tokens.json in the config home
+authama token init                             # a starter tokens.json in the config home
 $EDITOR ~/.config/ssh-manager/tokens.json      # keep the hosts you use
-GH_TOKEN=$(op read op://Private/GitHub/token) authama token sync
-authama token inventory
+authama token status                           # which variables are still missing
+GH_TOKEN=$(op read op://Private/GitHub/token) authama token apply
+authama token list
 ```
 
 One token, typed once:
 
 ```sh
-authama token store --service github --server github.com          # Composer
-authama token store --target npm --server npm.pkg.github.com --scope @acme
-authama token store --target git --server github.com --username octocat
-printf '%s\n' "$TOKEN" | authama token store --target netrc --server api.heroku.com --username me@example.com
+authama token set --service github --server github.com          # Composer
+authama token set --target npm --server npm.pkg.github.com --scope @acme
+authama token set --target git --server github.com --username octocat
+printf '%s\n' "$TOKEN" | authama token set --target netrc --server api.heroku.com --username me@example.com
 ```
+
+Rotate a token by setting it again: `token set` replaces the entry for that host
+and keeps every other one. `token show git github.com` confirms what is there.
+
+The menu (`authama tui`, **Auth tokens → Add or replace a token**) asks the same
+questions the auth-token-manager menu did: the tool, the provider (from
+`token providers`), cloud or self-hosted, then the secret. It also offers
+**Replace** for each installed entry, keeping its user name when you press Enter.
 
 ## The config
 
@@ -87,6 +112,15 @@ token, `@` in a git host - is refused before anything is written.
 `_settings.docker_creds_store` (`login` or `refuse`) sets what happens when
 Docker keeps a registry in a credential store; see [Docker](tokens/docker.md).
 
+## Templates
+
+`token init` writes the combined starter config; `token init --target npm`
+(repeatable) starts from one tool's template only. `token examples` shows the
+files those templates render, with placeholders. Each template carries a `_help`
+line describing its fields; delete it, and the hosts you do not use, once you
+have edited the file. A test keeps the combined template equal to the union of
+the per-tool ones.
+
 `--source FILE` loads `VAR=value` lines first (variables already set win).
 `--target` limits a run to some tools; `--project DIR` writes a project's
 `auth.json` and `.npmrc` instead of the user ones (docker, git and netrc are
@@ -114,21 +148,75 @@ refuses any write outside the sandbox. `docker login` is refused there too,
 because it would reach the real Docker credential store.
 
 ```sh
-authama --dev-root /tmp/sandbox token store --target git --server github.com --username me
-authama --dev-root /tmp/sandbox token inventory
+authama --dev-root /tmp/sandbox token set --target git --server github.com --username me
+authama --dev-root /tmp/sandbox token list
 ```
+
+## Self-hosted and enterprise hosts
+
+Use your own host as the key:
+
+```json
+{ "composer": { "git.acme.corp": { "service": "gitlab", "env": "ACME_GITLAB_TOKEN" } } }
+```
+
+Composer only sends a GitHub or GitLab token to a self-hosted host listed in the
+project's `composer.json`; the menu reminds you after saving one:
+
+```json
+{ "config": { "gitlab-domains": ["git.acme.corp"] } }
+```
+
+## Where tokens come from
+
+```sh
+export GH_TOKEN=changeme                                      # plain shell
+authama token apply --source .env                            # VAR=value file (set variables win)
+export GH_TOKEN=$(op read "op://Dev/GitHub/token")           # 1Password
+export GH_TOKEN=$(security find-generic-password -s gh -w)   # macOS Keychain
+```
+
+Values are trimmed of a trailing newline or spaces, a common cause of "valid
+token, still 401".
 
 ## CI
 
+```yaml
+# GitHub Actions - Composer through the environment, no file to go stale
+- run: eval "$(authama token apply --target composer --exports)"
+  env: { GH_TOKEN: "${{ secrets.COMPOSER_TOKEN }}" }
+- run: composer install --no-interaction
+```
+
 ```sh
-eval "$(GH_TOKEN=$TOKEN authama token sync --target composer --exports)"   # COMPOSER_AUTH, no file
-NPM_TOKEN=$TOKEN authama token sync --target npm --project .
+NPM_TOKEN=$TOKEN authama token apply --target npm --project .   # a project .npmrc
+npm ci
 ```
 
 `--exports` prints `COMPOSER_AUTH` as one shell export instead of writing
 `auth.json`; the other targets have no environment channel and say so.
-`--preview` prints what would be written as JSON, secrets masked, and writes
-nothing.
+`--dry-run` prints what would be written as JSON, secrets masked, and writes
+nothing. Do not leave a stale `auth.json` next to `COMPOSER_AUTH`: the file wins,
+and `token audit` notes it.
+
+Keep project credential files out of git:
+
+```sh
+printf 'auth.json\n.npmrc\n' >> .gitignore
+authama token audit --project .     # fails if .gitignore misses one
+```
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `HTTP 401` despite a token | A stale `auth.json` overrides `COMPOSER_AUTH`: `authama token audit`, then `token apply` again or delete the file. |
+| "required env var(s) not set" | The variables your config names are not set: export them, or `token apply --source .env`. `token status` lists every missing one. |
+| Token "valid" but rejected | A trailing newline or space in the value; authama trims it, but check where the value came from. |
+| Private GitLab or GitHub Enterprise token ignored by Composer | Add the host to `gitlab-domains` / `github-domains` in `composer.json`. |
+| Forgot what is stored where | `authama token list` (every token with its file, masked) or `token show TARGET HOST`. |
+| `token copy` fails in a container or over SSH | There is no clipboard there: use `token show --reveal` or run `copy` on your desktop. |
+| A file is world/group-readable | `authama doctor --fix` (or `chmod 600`). |
 
 ## Shell aliases
 
@@ -143,16 +231,21 @@ eval "$(authama token shell-aliases --print)"
 |---|---|
 | `atm` | `authama token` |
 | `atm-ui` | `authama tui` |
-| `atm-doctor` | `authama token checkup` |
-| `atm-init` | `authama token scaffold` |
+| `atm-doctor` | `authama token audit` |
+| `atm-init` | `authama token init` |
 
-The rc file is copied to `<file>.authama.bak` first unless `--no-backup`.
+The block goes in your interactive rc file (`~/.zshrc`, `~/.bashrc`, else
+`~/.profile`); `--login` uses `~/.zprofile` / `~/.bash_profile` instead, and
+`--file PATH` any file. bash on macOS opens login shells, which read
+`~/.bash_profile` but not `~/.bashrc`: install with `--login`, or source
+`~/.bashrc` from `~/.bash_profile`. An auth-token-manager block is replaced, not
+duplicated. The rc file is copied to `<file>.authama.bak` first unless `--no-backup`.
 
 ## Also in
 
-- [`doctor`](doctor.md) checks the token files' modes, and `doctor --fix` repairs them.
-- [`tui`](tui.md) has an **Auth tokens** group: inventory, checkup, clip, store, sync, forget.
-- [`serve`](serve.md) has a **Tokens** page: the inventory, the checkup, and previewed `forget` and `sync`.
+- [`doctor`](doctor.md) checks the token files' modes (a warning; `--strict` fails on it), and `doctor --fix` repairs them.
+- [`tui`](tui.md) has an **Auth tokens** group: list, status, audit, copy, add or replace, apply, delete.
+- [`serve`](serve.md) has a **Tokens** page: the list, the status and audit, and previewed `delete` and `apply`.
 
 <!-- nav-footer -->
 

@@ -10,9 +10,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **Auth token management, merged from auth-token-manager.** The new `token` group builds the credential
   files Composer (`auth.json`), npm (`.npmrc`), Docker (`config.json`), git (`.git-credentials`) and curl
-  (`.netrc`) read, from a config that names environment variables: `sync` (with `--preview` and
-  `--exports`), `store`, `inventory` (`--reveal` asks first), `clip`, `forget`, `checkup`, `skeleton`,
-  `scaffold`, `services`, `adopt-legacy` and `shell-aliases`. Ported from
+  (`.netrc`) read, from a config that names environment variables: `apply` (with `--dry-run` and
+  `--exports`), `set`, `list` (`--reveal` asks first), `show`, `status`, `copy`, `delete` (asks first at a
+  terminal), `audit`, `examples`, `init`, `providers`, `import` and `shell-aliases`. Ported from
   simtabi/auth-token-manager@20dda1e2c56ee23a87c0768edb6fadbd0c298227: rendering is checked byte-for-byte
   against golden files from the Python code, and its pytest suite is ported to Go. Files are written
   atomically at `0600` and merged with what is there; a malformed file, a value that could inject a second
@@ -27,9 +27,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `token` are the top level. Command names are distinct and prefix matching is off, held by a test. The
   module path, config home, `SSH_MANAGER_*` variables, managed-block markers and `known_hosts` tags are
   unchanged. Completion scripts are named for the binary that generates them.
-- **Auth tokens in the TUI and the web UI.** The TUI gains an *Auth tokens* group (list, check, clip,
-  store, sync, forget); `serve` gains a Tokens page listing installed tokens (never their secrets) with a
-  previewed forget and sync.
+- **Commands a token manager needs beyond auth-token-manager's flags.** `token show TARGET HOST` prints one
+  entry (secret masked unless `--reveal`); `token status` is a read-only overview of the config in use, each
+  tool's file and mode, and which variables are unset (it always exits 0; `token audit` is the check);
+  `token providers` also lists the well-known npm, Docker and git hosts; `token import FILE` imports any
+  config, with `--dry-run`; and `token delete` asks first at a terminal. Rotating or editing a token is
+  `token set` again for the same host.
+- **A complete command reference.** [docs/reference/cli.md](docs/reference/cli.md) lists every command with its
+  flags and examples, generated from the command tree and held current by a test; every command now has
+  examples in `--help`, each checked to parse. It ends with a guide to choosing between similar commands.
+- **Auth tokens in the TUI and the web UI.** The TUI gains an *Auth tokens* group (list, status, audit, copy,
+  set, apply, delete); `serve` gains a Tokens page listing installed tokens (never their secrets) with a
+  previewed delete and apply. *Add or replace a token* asks what auth-token-manager's menu asked: the
+  provider from the catalog, cloud or self-hosted (a typed URL loses its scheme and trailing slash), and the
+  credential its mechanism needs, Bitbucket key and secret and Composer custom headers included; it offers
+  *Replace* for each installed entry (the old *Edit*) and reminds you to add a self-hosted GitHub or GitLab
+  host to `composer.json`'s `*-domains`.
 - **`token shell-aliases`** installs `atm`, `atm-ui`, `atm-doctor` and `atm-init`, now calling `authama`.
 - **A Go dev container.** `Dockerfile` and `compose.yaml` at the root, with `make docker-shell`,
   `docker-run` and `docker-down`. Its home is `./.authama-home` (`AUTHAMA_DEV_HOME`), never your real one.
@@ -92,12 +105,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- **`doctor` checks token-file modes** and fails on a credential file others can read; `--fix` tightens
-  it, and `--json` adds a `tokens` object. A machine that passed before may now fail until fixed.
+- **`doctor` checks token-file modes.** A credential file others can read is a warning, so a machine that
+  passed before still passes; `doctor --strict` (as in CI) fails on it, and `--fix` tightens it.
+- **Machine-readable output is unchanged.** `doctor --json` keeps every key, in the same order, and only
+  gains a `tokens` member at the end; `history --json` records the same bare command names (`host add`,
+  `reconcile`), never the `authama ssh` spelling. A test pins both shapes. Only human-readable messages use
+  the new spellings.
 - **`ui` is deprecated.** It was an alias of `serve`; it still starts the web UI, hidden from help, with a
   notice naming `serve` (web) and `tui` (terminal), since `ui` no longer says which.
-- **Messages teach the new spellings** (`authama ssh deploy …`), so scripts that parse message text may
-  need updating.
+- **Messages teach the new spellings** (`authama ssh deploy …`), so scripts that parse message *text* (not
+  `--json`) may need updating.
+- **`install.ps1` is checked by PSScriptAnalyzer in CI** as well as parsed.
 - **Commands no longer hold the lock while they wait for your answer.** `reconcile`, `keygen`, `key delete`,
   `key regen-pub`, `host apply`, `clean` and `import` used to take the lock first and keep it while the question sat
   on screen, so every other sshmgr command waited for as long as you took. They now ask first, then take the lock

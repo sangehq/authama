@@ -33,7 +33,7 @@ authama doctor --strict  # every dangling-key state is fatal (CI)
 | dangling keys | declared-but-missing, half a pair, on disk but untracked, unwired |
 | duplicate keys | the same key material under two profiles |
 | stale predecessors | archived keys older than `SSH_MANAGER_OLD_KEY_MAX_AGE_DAYS` |
-| auth tokens | after the SSH report, under `=== auth tokens ===`: each installed credential file (Composer's `auth.json`, `.npmrc`, Docker's `config.json`, `.git-credentials`, `.netrc`) and whether it is owner-only. A file others can read fails the verdict. The same check, plus `.gitignore` coverage for a project, is `authama token checkup` |
+| auth tokens | after the SSH report, under `=== auth tokens ===`: each installed credential file (Composer's `auth.json`, `.npmrc`, Docker's `config.json`, `.git-credentials`, `.netrc`) and whether it is owner-only. A file others can read is a warning, and fails the verdict under `--strict`. The same check, plus `.gitignore` coverage for a project, is `authama token audit` |
 
 ## Exit codes
 
@@ -42,9 +42,10 @@ authama doctor --strict  # every dangling-key state is fatal (CI)
 a script that only wants to know "did it run" should check for output rather than
 the code.
 
-A token file with a loose mode is also a failure. That check arrived with the
-token feature, so a machine whose `~/.npmrc` is group-readable passes on sshmgr
-v3 and fails here until `doctor --fix` (or a `chmod 600`) tightens it.
+A token file with a loose mode is a **warning** by default, so a machine whose
+`~/.npmrc` was group-readable under sshmgr v3 still passes; the report says
+`doctor --fix` (or a `chmod 600`) tightens it. With `--strict` it fails the run,
+which is what CI wants. `token audit` always fails on it.
 
 Without `--strict`, a key that is declared but has never been minted is a warning
 and does not fail the run: it is an ordinary state on a machine that has not

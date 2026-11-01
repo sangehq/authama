@@ -1,7 +1,7 @@
 # Containerised dev environment for authama (Authentication Access Manager).
 #
 #   make docker-shell          # build + start + drop into a shell inside
-#   make docker-run ARGS=…     # one-off invocation inside, e.g. ARGS="token inventory"
+#   make docker-run ARGS=…     # one-off invocation inside, e.g. ARGS="token list"
 #   make docker-down           # stop & remove
 #
 # Configuration: set the AUTHAMA_* variables below in your shell or in .env

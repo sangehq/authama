@@ -71,12 +71,13 @@ Entries are grouped by consequence, not by frequency — everything above *Chang
    9  Snapshots - list and restore    ssh snapshots
 
   Auth tokens   (each one asks before it writes)
-  10  List installed tokens           token inventory
-  11  Check the token files           token checkup
-  12  Copy a token to the clipboard   token clip
-  13  Store a token                   token store
-  14  Sync tokens from the config     token sync
-  15  Forget a token                  token forget
+  10  List installed tokens           token list
+  11  Token setup status              token status
+  12  Audit the token files           token audit
+  13  Copy a token to the clipboard   token copy
+  14  Add or replace a token          token set
+  15  Apply the token config          token apply
+  16  Delete a token                  token delete
 
    q  Quit
 ```
@@ -84,7 +85,8 @@ Entries are grouped by consequence, not by frequency — everything above *Chang
 The right-hand column is the CLI verb that does the same thing, and it is also
 an accepted answer — typing what is on screen is never a dead end. So `5`,
 `ssh reconcile`, `reconcile` and the full label all select the same entry, as
-do `10`, `token inventory` and `inventory`.
+do `10` and `token list`. Token entries need the `token` prefix: a bare `list`
+is the SSH browse, and a bare `set`, `copy` or `apply` selects nothing.
 
 Entry 6 runs `knownhosts init --all`: a trust-on-first-use scan of every manifest
 host. Earlier releases listed it as `knownhosts pin`, which is a different command
@@ -94,13 +96,24 @@ the entry.
 ## Auth tokens
 
 The last group is the token side, the menu `auth-token-manager --ui` used to
-be. *List* masks every secret; *Check* writes nothing. *Store* asks for the
-tool, the server and (where the tool needs one) a user name, then reads the
-token without echoing it. *Sync* writes every target in the token config, and
-*Forget* picks an installed entry from a list and asks before removing it. To
-edit an entry, store it again: a store replaces the entry for that server. Each
-applies the same checks as its `authama token` command, and in dev mode every
-file is the sandbox's.
+be. *List* masks every secret (use `authama token show --reveal` to see one);
+*Status* and *Audit* write nothing. *Add or replace* asks, as the old menu did:
+
+1. a new token, or **Replace** one of the installed entries (its tool, host and
+   mechanism are kept, and Enter keeps its user name: this is the old *Edit*);
+2. the tool, then the provider from the catalog (`token providers`), shown with
+   its cloud host;
+3. for a provider that is both, **Cloud** or **Self-hosted / Enterprise**; a
+   typed host loses its `https://` and trailing `/`;
+4. the credential the mechanism needs - a token; a user name and password; a
+   Bitbucket consumer key and secret; or Composer custom headers,
+   comma-separated - read without echo.
+
+It asks before saving, and after a self-hosted GitHub or GitLab it reminds you to
+add the host to `github-domains` / `gitlab-domains` in `composer.json`. *Apply*
+previews then writes every target in the token config, and *Delete* picks an
+installed entry and asks before removing it. Each applies the same checks as its
+`authama token` command, and in dev mode every file is the sandbox's.
 
 ## Answering it
 

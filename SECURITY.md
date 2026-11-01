@@ -45,12 +45,12 @@ in these:
   refs that unlock the bundle).
 - **Token files are owner-only and written atomically.** `auth.json`, `.npmrc`,
   Docker's `config.json`, `.git-credentials` and `.netrc` are written to a temp
-  file at `0600` and renamed into place; `doctor` fails on a looser mode and
+  file at `0600` and renamed into place; `doctor` warns on a looser mode (`doctor --strict` and `token audit` fail on it) and
   `doctor --fix` tightens it.
 - **The token config holds no secrets.** It names environment variables; the
   values are read at run time and written only to the tools' own files.
-- **Secrets are not printed or recorded.** `token inventory` masks them unless
-  `--reveal` is confirmed, `token clip` copies without printing, `token sync`
+- **Secrets are not printed or recorded.** `token list` masks them unless
+  `--reveal` is confirmed, `token copy` copies without printing, `token apply`
   does not echo `COMPOSER_AUTH`, and the audit log and history record the target
   and host, never the value. The web UI never receives or shows a token.
 - **No credential injection.** `.npmrc`, `.netrc` and the git credential store

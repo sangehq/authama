@@ -35,7 +35,7 @@ when that port is taken.
 | Keys | every key with its fingerprint and expiry. A key's page shows where the key is deployed and every operation that touched it |
 | Snapshots | every snapshot. A snapshot's page diffs it against `~/.ssh` now or against another snapshot |
 | History | the [`history`](history.md), filtered the same way. An operation's page shows its events and the manifest before and after |
-| Tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret) and the token checkup, as `authama token inventory` and `authama token checkup` print, and which token config is in use |
+| Tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret) and the token audit, as `authama token list` and `authama token audit` print, and which token config is in use |
 | Doctor, Audit | the reports `authama doctor` and `authama ssh audit` print |
 
 ## Changes
@@ -67,13 +67,13 @@ These changes can be made from the pages:
 | Write an encrypted bundle | Snapshots | `authama ssh bundle [--keep]` |
 | Send the desktop alert, if one is due | Audit | `authama ssh audit --notify` |
 | Send a test notification | Audit | `authama ssh notify test` |
-| Remove an installed token | Tokens | `authama token forget <target> <host>` |
-| Write the token config's credential files | Tokens | `authama token sync` (a Docker registry in a credential store follows `_settings.docker_creds_store`, and is refused when it is unset, since a page cannot prompt) |
+| Remove an installed token | Tokens | `authama token delete <target> <host>` |
+| Write the token config's credential files | Tokens | `authama token apply` (a Docker registry in a credential store follows `_settings.docker_creds_store`, and is refused when it is unset, since a page cannot prompt) |
 
-The token sync resolves secrets from the environment `authama serve` was started
+The token apply resolves secrets from the environment `authama serve` was started
 in, so a variable set in another terminal is not seen. Storing, revealing and
-copying a token stay in the terminal (`token store`, `token inventory --reveal`,
-`token clip`): a page never receives or shows a secret.
+copying a token stay in the terminal (`token set`, `token list --reveal`,
+`token copy`): a page never receives or shows a secret.
 
 Each change takes two steps:
 

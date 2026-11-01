@@ -62,11 +62,13 @@ authama ssh validate                  # every keypair parses and the halves matc
 Auth tokens:
 
 ```sh
-authama token scaffold            # a starter tokens.json (env var names, no secrets)
-GH_TOKEN=$(op read op://Private/GitHub/token) authama token sync   # write auth.json, .npmrc, …
-authama token store --target npm --server registry.npmjs.org       # or one token, from a hidden prompt
-authama token inventory           # what is installed, secrets masked
-authama token checkup             # owner-only modes, .gitignore coverage
+authama token init                # a starter tokens.json (env var names, no secrets)
+GH_TOKEN=$(op read op://Private/GitHub/token) authama token apply   # write auth.json, .npmrc, …
+authama token set --target npm --server registry.npmjs.org        # or one token, from a hidden prompt
+authama token list                # what is installed, secrets masked
+authama token show npm registry.npmjs.org   # one entry in full
+authama token status              # which config, which files, which variables are missing
+authama token audit               # owner-only modes, .gitignore coverage
 ```
 
 Both:
@@ -94,8 +96,9 @@ else is in the [documentation index](#documentation).
 
 ### Reference
 
+- [Command reference](docs/reference/cli.md) — every command and subcommand with its flags, aliases and examples, generated from the binary (a test keeps it current), plus a "which command do I want" table.
 - [Feature catalog](docs/features.md) — every command, what it does, and how it is tested.
-- [`token`](docs/tools/tokens.md) — auth tokens: sync, store, inventory, clip, forget, checkup; per tool: [Composer](docs/tools/tokens/composer.md), [npm](docs/tools/tokens/npm.md), [Docker](docs/tools/tokens/docker.md), [git](docs/tools/tokens/git.md), [netrc](docs/tools/tokens/netrc.md).
+- [`token`](docs/tools/tokens.md) — auth tokens: apply, set, list, show, status, copy, delete, audit, import; per tool: [Composer](docs/tools/tokens/composer.md), [npm](docs/tools/tokens/npm.md), [Docker](docs/tools/tokens/docker.md), [git](docs/tools/tokens/git.md), [netrc](docs/tools/tokens/netrc.md).
 - [`doctor`](docs/tools/doctor.md) — what it checks (SSH and token files), `--fix`, `--json`, `--strict`.
 - [`deploy`](docs/tools/deploy.md) — installing a public key on its target.
 - [`providers`](docs/tools/providers.md) — the adapter catalog and how to extend it.
