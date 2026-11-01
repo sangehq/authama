@@ -5,21 +5,21 @@ Open the web UI, make a change after seeing exactly what it writes, and run a de
 ## Start it
 
 ```sh
-sshmgr serve
+authama serve
 ```
 
 It opens a browser at `http://127.0.0.1:7822/?token=…` and listens on this machine only. To try it
 on a sandbox first, so nothing touches your real `~/.ssh`:
 
 ```sh
-sshmgr --dev-root ~/sshmgr-sandbox serve
+authama --dev-root ~/sshmgr-sandbox serve
 ```
 
 ## Make a change
 
 1. Fill in a form: add a host on **Hosts**, or tick *and its key files* next to a profile on
    **Profiles** to delete one completely.
-2. **Preview.** The page shows the command it stands for, what sshmgr would say, and a diff of every
+2. **Preview.** The page shows the command it stands for, what authama would say, and a diff of every
    file the change would write. Private keys it would delete or move are listed by path.
 3. **Make this change.** If anything moved since the preview, from a terminal or another tab, the
    page shows the new preview instead of writing.
@@ -34,12 +34,12 @@ Each change is in **History**, with source `web`.
    to copy. Paste it there, then **Done, carry on**.
 
 A rotation writes an encrypted backup first, so set `SSH_MANAGER_AGE_RECIPIENT` before you start
-`sshmgr serve`. A target that needs a password is deployed from a terminal: `sshmgr deploy <key>`.
+`authama serve`. A target that needs a password is deployed from a terminal: `authama ssh deploy <key>`.
 
 ## Look without changing anything
 
 ```sh
-sshmgr serve --read-only
+authama serve --read-only
 ```
 
 The pages show no forms and serve no change.

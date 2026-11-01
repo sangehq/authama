@@ -8,10 +8,10 @@ Non-interactive, sandboxed, and failing loudly.
     SSH_MANAGER_HOME: ${{ github.workspace }}/.sshmgr
     SSH_MANAGER_AUTO_PIN: "0"      # no ssh-keyscan; the runner has no network trust
   run: |
-    sshmgr init
-    sshmgr reconcile --no-pin --yes
-    sshmgr config check            # exit != 0 on drift
-    sshmgr doctor --strict         # exit != 0 on any dangling key
+    authama init
+    authama ssh reconcile --no-pin --yes
+    authama ssh config check            # exit != 0 on drift
+    authama doctor --strict         # exit != 0 on any dangling key
 ```
 
 The pieces that matter:
@@ -34,7 +34,7 @@ a declined confirmation exits 1 silently.
 For machine-readable output:
 
 ```sh
-sshmgr doctor --json | jq '.perm_issues, .unpinned_hosts'
+authama doctor --json | jq '.perm_issues, .unpinned_hosts'
 ```
 
 Reference: [`doctor`](../tools/doctor.md) · [Configuration](../configuration.md).

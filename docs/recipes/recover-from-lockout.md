@@ -7,7 +7,7 @@ From a machine that still works, print the snippet for the key that should be
 there:
 
 ```sh
-sshmgr recover work/work_hpc-ed25519
+authama ssh recover work/work_hpc-ed25519
 ```
 
 Paste the output into the console. It is POSIX `sh`, needs no working SSH and no
@@ -17,7 +17,7 @@ the key only if it is not already present, and leaves the file at 0600.
 With no key named, you get the full interactive repair tool instead:
 
 ```sh
-sshmgr recover > fixkeys.sh
+authama ssh recover > fixkeys.sh
 ```
 
 It reads its prompts from `/dev/tty` rather than stdin, so pasting the whole

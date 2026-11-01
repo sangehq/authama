@@ -31,22 +31,22 @@ account. `--profile` overrides the mapping for one run.
 }
 ```
 
-## `sshmgr git status [PATH...]`
+## `authama ssh git status [PATH...]`
 
 ```text
-$ sshmgr git status ~/Artisan/projects/opensource/simtabi/packages/*
+$ authama ssh git status ~/Artisan/projects/opensource/simtabi/packages/*
 .../pheg      https    simtabi/pheg      profile=imanimanyara (by owner)
 .../sshmgr    profile  simtabi/ssh-manager  profile=imanimanyara
 .../notes     -  no origin
 ```
 
-## `sshmgr git use [MODE] [PATH...]`
+## `authama ssh git use [MODE] [PATH...]`
 
 ```sh
-sshmgr git use profile ~/code/*/ --dry-run   # show every rewrite, change nothing
-sshmgr git use profile ~/code/*/ --yes       # rewrite, each URL checked first
-sshmgr git use https .                        # back to HTTPS in this checkout
-SSHMGR_GIT_MODE=ssh sshmgr git use .          # one-off override of the default
+authama ssh git use profile ~/code/*/ --dry-run   # show every rewrite, change nothing
+authama ssh git use profile ~/code/*/ --yes       # rewrite, each URL checked first
+authama ssh git use https .                        # back to HTTPS in this checkout
+SSHMGR_GIT_MODE=ssh authama ssh git use .          # one-off override of the default
 ```
 
 What it does per checkout:

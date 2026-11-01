@@ -25,12 +25,12 @@ need a `providers.json` for it to work. To customize, materialize an editable co
 into your home and edit it:
 
 ```sh
-sshmgr providers --export      # writes <home>/providers.json (the shipped catalog)
-sshmgr providers               # shows the active catalog + which credentials are set
+authama ssh providers --export      # writes <home>/providers.json (the shipped catalog)
+authama ssh providers               # shows the active catalog + which credentials are set
 ```
 
 Resolution: `<home>/providers.json` if you created one, else the shipped default
-(kept byte-identical to the repo's `src/config/providers.json`). `sshmgr doctor` prints
+(kept byte-identical to the repo's `src/config/providers.json`). `authama doctor` prints
 which source is active. Delete your file to track the shipped default again.
 
 | Provider name | kind | category | automated? | notes |
@@ -83,7 +83,7 @@ name from a host:
  "key_name": "work_acme-ed25519"}
 ```
 
-Then `sshmgr deploy work_acme-ed25519`. With `glab` + the token it adds the key
+Then `authama ssh deploy work_acme-ed25519`. With `glab` + the token it adds the key
 to your self-hosted GitLab; without them it opens
 `https://gitlab.acme.io/-/user_settings/ssh_keys` for you to paste.
 

@@ -32,9 +32,9 @@ In the manifest, give the profile a store and a vault:
 ```
 
 ```sh
-sshmgr doctor          # op found, agent socket present, vault served
-sshmgr reconcile       # creates the item, writes simtabibot_github-ed25519.pub
-sshmgr validate        # the item exists and matches the .pub
+authama doctor          # op found, agent socket present, vault served
+authama ssh reconcile       # creates the item, writes simtabibot_github-ed25519.pub
+authama ssh validate        # the item exists and matches the .pub
 ```
 
 The rendered host points ssh at the public key and the 1Password agent:
@@ -51,7 +51,7 @@ Host github-simtabi
 Rotate the same way as any key:
 
 ```sh
-sshmgr rotate simtabibot_github-ed25519
+authama ssh rotate simtabibot_github-ed25519
 ```
 
 The new key is created in the vault as `<key>.staged`, deployed and verified,

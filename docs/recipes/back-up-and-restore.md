@@ -8,7 +8,7 @@ backing up:
 
 ```sh
 age-keygen -o ~/age-identity.txt        # note the "public key:" line
-sshmgr bundle -r age1... -o ~/Backups
+authama ssh bundle -r age1... -o ~/Backups
 ```
 
 The bundle holds the private keys, the manifest, the inventory and
@@ -20,16 +20,16 @@ staging copy in `$TMPDIR`.
 On the new machine:
 
 ```sh
-sshmgr init
-sshmgr restore ~/Backups/ssh-manager-*.age -i ~/age-identity.txt
-sshmgr validate                          # every pair parses and matches
-sshmgr doctor
+authama init
+authama ssh restore ~/Backups/ssh-manager-*.age -i ~/age-identity.txt
+authama ssh validate                          # every pair parses and matches
+authama doctor
 ```
 
 Keys kept in 1Password (`key_store: 1password`) are not in the bundle: only
 their `.pub` is on disk, and the private key is already backed up by 1Password.
-On the new machine, sign in to 1Password and run `sshmgr key regen-pub --all`
-(or `sshmgr reconcile`) to bring their public halves back from the vault.
+On the new machine, sign in to 1Password and run `authama ssh key regen-pub --all`
+(or `authama ssh reconcile`) to bring their public halves back from the vault.
 
 `restore` overlays: a key already on disk that the bundle does not contain — one
 minted since the backup — survives. It replaces only what it has a copy of.

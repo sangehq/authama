@@ -17,35 +17,35 @@ The manifest is the single source of truth. `~/.ssh` is **generated output**:
 ## First run
 
 ```sh
-sshmgr init                  # create ~/.config/ssh-manager (dirs, perms, seed files)
+authama init                  # create ~/.config/ssh-manager (dirs, perms, seed files)
 ```
 
 `init` seeds an **empty** manifest. Add profiles and hosts before `reconcile`
 mints anything — three ways, whichever suits:
 
 ```sh
-sshmgr profile add work
-sshmgr host add work gh -H github.com -u git      # or edit manifest.json directly
-sshmgr host apply work web1 203.0.113.10 deploy web   # add-or-update from a compact spec
+authama ssh profile add work
+authama ssh host add work gh -H github.com -u git      # or edit manifest.json directly
+authama ssh host apply work web1 203.0.113.10 deploy web   # add-or-update from a compact spec
 ```
 
 `host apply` takes `<alias> <host>[:port] <user> [role]` and adds the host if
 it is new or updates it if not, so the same line can be re-run. Many at once:
 
 ```sh
-sshmgr host apply work \
+authama ssh host apply work \
   --host "web1 203.0.113.10 deploy web" \
   --host "db1  203.0.113.11 deploy db" --reconcile
-sshmgr host apply work -f hosts.txt     # one spec per line, # comments, - for stdin
-sshmgr import ~/.ssh/config                        # or onboard an existing setup
+authama ssh host apply work -f hosts.txt     # one spec per line, # comments, - for stdin
+authama ssh import ~/.ssh/config                        # or onboard an existing setup
 ```
 
 Then build the tree:
 
 ```sh
-sshmgr reconcile --dry-run   # preview: what would be minted, what would be written
-sshmgr reconcile             # build ~/.ssh from the manifest
-sshmgr config check          # confirm the file matches the manifest (exit != 0 on drift)
+authama ssh reconcile --dry-run   # preview: what would be minted, what would be written
+authama ssh reconcile             # build ~/.ssh from the manifest
+authama ssh config check          # confirm the file matches the manifest (exit != 0 on drift)
 ```
 
 At this point every declared key exists at `~/.ssh/profiles/<profile>/<key>`
@@ -59,9 +59,9 @@ on disk; its private key lives in a 1Password vault
 ## Getting a key onto its target
 
 ```sh
-sshmgr deploy work_gh-ed25519    # ssh-copy-id, gh, glab, a REST API, or manual
-sshmgr validate                  # every keypair parses and the halves match
-sshmgr doctor                    # deps, perms, agent, pins, drift
+authama ssh deploy work_gh-ed25519    # ssh-copy-id, gh, glab, a REST API, or manual
+authama ssh validate                  # every keypair parses and the halves match
+authama doctor                    # deps, perms, agent, pins, drift
 ```
 
 `deploy` picks its method from the host's provider. Where there is no API — a
@@ -71,11 +71,11 @@ than pretending to have done it.
 ## Living with it
 
 ```sh
-sshmgr list --type vcs         # filterable view across profiles
-sshmgr show gh                 # manifest, key files, rendered config and pins, reconciled
-sshmgr expiry                  # per-key rotation age
-sshmgr rotate work_gh-ed25519  # zero-downtime staged rotation
-sshmgr notify install          # scheduled reminders before keys come due
+authama ssh list --type vcs         # filterable view across profiles
+authama ssh show gh                 # manifest, key files, rendered config and pins, reconciled
+authama ssh expiry                  # per-key rotation age
+authama ssh rotate work_gh-ed25519  # zero-downtime staged rotation
+authama ssh notify install          # scheduled reminders before keys come due
 ```
 
 **Every verb that changes `~/.ssh` asks first.** `reconcile` shows its dry run as

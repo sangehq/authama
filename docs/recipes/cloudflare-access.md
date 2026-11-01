@@ -8,8 +8,8 @@ Access policy) is set up once in the Cloudflare dashboard. This recipe is the la
 
 ```bash
 brew install cloudflared
-sshmgr host add simtabi oribi-web -H ssh-web-00.simtabi.com -u adm-imani --proxy cloudflared
-sshmgr reconcile
+authama ssh host add simtabi oribi-web -H ssh-web-00.simtabi.com -u adm-imani --proxy cloudflared
+authama ssh reconcile
 ssh oribi-web
 ```
 
@@ -17,10 +17,10 @@ The first `ssh` opens a browser to sign in; after that the Access session lasts 
 move an existing host behind Access, change its hostname to the Access hostname and add the proxy:
 
 ```bash
-sshmgr host edit simtabi oribi-web -H ssh-web-00.simtabi.com --proxy cloudflared
+authama ssh host edit simtabi oribi-web -H ssh-web-00.simtabi.com --proxy cloudflared
 ```
 
-`sshmgr host edit ... --proxy none` takes it off again. `sshmgr doctor` reports a proxied host when `cloudflared`
+`authama ssh host edit ... --proxy none` takes it off again. `authama doctor` reports a proxied host when `cloudflared`
 is missing.
 
 Reference: [`proxy`](../configuration.md#proxy).

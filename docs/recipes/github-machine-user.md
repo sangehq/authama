@@ -27,7 +27,7 @@ only speaks SSH, or a server that pulls with a key.
 3. Create a token for the machine user that can manage its SSH keys: a
    fine-grained token with the account permission *Git SSH keys: read and
    write*, or a classic token with `admin:public_key`.
-4. Store the token where sshmgr can read it, in `~/.config/ssh-manager/.env`:
+4. Store the token where authama can read it, in `~/.config/ssh-manager/.env`:
 
    ```sh
    GH_TOKEN_SIMTABI=op://Simtabi/simtabi-bot/token
@@ -44,8 +44,8 @@ only speaks SSH, or a server that pulls with a key.
 6. Add the key to the account and check it:
 
    ```sh
-   sshmgr reconcile
-   sshmgr deploy simtabibot_github-ed25519
+   authama ssh reconcile
+   authama ssh deploy simtabibot_github-ed25519
    ssh -T git@github-simtabi      # Hi simtabi-bot! ...
    ```
 
@@ -54,7 +54,7 @@ Use the alias in remotes: `git@github-simtabi:simtabi/ssh-manager.git`.
 ## Rotate it
 
 ```sh
-sshmgr rotate simtabibot_github-ed25519
+authama ssh rotate simtabibot_github-ed25519
 ```
 
 The new key is added to the account, verified, and the old one removed through

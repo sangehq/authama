@@ -3,10 +3,10 @@
 Bring a hand-built setup under management without regenerating anything.
 
 ```sh
-sshmgr init                      # create the home (seeds an EMPTY manifest)
-sshmgr import ~/.ssh/config      # read the config into the manifest
-sshmgr diff                      # what would change, before anything does
-sshmgr reconcile
+authama init                      # create the home (seeds an EMPTY manifest)
+authama ssh import ~/.ssh/config      # read the config into the manifest
+authama ssh diff                      # what would change, before anything does
+authama ssh reconcile
 ```
 
 `import` parses your config — including `Include` directives — and derives a
@@ -21,8 +21,8 @@ the original had.
 Review before reconciling — the derived profile names are a guess:
 
 ```sh
-sshmgr list
-sshmgr profile edit imported --key-scope per_service
+authama ssh list
+authama ssh profile edit imported --key-scope per_service
 ```
 
 A second `import` replaces the manifest, so it is safe to re-run after editing

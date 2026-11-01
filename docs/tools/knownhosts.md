@@ -38,9 +38,9 @@ To set up known_hosts (create the file + pin its reachable hosts) in one go -
 handy after `import`, or to repair a store - use `init`. Scopes are combinable:
 
 ```sh
-sshmgr knownhosts init personal       # pin the hosts in one profile
-sshmgr knownhosts init --all          # pin every host in the manifest
-sshmgr knownhosts init --all --force  # re-scan already-trusted hosts, add any new keys
+authama ssh knownhosts init personal       # pin the hosts in one profile
+authama ssh knownhosts init --all          # pin every host in the manifest
+authama ssh knownhosts init --all --force  # re-scan already-trusted hosts, add any new keys
 ```
 
 It takes a profile or `--all`; a bare `knownhosts init` says what it needs rather
@@ -69,24 +69,24 @@ when you want to verify against the host's published fingerprint rather than
 trust-on-first-use, or to pin a host auto-pin couldn't reach:
 
 ```sh
-sshmgr knownhosts pin --all       # review fingerprints, then pin
+authama ssh knownhosts pin --all       # review fingerprints, then pin
 ```
 
 So the first-use sequence is **reconcile (auto-pins reachable hosts) -> deploy**,
-and for a VPN-gated host: connect the VPN, then `knownhosts pin`. `sshmgr doctor`
+and for a VPN-gated host: connect the VPN, then `knownhosts pin`. `authama doctor`
 lists any reachable manifest host whose key isn't pinned yet, so a failed push is
 easy to diagnose.
 
-## `sshmgr knownhosts pin [HOST] [--all]`
+## `authama ssh knownhosts pin [HOST] [--all]`
 
 Scans a host with `ssh-keyscan`, shows each key's type + SHA256 fingerprint, and
 (after you confirm) writes it into the one hashed `~/.ssh/known_hosts` (0600):
 
 ```sh
-sshmgr knownhosts pin github.com         # pin one host
-sshmgr knownhosts pin 203.0.113.10 -p 2222
-sshmgr knownhosts pin --all              # pin every host in the manifest
-sshmgr knownhosts pin --all --yes        # trust scanned keys without prompting (scripted)
+authama ssh knownhosts pin github.com         # pin one host
+authama ssh knownhosts pin 203.0.113.10 -p 2222
+authama ssh knownhosts pin --all              # pin every host in the manifest
+authama ssh knownhosts pin --all --yes        # trust scanned keys without prompting (scripted)
 ```
 
 You're shown the fingerprint for **each** scanned key and asked to trust it -

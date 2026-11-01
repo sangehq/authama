@@ -4,10 +4,10 @@ Twelve checks over the environment, the config home and `~/.ssh`, with an exit
 code that is a verdict rather than a success flag.
 
 ```sh
-sshmgr doctor           # report
-sshmgr doctor --fix     # report, and repair what it can
-sshmgr doctor --json    # the same report, for a script
-sshmgr doctor --strict  # every dangling-key state is fatal (CI)
+authama doctor           # report
+authama doctor --fix     # report, and repair what it can
+authama doctor --json    # the same report, for a script
+authama doctor --strict  # every dangling-key state is fatal (CI)
 ```
 
 ## What it checks
@@ -21,7 +21,7 @@ sshmgr doctor --strict  # every dangling-key state is fatal (CI)
 | `providers` | whether the catalog is the shipped default or a user file |
 | `agent` | whether `ssh-agent` is running and how many keys it holds |
 | `1Password` | when a profile uses `key_store: 1password`: that `op` is on PATH, the agent socket exists, and the agent serves the profile's vault (`agent.toml`) |
-| `proxy` | every `ProxyCommand` sshmgr rendered names a binary that still exists: the sshmgr binary for VM hosts (an upgrade that moved it fails the verdict, and `sshmgr config render` rewrites the path) and `cloudflared` for Cloudflare Access hosts (install it, then re-render) |
+| `proxy` | every `ProxyCommand` authama rendered names a binary that still exists: the sshmgr binary for VM hosts (an upgrade that moved it fails the verdict, and `authama ssh config render` rewrites the path) and `cloudflared` for Cloudflare Access hosts (install it, then re-render) |
 | `MISSING tool` | a command the manifest relies on is not on PATH: the hypervisor CLI behind a VM host (its address comes from it at connect time), and `git` once `defaults.git` is set (fails the verdict) |
 | `clipboard` | no clipboard tool was found, so `termius keys` needs `--print` (advice; never fails the verdict) |
 | `known_hosts` | whether the trust store exists, and which hosts are unpinned |
@@ -29,7 +29,7 @@ sshmgr doctor --strict  # every dangling-key state is fatal (CI)
 | `perms` | every managed path whose mode is not what it should be |
 | alias collisions | the same Host alias in more than one profile, so ssh applies only the first (warning) |
 | shadowed hosts | a block above the managed block matches a managed alias, so the manifest's values do not apply (fails the verdict) |
-| raw-option overlaps | a `raw_options` key that duplicates a field sshmgr already writes for that host (informational) |
+| raw-option overlaps | a `raw_options` key that duplicates a field authama already writes for that host (informational) |
 | dangling keys | declared-but-missing, half a pair, on disk but untracked, unwired |
 | duplicate keys | the same key material under two profiles |
 | stale predecessors | archived keys older than `SSH_MANAGER_OLD_KEY_MAX_AGE_DAYS` |
@@ -61,7 +61,7 @@ The scripting surface. Empty collections serialize as `[]` and `{}`, never
 `null`, so a consumer never has to distinguish "none" from "absent":
 
 ```sh
-sshmgr doctor --json | jq -e '.perm_issues | length == 0'
+authama doctor --json | jq -e '.perm_issues | length == 0'
 ```
 
 Keys: `ok`, `home`, `ssh_dir`, `preflight_ok`, `providers_source`, `agent`,

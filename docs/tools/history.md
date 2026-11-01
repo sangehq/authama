@@ -1,6 +1,6 @@
 # `history`
 
-`sshmgr history` lists every change sshmgr has made, newest first, from a SQLite database at
+`authama history` lists every change authama has made, newest first, from a SQLite database at
 `~/.config/ssh-manager/log/history.db`.
 
 ## What is recorded
@@ -19,10 +19,10 @@ Each operation holds:
 | `snapshot` | the `~/.ssh` snapshot the command took, or a `snapshot.failed` event saying why there is none |
 | `events` | every `audit.log` event the command raised |
 | manifest before and after | stored once by content, so `history show` can diff them |
-| user, machine, version | who ran it, where, with which sshmgr |
+| user, machine, version | who ran it, where, with which authama |
 
 `audit.log` is still written first and in the same format. The store indexes it. When a write to the
-store fails, the command still succeeds and prints one warning, and `sshmgr history` reports how many
+store fails, the command still succeeds and prints one warning, and `authama history` reports how many
 `audit.log` events the store is missing.
 
 The store holds no key material. The manifest and inventory carry none, and a test scans every
@@ -44,11 +44,11 @@ imported, and the next run tries again.
 ## Listing
 
 ```sh
-sshmgr history                          # the last 50, newest first
-sshmgr history --host gh --since 7d     # one host, the past week
-sshmgr history --command host           # every host add, edit, delete and apply
-sshmgr history --source tui --limit 0   # everything done from the menu
-sshmgr history --json | jq .            # one object per operation, events nested
+authama history                          # the last 50, newest first
+authama history --host gh --since 7d     # one host, the past week
+authama history --command host           # every host add, edit, delete and apply
+authama history --source tui --limit 0   # everything done from the menu
+authama history --json | jq .            # one object per operation, events nested
 ```
 
 | Flag | Filters on |
@@ -62,7 +62,7 @@ sshmgr history --json | jq .            # one object per operation, events neste
 ## One operation
 
 ```sh
-sshmgr history show 3f9a1c2e
+authama history show 3f9a1c2e
 ```
 
 `history show` prints the operation's details, its events, and a diff of the manifest before and after.
@@ -75,10 +75,10 @@ It takes any unique prefix of the operation id, which `history` prints in its la
 ## Where it lives
 
 `log/history.db` sits beside `audit.log`, with its `-wal` and `-shm` files. `doctor --fix` holds all
-three at `0600`. `sshmgr bundle` doesn't include it: the history belongs to one machine, and it
+three at `0600`. `authama ssh bundle` doesn't include it: the history belongs to one machine, and it
 grows. Nothing prunes it yet. An operation is about 0.5 KB, so 10,000 operations come to about 5 MB.
 
-A newer sshmgr may add to the schema. An older binary that finds a newer schema opens the database
+A newer authama may add to the schema. An older binary that finds a newer schema opens the database
 read-only and says so. It never migrates the database down.
 
 ---

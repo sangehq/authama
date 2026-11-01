@@ -11,13 +11,13 @@ Map owners to profiles once, in the manifest:
 Then preview, apply, and check:
 
 ```sh
-sshmgr git use profile ~/Artisan/projects/opensource/simtabi/packages/* --dry-run
-sshmgr git use profile ~/Artisan/projects/opensource/simtabi/packages/* --yes
-sshmgr git status ~/Artisan/projects/opensource/simtabi/packages/*
+authama ssh git use profile ~/Artisan/projects/opensource/simtabi/packages/* --dry-run
+authama ssh git use profile ~/Artisan/projects/opensource/simtabi/packages/* --yes
+authama ssh git status ~/Artisan/projects/opensource/simtabi/packages/*
 ```
 
 Each new URL is checked with `git ls-remote` before `origin` changes, so a checkout whose key is not on
-the account stays on its old remote and is named in the error. To go back: `sshmgr git use https …`.
+the account stays on its old remote and is named in the error. To go back: `authama ssh git use https …`.
 
 Plain `git@github.com` remotes (`ssh` mode) use the `defaults.git.profile` key through the rendered
 `Host github.com`; client repositories belong in `profile` mode, so they never use your key.

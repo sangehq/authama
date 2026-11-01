@@ -4,8 +4,8 @@ A numbered stdin menu over the same services the CLI verbs use, so nothing is
 reimplemented and the two cannot drift.
 
 ```sh
-sshmgr          # on a terminal, this opens the menu
-sshmgr tui      # the same thing, explicitly
+authama          # on a terminal, this opens the menu
+authama tui      # the same thing, explicitly
 ```
 
 Running the binary with no arguments opens the menu when standard input is a
@@ -26,15 +26,15 @@ in [Architecture](../architecture.md).
 It opens with a header describing the session:
 
 ```
-  sshmgr v3.0.1   darwin/arm64   built 2026-08-06 from d7ea28f
+  authama v3.0.1  darwin/arm64   built 2026-08-06 from d7ea28f
 
   home      ~/.config/ssh-manager   (providers: shipped default)
   ssh       ~/.ssh
   manifest  5 profiles, 7 hosts, 7 keys
   agent     running, 2 keys loaded
-! rendered  drifted from the manifest          sshmgr reconcile
-! pins      6 of 7 pinned                      sshmgr knownhosts pin
-! perms     1 path with the wrong mode         sshmgr doctor --fix
+! rendered  drifted from the manifest          authama ssh reconcile
+! pins      6 of 7 pinned                      authama ssh knownhosts pin
+! perms     1 path with the wrong mode         authama doctor --fix
 ```
 
 The two paths are the point of it. Both the config home and `~/.ssh` are
@@ -44,7 +44,7 @@ pointed at your real tree look identical — and every entry under *Change
 
 A row marked `!` is a problem, and carries the command that resolves it in the
 last column, so the report and the remedy are never in two different places. A
-first run has no manifest and says so, naming `sshmgr init`.
+first run has no manifest and says so, naming `authama init`.
 
 The banner is redrawn after any action that changes `~/.ssh`, so watching
 `drifted` become `in sync` is the confirmation that the action landed.
@@ -93,12 +93,12 @@ redraws the menu without comment; a closed input ends the session.
 Every entry under *Change `~/.ssh`*, and snapshot restore, asks before it writes,
 and each applies the same guards as its CLI command: it takes the advisory lock
 before it writes, and `~/.ssh` is snapshotted before any change. The lock is
-released when the change ends, so an open menu never holds up another sshmgr
+released when the change ends, so an open menu never holds up another authama
 command between changes, and no question waits for your answer while holding it.
 Reconcile shows its dry run as the question, then takes the lock and works the
 dry run out again; if the manifest moved while you were deciding, it stops and
 changes nothing. It pins host keys afterwards unless `SSH_MANAGER_AUTO_PIN=0`. Deploy is refused in dev mode. Rotate writes an
-encrypted key backup first, as `sshmgr rotate` does, so it needs
+encrypted key backup first, as `authama ssh rotate` does, so it needs
 `SSH_MANAGER_AGE_RECIPIENT`; the TUI has no `--no-key-backup`, so without a
 recipient it stops and says so.
 

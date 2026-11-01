@@ -1,9 +1,9 @@
 # rotate / rollback - zero-downtime key rotation
 
 ```sh
-sshmgr rotate <key> [--allow-unverified] [--passphrase] [--yes]
-sshmgr rotate [<key>|<profile>|<alias> ...] [--category <name>] [--all] [--dry-run]
-sshmgr rollback <key> [--yes]
+authama ssh rotate <key> [--allow-unverified] [--passphrase] [--yes]
+authama ssh rotate [<key>|<profile>|<alias> ...] [--category <name>] [--all] [--dry-run]
+authama ssh rollback <key> [--yes]
 ```
 
 Rotation never leaves a `...-ed25519.new` sibling: the active key keeps its
@@ -27,7 +27,7 @@ filename** - so swap-back is a plain move and there's never a name collision.
    key and its files are untouched - true zero-downtime.
 
 `~/.ssh` is snapshotted before the rotation starts (the mutation guard), so the
-whole operation is reversible with `sshmgr snapshots restore` as well.
+whole operation is reversible with `authama ssh snapshots restore` as well.
 
 ## Verification & manual targets
 
@@ -43,7 +43,7 @@ oribi-web: this target takes the key by hand. paste simtabi_oribi-web-ed25519.pu
 
 ssh-ed25519 AAAAC3Nza... simtabi/oribi-web 2026-10-20
 
-  Pasted it? sshmgr will now log in with the new key to prove it [y/N]
+  Pasted it? authama will now log in with the new key to prove it [y/N]
 ```
 
 After `y` it logs in **with the staged key itself**; only a working login
@@ -55,7 +55,7 @@ to be removed from the panel: until you do, it still logs in.
 Without a terminal (a script, CI), such a target cannot verify, so rotation
 aborts. `--allow-unverified` commits anyway, before anything proves the key
 works, so SSH to that server fails until the key is pasted or you
-`sshmgr rollback`. Prefer running it at a terminal.
+`authama ssh rollback`. Prefer running it at a terminal.
 
 A git host on the manual path (`gitea`, `bitbucket` and the other `vcs`
 web-panel entries) is never proven by logging in, because it refuses a shell
@@ -67,9 +67,9 @@ even for a valid key; it still needs `--allow-unverified`.
 category (`--category orgs`), or every key (`--all`):
 
 ```sh
-sshmgr rotate --all --dry-run          # list what would rotate
-sshmgr rotate --category clients
-sshmgr rotate simtabi imanimanyara/imanimanyara_github-ed25519
+authama ssh rotate --all --dry-run          # list what would rotate
+authama ssh rotate --category clients
+authama ssh rotate simtabi imanimanyara/imanimanyara_github-ed25519
 ```
 
 A batch asks once, writes one encrypted backup and one snapshot, then rotates
@@ -111,7 +111,7 @@ standing in for the private key files:
    back what had moved.
 
 `rollback` retitles `<key>.old` back to `<key>` and archives the rotated-in
-item. sshmgr archives items and never deletes them, so every one is still
+item. authama archives items and never deletes them, so every one is still
 recoverable from 1Password's Archive.
 
 Rotating a key whose profile has just been switched to `1password` moves it

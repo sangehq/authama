@@ -4,9 +4,9 @@ File profiles under a category directory, such as `internal`, `clients` or
 `others`, and give each category its own `config` file.
 
 ```sh
-sshmgr profile edit personal --category internal
-sshmgr profile edit adelsaiq --category clients
-sshmgr profile edit work     --category others
+authama ssh profile edit personal --category internal
+authama ssh profile edit adelsaiq --category clients
+authama ssh profile edit work     --category others
 ```
 
 Each edit moves the profile's key directory from `profiles/<profile>/` to
@@ -31,7 +31,7 @@ Host *
 the managed block would scope every category to that one host. Uncategorized
 profiles stay inline in the root config, as before.
 
-New profiles take the flag too: `sshmgr profile add acme --category clients`.
+New profiles take the flag too: `authama ssh profile add acme --category clients`.
 `--category ""` returns a profile to the flat layout.
 
 ## If you already moved the directories by hand
@@ -40,18 +40,18 @@ New profiles take the flag too: `sshmgr profile add acme --category clients`.
 already at the new location, it leaves the files alone and only updates the
 manifest and the inventory. Until you run it:
 
-- `sshmgr doctor` reports each moved key as untracked, with where the manifest
+- `authama doctor` reports each moved key as untracked, with where the manifest
   expects it. Its missing finding says not to reconcile.
-- `sshmgr reconcile` refuses to run and names the key's real location, rather
+- `authama ssh reconcile` refuses to run and names the key's real location, rather
   than minting a replacement for a key that is still deployed.
 
-A `profiles/<category>/config` you wrote by hand is never pruned. sshmgr deletes
+A `profiles/<category>/config` you wrote by hand is never pruned. authama deletes
 a `profiles/*/config` only when it carries the managed header or sits in a flat
 profile directory, which is where v1 wrote its per-profile files. Once the
 manifest names that category, `config render` replaces your file with the
 rendered one; a snapshot is taken first.
 
-If your root config has no managed block yet, sshmgr appends one below your
+If your root config has no managed block yet, authama appends one below your
 existing content. Remove your own `Include profiles/...` lines and `Host *`
 block first if you want only the managed copy.
 

@@ -1,6 +1,6 @@
 # validate & providers - integrity checks
 
-## `sshmgr validate [key|profile]`
+## `authama ssh validate [key|profile]`
 
 Validates managed keypairs. With no argument it checks **every** managed key;
 pass a key name or a profile to scope it. Exits non-zero if any key fails (so it
@@ -28,15 +28,15 @@ one: the `.pub` makes it look present, but ssh asks the 1Password agent, which
 does not hold it. Without `op` the vault check is noted, not failed.
 
 ```sh
-sshmgr validate                     # all keys
-sshmgr validate work                # one profile
-sshmgr validate work_hpc-ed25519    # one key
+authama ssh validate                     # all keys
+authama ssh validate work                # one profile
+authama ssh validate work_hpc-ed25519    # one key
 ```
 
 Example: a corrupted `.pub`, a mismatched pair, or loose perms each surface as a
 red ✗ with the specific issue, and the command exits non-zero.
 
-## `sshmgr key regen-pub [selector ...] [--category <name>] [--all]`
+## `authama ssh key regen-pub [selector ...] [--category <name>] [--all]`
 
 Rebuilds public keys from the key they belong to, when a `.pub` is missing or
 wrong: from the private key with `ssh-keygen -y`, or for a profile with
@@ -55,11 +55,11 @@ regenerated fingerprint. It never creates or changes a private key: a missing
 private key is `reconcile`'s job, a new one `rotate`'s.
 
 ```sh
-sshmgr key regen-pub --all --dry-run
-sshmgr key regen-pub work
+authama ssh key regen-pub --all --dry-run
+authama ssh key regen-pub work
 ```
 
-## `sshmgr providers`
+## `authama ssh providers`
 
 Lists every provider in the active catalog - your `<home>/providers.json` if you
 created one, else the shipped default (`providers --export` materializes an
@@ -67,7 +67,7 @@ editable copy) - with its `kind`, `category`, the `token_env` it reads, and whet
 credential is **set right now**:
 
 ```sh
-sshmgr providers
+authama ssh providers
 # NAME           KIND          CATEGORY  TOKEN_ENV           CREDENTIAL
 # digitalocean   digitalocean  vps       DIGITALOCEAN_TOKEN  ✓ set
 # github         github        vcs       GH_TOKEN            - none

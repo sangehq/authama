@@ -15,7 +15,7 @@ From the inventory, per key: `expires_on = created + rotate_after_days`,
 
 `rotate` resets `created`/`expires_on`, clearing the warning. Archived `/old/`
 keys are excluded. To clear several at once, rotate them as a batch: a category
-(`sshmgr rotate --category clients`) or everything (`sshmgr rotate --all`); see
+(`authama ssh rotate --category clients`) or everything (`authama ssh rotate --all`); see
 [Rotating a batch](rotate.md#rotating-a-batch).
 
 ## Surfaces (layered - warned whether or not you open the tool)
@@ -23,23 +23,23 @@ keys are excluded. To clear several at once, rotate them as a batch: a category
 1. **Inline banner** - every command runs a cheap, **debounced** check first
    (cached for `expiry_check.debounce_hours`, default 24) and prints a `⚠` line to
    stderr for any due/overdue key. Never breaks scripting (stderr, best-effort).
-2. **`sshmgr expiry`** - the full table (key, profile, `expires_on`, days, state).
-   Also folded into `sshmgr audit`.
-3. **Scheduled notifier** - `sshmgr notify install` registers a launchd (macOS) /
-   cron (Linux) job running `sshmgr audit --notify`. It emits a **desktop
+2. **`authama ssh expiry`** - the full table (key, profile, `expires_on`, days, state).
+   Also folded into `authama ssh audit`.
+3. **Scheduled notifier** - `authama ssh notify install` registers a launchd (macOS) /
+   cron (Linux) job running `authama ssh audit --notify`. It emits a **desktop
    notification** and appends to the audit log. Cadence is **weekly** normally,
    **daily** once any key is inside its warn window, with a last-notified debounce.
-   `sshmgr notify test` fires a test notification.
+   `authama ssh notify test` fires a test notification.
 
 All of this is config-driven from `defaults.warn_before_days` and
 `defaults.expiry_check` in the manifest (`SSH_MANAGER_SNAPSHOT_RETAIN` and the cadence
 caches live in the config-dir, gitignored).
 
 ```sh
-sshmgr expiry                 # full table
-sshmgr audit --notify         # report + cadence-gated desktop alert (what the job runs)
-sshmgr notify install         # set up the scheduled notifier
-sshmgr notify test            # confirm desktop notifications work
+authama ssh expiry                 # full table
+authama ssh audit --notify         # report + cadence-gated desktop alert (what the job runs)
+authama ssh notify install         # set up the scheduled notifier
+authama ssh notify test            # confirm desktop notifications work
 ```
 
 ---

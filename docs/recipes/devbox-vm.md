@@ -3,10 +3,10 @@
 Reach a Parallels, VMPal, VMware, UTM or Lima VM by name, whatever IP it booted with, and point Docker at it.
 
 ```sh
-sshmgr vm list                                   # find the VM's name
-sshmgr profile add devbox --category personal
-sshmgr vm add devbox devbox --hypervisor vmpal --vm "Ubuntu 24.04" -u imani
-sshmgr reconcile                                 # mint devbox_devbox-ed25519
+authama ssh vm list                                   # find the VM's name
+authama ssh profile add devbox --category personal
+authama ssh vm add devbox devbox --hypervisor vmpal --vm "Ubuntu 24.04" -u imani
+authama ssh reconcile                                 # mint devbox_devbox-ed25519
 ```
 
 Install the public key in the guest once, for example through the hypervisor:
@@ -20,7 +20,7 @@ Then connect, and give Docker a context:
 
 ```sh
 ssh devbox                      # starts the VM if it is stopped
-sshmgr vm docker-context devbox
+authama ssh vm docker-context devbox
 docker --context devbox ps
 ```
 
