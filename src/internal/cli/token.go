@@ -66,7 +66,13 @@ func checkTarget(t string) error {
 	return nil
 }
 
+// checkTargets validates --target values. No targets is nil, which every
+// consumer (RedactedJSON included) reads as "all of them"; an empty map would
+// select nothing.
 func checkTargets(ts []string) (map[string]bool, error) {
+	if len(ts) == 0 {
+		return nil, nil
+	}
 	sel := map[string]bool{}
 	for _, t := range ts {
 		if err := checkTarget(t); err != nil {
