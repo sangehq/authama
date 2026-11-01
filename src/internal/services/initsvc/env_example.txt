@@ -2,7 +2,7 @@
 # ssh-manager environment - TEMPLATE (committed). Generates the real, gitignored .env.
 #
 # Generate the production .env (created 0600, never committed):
-#     sshmgr init                 # seeds .env from this file
+#     authama init                 # seeds .env from this file
 #     # or:  cp .env-example .env && chmod 600 .env
 #     make perms                  # re-asserts 0600 on secrets at any time
 #
@@ -24,7 +24,7 @@ SSH_MANAGER_SNAPSHOT_RETAIN=10
 #   e.g. age1ql3z7hjy54pw3hyww5ayyfg7z... or an age-plugin-yubikey recipient.
 SSH_MANAGER_AGE_RECIPIENT=
 # Path to the age IDENTITY used to DECRYPT on restore (gitignored; keep 0600).
-# Pass it with `sshmgr restore --identity`, or set it here. If you keep the
+# Pass it with `authama ssh restore --identity`, or set it here. If you keep the
 # identity in a password manager, write it to a file first and point here at it.
 SSH_MANAGER_AGE_IDENTITY_FILE=
 
@@ -49,3 +49,11 @@ LINODE_TOKEN=            # Linode: Profile > API Tokens (SSH Keys read/write)
 SCW_SECRET_KEY=          # Scaleway: a secret key (IAM)
 SCW_PROJECT_ID=          # Scaleway: the project these keys belong to
 # EXAMPLE_TOKEN=         # for the `example-rest` template provider (kind: rest)
+
+# auth tokens (authama token ...)
+# The token commands read their variables from the process environment, not from
+# this file: export them in your shell or CI, or pass `authama token sync --source FILE`.
+#   SSH_MANAGER_TOKENS_CONFIG   the token config, if not ./authama-tokens.json or <home>/tokens.json
+#   GH_TOKEN, NPM_TOKEN, ...    whatever variable names your token config uses
+# The dev container's home is set with AUTHAMA_DEV_HOME (default ./.authama-home) when
+# running `make docker-shell`; it is a make/compose variable, not one read from here.
