@@ -28,7 +28,7 @@ func (s Shadow) String() string {
 // ShadowFix says how to resolve a shadow. sshmgr never edits content outside
 // its managed block, so the fix is the user's to make.
 const ShadowFix = "delete or rename that block, or remove those lines from it " +
-	"(sshmgr does not edit content outside its managed block)"
+	"(authama does not edit content outside its managed block)"
 
 // foreignBlock is one section of ssh_config outside the managed block.
 type foreignBlock struct {

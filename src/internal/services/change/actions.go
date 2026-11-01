@@ -53,7 +53,7 @@ func ProfileAdd(name, keyScope, keyName, keyComment string) Change {
 				}
 			}
 			_, _ = fmt.Fprintf(out, "added profile %s (no hosts yet - add one with "+
-				"`sshmgr host add %s <alias>`)\n", name, name)
+				"`authama ssh host add %s <alias>`)\n", name, name)
 			return ApplyManifestEdit(out, p)
 		},
 	}
@@ -76,7 +76,7 @@ func ProfileEdit(name string, keyScope, keyName *string) Change {
 			if err := editor.New(p).EditProfile(name, keyScope, keyName); err != nil {
 				return err
 			}
-			_, _ = fmt.Fprintf(out, "edited profile %s (run `sshmgr reconcile` to mint any key "+
+			_, _ = fmt.Fprintf(out, "edited profile %s (run `authama ssh reconcile` to mint any key "+
 				"this now points at)\n", name)
 			if err := ApplyManifestEdit(out, p); err != nil {
 				return err
@@ -157,7 +157,7 @@ func HostAdd(profile, alias string, in HostInput) Change {
 			if err := editor.New(p).AddHost(profile, alias, f); err != nil {
 				return err
 			}
-			_, _ = fmt.Fprintf(out, "added host %s to %s (run `sshmgr reconcile` to mint its "+
+			_, _ = fmt.Fprintf(out, "added host %s to %s (run `authama ssh reconcile` to mint its "+
 				"key)\n", alias, profile)
 			return ApplyManifestEdit(out, p)
 		},
@@ -177,7 +177,7 @@ func HostEdit(profile, alias string, in HostInput) Change {
 			_, _ = fmt.Fprintf(out, "edited host %s\n", alias)
 			if in.KeyName != nil {
 				_, _ = fmt.Fprintln(out, "  the key it now names may not exist yet - "+
-					"run `sshmgr reconcile` to mint it")
+					"run `authama ssh reconcile` to mint it")
 			}
 			if err := ApplyManifestEdit(out, p); err != nil {
 				return err
@@ -232,7 +232,7 @@ func VMAdd(profile, alias, hypervisor, vmName, user string) Change {
 		Subjects: []history.Subject{{Kind: history.KindProfile, Name: profile}, {Kind: history.KindHost, Name: alias}},
 		Run: func(p paths.Paths, out io.Writer) error {
 			if hypervisor == manifest.HypervisorOrbStack || hypervisor == manifest.HypervisorPodman {
-				return fmt.Errorf("%s manages its own SSH access and keys; use `sshmgr vm docker-context` instead of a host", hypervisor)
+				return fmt.Errorf("%s manages its own SSH access and keys; use `authama ssh vm docker-context` instead of a host", hypervisor)
 			}
 			name := alias
 			f := editor.HostFields{Hostname: &name, User: &user,
@@ -240,7 +240,7 @@ func VMAdd(profile, alias, hypervisor, vmName, user string) Change {
 			if err := editor.New(p).AddHost(profile, alias, f); err != nil {
 				return err
 			}
-			_, _ = fmt.Fprintf(out, "added VM host %s to %s (%s %q); run `sshmgr reconcile` to mint its key, "+
+			_, _ = fmt.Fprintf(out, "added VM host %s to %s (%s %q); run `authama ssh reconcile` to mint its key, "+
 				"then install the public key in the guest\n", alias, profile, hypervisor, vmName)
 			return ApplyManifestEdit(out, p)
 		},

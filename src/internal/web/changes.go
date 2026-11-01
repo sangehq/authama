@@ -3,6 +3,7 @@ package web
 import (
 	"errors"
 	"fmt"
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -66,7 +67,7 @@ func badForm(format string, a ...any) error { return formError{fmt.Sprintf(forma
 func name(f url.Values, field string) (string, error) {
 	v := strings.TrimSpace(f.Get(field))
 	if !nameRe.MatchString(v) {
-		return "", badForm("%s %q is not a name sshmgr accepts: letters, digits, '.', '_' and '-'", field, v)
+		return "", badForm("%s %q is not a name authama accepts: letters, digits, '.', '_' and '-'", field, v)
 	}
 	return v, nil
 }
@@ -134,7 +135,7 @@ func hostSpecs(f url.Values) ([]editor.HostSpec, error) {
 	}
 	for _, s := range specs {
 		if !nameRe.MatchString(s.Alias) {
-			return nil, badForm("alias %q is not a name sshmgr accepts: letters, digits, '.', '_' and '-'", s.Alias)
+			return nil, badForm("alias %q is not a name authama accepts: letters, digits, '.', '_' and '-'", s.Alias)
 		}
 		for _, v := range append([]string{s.Hostname, s.User, s.Role}, s.Tags...) {
 			if strings.ContainsFunc(v, func(r rune) bool { return r < 0x20 || r == 0x7f }) {
@@ -368,7 +369,7 @@ type donePage struct {
 }
 
 func commandLine(p change.Plan) string {
-	return strings.TrimSpace("sshmgr " + p.Command + " " + strings.Join(p.Args, " "))
+	return strings.TrimSpace(brand.Line(p.Command) + " " + strings.Join(p.Args, " "))
 }
 
 func (h pages) parseChange(w http.ResponseWriter, r *http.Request) (change.Change, bool) {
@@ -410,7 +411,7 @@ func (h pages) handleApply(w http.ResponseWriter, r *http.Request) {
 		h.s.renderError(w, r, http.StatusUnprocessableEntity, "The change was not made", err.Error())
 	default:
 		h.s.render(w, http.StatusOK, "done", h.s.newView(r, "", "Done",
-			donePage{Command: strings.TrimSpace("sshmgr " + ch.Command + " " + strings.Join(ch.Args, " ")), Result: res}))
+			donePage{Command: strings.TrimSpace(brand.Line(ch.Command) + " " + strings.Join(ch.Args, " ")), Result: res}))
 	}
 }
 

@@ -3,6 +3,7 @@ package mutation
 import (
 	"errors"
 	"fmt"
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -275,5 +276,5 @@ func warn(err error) {
 		return
 	}
 	warned = true
-	_, _ = fmt.Fprintf(os.Stderr, "sshmgr: WARNING: the operation history was not recorded (%v); audit.log still was\n", err)
+	_, _ = fmt.Fprintf(os.Stderr, brand.Command+": WARNING: the operation history was not recorded (%v); audit.log still was\n", err)
 }

@@ -1,7 +1,7 @@
 {{define "content"}}{{with .Data}}
 <div class="page-header d-print-none mb-3">
   <div class="text-secondary">Job, started {{when .Started}}</div>
-  <h1 class="page-title"><code>sshmgr {{.Command}}</code></h1>
+  <h1 class="page-title"><code>{{cmdline .Command}}</code></h1>
 </div>
 <div class="mb-3" id="job-state" data-state="{{.State}}">
   {{if eq .State "running"}}<span class="badge badge-info">running</span>

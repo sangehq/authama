@@ -304,7 +304,7 @@ func (e *Editor) AddKey(profile, name string, keyType *string, rotateAfterDays *
 		// one host to a different key would silently do nothing.
 		if p.KeyScope == "shared" {
 			return fmt.Errorf("profile %q is shared - every host uses its key_name; "+
-				"use `sshmgr profile edit %s --key-name %s` to switch the whole profile",
+				"use `authama ssh profile edit %s --key-name %s` to switch the whole profile",
 				profile, profile, name)
 		}
 		idx, host, err := findHost(m, profile, hostAlias)
@@ -351,7 +351,7 @@ func (e *Editor) DeleteKey(ref manifest.KeyRef, revoke bool) (DeleteResult, erro
 			aliases = append(aliases, h.Alias)
 		}
 		return DeleteResult{}, fmt.Errorf("key %s is still used by %d host(s): %s - "+
-			"point them at another key (`sshmgr host edit <alias> --key-name ...`) or "+
+			"point them at another key (`authama ssh host edit <alias> --key-name ...`) or "+
 			"delete them first", ref, len(hosts), strings.Join(aliases, ", "))
 	}
 	kept := p.Keys[:0:0]

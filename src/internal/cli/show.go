@@ -123,7 +123,7 @@ func showHost(out io.Writer, m *manifest.Manifest, keys *keysvc.Service, kh *kno
 	if err != nil {
 		return err
 	}
-	_, _ = fmt.Fprintln(out, "\nconfig (as rendered from the manifest; `sshmgr diff` compares it to the file):")
+	_, _ = fmt.Fprintln(out, "\nconfig (as rendered from the manifest; `authama ssh diff` compares it to the file):")
 	for _, line := range strings.Split(strings.TrimRight(block, "\n"), "\n") {
 		_, _ = fmt.Fprintln(out, "  "+line)
 	}
@@ -216,7 +216,7 @@ func showKey(out io.Writer, keys *keysvc.Service, ref manifest.KeyRef, indent st
 func writePins(out io.Writer, kh *knownhosts.Service, indent string, host manifest.Host) {
 	entries := kh.EntriesFor(knownHostsToken(host))
 	if len(entries) == 0 {
-		_, _ = fmt.Fprintf(out, "%snot pinned (run `sshmgr knownhosts pin %s`)\n", indent, host.Alias)
+		_, _ = fmt.Fprintf(out, "%snot pinned (run `authama ssh knownhosts pin %s`)\n", indent, host.Alias)
 		return
 	}
 	for _, e := range entries {

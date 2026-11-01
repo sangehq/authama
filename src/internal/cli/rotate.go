@@ -244,6 +244,6 @@ func withManualPaste(c *cobra.Command, r *rotator.Rotator) *rotator.Rotator {
 	return r.WithManualStep(func(alias, where, pubkey string) bool {
 		out := c.OutOrStdout()
 		_, _ = fmt.Fprintf(out, "\n%s: this target takes the key by hand. %s\n\n%s\n\n", alias, where, strings.TrimSpace(pubkey))
-		return confirm(c, "  Pasted it? sshmgr will now log in with the new key to prove it")
+		return confirm(c, "  Pasted it? authama will now log in with the new key to prove it")
 	})
 }

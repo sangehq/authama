@@ -195,7 +195,7 @@ func (r *Rotator) Rotate(selector string, allowUnverified bool, passphrase strin
 	curPriv := filepath.Join(pdir, keyName)
 	curPub := curPriv + ".pub"
 	if !exists(curPriv) {
-		return RotateReport{}, fmt.Errorf("key not present: %s - run `sshmgr reconcile` first", curPriv)
+		return RotateReport{}, fmt.Errorf("key not present: %s - run `authama ssh reconcile` first", curPriv)
 	}
 	report := RotateReport{KeyName: keyName}
 	// An unreadable fingerprint is not a reason to skip the archive: the outgoing
@@ -311,7 +311,7 @@ func (r *Rotator) Rotate(selector string, allowUnverified bool, passphrase strin
 		if rerr := os.Rename(oldPrivSlot, curPriv); rerr != nil {
 			return RotateReport{}, fmt.Errorf("the rotation failed midway AND could not be undone. "+
 				"%s now holds the NEW private key while %s is the OLD public key, and the "+
-				"previous private key is at %s. Restore by hand, or run `sshmgr rollback %s`: "+
+				"previous private key is at %s. Restore by hand, or run `authama ssh rollback %s`: "+
 				"%w (undo also failed: %v)", curPriv, curPub, oldPrivSlot, keyName, err, rerr)
 		}
 		removePair(oldPrivSlot)
@@ -540,12 +540,12 @@ func (r *Rotator) finishRollback(profile, keyName string, hosts []manifest.Host,
 	report.Committed = len(unreached) == 0 && len(failed) == 0
 	if len(failed) > 0 {
 		report.Message = fmt.Sprintf("the local key was restored, but %d target(s) did not take or "+
-			"verify it: %s. Fix the target and run `sshmgr deploy %s`.",
+			"verify it: %s. Fix the target and run `authama ssh deploy %s`.",
 			len(failed), strings.Join(failed, ", "), keyName)
 	}
 	if len(unreached) > 0 {
 		report.Message = fmt.Sprintf("the local key was restored, but %d target(s) could not be "+
-			"reached and still trust the rotated-in key: %s. Re-run `sshmgr rollback %s` once "+
+			"reached and still trust the rotated-in key: %s. Re-run `authama ssh rollback %s` once "+
 			"they are reachable (VPN-gated hosts: connect the VPN first).",
 			len(unreached), strings.Join(unreached, ", "), keyName)
 	}

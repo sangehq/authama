@@ -3,6 +3,7 @@ package web
 import (
 	"errors"
 	"fmt"
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"io"
 	"net/http"
 	"net/url"
@@ -60,7 +61,7 @@ type jobSpec struct {
 func keyRef(f url.Values) (manifest.KeyRef, error) {
 	profile, key, ok := strings.Cut(strings.TrimSpace(f.Get("key")), "/")
 	if !ok || !nameRe.MatchString(profile) || !nameRe.MatchString(key) {
-		return manifest.KeyRef{}, badForm("key must be profile/key, each a name sshmgr accepts")
+		return manifest.KeyRef{}, badForm("key must be profile/key, each a name authama accepts")
 	}
 	return manifest.KeyRef{Profile: profile, KeyName: key}, nil
 }
@@ -330,7 +331,7 @@ func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection,
 func manualPaste(j *jobs.Job) rotator.ManualStep {
 	return func(alias, where, pubkey string) bool {
 		_, _ = fmt.Fprintf(j, "%s: this target takes the key by hand. %s\n", alias, where)
-		return j.Ask("Paste this key where "+alias+" takes it, then confirm: sshmgr will log in with it to prove it.",
+		return j.Ask("Paste this key where "+alias+" takes it, then confirm: authama will log in with it to prove it.",
 			strings.TrimSpace(pubkey))
 	}
 }
@@ -341,7 +342,7 @@ func manualPaste(j *jobs.Job) rotator.ManualStep {
 func bundleRestoreSpec(f url.Values, h home, retain int) (jobSpec, error) {
 	b := strings.TrimSpace(f.Get("bundle"))
 	if !bundleRe.MatchString(b) {
-		return jobSpec{}, badForm("bundle %q is not one sshmgr bundle writes", b)
+		return jobSpec{}, badForm("bundle %q is not a bundle authama writes", b)
 	}
 	path := filepath.Join(h.p.DistDir(), b)
 	if _, err := os.Stat(path); err != nil {
@@ -361,8 +362,8 @@ func bundleRestoreSpec(f url.Values, h home, retain int) (jobSpec, error) {
 func bundleRestoreJob(j *jobs.Job, p paths.Paths, retain int, path string) error {
 	ident := os.Getenv("SSH_MANAGER_AGE_IDENTITY_FILE")
 	if ident == "" {
-		return errors.New("SSH_MANAGER_AGE_IDENTITY_FILE is not set where sshmgr serve runs; restore from a terminal " +
-			"with `sshmgr restore " + filepath.Base(path) + " -i <identity>`")
+		return errors.New("SSH_MANAGER_AGE_IDENTITY_FILE is not set where authama serve runs; restore from a terminal " +
+			"with `authama ssh restore " + filepath.Base(path) + " -i <identity>`")
 	}
 	mutation.SnapshotBeforeMutation(p, retain)
 	if err := j.Step(); err != nil {
@@ -388,7 +389,7 @@ type jobReview struct {
 }
 
 func jobCommand(s mutation.Scope) string {
-	return strings.TrimSpace("sshmgr " + s.Command + " " + strings.Join(s.Args, " "))
+	return strings.TrimSpace(brand.Line(s.Command) + " " + strings.Join(s.Args, " "))
 }
 
 func carriedJob(f url.Values) []formField {
@@ -467,7 +468,7 @@ func (h jobPages) handleJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v, _ := j.View()
-	h.s.render(w, http.StatusOK, "job", h.s.newView(r, "", "sshmgr "+v.Command, v))
+	h.s.render(w, http.StatusOK, "job", h.s.newView(r, "", brand.Line(v.Command), v))
 }
 
 // handleJobEvents streams a job's output as server-sent events: each new

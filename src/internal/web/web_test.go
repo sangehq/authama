@@ -33,7 +33,7 @@ func TestEveryPageRenders(t *testing.T) {
 		"/history":                              "host add",
 		"/history/" + opID:                      "host.add",
 		"/history/" + opID[:8]:                  "Manifest",
-		"/doctor":                               "sshmgr doctor",
+		"/doctor":                               "authama doctor",
 		"/audit":                                "Deployments",
 		"/about/licenses":                       "Permission is hereby granted",
 	}

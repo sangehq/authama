@@ -100,7 +100,7 @@ func (d *Deployer) Deploy(selector, targetAlias string) (DeployReport, error) {
 	profile, keyName := ref.Profile, ref.KeyName
 	pub := d.m.KeyPath(d.p.SSHDir, ref) + ".pub"
 	if _, err := os.Stat(pub); err != nil {
-		return DeployReport{}, fmt.Errorf("public key not found: %s - run `sshmgr reconcile` first", pub)
+		return DeployReport{}, fmt.Errorf("public key not found: %s - run `authama ssh reconcile` first", pub)
 	}
 	fp, err := d.ks.Fingerprint(pub)
 	if err != nil {

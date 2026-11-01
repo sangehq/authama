@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -181,7 +182,7 @@ func TestTheBannerNamesTheBinaryAndWhereItWillOperate(t *testing.T) {
 	out := buf.String()
 
 	for _, want := range []string{
-		"sshmgr ",                  // which binary
+		brand.Command + " ",        // which binary
 		runtime.GOOS,               // and which build of it
 		tt.p.ConfigDir,             // where state is read from
 		tt.p.SSHDir,                // and where it will be written
@@ -203,7 +204,7 @@ func TestTheBannerTellsAFirstRunWhatToDo(t *testing.T) {
 	tt.run()
 
 	out := buf.String()
-	if !strings.Contains(out, "none yet") || !strings.Contains(out, "sshmgr init") {
+	if !strings.Contains(out, "none yet") || !strings.Contains(out, "authama init") {
 		t.Errorf("a manifest-less banner should name the command that creates one:\n%s", out)
 	}
 	// Still a usable screen: the menu is drawn even with nothing to act on.
@@ -216,8 +217,8 @@ func TestTheBannerTellsAFirstRunWhatToDo(t *testing.T) {
 // remedy are never in two different places.
 func TestAProblemRowCarriesItsFix(t *testing.T) {
 	for _, tc := range []struct{ row, fix string }{
-		{"drifted from the manifest", "sshmgr reconcile"},
-		{"none yet", "sshmgr init"},
+		{"drifted from the manifest", "authama ssh reconcile"},
+		{"none yet", "authama init"},
 	} {
 		r := bannerRow{label: "x", value: tc.row, fix: tc.fix}
 		line := r.String()

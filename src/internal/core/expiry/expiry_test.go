@@ -181,7 +181,7 @@ func TestBannerNamesKeysUnambiguously(t *testing.T) {
 	for _, want := range []string{
 		"personal/imani_github-ed25519", "adelsaiq/imani_github-ed25519",
 		"OVERDUE by 6 days", "expires in 4 days",
-		"sshmgr rotate personal/imani_github-ed25519",
+		"authama ssh rotate personal/imani_github-ed25519",
 		"2026-06-10", "2026-06-20",
 	} {
 		if !strings.Contains(joined, want) {

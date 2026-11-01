@@ -30,12 +30,12 @@ Specs come from any mix of:
 The batch is checked by the manifest's own validation and saved at once, so one
 bad spec changes nothing. --reconcile mints the new hosts' keys afterwards.`
 
-const hostApplyExample = `  sshmgr host apply adelsaiq dani-prd-web-00 206.189.185.129 ploi web
-  sshmgr host apply adelsaiq \
+const hostApplyExample = `  authama ssh host apply adelsaiq dani-prd-web-00 206.189.185.129 ploi web
+  authama ssh host apply adelsaiq \
       --host "dani-prd-web-00 206.189.185.129 ploi web" \
       --host "dani-prd-db-00  137.184.219.1   ploi db" --tag prd --reconcile
-  sshmgr host apply adelsaiq -f hosts.txt --create-profile --category clients
-  printf 'bastion 10.0.0.5:2222 admin\n' | sshmgr host apply adelsaiq -f - --dry-run`
+  authama ssh host apply adelsaiq -f hosts.txt --create-profile --category clients
+  printf 'bastion 10.0.0.5:2222 admin\n' | authama ssh host apply adelsaiq -f - --dry-run`
 
 func newHostApplyCmd() *cobra.Command {
 	var specLines, extraTags []string
@@ -91,7 +91,7 @@ func newHostApplyCmd() *cobra.Command {
 				}
 				_, exists = m.Profiles[profile]
 				if !exists && !createProfile {
-					return "", fmt.Errorf("unknown profile: %q (add it with `sshmgr profile add %s`, "+
+					return "", fmt.Errorf("unknown profile: %q (add it with `authama ssh profile add %s`, "+
 						"or pass --create-profile / --category)", profile, profile)
 				}
 				var preview []editor.ApplyResult
@@ -136,7 +136,7 @@ func newHostApplyCmd() *cobra.Command {
 			}
 			if !doReconcile {
 				if anyAdded(res) {
-					_, _ = fmt.Fprintln(out, "run `sshmgr reconcile` (or pass --reconcile) to mint new hosts' keys")
+					_, _ = fmt.Fprintln(out, "run `authama ssh reconcile` (or pass --reconcile) to mint new hosts' keys")
 				}
 				return nil
 			}

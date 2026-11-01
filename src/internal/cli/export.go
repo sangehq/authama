@@ -48,7 +48,7 @@ func exportTarget(p paths.Paths, out, defaultName string) (string, error) {
 		return "", err
 	}
 	if insideDir(target, p.SSHDir) {
-		return "", fmt.Errorf("refusing to write %s: it is inside %s, which `sshmgr config render` and "+
+		return "", fmt.Errorf("refusing to write %s: it is inside %s, which `authama ssh config render` and "+
 			"the key store own; an export must leave it as it is. Choose an --out outside it", target, p.SSHDir)
 	}
 	return target, nil
@@ -220,7 +220,7 @@ func reportTermius(w io.Writer, exp *renderer.TermiusExport, toStdout bool) {
 		return
 	}
 	_, _ = fmt.Fprintln(w, "The CSV carries no keys (Termius's importer has no key column). For each host below:")
-	_, _ = fmt.Fprintln(w, "  sshmgr termius keys <HOST>   copies its private key and prints the Termius label;")
+	_, _ = fmt.Fprintln(w, "  authama ssh termius keys <HOST>   copies its private key and prints the Termius label;")
 	_, _ = fmt.Fprintln(w, "  then Keychain > New Key: Label + paste into Private key > Save, pick it on the host, Continue & Save.")
 	width := 0
 	for _, k := range exp.Keys {

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"os"
 	"os/exec"
 	"strings"
@@ -79,16 +80,22 @@ func newNotifyCmd() *cobra.Command {
 	return cmd
 }
 
-// schedulerExe is the quoted invocation for the scheduled job. The sshmgr on PATH
-// if present, else this binary; quoted so a path with spaces stays one token
+// schedulerExe is the quoted invocation for the scheduled job. The authama on
+// PATH if present, then the sshmgr compatibility binary, else this binary; quoted so a path with spaces stays one token
 // (double quotes on Windows, shell-quote on POSIX). Mirrors facade._scheduler_exe.
 func schedulerExe() string {
-	exe, err := exec.LookPath("sshmgr")
-	if err != nil {
+	exe := ""
+	for _, name := range brand.Commands() {
+		if p, err := exec.LookPath(name); err == nil {
+			exe = p
+			break
+		}
+	}
+	if exe == "" {
 		if self, e := os.Executable(); e == nil {
 			exe = self
 		} else {
-			exe = "sshmgr"
+			exe = brand.Command
 		}
 	}
 	if platform.IsWindows() {

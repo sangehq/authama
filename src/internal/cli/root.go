@@ -83,7 +83,7 @@ func newRootCmd() *cobra.Command {
 	// The two feature groups.
 	ssh := &cobra.Command{
 		Use:   sshGroup,
-		Short: "SSH keys, profiles, hosts, config and trust (every former top-level sshmgr verb)",
+		Short: "SSH keys, profiles, hosts, config and trust (every former top-level sshmgr verb, still accepted there)",
 		Args:  cobra.ArbitraryArgs,
 		RunE:  groupHelp,
 	}

@@ -108,7 +108,7 @@ func (r *CheckResult) Format() string {
 	if len(r.Shadowed) > 0 {
 		b.WriteString("config: shadowed aliases need fixing by hand - " + ShadowFix + "\n")
 	}
-	b.WriteString("config: DRIFT detected - run: sshmgr config render")
+	b.WriteString("config: DRIFT detected - run: authama ssh config render")
 	return b.String()
 }
 

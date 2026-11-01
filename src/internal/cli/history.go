@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"io"
 	"os"
 	"strconv"
@@ -25,7 +26,7 @@ func newHistoryCmd() *cobra.Command {
 	var asJSON bool
 	cmd := &cobra.Command{
 		Use:   "history",
-		Short: "List the changes sshmgr has made, newest first",
+		Short: "List the changes authama has made, newest first",
 		Long: "List the operations that changed something - every command that took the lock -\n" +
 			"newest first, with how each ended and what it was about.\n\n" +
 			"The first run imports what was already on disk: audit.log, the dates inventory.json\n" +
@@ -98,7 +99,7 @@ func newHistoryCmd() *cobra.Command {
 				return err
 			}
 			if !ok {
-				return fmt.Errorf("no operation %q in the history (sshmgr history lists them)", args[0])
+				return fmt.Errorf("no operation %q in the history (authama history lists them)", args[0])
 			}
 			return writeOp(c.OutOrStdout(), s, op)
 		},
@@ -112,7 +113,7 @@ func newHistoryCmd() *cobra.Command {
 func openHistory(c *cobra.Command, p paths.Paths) (*history.Store, error) {
 	s, err := history.Open(p.HistoryDB())
 	if errors.Is(err, history.ErrNewerSchema) {
-		_, _ = fmt.Fprintln(c.ErrOrStderr(), "sshmgr: note:", err)
+		_, _ = fmt.Fprintln(c.ErrOrStderr(), brand.Command+": note:", err)
 		return s, nil
 	}
 	if err != nil {

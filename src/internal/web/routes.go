@@ -45,7 +45,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			s.renderError(w, r, http.StatusMethodNotAllowed, "Not a change",
-				"Changes are made from the forms on these pages, or with the sshmgr command.")
+				"Changes are made from the forms on these pages, or with the authama command.")
 			return
 		}
 		s.renderError(w, r, http.StatusNotFound, "Not found", "There is no page at this address.")
@@ -67,10 +67,10 @@ type pages struct{ s *Server }
 // anything else is a 500 with the message, which is the CLI's own wording.
 func (h pages) fail(w http.ResponseWriter, r *http.Request, err error) {
 	if errors.Is(err, ErrNotFound) {
-		h.s.renderError(w, r, http.StatusNotFound, "Not found", "Nothing by that name is in this sshmgr home.")
+		h.s.renderError(w, r, http.StatusNotFound, "Not found", "Nothing by that name is in this authama home.")
 		return
 	}
-	h.s.renderError(w, r, http.StatusInternalServerError, "Could not read the sshmgr home", err.Error())
+	h.s.renderError(w, r, http.StatusInternalServerError, "Could not read the authama home", err.Error())
 }
 
 func (h pages) handleOverview(w http.ResponseWriter, r *http.Request) {

@@ -247,21 +247,21 @@ func (s *Service) manifestKeyFinding(row keysvc.Row, state string) Finding {
 			f.Detail = "the manifest references it; its public key is not on disk " +
 				"(the private key lives in 1Password vault " + row.Vault + ")"
 		}
-		f.Fix = "sshmgr reconcile"
+		f.Fix = "authama ssh reconcile"
 	case HalfPair:
 		half := "the private key is missing"
 		if row.PrivateOnDisk {
 			half = "the .pub is missing"
 		}
 		f.Detail = half
-		f.Fix = "sshmgr validate " + row.Ref.String() + "   (then reconcile, or key delete --purge)"
+		f.Fix = "authama ssh validate " + row.Ref.String() + "   (then reconcile, or key delete --purge)"
 	case Unrecorded:
 		f.Detail = "on disk but in no inventory record, so expiry and rotation ignore it"
-		f.Fix = "sshmgr reconcile"
+		f.Fix = "authama ssh reconcile"
 	case Unwired:
 		f.Detail = "no host uses it, so it is never an IdentityFile"
-		f.Fix = "sshmgr host edit <profile> <alias> --key-name " + row.Ref.KeyName +
-			"   (or: sshmgr key delete " + row.Ref.String() + " --purge)"
+		f.Fix = "authama ssh host edit <profile> <alias> --key-name " + row.Ref.KeyName +
+			"   (or: authama ssh key delete " + row.Ref.String() + " --purge)"
 	}
 	return f
 }
@@ -322,7 +322,7 @@ func (s *Service) untracked(owned map[manifest.KeyRef]bool) ([]Finding, map[mani
 		}
 		out = append(out, Finding{
 			State: Untracked, Subject: rel, Detail: detail,
-			Fix: "sshmgr key add " + ref.Profile + " " + ref.KeyName + "   (adopt it), or delete the files",
+			Fix: "authama ssh key add " + ref.Profile + " " + ref.KeyName + "   (adopt it), or delete the files",
 		})
 	}
 	return out, misplacedAt
@@ -347,7 +347,7 @@ func (s *Service) staleInventory() []Finding {
 		out = append(out, Finding{
 			State: StaleInventory, Subject: fp,
 			Detail: "tracks " + rec.Path + ", which no manifest key owns",
-			Fix:    "sshmgr clean   (removes the record; no key material is touched)",
+			Fix:    "authama ssh clean   (removes the record; no key material is touched)",
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Subject < out[j].Subject })
@@ -392,7 +392,7 @@ func (s *Service) loose() []Finding {
 		out = append(out, Finding{
 			State: Loose, Subject: stem,
 			Detail: "a key in ~/.ssh that no Host block uses",
-			Fix:    "sshmgr import   (bring it under management), or leave it alone",
+			Fix:    "authama ssh import   (bring it under management), or leave it alone",
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Subject < out[j].Subject })

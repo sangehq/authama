@@ -11,7 +11,7 @@ import (
 	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
 )
 
-// After `sshmgr import ~/.ssh/config` and a render, the user's original Host
+// After `authama ssh import ~/.ssh/config` and a render, the user's original Host
 // blocks sit above the managed block and win for every keyword they set. doctor
 // used to call that clean; it now names the alias and the line, and fails.
 func TestDoctorReportsAShadowedManagedAlias(t *testing.T) {
@@ -45,7 +45,7 @@ func TestDoctorReportsAShadowedManagedAlias(t *testing.T) {
 		t.Error("a shadowed managed alias must fail the verdict")
 	}
 	f := base.Format()
-	if !strings.Contains(f, "srv") || !strings.Contains(f, "sshmgr does not edit") {
+	if !strings.Contains(f, "srv") || !strings.Contains(f, "authama does not edit") {
 		t.Errorf("the report must name the alias and say who has to fix it:\n%s", f)
 	}
 }

@@ -43,7 +43,7 @@ func ApplyManifestEdit(out io.Writer, p paths.Paths) error {
 	res, err := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).Write(false)
 	if err != nil {
 		return fmt.Errorf("the manifest edit was saved, but the config could not be re-rendered "+
-			"(fix this, then run `sshmgr reconcile`): %w", err)
+			"(fix this, then run `authama ssh reconcile`): %w", err)
 	}
 	if len(res.Written) > 0 {
 		_, _ = fmt.Fprintf(out, "re-rendered %s\n", strings.Join(res.Written, ", "))

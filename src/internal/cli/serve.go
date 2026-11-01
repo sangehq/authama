@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"net"
 	"os"
 	"os/exec"
@@ -105,7 +106,7 @@ func newServeCmd() *cobra.Command {
 			if bound != pinnedPort && pinnedPort != 0 {
 				_, _ = fmt.Fprintf(out, "port %d is in use; listening on %d instead\n", pinnedPort, bound)
 			}
-			_, _ = fmt.Fprintf(out, "sshmgr web UI: %s\n", url)
+			_, _ = fmt.Fprintf(out, "%s web UI: %s\n", brand.Name, url)
 			mode := "changes are previewed before they are made"
 			if readOnly {
 				mode = "read-only"

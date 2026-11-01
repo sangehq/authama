@@ -263,7 +263,7 @@ func TestDeployOverSSHKeepsTheKeyOutOfTheCommandLine(t *testing.T) {
 }
 
 // W12: a deploy nobody can answer runs with BatchMode=yes and stdin closed, so
-// a password prompt fails at once instead of reaching the terminal sshmgr serve
+// a password prompt fails at once instead of reaching the terminal authama serve
 // was started from; its output goes to the writer, and the failure says where
 // a password can be typed. Without Unattended, the terminal is kept.
 func TestUnattendedDeployCannotPrompt(t *testing.T) {
@@ -293,7 +293,7 @@ func TestUnattendedDeployCannotPrompt(t *testing.T) {
 	if !strings.Contains(out.String(), "Permission denied") {
 		t.Errorf("its output did not reach the writer: %q", out.String())
 	}
-	if !res.Error || !strings.Contains(res.Detail, "run `sshmgr deploy` in a terminal") {
+	if !res.Error || !strings.Contains(res.Detail, "run `authama ssh deploy` in a terminal") {
 		t.Errorf("the failure does not say where to type a password: %+v", res)
 	}
 

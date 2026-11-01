@@ -9,6 +9,7 @@ package mutation
 import (
 	"errors"
 	"fmt"
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"os"
 
 	"github.com/simtabi/ssh-manager/src/v3/internal/services/snapshots"
@@ -58,8 +59,8 @@ func LockForMutation(p paths.Paths) {
 			// filesystem - but not silent. Acquire blocks while another process
 			// holds the lock, so an error here means the lock itself is broken,
 			// and the serialization the guard promises is simply not happening.
-			_, _ = fmt.Fprintf(os.Stderr, "sshmgr: WARNING: could not take the advisory lock at %s, "+
-				"so a concurrent sshmgr command could interleave with this one: %v\n", p.LockFile(), err)
+			_, _ = fmt.Fprintf(os.Stderr, brand.Command+": WARNING: could not take the advisory lock at %s, "+
+				"so a concurrent authama command could interleave with this one: %v\n", p.LockFile(), err)
 		} else {
 			heldLock = rel
 		}

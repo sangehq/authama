@@ -315,7 +315,7 @@ func TestOnePasswordProfileWithAPrivateKeyFileOnDiskFails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(checks) != 1 || checks[0].OK || !strings.Contains(strings.Join(checks[0].Issues, "|"), "sshmgr rotate") {
+	if len(checks) != 1 || checks[0].OK || !strings.Contains(strings.Join(checks[0].Issues, "|"), "authama ssh rotate") {
 		t.Fatalf("checks = %+v, want a failing check pointing at rotate", checks)
 	}
 	if !strings.Contains(strings.Join(checks[0].Notes, "|"), "not checked") {

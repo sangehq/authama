@@ -14,7 +14,7 @@
       {{if eq .Problems 0}}<div class="card-body pb-0"><p class="text-success mb-0">{{icon "circle-check"}}<span class="ms-1">Nothing needs attention.</span></p></div>{{end}}
       <div class="table-responsive">
         <table class="table table-vcenter card-table">
-          <caption class="visually-hidden">The state of this sshmgr home; a row with a command needs attention</caption>
+          <caption class="visually-hidden">The state of this authama home; a row with a command needs attention</caption>
           <thead><tr><th scope="col">What</th><th scope="col">State</th><th scope="col">Fix</th></tr></thead>
           <tbody>
             {{range .Rows}}
@@ -28,7 +28,7 @@
         </table>
       </div>
       <div class="card-footer text-secondary d-flex flex-wrap gap-2 align-items-center">
-        <span class="me-auto">These are the rows the <code>sshmgr</code> menu prints at the top.</span>
+        <span class="me-auto">These are the rows the <code>authama</code> menu prints at the top.</span>
         {{if not $.ReadOnly}}
         {{template "change_open" $}}<input type="hidden" name="action" value="reconcile"><button type="submit" class="btn btn-sm btn-primary">Reconcile: mint missing keys and render</button></form>
         {{template "change_open" $}}<input type="hidden" name="action" value="config-render"><button type="submit" class="btn btn-sm btn-outline-primary">Re-render ~/.ssh/config</button></form>

@@ -163,7 +163,7 @@ func (e AppEngine) manifest() (*manifest.Manifest, error) {
 	m, err := manifest.Load(e.P.Manifest())
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("no manifest at %s yet; run `sshmgr init` first", e.P.Manifest())
+			return nil, fmt.Errorf("no manifest at %s yet; run `authama init` first", e.P.Manifest())
 		}
 		return nil, err
 	}

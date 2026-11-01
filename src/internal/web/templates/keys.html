@@ -23,7 +23,7 @@
   </div>
   {{else}}<div class="card-body text-secondary">No keys in the manifest yet.</div>{{end}}
 </div>
-<p class="text-secondary mt-2">A declared key no host uses can be deleted here: the declaration and its record go, the files stay. Rotation, overwriting a key, passphrases and keys kept in 1Password stay in the terminal: <code>sshmgr rotate</code>, <code>sshmgr keygen --force</code>, <code>--passphrase</code>.</p>
+<p class="text-secondary mt-2">A declared key no host uses can be deleted here: the declaration and its record go, the files stay. Rotation, overwriting a key, passphrases and keys kept in 1Password stay in the terminal: <code>authama ssh rotate</code>, <code>authama ssh keygen --force</code>, <code>--passphrase</code>.</p>
 {{if not .ReadOnly}}
 <div class="row row-cards mt-1">
   <div class="col-lg-7">

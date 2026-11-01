@@ -7,7 +7,7 @@ import (
 
 // ErrBusy reports that another change is being made by this process: in a
 // server, a preview, a confirmed change or a job.
-var ErrBusy = errors.New("another change is being made from this sshmgr serve; wait for it to finish, then try again")
+var ErrBusy = errors.New("another change is being made from this authama serve; wait for it to finish, then try again")
 
 // serial allows one change at a time in a process. The advisory lock
 // serializes processes; within a server, two requests would otherwise share

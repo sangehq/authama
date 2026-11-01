@@ -62,7 +62,7 @@ func TestAJobIsReviewedStartedAndStreamed(t *testing.T) {
 
 	f := url.Values{"action": {"rollback"}, "key": {key}}
 	rev := c.change("/jobs/review", f)
-	if rev.Code != http.StatusOK || !strings.Contains(rev.Body.String(), "sshmgr rollback "+key+" --yes") {
+	if rev.Code != http.StatusOK || !strings.Contains(rev.Body.String(), "authama ssh rollback "+key+" --yes") {
 		t.Fatalf("review: %d\n%s", rev.Code, rev.Body.String())
 	}
 	start := c.change("/jobs", url.Values{"action": {"rollback"}, "key": {key}})
@@ -164,7 +164,7 @@ func TestRotatingAProfileListsItsKeysAndNeedsABackup(t *testing.T) {
 	key := fixtureKey(t, c)
 	rev := c.change("/jobs/review", url.Values{"action": {"rotate-keys"}, "profile": {"work"}})
 	if body := rev.Body.String(); rev.Code != http.StatusOK || !strings.Contains(body, key) ||
-		!strings.Contains(body, "sshmgr rotate work --yes") {
+		!strings.Contains(body, "authama ssh rotate work --yes") {
 		t.Fatalf("review: %d\n%s", rev.Code, body)
 	}
 	start := c.change("/jobs", url.Values{"action": {"rotate-keys"}, "all": {"1"}})

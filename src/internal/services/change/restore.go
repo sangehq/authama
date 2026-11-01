@@ -33,7 +33,7 @@ func SnapshotRestore(snapshotsDir, id string, retain int) Change {
 			name := filepath.Base(path)
 			if snapshots.HoldsKeyMaterial(path) {
 				return nil, fmt.Errorf("%s holds private keys from before snapshots left them out; restore it "+
-					"from a terminal with `sshmgr snapshots restore %s`, or remove it with `sshmgr snapshots prune`", name, name)
+					"from a terminal with `authama ssh snapshots restore %s`, or remove it with `authama ssh snapshots prune`", name, name)
 			}
 			// Naming the file binds the confirmation to it: a partial id that
 			// would pick a newer snapshot by apply time shows as a change.

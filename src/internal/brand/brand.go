@@ -11,6 +11,8 @@
 // existing install's data and every script that sets them.
 package brand
 
+import "strings"
+
 const (
 	// Name is the display name: titles, banners, the web UI, the docs.
 	Name = "Authentication Access Manager"
@@ -25,6 +27,28 @@ const (
 	// Summary is the one-line description under the name.
 	Summary = "SSH keys & config, and package-manager / git auth tokens, in one tool"
 )
+
+// TopLevel lists the commands that sit directly under Command. Every other
+// verb lives in the ssh group; a test in the cli package keeps this list equal
+// to the command tree.
+var TopLevel = []string{"version", "doctor", "init", "migrate", "tui", "history", "serve", "ssh", "token"}
+
+// Line spells a command the way a user types it now: a top-level verb as
+// `authama <verb>`, an SSH verb (as the history and the web record it) as
+// `authama ssh <verb>`.
+func Line(cmd string) string {
+	cmd = strings.TrimSpace(cmd)
+	if cmd == "" {
+		return Command
+	}
+	first := strings.Fields(cmd)[0]
+	for _, t := range TopLevel {
+		if first == t {
+			return Command + " " + cmd
+		}
+	}
+	return Command + " ssh " + cmd
+}
 
 // Commands lists every name the binary answers to, the current one first.
 func Commands() []string { return []string{Command, LegacyCommand} }

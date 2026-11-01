@@ -1,6 +1,11 @@
 package cli
 
 import (
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -200,5 +205,78 @@ func TestEveryHiddenTopLevelCommandIsAnSSHVerb(t *testing.T) {
 	}
 	if hidden != len(visible(ssh)) {
 		t.Errorf("%d hidden top-level spellings for %d ssh verbs", hidden, len(visible(ssh)))
+	}
+}
+
+// brand.Line decides whether a recorded verb prints as `authama <verb>` or
+// `authama ssh <verb>`; its list has to be the tree's top level.
+func TestBrandTopLevelIsTheVisibleRoot(t *testing.T) {
+	var got []string
+	for _, c := range newRootCmd().Commands() {
+		if !c.Hidden && c.Name() != "help" && c.Name() != "completion" {
+			got = append(got, c.Name())
+		}
+	}
+	sort.Strings(got)
+	want := append([]string(nil), brand.TopLevel...)
+	sort.Strings(want)
+	if strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Errorf("visible top level %v, brand.TopLevel %v", got, want)
+	}
+	for in, out := range map[string]string{
+		"reconcile":   "authama ssh reconcile",
+		"host add":    "authama ssh host add",
+		"init":        "authama init",
+		"token store": "authama token store",
+		"":            "authama",
+	} {
+		if g := brand.Line(in); g != out {
+			t.Errorf("brand.Line(%q) = %q, want %q", in, g, out)
+		}
+	}
+}
+
+// Messages tell people what to run next. After the rename they must say
+// `authama ssh <verb>`: the old spelling still works, but a hint is the one
+// place new users learn the command, so it must teach the current one. The
+// files listed write the spelling into config and key names on purpose.
+func TestNoMessageTeachesTheOldSpelling(t *testing.T) {
+	var verbs []string
+	for _, c := range newRootCmd().Commands() {
+		verbs = append(verbs, c.Name())
+	}
+	rx := regexp.MustCompile(`\bsshmgr (` + strings.Join(verbs, "|") + `)\b`)
+	keep := map[string]bool{
+		"core/renderer/renderer.go": true, // the managed-block markers already on disk
+		"core/renderer/gitvm.go":    true, // ProxyCommand for the compat binary
+	}
+	root := filepath.Join("..")
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		rel, _ := filepath.Rel(root, path)
+		rel = filepath.ToSlash(rel)
+		if keep[rel] || strings.HasSuffix(rel, "_test.go") ||
+			!(strings.HasSuffix(rel, ".go") || strings.HasSuffix(rel, ".html")) {
+			return nil
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		for i, line := range strings.Split(string(b), "\n") {
+			if strings.HasPrefix(strings.TrimSpace(line), "//") {
+				continue
+			}
+			if m := rx.FindString(line); m != "" {
+				t.Errorf("%s:%d says %q; use `%s %s`", rel, i+1, m, brand.Command,
+					strings.TrimPrefix(brand.Line(strings.TrimPrefix(m, "sshmgr ")), brand.Command+" "))
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }

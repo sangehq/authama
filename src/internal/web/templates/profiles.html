@@ -26,9 +26,9 @@
       </tbody>
     </table>
   </div>
-  {{else}}<div class="card-body text-secondary">No profiles yet. Add one below, or with <code>sshmgr profile add &lt;name&gt;</code>.</div>{{end}}
+  {{else}}<div class="card-body text-secondary">No profiles yet. Add one below, or with <code>authama ssh profile add &lt;name&gt;</code>.</div>{{end}}
 </div>
-<p class="text-secondary mt-2">Deleting a profile removes its hosts, their config blocks and their pins. Its key files stay on disk unless you tick <strong>and its key files</strong>: then they are deleted too, after sshmgr writes an encrypted backup of <code>~/.ssh</code>, which needs <code>SSH_MANAGER_AGE_RECIPIENT</code>.</p>
+<p class="text-secondary mt-2">Deleting a profile removes its hosts, their config blocks and their pins. Its key files stay on disk unless you tick <strong>and its key files</strong>: then they are deleted too, after authama writes an encrypted backup of <code>~/.ssh</code>, which needs <code>SSH_MANAGER_AGE_RECIPIENT</code>.</p>
 
 {{if not .ReadOnly}}
 <div class="row row-cards mt-1">

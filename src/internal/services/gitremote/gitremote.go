@@ -103,7 +103,7 @@ func Use(g Git, m *manifest.Manifest, dir, mode, profile string, dryRun bool) (C
 	ch.From = url
 	r, ok := Parse(m, url)
 	if !ok {
-		ch.Skipped = "origin is not a GitHub remote sshmgr manages"
+		ch.Skipped = "origin is not a GitHub remote authama manages"
 		return ch, nil
 	}
 	if profile == "" {

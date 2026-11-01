@@ -46,7 +46,7 @@ func (r Result) Format() string {
 	if r.Backup != "" {
 		lines = append(lines, "  backup   previous files saved to "+r.Backup)
 	}
-	lines = append(lines, "Next: edit "+filepath.Join(r.ConfigDir, "manifest.json")+", then `sshmgr reconcile`.")
+	lines = append(lines, "Next: edit "+filepath.Join(r.ConfigDir, "manifest.json")+", then `authama ssh reconcile`.")
 	return strings.Join(lines, "\n")
 }
 

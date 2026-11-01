@@ -83,7 +83,7 @@ func (s *Service) one(row keysvc.Row, dryRun bool) Result {
 	if current != "" {
 		res.Action = Rewritten
 		res.Detail = "the .pub on disk was a different key; anything deployed from it " +
-			"needs `sshmgr deploy " + row.Ref.String() + "`"
+			"needs `authama ssh deploy " + row.Ref.String() + "`"
 	}
 	if dryRun {
 		return res
@@ -102,7 +102,7 @@ func (s *Service) source(row keysvc.Row) (pub, skip string, err error) {
 		it, err := s.op.Get(row.Vault, row.Ref.KeyName)
 		switch {
 		case errors.Is(err, opstore.ErrNotFound):
-			return "", fmt.Sprintf("no item %q in 1Password vault %q (`sshmgr reconcile` creates it)",
+			return "", fmt.Sprintf("no item %q in 1Password vault %q (`authama ssh reconcile` creates it)",
 				row.Ref.KeyName, row.Vault), nil
 		case err != nil:
 			return "", "", err
@@ -113,7 +113,7 @@ func (s *Service) source(row keysvc.Row) (pub, skip string, err error) {
 	}
 	if !row.PrivateOnDisk {
 		return "", "the private key is missing, so there is nothing to derive from " +
-			"(`sshmgr reconcile` mints a new pair)", nil
+			"(`authama ssh reconcile` mints a new pair)", nil
 	}
 	derived, encrypted, err := s.ks.PublicFromPrivate(row.PrivatePath)
 	switch {

@@ -42,7 +42,7 @@ func TestPreviewThenApplyMakesTheChange(t *testing.T) {
 
 	rec := c.change("/changes/preview", addHost("db"))
 	body := rec.Body.String()
-	if rec.Code != http.StatusOK || !strings.Contains(body, "config/manifest.json") || !strings.Contains(body, "sshmgr host add work db") {
+	if rec.Code != http.StatusOK || !strings.Contains(body, "config/manifest.json") || !strings.Contains(body, "authama ssh host add work db") {
 		t.Fatalf("preview: %d\n%s", rec.Code, body)
 	}
 	if after, _ := os.ReadFile(p.Manifest()); string(after) != string(before) {

@@ -162,7 +162,7 @@ func newKeyAddCmd() *cobra.Command {
 				_, _ = fmt.Fprintf(out, "wired to host %s\n", host)
 			} else {
 				_, _ = fmt.Fprintf(out, "UNWIRED: no host uses %s yet. Wire it with:\n"+
-					"  sshmgr host edit %s <alias> --key-name %s\n", ref, profile, name)
+					"  authama ssh host edit %s <alias> --key-name %s\n", ref, profile, name)
 			}
 			return applyManifestEdit(c, p)
 		},
@@ -211,7 +211,7 @@ func newKeyListCmd() *cobra.Command {
 // parity).
 func writeKeyTable(out io.Writer, rows []keysvc.Row) {
 	if len(rows) == 0 {
-		_, _ = fmt.Fprintln(out, "no keys in the manifest (add one with `sshmgr key add`)")
+		_, _ = fmt.Fprintln(out, "no keys in the manifest (add one with `authama ssh key add`)")
 		return
 	}
 	tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
