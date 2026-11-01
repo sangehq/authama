@@ -660,3 +660,28 @@ func TestImportANamedFileWithADryRunFirst(t *testing.T) {
 		t.Fatal("imported tokens.json onto itself")
 	}
 }
+
+// test_windows.py: is_owner_only is true on Windows (ACLs, not mode bits;
+// SetPerms enforces them with icacls on every write) and the perms column
+// reads as text, never a crash.
+func TestOwnerOnlyAndPermsOnWindows(t *testing.T) {
+	f := filepath.Join(t.TempDir(), "auth.json")
+	if err := os.WriteFile(f, []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !ownerOnlyOn(true, f) {
+		t.Error("an existing file should pass the Windows check")
+	}
+	if ownerOnlyOn(false, f) {
+		t.Error("a 0644 file should fail the POSIX check")
+	}
+	if got := permStringOn(true, f); got != "ACL" {
+		t.Errorf("windows perms = %q, want ACL", got)
+	}
+	if got := permStringOn(true, f+".absent"); got != "absent" {
+		t.Errorf("absent file perms = %q", got)
+	}
+	if ownerOnlyOn(true, f+".absent") {
+		t.Error("an absent file must not pass")
+	}
+}

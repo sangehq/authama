@@ -82,20 +82,26 @@ func (e Env) Checkup(set *tokens.Set, project string) (out []Finding, failed boo
 
 // ownerOnly is "no group or other access" on POSIX; on Windows the ACL
 // check stands in.
-func ownerOnly(path string) bool {
-	if platform.IsWindows() {
-		return perms.PermsOK(path, SecretMode)
+func ownerOnly(path string) bool { return ownerOnlyOn(platform.IsWindows(), path) }
+
+// ownerOnlyOn is ownerOnly with the platform passed in, so the Windows branch
+// is tested on every host (as test_windows.py did by toggling IS_WINDOWS).
+func ownerOnlyOn(windows bool, path string) bool {
+	if windows {
+		return perms.WindowsPermsOK(path)
 	}
 	fi, err := os.Stat(path)
 	return err == nil && fi.Mode().Perm()&0o077 == 0
 }
 
-func permString(path string) string {
+func permString(path string) string { return permStringOn(platform.IsWindows(), path) }
+
+func permStringOn(windows bool, path string) string {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return "absent"
 	}
-	if platform.IsWindows() {
+	if windows {
 		return "ACL"
 	}
 	return fmt.Sprintf("0o%o", fi.Mode().Perm())

@@ -15,6 +15,10 @@
   $env:AUTHAMA_VERSION = 'v0.1.0'; irm https://.../install.ps1 | iex
 #>
 #Requires -Version 5
+# Progress lines go to the host, not the pipeline: this runs as `irm | iex`, where
+# anything written to the output stream would be echoed back as a result.
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
+  Justification = 'Installer progress for an interactive irm | iex run')]
 [CmdletBinding()]
 param(
   [string]$Version,

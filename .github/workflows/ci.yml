@@ -160,6 +160,18 @@ jobs:
             "src/scripts/install.ps1", [ref]$null, [ref]$errors) | Out-Null
           if ($errors) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
           Write-Output "src/scripts/install.ps1 parses"
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          # A parse catches syntax; the analyzer catches what parses but misbehaves
+          # (unused or misspelled variables, automatic-variable overwrites). The one
+          # deliberate exception, Write-Host for irm | iex progress, is suppressed
+          # in the script itself with its reason.
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+          $r = Invoke-ScriptAnalyzer -Path src/scripts/install.ps1 -Severity Error,Warning,Information
+          if ($r) { $r | Format-Table -AutoSize RuleName,Severity,Line,Message | Out-String -Width 250; exit 1 }
+          Write-Output "src/scripts/install.ps1: no PSScriptAnalyzer findings"
       - name: The installers reconstruct the artifact names GoReleaser writes
         run: |
           # Both installers build "{authama,sshmgr}_{os}_{arch}", and .goreleaser.yaml maps
