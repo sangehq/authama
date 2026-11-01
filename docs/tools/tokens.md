@@ -121,6 +121,18 @@ line describing its fields; delete it, and the hosts you do not use, once you
 have edited the file. A test keeps the combined template equal to the union of
 the per-tool ones.
 
+### A custom catalog
+
+The Composer services, provider shortcuts and enterprise hosts come from a
+catalog built into the binary (`authama token providers` lists it). To add a
+service without waiting for a release, copy
+[`catalog.json`](../../src/internal/core/tokens/catalog.json), edit it, and
+point `$SSH_MANAGER_TOKENS_CATALOG` at it. auth-token-manager's
+`$AUTH_TOKEN_MANAGER_CATALOG` is still read, with a deprecation notice. A
+variable naming a file that is not there warns and uses the built-in catalog;
+a file that does not parse, or names a target other than composer, npm,
+docker, git and netrc, stops the command.
+
 `--source FILE` loads `VAR=value` lines first (variables already set win).
 `--target` limits a run to some tools; `--project DIR` writes a project's
 `auth.json` and `.npmrc` instead of the user ones (docker, git and netrc are

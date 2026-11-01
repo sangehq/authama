@@ -124,7 +124,8 @@ bounded SSH-level reachability probe first, so a down or VPN-gated host (includi
 | `tui` (or a bare `authama` on a terminal) | Interactive arrow-key UI over the whole facade, SSH and auth tokens. | U |
 
 Cross-cutting flags: `--yes`/`-y` on destructive verbs (with `--revoke` on deletes);
-`--passphrase` on key generation (a plain flag: leaving it off is the "no" answer).
+`--passphrase` on key generation (a plain flag: leaving it off is the "no" answer; v1's
+`--no-passphrase` is still accepted, hidden, on `keygen`, `reconcile` and `rotate`).
 
 ## Auth tokens
 

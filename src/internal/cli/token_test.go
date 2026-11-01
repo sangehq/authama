@@ -818,3 +818,70 @@ func TestTokenDeleteAsksAtATerminal(t *testing.T) {
 		t.Error("--yes did not delete")
 	}
 }
+
+// auth-token-manager read its catalog from $AUTH_TOKEN_MANAGER_CATALOG when
+// set, so a Composer service could be added without a release. authama reads
+// $SSH_MANAGER_TOKENS_CATALOG, and still the old name with a notice.
+func TestTokenCatalogOverride(t *testing.T) {
+	b := tokenSandbox(t)
+	t.Cleanup(func() { _ = tokens.UseCatalog("") })
+	embedded, err := tokens.LoadCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc map[string]any
+	if err := json.Unmarshal([]byte(embeddedCatalogText(t)), &doc); err != nil {
+		t.Fatal(err)
+	}
+	doc["composer"].(map[string]any)["services"].(map[string]any)["acme-forge"] = "gitlab-token"
+	custom, _ := json.Marshal(doc)
+	path := filepath.Join(t.TempDir(), "catalog.json")
+	if err := os.WriteFile(path, custom, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, v := range []string{"SSH_MANAGER_TOKENS_CATALOG", "AUTH_TOKEN_MANAGER_CATALOG"} {
+		b.env = map[string]string{v: path}
+		out := b.ok(t, "", "providers")
+		if !strings.Contains(out, "acme-forge") {
+			t.Errorf("$%s: the custom service is not listed:\n%s", v, out)
+		}
+		if legacy := v == "AUTH_TOKEN_MANAGER_CATALOG"; legacy != strings.Contains(out, "deprecated:") {
+			t.Errorf("$%s: deprecation notice wrong:\n%s", v, out)
+		}
+	}
+
+	// A missing file warns and falls back, as auth-token-manager did.
+	b.env = map[string]string{"SSH_MANAGER_TOKENS_CATALOG": filepath.Join(t.TempDir(), "nope.json")}
+	out := b.ok(t, "", "providers")
+	if !strings.Contains(out, "not a file") || strings.Contains(out, "acme-forge") {
+		t.Errorf("missing catalog file:\n%s", out)
+	}
+	if got, _ := tokens.LoadCatalog(); got != embedded {
+		t.Error("the embedded catalog was not restored")
+	}
+
+	// A broken file is refused before anything runs.
+	if err := os.WriteFile(path, []byte(`{"targets":["composer","pip"]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	b.env = map[string]string{"SSH_MANAGER_TOKENS_CATALOG": path}
+	if out, err := b.run(t, "", "providers"); err == nil || !strings.Contains(err.Error(), "unknown target") {
+		t.Errorf("a catalog naming an unknown target was used: %v\n%s", err, out)
+	}
+
+	// Unset, the embedded catalog is back.
+	b.env = map[string]string{}
+	if out := b.ok(t, "", "providers"); strings.Contains(out, "acme-forge") {
+		t.Errorf("the override outlived its variable:\n%s", out)
+	}
+}
+
+func embeddedCatalogText(t *testing.T) string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "core", "tokens", "catalog.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}

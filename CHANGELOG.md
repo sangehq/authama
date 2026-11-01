@@ -6,6 +6,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`--no-passphrase` works again on `keygen`, `reconcile` and `rotate`.** v1 accepted it; the 2.0.0 Go
+  rewrite dropped it without a note, so scripts that passed it failed with "unknown flag". It is back,
+  hidden, as the spelling of the default (no passphrase), and cannot be combined with `--passphrase`.
+- **A custom token catalog can be used again.** auth-token-manager read its service catalog from
+  `$AUTH_TOKEN_MANAGER_CATALOG`; the port embedded the catalog and lost the override. `authama token`
+  now reads `$SSH_MANAGER_TOKENS_CATALOG`, and the old name with a deprecation notice. A missing file
+  warns and falls back to the built-in catalog; an invalid one stops the command.
+
+### Documentation
+
+- **[migration](docs/migration.md#history-audit)** records an audit of every tag, release note and commit
+  of sshmgr and auth-token-manager against this release, with what was restored and what was dropped on
+  purpose.
+
 ## [3.6.1] - 2026-11-01
 
 ### Changed

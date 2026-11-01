@@ -148,6 +148,7 @@ func newKeygenCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "answer yes to overwrite prompts")
 	cmd.Flags().BoolVar(&noKeyBackup, "no-key-backup", false,
 		"overwrite without writing an encrypted backup first (any earlier predecessor is lost)")
+	addNoPassphraseCompat(cmd)
 	return cmd
 }
 

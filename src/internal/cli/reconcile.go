@@ -51,6 +51,7 @@ func newReconcileCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&noPin, "no-pin", false, "don't auto-pin reachable hosts' known_hosts")
 	cmd.Flags().BoolVar(&passphrase, "passphrase", false, "protect newly minted keys (prompts without echo)")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "apply without confirming (implied when there is no terminal)")
+	addNoPassphraseCompat(cmd)
 	return cmd
 }
 
