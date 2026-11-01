@@ -193,7 +193,7 @@ func TestEveryTrackedJSONFileParses(t *testing.T) {
 // the check that would have caught the tree moving under src/.
 func TestDocumentedRawURLsPointAtFilesThatExist(t *testing.T) {
 	root, files := trackedFiles(t)
-	re := regexp.MustCompile(`https://raw\.githubusercontent\.com/simtabi/ssh-manager/[^/]+/([^\s)"'` + "`" + `]+)`)
+	re := regexp.MustCompile(`https://raw\.githubusercontent\.com/simtabi/authama/[^/]+/([^\s)"'` + "`" + `]+)`)
 
 	var checked int
 	for _, name := range files {

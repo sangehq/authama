@@ -17,7 +17,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/tabler"
+	"github.com/simtabi/authama/src/v3/internal/tabler"
 )
 
 func main() {

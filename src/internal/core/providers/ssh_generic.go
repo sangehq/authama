@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/authkeys"
+	"github.com/simtabi/authama/src/v3/internal/core/authkeys"
 )
 
 // removeScript is the remote read-modify-write of authorized_keys, run as one ssh

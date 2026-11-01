@@ -25,10 +25,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
-	"github.com/simtabi/ssh-manager/src/v3/internal/platform"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
-	"github.com/simtabi/ssh-manager/src/v3/internal/version"
+	"github.com/simtabi/authama/src/v3/internal/brand"
+	"github.com/simtabi/authama/src/v3/internal/platform"
+	"github.com/simtabi/authama/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/v3/internal/version"
 )
 
 // sshGroup is the name of the SSH feature group.

@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/history"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/log"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/v3/internal/services/history"
+	"github.com/simtabi/authama/src/v3/internal/util/log"
+	"github.com/simtabi/authama/src/v3/internal/util/paths"
 )
 
 const testHost = "127.0.0.1:7822"

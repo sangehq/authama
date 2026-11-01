@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/log"
+	"github.com/simtabi/authama/src/v3/internal/util/log"
 )
 
 // MetaBackfillDone is set once the first open has imported what was on disk.

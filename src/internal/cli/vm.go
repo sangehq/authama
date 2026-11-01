@@ -12,11 +12,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/hypervisor"
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/dockerctx"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/editor"
+	"github.com/simtabi/authama/src/v3/internal/brand"
+	"github.com/simtabi/authama/src/v3/internal/core/hypervisor"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/services/dockerctx"
+	"github.com/simtabi/authama/src/v3/internal/services/editor"
 )
 
 func newVMCmd() *cobra.Command {

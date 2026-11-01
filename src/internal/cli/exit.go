@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
-	"github.com/simtabi/ssh-manager/src/v3/internal/platform"
+	"github.com/simtabi/authama/src/v3/internal/brand"
+	"github.com/simtabi/authama/src/v3/internal/platform"
 
 	"github.com/spf13/cobra"
 )

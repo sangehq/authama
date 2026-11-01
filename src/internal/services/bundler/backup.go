@@ -9,7 +9,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/v3/internal/util/paths"
 )
 
 // BackupBeforeDestroying writes an age-encrypted bundle so an operation that

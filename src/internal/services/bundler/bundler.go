@@ -26,7 +26,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/renderer"
+	"github.com/simtabi/authama/src/v3/internal/core/renderer"
 )
 
 const ageHint = "install age: brew install age  (Linux: apt install age / get from FiloSottile/age)"

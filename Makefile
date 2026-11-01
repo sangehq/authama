@@ -31,7 +31,7 @@ COMPAT_PKG := ./cmd/sshmgr
 # enough: it excludes v1-final but admits anything else beginning with v,
 # and a tag like v2-migration-record would then be stamped into the binary.
 VERSION := $(shell git describe --tags --match 'v[0-9]*' --always --dirty 2>/dev/null || echo dev)
-LDFLAGS := -s -w -X github.com/simtabi/ssh-manager/src/v3/internal/version.Version=$(VERSION)
+LDFLAGS := -s -w -X github.com/simtabi/authama/src/v3/internal/version.Version=$(VERSION)
 GO      := go -C $(MODULE)
 
 .PHONY: help build build-all test vet fmt fmt-check lint lint-all ci check ci-linux e2e feature-check docker-shell docker-run docker-down \

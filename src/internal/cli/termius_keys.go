@@ -12,8 +12,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/renderer"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/clipboard"
+	"github.com/simtabi/authama/src/v3/internal/core/renderer"
+	"github.com/simtabi/authama/src/v3/internal/util/clipboard"
 )
 
 // Termius's CSV import has no key column (docs.termius.com, "Import existing

@@ -15,12 +15,12 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/inventory"
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/key"
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/keystore"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/perms"
+	"github.com/simtabi/authama/src/v3/internal/core/inventory"
+	"github.com/simtabi/authama/src/v3/internal/core/key"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/services/keystore"
+	"github.com/simtabi/authama/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/v3/internal/util/perms"
 )
 
 // kv is one ordered raw_option carried through from the source config.

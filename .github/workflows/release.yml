@@ -58,7 +58,7 @@ jobs:
       - uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
 
       # `go install` needs a tag named after the module's subdirectory: the
-      # module is github.com/simtabi/ssh-manager/src/v3, so Go looks for
+      # module is github.com/simtabi/authama/src/v3, so Go looks for
       # src/v3.0.1 and ignores v3.0.1 entirely. GoReleaser cannot be driven from
       # the prefixed tag - OSS rejects it as non-semver - so the release runs off
       # v3.0.1 and mirrors src/v3.0.1 onto the same commit here, where it cannot

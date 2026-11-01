@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/history"
+	"github.com/simtabi/authama/src/v3/internal/services/history"
 )
 
 // routes registers every page. Each takes names from the path, the query or

@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/inventory"
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/opstore"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/fs"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/log"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/perms"
+	"github.com/simtabi/authama/src/v3/internal/core/inventory"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/services/opstore"
+	"github.com/simtabi/authama/src/v3/internal/util/fs"
+	"github.com/simtabi/authama/src/v3/internal/util/log"
+	"github.com/simtabi/authama/src/v3/internal/util/perms"
 )
 
 // Item titles in the vault. The live key is titled with the key name, exactly

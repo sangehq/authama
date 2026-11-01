@@ -8,8 +8,8 @@ package main
 import (
 	"os"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/cli"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/askpass"
+	"github.com/simtabi/authama/src/v3/internal/cli"
+	"github.com/simtabi/authama/src/v3/internal/util/askpass"
 )
 
 func main() {

@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
 )
 
 // ExportPaths is what an export needs to turn the ~ form paths the managed

@@ -10,17 +10,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
-	"github.com/simtabi/ssh-manager/src/v3/internal/platform"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/bundler"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/cleaner"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/dockerctx"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/editor"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/history"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/lifecycle"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/notifier"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/snapshots"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/platform"
+	"github.com/simtabi/authama/src/v3/internal/services/bundler"
+	"github.com/simtabi/authama/src/v3/internal/services/cleaner"
+	"github.com/simtabi/authama/src/v3/internal/services/dockerctx"
+	"github.com/simtabi/authama/src/v3/internal/services/editor"
+	"github.com/simtabi/authama/src/v3/internal/services/history"
+	"github.com/simtabi/authama/src/v3/internal/services/lifecycle"
+	"github.com/simtabi/authama/src/v3/internal/services/notifier"
+	"github.com/simtabi/authama/src/v3/internal/services/snapshots"
+	"github.com/simtabi/authama/src/v3/internal/util/paths"
 )
 
 // The changes below reach past the files a preview copies. Some touch files

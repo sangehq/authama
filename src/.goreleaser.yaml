@@ -54,9 +54,9 @@ builds:
     mod_timestamp: "{{ .CommitTimestamp }}"
     ldflags:
       - -s -w
-      - -X github.com/simtabi/ssh-manager/src/v3/internal/version.Version={{ .Version }}
-      - -X github.com/simtabi/ssh-manager/src/v3/internal/version.Commit={{ .Commit }}
-      - -X github.com/simtabi/ssh-manager/src/v3/internal/version.Date={{ .CommitDate }}
+      - -X github.com/simtabi/authama/src/v3/internal/version.Version={{ .Version }}
+      - -X github.com/simtabi/authama/src/v3/internal/version.Commit={{ .Commit }}
+      - -X github.com/simtabi/authama/src/v3/internal/version.Date={{ .CommitDate }}
 
   - id: authama
     dir: src
@@ -87,9 +87,9 @@ builds:
     mod_timestamp: "{{ .CommitTimestamp }}"
     ldflags:
       - -s -w
-      - -X github.com/simtabi/ssh-manager/src/v3/internal/version.Version={{ .Version }}
-      - -X github.com/simtabi/ssh-manager/src/v3/internal/version.Commit={{ .Commit }}
-      - -X github.com/simtabi/ssh-manager/src/v3/internal/version.Date={{ .CommitDate }}
+      - -X github.com/simtabi/authama/src/v3/internal/version.Version={{ .Version }}
+      - -X github.com/simtabi/authama/src/v3/internal/version.Commit={{ .Commit }}
+      - -X github.com/simtabi/authama/src/v3/internal/version.Date={{ .CommitDate }}
 
 # A single macOS universal binary (amd64 + arm64) alongside the per-arch ones.
 universal_binaries:
@@ -234,7 +234,7 @@ winget:
     short_description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
     description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
     publisher_url: "https://simtabi.com"
-    release_notes_url: "https://github.com/simtabi/ssh-manager/releases/tag/{{ .Tag }}"
+    release_notes_url: "https://github.com/simtabi/authama/releases/tag/{{ .Tag }}"
     repository:
       owner: simtabi
       name: winget-pkgs
@@ -252,7 +252,7 @@ winget:
 release:
   github:
     owner: simtabi
-    name: ssh-manager
+    name: authama
   draft: false
   prerelease: auto
   # The install scripts ship with the release, so `curl | bash` has a URL on the

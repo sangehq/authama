@@ -38,7 +38,7 @@ REPO_ROOT=".."
 # The archive name stays sshmgr_ (the v3 asset names); both binaries go in it.
 BINARY="sshmgr"
 BINARIES="authama sshmgr"
-PKG="github.com/simtabi/ssh-manager/src/v3/internal/version"
+PKG="github.com/simtabi/authama/src/v3/internal/version"
 BUILD_DIR="${REPO_ROOT}/build"
 OUT="${BUILD_DIR}/dist"
 ARCHIVE_DIR="${OUT}/archives"

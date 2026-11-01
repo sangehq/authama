@@ -11,10 +11,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/snapshots"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/lock"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/v3/internal/brand"
+	"github.com/simtabi/authama/src/v3/internal/services/snapshots"
+	"github.com/simtabi/authama/src/v3/internal/util/lock"
+	"github.com/simtabi/authama/src/v3/internal/util/paths"
 )
 
 // heldLock keeps the acquired advisory lock alive for the rest of the process so

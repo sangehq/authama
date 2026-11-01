@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/inventory"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/mutation"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/lock"
+	"github.com/simtabi/authama/src/v3/internal/core/inventory"
+	"github.com/simtabi/authama/src/v3/internal/services/mutation"
+	"github.com/simtabi/authama/src/v3/internal/util/lock"
 )
 
 // The advisory lock only serializes commands if it is taken before they read

@@ -10,11 +10,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/ssh-manager/src/v3/internal/core/manifest"
-	"github.com/simtabi/ssh-manager/src/v3/internal/platform"
-	"github.com/simtabi/ssh-manager/src/v3/internal/services/importer"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/homeperms"
-	"github.com/simtabi/ssh-manager/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/v3/internal/platform"
+	"github.com/simtabi/authama/src/v3/internal/services/importer"
+	"github.com/simtabi/authama/src/v3/internal/util/homeperms"
+	"github.com/simtabi/authama/src/v3/internal/util/paths"
 )
 
 // newImportCmd is the native import verb: onboard an existing ~/.ssh into the
