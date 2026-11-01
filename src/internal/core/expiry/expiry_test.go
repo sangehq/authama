@@ -170,7 +170,7 @@ func TestBannerNamesKeysUnambiguously(t *testing.T) {
 		ExpiresOn: sp("2026-06-10"), // overdue by 6
 	})
 	inv.Record("fp-b", inventory.KeyRecord{
-		Profile: "adelsaiq", Path: "/h/.ssh/profiles/adelsaiq/imani_github-ed25519",
+		Profile: "clientco", Path: "/h/.ssh/profiles/clientco/imani_github-ed25519",
 		ExpiresOn: sp("2026-06-20"), // due in 4
 	})
 	lines := BannerLines(ComputeStates(inv, []int{30}, today))
@@ -179,7 +179,7 @@ func TestBannerNamesKeysUnambiguously(t *testing.T) {
 	}
 	joined := strings.Join(lines, "\n")
 	for _, want := range []string{
-		"personal/imani_github-ed25519", "adelsaiq/imani_github-ed25519",
+		"personal/imani_github-ed25519", "clientco/imani_github-ed25519",
 		"OVERDUE by 6 days", "expires in 4 days",
 		"authama ssh rotate personal/imani_github-ed25519",
 		"2026-06-10", "2026-06-20",

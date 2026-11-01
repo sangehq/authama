@@ -190,7 +190,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   now points to it, and the export docs and Termius recipe describe the full flow with Termius's docs as sources.
 - **`sshmgr host apply` - add or update hosts from compact specs.** A spec is
   `<alias> <host>[:port] <user> [role]`, e.g.
-  `sshmgr host apply adelsaiq dani-prd-web-00 206.189.185.129 ploi web`. Give
+  `sshmgr host apply clientco web-01 203.0.113.21 ploi web`. Give
   one positionally, many with repeated `--host "..."`, or a file with
   `-f FILE` (`-` for stdin; one spec per line with `#` comments, or a JSON
   array of spec strings or `{alias,host,user,port,role,tags}` objects). A new

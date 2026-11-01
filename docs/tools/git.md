@@ -26,7 +26,7 @@ account. `--profile` overrides the mapping for one run.
   "git": {
     "mode": "profile",
     "profile": "imanimanyara",
-    "orgs": {"simtabi": "imanimanyara", "laranail": "imanimanyara", "adelsaiq": "dannielagumo"}
+    "orgs": {"simtabi": "imanimanyara", "laranail": "imanimanyara", "clientco": "example-user"}
   }
 }
 ```

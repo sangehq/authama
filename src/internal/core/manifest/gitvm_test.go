@@ -11,12 +11,12 @@ import (
 
 const gitManifest = `{
   "version": 1,
-  "defaults": {"git": {"mode": "profile", "profile": "imanimanyara", "orgs": {"simtabi": "imanimanyara", "adelsaiq": "dannielagumo"}}},
+  "defaults": {"git": {"mode": "profile", "profile": "imanimanyara", "orgs": {"simtabi": "imanimanyara", "clientco": "example-user"}}},
   "profiles": {
     "imanimanyara": {"category": "personal", "hosts": [
       {"alias": "github-imanimanyara", "hostname": "github.com", "user": "git", "key_name": "imanimanyara_github-ed25519"}]},
-    "dannielagumo": {"category": "clients", "hosts": [
-      {"alias": "github-dannielagumo", "hostname": "github.com", "user": "git", "key_name": "dannielagumo_github-ed25519"}]},
+    "example-user": {"category": "clients", "hosts": [
+      {"alias": "github-example-user", "hostname": "github.com", "user": "git", "key_name": "example-user_github-ed25519"}]},
     "devbox": {"category": "personal", "hosts": [
       {"alias": "devbox", "hostname": "devbox", "user": "imani", "key_name": "devbox_docker-ed25519",
        "vm": {"hypervisor": "parallels", "name": "Ubuntu 24.04"}}]}
@@ -32,12 +32,12 @@ func TestGitDefaultsAndVMLoadAndResolve(t *testing.T) {
 		t.Errorf("mode=%q", got)
 	}
 	for owner, want := range map[string]string{"simtabi": "imanimanyara", "SimTabi": "imanimanyara",
-		"adelsaiq": "dannielagumo", "laranail": "imanimanyara"} {
+		"clientco": "example-user", "laranail": "imanimanyara"} {
 		if got, err := ProfileForOwner(m, owner); err != nil || got != want {
 			t.Errorf("owner %s -> %q, %v; want %q", owner, got, err, want)
 		}
 	}
-	if h, ok := GitHubHostOf(m, "dannielagumo"); !ok || h.Alias != "github-dannielagumo" {
+	if h, ok := GitHubHostOf(m, "example-user"); !ok || h.Alias != "github-example-user" {
 		t.Errorf("GitHubHostOf = %v, %v", h, ok)
 	}
 	if _, ok := GitHubHostOf(m, "devbox"); ok {
@@ -51,7 +51,7 @@ func TestGitDefaultsAndVMLoadAndResolve(t *testing.T) {
 
 func TestProfileForOwnerRefusesToGuess(t *testing.T) {
 	m, err := loadJSON(t, strings.Replace(gitManifest,
-		`"git": {"mode": "profile", "profile": "imanimanyara", "orgs": {"simtabi": "imanimanyara", "adelsaiq": "dannielagumo"}}`,
+		`"git": {"mode": "profile", "profile": "imanimanyara", "orgs": {"simtabi": "imanimanyara", "clientco": "example-user"}}`,
 		`"git": {}`, 1))
 	if err != nil {
 		t.Fatal(err)
@@ -73,7 +73,7 @@ func TestGitAndVMValidation(t *testing.T) {
 		{"unknown mode", `"mode": "profile"`, `"mode": "carrier-pigeon"`, "defaults.git.mode"},
 		{"missing profile", `"profile": "imanimanyara"`, `"profile": "ghost"`, "does not exist"},
 		{"profile without GitHub", `"profile": "imanimanyara"`, `"profile": "devbox"`, "no github.com host"},
-		{"org to missing profile", `"adelsaiq": "dannielagumo"`, `"adelsaiq": "nobody"`, "does not exist"},
+		{"org to missing profile", `"clientco": "example-user"`, `"clientco": "nobody"`, "does not exist"},
 		{"ssh mode needs a profile", `"mode": "profile", "profile": "imanimanyara"`, `"mode": "ssh"`, "needs defaults.git.profile"},
 		{"alias github.com shadowed", `"alias": "github-imanimanyara"`, `"alias": "github.com"`, "clashes with the Host github.com"},
 		{"unknown hypervisor", `"hypervisor": "parallels"`, `"hypervisor": "virtualbox"`, "vm.hypervisor"},

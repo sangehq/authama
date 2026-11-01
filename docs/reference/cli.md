@@ -657,12 +657,12 @@ authama ssh host apply <profile> [<alias> <host>[:port] <user> [role]] [flags]
 Examples:
 
 ```sh
-  authama ssh host apply adelsaiq dani-prd-web-00 206.189.185.129 ploi web
-  authama ssh host apply adelsaiq \
-      --host "dani-prd-web-00 206.189.185.129 ploi web" \
-      --host "dani-prd-db-00  137.184.219.1   ploi db" --tag prd --reconcile
-  authama ssh host apply adelsaiq -f hosts.txt --create-profile --category clients
-  printf 'bastion 10.0.0.5:2222 admin\n' | authama ssh host apply adelsaiq -f - --dry-run
+  authama ssh host apply clientco web-01 203.0.113.21 ploi web
+  authama ssh host apply clientco \
+      --host "web-01 203.0.113.21 ploi web" \
+      --host "db-01  203.0.113.22 ploi db" --tag prd --reconcile
+  authama ssh host apply clientco -f hosts.txt --create-profile --category clients
+  printf 'bastion 10.0.0.5:2222 admin\n' | authama ssh host apply clientco -f - --dry-run
 ```
 
 Flags:
@@ -1442,7 +1442,7 @@ Examples:
 
 ```sh
   authama ssh termius keys
-  authama ssh termius keys dani-prd-db-00 --clear-after 60s
+  authama ssh termius keys db-01 --clear-after 60s
   authama ssh termius keys --clear
 ```
 

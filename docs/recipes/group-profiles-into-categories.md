@@ -5,7 +5,7 @@ File profiles under a category directory, such as `internal`, `clients` or
 
 ```sh
 authama ssh profile edit personal --category internal
-authama ssh profile edit adelsaiq --category clients
+authama ssh profile edit clientco --category clients
 authama ssh profile edit work     --category others
 ```
 

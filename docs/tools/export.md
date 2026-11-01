@@ -72,16 +72,16 @@ no key column ([Import existing hosts](https://docs.termius.com/getting-started/
 
 ```bash
 authama ssh termius keys                              # every exported host: HOST, TERMIUS LABEL, PRIVATE KEY path
-authama ssh termius keys dani-prd-db-00               # copy its private key to the clipboard, print the label
-authama ssh termius keys dani-prd-db-00 --clear-after 60s   # ...and empty the clipboard after 60 seconds
+authama ssh termius keys db-01               # copy its private key to the clipboard, print the label
+authama ssh termius keys db-01 --clear-after 60s   # ...and empty the clipboard after 60 seconds
 authama ssh termius keys --clear                      # empty the clipboard now
-authama ssh termius keys dani-prd-db-00 --print       # key on stdout instead (warns on stderr; avoid)
+authama ssh termius keys db-01 --print       # key on stdout instead (warns on stderr; avoid)
 authama ssh termius keys github-me                    # a git host: naming it is enough
 authama ssh termius keys --include-git                # list git hosts too, as with export --include-git
 authama ssh termius keys --skip unc                   # leave a host out, as with export --skip
 ```
 
-The label is the key file's name (`adelsaiq_dani-prd-db-00-ed25519`). The key is copied with `pbcopy` (macOS),
+The label is the key file's name (`clientco_db-01-ed25519`). The key is copied with `pbcopy` (macOS),
 `wl-copy`, `xclip` or `xsel` (Linux), or `clip` (Windows), and never printed without `--print`. In Termius:
 **Keychain → New Key** (or **Add key** on SSH key selection), Label = the label, paste into **Private key**, leave
 **Certificate** empty, **Save**; pick it on the host and **Continue & Save**. A key kept in 1Password is refused, to

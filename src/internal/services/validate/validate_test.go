@@ -209,8 +209,8 @@ const sharedNameJSON = `{
   "profiles": {
     "personal": {"key_scope": "per_service", "hosts": [
       {"alias": "gh-personal", "hostname": "github.com", "user": "git", "key_name": "imani_github-ed25519"}]},
-    "adelsaiq": {"key_scope": "per_service", "hosts": [
-      {"alias": "gh-adelsaiq", "hostname": "gitlab.com", "user": "git", "key_name": "imani_github-ed25519"}]}
+    "clientco": {"key_scope": "per_service", "hosts": [
+      {"alias": "gh-clientco", "hostname": "gitlab.com", "user": "git", "key_name": "imani_github-ed25519"}]}
   }
 }`
 
@@ -224,14 +224,14 @@ func TestABareNameValidatesEveryProfileThatHasIt(t *testing.T) {
 	}
 	ssh := t.TempDir()
 	ks := keystore.New()
-	for _, profile := range []string{"personal", "adelsaiq"} {
+	for _, profile := range []string{"personal", "clientco"} {
 		if _, err := ks.Generate(filepath.Join(ssh, "profiles", profile, "imani_github-ed25519"),
 			"ed25519", profile, "", false); err != nil {
 			t.Fatal(err)
 		}
 	}
-	// Break only adelsaiq's copy.
-	if err := os.WriteFile(filepath.Join(ssh, "profiles", "adelsaiq", "imani_github-ed25519.pub"),
+	// Break only clientco's copy.
+	if err := os.WriteFile(filepath.Join(ssh, "profiles", "clientco", "imani_github-ed25519.pub"),
 		[]byte("not a key\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -251,18 +251,18 @@ func TestABareNameValidatesEveryProfileThatHasIt(t *testing.T) {
 	if !byProfile["personal"].OK {
 		t.Errorf("personal's copy is intact: %+v", byProfile["personal"])
 	}
-	if byProfile["adelsaiq"].OK {
+	if byProfile["clientco"].OK {
 		t.Error("the broken copy was reported clean")
 	}
 
 	// The composite form narrows to exactly one, which is how a user asks about
 	// the copy they mean when the name alone is ambiguous.
-	one, err := svc.ValidateKeys("adelsaiq/imani_github-ed25519")
+	one, err := svc.ValidateKeys("clientco/imani_github-ed25519")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(one) != 1 || one[0].Profile != "adelsaiq" {
-		t.Errorf("profile/key selector = %+v, want adelsaiq's copy alone", one)
+	if len(one) != 1 || one[0].Profile != "clientco" {
+		t.Errorf("profile/key selector = %+v, want clientco's copy alone", one)
 	}
 }
 

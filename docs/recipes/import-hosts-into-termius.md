@@ -12,7 +12,7 @@ authama ssh termius export --open
 2. **The CSV carries no SSH keys.** Termius's CSV template has no key column, so every imported host arrives with no
    key, and connecting stops at **SSH key selection**. For each host, once:
    1. `authama ssh termius keys <HOST>` copies that host's private key to the clipboard (never shown) and prints the
-      label to use, the key file's name, e.g. `adelsaiq_dani-prd-db-00-ed25519`.
+      label to use, the key file's name, e.g. `clientco_db-01-ed25519`.
    2. In Termius: **Keychain → New Key** (or **Add key** on the SSH key selection screen). Set **Label** to that
       label, click into **Private key** and paste, leave **Certificate** empty, and **Save**.
       (**Import from key file** works too; press ⌘⇧. to show the hidden `~/.ssh` folder.)

@@ -115,7 +115,7 @@ func TestDuplicateKeyNameAcrossProfilesIsAllowed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// personal + adelsaiq share the basename; simtabi is a third distinct key.
+	// personal + clientco share the basename; simtabi is a third distinct key.
 	if len(refs) != 3 {
 		t.Fatalf("KeyRefs = %v, want one entry per distinct profile/key", refs)
 	}
@@ -133,12 +133,12 @@ func TestResolveKeySelector(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Run("composite form picks the named profile", func(t *testing.T) {
-		ref, err := m.ResolveKeySelector("adelsaiq/imani_github-ed25519")
+		ref, err := m.ResolveKeySelector("clientco/imani_github-ed25519")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if ref.Profile != "adelsaiq" {
-			t.Errorf("profile = %q, want adelsaiq", ref.Profile)
+		if ref.Profile != "clientco" {
+			t.Errorf("profile = %q, want clientco", ref.Profile)
 		}
 	})
 	t.Run("bare name resolves when only one profile uses it", func(t *testing.T) {
@@ -156,7 +156,7 @@ func TestResolveKeySelector(t *testing.T) {
 			t.Fatal("expected an ambiguity error")
 		}
 		// The message must name the candidates - the caller has to retype one.
-		for _, want := range []string{"adelsaiq/imani_github-ed25519", "personal/imani_github-ed25519"} {
+		for _, want := range []string{"clientco/imani_github-ed25519", "personal/imani_github-ed25519"} {
 			if !strings.Contains(err.Error(), want) {
 				t.Errorf("error %q does not offer %q", err, want)
 			}
@@ -175,14 +175,14 @@ func TestResolveKeySelector(t *testing.T) {
 // is unique - enough to exercise both the ambiguous and unambiguous paths.
 const dupKeyManifest = `{"profiles":{
 	"personal":{"hosts":[{"alias":"github-imani","hostname":"github.com","user":"git","key_name":"imani_github-ed25519"}]},
-	"adelsaiq":{"hosts":[{"alias":"github-danniela","hostname":"github.com","user":"git","key_name":"imani_github-ed25519"}]},
+	"clientco":{"hosts":[{"alias":"github-danniela","hostname":"github.com","user":"git","key_name":"imani_github-ed25519"}]},
 	"simtabi":{"hosts":[{"alias":"github-simtabi","hostname":"github.com","user":"git","key_name":"simtabi_github-ed25519"}]}}}`
 
 // A profile declares two keys: one its host uses, one no host references yet.
 // The unwired key is the whole point of the list - it exists nowhere else in the
 // manifest, so KeyRefs is the only thing that can surface it.
 const declaredKeysManifest = `{"profiles":{
-	"adelsaiq":{"key_scope":"per_service",
+	"clientco":{"key_scope":"per_service",
 		"keys":[
 			{"name":"imani_github-ed25519","type":"ed25519","rotate_after_days":180},
 			{"name":"imani_spare-ed25519"}
@@ -200,10 +200,10 @@ func TestDeclaredKeysAreUnionedIntoKeyRefs(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Host-derived first within a profile, then the declared-only key; profiles
-	// in file order (adelsaiq before personal).
+	// in file order (clientco before personal).
 	want := []KeyRef{
-		{Profile: "adelsaiq", KeyName: "imani_github-ed25519"},
-		{Profile: "adelsaiq", KeyName: "imani_spare-ed25519"},
+		{Profile: "clientco", KeyName: "imani_github-ed25519"},
+		{Profile: "clientco", KeyName: "imani_spare-ed25519"},
 		{Profile: "personal", KeyName: "imani_github-ed25519"},
 	}
 	if len(refs) != len(want) {
@@ -219,8 +219,8 @@ func TestDeclaredKeysAreUnionedIntoKeyRefs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unwired key should resolve: %v", err)
 	}
-	if ref.Profile != "adelsaiq" {
-		t.Errorf("profile = %q, want adelsaiq", ref.Profile)
+	if ref.Profile != "clientco" {
+		t.Errorf("profile = %q, want clientco", ref.Profile)
 	}
 	hosts, err := m.HostsForKey(ref)
 	if err != nil {
@@ -236,7 +236,7 @@ func TestDeclaredKeyOverridesInheritDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	declared := KeyRef{Profile: "adelsaiq", KeyName: "imani_github-ed25519"}
+	declared := KeyRef{Profile: "clientco", KeyName: "imani_github-ed25519"}
 	if got := m.RotateAfterDaysFor(declared); got != 180 {
 		t.Errorf("rotate_after_days = %d, want the declared 180", got)
 	}
@@ -245,7 +245,7 @@ func TestDeclaredKeyOverridesInheritDefaults(t *testing.T) {
 	}
 	// Declared with no overrides, and not declared at all, both inherit.
 	for _, ref := range []KeyRef{
-		{Profile: "adelsaiq", KeyName: "imani_spare-ed25519"},
+		{Profile: "clientco", KeyName: "imani_spare-ed25519"},
 		{Profile: "personal", KeyName: "imani_github-ed25519"},
 	} {
 		if got := m.RotateAfterDaysFor(ref); got != m.Defaults.RotateAfterDays {
@@ -477,7 +477,7 @@ func TestProfileNamesAreSafePathSegments(t *testing.T) {
 			t.Errorf("profile name %q was accepted; it becomes a directory", bad)
 		}
 	}
-	if _, err := loadJSON(t, `{"profiles":{"ad-elsaiq":{"key_scope":"per_service","hosts":[]}}}`); err != nil {
+	if _, err := loadJSON(t, `{"profiles":{"client-co":{"key_scope":"per_service","hosts":[]}}}`); err != nil {
 		t.Errorf("an ordinary profile name was rejected: %v", err)
 	}
 }
@@ -554,7 +554,7 @@ func TestSharedKeyNameLoadsAndStaysProfileScoped(t *testing.T) {
 
 	// The hazard v1 named: resolving the shared name must never hand
 	// back one profile's hosts under the other profile's directory.
-	for _, profile := range []string{"personal", "adelsaiq"} {
+	for _, profile := range []string{"personal", "clientco"} {
 		ref := KeyRef{Profile: profile, KeyName: "imani_github-ed25519"}
 		hosts, err := m.HostsForKey(ref)
 		if err != nil {
@@ -715,7 +715,7 @@ func TestAliasHostnameUserRejectWhatSSHRefuses(t *testing.T) {
 // aliases, short user names.
 func TestOrdinaryHostValuesStillValidate(t *testing.T) {
 	js := `{"profiles":{"p":{"hosts":[
-		{"alias":"oribi-web","hostname":"143.198.186.131","user":"ploi"},
+		{"alias":"oribi-web","hostname":"203.0.113.23","user":"ploi"},
 		{"alias":"github-imanimanyara","hostname":"github.com","user":"git"},
 		{"alias":"unc-sc","hostname":"sc.its.unc.edu","user":"uncgit"},
 		{"alias":"v6","hostname":"2001:db8::1","user":"deploy_bot"}]}}}`

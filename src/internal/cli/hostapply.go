@@ -30,12 +30,12 @@ Specs come from any mix of:
 The batch is checked by the manifest's own validation and saved at once, so one
 bad spec changes nothing. --reconcile mints the new hosts' keys afterwards.`
 
-const hostApplyExample = `  authama ssh host apply adelsaiq dani-prd-web-00 206.189.185.129 ploi web
-  authama ssh host apply adelsaiq \
-      --host "dani-prd-web-00 206.189.185.129 ploi web" \
-      --host "dani-prd-db-00  137.184.219.1   ploi db" --tag prd --reconcile
-  authama ssh host apply adelsaiq -f hosts.txt --create-profile --category clients
-  printf 'bastion 10.0.0.5:2222 admin\n' | authama ssh host apply adelsaiq -f - --dry-run`
+const hostApplyExample = `  authama ssh host apply clientco web-01 203.0.113.21 ploi web
+  authama ssh host apply clientco \
+      --host "web-01 203.0.113.21 ploi web" \
+      --host "db-01  203.0.113.22 ploi db" --tag prd --reconcile
+  authama ssh host apply clientco -f hosts.txt --create-profile --category clients
+  printf 'bastion 10.0.0.5:2222 admin\n' | authama ssh host apply clientco -f - --dry-run`
 
 func newHostApplyCmd() *cobra.Command {
 	var specLines, extraTags []string

@@ -53,7 +53,7 @@ func systemClipboardWrite(text string) error {
 }
 
 // termiusKeyLabel is the label to give the key in Termius: the key file's
-// basename (adelsaiq_dani-prd-db-00-ed25519), so the keychain entry says which
+// basename (clientco_db-01-ed25519), so the keychain entry says which
 // file it came from.
 func termiusKeyLabel(k renderer.TermiusKey) string {
 	return strings.TrimSuffix(filepath.Base(k.KeyFile), ".pub")
@@ -74,7 +74,7 @@ func newTermiusKeysCmd() *cobra.Command {
 			"host's private key to the clipboard (pbcopy, wl-copy/xclip/xsel, or clip) and prints\n" +
 			"the label; the key itself is never printed unless --print is given.",
 		Example: "  authama ssh termius keys\n" +
-			"  authama ssh termius keys dani-prd-db-00 --clear-after 60s\n" +
+			"  authama ssh termius keys db-01 --clear-after 60s\n" +
 			"  authama ssh termius keys --clear",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
