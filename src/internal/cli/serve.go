@@ -41,9 +41,8 @@ func newServeCmd() *cobra.Command {
 		tokenFile   string
 	)
 	cmd := &cobra.Command{
-		Use:     "serve",
-		Aliases: []string{"ui"},
-		Short:   "Open the web UI on this machine",
+		Use:   "serve",
+		Short: "Open the web UI on this machine",
 		Long: "Open the web UI on this machine: an overview, the profiles, hosts and keys, the\n" +
 			"snapshots, the operation history, and the doctor and audit reports.\n\n" +
 			"Changes - adding, editing and deleting profiles, hosts and keys, and re-rendering\n" +

@@ -270,3 +270,15 @@ func Describe(target, host string) string {
 	}
 	return role
 }
+
+// LoadCatalogServices is the Composer service -> mechanism map.
+func LoadCatalogServices() map[string]string {
+	out := map[string]string{}
+	for k, v := range cat().Services {
+		out[k] = v
+	}
+	return out
+}
+
+// IsTokenMechanism reports whether a Composer mechanism stores one token.
+func IsTokenMechanism(m string) bool { return cat().TokenMechanisms[m] }

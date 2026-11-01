@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 	"os"
 
 	"github.com/simtabi/ssh-manager/src/v3/internal/platform"
@@ -62,7 +63,7 @@ func Execute() {
 		return
 	}
 	if !silent(err) {
-		fmt.Fprintln(os.Stderr, "sshmgr:", err)
+		fmt.Fprintln(os.Stderr, brand.Command+":", err)
 	}
 	os.Exit(1)
 }

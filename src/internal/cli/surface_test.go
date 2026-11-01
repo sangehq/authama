@@ -7,6 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
+	"github.com/simtabi/ssh-manager/src/v3/internal/brand"
 )
 
 // The command surface, checked against the implementation it was ported from.
@@ -218,12 +220,68 @@ var goOnly = map[string]string{
 	"clean --dry-run":        "D1",
 	"clean --adopt":          "D1",
 	"rotate --no-key-backup": "as keygen",
+
+	// The token group (4.0.0): auth-token-manager's CLI, ported. Each verb is
+	// one of its flags-as-actions; see docs/tools/tokens.md for the mapping.
+	"token inventory":                 "tokens - atm --list: what the credential files hold, masked",
+	"token inventory --json":          "tokens - atm --list --json",
+	"token inventory --reveal":        "tokens - atm --show-secrets",
+	"token inventory --yes":           "tokens - atm --yes: reveal without asking",
+	"token inventory --target":        "tokens - atm --target",
+	"token inventory --project":       "tokens - atm --project",
+	"token store":                     "tokens - atm --add",
+	"token store --target":            "tokens - atm --target",
+	"token store --service":           "tokens - atm --service",
+	"token store --server":            "tokens - atm --host, renamed: ssh's --host is a host alias, not a server",
+	"token store --username":          "tokens - atm --username",
+	"token store --scope":             "tokens - atm --scope",
+	"token store --project":           "tokens - atm --project",
+	"token store --creds-store-mode":  "tokens - docker credential stores: docker login or refuse (security fix)",
+	"token forget":                    "tokens - atm --remove",
+	"token forget --project":          "tokens - atm --project",
+	"token clip":                      "tokens - atm --copy",
+	"token clip --project":            "tokens - atm --project",
+	"token sync":                      "tokens - atm's default action: resolve the config and write the files",
+	"token sync --config":             "tokens - atm --config",
+	"token sync --target":             "tokens - atm --target",
+	"token sync --project":            "tokens - atm --project",
+	"token sync --source":             "tokens - atm --source",
+	"token sync --exports":            "tokens - atm --env, renamed so env is not a verb with two meanings",
+	"token sync --preview":            "tokens - atm --stdout, masked",
+	"token sync --no-env-hint":        "tokens - atm --no-env-hint",
+	"token sync --creds-store-mode":   "tokens - docker credential stores: docker login or refuse (security fix)",
+	"token skeleton":                  "tokens - atm --template",
+	"token skeleton --project":        "tokens - atm --template --project",
+	"token skeleton --target":         "tokens - atm --target",
+	"token skeleton --preview":        "tokens - atm --template --stdout",
+	"token scaffold":                  "tokens - atm --init",
+	"token scaffold --target":         "tokens - atm --init --target",
+	"token services":                  "tokens - atm --services",
+	"token checkup":                   "tokens - atm --doctor",
+	"token checkup --config":          "tokens - atm --config with --doctor",
+	"token checkup --target":          "tokens - atm --target with --doctor",
+	"token checkup --project":         "tokens - atm --project with --doctor",
+	"token adopt-legacy":              "tokens - move an auth-token-manager config to tokens.json",
+	"token shell-aliases":             "tokens - atm-aliases: the atm shell aliases",
+	"token shell-aliases --install":   "tokens - atm-aliases install",
+	"token shell-aliases --uninstall": "tokens - atm-aliases remove",
+	"token shell-aliases --print":     "tokens - atm-aliases print",
+	"token shell-aliases --file":      "tokens - atm-aliases --file",
+	"token shell-aliases --login":     "tokens - atm-aliases --login",
+	"token shell-aliases --no-backup": "tokens - atm-aliases --no-backup",
+	"token shell-aliases --quiet":     "tokens - atm-aliases --quiet",
 }
 
-// walk collects the tree as "parent child" -> long flag names.
+// walk collects the tree as "parent child" -> long flag names. The ssh group
+// is walked as if its verbs were top-level, which they were in v1 and still
+// are as hidden spellings: v1's "config check" is "ssh config check" now.
 func walk(c *cobra.Command, prefix string, out map[string][]string) {
 	for _, sub := range c.Commands() {
 		if sub.Hidden || sub.Name() == "help" || sub.Name() == "completion" {
+			continue
+		}
+		if !c.HasParent() && sub.Name() == sshGroup {
+			walk(sub, prefix, out)
 			continue
 		}
 		name := strings.TrimSpace(prefix + " " + sub.Name())
@@ -246,7 +304,7 @@ func TestTheCommandSurfaceMatchesTheOneItReplaced(t *testing.T) {
 	// Groups exist only to hold subcommands; v1 had them as sub-apps
 	// with no flags of their own.
 	groups := map[string]bool{"config": true, "profile": true, "host": true,
-		"notify": true, "snapshots": true, "knownhosts": true, "key": true}
+		"notify": true, "snapshots": true, "knownhosts": true, "key": true, "token": true}
 
 	// 1. Everything v1 had, Go still has - verb and flag.
 	for verb, want := range v1Surface {
@@ -381,7 +439,7 @@ func TestFlagUsageHasNoBackticks(t *testing.T) {
 // verb is an error rather than a silent no-op.
 func TestTheRootAnswersVersionAndRejectsAnUnknownVerb(t *testing.T) {
 	editHome(t)
-	if out := run(t, "--version"); !strings.Contains(out, "sshmgr") {
+	if out := run(t, "--version"); !strings.Contains(out, brand.Command) {
 		t.Errorf("--version printed %q", out)
 	}
 	if _, err := runErr(t, "no-such-verb"); err == nil {
