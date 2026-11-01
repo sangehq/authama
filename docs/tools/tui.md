@@ -56,31 +56,51 @@ Entries are grouped by consequence, not by frequency — everything above *Chang
 
 ```
   Inspect
-   1  Browse profiles & hosts         list
-   2  Show the rendered config        config show
-   3  Expiry status                   expiry
-   4  Audit deployments & expiry      audit
+   1  Browse profiles & hosts         ssh list
+   2  Show the rendered config        ssh config show
+   3  Expiry status                   ssh expiry
+   4  Audit deployments & expiry      ssh audit
 
   Change ~/.ssh   (each one asks before it writes)
-   5  Reconcile - apply the manifest  reconcile
-   6  Pin host keys into known_hosts  knownhosts init --all
-   7  Deploy a key to its target      deploy
-   8  Rotate a key                    rotate
+   5  Reconcile - apply the manifest  ssh reconcile
+   6  Pin host keys into known_hosts  ssh knownhosts init --all
+   7  Deploy a key to its target      ssh deploy
+   8  Rotate a key                    ssh rotate
 
   Recover
-   9  Snapshots - list and restore    snapshots
+   9  Snapshots - list and restore    ssh snapshots
+
+  Auth tokens   (each one asks before it writes)
+  10  List installed tokens           token inventory
+  11  Check the token files           token checkup
+  12  Copy a token to the clipboard   token clip
+  13  Store a token                   token store
+  14  Sync tokens from the config     token sync
+  15  Forget a token                  token forget
 
    q  Quit
 ```
 
 The right-hand column is the CLI verb that does the same thing, and it is also
 an accepted answer — typing what is on screen is never a dead end. So `5`,
-`reconcile`, and the full label all select the same entry.
+`ssh reconcile`, `reconcile` and the full label all select the same entry, as
+do `10`, `token inventory` and `inventory`.
 
 Entry 6 runs `knownhosts init --all`: a trust-on-first-use scan of every manifest
 host. Earlier releases listed it as `knownhosts pin`, which is a different command
 (it asks about each key and needs a host or `--all`); that answer still selects
 the entry.
+
+## Auth tokens
+
+The last group is the token side, the menu `auth-token-manager --ui` used to
+be. *List* masks every secret; *Check* writes nothing. *Store* asks for the
+tool, the server and (where the tool needs one) a user name, then reads the
+token without echoing it. *Sync* writes every target in the token config, and
+*Forget* picks an installed entry from a list and asks before removing it. To
+edit an entry, store it again: a store replaces the entry for that server. Each
+applies the same checks as its `authama token` command, and in dev mode every
+file is the sandbox's.
 
 ## Answering it
 

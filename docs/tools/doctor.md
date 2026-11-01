@@ -1,7 +1,7 @@
 # `doctor` — check, and repair, the managed tree
 
-Twelve checks over the environment, the config home and `~/.ssh`, with an exit
-code that is a verdict rather than a success flag.
+Twelve checks over the environment, the config home and `~/.ssh`, then the
+auth-token files, with an exit code that is a verdict rather than a success flag.
 
 ```sh
 authama doctor           # report
@@ -33,6 +33,7 @@ authama doctor --strict  # every dangling-key state is fatal (CI)
 | dangling keys | declared-but-missing, half a pair, on disk but untracked, unwired |
 | duplicate keys | the same key material under two profiles |
 | stale predecessors | archived keys older than `SSH_MANAGER_OLD_KEY_MAX_AGE_DAYS` |
+| auth tokens | after the SSH report, under `=== auth tokens ===`: each installed credential file (Composer's `auth.json`, `.npmrc`, Docker's `config.json`, `.git-credentials`, `.netrc`) and whether it is owner-only. A file others can read fails the verdict. The same check, plus `.gitignore` coverage for a project, is `authama token checkup` |
 
 ## Exit codes
 
@@ -40,6 +41,10 @@ authama doctor --strict  # every dangling-key state is fatal (CI)
 `doctor` succeeded either way. Everything else in the tool uses 1 for failure, so
 a script that only wants to know "did it run" should check for output rather than
 the code.
+
+A token file with a loose mode is also a failure. That check arrived with the
+token feature, so a machine whose `~/.npmrc` is group-readable passes on sshmgr
+v3 and fails here until `doctor --fix` (or a `chmod 600`) tightens it.
 
 Without `--strict`, a key that is declared but has never been minted is a warning
 and does not fail the run: it is an ordinary state on a machine that has not
@@ -49,7 +54,8 @@ it usable as a CI gate.
 ## `--fix`
 
 Repairs permissions, and only permissions. It re-asserts the canonical mode on
-every managed path in `~/.ssh` and on the config-home secrets — the same
+every managed path in `~/.ssh`, on the config-home secrets and on the installed
+token files (0600) — the same
 enumeration the check walks, so the two cannot disagree about what is managed.
 
 It does not mint keys, render config or pin hosts. Those are `reconcile` and
@@ -69,6 +75,14 @@ Keys: `ok`, `home`, `ssh_dir`, `preflight_ok`, `providers_source`, `agent`,
 `unpinned_hosts`, `alias_collisions`, `stale_proxy`, `old_keys`, `stale_old_keys`,
 `dangling_keys`, `stranded_legacy_home`, `shadowed_hosts`, `raw_option_overlaps`, `needed_tools`, `clipboard` (`null` when a
 clipboard tool was found).
+
+`tokens` is `{"ok": bool, "findings": [{"level", "target", "text"}]}`. Its `ok` is
+separate from the top-level `ok`, which stays the SSH verdict; the exit code
+fails if either is false:
+
+```sh
+authama doctor --json | jq -e '.ok and .tokens.ok'
+```
 
 Diagnostics go to stderr, so the document on stdout is always parseable.
 

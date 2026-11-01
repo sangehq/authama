@@ -1,7 +1,7 @@
 # `serve`
 
 `authama serve` opens a web UI for one authama home in a browser on this machine. It shows everything,
-and makes the everyday manifest changes, each previewed before it is made.
+and makes the everyday manifest and auth-token changes, each previewed before it is made.
 
 ## Starting it
 
@@ -29,12 +29,13 @@ when that port is taken.
 
 | Page | Shows |
 |---|---|
-| Overview | the rows the `sshmgr` menu prints at the top, each problem with the command that fixes it; counts; keys due for rotation; recent changes |
+| Overview | the rows the `authama tui` menu prints at the top, each problem with the command that fixes it; counts; keys due for rotation; recent changes |
 | Profiles | each profile's category, key scope, key store, and host and key counts |
 | Hosts | every host by profile. A host's page shows its manifest entry, its deployments, the block rendered into `~/.ssh/config`, and the host keys pinned for it |
 | Keys | every key with its fingerprint and expiry. A key's page shows where the key is deployed and every operation that touched it |
 | Snapshots | every snapshot. A snapshot's page diffs it against `~/.ssh` now or against another snapshot |
 | History | the [`history`](history.md), filtered the same way. An operation's page shows its events and the manifest before and after |
+| Tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret) and the token checkup, as `authama token inventory` and `authama token checkup` print, and which token config is in use |
 | Doctor, Audit | the reports `authama doctor` and `authama ssh audit` print |
 
 ## Changes
@@ -66,6 +67,13 @@ These changes can be made from the pages:
 | Write an encrypted bundle | Snapshots | `authama ssh bundle [--keep]` |
 | Send the desktop alert, if one is due | Audit | `authama ssh audit --notify` |
 | Send a test notification | Audit | `authama ssh notify test` |
+| Remove an installed token | Tokens | `authama token forget <target> <host>` |
+| Write the token config's credential files | Tokens | `authama token sync` (a Docker registry in a credential store follows `_settings.docker_creds_store`, and is refused when it is unset, since a page cannot prompt) |
+
+The token sync resolves secrets from the environment `authama serve` was started
+in, so a variable set in another terminal is not seen. Storing, revealing and
+copying a token stay in the terminal (`token store`, `token inventory --reveal`,
+`token clip`): a page never receives or shows a secret.
 
 Each change takes two steps:
 
@@ -167,7 +175,7 @@ Some changes are terminal-only:
 ## What it will not do
 
 - **Hold the lock while you read.** It holds the lock only while it checks and makes a change you
-  confirmed. The `sshmgr` menu now does the same.
+  confirmed. The `authama tui` menu now does the same.
 - **Open a snapshot that holds private keys.** A snapshot written before private keys were left out
   is listed but never opened. `authama ssh snapshots prune --keep 0` removes it.
 - **Show private keys.** Pages read public keys, `known_hosts` and config only.
