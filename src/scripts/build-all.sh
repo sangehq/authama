@@ -4,10 +4,11 @@
 # Regenerates build/targets.txt from an embedded matrix and produces, under
 # build/dist/:
 #
-#   sshmgr_{os}_{arch}[.exe]        flat, versionless, ready-to-run binaries
-#   sshmgr_macos_universal          Intel + Apple Silicon fat binary (on macOS)
+#   authama_{os}_{arch}[.exe]       flat, versionless, ready-to-run binaries,
+#   sshmgr_{os}_{arch}[.exe]        and the same program under its v3 name
+#   {authama,sshmgr}_macos_universal  Intel + Apple Silicon fat binaries (on macOS)
 #   checksums.txt                   SHA-256 over the bare binaries (bare names)
-#   archives/sshmgr_{os}_{arch}.{tar.gz,zip}   binary + LICENSE/README/CHANGELOG
+#   archives/sshmgr_{os}_{arch}.{tar.gz,zip}   both binaries + LICENSE/README/CHANGELOG
 #   archives/checksums.txt          SHA-256 over the archives
 #
 # Naming: darwin -> macos, arm -> armvN, .exe on windows. Static
@@ -34,7 +35,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 REPO_ROOT=".."
 
+# The archive name stays sshmgr_ (the v3 asset names); both binaries go in it.
 BINARY="sshmgr"
+BINARIES="authama sshmgr"
 PKG="github.com/simtabi/ssh-manager/src/v3/internal/version"
 BUILD_DIR="${REPO_ROOT}/build"
 OUT="${BUILD_DIR}/dist"
@@ -119,13 +122,17 @@ else
   echo "==> regenerated ${TARGETS_FILE}"
 fi
 
-# make_archive <bare-binary-filename> <goos>
+# make_archive <sshmgr-bare-binary-filename> <goos>: both binaries, under their
+# plain names, plus the docs.
 make_archive() {
   [ "$WITH_ARCHIVES" = "1" ] || return 0
   bin="$1"; goos="$2"
   base="${bin%.exe}"                      # sshmgr_macos_arm64
+  ext="";  [ "$goos" = "windows" ] && ext=".exe"
   stage="$(mktemp -d)"
-  cp "${OUT}/${bin}" "${stage}/${bin}"
+  for b in $BINARIES; do
+    cp "${OUT}/${b}${bin#"${BINARY}"}" "${stage}/${b}${ext}"
+  done
   # shellcheck disable=SC2086
   [ -n "$EXTRAS" ] && cp $EXTRAS "${stage}/"
   if [ "$goos" = "windows" ]; then
@@ -155,12 +162,13 @@ while IFS=$' \t\r' read -r goos goarch goarm || [ -n "${goos:-}" ]; do
   arch_token="$goarch"; [ "$goarch" = "arm" ] && arch_token="armv${goarm}"
   ext="";             [ "$goos" = "windows" ] && ext=".exe"
 
+  for b in $BINARIES; do
+    printf '  -> %-32s' "${b}_${os_token}_${arch_token}${ext}"
+    GOOS="$goos" GOARCH="$goarch" GOARM="${goarm:-}" CGO_ENABLED=0 \
+      go build -trimpath -ldflags "$LDFLAGS" -o "${OUT}/${b}_${os_token}_${arch_token}${ext}" "./cmd/${b}"
+    echo "ok"
+  done
   name="${BINARY}_${os_token}_${arch_token}${ext}"
-  printf '  -> %-32s' "$name"
-
-  GOOS="$goos" GOARCH="$goarch" GOARM="${goarm:-}" CGO_ENABLED=0 \
-    go build -trimpath -ldflags "$LDFLAGS" -o "${OUT}/${name}" ./cmd/sshmgr
-  echo "ok"
 
   make_archive "$name" "$goos"
   count=$((count + 1))
@@ -173,23 +181,24 @@ done <<< "$MATRIX"
 # --- macOS universal (Intel + Apple Silicon in one binary) -------------------
 if [ "$have_macos_amd64" = 1 ] && [ "$have_macos_arm64" = 1 ]; then
   if command -v lipo >/dev/null 2>&1; then
-    uni="${BINARY}_macos_universal"
-    printf '  -> %-32s' "$uni"
-    lipo -create -output "${OUT}/${uni}" \
-      "${OUT}/${BINARY}_macos_amd64" "${OUT}/${BINARY}_macos_arm64"
-    echo "ok"
-    make_archive "$uni" "darwin"
+    for b in $BINARIES; do
+      printf '  -> %-32s' "${b}_macos_universal"
+      lipo -create -output "${OUT}/${b}_macos_universal" \
+        "${OUT}/${b}_macos_amd64" "${OUT}/${b}_macos_arm64"
+      echo "ok"
+    done
+    make_archive "${BINARY}_macos_universal" "darwin"
   else
     echo "  ! 'lipo' not available (non-macOS host) — skipping macos_universal" >&2
   fi
 fi
 
 # --- checksums (bare names so install scripts / self-update can look up) ------
-( cd "$OUT" && sha256 ${BINARY}_* > checksums.txt )
+( cd "$OUT" && sha256 authama_* ${BINARY}_* > checksums.txt )
 echo "==> wrote ${OUT}/checksums.txt"
 if [ "$WITH_ARCHIVES" = "1" ] && ls "${ARCHIVE_DIR}/${BINARY}_"* >/dev/null 2>&1; then
   ( cd "$ARCHIVE_DIR" && sha256 ${BINARY}_* > checksums.txt )
   echo "==> wrote ${ARCHIVE_DIR}/checksums.txt"
 fi
 
-echo "==> done: ${count} binaries in ${OUT}$( [ "$WITH_ARCHIVES" = "1" ] && echo ", archives in ${ARCHIVE_DIR}" )"
+echo "==> done: ${count} targets (each: ${BINARIES}) in ${OUT}$( [ "$WITH_ARCHIVES" = "1" ] && echo ", archives in ${ARCHIVE_DIR}" )"
