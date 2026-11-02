@@ -49,6 +49,11 @@ main:focus { outline: none; }
    tint (found by e2e/web's axe pass, on the host page's delete button). */
 .btn-outline-danger { --tblr-btn-variant: #b42020; }
 
+/* Link buttons (a preview's Cancel): Tabler's link blue is 3.9:1 on the light
+   page background and 4.4:1 on the dark one. */
+.btn-link { --tblr-btn-color: #1a5fb4; --tblr-btn-hover-color: #144a8c; --tblr-btn-active-color: #144a8c; }
+:root[data-bs-theme=dark] .btn-link { --tblr-btn-color: #79aae7; --tblr-btn-hover-color: #a6cbf6; --tblr-btn-active-color: #a6cbf6; }
+
 /* Code on a tinted background takes the text colour around it: Tabler's
    gray-400 code colour is below 4.5:1 on the warning tints in the dark theme
    (axe: the overview's attention rows and the tokens page's alert). */

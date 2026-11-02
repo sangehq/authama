@@ -21,9 +21,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Referrer-Policy: no-referrer`, under which Chromium sends `Origin: null` on the page's own form
   posts, and the same-origin check refuses that. It now sends `Referrer-Policy: same-origin`, which
   still sends no referrer to another site. Found by the new browser tests.
-- **Three contrast failures in the web UI**, found by the axe pass: the outline delete button on a
-  card footer in the light theme, and `code` in the overview's attention rows and in alerts in the
-  dark theme.
+- **Four contrast failures in the web UI**, found by the axe pass: the outline delete button on a
+  card footer in the light theme, the Cancel link button on a review page in both themes, and `code`
+  in the overview's attention rows and in alerts in the dark theme.
 - **Docs corrected against the code.** SECURITY.md no longer says a key passphrase goes on
   `ssh-keygen`'s command line (it goes through askpass and stdin) or that each profile has its own
   `known_hosts` (there is one hashed store). `.state/`, `dist/` and the `init --backup` copy are
