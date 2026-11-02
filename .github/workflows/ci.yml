@@ -39,6 +39,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # A macOS leg that GitHub never gives a runner fails after about 15
+        # minutes with no step run; requeue.yml re-runs it once.
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v7
@@ -213,7 +215,8 @@ jobs:
             src/scripts/install.sh \
             src/scripts/build-all.sh \
             src/scripts/extract-changelog.sh \
-            src/internal/services/recover/fixkeys.sh
+            src/internal/services/recover/fixkeys.sh \
+            .github/scripts/requeue-stranded.sh
       - name: PowerShell parses
         shell: pwsh
         run: |
