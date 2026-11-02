@@ -80,6 +80,3 @@ func newNotifyCmd() *cobra.Command {
 
 // schedulerExe is the quoted invocation for the scheduled job; see scheduler.Exe.
 func schedulerExe() string { return scheduler.Exe() }
-
-// shellQuote quotes a string for POSIX shells; see scheduler.ShellQuote.
-func shellQuote(s string) string { return scheduler.ShellQuote(s) }

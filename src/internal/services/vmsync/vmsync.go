@@ -59,17 +59,16 @@ type Action struct {
 	Detail  string // the line a plan prints
 
 	// What the step needs to run.
-	driver   hypervisor.Driver
-	vm       string
-	user     string
-	pubLine  string
-	token    string
-	scanned  []knownhosts.ScannedKey
-	context  dockerctx.Context
-	devbox   settings.Devbox
-	keySrc   string // adopt-key: the loose private key path
-	keyName  string
-	guestWin bool
+	driver  hypervisor.Driver
+	vm      string
+	user    string
+	pubLine string
+	token   string
+	scanned []knownhosts.ScannedKey
+	context dockerctx.Context
+	devbox  settings.Devbox
+	keySrc  string // adopt-key: the loose private key path
+	keyName string
 }
 
 // Outside reports whether the action acts outside the manifest and config
