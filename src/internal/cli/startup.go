@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/core/hypervisor"
 	"github.com/simtabi/authama/src/internal/services/migratesvc"
 	"github.com/simtabi/authama/src/internal/services/settings"
 	"github.com/simtabi/authama/src/internal/util/envnames"
@@ -94,6 +95,9 @@ func startup(c *cobra.Command, _ []string) error {
 	st.Settings, st.SettingsErr = settings.LoadFile(p.SettingsFile())
 	if st.SettingsErr == nil {
 		st.Applied = st.Settings.Apply(settings.Env{})
+		if st.Settings != nil {
+			hypervisor.Register(st.Settings.VM.Hypervisors)
+		}
 	}
 	// The state home may have come from one of the files.
 	if p2, err := quietPaths(c); err == nil {

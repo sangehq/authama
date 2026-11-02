@@ -22,6 +22,9 @@ a sandbox). Run all three with `make test e2e feature-check`.
   expiry reminders, and snapshots of `~/.ssh` before every write.
 - **Trust and reachability.** Host-key pinning (`knownhosts`), VPN-gated hosts
   (`net`), Cloudflare Access proxies, and local VMs addressed by name (`vm`).
+- **Self-maintaining VM hosts.** `vm sync` (daily, or from `doctor --fix`) re-pins, re-installs keys,
+  refreshes Docker contexts and drops hosts whose VM is gone, with backups; the hypervisors you use
+  are configured, any other VM tool plugs in as a command driver, and `vm adopt-key` adopts a loose key.
 - **Backups and recovery.** `age`-encrypted bundles, restore onto a new machine,
   and a break-glass `recover` script.
 - **Auth tokens.** `auth.json`, `.npmrc`, Docker `config.json`,
@@ -101,7 +104,7 @@ project-local mode. See [installation.md](installation.md) for the full layout.
 | `net [selector]` | Per-host connection status + a VPN/tunnel indicator. Exit ≠0 if a `requires_vpn` host is unreachable. | U·F |
 | `expiry` | Per-key rotation-age table (ok / due_soon / overdue), from each key's stored `expires_on`. | U·E·F |
 | `audit [--notify]` | Where each key is deployed + expiry + hygiene + recent activity (optionally fire a desktop alert). | U·E·F |
-| `serve [--addr/--port/--allow-remote/--allow-host/--read-only/--no-open/--token-file]` | The web UI on `127.0.0.1:7822`: overview, profiles, hosts, keys, auth tokens, snapshots and their diffs, history, doctor, audit. Makes the everyday changes, each previewed on a throwaway copy and made only if nothing moved since: profiles and hosts (one at a time or from specs), categories, deletes with or without key files, reconcile, keygen, key add, render, clean, prune, snapshot restore, bundles, doctor `--fix`, Docker contexts, notifications, token sync and forget. Runs deploy, rotate (one key or many), rollback and bundle restore as jobs, with their output streamed. Downloads the flat `ssh_config` and the Termius CSV. Signs in with the token in the printed address. | U |
+| `serve [--addr/--port/--allow-remote/--allow-host/--read-only/--no-open/--token-file]` | The web UI on `127.0.0.1:7822`: overview, profiles, hosts, keys, VMs, auth tokens, snapshots and their diffs, history, doctor, audit. Makes the everyday changes, each previewed on a throwaway copy and made only if nothing moved since: profiles and hosts (one at a time or from specs), categories, deletes with or without key files, reconcile, keygen, key add, render, clean, prune, snapshot restore, bundles, doctor `--fix`, VM sync, key adoption and the daily-sync schedule, Docker contexts, notifications, token sync and forget. Runs deploy, rotate (one key or many), rollback and bundle restore as jobs, with their output streamed. Downloads the flat `ssh_config` and the Termius CSV. Signs in with the token in the printed address. | U |
 | `history [--host/--profile/--key/--since/--until/--command/--source/--limit/--json]`, `history show <op>` | Every change authama has made (SSH or token), newest first, from `log/history.db`: command, result, snapshot, audit events, and the manifest before and after. The first run imports `audit.log`, the inventory's dates and the snapshots. | U |
 
 ## Deploy, rotate, network/VPN
@@ -148,6 +151,8 @@ bounded SSH-level reachability probe first, so a down or VPN-gated host (includi
 | `vm list` | Every installed hypervisor's VMs, and which manifest host uses each; missing hypervisors say so. | U·F |
 | `vm add PROFILE ALIAS --hypervisor H --vm NAME -u USER [--key-name] [-y]` | Add a local VM as a host; its address is resolved at connect time through `ProxyCommand "<authama>" vm proxy ALIAS`. | U·F |
 | `vm docker-context ALIAS` | Create or update a Docker context `ssh://ALIAS` for a VM host. | U·F |
+| `vm sync [-n] [-y] [-q] [--no-probe] [--repin] [--install-schedule\|--remove-schedule]` | Keep every VM host matching its VM: pin, re-install a missing guest key, refresh its Docker context; remove the host and context of a VM that is gone (backed up first); leave suspended and stopped VMs alone. | U·F |
+| `vm adopt-key [KEY [PROFILE [ALIAS]]] [--hypervisor] [--vm] [-u] [--move] [--docker-context] [-n] [-y]` | Copy a loose `~/.ssh` key into a profile as a new VM host's key; asks for what is missing at a terminal. | U·F |
 | `notify install\|test [-y]` | Scheduled desktop expiry reminders (launchd / systemd-user-or-cron / schtasks). | U·F |
 | `tui` (or a bare `authama` on a terminal) | Interactive arrow-key UI over the whole facade, SSH and auth tokens. | U |
 

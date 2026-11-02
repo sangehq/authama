@@ -134,6 +134,28 @@ var goOnly = map[string]string{
 	"vm add --yes":        "confirm-before-changing",
 	"vm docker-context":   "devboxes - Docker context ssh://<alias>",
 
+	// VM upkeep (0.1.3): keep VM hosts in line with their hypervisors, and
+	// adopt a loose key onto a VM.
+	"vm sync":                       "vm-sync - reconcile VM hosts with their hypervisors",
+	"vm sync --dry-run":             "vm-sync - show the plan only",
+	"vm sync --yes":                 "confirm-before-changing",
+	"vm sync --quiet":               "vm-sync - quiet when nothing changed, for a schedule",
+	"vm sync --repin":               "vm-sync - replace a changed guest host key pin",
+	"vm sync --no-probe":            "vm-sync - ask the hypervisors only, connect to no guest",
+	"vm sync --install-schedule":    "vm-sync - daily job with launchd, systemd/cron or Task Scheduler",
+	"vm sync --remove-schedule":     "vm-sync - remove the daily job",
+	"vm adopt-key":                  "vm-sync - adopt a loose keypair onto a VM host",
+	"vm adopt-key --hypervisor":     "vm-sync - which hypervisor",
+	"vm adopt-key --vm":             "vm-sync - the VM's name",
+	"vm adopt-key --user":           "vm-sync - guest user",
+	"vm adopt-key --key-name":       "vm-sync - the key's name in the profile",
+	"vm adopt-key --move":           "vm-sync - move rather than copy the loose files",
+	"vm adopt-key --docker-context": "vm-sync - also make the Docker context",
+	"vm adopt-key --dry-run":        "vm-sync - show the plan only",
+	"vm adopt-key --yes":            "confirm-before-changing",
+	"doctor --dry-run":              "vm-sync - show what --fix would do",
+	"doctor --yes":                  "confirm-before-changing",
+
 	// Exports (3.4.0): copies for tools that cannot read the split config. Neither
 	// touches ~/.ssh; both refuse a file `config render` owns as their target.
 	"config export":                "exports - the config as one file for another tool",

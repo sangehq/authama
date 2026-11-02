@@ -1,6 +1,7 @@
 package change
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +15,7 @@ import (
 	"github.com/simtabi/authama/src/internal/services/doctor"
 	"github.com/simtabi/authama/src/internal/services/editor"
 	"github.com/simtabi/authama/src/internal/services/history"
+	"github.com/simtabi/authama/src/internal/services/knownhosts"
 	"github.com/simtabi/authama/src/internal/services/reconciler"
 	"github.com/simtabi/authama/src/internal/services/snapshots"
 	"github.com/simtabi/authama/src/internal/util/fs"
@@ -251,6 +253,7 @@ func SnapshotsPrune(keep int) Change {
 // DoctorFix is the --fix half of `authama doctor --fix`: set every config-home
 // and ~/.ssh path back to its canonical mode.
 func DoctorFix() Change {
+	vm := VMSync(false)
 	return Change{
 		Command: "doctor", Args: []string{"--fix"},
 		Effects: func(p paths.Paths) ([]string, error) {
@@ -263,12 +266,42 @@ func DoctorFix() Change {
 			if len(out) == 0 {
 				out = append(out, "fixes nothing: every mode is already right")
 			}
+			sync, err := vm.Effects(p)
+			if err != nil {
+				return nil, err
+			}
+			for _, l := range sync {
+				if l != "changes nothing outside the manifest" {
+					out = append(out, "vm sync: "+l)
+				}
+			}
 			return out, nil
 		},
+		OnApply: vm.OnApply,
 		Run: func(p paths.Paths, out io.Writer) error {
 			m, _ := manifest.Load(p.Manifest())
 			for _, change := range doctor.New(p, m, platform.EmitUseKeychain()).FixPerms() {
 				_, _ = fmt.Fprintln(out, "fixed perms:", change)
+			}
+			if m == nil {
+				return nil
+			}
+			var synced bytes.Buffer
+			if err := vm.Run(p, &synced); err != nil {
+				return err
+			}
+			if !strings.HasPrefix(synced.String(), "manifest: nothing to change") {
+				_, _ = io.Copy(out, &synced)
+			}
+			if m, err := manifest.Load(p.Manifest()); err == nil {
+				kh := knownhosts.New(p.SSHDir)
+				if cands, _ := kh.PruneCandidates(m); len(cands) > 0 {
+					n, err := kh.Prune(m)
+					if err != nil {
+						return err
+					}
+					_, _ = fmt.Fprintf(out, "removed %d stale authama pin(s) from known_hosts\n", n)
+				}
 			}
 			return nil
 		},

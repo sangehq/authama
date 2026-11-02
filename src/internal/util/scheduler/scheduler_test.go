@@ -57,3 +57,21 @@ func TestLabels(t *testing.T) {
 		t.Errorf("delete argv = %q", got)
 	}
 }
+
+func TestVMSyncJobIsItsOwn(t *testing.T) {
+	if s := buildServiceFor(VMSyncLabel, "/x/authama ssh vm sync --quiet --yes"); !strings.Contains(s, "Description=authama VM host sync") {
+		t.Fatalf("service: %s", s)
+	}
+	if s := timerUnitFor(VMSyncLabel); !strings.Contains(s, "OnCalendar=*-*-* 09:30:00") {
+		t.Fatalf("timer: %s", s)
+	}
+	if p := buildPlist(VMSyncLabel, "/x/authama ssh vm sync"); !strings.Contains(p, "<integer>9</integer><key>Minute</key><integer>30</integer>") {
+		t.Fatalf("plist: %s", p)
+	}
+	if p := buildPlist(Label, "/x/authama audit --notify"); !strings.Contains(p, "<integer>9</integer><key>Minute</key><integer>0</integer>") {
+		t.Fatalf("notifier plist moved: %s", p)
+	}
+	if a := schtasksArgs("x", VMSyncLabel); a[9] != "09:30" {
+		t.Fatalf("schtasks: %v", a)
+	}
+}

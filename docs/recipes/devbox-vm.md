@@ -26,6 +26,37 @@ docker --context devbox ps
 
 OrbStack and Podman keep their own SSH and keys; use their contexts instead.
 
+## Already have a key for the VM?
+
+If a key for the devbox already sits loose in `~/.ssh` (say `~/.ssh/devbox-tunnel`), adopt it instead of
+minting a new one. Tell authama which hypervisors you use first, then let it guide you:
+
+```sh
+# .env (or "vm": {"hypervisors": "parallels,vmpal"} in authama.json)
+AUTHAMA_VM_HYPERVISORS="parallels,vmpal"
+
+authama ssh vm adopt-key                        # pick the key, hypervisor, VM and guest user
+# or, non-interactively, previewed first:
+authama ssh vm adopt-key devbox-tunnel devbox devbox --hypervisor parallels \
+  --vm "Ubuntu 24.04" --user dev --docker-context --dry-run
+```
+
+The pair is copied into the profile; the originals stay where they are unless `--move`.
+
+## Keep it up to date
+
+```sh
+authama ssh vm sync --dry-run       # what would change
+authama ssh vm sync                 # pin, re-install the key if the guest lost it, refresh the Docker context
+authama ssh vm sync --install-schedule   # do it daily (sync --quiet --yes)
+```
+
+If the VM is rebuilt, sync puts the key back in the new guest (`--repin` accepts its new host key). If
+the VM is deleted, sync backs up the manifest and removes the host entry and its Docker context; the
+key files stay. A suspended VM is left alone. `authama doctor --fix` runs the same sync. To have sync
+create the host for you on a new machine, declare it in `authama.json`'s `devboxes` section
+(see [`vm`](../tools/vm.md#declaring-devboxes)).
+
 Reference: [`vm`](../tools/vm.md).
 
 ---

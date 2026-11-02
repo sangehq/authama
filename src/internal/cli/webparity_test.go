@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -230,6 +231,79 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 	if runtime.GOOS != "darwin" {
 		notifier = stubs("notify-send", "")
 	}
+	// A VM host whose VM the (stubbed) hypervisor no longer lists.
+	goneVM := func(p paths.Paths) {
+		m, _ := manifest.Load(p.Manifest())
+		prof := m.Profiles["work"]
+		prof.Hosts = append(prof.Hosts, manifest.Host{Alias: "devbox", Hostname: "devbox", User: "dev",
+			VM: &manifest.VMSpec{Hypervisor: "lima", Name: "gone"}})
+		m.SetProfile("work", prof)
+		_ = m.Save(p.Manifest())
+	}
+	limaLists := func(t *testing.T, side string) {
+		stubs("limactl", `[ "$1" = list ] && printf '%s\n' '{"name":"default","status":"Stopped"}'`)(t, side)
+		t.Setenv("AUTHAMA_VM_HYPERVISORS", "lima")
+	}
+	// One loose keypair, the same bytes in both homes.
+	var looseKey, loosePub []byte
+	loose := func(p paths.Paths) {
+		if looseKey == nil {
+			dir, err := os.MkdirTemp("", "loose")
+			if err != nil {
+				return
+			}
+			defer func() { _ = os.RemoveAll(dir) }()
+			k := filepath.Join(dir, "k")
+			if err := exec.Command("ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "docker devbox", "-f", k).Run(); err != nil {
+				return
+			}
+			looseKey, _ = os.ReadFile(k)
+			loosePub, _ = os.ReadFile(k + ".pub")
+		}
+		_ = os.WriteFile(filepath.Join(p.SSHDir, "loose-vm"), looseKey, 0o600)
+		_ = os.WriteFile(filepath.Join(p.SSHDir, "loose-vm.pub"), loosePub, 0o644)
+	}
+	// The schedule is installed into a throwaway home with a stubbed
+	// scheduler, so the test never registers a real job.
+	schedHomes := map[string]string{}
+	schedSide := func(t *testing.T, side string) {
+		dir := t.TempDir()
+		schedHomes[side] = dir
+		t.Setenv("HOME", dir)
+		t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, ".config"))
+		for _, n := range []string{"launchctl", "systemctl", "crontab", "schtasks"} {
+			stubBin(t, dir, n, "exit 0")
+		}
+		t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	}
+	sameSchedule := func(t *testing.T) {
+		list := func(side string) map[string]string {
+			out := map[string]string{}
+			_ = filepath.WalkDir(schedHomes[side], func(path string, d os.DirEntry, err error) error {
+				if err == nil && !d.IsDir() && !strings.Contains(path, "launchctl") {
+					rel, _ := filepath.Rel(schedHomes[side], path)
+					b, _ := os.ReadFile(path)
+					out[rel] = string(b)
+				}
+				return nil
+			})
+			return out
+		}
+		a, b := list("cli"), list("web")
+		if len(a) != len(b) {
+			t.Errorf("the two sides installed different files:\n--- cli %v\n--- web %v", a, b)
+		}
+		found := false
+		for k, v := range a {
+			if b[k] != v {
+				t.Errorf("%s differs", k)
+			}
+			found = found || (strings.Contains(v, "sync") && strings.Contains(v, "--quiet") && strings.Contains(v, "--yes"))
+		}
+		if !found && runtime.GOOS != "windows" {
+			t.Errorf("no installed file runs the sync: %v", a)
+		}
+	}
 	cases := []struct {
 		name  string
 		cli   []string
@@ -306,8 +380,12 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 			change.TokenDelete("npm", "npm.example.com"), nil, tokenSide(true), sameTokenFiles(".npmrc", "SECRET_A", "npm.example.com")},
 		{"token apply", []string{"token", "apply", "--no-env-hint"}, change.TokenApply(), nil, tokenSide(false),
 			sameTokenFiles(filepath.Join("composer", "auth.json"), "SECRET_PARITY", "")},
+		{"vm sync", []string{"vm", "sync", "--yes"}, change.VMSync(false), goneVM, limaLists, nil},
+		{"vm adopt-key", []string{"vm", "adopt-key", "loose-vm", "work", "devbox", "--hypervisor", "parallels", "--vm", "Ubuntu", "-u", "dev", "--yes"},
+			change.VMAdoptKey("loose-vm", "work", "devbox", "parallels", "Ubuntu", "dev"), loose, nil, nil},
+		{"vm schedule", []string{"vm", "sync", "--install-schedule", "--yes"}, change.VMSchedule(true), nil, schedSide, sameSchedule},
 	}
-	if len(cases) != 27 {
+	if len(cases) != 30 {
 		t.Fatalf("%d cases; every change the web offers needs one", len(cases))
 	}
 	for _, tc := range cases {

@@ -119,7 +119,7 @@ func funcs(a *assetSet) template.FuncMap {
 		},
 		"join":        strings.Join,
 		"list":        func(xs ...string) []string { return xs },
-		"hypervisors": func() []string { return manifest.Hypervisors },
+		"hypervisors": manifest.KnownHypervisors,
 		"short":       func(s string) string { return shorten(s, 8) },
 		"size":        humanSize,
 		"resultClass": func(r string) string {
@@ -137,11 +137,11 @@ func funcs(a *assetSet) template.FuncMap {
 		},
 		"statusClass": func(s string) string {
 			switch s {
-			case "deployed", "ok":
+			case "deployed", "ok", "running":
 				return "badge-ok"
-			case "needs-redeploy", "due_soon":
+			case "needs-redeploy", "due_soon", "stopped", "suspended", "paused", "declared":
 				return "badge-warn"
-			case "no-key", "overdue":
+			case "no-key", "overdue", "gone":
 				return "badge-bad"
 			}
 			return "badge-muted"

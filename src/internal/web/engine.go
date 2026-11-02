@@ -51,6 +51,7 @@ type Engine interface {
 	History(f history.Filter) ([]history.Op, error)
 	Op(id string) (OpView, error)
 	Doctor() (doctor.Report, error)
+	VMs() (VMsView, error)
 	Audit(now time.Time) (AuditView, error)
 	Export(name string, includeGit bool) (string, error)
 	Tokens() (TokensView, error)

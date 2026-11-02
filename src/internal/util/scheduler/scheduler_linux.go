@@ -42,10 +42,10 @@ func installSystemd(command, label string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(dir, label+".service"), []byte(buildService(command)), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, label+".service"), []byte(buildServiceFor(label, command)), 0o644); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(dir, label+".timer"), []byte(timerUnit()), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, label+".timer"), []byte(timerUnitFor(label)), 0o644); err != nil {
 		return err
 	}
 	_ = exec.Command("systemctl", "--user", "daemon-reload").Run()
@@ -68,7 +68,8 @@ func installCron(command, label string) error {
 		}
 	}
 	escaped := strings.ReplaceAll(command, "%", `\%`)
-	kept = append(kept, fmt.Sprintf("0 9 * * * %s %s", escaped, marker))
+	h, m := hourMinute(jobFor(label).at)
+	kept = append(kept, fmt.Sprintf("%s %s * * * %s %s", m, h, escaped, marker))
 	return crontabIn(strings.Join(kept, "\n") + "\n")
 }
 

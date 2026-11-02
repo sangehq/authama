@@ -85,7 +85,8 @@ authama token audit               # owner-only modes, .gitignore coverage
 Both:
 
 ```sh
-authama doctor                    # SSH health and token-file modes; --fix repairs modes
+authama doctor                    # SSH health and token-file modes; --fix repairs modes and syncs VM hosts
+authama ssh vm sync --dry-run     # keep VM hosts matching their VMs (--install-schedule: daily)
 authama tui                       # an interactive menu over both
 authama serve                     # a web UI on this machine, with previewed changes
 authama history                   # every change made, SSH or token
@@ -118,7 +119,7 @@ else is in the [documentation index](#documentation).
 - [`expiry`](docs/tools/expiry.md) — rotation age and scheduled reminders.
 - [`knownhosts`](docs/tools/knownhosts.md) — pinning host keys into the trust store.
 - [`git`](docs/tools/git.md) — checkouts' GitHub remotes in profile SSH, plain SSH or HTTPS mode.
-- [`vm`](docs/tools/vm.md) — local VMs as hosts, addressed through their hypervisor.
+- [`vm`](docs/tools/vm.md) — local VMs as hosts, addressed through their hypervisor; configuring hypervisors, `vm sync`, `vm adopt-key`.
 - [`export`](docs/tools/export.md) — a flat `ssh_config` or a Termius CSV, for tools that cannot read the split config.
 - [`net`](docs/tools/network.md) — reachability and VPN-gated hosts.
 - [`validate`](docs/tools/validate.md) — keypair integrity checks.
@@ -151,7 +152,7 @@ else is in the [documentation index](#documentation).
 
 ## Community
 
-[Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [Code of conduct](code-of-conduct.md) · [Changelog](CHANGELOG.md)
+[Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [Code of conduct](CODE_OF_CONDUCT.md) · [Changelog](CHANGELOG.md)
 
 ## License
 

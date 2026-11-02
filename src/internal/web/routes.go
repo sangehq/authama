@@ -29,6 +29,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /history", h.handleHistory)
 	mux.HandleFunc("GET /history/{op}", h.handleOp)
 	mux.HandleFunc("GET /doctor", h.handleDoctor)
+	mux.HandleFunc("GET /vms", h.handleVMs)
 	mux.HandleFunc("GET /audit", h.handleAudit)
 	mux.HandleFunc("GET /tokens", h.handleTokens)
 	mux.HandleFunc("GET /exports/{name}", h.handleExport)
@@ -226,6 +227,15 @@ func (h pages) handleDoctor(w http.ResponseWriter, r *http.Request) {
 		OK     bool
 		Report string
 	}{rep.OK(), rep.Format()}))
+}
+
+func (h pages) handleVMs(w http.ResponseWriter, r *http.Request) {
+	v, err := h.s.opts.Engine.VMs()
+	if err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	h.s.render(w, http.StatusOK, "vms", h.s.newView(r, "vms", "VMs", v))
 }
 
 func (h pages) handleTokens(w http.ResponseWriter, r *http.Request) {

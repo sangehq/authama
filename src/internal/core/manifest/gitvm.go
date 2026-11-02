@@ -50,9 +50,33 @@ const (
 	HypervisorPodman    = "podman"
 )
 
-// Hypervisors lists the supported hypervisors.
+// Hypervisors lists the built-in hypervisors.
 var Hypervisors = []string{HypervisorParallels, HypervisorVMPal, HypervisorVMware,
 	HypervisorUTM, HypervisorLima, HypervisorOrbStack, HypervisorPodman}
+
+// customHypervisors are the command-driven hypervisors authama.json declares
+// ("hypervisors" section). Start-up registers them, so a VM host may name one.
+var customHypervisors []string
+
+// SetCustomHypervisors replaces the registered custom hypervisor names.
+func SetCustomHypervisors(names []string) {
+	customHypervisors = append([]string(nil), names...)
+}
+
+// KnownHypervisors is the built-in hypervisors followed by the custom ones.
+func KnownHypervisors() []string {
+	return append(append([]string(nil), Hypervisors...), customHypervisors...)
+}
+
+// IsBuiltinHypervisor reports whether name is one of the built-in drivers.
+func IsBuiltinHypervisor(name string) bool {
+	for _, hv := range Hypervisors {
+		if hv == name {
+			return true
+		}
+	}
+	return false
+}
 
 // VMSpec marks a host as a local VM: its address comes from the hypervisor at
 // connect time (`authama ssh vm proxy`), because a VM's IP changes and a static
@@ -166,13 +190,14 @@ func checkVM(profile string, h Host) error {
 		return nil
 	}
 	known := false
-	for _, hv := range Hypervisors {
+	for _, hv := range KnownHypervisors() {
 		if hv == h.VM.Hypervisor {
 			known = true
 		}
 	}
 	if !known {
-		return fmt.Errorf("%s/%s: vm.hypervisor %q is not one of %s", profile, h.Alias, h.VM.Hypervisor, strings.Join(Hypervisors, ", "))
+		return fmt.Errorf("%s/%s: vm.hypervisor %q is not one of %s (a custom hypervisor is declared in authama.json's "+
+			"\"hypervisors\" section)", profile, h.Alias, h.VM.Hypervisor, strings.Join(KnownHypervisors(), ", "))
 	}
 	if h.VM.Hypervisor == HypervisorOrbStack || h.VM.Hypervisor == HypervisorPodman {
 		return fmt.Errorf("%s/%s: %s runs its own SSH access and keys, so it cannot be a host; "+

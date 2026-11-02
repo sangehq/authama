@@ -339,6 +339,22 @@ func (r *Reconciler) recordExisting(pk plannedKey) bool {
 	return true
 }
 
+// RecordExisting records one key that is on disk with no inventory record (an
+// adopted key, say) and saves the inventory. It mints nothing. It reports
+// whether it recorded the key; false when it was already recorded, absent, or
+// unreadable.
+func (r *Reconciler) RecordExisting(ref manifest.KeyRef) (bool, error) {
+	if !r.present(ref) {
+		return false, nil
+	}
+	todo := r.unrecorded([]plannedKey{{Ref: ref}})
+	if len(todo) == 0 {
+		return false, nil
+	}
+	ok := r.recordExisting(todo[0])
+	return ok, r.saveRecords(ok, nil)
+}
+
 // MintRef mints exactly one key, by reference. It returns nil when the private
 // key is already on disk: a command that adds a key must never regenerate an
 // identity that exists, since the replaced key is what remote targets trust.
