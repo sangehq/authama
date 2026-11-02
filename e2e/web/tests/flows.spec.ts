@@ -10,7 +10,7 @@ const added = 'e2e-added';
 test('a profile is previewed, then added', async ({ page }) => {
   await page.goto('/profiles');
   const form = page.locator('form', { has: page.locator('input[name="action"][value="profile-add"]') });
-  await form.getByLabel('Name').fill(added);
+  await form.getByLabel('Name', { exact: true }).fill(added);
   await form.getByRole('button', { name: 'Preview' }).click();
 
   await expect(page).toHaveURL(/\/changes\/preview$/);
@@ -42,7 +42,7 @@ test('a profile is previewed, then added', async ({ page }) => {
 test('a preview whose home moved underneath is refused, and nothing is written', async ({ page }) => {
   await page.goto('/profiles');
   const form = page.locator('form', { has: page.locator('input[name="action"][value="profile-add"]') });
-  await form.getByLabel('Name').fill('e2e-stale');
+  await form.getByLabel('Name', { exact: true }).fill('e2e-stale');
   await form.getByRole('button', { name: 'Preview' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Review the change');
 
@@ -50,7 +50,7 @@ test('a preview whose home moved underneath is refused, and nothing is written',
   const other = await page.context().newPage();
   await other.goto('/profiles');
   const otherForm = other.locator('form', { has: other.locator('input[name="action"][value="profile-add"]') });
-  await otherForm.getByLabel('Name').fill('e2e-moved');
+  await otherForm.getByLabel('Name', { exact: true }).fill('e2e-moved');
   await otherForm.getByRole('button', { name: 'Preview' }).click();
   await other.getByRole('button', { name: 'Make this change' }).click();
   await expect(other.getByRole('heading', { level: 1 })).toHaveText('Done');

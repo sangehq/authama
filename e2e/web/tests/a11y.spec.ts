@@ -15,7 +15,11 @@ async function audit(page: Page, info: TestInfo, label: string): Promise<void> {
   }
   const failing = violations
     .filter((v) => blocking.has(v.impact ?? ''))
-    .map((v) => `${v.impact} ${v.id}: ${v.help} -> ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
+    .map(
+      (v) =>
+        `${v.impact} ${v.id}: ${v.help} -> ` +
+        v.nodes.map((n) => `${n.target.join(' ')} (${n.failureSummary?.replace(/\s+/g, ' ')})`).join('; '),
+    );
   expect(failing, `serious or critical axe violations on ${label}`).toEqual([]);
 }
 
