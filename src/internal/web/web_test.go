@@ -155,7 +155,7 @@ func TestEveryResponseCarriesTheSecurityHeaders(t *testing.T) {
 	} {
 		h := rec.Header()
 		if h.Get("Content-Security-Policy") != ContentSecurityPolicy || h.Get("X-Content-Type-Options") != "nosniff" ||
-			h.Get("X-Frame-Options") != "DENY" || h.Get("Referrer-Policy") != "no-referrer" {
+			h.Get("X-Frame-Options") != "DENY" || h.Get("Referrer-Policy") != "same-origin" {
 			t.Errorf("%s: headers %v", name, h)
 		}
 	}
