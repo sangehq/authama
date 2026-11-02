@@ -13,6 +13,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `known_hosts` (there is one hashed store). `.state/`, `dist/` and the `init --backup` copy are
   placed in the state home, where they live. `serve` shows its real start-up line, `settings init`
   is described as the minimal starter it writes, and install examples pin v0.1.2.
+- **winget is no longer listed as an install method.** No release has published it: its GoReleaser
+  manifest waits on a `simtabi/winget-pkgs` fork that does not exist yet. `docs/release.md` now says so.
 - **`init --backup` help and the `ssh` group's help** say where the backup goes and that the bare
   top-level verbs still work.
 
