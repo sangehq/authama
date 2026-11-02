@@ -1,0 +1,39 @@
+name: Requeue stranded jobs
+
+# GitHub's hosted macOS arm64 pool sometimes never gives a CI job a runner: the
+# job fails after about 15 minutes with no step run. This re-runs such a CI run
+# once, and only when that is all that went wrong; the rules and the incident
+# behind them are in .github/scripts/requeue-stranded.sh.
+#
+# workflow_run always runs this file as it is on the default branch, never a
+# pull request's copy, so a change here takes effect once it is merged.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  requeue:
+    # The first attempt only: a re-run that strands again is left for a person.
+    if: >-
+      github.event.workflow_run.run_attempt == 1 &&
+      contains(fromJSON('["failure", "cancelled"]'), github.event.workflow_run.conclusion)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      checks: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - name: Re-run jobs that never got a runner
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: .github/scripts/requeue-stranded.sh "$RUN_ID" "$RUN_ATTEMPT"

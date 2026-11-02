@@ -221,7 +221,7 @@ func TestDocumentedRawURLsPointAtFilesThatExist(t *testing.T) {
 // exceptions are the conventional upper-case names GitHub and readers look for.
 func TestMarkdownFileNamesAreLowercase(t *testing.T) {
 	_, files := trackedFiles(t)
-	conventional := []string{"README.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "LICENSE.md", "CODE_OF_CONDUCT.md"}
+	conventional := []string{"README.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "LICENSE.md", "CODE_OF_CONDUCT.md", "PULL_REQUEST_TEMPLATE.md"}
 	for _, f := range files {
 		base := filepath.Base(f)
 		if !strings.EqualFold(filepath.Ext(base), ".md") || slices.Contains(conventional, base) {
@@ -230,5 +230,67 @@ func TestMarkdownFileNamesAreLowercase(t *testing.T) {
 		if base != strings.ToLower(base) {
 			t.Errorf("%s: markdown file names are lowercase slugs (rename to %s)", f, strings.ToLower(base))
 		}
+	}
+}
+
+// minTestFiles is the floor for TestTestsGenerateTheirCredentials: 170 tracked
+// *_test.go files on 2026-11-02. A glob that stops matching would otherwise
+// report a clean tree having read nothing.
+const minTestFiles = 150
+
+// minBrowserTestFiles is the same floor for the browser tests under e2e/web:
+// 5 tracked TypeScript files on 2026-11-02.
+const minBrowserTestFiles = 4
+
+// credentialLiteral matches what a secret scanner reports in a test: a value
+// shaped like a provider token, a SECRET_* placeholder, or any literal assigned
+// to a field, variable or environment key named for a credential. Quotes are
+// any of " ' and ` so the same rules read Go and the TypeScript browser tests.
+var credentialLiteral = regexp.MustCompile(
+	"[\"'`](?:ghp|gho|ghs|ghu|github_pat|glpat|npm|xox[abp])[_-][A-Za-z0-9_]+[\"'`]" +
+		"|[\"'`]SECRET_[A-Z0-9_]+[\"'`]" +
+		"|(?:^|[\\s,{(])(?:[Pp]assword|[Pp]assphrase|[Ss]ecret|[Tt]oken)\\s*(?::|=|:=)\\s*[\"'`][^\"'`]+[\"'`]" +
+		"|\\[[\"'`][A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD)[A-Z0-9_]*[\"'`]\\]\\s*=\\s*[\"'`][^\"'`]+[\"'`]")
+
+// credentialExempt marks a line whose literal must be exact bytes (a test
+// vector, a fingerprinted key). It goes on the line above, so the literal's
+// own line never shows up in a diff because of the marker.
+const credentialExempt = "@credential-literal-exempt:"
+
+// Tests get credentials from internal/util/testcred at run time. A literal is a
+// scanner incident somebody closes by hand, however obviously fake it is.
+func TestTestsGenerateTheirCredentials(t *testing.T) {
+	root, files := trackedFiles(t)
+	inspected, browser := 0, 0
+	for _, f := range files {
+		switch {
+		case strings.HasPrefix(f, "src/") && strings.HasSuffix(f, "_test.go"):
+			inspected++
+		case strings.HasPrefix(f, "e2e/web/") && strings.HasSuffix(f, ".ts"):
+			browser++
+		default:
+			continue
+		}
+		body, err := os.ReadFile(filepath.Join(root, f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		lines := strings.Split(string(body), "\n")
+		for i, line := range lines {
+			if strings.HasPrefix(strings.TrimSpace(line), "//") || !credentialLiteral.MatchString(line) {
+				continue
+			}
+			if i > 0 && strings.Contains(lines[i-1], credentialExempt) {
+				continue
+			}
+			t.Errorf("%s:%d: credential literal in a test; generate it at run time (testcred in Go): %s",
+				f, i+1, strings.TrimSpace(line))
+		}
+	}
+	if inspected < minTestFiles {
+		t.Fatalf("inspected %d test files, want at least %d: the file list is not matching", inspected, minTestFiles)
+	}
+	if browser < minBrowserTestFiles {
+		t.Fatalf("inspected %d browser test files under e2e/web, want at least %d", browser, minBrowserTestFiles)
 	}
 }

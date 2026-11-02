@@ -203,7 +203,8 @@ Some changes are terminal-only:
   and `-`. A hostname or user with a control character in it is refused, so a form cannot smuggle a
   line into `~/.ssh/config`.
 - **Headers.** Every response sends a strict Content-Security-Policy with no inline script or style,
-  plus `nosniff`, `X-Frame-Options: DENY`, `no-referrer` and same-origin COOP and CORP.
+  plus `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: same-origin` (no referrer leaves for another
+  site) and same-origin COOP and CORP.
 - **No network.** The page loads nothing from the network: Tabler, its icons and the page's own script
   are embedded in the binary.
 

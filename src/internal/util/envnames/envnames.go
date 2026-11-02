@@ -9,6 +9,12 @@
 //
 // Every read goes through Get or Lookup with the current name, so no call site
 // spells a legacy name and none can forget one.
+//
+// One family is outside this table on purpose: the auth-token-manager names
+// ($AUTH_TOKEN_MANAGER_CONFIG, $COMPOSER_AUTH_CONFIG, $AUTH_TOKEN_MANAGER_CATALOG)
+// belong to a different tool whose config authama imports rather than reads in
+// place, so tokensvc consults them itself and its notice points at
+// `token import` instead of naming an AUTHAMA_* replacement.
 package envnames
 
 import (

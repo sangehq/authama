@@ -28,11 +28,46 @@ not made yet, or declare the devbox without a VM, and `doctor` lists it as infor
 - Reserved keys show in **`key list`** (under the table), **`show <name>`**, the TUI banner and the web
   overview (a `reserved` row), the web **Keys** page (with Reserve and Unreserve, previewed like every
   change) and the **VMs** page (reserved keys, and "no VM yet" for a planned devbox).
+- **Browser tests for the web UI.** `e2e/web/` holds Playwright tests that start `authama serve`
+  against a throwaway home (a temp `HOME` and XDG homes, seeded from the example manifest) and drive
+  every page, a change from preview to apply, a stale preview being refused, and a bundle restore job
+  whose event stream is read to the end. An axe pass over the same pages fails on serious or critical
+  violations in the light and the dark theme. Run it with `make e2e-web`; CI runs it on Linux in the
+  new `web-e2e` job.
 
 ### Changed
 
 - `vm adopt-key` and `vm sync` release a key's reservation when they adopt it; the adopt-key picker
   labels reserved keys. doctor's fix for a loose devbox-looking key also mentions `key reserve`.
+- The issue-template security link names `security@simtabi.com`, the disclosure inbox, instead of
+  the community address.
+- `.github/pull_request_template.md` is `.github/PULL_REQUEST_TEMPLATE.md`, the name the org
+  standard requires; the lowercase-markdown hygiene test lists it as a conventional name.
+- CI verifies the gitleaks tarball against its published SHA-256 before installing it.
+- CI, the release workflow and the Makefile set `GOPRIVATE`/`GONOSUMDB` for `github.com/simtabi/*`,
+  so our own builds never feed a version into the public Go proxy or checksum database.
+- The release workflow no longer starts on a tag push. Binary releases are on hold, and a release
+  runs only when dispatched by hand on a `v[0-9]*` tag with `-f confirm=release-go`; a test fails
+  if an automatic trigger returns.
+- The README and installation guide build authama from source only: no download, package-manager
+  or `go install` path is offered while binary releases are on hold. The 0.1.0 to 0.1.3 channels
+  are described as frozen, not removed.
+- Tests generate every token, password and passphrase at run time (`internal/util/testcred`)
+  instead of spelling them as literals, and a hygiene test fails on a credential literal in any
+  test file, the TypeScript browser tests under `e2e/web` included.
+- A CI run whose only failures are jobs GitHub never gave a runner (the macOS arm64 pool's "not
+  acquired" failure) is re-run once on its own by the new `requeue.yml`. A run with any real failure,
+  a second attempt, or a run superseded by a newer one is left alone.
+
+### Fixed
+
+- **Changes made from the web UI in Chromium were refused as cross-origin.** The server sent
+  `Referrer-Policy: no-referrer`, under which Chromium sends `Origin: null` on the page's own form
+  posts, and the same-origin check refuses that. It now sends `Referrer-Policy: same-origin`, which
+  still sends no referrer to another site. Found by the new browser tests.
+- **Four contrast failures in the web UI**, found by the axe pass: the outline delete button on a
+  card footer in the light theme, the Cancel link button on a review page in both themes, and `code`
+  in the overview's attention rows and in alerts in the dark theme.
 
 ### Compatibility
 

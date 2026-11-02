@@ -40,6 +40,7 @@ make check               # the CI gate plus lint: gofmt, build, vet, tests, gola
 make ci-linux            # the same gate inside a linux container (needs docker)
 make lint-all            # lint every GOOS - one run only ever sees one
 make e2e                 # end-to-end smoke against a real binary (build-tagged)
+make e2e-web             # the web UI in a browser: Playwright e2e and axe (needs node, age)
 make feature-check       # the per-command assertions
 ```
 
@@ -51,6 +52,33 @@ a Linux-only failure is otherwise invisible until CI reports it. That matters
 when CI cannot: a runner outage, a fork without Actions, or no network. Run `lint-all` when touching `internal/platform` or any
 build-tagged file: a single golangci-lint run analyses one GOOS and reports
 everything the others reference as dead code.
+
+### The web UI in a browser
+
+`make e2e-web` builds the binary and runs `e2e/web/`, Playwright tests for
+`authama serve`. The global setup (`e2e/web/support/sandbox.ts`) makes a throwaway
+home: a temp `HOME`, `XDG_CONFIG_HOME` and `XDG_STATE_HOME`, every `AUTHAMA_*`
+variable dropped, the shipped example manifest reconciled into it, and one
+encrypted bundle. It refuses to go on if the resolved `~/.ssh` is outside that
+directory, so your own keys are never in reach. Then it starts `authama serve
+--port 0` and signs each test in with the printed token.
+
+- `tests/pages.spec.ts` walks every page and checks what it shows against the
+  manifest: the profiles, hosts, keys and fingerprints, the doctor report, the
+  history, and the 401 without the token.
+- `tests/flows.spec.ts` previews a change and makes it, has a stale preview
+  refused, and runs a bundle restore as a job, reading its event stream to the end.
+- `tests/a11y.spec.ts` runs axe over the same pages in the light and the dark
+  theme, and fails on a serious or critical violation.
+
+It needs Node, `ssh-keygen` and `age`. The Node dependencies take ranges and no
+lock file is kept: `npm install --no-package-lock` writes none, and
+`e2e/web/.gitignore` refuses one. CI runs it on Linux only, in the `web-e2e` job.
+Binding a local port is the one thing it cannot do without, so a sandbox that
+refuses one can run only the typecheck (`cd e2e/web && npx tsc --noEmit`).
+Pass Playwright flags through `E2E_WEB_ARGS`, e.g.
+`make e2e-web E2E_WEB_ARGS='--grep doctor --headed'`, and set
+`AUTHAMA_E2E_KEEP=1` to keep the sandbox home for a look afterwards.
 
 ## Invariants
 
@@ -156,3 +184,10 @@ removing one that the baseline lists means the test fails, which is the point.
 - Subject ≤ 72 chars, imperative mood; body explains *why*. No emoji.
 - Keep PRs small, green, and scoped to one concern. Update `CHANGELOG.md` and
   `README.md` as verbs land.
+- If CI does not start on a push, look at the PR's merge state first: GitHub
+  starts no `pull_request` run while the PR conflicts with `main`. Resolve the
+  conflict rather than dispatching CI by hand, which tests the branch and not
+  the merge.
+- A `test (macos-latest)` leg that fails after about 15 minutes with no step
+  run never got a runner. `requeue.yml` re-runs it once on its own; re-run it
+  by hand only if that second attempt strands too.

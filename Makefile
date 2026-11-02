@@ -15,6 +15,12 @@ PKG     := ./cmd/authama
 # The deprecated compatibility build: the same program under its old name; it prints a deprecation notice.
 COMPAT_BIN := build/sshmgr
 COMPAT_PKG := ./cmd/sshmgr
+
+# Our own modules come from git, never proxy.golang.org or sum.golang.org, so a
+# local build cannot feed a version into the public cache. Overridable.
+export GOPRIVATE ?= github.com/simtabi/*
+export GONOSUMDB ?= github.com/simtabi/*
+
 # A release carries two tags on the same commit, and this matches the first:
 #
 #   v0.1.0      the release. GoReleaser, the installers and `git describe` use
@@ -34,7 +40,7 @@ VERSION := $(shell git describe --tags --match 'v[0-9]*' --always --dirty 2>/dev
 LDFLAGS := -s -w -X github.com/simtabi/authama/src/internal/version.Version=$(VERSION)
 GO      := go -C $(MODULE)
 
-.PHONY: help build build-all test vet fmt fmt-check lint lint-all ci check ci-linux e2e feature-check docker-shell docker-run docker-down \
+.PHONY: help build build-all test vet fmt fmt-check lint lint-all ci check ci-linux e2e e2e-web feature-check docker-shell docker-run docker-down \
         cross dist clean doctor reconcile render rotate bundle settings generate tabler-check tabler-update tabler-vendor
 
 help:  ## list targets
@@ -146,6 +152,18 @@ docker-down: ## stop and remove the dev container
 # The CI job keeps its own 15-minute limit.
 e2e: ## end-to-end smoke in a throwaway sandbox
 	$(GO) test -tags e2e -count=1 -timeout 600s ./cmd/authama/
+
+# The web UI in a real browser: Playwright drives every page and the write flows
+# of `authama serve`, and axe checks each page in both themes. It builds the
+# binary first, seeds a throwaway HOME (see e2e/web/support/sandbox.ts) and needs
+# Node, ssh-keygen and age. --no-package-lock: no lock file is written or kept.
+# Binding a local port is the one thing it cannot do without, so in a sandbox
+# that refuses one it runs only in CI. E2E_WEB_ARGS passes more to Playwright.
+e2e-web: build ## browser e2e + axe for `authama serve` (needs node, age)
+	cd e2e/web && npm install --no-audit --no-fund --no-package-lock
+	cd e2e/web && npx playwright install chromium
+	cd e2e/web && npx tsc --noEmit
+	cd e2e/web && npx playwright test $(E2E_WEB_ARGS)
 
 # The per-command assertions live in internal/cli/commands_test.go now, so they
 # run in the ordinary suite. Kept as a target because the docs and the shipping

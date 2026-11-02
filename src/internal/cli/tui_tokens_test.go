@@ -11,6 +11,18 @@ import (
 	"github.com/simtabi/authama/src/internal/core/tokens"
 	"github.com/simtabi/authama/src/internal/services/tokensvc"
 	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/util/testcred"
+)
+
+// Generated per run (internal/util/testcred), never written down.
+var (
+	credKeyOne     = testcred.Secret("keyone")
+	credSecretG    = testcred.Secret("secretg")
+	credSecretGhe  = testcred.Secret("secretghe")
+	credSecretH    = testcred.Secret("secreth")
+	credSecretNew  = testcred.Secret("secretnew")
+	credSecretOld  = testcred.Secret("secretold")
+	credSecretPair = testcred.Secret("secretpair")
 )
 
 // tokenTUI is a menu over a --dev-root sandbox, so every token file the
@@ -32,7 +44,7 @@ func (t *tui) envForTest() tokensvc.Env { return tokenMenu{t}.tokenEnv() }
 
 func TestTheTUIStoresATokenInTheSandbox(t *testing.T) {
 	tt, buf, b := tokenTUI(t, true,
-		"token set", tokens.NPM, "npm public registry  (registry.npmjs.org)", "@org", "SECRET_ONE",
+		"token set", tokens.NPM, "npm public registry  (registry.npmjs.org)", "@org", credSecretOne,
 		"token list", "q")
 	tt.run()
 	out := buf.String()
@@ -41,7 +53,7 @@ func TestTheTUIStoresATokenInTheSandbox(t *testing.T) {
 		t.Fatalf("the TUI resolved .npmrc outside the sandbox: %s", npmrc)
 	}
 	body, err := os.ReadFile(npmrc)
-	if err != nil || !strings.Contains(string(body), "SECRET_ONE") || !strings.Contains(string(body), "@org:registry") {
+	if err != nil || !strings.Contains(string(body), credSecretOne) || !strings.Contains(string(body), "@org:registry") {
 		t.Fatalf("store did not write .npmrc (%v):\n%s\n--- screen\n%s", err, body, out)
 	}
 	if runtime.GOOS != "windows" {
@@ -49,7 +61,7 @@ func TestTheTUIStoresATokenInTheSandbox(t *testing.T) {
 			t.Errorf(".npmrc mode %o, want 600", fi.Mode().Perm())
 		}
 	}
-	if strings.Contains(out, "SECRET_ONE") {
+	if strings.Contains(out, credSecretOne) {
 		t.Errorf("the secret reached the screen:\n%s", out)
 	}
 	if !strings.Contains(out, "TOOL") || !strings.Contains(out, "••••••••") {
@@ -58,7 +70,7 @@ func TestTheTUIStoresATokenInTheSandbox(t *testing.T) {
 }
 
 func TestTheTUIWritesNothingWhenTheSaveIsDeclined(t *testing.T) {
-	tt, buf, _ := tokenTUI(t, false, "token set", tokens.NPM, "npm public registry  (registry.npmjs.org)", "", "SECRET_ONE", "q")
+	tt, buf, _ := tokenTUI(t, false, "token set", tokens.NPM, "npm public registry  (registry.npmjs.org)", "", credSecretOne, "q")
 	tt.run()
 	if _, err := os.Stat(tt.envForTest().TargetPath(tokens.NPM, "")); err == nil {
 		t.Errorf("a declined save wrote .npmrc:\n%s", buf.String())
@@ -81,17 +93,17 @@ func readTokenFile(t *testing.T, tt *tui, target string) string {
 // a Bitbucket consumer key and secret, and custom headers.
 func TestTheTUIStoresComposerPairsAndHeaders(t *testing.T) {
 	tt, buf, _ := tokenTUI(t, true,
-		"token set", tokens.Composer, "bitbucket  (bitbucket.org)", "Cloud  (bitbucket.org)", "KEY_ONE", "SECRET_PAIR", "q")
+		"token set", tokens.Composer, "bitbucket  (bitbucket.org)", "Cloud  (bitbucket.org)", credKeyOne, credSecretPair, "q")
 	tt.run()
 	if body := readTokenFile(t, tt, tokens.Composer); !strings.Contains(body, "bitbucket-oauth") ||
-		!strings.Contains(body, "KEY_ONE") || !strings.Contains(body, "SECRET_PAIR") {
+		!strings.Contains(body, credKeyOne) || !strings.Contains(body, credSecretPair) {
 		t.Fatalf("bitbucket-oauth not stored:\n%s\n--- screen\n%s", body, buf.String())
 	}
 	tt2, buf2, _ := tokenTUI(t, true,
-		"token set", tokens.Composer, "generic-headers", "repo.acme.test", "API-TOKEN: SECRET_H, X-Team: a", "q")
+		"token set", tokens.Composer, "generic-headers", "repo.acme.test", "API-TOKEN: "+credSecretH+", X-Team: a", "q")
 	tt2.run()
 	if body := readTokenFile(t, tt2, tokens.Composer); !strings.Contains(body, "custom-headers") ||
-		!strings.Contains(body, "API-TOKEN: SECRET_H") || !strings.Contains(body, "X-Team: a") {
+		!strings.Contains(body, "API-TOKEN: "+credSecretH) || !strings.Contains(body, "X-Team: a") {
 		t.Fatalf("custom-headers not stored:\n%s\n--- screen\n%s", body, buf2.String())
 	}
 }
@@ -101,7 +113,7 @@ func TestTheTUIStoresComposerPairsAndHeaders(t *testing.T) {
 func TestTheTUIRemindsAboutSelfHostedComposerDomains(t *testing.T) {
 	tt, buf, _ := tokenTUI(t, true,
 		"token set", tokens.Composer, "github  (github.com)", "Self-hosted / Enterprise (custom URL)",
-		"https://git.acme.test/", "SECRET_GHE", "q")
+		"https://git.acme.test/", credSecretGhe, "q")
 	tt.run()
 	if body := readTokenFile(t, tt, tokens.Composer); !strings.Contains(body, `"git.acme.test"`) {
 		t.Fatalf("the typed URL was not trimmed to a host:\n%s", body)
@@ -113,9 +125,9 @@ func TestTheTUIRemindsAboutSelfHostedComposerDomains(t *testing.T) {
 
 func TestTheTUIAsksForAHostWhenTheProviderHasNoCloud(t *testing.T) {
 	tt, buf, _ := tokenTUI(t, true,
-		"token set", tokens.Git, "Gitea / Forgejo / Codeberg", "http://gitea.acme.test/", "me", "SECRET_G", "q")
+		"token set", tokens.Git, "Gitea / Forgejo / Codeberg", "http://gitea.acme.test/", "me", credSecretG, "q")
 	tt.run()
-	if body := readTokenFile(t, tt, tokens.Git); !strings.Contains(body, "me:SECRET_G@gitea.acme.test") {
+	if body := readTokenFile(t, tt, tokens.Git); !strings.Contains(body, "me:"+credSecretG+"@gitea.acme.test") {
 		t.Fatalf("git credential not stored for the typed host:\n%s\n--- screen\n%s", body, buf.String())
 	}
 }
@@ -124,7 +136,7 @@ func seedNPM(t *testing.T, tt *tui) string {
 	t.Helper()
 	env := tt.envForTest()
 	set := tokens.NewSet()
-	set.Apply(tokens.NPM, "", "registry.npmjs.org", tokens.Credential{Token: "SECRET_TWO"})
+	set.Apply(tokens.NPM, "", "registry.npmjs.org", tokens.Credential{Token: credSecretTwo})
 	if _, err := env.WriteTarget(set, tokens.NPM, env.TargetPath(tokens.NPM, "")); err != nil {
 		t.Fatal(err)
 	}
@@ -140,15 +152,15 @@ func seedNPM(t *testing.T, tt *tui) string {
 func TestTheTUIReplacesAnInstalledToken(t *testing.T) {
 	tt, buf, _ := tokenTUI(t, true)
 	set := tokens.NewSet()
-	set.Apply(tokens.Git, "", "github.com", tokens.Credential{Username: "me", Password: "SECRET_OLD"})
+	set.Apply(tokens.Git, "", "github.com", tokens.Credential{Username: "me", Password: credSecretOld})
 	env := tt.envForTest()
 	if _, err := env.WriteTarget(set, tokens.Git, env.TargetPath(tokens.Git, "")); err != nil {
 		t.Fatal(err)
 	}
-	tt.pr = &scriptPrompter{answers: []string{"token set", "Replace git: github.com (me)", "", "SECRET_NEW", "q"}, confirm: true}
+	tt.pr = &scriptPrompter{answers: []string{"token set", "Replace git: github.com (me)", "", credSecretNew, "q"}, confirm: true}
 	tt.run()
 	body := readTokenFile(t, tt, tokens.Git)
-	if !strings.Contains(body, "me:SECRET_NEW@github.com") || strings.Contains(body, "SECRET_OLD") {
+	if !strings.Contains(body, "me:"+credSecretNew+"@github.com") || strings.Contains(body, credSecretOld) {
 		t.Fatalf("replace did not rotate the secret:\n%s\n--- screen\n%s", body, buf.String())
 	}
 }
@@ -173,25 +185,25 @@ func TestTheTUICopiesATokenWithoutPrintingIt(t *testing.T) {
 	clipboardWrite = func(s string) error { got = s; return nil }
 	tt.pr = &scriptPrompter{answers: []string{"token copy", label, "q"}}
 	tt.run()
-	if got != "SECRET_TWO" {
+	if got != credSecretTwo {
 		t.Errorf("clipboard got %q", got)
 	}
-	if strings.Contains(buf.String(), "SECRET_TWO") {
+	if strings.Contains(buf.String(), credSecretTwo) {
 		t.Errorf("clip printed the secret:\n%s", buf.String())
 	}
 }
 
 func TestTheTUISyncsTheBuiltInConfigAfterAPreview(t *testing.T) {
 	tt, buf, b := tokenTUI(t, true, "token apply", "q")
-	b.env["GH_TOKEN"] = "SECRET_ONE"
+	b.env["GH_TOKEN"] = credSecretOne
 	tt.run()
 	out := buf.String()
 	auth := tt.envForTest().TargetPath(tokens.Composer, "")
 	body, err := os.ReadFile(auth)
-	if err != nil || !strings.Contains(string(body), "SECRET_ONE") {
+	if err != nil || !strings.Contains(string(body), credSecretOne) {
 		t.Fatalf("apply did not write %s (%v):\n%s", auth, err, out)
 	}
-	if strings.Contains(out, "SECRET_ONE") {
+	if strings.Contains(out, credSecretOne) {
 		t.Errorf("the preview showed the secret:\n%s", out)
 	}
 }

@@ -1,8 +1,10 @@
 # Release
 
-Tag-driven. A `v*` tag builds a static binary per OS/arch and attaches them,
-with checksums, to a GitHub Release. Install the binary, or build from source
-with `go install github.com/simtabi/authama/src/cmd/authama@latest`.
+Tag-driven, and on hold. A `vX.Y.Z` tag records a version; a binary release is
+built from it only when dispatched by hand with a confirmation (below), which
+builds a static binary per OS/arch and attaches them, with checksums, to a GitHub
+Release. Until binary releases resume, users build from source
+([installation](installation.md#install)).
 
 ## Two tags per release
 
@@ -33,9 +35,15 @@ matching native one per OS. The binary version comes from the tag via ldflags
 
 1. Update `CHANGELOG.md` (move Unreleased into a dated, semver-tagged section).
 2. Tag and push: `git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`.
-   A tag with a pre-release suffix (`-rc.1`, `-beta`) is published as a GitHub
-   pre-release. The workflow adds the second tag itself - see below.
-3. The `Release` workflow builds every target and publishes the per-OS/arch
+   Pushing a tag publishes nothing: binary releases are on hold, and authama is
+   built from source until the owner decides otherwise.
+3. Only when a binary release has been approved for this version, dispatch it
+   on the tag: `gh workflow run release.yml --ref vX.Y.Z -f confirm=release-go`.
+   The workflow refuses to run without that confirmation or on anything but a
+   `v[0-9]*` tag. A tag with a pre-release suffix (`-rc.1`, `-beta`) is
+   published as a GitHub pre-release, and the workflow adds the second tag
+   itself - see below.
+4. The `Release` workflow builds every target and publishes the per-OS/arch
    binaries and archives, the deb/rpm/apk packages, per-archive SBOMs,
    `checksums.txt`, and a signed build-provenance attestation. Verify any
    downloaded artifact with

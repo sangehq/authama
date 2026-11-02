@@ -24,22 +24,19 @@ sshmgr 3.x or auth-token-manager? See the [migration guide](docs/migration.md).
 
 ## Install
 
+authama is built from source: binary releases are on hold, so there is no
+download, package-manager or `go install` channel to use. You need Go (the
+version `src/go.mod` names), `git` and `make`.
+
 ```sh
-# macOS / Linux: installs authama (and the deprecated sshmgr alias), checksum-verified
-curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash
+git clone https://github.com/simtabi/authama ~/src/authama
+make -C ~/src/authama build      # -> build/authama, and build/sshmgr (the deprecated alias)
+install -m 0755 ~/src/authama/build/authama ~/.local/bin/authama
 authama doctor
 ```
 
-| Channel | Command |
-|---------|---------|
-| Windows (PowerShell) | `irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 \| iex` |
-| Homebrew | `brew install --cask simtabi/tap/authama` |
-| Scoop | `scoop bucket add simtabi https://github.com/simtabi/scoop-bucket; scoop install simtabi/authama` |
-| Go | `go install github.com/simtabi/authama/src/cmd/authama@latest` |
-| deb / rpm / apk | `authama_linux_<arch>.{deb,rpm,apk}` from [Releases](https://github.com/simtabi/authama/releases) |
-
-Every channel, pinning a version, a per-user install directory, and where
-per-user state lives are in [docs/installation.md](docs/installation.md). There is
+Updating, shell completion, where per-user state lives, and the binaries published
+for 0.1.0 to 0.1.3 are in [docs/installation.md](docs/installation.md). There is
 no runtime Docker image; the [dev container](docs/installation.md#dev-container) is
 for working on authama itself.
 

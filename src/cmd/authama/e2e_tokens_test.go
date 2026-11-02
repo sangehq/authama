@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/util/testcred"
 )
 
 // TestTokenEndToEnd drives the token group through both shipped binaries,
@@ -41,14 +42,25 @@ func TestTokenEndToEnd(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	// Generated per run (internal/util/testcred), never written down. leaks
+	// reports whether any of them reached the output.
+	ghSecret, npmSecret, gitSecret := testcred.Secret("github"), testcred.Secret("npm"), testcred.Secret("git")
+	leaks := func(out string) bool {
+		for _, s := range []string{ghSecret, npmSecret, gitSecret} {
+			if strings.Contains(out, s) {
+				return true
+			}
+		}
+		return false
+	}
 	env := []string{
 		"PATH=" + os.Getenv("PATH"),
 		"HOME=" + home,
 		"USERPROFILE=" + home,
 		"AUTHAMA_CONFIG_DIR=" + filepath.Join(home, "cfg"),
 		"AUTHAMA_AUTO_PIN=0",
-		"GH_TOKEN=SECRET_E2E_GH",
-		"NPM_TOKEN=SECRET_E2E_NPM",
+		"GH_TOKEN=" + ghSecret,
+		"NPM_TOKEN=" + npmSecret,
 		// Set on purpose: dev mode must ignore them.
 		"COMPOSER_HOME=" + filepath.Join(home, "leak-composer"),
 		"NPM_CONFIG_USERCONFIG=" + filepath.Join(home, "leak.npmrc"),
@@ -84,7 +96,7 @@ func TestTokenEndToEnd(t *testing.T) {
 
 	t.Run("apply writes the configured targets and prints no secret", func(t *testing.T) {
 		out := ok("authama", "", "token", "apply", "--config", cfg, "--no-env-hint")
-		if strings.Contains(out, "SECRET_E2E") {
+		if leaks(out) {
 			t.Errorf("sync printed a secret:\n%s", out)
 		}
 		if !strings.Contains(out, "wrote composer") || !strings.Contains(out, "wrote npm") {
@@ -93,7 +105,7 @@ func TestTokenEndToEnd(t *testing.T) {
 	})
 
 	t.Run("set reads the secret from stdin", func(t *testing.T) {
-		ok("authama", "SECRET_E2E_GIT\n", "token", "set", "--target", "git", "--server", "github.com", "--username", "octocat")
+		ok("authama", gitSecret+"\n", "token", "set", "--target", "git", "--server", "github.com", "--username", "octocat")
 	})
 
 	t.Run("list lists every entry and masks the secrets", func(t *testing.T) {
@@ -103,14 +115,14 @@ func TestTokenEndToEnd(t *testing.T) {
 				t.Errorf("inventory lacks %q:\n%s", want, out)
 			}
 		}
-		if strings.Contains(out, "SECRET_E2E") {
+		if leaks(out) {
 			t.Errorf("inventory printed a secret:\n%s", out)
 		}
 	})
 
 	t.Run("show prints one entry, masked", func(t *testing.T) {
 		out := ok("authama", "", "token", "show", "git", "github.com")
-		if !strings.Contains(out, "octocat") || strings.Contains(out, "SECRET_E2E") {
+		if !strings.Contains(out, "octocat") || leaks(out) {
 			t.Errorf("show should name the user and mask the secret:\n%s", out)
 		}
 	})

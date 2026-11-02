@@ -13,6 +13,12 @@ import (
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/services/keystore"
 	"github.com/simtabi/authama/src/internal/services/keysvc"
+	"github.com/simtabi/authama/src/internal/util/testcred"
+)
+
+// Generated per run (internal/util/testcred), never written down.
+var (
+	credPassphrase = testcred.Secret("passphrase")
 )
 
 const fileManifest = `{"version":1,"profiles":{"work":{"hosts":[
@@ -110,7 +116,7 @@ func TestRegenerateCreatesRewritesAndLeavesAlone(t *testing.T) {
 
 func TestRegenerateSkipsWhatItCannotDerive(t *testing.T) {
 	f := setup(t, fileManifest)
-	f.mint(t, manifest.KeyRef{Profile: "work", KeyName: "work_a-ed25519"}, "s3cret-passphrase")
+	f.mint(t, manifest.KeyRef{Profile: "work", KeyName: "work_a-ed25519"}, credPassphrase)
 	got := f.regen(t, false)
 	if got["work_a-ed25519"].Action != Skipped || !strings.Contains(got["work_a-ed25519"].Detail, "passphrase") {
 		t.Errorf("encrypted key: %+v", got["work_a-ed25519"])
