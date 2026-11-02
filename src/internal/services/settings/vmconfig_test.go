@@ -34,12 +34,14 @@ func TestTheVMSectionsParse(t *testing.T) {
 func TestBadVMSectionsAreReported(t *testing.T) {
 	t.Cleanup(func() { hypervisor.Register(nil) })
 	for name, body := range map[string]string{
-		"builtin name":  `{"hypervisors": {"parallels": {"list": ["x"], "address": ["x"]}}}`,
-		"no address":    `{"hypervisors": {"mybox": {"list": ["x"]}}}`,
-		"unknown field": `{"hypervisors": {"mybox": {"list": ["x"], "address": ["x"], "shell": "rm"}}}`,
-		"unknown hv":    `{"devboxes": {"d": {"profile": "p", "hypervisor": "nope", "vm": "v", "user": "u"}}}`,
-		"bad user":      `{"devboxes": {"d": {"profile": "p", "hypervisor": "parallels", "vm": "v", "user": "u; rm -rf"}}}`,
-		"not an object": `{"devboxes": []}`,
+		"builtin name":     `{"hypervisors": {"parallels": {"list": ["x"], "address": ["x"]}}}`,
+		"no address":       `{"hypervisors": {"mybox": {"list": ["x"]}}}`,
+		"unknown field":    `{"hypervisors": {"mybox": {"list": ["x"], "address": ["x"], "shell": "rm"}}}`,
+		"unknown hv":       `{"devboxes": {"d": {"profile": "p", "hypervisor": "nope", "vm": "v", "user": "u"}}}`,
+		"bad user":         `{"devboxes": {"d": {"profile": "p", "hypervisor": "parallels", "vm": "v", "user": "u; rm -rf"}}}`,
+		"not an object":    `{"devboxes": []}`,
+		"planned, no key":  `{"devboxes": {"d": {"profile": "p"}}}`,
+		"planned orbstack": `{"devboxes": {"d": {"profile": "p", "hypervisor": "orbstack", "key": "k"}}}`,
 	} {
 		_, err := Parse("authama.json", []byte(body))
 		var v *ValidationError
@@ -59,5 +61,22 @@ func TestValidUser(t *testing.T) {
 		if ValidUser(u) {
 			t.Errorf("%q accepted", u)
 		}
+	}
+}
+
+// A devbox without a vm is planned: it needs only a profile and a key, and its
+// key is kept as a reservation.
+func TestPlannedDevbox(t *testing.T) {
+	t.Cleanup(func() { hypervisor.Register(nil) })
+	f, err := Parse("authama.json", []byte(`{"devboxes": {"docker": {"profile": "devbox", "key": "docker-tunnel", "description": "Docker VM, later"}}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !f.VM.Devboxes["docker"].Planned() {
+		t.Fatal("a devbox without vm should be planned")
+	}
+	got := f.VM.PlannedKeys()
+	if r, ok := got["docker-tunnel"]; !ok || r.For != "devbox docker" || r.Note != "Docker VM, later" {
+		t.Errorf("planned keys: %+v", got)
 	}
 }

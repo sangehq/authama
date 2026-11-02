@@ -61,6 +61,9 @@ func newShowCmd() *cobra.Command {
 			}
 			ref, err := m.ResolveKeySelector(selector)
 			if err != nil {
+				if showReserved(out, m, inv, p.SSHDir, vmConfig(p).PlannedKeys(), selector) {
+					return nil
+				}
 				return fmt.Errorf("no profile, host or key matches %q", selector)
 			}
 			return showKey(out, keys, ref, "")
@@ -253,4 +256,33 @@ func hostPort(host manifest.Host) string {
 		return host.Hostname
 	}
 	return fmt.Sprintf("%s:%d", host.Hostname, host.Port)
+}
+
+// showReserved prints a reserved (kept on purpose) loose key, reporting
+// whether selector named one.
+func showReserved(out io.Writer, m *manifest.Manifest, inv *inventory.Inventory, sshDir string,
+	planned map[string]manifest.ReservedKey, selector string) bool {
+	rep, err := keyaudit.New(m, inv, sshDir).WithPlanned(planned).Audit(false)
+	if err != nil {
+		return false
+	}
+	for _, r := range rep.Reserved {
+		if r.Name != selector {
+			continue
+		}
+		_, _ = fmt.Fprintf(out, "reserved key %s  (~/.ssh/%s, kept on purpose; no host uses it)\n", r.Name, r.Name)
+		for _, kv := range [][2]string{{"for", r.For}, {"note", r.Note}, {"since", r.Since},
+			{"fingerprint", r.Fingerprint}, {"source", r.Source}, {"state", r.State}} {
+			if kv[1] != "" {
+				_, _ = fmt.Fprintf(out, "  %-12s %s\n", kv[0]+":", kv[1])
+			}
+		}
+		if r.Problem() {
+			_, _ = fmt.Fprintf(out, "  problem:     %s\n  fix:         %s\n", r.Detail, r.Fix)
+		} else {
+			_, _ = fmt.Fprintf(out, "  adopt it onto a VM later: authama ssh vm adopt-key %s ...  (releases the reservation)\n", r.Name)
+		}
+		return true
+	}
+	return false
 }

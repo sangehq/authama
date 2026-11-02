@@ -113,6 +113,15 @@ var goOnly = map[string]string{
 	"key regen-pub --dry-run":  "regen-pub - report only",
 	"key regen-pub --yes":      "confirm-before-changing",
 
+	// Reserved keys (0.1.4): keep a loose ~/.ssh key on purpose.
+	"key reserve":           "reserved keys - keep a loose key on purpose",
+	"key reserve --for":     "reserved keys - what it is kept for",
+	"key reserve --note":    "reserved keys - a note",
+	"key reserve --dry-run": "reserved keys - report only",
+	"key reserve --yes":     "confirm-before-changing",
+	"key unreserve":         "reserved keys - drop the reservation",
+	"key unreserve --yes":   "confirm-before-changing",
+
 	// Git remote modes (3.4.0): profile SSH by default, plain SSH or HTTPS on demand,
 	// switched per checkout with an ls-remote check before origin is rewritten.
 	"git":               "git remote modes - group",

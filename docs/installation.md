@@ -41,7 +41,7 @@ none. A version argument pins the release; without one it takes the latest:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh \
-  | AUTHAMA_INSTALL_DIR="$HOME/.local/bin" bash -s v0.1.3
+  | AUTHAMA_INSTALL_DIR="$HOME/.local/bin" bash -s v0.1.4
 ```
 
 On Windows:
@@ -49,7 +49,7 @@ On Windows:
 ```powershell
 irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex
 # pin a version or a directory (the old SSHMGR_* names still work)
-$env:AUTHAMA_VERSION = 'v0.1.3'; irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex
+$env:AUTHAMA_VERSION = 'v0.1.4'; irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex
 ```
 
 It installs into `%LOCALAPPDATA%\Programs\authama` and adds it to the user

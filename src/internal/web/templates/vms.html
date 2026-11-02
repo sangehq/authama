@@ -75,12 +75,19 @@
           <thead><tr><th scope="col">Alias</th><th scope="col">Profile</th><th scope="col">VM</th><th scope="col">User</th><th scope="col">Key</th></tr></thead>
           <tbody>
             {{range .Devboxes}}
-            <tr><th scope="row"><code>{{.Alias}}</code></th><td>{{.Profile}}</td><td>{{.Hypervisor}}: {{.VM}}</td><td>{{.User}}</td><td>{{orDash .Key}}</td></tr>
+            <tr><th scope="row"><code>{{.Alias}}</code></th><td>{{.Profile}}</td><td>{{if .Planned}}<span class="badge bg-secondary-lt">no VM yet</span>{{else}}{{.Hypervisor}}: {{.VM}}{{end}}</td><td>{{orDash .User}}</td><td>{{orDash .Key}}{{if .Planned}} <span class="text-secondary">(reserved)</span>{{end}}</td></tr>
             {{end}}
           </tbody>
         </table>
       </div>
-      {{else}}<div class="card-body text-secondary">None. Declare one under <code>devboxes</code> in authama.json and a sync adds it.</div>{{end}}
+      {{else}}<div class="card-body text-secondary">None. Declare one under <code>devboxes</code> in authama.json and a sync adds it; leave out <code>vm</code> to keep its key for a VM you have not made yet.</div>{{end}}
+      {{if .Reserved}}
+      <div class="card-body border-top small">
+        <div class="fw-bold mb-1">Reserved keys</div>
+        {{range .Reserved}}<div><code>~/.ssh/{{.Name}}</code> - reserved{{if .For}} for {{.For}}{{end}}{{if .Note}}: {{.Note}}{{end}}{{if .Problem}} <span class="badge badge-warn">{{.State}}</span>{{end}}</div>{{end}}
+        <div class="text-secondary mt-1">Kept on purpose; adopting one onto a VM below releases its reservation. Manage them on the <a href="/keys">Keys</a> page.</div>
+      </div>
+      {{end}}
     </div>
   </div>
 </div>
@@ -93,7 +100,7 @@
         {{if .Loose}}
         {{template "change_open" $}}<input type="hidden" name="action" value="vm-adopt-key">
           <div class="row g-2">
-            <div class="col-sm-6"><label class="form-label" for="ak-key">Loose key</label><select class="form-select" id="ak-key" name="key">{{range .Loose}}<option value="{{.Name}}">{{.Name}}{{if .Devbox}} (looks like a devbox key){{end}}</option>{{end}}</select></div>
+            <div class="col-sm-6"><label class="form-label" for="ak-key">Loose key</label><select class="form-select" id="ak-key" name="key">{{range .Loose}}<option value="{{.Name}}">{{.Name}}{{if .Reserved}} (reserved{{if .ReservedFor}} for {{.ReservedFor}}{{end}}){{else if .Devbox}} (looks like a devbox key){{end}}</option>{{end}}</select></div>
             <div class="col-sm-6"><label class="form-label" for="ak-profile">Profile</label><input class="form-control" id="ak-profile" name="profile" list="ak-profiles" value="devbox" required autocomplete="off" spellcheck="false"><datalist id="ak-profiles">{{range .Profiles}}<option value="{{.}}">{{end}}</datalist></div>
             <div class="col-sm-6"><label class="form-label" for="ak-alias">Alias</label><input class="form-control" id="ak-alias" name="alias" required autocomplete="off" spellcheck="false"></div>
             <div class="col-sm-6"><label class="form-label" for="ak-hv">Hypervisor</label><select class="form-select" id="ak-hv" name="hypervisor">{{range hypervisors}}{{if and (ne . "orbstack") (ne . "podman")}}<option value="{{.}}">{{.}}</option>{{end}}{{end}}</select></div>

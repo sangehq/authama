@@ -384,8 +384,14 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 		{"vm adopt-key", []string{"vm", "adopt-key", "loose-vm", "work", "devbox", "--hypervisor", "parallels", "--vm", "Ubuntu", "-u", "dev", "--yes"},
 			change.VMAdoptKey("loose-vm", "work", "devbox", "parallels", "Ubuntu", "dev"), loose, nil, nil},
 		{"vm schedule", []string{"vm", "sync", "--install-schedule", "--yes"}, change.VMSchedule(true), nil, schedSide, sameSchedule},
+		{"key reserve", []string{"key", "reserve", "loose-vm", "--for", "devbox", "--note", "Docker VM, later", "--yes"},
+			change.KeyReserve("loose-vm", "devbox", "Docker VM, later"), loose, nil, nil},
+		{"key unreserve", []string{"key", "unreserve", "loose-vm", "--yes"}, change.KeyUnreserve("loose-vm"), func(p paths.Paths) {
+			loose(p)
+			_ = editor.New(p).ReserveKey("loose-vm", manifest.ReservedKey{For: "devbox"})
+		}, nil, nil},
 	}
-	if len(cases) != 30 {
+	if len(cases) != 32 {
 		t.Fatalf("%d cases; every change the web offers needs one", len(cases))
 	}
 	for _, tc := range cases {

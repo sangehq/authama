@@ -6,6 +6,39 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-11-02
+
+A key you keep on purpose is no longer a warning: reserve a loose `~/.ssh` key for a devbox you have
+not made yet, or declare the devbox without a VM, and `doctor` lists it as information.
+
+### Added
+
+- **`authama ssh key reserve <name|path> [--for ...] [--note ...]`** and **`key unreserve <name>`**. A
+  key pair directly in `~/.ssh` that no host uses and authama does not manage can be kept on purpose.
+  The reservation is a new optional `reserved_keys` section in `manifest.json` (what it is for, a note,
+  the public key's SHA256 fingerprint and the day); the key file is never moved, changed or read beyond
+  its `.pub`. `--dry-run` and `--yes`; recorded in `history`.
+- **Planned devboxes.** A `devboxes` entry in `authama.json` with a `key` and no `vm` keeps that key
+  reserved for the devbox: only `profile` and `key` are required, `vm sync` adds no host for it and
+  notes it, and giving it its `vm` later lets sync add the host and adopt the key. The schema allows it.
+- **`doctor`** prints a "reserved keys (kept on purpose, not dangling)" block instead of listing those
+  keys as loose, and `--strict` passes. A reserved key whose file is gone, was replaced by a different
+  key (fingerprint), or has since been adopted is a warning with its fix. `doctor --json` gains
+  `reserved_keys`, after the 0.1.3 keys.
+- Reserved keys show in **`key list`** (under the table), **`show <name>`**, the TUI banner and the web
+  overview (a `reserved` row), the web **Keys** page (with Reserve and Unreserve, previewed like every
+  change) and the **VMs** page (reserved keys, and "no VM yet" for a planned devbox).
+
+### Changed
+
+- `vm adopt-key` and `vm sync` release a key's reservation when they adopt it; the adopt-key picker
+  labels reserved keys. doctor's fix for a loose devbox-looking key also mentions `key reserve`.
+
+### Compatibility
+
+- A manifest with `reserved_keys` is refused by authama 0.1.3 and earlier (unknown fields are an
+  error). Without reservations the manifest is written exactly as before.
+
 ## [0.1.3] - 2026-11-02
 
 Local VMs look after themselves: `ssh vm sync` keeps every VM host matching its VM, the hypervisors
@@ -1396,7 +1429,8 @@ generalised beyond Composer, packaged for PyPI, and given an interactive UI.
 ##### Security
 - Owner-only hardening now applies on Windows (ACL), not just POSIX `chmod`.
 
-[Unreleased]: https://github.com/simtabi/authama/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/simtabi/authama/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/simtabi/authama/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/simtabi/authama/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/simtabi/authama/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/simtabi/authama/compare/v0.1.0...v0.1.1

@@ -464,6 +464,14 @@ func (s *Syncer) planKeyInstall(m *manifest.Manifest, pname string, h manifest.H
 func (s *Syncer) planDevboxes(plan *Plan, m *manifest.Manifest, aliases map[string]bool) {
 	for _, alias := range s.Cfg.DevboxAliases() {
 		db := s.Cfg.Devboxes[alias]
+		if db.Planned() {
+			// No VM yet: the devbox only keeps its key (doctor shows it as
+			// reserved). Give it a vm and the next sync adds and adopts.
+			if db.Key != "" {
+				plan.Notes = append(plan.Notes, fmt.Sprintf("devbox %s has no vm yet; key %s is kept for it (reserved) - set its vm to add the host", alias, db.Key))
+			}
+			continue
+		}
 		if aliases[alias] {
 			s.planDevboxDrift(plan, m, alias, db)
 			continue

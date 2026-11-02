@@ -32,10 +32,10 @@ when that port is taken.
 | Overview | the rows the `authama tui` menu prints at the top, each problem with the command that fixes it; counts; keys due for rotation; recent changes |
 | Profiles | each profile's category, key scope, key store, and host and key counts |
 | Hosts | every host by profile. A host's page shows its manifest entry, its deployments, the block rendered into `~/.ssh/config`, and the host keys pinned for it |
-| Keys | every key with its fingerprint and expiry. A key's page shows where the key is deployed and every operation that touched it |
+| Keys | every key with its fingerprint and expiry, and the reserved keys (loose keys kept on purpose). A key's page shows where the key is deployed and every operation that touched it |
 | Snapshots | every snapshot. A snapshot's page diffs it against `~/.ssh` now or against another snapshot |
 | History | the [`history`](history.md), filtered the same way. An operation's page shows its events and the manifest before and after |
-| VMs | the VM hosts and their VMs' state, the pending `ssh vm sync` plan, the enabled hypervisors and their VMs, the declared devboxes, the loose keys that could be adopted, and whether the daily sync is scheduled |
+| VMs | the VM hosts and their VMs' state, the pending `ssh vm sync` plan, the enabled hypervisors and their VMs, the declared devboxes (planned ones without a VM yet), the reserved keys, the loose keys that could be adopted, and whether the daily sync is scheduled |
 | Tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret) and the token audit, as `authama token list` and `authama token audit` print, and which token config is in use |
 | Doctor, Audit | the reports `authama doctor` and `authama ssh audit` print |
 | Third-party licences | the licences of the web UI's bundled front-end assets (Tabler, Tabler Icons, Bootstrap, Popper), at `/about/licenses` |
@@ -60,6 +60,8 @@ These changes can be made from the pages:
 | Edit a host's hostname, user, port or tags | the host's page | `authama ssh host edit` |
 | Delete a host and its pins | the host's page | `authama ssh host delete --yes` |
 | Delete a declared key that no host uses | Keys | `authama ssh key delete --yes` |
+| Reserve a loose key (keep it on purpose) | Keys | `authama ssh key reserve <key> --for … --note … --yes` |
+| Drop a key's reservation | Keys | `authama ssh key unreserve <key> --yes` |
 | Re-render `~/.ssh/config` | Overview | `authama ssh config render --yes` |
 | Reconcile: mint missing keys, record keys on disk, render | Overview | `authama ssh reconcile --yes --no-pin` |
 | Mint a profile's or host's missing keys | Keys | `authama ssh keygen <target> --no-pin --yes` |

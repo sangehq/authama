@@ -415,6 +415,8 @@ type Manifest struct {
 	Version  int                `json:"version"`
 	Defaults Defaults           `json:"defaults"`
 	Profiles map[string]Profile `json:"profiles"`
+	// ReservedKeys are loose ~/.ssh keys kept on purpose, by file name (0.1.4).
+	ReservedKeys map[string]ReservedKey `json:"reserved_keys,omitempty"`
 
 	// profileOrder is the JSON insertion order of profile keys. The renderer
 	// emits in name order, but the read views (query.groups) iterate the manifest
@@ -438,7 +440,7 @@ func (m *Manifest) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// MarshalJSON emits {version, defaults, profiles} with profiles in manifest (file)
+// MarshalJSON emits {version, defaults, profiles[, reserved_keys]} with profiles in manifest (file)
 // order - a Go map would otherwise marshal its keys sorted. Compact output;
 // Save re-indents it to two spaces, the indentation those files used.
 func (m Manifest) MarshalJSON() ([]byte, error) {
@@ -469,7 +471,11 @@ func (m Manifest) MarshalJSON() ([]byte, error) {
 		}
 		b.Write(pb)
 	}
-	b.WriteString("}}")
+	b.WriteByte('}')
+	if err := marshalReserved(&m, &b); err != nil {
+		return nil, err
+	}
+	b.WriteByte('}')
 	return b.Bytes(), nil
 }
 
@@ -916,6 +922,9 @@ func (m *Manifest) validate() error {
 		return err
 	}
 	if err := checkGit(m); err != nil {
+		return err
+	}
+	if err := checkReserved(m); err != nil {
 		return err
 	}
 	for name, p := range m.Profiles {

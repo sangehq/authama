@@ -48,6 +48,8 @@ var commandExamples = map[string][]string{
 	"ssh key delete":        {"ssh key delete work/deploy", "ssh key delete work/deploy --revoke --purge --yes"},
 	"ssh key list":          {"ssh key list", "ssh key list work"},
 	"ssh key regen-pub":     {"ssh key regen-pub work/deploy", "ssh key regen-pub --all --dry-run"},
+	"ssh key reserve":       {"ssh key reserve docker-tunnel --for devbox --note \"Docker VM, later\"", "ssh key reserve ~/.ssh/old-laptop --dry-run"},
+	"ssh key unreserve":     {"ssh key unreserve docker-tunnel"},
 	"ssh keygen":            {"ssh keygen work", "ssh keygen web1 --force --yes"},
 	"ssh knownhosts init":   {"ssh knownhosts init work", "ssh knownhosts init --all --yes"},
 	"ssh knownhosts pin":    {"ssh knownhosts pin web1", "ssh knownhosts pin git.example.com --port 2222", "ssh knownhosts pin --all --yes"},

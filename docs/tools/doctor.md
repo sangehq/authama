@@ -28,7 +28,8 @@ authama doctor --strict  # any warning fails the run (CI)
 | `known_hosts` | whether the trust store exists, and which hosts are unpinned |
 | `VM hosts` | each VM host, its hypervisor and VM, and the VM's state (running, suspended, stopped, gone, or a hypervisor that is not enabled); what `ssh vm sync` would do; VM hosts not pinned yet; names in `vm.hypervisors` that match no driver |
 | stale pins | `known_hosts` entries authama wrote for hosts no longer in the manifest |
-| loose keys | key pairs in `~/.ssh` no profile manages. One whose name or comment suggests a devbox (`docker-tunnel`, `devbox`, a hypervisor's name, ...) gets the fix `authama ssh vm adopt-key <key> --hypervisor ... --vm ...` instead of the generic one |
+| loose keys | key pairs in `~/.ssh` no profile manages. One whose name or comment suggests a devbox (`docker-tunnel`, `devbox`, a hypervisor's name, ...) gets the fix `authama ssh vm adopt-key <key> --hypervisor ... --vm ...` instead of the generic one (or `authama ssh key reserve <key> --for devbox` to keep it for later) |
+| reserved keys | loose keys kept on purpose: reserved with `authama ssh key reserve`, or the key of a devbox declared in `authama.json` without a `vm`. Information, not a warning (`--strict` passes); a reserved key whose file is gone, was replaced by another key, or has since been adopted is a warning with its fix. `--json`: `reserved_keys` |
 | `config drift` | whether the rendered block still matches the manifest |
 | `perms` | every managed path whose mode is not what it should be |
 | alias collisions | the same Host alias in more than one profile, so ssh applies only the first (warning) |

@@ -56,6 +56,8 @@ Every command also takes the global flag:
     - [`authama ssh key delete`](#authama-ssh-key-delete) - Delete a key (refuses while a host uses it)
     - [`authama ssh key list`](#authama-ssh-key-list) - Every key with its fingerprint, expiry, hosts and state
     - [`authama ssh key regen-pub`](#authama-ssh-key-regen-pub) - Rebuild public keys from their private key or 1Password item
+    - [`authama ssh key reserve`](#authama-ssh-key-reserve) - Keep a loose ~/.ssh key on purpose (doctor stops calling it loose)
+    - [`authama ssh key unreserve`](#authama-ssh-key-unreserve) - Drop a key's reservation (doctor lists it as loose again)
   - [`authama ssh keygen`](#authama-ssh-keygen) - Generate a profile's or host's keys
   - [`authama ssh knownhosts`](#authama-ssh-knownhosts) - Pin host keys into the single ~/.ssh/known_hosts trust store
     - [`authama ssh knownhosts init`](#authama-ssh-knownhosts-init) - Pin reachable hosts into known_hosts (TOFU; fingerprints reported)
@@ -885,6 +887,8 @@ Subcommands:
 - [`delete`](#authama-ssh-key-delete) - Delete a key (refuses while a host uses it)
 - [`list`](#authama-ssh-key-list) - Every key with its fingerprint, expiry, hosts and state
 - [`regen-pub`](#authama-ssh-key-regen-pub) - Rebuild public keys from their private key or 1Password item
+- [`reserve`](#authama-ssh-key-reserve) - Keep a loose ~/.ssh key on purpose (doctor stops calling it loose)
+- [`unreserve`](#authama-ssh-key-unreserve) - Drop a key's reservation (doctor lists it as loose again)
 
 ## authama ssh key add
 
@@ -985,6 +989,58 @@ Flags:
       --category string   every key in profiles of this category
       --dry-run           report what would change, and change nothing
   -y, --yes               skip the confirmation prompt
+```
+
+## authama ssh key reserve
+
+reserve records that a key file directly in ~/.ssh - one no Host block uses - is kept
+deliberately, for example for a devbox VM you have not made yet. doctor then lists it
+under "reserved keys" as information instead of a loose key (and --strict passes),
+and `authama ssh vm adopt-key` or `vm sync` release the reservation when they adopt it.
+
+The argument is the file's name (docker-tunnel), ~/.ssh/docker-tunnel, or its .pub.
+The reservation lives in manifest.json under reserved_keys, with the public key's
+fingerprint, so doctor notices if the file is replaced or removed. The key file itself
+is never read beyond its .pub, moved or changed. Reserving a reserved key updates it.
+
+```
+authama ssh key reserve <name|path> [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh key reserve docker-tunnel --for devbox --note "Docker VM, later"
+  authama ssh key reserve ~/.ssh/old-laptop --dry-run
+```
+
+Flags:
+
+```
+  -n, --dry-run       show what would be recorded; change nothing
+      --for string    what the key is kept for, e.g. devbox (shown by doctor)
+      --note string   a note to keep with it
+  -y, --yes           do not ask for confirmation
+```
+
+## authama ssh key unreserve
+
+Drop a key's reservation (doctor lists it as loose again).
+
+```
+authama ssh key unreserve <name> [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh key unreserve docker-tunnel
+```
+
+Flags:
+
+```
+  -y, --yes   do not ask for confirmation
 ```
 
 ## authama ssh keygen

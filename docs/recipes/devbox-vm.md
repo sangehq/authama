@@ -43,6 +43,15 @@ authama ssh vm adopt-key devbox-tunnel devbox devbox --hypervisor parallels \
 
 The pair is copied into the profile; the originals stay where they are unless `--move`.
 
+No VM yet, but want to keep the key? Reserve it, and `doctor` stops calling it loose:
+
+```sh
+authama ssh key reserve devbox-tunnel --for devbox --note "for the Ubuntu VM, later"
+```
+
+Adopting it later (above) releases the reservation. A `devboxes` entry in `authama.json` with a `key`
+and no `vm` does the same (see [tools/vm.md](../tools/vm.md#declaring-devboxes)).
+
 ## Keep it up to date
 
 ```sh

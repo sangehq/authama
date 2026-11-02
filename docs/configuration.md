@@ -127,6 +127,14 @@ guarantees each alias offers only its own key and trusts only its own host keys.
         }
       ]
     }
+  },
+  "reserved_keys": {                     // optional (0.1.4): loose ~/.ssh keys kept on purpose
+    "docker-tunnel": {
+      "for": "devbox",                    // free text, shown by doctor
+      "note": "Docker devbox VM, kept for later",
+      "fingerprint": "SHA256:…",          // of the .pub when reserved; doctor notices a swap
+      "since": "2026-11-02"
+    }
   }
 }
 ```
@@ -135,6 +143,15 @@ Hosts need not be written by hand: `authama ssh host add|edit` change one field 
 time, and `authama ssh host apply <profile> <alias> <host>[:port] <user> [role]` (or many
 with `--host`/`-f`) adds or updates `alias`, `hostname`, `user`, `port` and `tags` in one
 step. See [Host specs](recipes/host-specs.md).
+
+### `reserved_keys`
+
+Written by `authama ssh key reserve` and removed by `key unreserve` (and by `vm adopt-key`/`vm sync` when
+they adopt the key); you rarely edit it by hand. Each name is a key file directly in `~/.ssh` (not a
+`.pub`, not one of ssh's own files). The section is omitted when empty, so a manifest without
+reservations is unchanged. Older authama versions (0.1.3 and earlier) refuse a manifest that has it
+(unknown fields are an error), so unreserve first if you go back. See
+[Keeping a key for later](tools/vm.md#keeping-a-key-for-later).
 
 ### `defaults`
 
@@ -452,7 +469,7 @@ every setting stays at its default until you add it.
 | `vm.repin_changed` | `AUTHAMA_VM_REPIN` | `false` (`ssh vm sync` reports a changed guest host key) |
 
 Two sections are not settings but declarations: `hypervisors` adds a command driver for a VM tool
-authama has no driver for, and `devboxes` names the VM hosts `ssh vm sync` keeps. Both are described,
+authama has no driver for, and `devboxes` names the VM hosts `ssh vm sync` keeps (a devbox without `vm` only keeps its key reserved). Both are described,
 with examples, in [tools/vm.md](tools/vm.md#choosing-your-hypervisors).
 
 Paths may start with `~/`. A secret never goes in `authama.json`; put it in

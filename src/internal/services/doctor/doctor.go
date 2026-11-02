@@ -27,6 +27,7 @@ import (
 	"github.com/simtabi/authama/src/internal/services/knownhosts"
 	"github.com/simtabi/authama/src/internal/services/opstore"
 	"github.com/simtabi/authama/src/internal/services/preflight"
+	"github.com/simtabi/authama/src/internal/services/settings"
 	"github.com/simtabi/authama/src/internal/util/clipboard"
 	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/util/fs"
@@ -105,6 +106,9 @@ func (r Report) Warnings() []string {
 		for _, a := range r.VM.Undeclared {
 			w = append(w, "devbox declared in authama.json but not a host yet: "+a)
 		}
+	}
+	for _, k := range r.Dangling.ReservedProblems() {
+		w = append(w, "reserved key "+k.State+": "+k.Name)
 	}
 	for _, a := range r.AliasCollisions {
 		w = append(w, "alias used in more than one profile: "+a)
@@ -257,6 +261,7 @@ func (r Report) Format() string {
 			"(keep them longer with AUTHAMA_OLD_KEY_MAX_AGE_DAYS)")
 	}
 	lines = append(lines, r.Dangling.Lines()...)
+	lines = append(lines, r.Dangling.ReservedLines()...)
 	if len(r.DuplicateKeys) > 0 {
 		lines = append(lines, "WARNING: keys reuse the same fingerprint (blast radius): "+strings.Join(r.DuplicateKeys, ", "))
 	}
@@ -310,6 +315,8 @@ func (r Report) JSON() ([]byte, error) {
 		UnpinnedVMHosts []string  `json:"unpinned_vm_hosts"`
 		StalePins       int       `json:"stale_pins"`
 		VM              *VMStatus `json:"vm"`
+		// Added in 0.1.4.
+		ReservedKeys []keyaudit.Reserved `json:"reserved_keys"`
 	}
 	nz := func(s []string) []string {
 		if s == nil {
@@ -329,6 +336,7 @@ func (r Report) JSON() ([]byte, error) {
 		OrphanKeys: nz(r.OrphanKeys), DanglingKeys: danglingRows(r.Dangling),
 		DuplicateKeys: nz(r.DuplicateKeys), UnpinnedHosts: nz(r.UnpinnedHosts),
 		UnpinnedVMHosts: nz(r.UnpinnedVMHosts), StalePins: r.StalePins, VM: r.VM,
+		ReservedKeys:    reservedRows(r.Dangling),
 		AliasCollisions: nz(r.AliasCollisions), StaleProxy: nz(r.StaleProxy),
 		ShadowedHosts: nz(r.ShadowedHosts), RawOptionOverlaps: nz(r.RawOptionOverlaps),
 		NeededTools: nz(r.NeededTools), Clipboard: strOrNil(r.Clipboard),
@@ -604,11 +612,20 @@ func (s *Service) dangling(strict bool) keyaudit.Report {
 	if err != nil {
 		inv = inventory.New()
 	}
-	rep, err := keyaudit.New(s.m, inv, s.p.SSHDir).Audit(strict)
+	// Planned devboxes (authama.json, no vm yet) keep their keys reserved.
+	cfg, _ := settings.LoadVMConfig(s.p.SettingsFile())
+	rep, err := keyaudit.New(s.m, inv, s.p.SSHDir).WithPlanned(cfg.PlannedKeys()).Audit(strict)
 	if err != nil {
 		return keyaudit.Report{Strict: strict}
 	}
 	return rep
+}
+
+func reservedRows(rep keyaudit.Report) []keyaudit.Reserved {
+	if rep.Reserved == nil {
+		return []keyaudit.Reserved{}
+	}
+	return rep.Reserved
 }
 
 // danglingJSON is one finding in the machine-readable report.

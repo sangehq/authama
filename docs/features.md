@@ -24,7 +24,7 @@ a sandbox). Run all three with `make test e2e feature-check`.
   (`net`), Cloudflare Access proxies, and local VMs addressed by name (`vm`).
 - **Self-maintaining VM hosts.** `vm sync` (daily, or from `doctor --fix`) re-pins, re-installs keys,
   refreshes Docker contexts and drops hosts whose VM is gone, with backups; the hypervisors you use
-  are configured, any other VM tool plugs in as a command driver, and `vm adopt-key` adopts a loose key.
+  are configured, any other VM tool plugs in as a command driver, and `vm adopt-key` adopts a loose key; `key reserve` (or a devbox declared without a `vm`) keeps one for later.
 - **Backups and recovery.** `age`-encrypted bundles, restore onto a new machine,
   and a break-glass `recover` script.
 - **Auth tokens.** `auth.json`, `.npmrc`, Docker `config.json`,
@@ -89,6 +89,8 @@ project-local mode. See [installation.md](installation.md) for the full layout.
 | `key list [selector]` | Every key with its fingerprint, expiry, the hosts using it, and its state — including keys nothing references. | U |
 | `key regen-pub [selectors...] [--category] [--all] [--dry-run]` | Rebuild `.pub` files from the private key or the 1Password item; reports unchanged / created / rewritten / skipped. Never changes a private key. | U |
 | `key add <profile> <name> [--type] [--rotate-after-days] [--host] [--passphrase]` | Declare a key on a profile and mint it. Without `--host` the key is minted **unwired**: it exists and nothing uses it, which `doctor` then reports. | U |
+| `key reserve <name\|path> [--for] [--note] [-n] [-y]` | Keep a loose `~/.ssh` key on purpose (for a devbox you have not made yet): `doctor` lists it as reserved instead of loose. Recorded in the manifest's `reserved_keys` with the public key's fingerprint; the key file is never touched. `vm adopt-key` and `vm sync` release the reservation when they adopt it. | U·E |
+| `key unreserve <name> [-y]` | Drop a reservation; the key is loose again. | U·E |
 | `key delete <profile/key> [--purge] [--revoke] [--yes] [--no-key-backup]` | Remove the declaration and the inventory record. **Refuses while any host still resolves to the key** — a `Host` block pointing at a missing `IdentityFile` fails as a bare "Permission denied (publickey)" with nothing naming the cause. `--purge` also deletes the files. | U |
 | `clean [--dry-run] [--adopt] [-y]` | Prune stale `known_hosts` pins, stale inventory records and write residue. Only removes pins tagged `authama` (or `sshmgr`, from releases before 0.1.2); `--adopt` opts an untagged pin that matches a manifest host into management, since an untagged pin is presumed to be yours. | U |
 

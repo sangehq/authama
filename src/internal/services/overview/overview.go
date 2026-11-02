@@ -79,6 +79,18 @@ func Rows(p paths.Paths, m *manifest.Manifest, now time.Time) []Row {
 			Label: "keys", Value: fmt.Sprintf("%s need attention", plural(len(rep.Dangling.Findings), "key", "keys")),
 			Fix: "authama doctor"})
 	}
+	if n := len(rep.Dangling.Reserved); n > 0 {
+		names := make([]string, 0, n)
+		for _, r := range rep.Dangling.Reserved {
+			names = append(names, r.Name)
+		}
+		row := Row{Label: "reserved", Value: fmt.Sprintf("%s kept for later: %s", plural(n, "key", "keys"), strings.Join(names, ", "))}
+		if bad := len(rep.Dangling.ReservedProblems()); bad > 0 {
+			row.Value = fmt.Sprintf("%s no longer match their reservation", plural(bad, "key", "keys"))
+			row.Fix = "authama doctor"
+		}
+		rows = append(rows, row)
+	}
 	if !rep.Preflight.OK() {
 		rows = append(rows, Row{
 			Label: "deps", Value: "a required OpenSSH tool is missing", Fix: "authama doctor"})

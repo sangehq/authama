@@ -136,6 +136,11 @@ func VMAdoptKey(key, profile, alias, hv, vmName, user string) Change {
 				return err
 			}
 			_, _ = fmt.Fprintf(out, "adopted ~/.ssh/%s as %s\n", key, res.Dest)
+			if released, err := vmsync.ReleaseReservation(p, filepath.Join(p.SSHDir, key)); err != nil {
+				return err
+			} else if released {
+				_, _ = fmt.Fprintf(out, "released the reservation of %s: it has a host now\n", key)
+			}
 			if err := ApplyManifestEdit(out, p); err != nil {
 				return err
 			}
@@ -145,14 +150,14 @@ func VMAdoptKey(key, profile, alias, hv, vmName, user string) Change {
 	}
 }
 
-// reservedKeyNames are files in ~/.ssh that are never a key to adopt.
-var reservedKeyNames = map[string]bool{"config": true, "known_hosts": true, "known_hosts.old": true, "authorized_keys": true}
+// notKeyNames are files in ~/.ssh that are never a key to adopt.
+var notKeyNames = map[string]bool{"config": true, "known_hosts": true, "known_hosts.old": true, "authorized_keys": true}
 
 // CheckAdopt validates an adoption against the home as it is now: a loose
 // pair in ~/.ssh, a hypervisor authama knows that does not manage its own
 // keys, a guest user it will embed, a per_service profile, a new alias.
 func CheckAdopt(p paths.Paths, key, profile, alias, hv, user string) error {
-	if key == "" || filepath.Base(key) != key || reservedKeyNames[key] || filepath.Ext(key) == ".pub" {
+	if key == "" || filepath.Base(key) != key || notKeyNames[key] || filepath.Ext(key) == ".pub" {
 		return fmt.Errorf("%q: name a key file directly in ~/.ssh, without .pub", key)
 	}
 	for _, f := range []string{key, key + ".pub"} {

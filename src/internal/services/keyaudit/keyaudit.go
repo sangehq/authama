@@ -76,6 +76,9 @@ type Finding struct {
 // Report is everything the audit found.
 type Report struct {
 	Findings []Finding
+	// Reserved are the keys kept on purpose (0.1.4). They are information, not
+	// findings: none of them makes the report fail, even under Strict.
+	Reserved []Reserved
 	// Strict escalates every state to blocking, for CI - where a warning nobody
 	// reads is the same as no check at all.
 	Strict bool
@@ -186,6 +189,8 @@ type Service struct {
 	inv    *inventory.Inventory
 	sshDir string
 	keys   *keysvc.Service
+	// planned are reservations from authama.json devboxes with no VM yet.
+	planned map[string]manifest.ReservedKey
 }
 
 // New builds an audit service.
@@ -223,6 +228,7 @@ func (s *Service) Audit(strict bool) (Report, error) {
 	rep.Findings = append(rep.Findings, stray...)
 	rep.Findings = append(rep.Findings, s.staleInventory()...)
 	rep.Findings = append(rep.Findings, s.loose()...)
+	rep.Reserved = s.reserved()
 
 	rank := map[string]int{}
 	for i, state := range order {
@@ -365,8 +371,12 @@ var managedInSSHDir = map[string]bool{
 // key that looks like a devbox's, or any other.
 func (s *Service) loose() []Finding {
 	keys := LooseKeys(s.sshDir)
+	res, _ := Reservations(s.m, s.planned)
 	out := make([]Finding, 0, len(keys))
 	for _, k := range keys {
+		if _, kept := res[k.Name]; kept {
+			continue // reported as a reservation instead
+		}
 		f := Finding{State: Loose, Subject: k.Name,
 			Detail: "a key in ~/.ssh that no Host block uses",
 			Fix:    "authama ssh import   (bring it under management), or leave it alone",
@@ -380,7 +390,8 @@ func (s *Service) loose() []Finding {
 			f.Detail = "a key in ~/.ssh that no Host block uses; its " + k.Hint + " suggests a devbox VM"
 			f.Fix = "adopt it onto its VM: authama ssh vm adopt-key " + k.Name +
 				" <profile> <alias> --hypervisor <hypervisor> --vm <vm name> --user <guest user>   " +
-				"(pick the VM from `authama ssh vm list`; or declare it under devboxes in authama.json and run `authama ssh vm sync`)"
+				"(pick the VM from `authama ssh vm list`; or declare it under devboxes in authama.json and run `authama ssh vm sync`; " +
+				"or keep it for later: authama ssh key reserve " + k.Name + " --for devbox)"
 		}
 		out = append(out, f)
 	}
@@ -399,6 +410,10 @@ type LooseKey struct {
 	// CopyOf is the managed key (relative to ~/.ssh) whose public key this
 	// one's is - the original left behind by `vm adopt-key` without --move.
 	CopyOf string `json:"copy_of,omitempty"`
+	// Reserved is set (by MarkReserved) when the key is kept on purpose.
+	Reserved     bool   `json:"reserved,omitempty"`
+	ReservedFor  string `json:"reserved_for,omitempty"`
+	ReservedNote string `json:"reserved_note,omitempty"`
 }
 
 var devboxWords = []string{"devbox", "docker", "tunnel", "vm", "lima", "orb", "parallels", "vmpal", "utm",

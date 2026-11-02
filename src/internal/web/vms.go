@@ -22,6 +22,8 @@ type VMsView struct {
 	Unknown  []string // enabled names that match no driver
 	Devboxes []DevboxView
 	Loose    []keyaudit.LooseKey
+	// Reserved are the loose keys kept on purpose; they can still be adopted.
+	Reserved []keyaudit.Reserved
 	Profiles []string
 	// Schedule is the command the daily schedule runs.
 	Schedule string
@@ -67,12 +69,15 @@ func (e AppEngine) VMs() (VMsView, error) {
 	for _, a := range cfg.DevboxAliases() {
 		v.Devboxes = append(v.Devboxes, DevboxView{Alias: a, Devbox: cfg.Devboxes[a]})
 	}
-	for _, k := range keyaudit.LooseKeys(e.P.SSHDir) {
+	m, merr := manifest.Load(e.P.Manifest())
+	res, _ := keyaudit.Reservations(m, cfg.PlannedKeys())
+	for _, k := range keyaudit.MarkReserved(keyaudit.LooseKeys(e.P.SSHDir), res) {
 		if k.CopyOf == "" {
 			v.Loose = append(v.Loose, k)
 		}
 	}
-	if m, err := manifest.Load(e.P.Manifest()); err == nil {
+	if merr == nil {
+		v.Reserved, _ = e.reservedAndLoose(m)
 		v.Profiles = m.ProfileNames()
 		sort.Strings(v.Profiles)
 	}

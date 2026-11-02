@@ -28,6 +28,8 @@ func newKeyCmd() *cobra.Command {
 	cmd.AddCommand(newKeyListCmd())
 	cmd.AddCommand(newKeyDeleteCmd())
 	cmd.AddCommand(newKeyRegenPubCmd())
+	cmd.AddCommand(newKeyReserveCmd())
+	cmd.AddCommand(newKeyUnreserveCmd())
 	return cmd
 }
 
@@ -202,6 +204,9 @@ func newKeyListCmd() *cobra.Command {
 				return err
 			}
 			writeKeyTable(c.OutOrStdout(), rows)
+			if selector == "" {
+				writeReserved(c.OutOrStdout(), m, inv, p.SSHDir, vmConfig(p).PlannedKeys())
+			}
 			return nil
 		},
 	}
@@ -225,6 +230,19 @@ func writeKeyTable(out io.Writer, rows []keysvc.Row) {
 			r.Ref, r.Type, dash(r.Fingerprint), dash(r.ExpiresOn), dash(strings.Join(r.Hosts, ",")), state)
 	}
 	_ = tw.Flush()
+}
+
+// writeReserved lists the loose keys kept on purpose under the key table.
+func writeReserved(out io.Writer, m *manifest.Manifest, inv *inventory.Inventory, sshDir string,
+	planned map[string]manifest.ReservedKey) {
+	rep, err := keyaudit.New(m, inv, sshDir).WithPlanned(planned).Audit(false)
+	if err != nil || len(rep.Reserved) == 0 {
+		return
+	}
+	_, _ = fmt.Fprintln(out, "\nreserved (loose keys in ~/.ssh kept on purpose; `authama ssh key unreserve` drops one):")
+	for _, r := range rep.Reserved {
+		_, _ = fmt.Fprintln(out, "  "+r.Line())
+	}
 }
 
 func dash(s string) string {
