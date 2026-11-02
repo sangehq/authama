@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/simtabi/authama/src/v3/internal/core/tokens"
+	"github.com/simtabi/authama/src/internal/core/tokens"
 )
 
 // Catalog override variables. auth-token-manager read its catalog from

@@ -5,10 +5,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
-	"github.com/simtabi/authama/src/v3/internal/platform"
-	"github.com/simtabi/authama/src/v3/internal/services/editor"
-	"github.com/simtabi/authama/src/v3/internal/services/lifecycle"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/simtabi/authama/src/internal/services/editor"
+	"github.com/simtabi/authama/src/internal/services/lifecycle"
 )
 
 func intPtrIf(cmd *cobra.Command, flag string, val int) *int {

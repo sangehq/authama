@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/v3/internal/core/tokens"
-	"github.com/simtabi/authama/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/core/tokens"
+	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
 // sandbox is a token environment whose home, config and cwd are all under a

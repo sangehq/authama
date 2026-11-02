@@ -9,12 +9,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/simtabi/authama/src/v3/internal/brand"
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
-	"github.com/simtabi/authama/src/v3/internal/core/tokens"
-	"github.com/simtabi/authama/src/v3/internal/services/change"
-	"github.com/simtabi/authama/src/v3/internal/services/editor"
-	"github.com/simtabi/authama/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/core/tokens"
+	"github.com/simtabi/authama/src/internal/services/change"
+	"github.com/simtabi/authama/src/internal/services/editor"
+	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
 // A change is two requests. POST /changes/preview runs it against a private

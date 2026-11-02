@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/simtabi/authama/src/v3/internal/core/authkeys"
-	"github.com/simtabi/authama/src/v3/internal/util/httpjson"
-	"github.com/simtabi/authama/src/v3/internal/util/secrets"
+	"github.com/simtabi/authama/src/internal/core/authkeys"
+	"github.com/simtabi/authama/src/internal/util/httpjson"
+	"github.com/simtabi/authama/src/internal/util/secrets"
 )
 
 const maxPages = 50

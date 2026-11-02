@@ -19,10 +19,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/simtabi/authama/src/v3/internal/brand"
-	"github.com/simtabi/authama/src/v3/internal/services/history"
-	"github.com/simtabi/authama/src/v3/internal/services/mutation"
-	"github.com/simtabi/authama/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/services/history"
+	"github.com/simtabi/authama/src/internal/services/mutation"
+	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
 // States a job is in.

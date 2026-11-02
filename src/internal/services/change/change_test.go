@@ -9,11 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/v3/internal/services/editor"
-	"github.com/simtabi/authama/src/v3/internal/services/history"
-	"github.com/simtabi/authama/src/v3/internal/services/mutation"
-	"github.com/simtabi/authama/src/v3/internal/services/snapshots"
-	"github.com/simtabi/authama/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/services/editor"
+	"github.com/simtabi/authama/src/internal/services/history"
+	"github.com/simtabi/authama/src/internal/services/mutation"
+	"github.com/simtabi/authama/src/internal/services/snapshots"
+	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
 const privateMarker = "-----BEGIN OPENSSH PRIVATE KEY-----"

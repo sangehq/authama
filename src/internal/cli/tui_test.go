@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/v3/internal/brand"
-	"github.com/simtabi/authama/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
 // scriptPrompter replays scripted answers so the TUI navigation loop is testable

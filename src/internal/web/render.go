@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/v3/internal/brand"
-	"github.com/simtabi/authama/src/v3/internal/core/expiry"
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
-	"github.com/simtabi/authama/src/v3/internal/services/history"
+	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/core/expiry"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/services/history"
 )
 
 // assetSet is the embedded assets with a content hash each, for

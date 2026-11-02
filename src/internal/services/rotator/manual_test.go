@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/v3/internal/core/providers"
+	"github.com/simtabi/authama/src/internal/core/providers"
 )
 
 // A web-panel target (Ploi) cannot take a key through an API, so rotate used to either abort or,

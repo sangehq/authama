@@ -15,11 +15,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/simtabi/authama/src/v3/internal/core/inventory"
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
-	"github.com/simtabi/authama/src/v3/internal/util/log"
-	"github.com/simtabi/authama/src/v3/internal/util/paths"
-	"github.com/simtabi/authama/src/v3/internal/util/perms"
+	"github.com/simtabi/authama/src/internal/core/inventory"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/util/log"
+	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/util/perms"
 )
 
 // DeleteResult is what one manifest-level deletion changed. It is data for the

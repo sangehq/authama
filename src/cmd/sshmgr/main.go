@@ -8,8 +8,8 @@ package main
 import (
 	"os"
 
-	"github.com/simtabi/authama/src/v3/internal/cli"
-	"github.com/simtabi/authama/src/v3/internal/util/askpass"
+	"github.com/simtabi/authama/src/internal/cli"
+	"github.com/simtabi/authama/src/internal/util/askpass"
 )
 
 func main() {

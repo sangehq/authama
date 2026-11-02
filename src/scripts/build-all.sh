@@ -5,7 +5,7 @@
 # build/dist/:
 #
 #   authama_{os}_{arch}[.exe]       flat, versionless, ready-to-run binaries,
-#   sshmgr_{os}_{arch}[.exe]        and the same program under its v3 name
+#   sshmgr_{os}_{arch}[.exe]        and the same program under its original name
 #   {authama,sshmgr}_macos_universal  Intel + Apple Silicon fat binaries (on macOS)
 #   checksums.txt                   SHA-256 over the bare binaries (bare names)
 #   archives/sshmgr_{os}_{arch}.{tar.gz,zip}   both binaries + LICENSE/README/CHANGELOG
@@ -35,10 +35,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 REPO_ROOT=".."
 
-# The archive name stays sshmgr_ (the v3 asset names); both binaries go in it.
+# The archive name stays sshmgr_ (the pre-0.1.0 asset names); both binaries go in it.
 BINARY="sshmgr"
 BINARIES="authama sshmgr"
-PKG="github.com/simtabi/authama/src/v3/internal/version"
+PKG="github.com/simtabi/authama/src/internal/version"
 BUILD_DIR="${REPO_ROOT}/build"
 OUT="${BUILD_DIR}/dist"
 ARCHIVE_DIR="${OUT}/archives"

@@ -8,9 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/v3/internal/services/bundler"
-	"github.com/simtabi/authama/src/v3/internal/services/keystore"
-	"github.com/simtabi/authama/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/services/bundler"
+	"github.com/simtabi/authama/src/internal/services/keystore"
+	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
 func newBundleCmd() *cobra.Command {

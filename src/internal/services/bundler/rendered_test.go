@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/v3/internal/core/renderer"
+	"github.com/simtabi/authama/src/internal/core/renderer"
 )
 
 // writeArchiveWith builds an unencrypted bundle (fakeCipher passes it through)

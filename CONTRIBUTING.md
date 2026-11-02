@@ -86,8 +86,8 @@ Everything the repository *presents* stays at the top: `README.md`, `LICENSE`,
 | `src/` | `go.mod`, `cmd/`, `internal/`, `config/`, `scripts/`, `.goreleaser.yaml`, `.golangci.yml` |
 | repo root | the README and friends, `docs/`, `.github/`, `Makefile`, `build/` |
 
-Import paths carry both segments: `github.com/simtabi/authama/src/v3/internal/cli`.
-The `v3` is Go's required major-version suffix, not a directory. Package names in
+Import paths start with the module path, `github.com/simtabi/authama/src/internal/cli`;
+there is no major-version suffix below v2. Package names in
 this document are written relative to the module, so `internal/cli` means
 `src/internal/cli` on disk.
 

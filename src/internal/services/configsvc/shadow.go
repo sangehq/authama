@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/simtabi/authama/src/v3/internal/core/renderer"
+	"github.com/simtabi/authama/src/internal/core/renderer"
 )
 
 // Shadow is a foreign block above the managed block that ssh reads first for a

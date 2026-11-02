@@ -9,10 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/v3/internal/core/inventory"
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
-	"github.com/simtabi/authama/src/v3/internal/services/keystore"
-	"github.com/simtabi/authama/src/v3/internal/services/keysvc"
+	"github.com/simtabi/authama/src/internal/core/inventory"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/services/keystore"
+	"github.com/simtabi/authama/src/internal/services/keysvc"
 )
 
 const fileManifest = `{"version":1,"profiles":{"work":{"hosts":[

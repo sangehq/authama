@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/core/manifest"
 )
 
 // SelfPath returns the sshmgr binary a VM host's ProxyCommand runs. A variable so tests pin it.

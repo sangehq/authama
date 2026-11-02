@@ -9,8 +9,8 @@
 set -euo pipefail
 
 tag="${1:?usage: extract-changelog.sh <tag>}"
-# Tags come in two forms on the same commit - v3.0.1 drives the release and
-# src/v3.0.1 is the module alias Go resolves through. Accept either, so this
+# Tags come in two forms on the same commit - v0.1.0 drives the release and
+# src/v0.1.0 is the module alias Go resolves through. Accept either, so this
 # still works if it is ever handed GITHUB_REF_NAME from the aliased tag.
 tag="${tag#src/}"
 version="${tag#v}"
@@ -18,10 +18,11 @@ changelog="${CHANGELOG_FILE:-CHANGELOG.md}"
 
 [ -f "$changelog" ] || { echo "error: $changelog not found" >&2; exit 1; }
 
-# Print lines between "## [<version>]" and the next "## [" heading.
+# Print lines between "## [<version>]" and the next level-2 heading (another
+# release, or the "Pre-0.1.0 history" section that follows 0.1.0).
 body="$(awk -v ver="$version" '
   $0 ~ "^## \\[" ver "\\]"  { capture = 1; next }
-  capture && /^## \[/       { exit }
+  capture && /^## /         { exit }
   capture && /^\[[^]]+\]:/  { exit }   # stop at link-reference definitions
   capture                   { print }
 ' "$changelog" | sed -e 's/[[:space:]]*$//' | awk 'NF {p=1} p')"

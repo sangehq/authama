@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/v3/internal/core/tokens"
-	"github.com/simtabi/authama/src/v3/internal/services/tokensvc"
-	"github.com/simtabi/authama/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/core/tokens"
+	"github.com/simtabi/authama/src/internal/services/tokensvc"
+	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
 // tokenTUI is a menu over a --dev-root sandbox, so every token file the

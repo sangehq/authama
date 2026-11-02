@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/core/manifest"
 )
 
 func TestOnePasswordIssuesOnlyWhenAProfileUsesIt(t *testing.T) {

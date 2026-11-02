@@ -26,7 +26,7 @@ in [Architecture](../architecture.md).
 It opens with a header describing the session:
 
 ```
-  authama v3.0.1  darwin/arm64   built 2026-08-06 from d7ea28f
+  authama v0.1.0  darwin/arm64   built 2026-11-02 from d7ea28f
 
   home      ~/.config/ssh-manager   (providers: shipped default)
   ssh       ~/.ssh

@@ -8,12 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/v3/internal/core/authkeys"
-	"github.com/simtabi/authama/src/v3/internal/core/inventory"
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
-	"github.com/simtabi/authama/src/v3/internal/services/keystore"
-	"github.com/simtabi/authama/src/v3/internal/services/reconciler"
-	"github.com/simtabi/authama/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/core/authkeys"
+	"github.com/simtabi/authama/src/internal/core/inventory"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/services/keystore"
+	"github.com/simtabi/authama/src/internal/services/reconciler"
+	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
 // A web-panel provider (ploi) deploys via the manual path - no network - so the

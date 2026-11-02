@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/v3/internal/services/migratesvc"
+	"github.com/simtabi/authama/src/internal/services/migratesvc"
 )
 
 // newMigrateCmd is the native migrate verb: move a legacy home to the standard one.

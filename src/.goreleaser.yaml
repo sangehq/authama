@@ -18,7 +18,7 @@ before:
 
 # Two pure-Go binaries cross-compiled to the full OS/arch matrix: authama
 # (Authentication Access Manager) and sshmgr, the same program under the name
-# v3 shipped, kept so existing scripts, aliases and the ProxyCommand lines
+# ssh-manager shipped, kept so existing scripts, aliases and the ProxyCommand lines
 # `vm` writes keep working. CGO is disabled
 # so every target is a static, portable binary; -trimpath makes builds
 # reproducible and -s -w strips debug info for smaller artifacts.
@@ -54,9 +54,9 @@ builds:
     mod_timestamp: "{{ .CommitTimestamp }}"
     ldflags:
       - -s -w
-      - -X github.com/simtabi/authama/src/v3/internal/version.Version={{ .Version }}
-      - -X github.com/simtabi/authama/src/v3/internal/version.Commit={{ .Commit }}
-      - -X github.com/simtabi/authama/src/v3/internal/version.Date={{ .CommitDate }}
+      - -X github.com/simtabi/authama/src/internal/version.Version={{ .Version }}
+      - -X github.com/simtabi/authama/src/internal/version.Commit={{ .Commit }}
+      - -X github.com/simtabi/authama/src/internal/version.Date={{ .CommitDate }}
 
   - id: authama
     dir: src
@@ -87,9 +87,9 @@ builds:
     mod_timestamp: "{{ .CommitTimestamp }}"
     ldflags:
       - -s -w
-      - -X github.com/simtabi/authama/src/v3/internal/version.Version={{ .Version }}
-      - -X github.com/simtabi/authama/src/v3/internal/version.Commit={{ .Commit }}
-      - -X github.com/simtabi/authama/src/v3/internal/version.Date={{ .CommitDate }}
+      - -X github.com/simtabi/authama/src/internal/version.Version={{ .Version }}
+      - -X github.com/simtabi/authama/src/internal/version.Commit={{ .Commit }}
+      - -X github.com/simtabi/authama/src/internal/version.Date={{ .CommitDate }}
 
 # A single macOS universal binary (amd64 + arm64) alongside the per-arch ones.
 universal_binaries:
@@ -107,7 +107,7 @@ universal_binaries:
 #   sshmgr_macos_arm64, sshmgr_linux_amd64, sshmgr_windows_386.exe,
 #   sshmgr_macos_universal, sshmgr_linux_armv7.
 # The bare authama binaries follow the same scheme (authama_macos_arm64, ...).
-# The tar.gz/zip archives keep the sshmgr_ name, so v3 download URLs and the
+# The tar.gz/zip archives keep the sshmgr_ name, so pre-0.1.0 download URLs and the
 # package managers' asset names are unchanged, and carry both binaries.
 # The release tag carries the version. install scripts reconstruct these names.
 archives:

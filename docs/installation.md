@@ -2,8 +2,8 @@
 
 How to get `authama` onto a machine, and where it keeps its state once it is there.
 
-Every install path puts two binaries on `PATH`: `authama`, and `sshmgr`, the v3
-name, kept for existing scripts and `ProxyCommand` lines. They are the same
+Every install path puts two binaries on `PATH`: `authama`, and `sshmgr`, the
+original name, kept for existing scripts and `ProxyCommand` lines. They are the same
 program; use either.
 
 ## Requirements
@@ -45,31 +45,24 @@ irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.p
 With the Go toolchain:
 
 ```sh
-go install github.com/simtabi/authama/src/v3/cmd/authama@latest
-go install github.com/simtabi/authama/src/v3/cmd/sshmgr@latest   # the compat name, if you want it
+go install github.com/simtabi/authama/src/cmd/authama@latest
+go install github.com/simtabi/authama/src/cmd/sshmgr@latest   # the compat name, if you want it
 ```
 
-`cmd/authama` exists from the first release that ships it; before then, use
-`@main` (below) or `cmd/sshmgr`.
-
-Both segments after the repository name are load-bearing. `src` is the
-subdirectory the Go module lives in, and `v3` is the major version - Go requires
-that suffix from v2 onward. Dropping either gives a module path that does not
-exist, and the error names a version rather than a path, so it reads as a
-missing release:
-
-```
-go: ...found (v0.1.0), but does not contain package .../cmd/sshmgr
-```
+The `src` segment is load-bearing: it is the subdirectory the Go module lives
+in. There is no major-version suffix, because versions restarted at v0.1.0.
+`github.com/simtabi/authama/src/v3/...` is the path of the releases before the
+restart (v3.6.1 and earlier); the Go proxy still serves them, but they are no
+longer maintained.
 
 To build the current `main` instead of the last release — useful for a fix that
 has landed but not shipped — name the branch:
 
 ```sh
-go install github.com/simtabi/authama/src/v3/cmd/authama@main
+go install github.com/simtabi/authama/src/cmd/authama@main
 ```
 
-Go turns that into a pseudo-version (`v3.0.0-20260806193200-60ce5f9c4ee6`) and
+Go turns that into a pseudo-version (`v0.1.1-0.20261102073200-60ce5f9c4ee6`) and
 the binary reports it, so a build from a branch is still identifiable. It needs
 no tag and no release, which also makes it the way in when a release is pending.
 

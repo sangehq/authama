@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/v3/internal/services/mutation"
-	"github.com/simtabi/authama/src/v3/internal/services/snapshots"
+	"github.com/simtabi/authama/src/internal/services/mutation"
+	"github.com/simtabi/authama/src/internal/services/snapshots"
 )
 
 // The TUI's Change entries each have a CLI command beside them, and the menu

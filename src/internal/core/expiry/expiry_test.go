@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/v3/internal/core/inventory"
+	"github.com/simtabi/authama/src/internal/core/inventory"
 )
 
 func sp(s string) *string { return &s }

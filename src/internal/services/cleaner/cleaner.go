@@ -12,12 +12,12 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/simtabi/authama/src/v3/internal/core/inventory"
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
-	"github.com/simtabi/authama/src/v3/internal/services/keyaudit"
-	"github.com/simtabi/authama/src/v3/internal/services/knownhosts"
-	"github.com/simtabi/authama/src/v3/internal/services/snapshots"
-	"github.com/simtabi/authama/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/core/inventory"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/services/keyaudit"
+	"github.com/simtabi/authama/src/internal/services/knownhosts"
+	"github.com/simtabi/authama/src/internal/services/snapshots"
+	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
 // Run is `sshmgr clean` after its confirmation, with the lock held. With
