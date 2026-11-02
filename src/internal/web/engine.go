@@ -19,11 +19,13 @@ import (
 	"github.com/simtabi/authama/src/internal/services/change"
 	"github.com/simtabi/authama/src/internal/services/doctor"
 	"github.com/simtabi/authama/src/internal/services/history"
+	"github.com/simtabi/authama/src/internal/services/keyaudit"
 	"github.com/simtabi/authama/src/internal/services/keysvc"
 	"github.com/simtabi/authama/src/internal/services/knownhosts"
 	"github.com/simtabi/authama/src/internal/services/notifier"
 	"github.com/simtabi/authama/src/internal/services/overview"
 	"github.com/simtabi/authama/src/internal/services/query"
+	"github.com/simtabi/authama/src/internal/services/settings"
 	"github.com/simtabi/authama/src/internal/services/snapshots"
 	"github.com/simtabi/authama/src/internal/services/tokensvc"
 	"github.com/simtabi/authama/src/internal/util/paths"
@@ -43,7 +45,7 @@ type Engine interface {
 	Profiles() ([]ProfileView, error)
 	Hosts() ([]query.ProfileGroup, error)
 	Host(alias string) (HostView, error)
-	Keys() ([]keysvc.Row, error)
+	Keys() (KeysView, error)
 	Key(ref string) (KeyView, error)
 	Snapshots() ([]SnapshotView, error)
 	Bundles() ([]BundleView, error)
@@ -283,13 +285,45 @@ func knownHostsToken(h manifest.Host) string {
 	return fmt.Sprintf("[%s]:%d", h.Hostname, h.Port)
 }
 
+// KeysView is the /keys page: every key, as `authama ssh key list` shows
+// them, the loose ~/.ssh keys kept on purpose, and the loose keys that could be.
+type KeysView struct {
+	Rows     []keysvc.Row
+	Reserved []keyaudit.Reserved
+	Loose    []keyaudit.LooseKey
+}
+
 // Keys lists every key, as `authama ssh key list` does.
-func (e AppEngine) Keys() ([]keysvc.Row, error) {
+func (e AppEngine) Keys() (KeysView, error) {
 	m, err := e.manifest()
 	if err != nil {
-		return nil, err
+		return KeysView{}, err
 	}
-	return keysvc.New(m, e.inventory(), e.P.SSHDir).Rows("")
+	rows, err := keysvc.New(m, e.inventory(), e.P.SSHDir).Rows("")
+	if err != nil {
+		return KeysView{}, err
+	}
+	v := KeysView{Rows: rows}
+	v.Reserved, v.Loose = e.reservedAndLoose(m)
+	return v, nil
+}
+
+// reservedAndLoose are the reserved keys (manifest and planned devboxes) and
+// the loose keys that are neither reserved nor a leftover copy.
+func (e AppEngine) reservedAndLoose(m *manifest.Manifest) ([]keyaudit.Reserved, []keyaudit.LooseKey) {
+	cfg, _ := settings.LoadVMConfig(e.P.SettingsFile())
+	rep, err := keyaudit.New(m, e.inventory(), e.P.SSHDir).WithPlanned(cfg.PlannedKeys()).Audit(false)
+	if err != nil {
+		return nil, nil
+	}
+	res, _ := keyaudit.Reservations(m, cfg.PlannedKeys())
+	var loose []keyaudit.LooseKey
+	for _, k := range keyaudit.MarkReserved(keyaudit.LooseKeys(e.P.SSHDir), res) {
+		if k.CopyOf == "" && !k.Reserved {
+			loose = append(loose, k)
+		}
+	}
+	return rep.Reserved, loose
 }
 
 // Key is one key by its profile/key reference.

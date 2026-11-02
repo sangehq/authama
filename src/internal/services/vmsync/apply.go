@@ -83,7 +83,9 @@ func (s *Syncer) ApplyManifest(plan Plan, out io.Writer) (int, error) {
 		case ActUpdateDevbox:
 			err = s.updateDevbox(a)
 		case ActAdoptKey:
-			_, err = AdoptKey(s.P, a.keySrc, a.Profile, a.keyName, false)
+			if _, err = AdoptKey(s.P, a.keySrc, a.Profile, a.keyName, false); err == nil {
+				_, err = ReleaseReservation(s.P, a.keySrc)
+			}
 		}
 		if err != nil {
 			errs = append(errs, fmt.Errorf("%s: %w", a.Detail, err))
@@ -257,6 +259,17 @@ func AdoptKey(P paths.Paths, src, profile, keyName string, move bool) (AdoptResu
 		res.Moved = true
 	}
 	return res, nil
+}
+
+// ReleaseReservation drops the reservation of a loose key that has just been
+// adopted from src (a path directly in ~/.ssh): the key now has a host, so the
+// note that it is kept for later no longer applies. Reports whether one was
+// dropped.
+func ReleaseReservation(P paths.Paths, src string) (bool, error) {
+	if filepath.Dir(filepath.Clean(src)) != filepath.Clean(P.SSHDir) {
+		return false, nil
+	}
+	return editor.New(P).UnreserveKey(filepath.Base(src), true)
 }
 
 func copyExact(src, dst string, mode os.FileMode) error {

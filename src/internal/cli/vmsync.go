@@ -261,7 +261,9 @@ func newVMAdoptKeyCmd() *cobra.Command {
 				if !interactive {
 					return errors.New("name the key to adopt (a file directly in ~/.ssh)")
 				}
-				loose := keyaudit.LooseKeys(p.SSHDir)
+				m, _ := manifest.Load(p.Manifest())
+				res, _ := keyaudit.Reservations(m, vmConfig(p).PlannedKeys())
+				loose := keyaudit.MarkReserved(keyaudit.LooseKeys(p.SSHDir), res)
 				var opts []string
 				var names []string
 				for _, k := range loose {
@@ -272,7 +274,12 @@ func newVMAdoptKeyCmd() *cobra.Command {
 					if k.Comment != "" {
 						label += "  (" + k.Comment + ")"
 					}
-					if k.Devbox {
+					switch {
+					case k.Reserved && k.ReservedFor != "":
+						label += "  - reserved for " + k.ReservedFor
+					case k.Reserved:
+						label += "  - reserved"
+					case k.Devbox:
 						label += "  - looks like a devbox key"
 					}
 					opts, names = append(opts, label), append(names, k.Name)
@@ -366,6 +373,11 @@ func newVMAdoptKeyCmd() *cobra.Command {
 			if docker {
 				summary += "  - create or update Docker context " + alias + " (ssh://" + alias + ")\n"
 			}
+			if m, err := manifest.Load(p.Manifest()); err == nil {
+				if _, ok := m.ReservedKeys[key]; ok {
+					summary += "  - release its reservation (authama ssh key reserve)\n"
+				}
+			}
 			summary += "  - back up the manifest, snapshot ~/.ssh, and re-render ~/.ssh/config"
 			if dryRun {
 				_, _ = fmt.Fprintln(c.OutOrStdout(), summary)
@@ -396,6 +408,11 @@ func newVMAdoptKeyCmd() *cobra.Command {
 			}
 			out := c.OutOrStdout()
 			_, _ = fmt.Fprintf(out, "adopted ~/.ssh/%s as %s\n", key, res.Dest)
+			if released, err := vmsync.ReleaseReservation(p, src); err != nil {
+				return err
+			} else if released {
+				_, _ = fmt.Fprintf(out, "released the reservation of %s: it has a host now\n", key)
+			}
 			if err := applyManifestEdit(c, p); err != nil {
 				return err
 			}

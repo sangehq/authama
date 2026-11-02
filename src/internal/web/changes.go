@@ -38,6 +38,8 @@ var actionFields = map[string][]string{
 	"host-edit":         {"profile", "alias", "hostname", "user", "port", "tags"},
 	"host-delete":       {"profile", "alias"},
 	"key-delete":        {"profile", "key"},
+	"key-reserve":       {"key", "for", "note"},
+	"key-unreserve":     {"key"},
 	"vm-add":            {"profile", "alias", "hypervisor", "vm", "user"},
 	"config-render":     {},
 	"reconcile":         {},
@@ -299,6 +301,14 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 			host = n("host")
 		}
 		ch = change.KeyAdd(n("profile"), n("key"), kt, host)
+	case "key-reserve":
+		forWhat, note := pl("for"), pl("note")
+		if len(forWhat) > 200 || len(note) > 200 {
+			errs = append(errs, badForm("for and note are at most 200 characters"))
+		}
+		ch = change.KeyReserve(n("key"), forWhat, note)
+	case "key-unreserve":
+		ch = change.KeyUnreserve(n("key"))
 	case "providers-export":
 		ch = change.ProvidersExport()
 	case "snapshots-prune":

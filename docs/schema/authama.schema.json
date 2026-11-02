@@ -34,6 +34,16 @@
     "devboxes": {
       "additionalProperties": {
         "additionalProperties": false,
+        "else": {
+          "required": [
+            "key"
+          ]
+        },
+        "if": {
+          "required": [
+            "vm"
+          ]
+        },
         "properties": {
           "description": {
             "type": "string"
@@ -64,20 +74,24 @@
             "type": "string"
           },
           "vm": {
-            "description": "The VM's name as the hypervisor lists it.",
+            "description": "The VM's name as the hypervisor lists it. Leave it out for a planned devbox that only keeps its key.",
             "minLength": 1,
             "type": "string"
           }
         },
         "required": [
-          "profile",
-          "hypervisor",
-          "vm",
-          "user"
+          "profile"
         ],
+        "then": {
+          "required": [
+            "hypervisor",
+            "vm",
+            "user"
+          ]
+        },
         "type": "object"
       },
-      "description": "Devboxes authama keeps as SSH hosts, by alias. `ssh vm sync` adds a declared devbox that is not a host yet and adopts its loose key (a copy) when the profile lacks it.",
+      "description": "Devboxes authama keeps as SSH hosts, by alias. `ssh vm sync` adds a declared devbox that is not a host yet and adopts its loose key (a copy) when the profile lacks it. A devbox without vm is planned: it only keeps its key (doctor reports it as reserved) until the VM exists.",
       "propertyNames": {
         "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$"
       },

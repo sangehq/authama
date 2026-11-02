@@ -112,12 +112,12 @@ func (h pages) handleHost(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h pages) handleKeys(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.s.opts.Engine.Keys()
+	keys, err := h.s.opts.Engine.Keys()
 	if err != nil {
 		h.fail(w, r, err)
 		return
 	}
-	h.s.render(w, http.StatusOK, "keys", h.s.newView(r, "keys", "Keys", rows))
+	h.s.render(w, http.StatusOK, "keys", h.s.newView(r, "keys", "Keys", keys))
 }
 
 func (h pages) handleKey(w http.ResponseWriter, r *http.Request) {

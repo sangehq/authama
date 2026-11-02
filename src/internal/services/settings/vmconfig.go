@@ -40,6 +40,23 @@ type Devbox struct {
 	Description   string `json:"description,omitempty"`
 }
 
+// Planned reports a devbox declared without a VM yet: it only keeps its key
+// (reserved, so doctor does not call it loose) until the VM exists.
+func (d Devbox) Planned() bool { return strings.TrimSpace(d.VM) == "" }
+
+// PlannedKeys are the keys planned devboxes keep, as reservations keyed by
+// the ~/.ssh file name, For naming the devbox.
+func (c VMConfig) PlannedKeys() map[string]manifest.ReservedKey {
+	out := map[string]manifest.ReservedKey{}
+	for _, alias := range c.DevboxAliases() {
+		d := c.Devboxes[alias]
+		if d.Planned() && d.Key != "" {
+			out[d.Key] = manifest.ReservedKey{For: "devbox " + alias, Note: d.Description}
+		}
+	}
+	return out
+}
+
 // WantsDockerContext is DockerContext, defaulting to true.
 func (d Devbox) WantsDockerContext() bool { return d.DockerContext == nil || *d.DockerContext }
 
@@ -86,7 +103,7 @@ func parseStructured(f *File, name string, raw json.RawMessage) []string {
 	case SectionDevboxes:
 		var m map[string]Devbox
 		if err := d.Decode(&m); err != nil || m == nil {
-			return []string{"devboxes: must be an object of alias -> {profile, hypervisor, vm, user, key?, docker_context?}: " + errText(err)}
+			return []string{"devboxes: must be an object of alias -> {profile, hypervisor, vm, user, key?, docker_context?} (or {profile, key} for a planned devbox with no VM yet): " + errText(err)}
 		}
 		f.VM.Devboxes = m
 	}
@@ -122,7 +139,12 @@ func (c VMConfig) crossCheck() []string {
 		if !nameRE.MatchString(d.Profile) {
 			probs = append(probs, at+".profile: required (a profile name)")
 		}
+		// A devbox without a vm is planned: it holds its key for a VM that does
+		// not exist yet (doctor reports the key as reserved, sync adds no host),
+		// so only the key is required; hypervisor and user are checked if given.
+		planned := d.Planned()
 		switch {
+		case d.Hypervisor == "" && planned:
 		case d.Hypervisor == "":
 			probs = append(probs, at+".hypervisor: required")
 		case d.Hypervisor == manifest.HypervisorOrbStack || d.Hypervisor == manifest.HypervisorPodman:
@@ -131,10 +153,14 @@ func (c VMConfig) crossCheck() []string {
 			probs = append(probs, fmt.Sprintf("%s.hypervisor: %q is neither built in (%s) nor declared in the hypervisors section",
 				at, d.Hypervisor, strings.Join(manifest.Hypervisors, ", ")))
 		}
-		if strings.TrimSpace(d.VM) == "" || strings.ContainsFunc(d.VM, func(r rune) bool { return r < 0x20 || r == 0x7f }) {
+		switch {
+		case planned && d.Key == "":
+			probs = append(probs, at+".vm: required (the VM's name as the hypervisor lists it), "+
+				"or leave it out and set key to keep that key for a VM you have not made yet")
+		case strings.ContainsFunc(d.VM, func(r rune) bool { return r < 0x20 || r == 0x7f }):
 			probs = append(probs, at+".vm: required (the VM's name as the hypervisor lists it)")
 		}
-		if !ValidUser(d.User) {
+		if !ValidUser(d.User) && (!planned || d.User != "") {
 			probs = append(probs, at+".user: required (the guest user: letters, digits, '.', '_' and '-')")
 		}
 		if d.Key != "" && !nameRE.MatchString(d.Key) {
@@ -169,14 +195,17 @@ func structuredSchema() map[string]any {
 		},
 		SectionDevboxes: obj{
 			"type":          "object",
-			"description":   "Devboxes authama keeps as SSH hosts, by alias. `ssh vm sync` adds a declared devbox that is not a host yet and adopts its loose key (a copy) when the profile lacks it.",
+			"description":   "Devboxes authama keeps as SSH hosts, by alias. `ssh vm sync` adds a declared devbox that is not a host yet and adopts its loose key (a copy) when the profile lacks it. A devbox without vm is planned: it only keeps its key (doctor reports it as reserved) until the VM exists.",
 			"propertyNames": obj{"pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$"},
 			"additionalProperties": obj{
-				"type": "object", "additionalProperties": false, "required": []string{"profile", "hypervisor", "vm", "user"},
+				"type": "object", "additionalProperties": false, "required": []string{"profile"},
+				"if":   obj{"required": []string{"vm"}},
+				"then": obj{"required": []string{"hypervisor", "vm", "user"}},
+				"else": obj{"required": []string{"key"}},
 				"properties": obj{
 					"profile":        obj{"type": "string", "minLength": 1, "description": "The profile the host belongs to (created when missing)."},
 					"hypervisor":     obj{"type": "string", "minLength": 1, "description": "A built-in hypervisor (" + strings.Join(manifest.Hypervisors[:5], ", ") + ") or one from the hypervisors section."},
-					"vm":             obj{"type": "string", "minLength": 1, "description": "The VM's name as the hypervisor lists it."},
+					"vm":             obj{"type": "string", "minLength": 1, "description": "The VM's name as the hypervisor lists it. Leave it out for a planned devbox that only keeps its key."},
 					"user":           obj{"type": "string", "pattern": "^[A-Za-z0-9_][A-Za-z0-9._-]{0,31}$", "description": "The guest user."},
 					"key":            obj{"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$", "description": "The key name the host uses; a loose ~/.ssh/<key> pair is adopted (copied) when the profile has no key of that name."},
 					"docker_context": obj{"type": "boolean", "default": true, "description": "Keep a Docker context ssh://<alias>."},

@@ -80,6 +80,24 @@ that pair into the profile (the originals stay). A declared devbox is never prun
 
 `profile`, `hypervisor`, `vm` and `user` are required; `docker_context` defaults to `true`.
 
+A devbox **without `vm`** is *planned*: it keeps its key for a VM you have not made yet. Only `profile`
+and `key` are required (a `hypervisor` and `user` are checked if you give them). `doctor` reports the key
+under "reserved keys" instead of calling it loose, and `vm sync` adds no host for it - it notes
+"devbox docker has no vm yet". Give it its `vm` (and `hypervisor`, `user`) later and the next sync adds
+the host and adopts the key.
+
+```json
+{
+  "devboxes": {
+    "docker": { "profile": "devbox", "key": "docker-tunnel",
+                "description": "Docker devbox VM, kept for later" }
+  }
+}
+```
+
+The same can be recorded without `authama.json`: `authama ssh key reserve docker-tunnel --for devbox`
+(see [Keeping a key for later](#keeping-a-key-for-later)).
+
 ## `authama ssh vm list`
 
 ```text
@@ -182,13 +200,36 @@ authama ssh vm sync                            # then pin, install the key in th
 
 OrbStack and Podman are refused (they own their keys); so is an alias already in use or an invalid user.
 `doctor` points at this command for a loose key whose name or comment suggests a devbox (words such as
-`devbox`, `docker`, `tunnel`, `vm`, or a hypervisor's name).
+`devbox`, `docker`, `tunnel`, `vm`, or a hypervisor's name). The picker labels a reserved key
+("reserved for devbox"), and adopting a reserved key releases its reservation in the same change.
+
+## Keeping a key for later
+
+A key you keep on purpose for a VM that does not exist yet - say `~/.ssh/docker-tunnel`, kept in case you
+run Docker in a VM again - need not be a `doctor` warning. Reserve it:
+
+```sh
+authama ssh key reserve docker-tunnel --for devbox --note "Docker devbox VM, kept for later" --dry-run
+authama ssh key reserve docker-tunnel --for devbox --note "Docker devbox VM, kept for later"
+authama ssh key list          # lists it under "reserved"
+authama ssh show docker-tunnel
+authama ssh key unreserve docker-tunnel   # loose again
+```
+
+The argument is the file's name, `~/.ssh/<name>` or its `.pub`; only a key pair directly in `~/.ssh` that
+authama does not manage can be reserved. The reservation is a `reserved_keys` entry in `manifest.json`
+(see [the manifest reference](../configuration.md#reserved_keys)) with the public key's fingerprint and
+the day; the key file is never moved, changed or read beyond its `.pub`. `doctor` then prints it under
+"reserved keys (kept on purpose, not dangling)" and `--strict` passes; it warns only if the file is gone,
+was replaced by a different key, or has since been adopted. When the VM exists,
+`authama ssh vm adopt-key docker-tunnel ...` (or a `devboxes` entry and `vm sync`) adopts it and
+releases the reservation.
 
 ## The web UI
 
 `authama serve` has a **VMs** page (`/vms`): the VM hosts and their state, the pending sync plan with a
 Preview/Apply of `ssh vm sync` (optionally `--repin`), the hypervisors with their CLI and VMs, the
-declared devboxes, an adopt-key form, and buttons to install or remove the daily sync. Every change shows
+declared devboxes (a planned one shows "no VM yet"), the reserved keys, an adopt-key form, and buttons to install or remove the daily sync. Every change shows
 the exact CLI command and a preview first, as on the other pages.
 
 ---

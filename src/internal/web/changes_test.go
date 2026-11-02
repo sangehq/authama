@@ -12,7 +12,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/services/change"
+	"github.com/simtabi/authama/src/internal/services/editor"
 	"github.com/simtabi/authama/src/internal/services/history"
 	"github.com/simtabi/authama/src/internal/services/mutation"
 	"github.com/simtabi/authama/src/internal/services/snapshots"
@@ -239,11 +241,15 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	// A loose keypair, for the VMs page to offer adopting onto a VM.
-	for _, f := range []string{"loose-vm", "loose-vm.pub"} {
+	// A loose keypair, for the VMs page to offer adopting onto a VM and the
+	// keys page to offer reserving; and a reserved one, for unreserving.
+	for _, f := range []string{"loose-vm", "loose-vm.pub", "kept-vm", "kept-vm.pub"} {
 		if err := os.WriteFile(filepath.Join(p.SSHDir, f), []byte("x\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
+	}
+	if err := editor.New(p).ReserveKey("kept-vm", manifest.ReservedKey{For: "devbox"}); err != nil {
+		t.Fatal(err)
 	}
 	c := signIn(t, s)
 	action := regexp.MustCompile(`name="action" value="([a-z-]+)"`)

@@ -49,6 +49,8 @@ var positional = map[string][]string{
 	"host apply":        {history.KindProfile, history.KindHost},
 	"key add":           {history.KindProfile, history.KindKey},
 	"key delete":        {history.KindKey},
+	"key reserve":       {history.KindKey},
+	"key unreserve":     {history.KindKey},
 	"deploy":            {history.KindKey, history.KindTarget},
 	"rollback":          {history.KindKey},
 	"rotate":            {history.KindKey},
