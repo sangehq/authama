@@ -8,6 +8,28 @@ shared commands at the top level. SSH verbs are listed by their short name
 per-command feature check (`make feature-check`, which exercises every command in
 a sandbox). Run all three with `make test e2e feature-check`.
 
+## At a glance
+
+- **One manifest, reproducible `~/.ssh`.** Profiles (who you are) hold hosts
+  (where you go); `reconcile` mints missing keys and renders a managed block of
+  `~/.ssh/config`, leaving everything outside it alone.
+- **Isolated identities.** Per-profile keys, `IdentitiesOnly`, and profile-prefixed
+  aliases keep two GitHub accounts on one machine from acting as each other.
+- **Key delivery.** `deploy` installs a public key through `ssh-copy-id`, `gh`,
+  `glab`, a cloud provider's REST API (DigitalOcean, Hetzner, Vultr, Linode,
+  Scaleway, …) or a manual paste step.
+- **Safe rotation.** Staged, verified, zero-downtime `rotate` with rollback,
+  expiry reminders, and snapshots of `~/.ssh` before every write.
+- **Trust and reachability.** Host-key pinning (`knownhosts`), VPN-gated hosts
+  (`net`), Cloudflare Access proxies, and local VMs addressed by name (`vm`).
+- **Backups and recovery.** `age`-encrypted bundles, restore onto a new machine,
+  and a break-glass `recover` script.
+- **Auth tokens.** `auth.json`, `.npmrc`, Docker `config.json`,
+  `.git-credentials` and `.netrc` built from environment variables, owner-only and
+  atomic, with `audit` and masked listing.
+- **Three front ends.** The CLI, an interactive `tui`, and a local web UI (`serve`)
+  that previews every change; every change lands in `history`.
+
 The mental model: the **manifest** in `~/.config/authama/manifest.json` is the single source
 of truth; `~/.ssh` is generated, reproducible output. Profiles model *identity*
 (work · personal · acme · ...), not technology, and everything for an identity

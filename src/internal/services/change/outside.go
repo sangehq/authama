@@ -183,7 +183,7 @@ func Clean(adopt bool) Change {
 }
 
 // Bundle is `authama ssh bundle [--keep N]`: an age-encrypted backup of ~/.ssh
-// and the config, written to the config home's dist/. It takes no snapshot,
+// and the config, written to the state home's dist/. It takes no snapshot,
 // as the CLI's does not: it changes nothing a snapshot would hold.
 func Bundle(keep int) Change {
 	var args []string

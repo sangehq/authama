@@ -90,6 +90,8 @@ func renderCLIReference(root *cobra.Command) string {
 	}
 	walk(root)
 	w("%s", choosingSection)
+	// The footer every docs page carries (docs standard), two levels down from the README.
+	w("\n---\n\n[← Docs index](../../README.md#documentation)\n")
 	return b.String()
 }
 

@@ -1,4 +1,4 @@
-# Authentication Access Manager (`authama`)
+# authama
 
 <!-- Three badges, not the usual four: authama ships as a static binary and has no
      package-registry release, so a registry-version badge would have no target. -->
@@ -6,7 +6,7 @@
 [![Static analysis](https://img.shields.io/github/actions/workflow/status/simtabi/authama/codeql.yml?branch=main&label=codeql)](https://github.com/simtabi/authama/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> SSH keys and config, and package-manager / git auth tokens, in one tool.
+> Authentication Access Manager: SSH keys and config, and package-manager / git auth tokens, in one tool.
 
 Two features in a single static binary with no runtime dependencies:
 
@@ -42,28 +42,6 @@ Every channel, pinning a version, a per-user install directory, and where
 per-user state lives are in [docs/installation.md](docs/installation.md). There is
 no runtime Docker image; the [dev container](docs/installation.md#dev-container) is
 for working on authama itself.
-
-## Features
-
-- **One manifest, reproducible `~/.ssh`.** Profiles (who you are) hold hosts
-  (where you go); `reconcile` mints missing keys and renders a managed block of
-  `~/.ssh/config`, leaving everything outside it alone.
-- **Isolated identities.** Per-profile keys, `IdentitiesOnly`, and profile-prefixed
-  aliases keep two GitHub accounts on one machine from acting as each other.
-- **Key delivery.** `deploy` installs a public key through `ssh-copy-id`, `gh`,
-  `glab`, a cloud provider's REST API (DigitalOcean, Hetzner, Vultr, Linode,
-  Scaleway, …) or a manual paste step.
-- **Safe rotation.** Staged, verified, zero-downtime `rotate` with rollback,
-  expiry reminders, and snapshots of `~/.ssh` before every write.
-- **Trust and reachability.** Host-key pinning (`knownhosts`), VPN-gated hosts
-  (`net`), Cloudflare Access proxies, and local VMs addressed by name (`vm`).
-- **Backups and recovery.** `age`-encrypted bundles, restore onto a new machine,
-  and a break-glass `recover` script.
-- **Auth tokens.** `auth.json`, `.npmrc`, Docker `config.json`,
-  `.git-credentials` and `.netrc` built from environment variables, owner-only and
-  atomic, with `audit` and masked listing.
-- **Three front ends.** The CLI, an interactive `tui`, and a local web UI (`serve`)
-  that previews every change; every change lands in `history`.
 
 ## Quick start guide and usage
 

@@ -44,7 +44,7 @@ var jobFields = map[string][]string{
 	"rollback": {"key"},
 	// rotate-keys rotates a profile's keys, or every key, one after another.
 	"rotate-keys": {"profile", "all", "allow_unverified"},
-	// bundle-restore lays a bundle from the config home's dist/ back.
+	// bundle-restore lays a bundle from the state home's dist/ back.
 	"bundle-restore": {"bundle"},
 }
 
@@ -338,7 +338,7 @@ func manualPaste(j *jobs.Job) rotator.ManualStep {
 }
 
 // bundleRestoreSpec is `authama ssh restore <bundle> --yes`, for a bundle in the
-// config home's dist/, with the identity from AUTHAMA_AGE_IDENTITY_FILE.
+// state home's dist/, with the identity from AUTHAMA_AGE_IDENTITY_FILE.
 // The web takes no identity, and no passphrase for one.
 func bundleRestoreSpec(f url.Values, h home, retain int) (jobSpec, error) {
 	b := strings.TrimSpace(f.Get("bundle"))

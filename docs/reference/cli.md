@@ -2077,3 +2077,7 @@ Some names appear in both groups, or sound alike. Where a word appears in both
 | get back into a host after losing the key | `ssh recover` (prints a break-glass snippet) | |
 | replace or rotate a token | `token set` again for the same host | |
 | move an old config in | `token import` (tokens), `ssh import` (an existing `~/.ssh`), `migrate` (an older layout of this tool) | |
+
+---
+
+[← Docs index](../../README.md#documentation)
