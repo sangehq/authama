@@ -20,41 +20,43 @@ only speaks SSH, or a server that pulls with a key.
 
 ## Set it up
 
-1. Create the account (for example `simtabi-bot`) with an inbox you control,
+1. Create the account (for example `acme-bot`) with an inbox you control,
    and turn on two-factor authentication.
 2. In the organization, create a team (for example `bots-read`) with **Read**
    access to the repositories, and add the account to it.
 3. Create a token for the machine user that can manage its SSH keys: a
    fine-grained token with the account permission *Git SSH keys: read and
    write*, or a classic token with `admin:public_key`.
-4. Store the token where authama can read it, in `~/.config/ssh-manager/.env`:
+4. Put a reference to the token in `~/.config/ssh-manager/.env`, and export it
+   into the environment authama runs in (it reads `token_env` variables from the
+   process environment - see [`.env`](../configuration.md#env-gitignored)):
 
    ```sh
-   GH_TOKEN_SIMTABI=op://Simtabi/simtabi-bot/token
+   GH_TOKEN_ACME="op://Acme/acme-bot/token"
    ```
 
 5. Wire a host to it in the manifest, with `provider` and `token_env`:
 
    ```jsonc
-   {"alias": "github-simtabi", "hostname": "github.com", "user": "git",
-    "provider": "github", "token_env": "GH_TOKEN_SIMTABI",
-    "key_name": "simtabibot_github-ed25519"}
+   {"alias": "github-acme", "hostname": "github.com", "user": "git",
+    "provider": "github", "token_env": "GH_TOKEN_ACME",
+    "key_name": "acmebot_github-ed25519"}
    ```
 
 6. Add the key to the account and check it:
 
    ```sh
    authama ssh reconcile
-   authama ssh deploy simtabibot_github-ed25519
-   ssh -T git@github-simtabi      # Hi simtabi-bot! ...
+   authama ssh deploy acmebot_github-ed25519
+   ssh -T git@github-acme      # Hi acme-bot! ...
    ```
 
-Use the alias in remotes: `git@github-simtabi:simtabi/authama.git`.
+Use the alias in remotes: `git@github-acme:acme/app.git`.
 
 ## Rotate it
 
 ```sh
-authama ssh rotate simtabibot_github-ed25519
+authama ssh rotate acmebot_github-ed25519
 ```
 
 The new key is added to the account, verified, and the old one removed through

@@ -25,7 +25,7 @@ in [Architecture](../architecture.md).
 
 It opens with a header describing the session:
 
-```
+```text
   authama v0.1.0  darwin/arm64   built 2026-11-02 from d7ea28f
 
   home      ~/.config/ssh-manager   (providers: shipped default)
@@ -145,7 +145,7 @@ own input stream, tests inject a scripted fake. So the whole navigation loop —
 including that destructive actions require confirmation — is exercised without a
 TTY.
 
-> The production prompter read `os.Stdin` directly until v2.1, which meant it
+> The production prompter read `os.Stdin` directly in earlier releases, which meant it
 > ignored a redirected input and could only ever be driven by a real terminal.
 > Every test injected the fake, so the code a user actually meets was the one
 > piece of the TUI never exercised. It reads `c.InOrStdin()` now, like every

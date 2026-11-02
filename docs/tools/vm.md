@@ -32,7 +32,7 @@ its key with `authama ssh reconcile`, then install the public key in the guest o
 exec, or over SSH with a password).
 
 ```sh
-authama ssh vm add devbox devbox --hypervisor parallels --vm "Ubuntu 24.04" -u imani
+authama ssh vm add devbox devbox --hypervisor parallels --vm "Ubuntu 24.04" -u dev
 authama ssh reconcile
 ssh devbox
 ```
@@ -40,7 +40,7 @@ ssh devbox
 In the manifest:
 
 ```jsonc
-{"alias": "devbox", "hostname": "devbox", "user": "imani", "key_name": "devbox_docker-ed25519",
+{"alias": "devbox", "hostname": "devbox", "user": "dev", "key_name": "devbox_docker-ed25519",
  "vm": {"hypervisor": "parallels", "name": "Ubuntu 24.04"}}
 ```
 

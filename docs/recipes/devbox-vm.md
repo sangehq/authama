@@ -5,7 +5,7 @@ Reach a Parallels, VMPal, VMware, UTM or Lima VM by name, whatever IP it booted 
 ```sh
 authama ssh vm list                                   # find the VM's name
 authama ssh profile add devbox --category personal
-authama ssh vm add devbox devbox --hypervisor vmpal --vm "Ubuntu 24.04" -u imani
+authama ssh vm add devbox devbox --hypervisor vmpal --vm "Ubuntu 24.04" -u dev
 authama ssh reconcile                                 # mint devbox_devbox-ed25519
 ```
 

@@ -8,16 +8,16 @@ Access policy) is set up once in the Cloudflare dashboard. This recipe is the la
 
 ```bash
 brew install cloudflared
-authama ssh host add simtabi oribi-web -H ssh-web-00.simtabi.com -u adm-imani --proxy cloudflared
+authama ssh host add acme app-web -H ssh.example.com -u admin --proxy cloudflared
 authama ssh reconcile
-ssh oribi-web
+ssh app-web
 ```
 
 The first `ssh` opens a browser to sign in; after that the Access session lasts as long as the policy allows. To
 move an existing host behind Access, change its hostname to the Access hostname and add the proxy:
 
 ```bash
-authama ssh host edit simtabi oribi-web -H ssh-web-00.simtabi.com --proxy cloudflared
+authama ssh host edit acme app-web -H ssh.example.com --proxy cloudflared
 ```
 
 `authama ssh host edit ... --proxy none` takes it off again. `authama doctor` reports a proxied host when `cloudflared`

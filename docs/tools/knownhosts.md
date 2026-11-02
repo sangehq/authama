@@ -3,7 +3,7 @@
 One hashed `~/.ssh/known_hosts`, owner-only, with every line this tool wrote
 tagged so it only ever prunes its own.
 
-v1 kept a `known_hosts` per profile. v2 does not: identity isolation comes from
+The Python version kept a `known_hosts` per profile. authama does not: identity isolation comes from
 `IdentityFile` plus a per-host `IdentitiesOnly yes`, which is a stronger
 guarantee than where the trust store sits, and one store means a host key is
 verified once instead of once per profile that uses it. See *Why one inline
@@ -17,7 +17,7 @@ conventional 0644 for the same reason.
 
 Until a host's key is in `known_hosts`, a **non-interactive**
 client - notably `git push`/`git fetch` - fails with `Host key verification
-failed` (OpenSSH defaults to `StrictHostKeyChecking ask`). ssh-manager handles this two
+failed` (OpenSSH defaults to `StrictHostKeyChecking ask`). authama handles this two
 ways:
 
 ### Auto-pin on reconcile / keygen (default)
@@ -47,7 +47,7 @@ It takes a profile or `--all`; a bare `knownhosts init` says what it needs rathe
 than guessing at a scope.
 
 `--force` re-scans hosts that are already trusted and adds any **new** key types
-it finds; it does **not** remove a superseded key (ssh-manager never silently accepts a
+it finds; it does **not** remove a superseded key (authama never silently accepts a
 changed host key - if a host's key genuinely rotated, remove the stale line by
 hand or re-pin with `knownhosts pin`).
 
@@ -100,9 +100,9 @@ untrusted. Now each such host is named with the reason, the rest are still
 pinned, and the exit status is non-zero:
 
 ```text
-unc: sc.its.unc.edu:443: no SSH host key came back (port closed or filtered, or not an SSH server); check the hostname and port
+uni: login.example.edu:443: no SSH host key came back (port closed or filtered, or not an SSH server); check the hostname and port
 pinned 0 host key(s) into known_hosts
-Error: no SSH host key from 1 host(s): unc
+Error: no SSH host key from 1 host(s): uni
 ```
 
 A missing `ssh-keyscan` is reported the same way. Declining every key at the

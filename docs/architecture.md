@@ -19,7 +19,7 @@ There is no facade. `internal/cli` is where composition happens, and it is a
 leaf: nothing under `internal/` imports it. `internal/core` is the domain and
 depends on nothing above it. Both directions are asserted by
 `src/cmd/sshmgr/layering_test.go`, along with a ceiling on methods-per-type - the
-v1 facade type carried 54 and every verb hung off it.
+Python version's facade type carried 54 and every verb hung off it.
 
 The repository has two roots. Everything the Go toolchain reads lives under
 `src/`, which is the module; everything the repository presents - README,
@@ -31,7 +31,7 @@ at the root and not one per module.
 src/                # THE GO MODULE. go.mod is here, so every `go` command runs
                     #   here - the Makefile uses `go -C src` for exactly this.
   cmd/authama/      # thin entrypoint; calls internal/cli and nothing else
-  cmd/sshmgr/       # the same, under the v3 name; also holds the repo-wide
+  cmd/sshmgr/       # the same, under its original name; also holds the repo-wide
                     #   invariant tests (layering, hygiene, e2e)
   internal/
     cli/            # the cobra tree, one file per verb. The ONLY package that
@@ -205,7 +205,7 @@ that identity's profile directory, and nothing crosses profiles:
 
 ```
 ~/.ssh/
-├── config                          # 600 - A marked ssh-manager block holds every
+├── config                          # 600 - A marked managed block holds every
 │                                   #   uncategorized Host entry, grouped by profile
 │                                   #   banner, one Include per category, and
 │                                   #   `Host *` last. Foreign content outside the
@@ -222,8 +222,8 @@ that identity's profile directory, and nothing crosses profiles:
     ├── personal/  ...  (github.com via its own key)
     └── orgs/                       # a category
         ├── config                  # 600 - rendered Host blocks for the category
-        └── simtabi/                # github.com again, but a SEPARATE key
-            └── simtabi_github-ed25519.pub   # key_store 1password: .pub only
+        └── acme/                   # github.com again, but a SEPARATE key
+            └── acme_github-ed25519.pub   # key_store 1password: .pub only
 ```
 
 Per-profile isolation is enforced by the rendered config, not by the file layout:
@@ -276,11 +276,11 @@ There is deliberately no facade. See *Why is there no single service object?* be
   not once per call: `flock` is per descriptor, so a second acquire in the same
   process waits forever on a lock that process is already holding.
 
-## Why the v2 layout is what it is
+## Why the layout is what it is
 
 ### Why one inline config and one `known_hosts`?
 
-v1 wrote a `config` and a `known_hosts` per profile and stitched them together
+The Python version wrote a `config` and a `known_hosts` per profile and stitched them together
 with `Include`. That put the trust store's isolation in the file layout, which
 made it fragile in two ways: `Include` ordering is subtle enough that a
 hand-edited file could silently stop applying, and a per-profile store meant the
@@ -293,7 +293,7 @@ stronger and the layout is simpler. The one trust store is hashed, and every lin
 this tool writes carries an `sshmgr` comment tag so pruning only ever removes its
 own.
 
-This is the one place the Go implementation deliberately does not match v1's
+This is the one place the Go implementation deliberately does not match the Python version's
 output. Everything else does.
 
 ### Why do categories use `Include` when everything else is inline?
@@ -304,7 +304,7 @@ mechanism, so it does not reopen the argument above. Isolation still comes from
 `IdentityFile` plus per-host `IdentitiesOnly`, written into every block wherever
 the block lives.
 
-The ordering hazard that retired v1's per-profile Includes is handled
+The ordering hazard that retired the Python version's per-profile Includes is handled
 explicitly. The Includes sit at the top of the managed block, ahead of every
 inline host and `Host *`, and open with `Match all` so they stay global when
 foreign content above the block ends inside a `Host` stanza. A test runs
@@ -332,7 +332,7 @@ profile between stores is a rotation, not a migration of state.
 
 ### Why is there no single service object?
 
-v1 had a `SshManagerService` facade: 1356 lines, 54
+The Python version had a `SshManagerService` facade: 1356 lines, 54
 methods, every verb hanging off it. It was the natural place for logic to
 accumulate, and it did. `internal/cli` composes services directly instead, and a
 test enforces the shape — a ceiling on methods per type, plus the two dependency
@@ -353,7 +353,7 @@ runs as a job, where nothing is previewed and the output is shown as it happens.
 
 ### Why is the TUI a plain menu?
 
-v1 used `rich` and `questionary`. The Go binary has one third-party dependency,
+The Python version used `rich` and `questionary`. The Go binary has one third-party dependency,
 `cobra`, and no presentation library — so output is plain text that a pipe can
 read and the TUI is a numbered stdin menu rather than a full-screen application.
 That is a real loss of polish and a real gain in portability: nothing to render,
@@ -361,7 +361,7 @@ nothing to detect, and every command's output is machine-readable by default.
 
 ### Why does a `key_name` repeat across profiles?
 
-v1 rejected a manifest where two profiles declared the same key name. One person
+The Python version rejected a manifest where two profiles declared the same key name. One person
 working under two organisations uses the same file name in both, so that ban
 prevented a normal setup. A key's identity here is the pair `profile/key`, not
 the bare name — which is also why `keygen --force` confirms per key rather than

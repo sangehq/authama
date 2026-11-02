@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/simtabi/authama/security/advisories/new
     about: Please report vulnerabilities privately (or email opensource@simtabi.com).
   - name: Documentation
-    url: https://opensource.simtabi.com/documentation/ssh-manager
+    url: https://github.com/simtabi/authama#documentation
     about: Product documentation and guides.

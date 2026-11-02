@@ -47,7 +47,7 @@ manifest and the inventory. Until you run it:
 
 A `profiles/<category>/config` you wrote by hand is never pruned. authama deletes
 a `profiles/*/config` only when it carries the managed header or sits in a flat
-profile directory, which is where v1 wrote its per-profile files. Once the
+profile directory, which is where the Python version wrote its per-profile files. Once the
 manifest names that category, `config render` replaces your file with the
 rendered one; a snapshot is taken first.
 

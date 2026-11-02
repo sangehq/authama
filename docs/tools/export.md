@@ -42,7 +42,7 @@ it. It writes the CSV Termius's importer reads instead:
 ```bash
 authama ssh termius export                      # ~/.config/ssh-manager/exports/termius-hosts.csv
 authama ssh termius export --open               # macOS: also open Termius and show the file in Finder
-authama ssh termius export --skip unc           # leave a host out (repeatable)
+authama ssh termius export --skip uni           # leave a host out (repeatable)
 authama ssh termius export --include-git        # also git hosts
 authama ssh termius export --out - > hosts.csv  # CSV on stdout, the report on stderr
 ```
@@ -78,7 +78,7 @@ authama ssh termius keys --clear                      # empty the clipboard now
 authama ssh termius keys db-01 --print       # key on stdout instead (warns on stderr; avoid)
 authama ssh termius keys github-me                    # a git host: naming it is enough
 authama ssh termius keys --include-git                # list git hosts too, as with export --include-git
-authama ssh termius keys --skip unc                   # leave a host out, as with export --skip
+authama ssh termius keys --skip uni                   # leave a host out, as with export --skip
 ```
 
 The label is the key file's name (`clientco_db-01-ed25519`). The key is copied with `pbcopy` (macOS),

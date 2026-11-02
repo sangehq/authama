@@ -5,15 +5,15 @@ Move a tree of checkouts from HTTPS to each owner's own SSH key, safely, and ste
 Map owners to profiles once, in the manifest:
 
 ```jsonc
-"defaults": {"git": {"profile": "imanimanyara", "orgs": {"simtabi": "imanimanyara", "laranail": "imanimanyara"}}}
+"defaults": {"git": {"profile": "alice", "orgs": {"acme": "alice", "acme-labs": "alice"}}}
 ```
 
 Then preview, apply, and check:
 
 ```sh
-authama ssh git use profile ~/Artisan/projects/opensource/simtabi/packages/* --dry-run
-authama ssh git use profile ~/Artisan/projects/opensource/simtabi/packages/* --yes
-authama ssh git status ~/Artisan/projects/opensource/simtabi/packages/*
+authama ssh git use profile ~/code/acme/* --dry-run
+authama ssh git use profile ~/code/acme/* --yes
+authama ssh git status ~/code/acme/*
 ```
 
 Each new URL is checked with `git ls-remote` before `origin` changes, so a checkout whose key is not on

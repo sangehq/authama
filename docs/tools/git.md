@@ -5,7 +5,7 @@ one of three modes after proving the new URL works.
 
 | Mode | Origin URL | Authenticates as |
 |---|---|---|
-| `profile` (default) | `git@<profile's alias>:owner/repo.git`, e.g. `git@github-imanimanyara:simtabi/pheg.git` | that profile's GitHub key |
+| `profile` (default) | `git@<profile's alias>:owner/repo.git`, e.g. `git@github-alice:acme/app.git` | that profile's GitHub key |
 | `ssh` | `git@github.com:owner/repo.git` | the key bound to the rendered `Host github.com` (`defaults.git.profile`), written into that profile's category config when it has one |
 | `https` | `https://github.com/owner/repo.git` | your git credential helper (for example `gh-app git-credential`) |
 
@@ -25,8 +25,8 @@ account. `--profile` overrides the mapping for one run.
 "defaults": {
   "git": {
     "mode": "profile",
-    "profile": "imanimanyara",
-    "orgs": {"simtabi": "imanimanyara", "laranail": "imanimanyara", "clientco": "example-user"}
+    "profile": "alice",
+    "orgs": {"acme": "alice", "acme-labs": "alice", "clientco": "example-user"}
   }
 }
 ```
@@ -34,9 +34,9 @@ account. `--profile` overrides the mapping for one run.
 ## `authama ssh git status [PATH...]`
 
 ```text
-$ authama ssh git status ~/Artisan/projects/opensource/simtabi/packages/*
-.../pheg      https    simtabi/pheg      profile=imanimanyara (by owner)
-.../sshmgr    profile  simtabi/authama  profile=imanimanyara
+$ authama ssh git status ~/code/acme/*
+.../app       https    acme/app      profile=alice (by owner)
+.../api       profile  acme/api      profile=alice
 .../notes     -  no origin
 ```
 

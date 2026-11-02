@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a defect in ssh-manager
+description: Report a defect in Authentication Access Manager (authama)
 labels: ["bug"]
 body:
   - type: textarea
@@ -22,8 +22,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: ssh-manager version
-      placeholder: "ssh-manager version"
+      label: authama version
+      placeholder: "output of: authama version"
     validations:
       required: true
   - type: input

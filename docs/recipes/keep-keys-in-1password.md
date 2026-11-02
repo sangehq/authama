@@ -13,37 +13,37 @@ have a `~/.config/1Password/ssh/agent.toml`, tell the agent to serve it:
 ```toml
 # ~/.config/1Password/ssh/agent.toml
 [[ssh-keys]]
-vault = "Simtabi"
+vault = "Acme"
 ```
 
 In the manifest, give the profile a store and a vault:
 
 ```jsonc
-"simtabibot": {
+"acmebot": {
   "category": "orgs",
   "key_store": "1password",
-  "op_vault": "Simtabi",
+  "op_vault": "Acme",
   "hosts": [
-    {"alias": "github-simtabi", "hostname": "github.com", "user": "git",
-     "provider": "github", "token_env": "GH_TOKEN_SIMTABI",
-     "key_name": "simtabibot_github-ed25519"}
+    {"alias": "github-acme", "hostname": "github.com", "user": "git",
+     "provider": "github", "token_env": "GH_TOKEN_ACME",
+     "key_name": "acmebot_github-ed25519"}
   ]
 }
 ```
 
 ```sh
 authama doctor          # op found, agent socket present, vault served
-authama ssh reconcile       # creates the item, writes simtabibot_github-ed25519.pub
+authama ssh reconcile       # creates the item, writes acmebot_github-ed25519.pub
 authama ssh validate        # the item exists and matches the .pub
 ```
 
 The rendered host points ssh at the public key and the 1Password agent:
 
 ```
-Host github-simtabi
+Host github-acme
     HostName github.com
     User git
-    IdentityFile ~/.ssh/profiles/orgs/simtabibot/simtabibot_github-ed25519.pub
+    IdentityFile ~/.ssh/profiles/orgs/acmebot/acmebot_github-ed25519.pub
     IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
     IdentitiesOnly yes
 ```
@@ -51,7 +51,7 @@ Host github-simtabi
 Rotate the same way as any key:
 
 ```sh
-authama ssh rotate simtabibot_github-ed25519
+authama ssh rotate acmebot_github-ed25519
 ```
 
 The new key is created in the vault as `<key>.staged`, deployed and verified,

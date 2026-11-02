@@ -32,7 +32,7 @@ order:
 When a VCS provider has no token/CLI it **degrades to the manual path** - the
 deployment is recorded as `needs-redeploy` (unverified) and you finish it in the
 web UI. Two accounts on one provider stay separate via per-host `token_env`
-(`GH_TOKEN` vs `GH_TOKEN_SIMTABI`).
+(`GH_TOKEN` vs `GH_TOKEN_ACME`).
 
 ## Verified vs needs-redeploy
 

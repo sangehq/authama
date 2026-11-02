@@ -1,8 +1,9 @@
-# Contributing to ssh-manager
+# Contributing to Authentication Access Manager (authama)
 
 Where this file is silent, the [Simtabi contributing guide](https://github.com/simtabi/.github/blob/HEAD/CONTRIBUTING.md) applies.
 
-Thanks for your interest! `ssh-manager` is a Simtabi LLC open-source project.
+Thanks for your interest! Authentication Access Manager (`authama`, also
+installed under its original name `sshmgr`) is a Simtabi LLC open-source project.
 
 ## Ground rules (the invariants)
 
@@ -22,12 +23,12 @@ around it.
 ## Dev setup
 
 ```sh
-git clone https://github.com/simtabi/authama && cd ssh-manager
-make build               # -> build/sshmgr (empties build/ first, every time)
+git clone https://github.com/simtabi/authama && cd authama
+make build               # -> build/authama and build/sshmgr (empties build/ first, every time)
 make doctor              # verify the environment, using the binary you just built
 ```
 
-There is no bootstrap step: Go 1.26 is the only prerequisite. ssh-manager's home
+There is no bootstrap step: Go 1.26 is the only prerequisite. authama's home
 is the OS config dir (`~/.config/ssh-manager`); set
 `SSH_MANAGER_HOME=$PWD/.devhome` to sandbox a throwaway one while developing.
 
@@ -87,7 +88,7 @@ Everything the repository *presents* stays at the top: `README.md`, `LICENSE`,
 | repo root | the README and friends, `docs/`, `.github/`, `Makefile`, `build/` |
 
 Import paths start with the module path, `github.com/simtabi/authama/src/internal/cli`;
-there is no major-version suffix below v2. Package names in
+versions restarted at v0.1.0, so there is no major-version suffix. Package names in
 this document are written relative to the module, so `internal/cli` means
 `src/internal/cli` on disk.
 
@@ -148,8 +149,9 @@ removing one that the baseline lists means the test fails, which is the point.
 
 ## Commits & PRs
 
-- Set `git config user.email "imanimanyara@users.noreply.github.com"` — the
-  address every commit in this repo has been authored under.
+- Author commits with your GitHub noreply address
+  (`git config user.email "<id>+<username>@users.noreply.github.com"`) so no
+  personal address lands in the history.
 - Subject ≤ 72 chars, imperative mood; body explains *why*. No emoji.
 - Keep PRs small, green, and scoped to one concern. Update `CHANGELOG.md` and
   `README.md` as verbs land.

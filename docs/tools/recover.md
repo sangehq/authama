@@ -1,6 +1,6 @@
 # recover - break-glass when you're locked out
 
-ssh-manager is built so you don't get locked out - but if you do (lost laptop, wiped
+authama is built so you don't get locked out - but if you do (lost laptop, wiped
 `~/.ssh`, a bad `authorized_keys` edit), `recover` is the escape hatch. It needs
 no working SSH and no interpreter *on the server* - you reach the box another way
 (your provider's web/recovery console: DigitalOcean Recovery Console, GCP
@@ -16,7 +16,7 @@ embedded** (shell-escaped). Paste it into the console; it backs up
 authama ssh recover work_web1-ed25519     # copy the output, paste into the server console
 ```
 
-The body is computed by ssh-manager (not fragile `awk`), and the key line is escaped,
+The body is computed by authama (not fragile `awk`), and the key line is escaped,
 so an arbitrary key comment can't break or inject the script.
 
 ## `authama ssh recover` - full interactive tool
@@ -37,7 +37,7 @@ Every change is backed up first and written atomically.
 > before closing the console - a backup is useless if you can't get back in.
 
 Related: the `generic-ssh` provider applies the same backup/atomic/lockout-guard
-rules when ssh-manager edits `authorized_keys` over SSH (see [vps.md](vps.md)).
+rules when authama edits `authorized_keys` over SSH (see [vps.md](vps.md)).
 
 ---
 

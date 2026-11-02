@@ -13,7 +13,7 @@ Rotate by category, profile, host alias or key, in any mix:
 
 ```sh
 authama ssh rotate --category clients
-authama ssh rotate simtabi github-imanimanyara
+authama ssh rotate acme github-alice
 ```
 
 The batch asks once, writes one backup, then rotates each key with the usual

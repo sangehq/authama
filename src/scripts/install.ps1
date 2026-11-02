@@ -3,15 +3,15 @@
   Authentication Access Manager installer for Windows.
 
 .DESCRIPTION
-  Installs authama.exe and sshmgr.exe - the same program under the name v3
-  shipped, kept for scripts and aliases. A release from before authama existed
+  Installs authama.exe and sshmgr.exe - the same program under its original
+  name (sshmgr 3.x and earlier), kept for scripts and aliases. A release from before authama existed
   installs sshmgr.exe alone.
 
 .EXAMPLE
   irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex
 
 .EXAMPLE
-  # Pin a version / custom dir (AUTHAMA_*, or the v3 names SSHMGR_*)
+  # Pin a version / custom dir (AUTHAMA_*, or the original names SSHMGR_*)
   $env:AUTHAMA_VERSION = 'v0.1.0'; irm https://.../install.ps1 | iex
 #>
 #Requires -Version 5
@@ -34,7 +34,7 @@ $dirName = 'ssh-manager'
 $binBase = 'authama'
 $compat  = 'sshmgr'
 
-# AUTHAMA_*, else the v3 names SSHMGR_*, matching the POSIX installer.
+# AUTHAMA_*, else the original names SSHMGR_*, matching the POSIX installer.
 foreach ($prefix in 'AUTHAMA', 'SSHMGR') {
   if (-not $Version)    { $Version    = [Environment]::GetEnvironmentVariable("${prefix}_VERSION") }
   if (-not $InstallDir) { $InstallDir = [Environment]::GetEnvironmentVariable("${prefix}_INSTALL_DIR") }

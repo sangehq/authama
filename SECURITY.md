@@ -14,7 +14,7 @@ within a few business days and will keep you updated on remediation progress.
 
 ## Scope notes for this project
 
-`ssh-manager` (the `authama` binary, also installed as `sshmgr`) manages SSH
+Authentication Access Manager (`authama`, also installed as `sshmgr`) manages SSH
 private keys and config, and the auth-token files package managers and git
 read. A few invariants are security-load-bearing - please flag any regression
 in these:
@@ -33,8 +33,8 @@ in these:
   home `.env` is plaintext at mode `0600`. To keep it out of plaintext, set the
   value to `cmd:<command>` and the token is fetched at use-time from any secret
   manager (it never touches disk):
-  `GH_TOKEN=cmd:op read op://Private/GitHub/token`, or
-  `cmd:keyring get ssh-manager gh_token`, or `cmd:age -d -i <id> token.age`.
+  `GH_TOKEN="cmd:op read op://Private/GitHub/token"`, or
+  `"cmd:keyring get authama gh_token"`, or `"cmd:age -d -i <id> token.age"`.
 - **Permissions are enforced.** Directories `700`, private keys + `config` `600`,
   `.pub` + `known_hosts` `644` - set on create and re-asserted by `doctor`.
 - **Per-profile isolation.** Everything for an identity lives under

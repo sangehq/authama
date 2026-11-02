@@ -12,7 +12,7 @@ authama --dev-root ./sandbox doctor
 Or set it once for a shell:
 
 ```sh
-export SSHMGR_DEV_ROOT=./sandbox
+export SSHMGR_DEV_ROOT="./sandbox"
 authama ssh reconcile
 ```
 

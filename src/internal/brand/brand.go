@@ -5,10 +5,11 @@
 // new command with it. Every user-facing mention of either goes through these
 // constants, so the next rename is an edit here and not a search across the tree.
 //
-// What does NOT change with them, on purpose: the Go module path, the repository
-// and its folder, the config home (~/.config/ssh-manager) and the environment
-// variables (SSH_MANAGER_*, SSHMGR_DEV_ROOT). Renaming those would strand every
-// existing install's data and every script that sets them.
+// The repository (simtabi/authama), its folder and the Go module path
+// (github.com/simtabi/authama/src) followed the name at 0.1.0. What does NOT
+// change, on purpose: the config home (~/.config/ssh-manager) and the
+// environment variables (SSH_MANAGER_*, SSHMGR_DEV_ROOT). Renaming those would
+// strand every existing install's data and every script that sets them.
 package brand
 
 import "strings"

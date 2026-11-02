@@ -6,6 +6,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Documentation
+
+- Every install channel is documented: the install scripts (with a pinned version
+  and a per-user directory), Homebrew, Scoop, `go install`, and the `.deb`/`.rpm`/`.apk`
+  packages. The README gains a feature overview.
+- The quick start adds `--provider github`, so the host it creates is the GitHub
+  host the later `ssh list --type vcs` step expects.
+- `.env` documentation says what authama actually does: it reads provider tokens
+  and settings from the process environment and does not load the home `.env` by
+  itself. The seeded `.env` template says how to load it, and values with spaces
+  or special characters are shown in double quotes.
+- Branding is consistent (Authentication Access Manager, `authama`, with `sshmgr`
+  as the compatibility name) across CONTRIBUTING, SECURITY, the issue templates
+  and the docs; examples use placeholder identities only.
+- A test parses every `authama`/`sshmgr` command shown in the docs against the
+  real command tree, so a renamed verb or flag fails CI.
+
 ## [0.1.0] - 2026-11-02
 
 First release under the authama name, with version numbers restarted at 0.1.0. authama (Authentication
