@@ -221,7 +221,7 @@ func TestDocumentedRawURLsPointAtFilesThatExist(t *testing.T) {
 // exceptions are the conventional upper-case names GitHub and readers look for.
 func TestMarkdownFileNamesAreLowercase(t *testing.T) {
 	_, files := trackedFiles(t)
-	conventional := []string{"README.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "LICENSE.md", "CODE_OF_CONDUCT.md"}
+	conventional := []string{"README.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "LICENSE.md", "CODE_OF_CONDUCT.md", "PULL_REQUEST_TEMPLATE.md"}
 	for _, f := range files {
 		base := filepath.Base(f)
 		if !strings.EqualFold(filepath.Ext(base), ".md") || slices.Contains(conventional, base) {
