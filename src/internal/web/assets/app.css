@@ -45,6 +45,23 @@ main:focus { outline: none; }
 :root[data-bs-theme=dark] .btn-outline-primary { --tblr-btn-variant: #79aae7; --tblr-btn-variant-fg: #0b1a2b; }
 :root[data-bs-theme=dark] .btn-outline-danger { --tblr-btn-variant: #ff8f8f; --tblr-btn-variant-fg: #2b0b0b; }
 
+/* Outline danger in the light theme: Tabler's red is 4.0:1 on a card footer's
+   tint (found by e2e/web's axe pass, on the host page's delete button). */
+.btn-outline-danger { --tblr-btn-variant: #b42020; }
+
+/* Link buttons (a preview's Cancel): Tabler's link blue is 3.9:1 on the light
+   page background and 4.4:1 on the dark one.
+   Tabler sets the colour itself, not only through its variables. */
+.btn-link, .btn-link:focus-visible { color: #1a5fb4; }
+.btn-link:hover { color: #144a8c; }
+:root[data-bs-theme=dark] .btn-link, :root[data-bs-theme=dark] .btn-link:focus-visible { color: #79aae7; }
+:root[data-bs-theme=dark] .btn-link:hover { color: #a6cbf6; }
+
+/* Code on a tinted background takes the text colour around it: Tabler's
+   gray-400 code colour is below 4.5:1 on the warning tints in the dark theme
+   (axe: the overview's attention rows and the tokens page's alert). */
+.alert code, .row-attention code { color: inherit; }
+
 /* A link inside running text is told apart by more than its colour. */
 .page-body p a, .page-body dd a, .page-body .text-secondary a, .alert a { text-decoration: underline; }
 

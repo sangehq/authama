@@ -129,6 +129,45 @@ jobs:
         run: make e2e
 
 
+  web-e2e:
+    # The web UI in a browser: Playwright drives every page of `authama serve` and
+    # its write flows against a throwaway home, and axe fails a serious or
+    # critical violation in either theme. Linux only, as the plan settled: the
+    # pages are the same on every OS and a browser leg costs the most minutes.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: src/go.mod
+          cache-dependency-path: src/go.sum
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+      # age writes and reads the bundle the restore job streams; ssh-keygen is
+      # on the runner already.
+      - name: Install age
+        run: sudo apt-get update -q && sudo apt-get install -y -q age
+      - name: Install the browser
+        working-directory: e2e/web
+        run: |
+          npm install --no-audit --no-fund --no-package-lock
+          npx playwright install --with-deps chromium
+      - name: Browser e2e and axe
+        run: make e2e-web
+      - name: Keep the report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: web-e2e-report
+          path: |
+            e2e/web/playwright-report/
+            e2e/web/test-results/
+          retention-days: 7
+
   gitleaks:
     # The only secret scanner now, and the only one that ever mattered: it runs
     # against the full history, which the pre-commit hook of the same name could
