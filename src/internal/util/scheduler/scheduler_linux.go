@@ -22,6 +22,12 @@ func Install(command, label string) error {
 	}
 }
 
+// Remove deletes the systemd timer and the cron entry for label, if any.
+func Remove(label string) {
+	removeSystemd(label)
+	removeCron(label)
+}
+
 func systemdUserDir() string {
 	base := os.Getenv("XDG_CONFIG_HOME")
 	if base == "" {
@@ -75,6 +81,9 @@ func removeCron(label string) {
 		return
 	}
 	marker := "# " + label
+	if !strings.Contains(string(out), marker) {
+		return
+	}
 	var kept []string
 	for _, ln := range strings.Split(strings.TrimRight(string(out), "\n"), "\n") {
 		if ln != "" && !strings.Contains(ln, marker) {
@@ -89,10 +98,15 @@ func removeCron(label string) {
 }
 
 func removeSystemd(label string) {
+	dir := systemdUserDir()
+	if _, err := os.Stat(filepath.Join(dir, label+".timer")); err != nil {
+		if _, err := os.Stat(filepath.Join(dir, label+".service")); err != nil {
+			return
+		}
+	}
 	if has("systemctl") {
 		_ = exec.Command("systemctl", "--user", "disable", "--now", label+".timer").Run()
 	}
-	dir := systemdUserDir()
 	_ = os.Remove(filepath.Join(dir, label+".service"))
 	_ = os.Remove(filepath.Join(dir, label+".timer"))
 }

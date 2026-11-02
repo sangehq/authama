@@ -3,15 +3,15 @@
   Authentication Access Manager installer for Windows.
 
 .DESCRIPTION
-  Installs authama.exe and sshmgr.exe - the same program under its original
-  name (sshmgr 3.x and earlier), kept for scripts and aliases. A release from before authama existed
-  installs sshmgr.exe alone.
+  Installs authama.exe, and beside it sshmgr.exe: the same program under its
+  old name, deprecated (it prints a notice), kept so scripts and aliases keep
+  working. A release from before authama existed installs sshmgr.exe alone.
 
 .EXAMPLE
   irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex
 
 .EXAMPLE
-  # Pin a version / custom dir (AUTHAMA_*, or the original names SSHMGR_*)
+  # Pin a version / custom dir (AUTHAMA_*, or the deprecated SSHMGR_*)
   $env:AUTHAMA_VERSION = 'v0.1.0'; irm https://.../install.ps1 | iex
 #>
 #Requires -Version 5
@@ -36,7 +36,7 @@ $oldDirName = 'ssh-manager'
 $binBase = 'authama'
 $compat  = 'sshmgr'
 
-# AUTHAMA_*, else the original names SSHMGR_*, matching the POSIX installer.
+# AUTHAMA_*, else the deprecated SSHMGR_*, matching the POSIX installer.
 foreach ($prefix in 'AUTHAMA', 'SSHMGR') {
   if (-not $Version)    { $Version    = [Environment]::GetEnvironmentVariable("${prefix}_VERSION") }
   if (-not $InstallDir) { $InstallDir = [Environment]::GetEnvironmentVariable("${prefix}_INSTALL_DIR") }
@@ -93,20 +93,24 @@ try {
   try { Invoke-WebRequest "$base/checksums.txt" -OutFile $sums } catch { $haveSums = $false; Write-Warning 'checksums.txt not found; skipping verification.' }
 
   New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-  foreach ($name in $compat, $binBase) {
+  foreach ($name in $binBase, $compat) {
     $asset = "${name}_windows_${arch}.exe"
     $exe = Join-Path $tmp $asset
     Write-Host "Downloading $asset ($Version) ..."
     try { Invoke-WebRequest "$base/$asset" -OutFile $exe }
     catch {
-      if ($name -eq $compat) { throw "$Version has no $asset" }
-      Write-Host "note: $Version predates $binBase; installing $compat only."
-      continue
+      if ($name -eq $binBase) {
+        Write-Host "note: $Version predates $binBase; installing $compat only."
+        continue
+      }
+      # The deprecated name is optional while authama is there; alone, it is required.
+      if ($installed.Count -gt 0) { continue }
+      throw "$Version has no ${binBase}_windows_${arch}.exe"
     }
     if ($haveSums) {
       # Anchored on the whole filename field, not a substring. checksums.txt lists
       # the binary, its archive and the archive's SBOM, so a bare name like
-      # "sshmgr_macos_arm64" appears in three lines; -First 1 on an unanchored match
+      # "authama_macos_arm64" appears in three lines; -First 1 on an unanchored match
       # would compare the download against whichever hash came first in the file.
       $line = Select-String -Path $sums -Pattern ('\s' + [regex]::Escape($asset) + '$') | Select-Object -First 1
       if (-not $line) { throw "no checksum entry for $asset" }
@@ -141,7 +145,8 @@ if (($userPath -split ';') -notcontains $InstallDir) {
 }
 $env:Path += ";$InstallDir"
 
-& (Join-Path $InstallDir "$($installed[-1]).exe") version
+& (Join-Path $InstallDir "$($installed[0]).exe") version
 foreach ($name in $installed) { Write-Host "Installed $name to $InstallDir\$name.exe" }
+if ($installed.Count -gt 1) { Write-Host "$compat is a deprecated alias of $binBase; use $binBase." }
 Write-Host "Settings live in $env:USERPROFILE\.config\authama (.env and authama.json, loaded at startup);"
 Write-Host "a 0.1.0 home in $env:APPDATA\ssh-manager is copied there on the first run and kept."

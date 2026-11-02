@@ -29,7 +29,7 @@ import (
 
 // errAborted is returned when the user declines a confirmation. It exits 1 like
 // any other failure, but silently: the prompt already said what happened, and
-// "sshmgr: aborted" underneath it reads like a fault rather than a choice.
+// "authama: aborted" underneath it reads like a fault rather than a choice.
 var errAborted = errors.New("aborted at the user's request")
 
 // errNotClean is returned by a command whose *report* is the failure - doctor

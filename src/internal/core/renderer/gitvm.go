@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/simtabi/authama/src/internal/brand"
@@ -28,6 +29,24 @@ func defaultSelfPath() string {
 		if errA == nil && errB == nil && os.SameFile(a, b) {
 			return onPath
 		}
+	}
+	return primaryFor(self, exec.LookPath)
+}
+
+// primaryFor swaps the deprecated sshmgr binary for authama, so a config rendered through the old
+// name still points ProxyCommand at the primary one: the authama installed next to it, else the one
+// on PATH. With neither, self is kept, since a working alias beats a missing binary.
+func primaryFor(self string, lookPath func(string) (string, error)) string {
+	base := strings.TrimSuffix(filepath.Base(self), ".exe")
+	if base != brand.LegacyCommand {
+		return self
+	}
+	sibling := filepath.Join(filepath.Dir(self), brand.Command+strings.TrimPrefix(filepath.Base(self), base))
+	if fi, err := os.Stat(sibling); err == nil && !fi.IsDir() {
+		return sibling
+	}
+	if onPath, err := lookPath(brand.Command); err == nil {
+		return onPath
 	}
 	return self
 }
@@ -83,8 +102,8 @@ func CloudflaredProxyCommand() string {
 	return `"` + bin + `" access ssh --hostname %h`
 }
 
-// ProxyBinary extracts the binary path from a ProxyCommand value sshmgr rendered - a VM host's
-// sshmgr or a Cloudflare Access host's cloudflared - and "" for any other value. doctor uses it to
+// ProxyBinary extracts the binary path from a ProxyCommand value authama rendered - a VM host's
+// authama or a Cloudflare Access host's cloudflared - and "" for any other value. doctor uses it to
 // find a recorded path that no longer exists, or a cloudflared that was never installed.
 func ProxyBinary(value string) string {
 	if !strings.HasPrefix(value, `"`) {

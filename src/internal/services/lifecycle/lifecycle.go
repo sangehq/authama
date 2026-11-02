@@ -54,9 +54,9 @@ type Result struct {
 	PrunedPins    int      // known_hosts lines removed
 
 	// UnwiredKeys are keys the deletion left with no host, but which their
-	// profile still declares - so they remain sshmgr's, just unused.
+	// profile still declares - so they remain authama's, just unused.
 	UnwiredKeys []string
-	// VaultItems are 1Password items that held a deleted key. sshmgr never
+	// VaultItems are 1Password items that held a deleted key. authama never
 	// deletes a vault item; the user archives it.
 	VaultItems []string
 	// OrphanedKeys are keys the deletion removed from the manifest entirely,
@@ -335,7 +335,7 @@ func (s *Service) finish(res *Result, files []string, profileDir string, opt Opt
 
 // purgeOrKeep deletes the key files under Purge and records what was left
 // otherwise. With a profileDir it also removes that directory under Purge, but
-// only once every file in it is accounted for - a file sshmgr did not create is
+// only once every file in it is accounted for - a file authama did not create is
 // reported and left alone, since deciding it is disposable is not this command's
 // call. An empty profileDir means the profile survives the deletion, so no
 // directory is touched at all.

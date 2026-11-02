@@ -296,7 +296,7 @@ func TestWriteRendersCategoryFilesAndChecksThem(t *testing.T) {
 	}
 }
 
-// A user who split their config by hand before sshmgr knew about categories has
+// A user who split their config by hand before authama knew about categories has
 // a headerless profiles/<category>/config beside profile directories. Pruning
 // it, as the legacy rule would, takes every host in it offline.
 func TestHandWrittenCategoryFileIsNeverPruned(t *testing.T) {
@@ -314,7 +314,7 @@ func TestHandWrittenCategoryFileIsNeverPruned(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(res.Pruned) != 0 {
-		t.Fatalf("pruned %v, want nothing: the file is not sshmgr's", res.Pruned)
+		t.Fatalf("pruned %v, want nothing: the file is not authama's", res.Pruned)
 	}
 	if _, err := os.Stat(hand); err != nil {
 		t.Errorf("the hand-written category file was removed: %v", err)
@@ -324,11 +324,11 @@ func TestHandWrittenCategoryFileIsNeverPruned(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(chk.Orphan) != 0 {
-		t.Errorf("a file sshmgr does not own is not its orphan: %v", chk.Orphan)
+		t.Errorf("a file authama does not own is not its orphan: %v", chk.Orphan)
 	}
 }
 
-// A category sshmgr rendered and the manifest then dropped is sshmgr's file,
+// A category authama rendered and the manifest then dropped is authama's file,
 // header and all, and is pruned like any other stale managed file.
 func TestRenderedCategoryFileIsPrunedWhenTheCategoryGoes(t *testing.T) {
 	ssh := t.TempDir()

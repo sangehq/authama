@@ -313,7 +313,7 @@ func TestVendoredFilesMatchTheManifest(t *testing.T) {
 	}
 }
 
-// THIRD_PARTY_NOTICES.md is exactly what the vendoring tool generates from the
+// third-party-notices.md is exactly what the vendoring tool generates from the
 // embedded licences, so the release archives ship what the binary serves.
 func TestNoticesMatchTheEmbeddedLicences(t *testing.T) {
 	vers, err := tabler.ParseVersions(vendorFile(t, tabler.VersionFile))
@@ -328,12 +328,12 @@ func TestNoticesMatchTheEmbeddedLicences(t *testing.T) {
 	if len(ls) != 4 {
 		t.Fatalf("%d licences", len(ls))
 	}
-	root, err := os.ReadFile(filepath.Join("..", "..", "..", "THIRD_PARTY_NOTICES.md"))
+	root, err := os.ReadFile(filepath.Join("..", "..", "..", "third-party-notices.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(root, tabler.Notices(ls)) {
-		t.Error("THIRD_PARTY_NOTICES.md is out of date; re-run make tabler-vendor")
+		t.Error("third-party-notices.md is out of date; re-run make tabler-vendor")
 	}
 }
 

@@ -1,7 +1,7 @@
 # `vm` — local VMs as SSH hosts
 
 A VM's address comes from its hypervisor and changes, so a VM host does not carry one. Its block renders
-`ProxyCommand "<sshmgr>" vm proxy <alias>`, and each connection asks the hypervisor where the VM is now.
+`ProxyCommand "<authama>" vm proxy <alias>`, and each connection asks the hypervisor where the VM is now.
 
 | Hypervisor | CLI | Address from | Key install | Keys owned by |
 |---|---|---|---|---|
@@ -53,7 +53,8 @@ A `port` other than 22 on the host wins over the hypervisor's (Lima and Podman f
    address, saying so on stderr.
 3. Connects and relays stdin/stdout, so ssh talks to the guest as if directly.
 
-The rendered path prefers the `sshmgr` on your `PATH` (a package manager's stable link) over the
+The rendered path is always `authama`, even when `sshmgr` (the deprecated alias) renders the
+config, and prefers the `authama` on your `PATH` (a package manager's stable link) over the
 versioned file behind it. If an upgrade still moves it, `doctor` reports `vm proxy: … does not exist`
 and `authama ssh config render` rewrites it.
 

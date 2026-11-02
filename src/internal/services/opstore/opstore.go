@@ -1,7 +1,7 @@
 // Package opstore keeps SSH keys as items in 1Password, through the op CLI.
 //
 // The private key is generated inside 1Password and never written to disk:
-// sshmgr only ever reads an item's public key back. Items are found by title
+// authama only ever reads an item's public key back. Items are found by title
 // (the key name) and then addressed by ID, so an edit or an archive cannot land
 // on a different item that happens to share a title.
 package opstore
@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-// Item is the part of a 1Password SSH Key item sshmgr uses.
+// Item is the part of a 1Password SSH Key item authama uses.
 type Item struct {
 	ID          string
 	Title       string
@@ -94,7 +94,7 @@ func (c *Client) Rename(vault, id, title string) error {
 }
 
 // Archive moves the item with id to 1Password's Archive, where it can still be
-// restored. sshmgr never deletes an item outright.
+// restored. authama never deletes an item outright.
 func (c *Client) Archive(vault, id string) error {
 	if _, err := c.run("item", "delete", id, "--vault", vault, "--archive"); err != nil {
 		return fmt.Errorf("op item delete %s --archive: %w", id, err)
@@ -130,7 +130,7 @@ func isNotFound(err error) bool {
 	return strings.Contains(strings.ToLower(err.Error()), "isn't an item")
 }
 
-// parseItem reads the fields sshmgr needs from `op item ... --format json`.
+// parseItem reads the fields authama needs from `op item ... --format json`.
 // The public key field is matched by id or by label, because 1Password
 // documents neither, and both have been seen as "public_key" / "public key".
 func parseItem(raw []byte) (Item, error) {

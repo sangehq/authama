@@ -119,12 +119,15 @@ func hashable(marker, field string) bool {
 		!strings.ContainsAny(field, "*?!")
 }
 
-// sshmgrTag marks a known_hosts line as one this tool wrote, in the trailing
+// ownerTag marks a known_hosts line as one this tool wrote, in the trailing
 // comment field sshd(8) defines as free text after the key ("marker hostnames
 // keytype key comment"). Only tagged lines are ever candidates for pruning; a
-// line without this tag - however it got there - is the user's and is left
-// alone.
-const sshmgrTag = "sshmgr"
+// line without a tag - however it got there - is the user's and is left alone.
+const ownerTag = "authama"
+
+// legacyOwnerTag is the tag every release before 0.1.2 wrote. Lines carrying it
+// are still this tool's: they are recognized, never rewritten just to retag.
+const legacyOwnerTag = "sshmgr"
 
 // khLine is a parsed known_hosts line. keytype+key identify the host key itself,
 // independent of how the host name is written, which is what makes it possible to
@@ -158,10 +161,10 @@ func parseKHLine(raw string) (khLine, bool) {
 	return khLine{marker: marker, field: fields[0], keytype: fields[1], key: fields[2], comment: comment}, true
 }
 
-// tagged reports whether this line carries the sshmgr comment tag.
+// tagged reports whether this line carries the owner tag, current or legacy.
 func (l khLine) tagged() bool {
 	for _, w := range strings.Fields(l.comment) {
-		if w == sshmgrTag {
+		if w == ownerTag || w == legacyOwnerTag {
 			return true
 		}
 	}

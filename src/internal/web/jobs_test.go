@@ -177,7 +177,7 @@ func TestRotatingAProfileListsItsKeysAndNeedsABackup(t *testing.T) {
 	}
 }
 
-// A bundle restore takes only a bundle named as sshmgr names them, from dist/,
+// A bundle restore takes only a bundle named as authama names them, from dist/,
 // and decrypts only with the identity in the environment.
 func TestBundleRestoreTakesABundleFromDistAndTheIdentityFromTheEnvironment(t *testing.T) {
 	t.Setenv("AUTHAMA_AGE_IDENTITY_FILE", "")

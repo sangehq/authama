@@ -64,7 +64,7 @@ func TestExplicitIdentitiesOnlyIsNotDuplicated(t *testing.T) {
 	}
 }
 
-// sshmgr hashes the names it writes, but ssh appends plaintext entries of its own
+// authama hashes the names it writes, but ssh appends plaintext entries of its own
 // whenever the user accepts an unknown host, so the store drifts back to a
 // readable inventory unless the rendered config says otherwise.
 func TestHostStarAlwaysHashesKnownHosts(t *testing.T) {

@@ -25,7 +25,7 @@ import (
 // outside the copy - a purge, a category move, clean, bundles, Docker
 // contexts, notifications - are in outside.go.
 
-// ProfileAdd is `sshmgr profile add <name> [--key-scope] [--key-name] [--key-comment]`.
+// ProfileAdd is `authama ssh profile add <name> [--key-scope] [--key-name] [--key-comment]`.
 func ProfileAdd(name, keyScope, keyName, keyComment string) Change {
 	if keyScope == "" {
 		keyScope = "per_service"
@@ -59,7 +59,7 @@ func ProfileAdd(name, keyScope, keyName, keyComment string) Change {
 	}
 }
 
-// ProfileEdit is `sshmgr profile edit <name> [--key-scope] [--key-name]`. A
+// ProfileEdit is `authama ssh profile edit <name> [--key-scope] [--key-name]`. A
 // nil field is left as it is.
 func ProfileEdit(name string, keyScope, keyName *string) Change {
 	args := []string{name}
@@ -89,7 +89,7 @@ func ProfileEdit(name string, keyScope, keyName *string) Change {
 	}
 }
 
-// ProfileDelete is `sshmgr profile delete <name> --yes`: the manifest, the
+// ProfileDelete is `authama ssh profile delete <name> --yes`: the manifest, the
 // inventory records, the rendered blocks and the pins go; key files stay.
 func ProfileDelete(name string) Change {
 	return Change{
@@ -140,7 +140,7 @@ func (h HostInput) args() []string {
 	return a
 }
 
-// HostAdd is `sshmgr host add <profile> <alias> -H <hostname> -u <user> [-p] [--tag]...`.
+// HostAdd is `authama ssh host add <profile> <alias> -H <hostname> -u <user> [-p] [--tag]...`.
 func HostAdd(profile, alias string, in HostInput) Change {
 	return Change{
 		Command: "host add", Args: append([]string{profile, alias}, in.args()...),
@@ -164,7 +164,7 @@ func HostAdd(profile, alias string, in HostInput) Change {
 	}
 }
 
-// HostEdit is `sshmgr host edit <profile> <alias> [...]`.
+// HostEdit is `authama ssh host edit <profile> <alias> [...]`.
 func HostEdit(profile, alias string, in HostInput) Change {
 	return Change{
 		Command: "host edit", Args: append([]string{profile, alias}, in.args()...),
@@ -190,7 +190,7 @@ func HostEdit(profile, alias string, in HostInput) Change {
 	}
 }
 
-// HostDelete is `sshmgr host delete <profile> <alias> --yes`: the host, its
+// HostDelete is `authama ssh host delete <profile> <alias> --yes`: the host, its
 // block and its pins go; its key files stay.
 func HostDelete(profile, alias string) Change {
 	return Change{
@@ -207,7 +207,7 @@ func HostDelete(profile, alias string) Change {
 	}
 }
 
-// KeyDelete is `sshmgr key delete <profile/key> --yes`: the declaration and
+// KeyDelete is `authama ssh key delete <profile/key> --yes`: the declaration and
 // the record go; the files stay.
 func KeyDelete(ref manifest.KeyRef) Change {
 	return Change{
@@ -224,7 +224,7 @@ func KeyDelete(ref manifest.KeyRef) Change {
 	}
 }
 
-// VMAdd is `sshmgr vm add <profile> <alias> --hypervisor --vm -u <user> --yes`.
+// VMAdd is `authama ssh vm add <profile> <alias> --hypervisor --vm -u <user> --yes`.
 func VMAdd(profile, alias, hypervisor, vmName, user string) Change {
 	return Change{
 		Command:  "vm add",
@@ -247,7 +247,7 @@ func VMAdd(profile, alias, hypervisor, vmName, user string) Change {
 	}
 }
 
-// ConfigRender is `sshmgr config render --yes`: migrate any legacy
+// ConfigRender is `authama ssh config render --yes`: migrate any legacy
 // per-profile known_hosts into the single store, then write the config.
 func ConfigRender() Change {
 	return Change{

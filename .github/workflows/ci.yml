@@ -74,12 +74,15 @@ jobs:
           dir="$(mktemp -d)/bin"
           # bash explicitly, so the macOS runner exercises its system bash 3.2
           # rather than whatever `env bash` happens to find.
-          SSHMGR_INSTALL_DIR="$dir" bash src/scripts/install.sh
-          "$dir/sshmgr" version
-          test -x "$dir/sshmgr"
-          # authama ships from the first release that has it; an older latest
-          # release installs sshmgr alone, which is the fallback under test.
-          if [ -e "$dir/authama" ]; then "$dir/authama" version; fi
+          AUTHAMA_INSTALL_DIR="$dir" bash src/scripts/install.sh
+          test -x "$dir/authama"
+          "$dir/authama" version
+          # sshmgr is the deprecated alias, installed while releases carry it.
+          if [ -e "$dir/sshmgr" ]; then "$dir/sshmgr" version; fi
+          # The deprecated variable name still picks the directory.
+          old="$(mktemp -d)/bin"
+          SSHMGR_INSTALL_DIR="$old" bash src/scripts/install.sh
+          test -x "$old/authama"
 
       # The Windows installer is an `irm | iex` entry point and was only ever
       # parsed, never run. Run it, then run it again with the API URL broken so
@@ -100,12 +103,13 @@ jobs:
             Set-Content -Path $path -Value $script
             $dir = Join-Path $env:RUNNER_TEMP "bin-$case"
             & $path -InstallDir $dir
-            & (Join-Path $dir 'sshmgr.exe') version
-            if ($LASTEXITCODE -ne 0) { throw "sshmgr version failed ($case)" }
-            $authama = Join-Path $dir 'authama.exe'
-            if (Test-Path $authama) {
-              & $authama version
-              if ($LASTEXITCODE -ne 0) { throw "authama version failed ($case)" }
+            & (Join-Path $dir 'authama.exe') version
+            if ($LASTEXITCODE -ne 0) { throw "authama version failed ($case)" }
+            # sshmgr is the deprecated alias, installed while releases carry it.
+            $sshmgr = Join-Path $dir 'sshmgr.exe'
+            if (Test-Path $sshmgr) {
+              & $sshmgr version
+              if ($LASTEXITCODE -ne 0) { throw "sshmgr version failed ($case)" }
             }
           }
 
@@ -119,7 +123,7 @@ jobs:
     # The only secret scanner now, and the only one that ever mattered: it runs
     # against the full history, which the pre-commit hook of the same name could
     # not do. That hook, and the interpreter the pre-commit job needed to run
-    # it, are gone; its file-hygiene rules are Go tests in cmd/sshmgr.
+    # it, are gone; its file-hygiene rules are Go tests in cmd/authama.
     #
     # Run the gitleaks binary directly: gitleaks-action@v2 requires a paid
     # GITLEAKS_LICENSE for organisation-owned repos (simtabi is an org).
@@ -180,10 +184,14 @@ jobs:
       - name: The installers reconstruct the artifact names GoReleaser writes
         run: |
           # Both installers build "{authama,sshmgr}_{os}_{arch}", and .goreleaser.yaml maps
-          # darwin -> macos. A drift here is invisible until a release is cut.
+          # darwin -> macos and names archives and packages authama_. A drift here is
+          # invisible until a release is cut.
           grep -q 'darwin' src/scripts/install.sh || { echo "install.sh no longer maps darwin"; exit 1; }
           grep -q 'macos'  src/scripts/install.sh || { echo "install.sh no longer produces the macos token"; exit 1; }
           grep -q 'macos'  src/.goreleaser.yaml  || { echo ".goreleaser.yaml no longer produces the macos token"; exit 1; }
+          grep -q 'BINARY="authama"' src/scripts/install.sh || { echo "install.sh no longer installs authama first"; exit 1; }
+          grep -q "binBase = 'authama'" src/scripts/install.ps1 || { echo "install.ps1 no longer installs authama first"; exit 1; }
+          grep -q 'authama_linux_' src/.goreleaser.yaml || { echo ".goreleaser.yaml no longer names the packages authama_"; exit 1; }
           grep -q 'checksums.txt' src/scripts/install.sh || { echo "install.sh stopped verifying checksums"; exit 1; }
           grep -qi 'checksums.txt' src/scripts/install.ps1 || { echo "install.ps1 stopped verifying checksums"; exit 1; }
           echo "installers and GoReleaser agree on the artifact naming"

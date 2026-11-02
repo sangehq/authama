@@ -86,7 +86,7 @@ func TestPruneKeepsLineIfAnyHostStillResolvesIt(t *testing.T) {
 	}
 }
 
-// Untagged lines are not sshmgr's to manage - the user's own pins, or anything
+// Untagged lines are not authama's to manage - the user's own pins, or anything
 // else already in the file - so prune must never remove them, live host or not.
 func TestPruneNeverTouchesUntaggedLines(t *testing.T) {
 	ssh := t.TempDir()
@@ -261,12 +261,47 @@ func TestAdoptDoesNotMakeALinePrunableNow(t *testing.T) {
 	if pruned != 0 {
 		t.Errorf("pruned %d adopted-but-live line(s), want 0", pruned)
 	}
-	// Once the host is gone, the adopted line is sshmgr's to remove.
+	// Once the host is gone, the adopted line is authama's to remove.
 	pruned, err = s.Prune(mustManifest(t, emptyManifestJSON))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if pruned != 1 {
 		t.Errorf("pruned %d, want the adopted line once its host went away", pruned)
+	}
+}
+
+// Lines are tagged "authama" from 0.1.2; every earlier release wrote "authama".
+// Both are this tool's, so a pin from either is pruned once no host needs it,
+// and an untagged one never is.
+func TestPruneRecognizesTheLegacyTag(t *testing.T) {
+	for _, tc := range []struct {
+		line string
+		want bool
+	}{
+		{"old.example ssh-ed25519 AAAA sshmgr", true},
+		{"new.example ssh-ed25519 BBBB authama", true},
+		{"mine.example ssh-ed25519 CCCC", false},
+		{"mine.example ssh-ed25519 DDDD sshmgr-ish", false},
+	} {
+		l, ok := parseKHLine(tc.line)
+		if !ok || l.tagged() != tc.want {
+			t.Errorf("tagged(%q) = %v, want %v", tc.line, l.tagged(), tc.want)
+		}
+	}
+	ssh := t.TempDir()
+	s := New(ssh)
+	if err := os.WriteFile(s.Path(), []byte("old.example ssh-ed25519 AAAA sshmgr\nmine.example ssh-ed25519 CCCC\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	n, err := s.Prune(mustManifest(t, emptyManifestJSON))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 || HostInKnownHosts(s.Path(), "old.example") || !HostInKnownHosts(s.Path(), "mine.example") {
+		t.Errorf("removed=%d; want only the legacy-tagged pin gone", n)
+	}
+	if ownerTag != "authama" {
+		t.Errorf("new pins are tagged %q", ownerTag)
 	}
 }

@@ -19,14 +19,14 @@ const removeScript = `set -eu
 AK="$HOME/.ssh/authorized_keys"
 mkdir -p "$HOME/.ssh"; chmod 700 "$HOME/.ssh"
 [ -f "$AK" ] || : > "$AK"
-exec 9>"$HOME/.ssh/.ssh-manager.lock" || exit 4
+exec 9>"$HOME/.ssh/.authama.lock" || exit 4
 if command -v flock >/dev/null 2>&1; then flock 9 || exit 4; fi
 BODY='{body}'
 grep -qF -- "$BODY" "$AK" || exit 2
-TMP="$(mktemp "$AK.ssh-manager.XXXXXX")" || exit 4
+TMP="$(mktemp "$AK.authama.XXXXXX")" || exit 4
 grep -vF -- "$BODY" "$AK" > "$TMP" || true
 if ! grep -Eq '^[[:space:]]*[^[:space:]#]' "$TMP"; then rm -f "$TMP"; exit 3; fi
-cp -p "$AK" "$AK.ssh-manager.bak.$(date +%Y%m%d-%H%M%S)" 2>/dev/null || true
+cp -p "$AK" "$AK.authama.bak.$(date +%Y%m%d-%H%M%S)" 2>/dev/null || true
 chmod 600 "$TMP"
 mv "$TMP" "$AK"
 `

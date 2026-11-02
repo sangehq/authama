@@ -12,7 +12,7 @@ import (
 )
 
 // X3 - packaging. Four things independently reconstruct the release matrix and
-// the `sshmgr_{os}_{arch}` artifact names: build/targets.txt,
+// the `authama_{os}_{arch}` artifact names: build/targets.txt,
 // scripts/build-all.sh, .goreleaser.yaml, and the two installers. Nothing tied
 // them together, so a target could be declared and not compile, or compile and
 // never be built.

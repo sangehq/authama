@@ -36,7 +36,7 @@ func TestHostInKnownHostsIgnoresHostnameCase(t *testing.T) {
 	}
 }
 
-// A pin sshmgr writes from a mixed-case name must be found by the lowercase
+// A pin authama writes from a mixed-case name must be found by the lowercase
 // name ssh actually looks up; hashing the raw spelling would write a line ssh
 // can never match.
 func TestAddHashesTheLowercasedHostname(t *testing.T) {

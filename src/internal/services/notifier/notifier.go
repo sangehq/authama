@@ -104,7 +104,7 @@ func (n *Notifier) Dangling() []keyaudit.Finding {
 // It covers dangling keys as well as expiry. An expiring key eventually stops
 // working; a dangling one already has, and it was the only class of problem the
 // daily reminder could not tell you about - so the one surface that reaches a
-// user who is not running sshmgr now reports both.
+// user who is not running authama now reports both.
 func (n *Notifier) Notify(now time.Time, force bool) bool {
 	states, _ := n.States(now)
 	var attention []expiry.Status

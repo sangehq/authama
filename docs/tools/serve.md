@@ -223,7 +223,7 @@ targets manage it:
 - `make tabler-vendor` re-vendors the pinned version.
 
 Each target checks every download against npm's integrity hash, then rewrites the files, the
-licences, `MANIFEST.sha256` and `THIRD_PARTY_NOTICES.md` together.
+licences, `MANIFEST.sha256` and `third-party-notices.md` together.
 
 ---
 

@@ -94,7 +94,7 @@ func (r *CheckResult) Format() string {
 	}
 	if r.BlockInSync() {
 		// The managed block already matches, so rendering again would not
-		// help - the fault is in content sshmgr does not own.
+		// help - the fault is in content authama does not own.
 		if len(r.SSHErrors) > 0 {
 			b.WriteString("config: ssh cannot parse the config - fix the lines reported above")
 		} else if len(r.Shadowed) == 0 {
@@ -233,7 +233,7 @@ func (s *Service) Show(alias string) (string, error) {
 }
 
 // configFilesOnDisk lists managed config files present under ~/.ssh as
-// forward-slash relpaths: the root config, plus each profiles/*/config sshmgr
+// forward-slash relpaths: the root config, plus each profiles/*/config authama
 // owns (see ownsConfigFile). Anything listed here and not rendered is pruned.
 func (s *Service) configFilesOnDisk() []string {
 	var found []string
@@ -254,15 +254,15 @@ func (s *Service) configFilesOnDisk() []string {
 	return found
 }
 
-// ownsConfigFile decides whether a profiles/<x>/config is sshmgr's to prune.
+// ownsConfigFile decides whether a profiles/<x>/config is authama's to prune.
 // Two shapes are:
 //
-//   - one carrying the managed header: a category file sshmgr rendered;
+//   - one carrying the managed header: a category file authama rendered;
 //   - one in a flat profile directory - keys, old/ and dot directories only -
 //     which is where v1 wrote its per-profile files, without a header.
 //
 // A headerless file beside profile directories is neither. It is a category
-// file someone wrote by hand before sshmgr knew about categories, and it is
+// file someone wrote by hand before authama knew about categories, and it is
 // the only thing routing those hosts until the manifest catches up, so
 // deleting it would take every host in the category offline.
 func ownsConfigFile(path string) bool {

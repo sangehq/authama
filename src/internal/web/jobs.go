@@ -161,7 +161,7 @@ func loadState(p paths.Paths) (*manifest.Manifest, *inventory.Inventory, error) 
 	return m, inv, nil
 }
 
-// deployJob is `sshmgr deploy` after its confirmation.
+// deployJob is `authama ssh deploy` after its confirmation.
 func deployJob(j *jobs.Job, p paths.Paths, retain int, key, target string) error {
 	m, inv, err := loadState(p)
 	if err != nil {
@@ -219,7 +219,7 @@ func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, allowUnverifi
 	return nil
 }
 
-// rollbackJob is `sshmgr rollback` after its confirmation.
+// rollbackJob is `authama ssh rollback` after its confirmation.
 func rollbackJob(j *jobs.Job, p paths.Paths, retain int, key string) error {
 	m, inv, err := loadState(p)
 	if err != nil {
@@ -243,7 +243,7 @@ func rollbackJob(j *jobs.Job, p paths.Paths, retain int, key string) error {
 	return nil
 }
 
-// rotateKeysSpec is `sshmgr rotate <profile> --yes` or `sshmgr rotate --all
+// rotateKeysSpec is `authama ssh rotate <profile> --yes` or `authama ssh rotate --all
 // --yes`: every key the selection holds that a host uses, one after another.
 func rotateKeysSpec(f url.Values, h home, retain int) (jobSpec, error) {
 	sel := keysvc.Selection{All: checked(f, "all")}
@@ -337,7 +337,7 @@ func manualPaste(j *jobs.Job) rotator.ManualStep {
 	}
 }
 
-// bundleRestoreSpec is `sshmgr restore <bundle> --yes`, for a bundle in the
+// bundleRestoreSpec is `authama ssh restore <bundle> --yes`, for a bundle in the
 // config home's dist/, with the identity from AUTHAMA_AGE_IDENTITY_FILE.
 // The web takes no identity, and no passphrase for one.
 func bundleRestoreSpec(f url.Values, h home, retain int) (jobSpec, error) {

@@ -216,3 +216,19 @@ func TestDocumentedRawURLsPointAtFilesThatExist(t *testing.T) {
 		t.Fatal("no raw URLs were checked; the install commands are documented with one, so this has stopped measuring anything")
 	}
 }
+
+// TestMarkdownFileNamesAreLowercase keeps documentation file names as lowercase slugs. The
+// exceptions are the conventional upper-case names GitHub and readers look for.
+func TestMarkdownFileNamesAreLowercase(t *testing.T) {
+	_, files := trackedFiles(t)
+	conventional := []string{"README.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "LICENSE.md"}
+	for _, f := range files {
+		base := filepath.Base(f)
+		if !strings.EqualFold(filepath.Ext(base), ".md") || slices.Contains(conventional, base) {
+			continue
+		}
+		if base != strings.ToLower(base) {
+			t.Errorf("%s: markdown file names are lowercase slugs (rename to %s)", f, strings.ToLower(base))
+		}
+	}
+}

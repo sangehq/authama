@@ -14,7 +14,7 @@ const shadowManifest = `{"version":1,"defaults":{"key_type":"ed25519"},"profiles
     {"alias":"db","hostname":"db.example","user":"deploy"}]}}}`
 
 // writeWithPreamble puts foreign content in ~/.ssh/config, then renders the
-// managed block under it, as `sshmgr import ~/.ssh/config` and a render leave it.
+// managed block under it, as `authama ssh import ~/.ssh/config` and a render leave it.
 func writeWithPreamble(t *testing.T, foreign string) (*Service, string) {
 	t.Helper()
 	ssh := t.TempDir()
@@ -66,9 +66,9 @@ func TestCheckReportsAForeignBlockShadowingAManagedAlias(t *testing.T) {
 			t.Errorf("report lacks %q:\n%s", want, f)
 		}
 	}
-	// Rendering again cannot fix content sshmgr does not own, so the report
+	// Rendering again cannot fix content authama does not own, so the report
 	// must not send the user there.
-	if strings.Contains(f, "run: sshmgr config render") {
+	if strings.Contains(f, "config render") {
 		t.Errorf("report points at render, which would not help:\n%s", f)
 	}
 	// And check never touches the user's content.
@@ -91,7 +91,7 @@ func TestShadowMatchingFollowsSSHPatternRules(t *testing.T) {
 		// A block that sets nothing the managed block sets overrides nothing.
 		{"no shared keyword", "Host *\n    ServerAliveInterval 30\n", nil},
 		{"other alias", "Host srv2 legacy\n    HostName x\n", nil},
-		// A Match condition sshmgr does not evaluate is left alone rather than guessed at.
+		// A Match condition authama does not evaluate is left alone rather than guessed at.
 		{"match block", "Match host srv\n    HostName x\n", nil},
 	}
 	for _, tc := range cases {

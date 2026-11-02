@@ -22,7 +22,7 @@ func (r *Rotator) WithManualStep(step ManualStep) *Rotator {
 // there; only panel providers (Ploi and the like, whose targets are servers) qualify.
 func panelProof(category string) bool { return category == "panel" }
 
-// proveManual turns a manual deploy into a verified one: the key is pasted while sshmgr waits, then
+// proveManual turns a manual deploy into a verified one: the key is pasted while authama waits, then
 // proven by logging in with the staged key itself. It returns verified unchanged when the provider
 // verified on its own, when the deploy was not manual, when no manual step is set, or when the
 // provider is not a panel.

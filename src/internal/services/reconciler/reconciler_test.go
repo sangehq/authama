@@ -357,7 +357,7 @@ func TestMintRefNeverRegeneratesAKeyThatExists(t *testing.T) {
 }
 
 // `keygen` is the one command whose purpose is a single key, and it was the only
-// selector that would not accept one: `sshmgr keygen work/work_gh-ed25519` was an
+// selector that would not accept one: `authama ssh keygen work/work_gh-ed25519` was an
 // unknown target. Each accepted form is checked by what it selects, since a
 // selector that silently matches nothing looks exactly like a successful no-op.
 func TestSelectorAcceptsProfileKeyAndHostForms(t *testing.T) {
@@ -479,7 +479,7 @@ func TestReconcileTightensTheConfigHomeToo(t *testing.T) {
 	cfg := t.TempDir()
 	p := paths.Paths{SSHDir: t.TempDir(), ConfigDir: cfg}
 	// providers.json can hold API tokens; the manifest maps every host and login.
-	// Seed both world-readable, as a plain redirect of ssh-manager output would.
+	// Seed both world-readable, as a plain redirect of authama output would.
 	for _, path := range []string{p.Manifest(), p.Providers()} {
 		if err := os.WriteFile(path, []byte("{}\n"), 0o644); err != nil {
 			t.Fatal(err)

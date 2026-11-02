@@ -130,7 +130,7 @@ func TestRunLatestVendorsEverythingTogether(t *testing.T) {
 			t.Errorf("manifest lacks %s", want)
 		}
 	}
-	notices, _ := os.ReadFile(filepath.Join(v.Root, "THIRD_PARTY_NOTICES.md"))
+	notices, _ := os.ReadFile(filepath.Join(v.Root, "third-party-notices.md"))
 	if !strings.Contains(string(notices), "## @tabler/core 1.7.1") || strings.Count(string(notices), "Permission is hereby granted") != 4 {
 		t.Errorf("notices:\n%s", notices)
 	}

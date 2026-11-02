@@ -53,7 +53,7 @@ func TestOpenCreatesAnOwnerOnlyDatabaseAtTheCurrentSchema(t *testing.T) {
 	_ = again.Close()
 }
 
-// A database from a newer sshmgr is opened, read and never written: migrating
+// A database from a newer authama is opened, read and never written: migrating
 // it down would destroy what the newer binary recorded.
 func TestANewerSchemaOpensReadOnly(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "history.db")

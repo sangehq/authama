@@ -252,7 +252,7 @@ func (r *Rotator) rollbackOnePassword(profile, keyName string, hosts []manifest.
 	oldPub := filepath.Join(oldDir, keyName+".pub")
 	// A key file at old/<key> is the predecessor only while old/<key>.pub is
 	// its public half: then the profile has rotated once since moving into
-	// 1Password and the way back is the file store. An earlier sshmgr left that
+	// 1Password and the way back is the file store. An earlier authama left that
 	// file in place across later vault rotations, which overwrote the .pub with
 	// the vault predecessor's, so presence alone is not proof. A key that
 	// cannot be derived (encrypted) is given the benefit of the doubt and

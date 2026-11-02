@@ -45,14 +45,14 @@ func TestNotifyUsesThePlatformsBackend(t *testing.T) {
 	}
 	log := stubBackend(t, name)
 
-	if !Notify("ssh-manager", "a key is due") {
+	if !Notify("authama", "a key is due") {
 		t.Fatal("Notify should report success when a backend handled it")
 	}
 	argv, err := os.ReadFile(log)
 	if err != nil {
 		t.Fatalf("the backend was not invoked: %v", err)
 	}
-	for _, want := range []string{"ssh-manager", "a key is due"} {
+	for _, want := range []string{"authama", "a key is due"} {
 		if !strings.Contains(string(argv), want) {
 			t.Errorf("argv = %q, want it to carry %q", argv, want)
 		}

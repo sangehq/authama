@@ -46,7 +46,7 @@ func (e errWrapper) Error() string { return "while doing the thing: " + e.err.Er
 func (e errWrapper) Unwrap() error { return e.err }
 
 // A declined confirmation must fail, and must not print a second line under the
-// prompt - "sshmgr: aborted" reads like a fault rather than the answer given.
+// prompt - "authama: aborted" reads like a fault rather than the answer given.
 func TestConfirmOrAbort(t *testing.T) {
 	c := &cobra.Command{}
 	var out bytes.Buffer

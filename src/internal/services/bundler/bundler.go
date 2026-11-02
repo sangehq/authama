@@ -267,7 +267,7 @@ func (b *Bundler) writeTarGz(w io.Writer) ([]string, error) {
 	return members, gz.Close()
 }
 
-// renderedSlot reports whether rel (relative to ~/.ssh) is where sshmgr puts a
+// renderedSlot reports whether rel (relative to ~/.ssh) is where authama puts a
 // file it renders rather than a key: profiles/<category>/config, which the
 // root config Includes, or a legacy per-profile profiles/<p>/known_hosts. A key
 // can carry either name too, which is why callers look at the content.
@@ -277,7 +277,7 @@ func renderedSlot(rel string) bool {
 }
 
 // isRenderedFile reports whether the file at path, in a rendered slot, is one
-// sshmgr rendered: a legacy known_hosts, or a config carrying the managed
+// authama rendered: a legacy known_hosts, or a config carrying the managed
 // header. Rendered files are rebuilt from the manifest after a restore, so a
 // bundle does not carry them - carrying them is what let a forged bundle plant
 // a category config with a ProxyCommand. A key named config is still a key.

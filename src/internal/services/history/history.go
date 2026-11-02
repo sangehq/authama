@@ -67,7 +67,7 @@ const (
 // second, the form audit.log already uses, so the two sort together.
 const TimeFormat = "2006-01-02T15:04:05Z"
 
-// ErrNewerSchema reports a database written by a newer sshmgr. It is opened
+// ErrNewerSchema reports a database written by a newer authama. It is opened
 // read-only rather than migrated down, and never written.
 var ErrNewerSchema = errors.New("the history database was written by a newer authama; it is open read-only")
 
@@ -115,7 +115,7 @@ type Event struct {
 }
 
 // Open opens the database at path, creating it owner-only and applying any
-// migrations it is missing. A database from a newer sshmgr opens read-only and
+// migrations it is missing. A database from a newer authama opens read-only and
 // Open returns it together with ErrNewerSchema.
 func Open(path string) (*Store, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
@@ -507,7 +507,7 @@ func (s *Store) Counts() (ops, events int) {
 	return ops, events
 }
 
-// SubjectsOf names what an audit event is about, from the fields sshmgr's
+// SubjectsOf names what an audit event is about, from the fields authama's
 // events use for it.
 func SubjectsOf(fields []log.Field) []Subject {
 	var out []Subject

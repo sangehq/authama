@@ -100,7 +100,7 @@ func TestAddRemove(t *testing.T) {
 //
 // The prefix is attacker-controlled: it comes out of an authorized_keys file,
 // which on a shared box anyone with write access can craft. On a 32-bit build -
-// sshmgr ships 386, armv6 and armv7 (build/targets.txt) - `int` is 32 bits, so
+// authama ships 386, armv6 and armv7 (build/targets.txt) - `int` is 32 bits, so
 // the old `4+int(n) > len(blob)` check converted such a prefix to a negative,
 // passed, and then panicked slicing with a negative bound. This asserts the
 // rejection; the point is that it returns rather than crashes.

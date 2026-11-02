@@ -41,7 +41,7 @@ func TestRawOptionsNeverDuplicateAManagedLine(t *testing.T) {
 		t.Errorf("IdentityFile appears %d times, want the managed key then the raw one:\n%s", n, got)
 	}
 	if !strings.Contains(got, "    ForwardAgent no\n") {
-		t.Errorf("an option sshmgr does not manage must still render:\n%s", got)
+		t.Errorf("an option authama does not manage must still render:\n%s", got)
 	}
 	assertSSHResolves(t, got, "srv", map[string][]string{
 		"hostname":           {"srv.example"},

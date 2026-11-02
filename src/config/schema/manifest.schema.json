@@ -68,7 +68,7 @@
         "git": {
           "type": "object",
           "additionalProperties": false,
-          "description": "sshmgr git: default remote mode, default identity, and owner-to-profile map.",
+          "description": "`authama ssh git`: default remote mode, default identity, and owner-to-profile map.",
           "properties": {
             "mode": {
               "enum": [
@@ -214,7 +214,7 @@
                   "required": [
                     "kind"
                   ],
-                  "description": "Route connections through a proxy command sshmgr renders: cloudflared reaches the host through Cloudflare Access (ssh runs `cloudflared access ssh --hostname %h`). A host is a VM or proxied, not both.",
+                  "description": "Route connections through a proxy command authama renders: cloudflared reaches the host through Cloudflare Access (ssh runs `cloudflared access ssh --hostname %h`). A host is a VM or proxied, not both.",
                   "properties": {
                     "kind": {
                       "enum": [

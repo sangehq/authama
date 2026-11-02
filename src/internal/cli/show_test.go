@@ -171,7 +171,7 @@ func TestShowProfileFlagsAnUnwiredKey(t *testing.T) {
 	}
 }
 
-// A key regenerated outside sshmgr leaves the inventory describing a key that is
+// A key regenerated outside authama leaves the inventory describing a key that is
 // no longer on disk; deployments and expiry then refer to nothing.
 func TestShowFlagsAFingerprintMismatch(t *testing.T) {
 	f := newShowFixture(t)
@@ -189,6 +189,6 @@ func TestShowFlagsAFingerprintMismatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out.String(), "MISMATCH") {
-		t.Errorf("a key replaced behind sshmgr's back should be flagged:\n%s", out.String())
+		t.Errorf("a key replaced behind authama's back should be flagged:\n%s", out.String())
 	}
 }

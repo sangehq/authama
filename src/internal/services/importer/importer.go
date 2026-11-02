@@ -495,7 +495,7 @@ func (im *Importer) Run(configPath string, dryRun bool) (ImportResult, error) {
 	}
 	// Save does not validate, and every later command Loads (which does). An
 	// import that wrote a manifest Load then rejects would report success and
-	// leave sshmgr unusable, so refuse it here - before any key is adopted, and
+	// leave authama unusable, so refuse it here - before any key is adopted, and
 	// in a dry run too, which should predict the real run.
 	if err := m.Validate(); err != nil {
 		return ImportResult{}, &importError{"import would produce an invalid manifest: " + err.Error()}

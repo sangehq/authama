@@ -10,7 +10,7 @@ import (
 // and it is decidable without Windows.
 
 func TestSchtasksRegistersADailyTask(t *testing.T) {
-	argv := schtasksArgs(`"C:\Program Files\sshmgr\sshmgr.exe" audit --notify`, "ssh_manager.expiry")
+	argv := schtasksArgs(`"C:\Program Files\authama\authama.exe" audit --notify`, Label)
 
 	if argv[0] != "schtasks" {
 		t.Fatalf("argv[0] = %q", argv[0])
@@ -32,7 +32,7 @@ func TestSchtasksRegistersADailyTask(t *testing.T) {
 	if value("/Create") == "" {
 		t.Error("/Create missing: the task would not be registered")
 	}
-	if pairs["/TN"] != "ssh_manager.expiry" {
+	if pairs["/TN"] != Label {
 		t.Errorf("/TN = %q, want the label", pairs["/TN"])
 	}
 	if !strings.Contains(pairs["/TR"], "audit --notify") {

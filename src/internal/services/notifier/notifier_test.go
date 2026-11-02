@@ -77,7 +77,7 @@ func TestNotifyGating(t *testing.T) {
 }
 
 // The daily alert is the one surface that reaches a user who is not running
-// sshmgr right now, and a dangling key is the class of problem it could not
+// authama right now, and a dangling key is the class of problem it could not
 // previously tell them about.
 func TestNotifyCoversDanglingKeys(t *testing.T) {
 	cfg := t.TempDir()

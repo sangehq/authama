@@ -26,7 +26,7 @@ var testToken = NewToken()
 // key material in front of a browser.
 const privateMarker = "-----BEGIN OPENSSH PRIVATE KEY-----"
 
-// fixtureHome is a small but complete sshmgr home: one profile with a host and
+// fixtureHome is a small but complete authama home: one profile with a host and
 // a key, an inventory record, a rendered config, two snapshots (one clean, one
 // from before private keys were excluded), and one recorded operation.
 func fixtureHome(t *testing.T) (paths.Paths, string) {

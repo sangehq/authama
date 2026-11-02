@@ -25,7 +25,7 @@ func (s Shadow) String() string {
 		s.Alias, s.File, s.Line, s.Header, strings.Join(s.Keywords, ", "))
 }
 
-// ShadowFix says how to resolve a shadow. sshmgr never edits content outside
+// ShadowFix says how to resolve a shadow. authama never edits content outside
 // its managed block, so the fix is the user's to make.
 const ShadowFix = "delete or rename that block, or remove those lines from it " +
 	"(authama does not edit content outside its managed block)"
@@ -43,9 +43,9 @@ type foreignBlock struct {
 //
 // Only the preamble counts: content below the managed block is read after it,
 // where the managed values have already won. A Match block other than `Match
-// all` is skipped, since sshmgr does not evaluate its conditions and a guess
+// all` is skipped, since authama does not evaluate its conditions and a guess
 // either way would be wrong; an Include is not followed. Both are rare in a
-// config that `sshmgr import` read, which is where this shadowing comes from.
+// config that `authama ssh import` read, which is where this shadowing comes from.
 func findShadows(file, onDisk string, rendered map[string]string) []Shadow {
 	lines := splitLines(onDisk)
 	end := len(lines)
@@ -91,7 +91,7 @@ func findShadows(file, onDisk string, rendered map[string]string) []Shadow {
 
 // parseBlocks splits config lines into blocks the way ssh scopes them: options
 // before the first Host/Match apply to every host, a Host line opens a block
-// for its patterns, and a Match line opens one sshmgr does not evaluate.
+// for its patterns, and a Match line opens one authama does not evaluate.
 func parseBlocks(lines []string) []foreignBlock {
 	var out []foreignBlock
 	var cur *foreignBlock

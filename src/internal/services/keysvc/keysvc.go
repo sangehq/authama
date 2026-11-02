@@ -111,7 +111,7 @@ func (s *Service) Row(ref manifest.KeyRef) (Row, error) { return s.row(ref) }
 type Detail struct {
 	Row
 	// DiskFingerprint is fingerprinted from the .pub actually on disk, which can
-	// disagree with the recorded one after a key was regenerated outside sshmgr.
+	// disagree with the recorded one after a key was regenerated outside authama.
 	// Empty when there is no .pub to read.
 	DiskFingerprint string
 	// FingerprintErr explains an unreadable or malformed .pub, rather than

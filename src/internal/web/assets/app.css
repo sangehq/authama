@@ -1,5 +1,5 @@
 /* Overrides only; everything else is Tabler. Copied from icon-sets-sync, with
-   the sshmgr additions at the end. */
+   the authama additions at the end. */
 .skip-link:focus { position: absolute; z-index: 1080; top: .5rem; left: .5rem; padding: .5rem 1rem; background: var(--tblr-bg-surface); }
 .licence-text { white-space: pre-wrap; font-size: .8125rem; max-height: 24rem; overflow: auto; }
 main:focus { outline: none; }
@@ -50,7 +50,7 @@ main:focus { outline: none; }
 
 .licence-text:focus-visible, .log-pane:focus-visible { outline: 2px solid var(--tblr-primary); outline-offset: 2px; }
 
-/* sshmgr */
+/* authama */
 .dev-banner { background: #fbefd5; color: #6e4700; padding: .5rem 0; font-size: .875rem; }
 :root[data-bs-theme=dark] .dev-banner { background: #3a2f16; color: #f2c46e; }
 .row-attention th, .row-attention td { background: color-mix(in srgb, var(--tblr-warning) 8%, transparent); }

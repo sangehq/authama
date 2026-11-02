@@ -170,7 +170,7 @@ var goOnly = map[string]string{
 	"serve --token-file":           "web UI - write the sign-in address to a 0600 file",
 	"termius keys --clear-after":   "exports - auto-clear the clipboard after a delay",
 
-	// Cloudflare Access (3.4.0): a host reached through cloudflared, rendered by sshmgr since
+	// Cloudflare Access (3.4.0): a host reached through cloudflared, rendered by authama since
 	// raw_options may not set a ProxyCommand.
 	"host add --proxy":  "cloudflare access - route the host through cloudflared",
 	"host edit --proxy": "cloudflare access - set or remove (none) the proxy",
@@ -400,7 +400,7 @@ func TestTheCommandSurfaceMatchesTheOneItReplaced(t *testing.T) {
 	}
 
 	// 5. Every command explains itself. A verb with no Short is invisible in
-	//    `sshmgr --help`, which is the only place most users look.
+	//    `authama --help`, which is the only place most users look.
 	var noShort []string
 	var check func(c *cobra.Command, prefix string)
 	check = func(c *cobra.Command, prefix string) {
@@ -428,7 +428,7 @@ func TestTheCommandSurfaceMatchesTheOneItReplaced(t *testing.T) {
 }
 
 // pflag reads the first `backticked` word of a flag's usage as the value's name,
-// so "see `sshmgr providers`" printed as "--provider sshmgr providers" in --help.
+// so "see `authama ssh providers`" printed as "--provider authama providers" in --help.
 // A flag that names a value does it with a plain word instead.
 func TestFlagUsageHasNoBackticks(t *testing.T) {
 	var bad []string

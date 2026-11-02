@@ -261,7 +261,7 @@ func TestDeclaredKeyOverridesInheritDefaults(t *testing.T) {
 }
 
 // A manifest that declares no keys must serialize as if the field did not exist,
-// since every manifest written before it did is one of those and sshmgr rewrites
+// since every manifest written before it did is one of those and authama rewrites
 // the file on every edit. (Save normalizes other fields - null-filling, number
 // coercion - so the contract is "no keys field, and stable across re-saves", not
 // byte-equality with the hand-written source.)
@@ -724,7 +724,7 @@ func TestOrdinaryHostValuesStillValidate(t *testing.T) {
 	}
 }
 
-// The starter manifest `sshmgr init` writes must pass its own validation on
+// The starter manifest `authama init` writes must pass its own validation on
 // every platform.
 func TestStarterManifestValidates(t *testing.T) {
 	for _, keychain := range []bool{true, false} {

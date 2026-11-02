@@ -1,4 +1,4 @@
-# authama (Authentication Access Manager; formerly sshmgr) - dev front door. Run from the repo root:  make <target>
+# authama (Authentication Access Manager) - dev front door. Run from the repo root:  make <target>
 #
 # Pure Go: no venv, no interpreter, no bootstrap step. `make build` is enough to
 # get a working binary, and every other target works off the toolchain already
@@ -12,7 +12,7 @@
 MODULE  := src
 BIN     := build/authama
 PKG     := ./cmd/authama
-# The compatibility build: the same program under its original name.
+# The deprecated compatibility build: the same program under its old name; it prints a deprecation notice.
 COMPAT_BIN := build/sshmgr
 COMPAT_PKG := ./cmd/sshmgr
 # A release carries two tags on the same commit, and this matches the first:
@@ -145,7 +145,7 @@ docker-down: ## stop and remove the dev container
 # 300s left about a minute of headroom; 600s is a hang detector, not a budget.
 # The CI job keeps its own 15-minute limit.
 e2e: ## end-to-end smoke in a throwaway sandbox
-	$(GO) test -tags e2e -count=1 -timeout 600s ./cmd/sshmgr/
+	$(GO) test -tags e2e -count=1 -timeout 600s ./cmd/authama/
 
 # The per-command assertions live in internal/cli/commands_test.go now, so they
 # run in the ordinary suite. Kept as a target because the docs and the shipping
@@ -179,7 +179,7 @@ dist: ## full release artifacts into build/dist/ (needs goreleaser)
 
 # The web UI's vendored Tabler files. Each target downloads the npm tarballs,
 # checks them against the registry's integrity hash before extracting, and
-# rewrites the files, the licences, MANIFEST.sha256 and THIRD_PARTY_NOTICES.md
+# rewrites the files, the licences, MANIFEST.sha256 and third-party-notices.md
 # together, so a version never moves without its notices and hashes.
 tabler-check: ## say whether a newer Tabler or Tabler Icons release is out (writes nothing)
 	go -C $(MODULE) run ./internal/tools/tablervendor -check -root ..

@@ -5,10 +5,10 @@
 # build/dist/:
 #
 #   authama_{os}_{arch}[.exe]       flat, versionless, ready-to-run binaries,
-#   sshmgr_{os}_{arch}[.exe]        and the same program under its original name
+#   sshmgr_{os}_{arch}[.exe]        and the deprecated compatibility name
 #   {authama,sshmgr}_macos_universal  Intel + Apple Silicon fat binaries (on macOS)
 #   checksums.txt                   SHA-256 over the bare binaries (bare names)
-#   archives/sshmgr_{os}_{arch}.{tar.gz,zip}   both binaries + LICENSE/README/CHANGELOG
+#   archives/authama_{os}_{arch}.{tar.gz,zip}  both binaries + LICENSE/README/CHANGELOG
 #   archives/checksums.txt          SHA-256 over the archives
 #
 # Naming: darwin -> macos, arm -> armvN, .exe on windows. Static
@@ -28,15 +28,15 @@
 # Portable to bash 3.2 (the macOS system bash): no mapfile / wait -n / assoc arrays.
 set -euo pipefail
 
-# Run from the module root (src/), because `go build ./cmd/sshmgr` resolves
+# Run from the module root (src/), because `go build ./cmd/authama` resolves
 # relative to it. The repo root is one level up, and that is where build/ and the
 # LICENSE/README/CHANGELOG bundled into each archive live - so paths below are
 # deliberately explicit about which of the two roots they mean.
 cd "$(dirname "$0")/.."
 REPO_ROOT=".."
 
-# The archive name stays sshmgr_ (the pre-0.1.0 asset names); both binaries go in it.
-BINARY="sshmgr"
+# Archives are named after authama (sshmgr_ before 0.1.2); both binaries go in it.
+BINARY="authama"
 BINARIES="authama sshmgr"
 PKG="github.com/simtabi/authama/src/internal/version"
 BUILD_DIR="${REPO_ROOT}/build"
@@ -122,12 +122,12 @@ else
   echo "==> regenerated ${TARGETS_FILE}"
 fi
 
-# make_archive <sshmgr-bare-binary-filename> <goos>: both binaries, under their
+# make_archive <authama-bare-binary-filename> <goos>: both binaries, under their
 # plain names, plus the docs.
 make_archive() {
   [ "$WITH_ARCHIVES" = "1" ] || return 0
   bin="$1"; goos="$2"
-  base="${bin%.exe}"                      # sshmgr_macos_arm64
+  base="${bin%.exe}"                      # authama_macos_arm64
   ext="";  [ "$goos" = "windows" ] && ext=".exe"
   stage="$(mktemp -d)"
   for b in $BINARIES; do
@@ -194,7 +194,7 @@ if [ "$have_macos_amd64" = 1 ] && [ "$have_macos_arm64" = 1 ]; then
 fi
 
 # --- checksums (bare names so install scripts / self-update can look up) ------
-( cd "$OUT" && sha256 authama_* ${BINARY}_* > checksums.txt )
+( cd "$OUT" && sha256 authama_* sshmgr_* > checksums.txt )
 echo "==> wrote ${OUT}/checksums.txt"
 if [ "$WITH_ARCHIVES" = "1" ] && ls "${ARCHIVE_DIR}/${BINARY}_"* >/dev/null 2>&1; then
   ( cd "$ARCHIVE_DIR" && sha256 ${BINARY}_* > checksums.txt )

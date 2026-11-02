@@ -1,6 +1,6 @@
 // Package cli is the cobra command surface. The binary is authama
-// (brand.Command) and is also installed as sshmgr (brand.LegacyCommand), the
-// name v1 installed as its console script.
+// (brand.Command); sshmgr (brand.LegacyCommand), the name it shipped under
+// before, is still installed beside it as a deprecated alias.
 //
 // The tree has two feature groups and a few commands that serve both:
 //

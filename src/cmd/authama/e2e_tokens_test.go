@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/simtabi/authama/src/internal/brand"
 )
 
 // TestTokenEndToEnd drives the token group through both shipped binaries,
@@ -26,7 +28,7 @@ func TestTokenEndToEnd(t *testing.T) {
 	}
 	dir := t.TempDir()
 	bins := map[string]string{}
-	for name, pkg := range map[string]string{"authama": "../authama", "sshmgr": "."} {
+	for name, pkg := range map[string]string{"authama": ".", "sshmgr": "../sshmgr"} {
 		bins[name] = filepath.Join(dir, name)
 		if out, err := exec.Command("go", "build", "-o", bins[name], pkg).CombinedOutput(); err != nil {
 			t.Fatalf("building %s: %v\n%s", name, err, out)
@@ -124,7 +126,8 @@ func TestTokenEndToEnd(t *testing.T) {
 
 	t.Run("the sshmgr compatibility binary reaches the same token group", func(t *testing.T) {
 		a := ok("authama", "", "token", "list", "--json")
-		s := ok("sshmgr", "", "token", "list", "--json")
+		// The deprecated name says so first, on stderr (folded in here).
+		s := strings.TrimPrefix(ok("sshmgr", "", "token", "list", "--json"), brand.DeprecationNotice+"\n")
 		if a != s {
 			t.Errorf("authama and sshmgr disagree:\n%s\n---\n%s", a, s)
 		}

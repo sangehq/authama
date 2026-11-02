@@ -3,7 +3,7 @@
 // confirmed lines, deduped, with the right perms - into the single, user-wide
 // ~/.ssh/known_hosts trust store every rendered host block points at.
 //
-// Every line sshmgr writes carries a trailing "sshmgr" comment tag (see
+// Every line authama writes carries a trailing "authama" comment tag (see
 // sshd(8)'s "marker hostnames keytype key comment" line format). That tag is
 // what makes cleanup safe: prune only removes tagged lines, and only once no
 // remaining manifest host resolves to that host:port, so deleting one profile
@@ -115,7 +115,7 @@ func (s *Service) Ensure() (bool, error) {
 }
 
 // Add appends confirmed host-key lines to the trust store, deduped, atomically.
-// Host names are hashed on the way in and every line is tagged as sshmgr-owned.
+// Host names are hashed on the way in and every line is tagged as authama-owned.
 // Returns the count added.
 //
 // Dedup cannot be string equality any more. Every hashed line carries a fresh
@@ -158,7 +158,7 @@ func (s *Service) Add(lines []string) (int, error) {
 			}
 			out := trimmed
 			if ok && !parsed.tagged() {
-				out = trimmed + " " + sshmgrTag
+				out = trimmed + " " + ownerTag
 			}
 			fresh = append(fresh, out)
 			verbatimRaw[out] = true
@@ -181,7 +181,7 @@ func (s *Service) Add(lines []string) (int, error) {
 			if err != nil {
 				return 0, err
 			}
-			line := field + " " + parsed.keytype + " " + parsed.key + " " + sshmgrTag
+			line := field + " " + parsed.keytype + " " + parsed.key + " " + ownerTag
 			fresh = append(fresh, line)
 			pinned = append(pinned, khLine{field: field, keytype: parsed.keytype, key: parsed.key})
 		}
@@ -211,7 +211,7 @@ func parseAll(lines []string) []khLine {
 
 // lineKey identifies a parsed line by its meaning (marker, host field, key
 // type, key) rather than by its exact bytes, so a candidate line differing
-// only by the trailing sshmgr tag is still recognized as the same entry.
+// only by the trailing authama tag is still recognized as the same entry.
 func lineKey(p khLine) string {
 	return p.marker + "\x00" + p.field + "\x00" + p.keytype + "\x00" + p.key
 }
@@ -304,7 +304,7 @@ type Entry struct {
 	Keytype     string
 	Fingerprint string
 	Hashed      bool
-	Tagged      bool // written (or adopted) by sshmgr
+	Tagged      bool // written (or adopted) by authama
 }
 
 // Name is how to refer to the entry on screen. A hashed line that matches no
@@ -325,7 +325,7 @@ func (e Entry) Name() string {
 // EntriesFor returns the trust-store lines that pin token (a hostname or the
 // [host]:port form), decoded so they can be shown to a human.
 //
-// Reading the file is not enough any more: sshmgr hashes the names it writes and
+// Reading the file is not enough any more: authama hashes the names it writes and
 // pins HashKnownHosts for the ones ssh writes, so the host field is an HMAC and
 // the store cannot be grepped. Matching goes through the same hash-aware
 // comparison the rest of the package uses, and only the fingerprint and key type
@@ -609,7 +609,7 @@ func liveTokens(m *manifest.Manifest) ([]string, error) {
 	return tokens, nil
 }
 
-// Prune removes sshmgr-tagged lines that no longer correspond to any manifest
+// Prune removes authama-tagged lines that no longer correspond to any manifest
 // host. A tagged line survives if any remaining host - in any profile - still
 // resolves to its host:port, so deleting one profile's hosts can never strand
 // or unpin a host another profile still uses. Untagged lines (the user's own
@@ -720,7 +720,7 @@ func (sc scanResult) entries(idx []int) []Entry {
 
 // Adopt tags every untagged line matching a live manifest host, making it
 // eligible for future pruning. Opt-in: an untagged pin is presumed to be the
-// user's own until they explicitly ask for sshmgr to manage it. Returns the
+// user's own until they explicitly ask for authama to manage it. Returns the
 // count adopted.
 func (s *Service) Adopt(m *manifest.Manifest) (int, error) {
 	sc, err := s.scan(m)
@@ -728,7 +728,7 @@ func (s *Service) Adopt(m *manifest.Manifest) (int, error) {
 		return 0, err
 	}
 	for _, i := range sc.adoptable {
-		sc.lines[i] = strings.TrimSpace(sc.lines[i]) + " " + sshmgrTag
+		sc.lines[i] = strings.TrimSpace(sc.lines[i]) + " " + ownerTag
 	}
 	return len(sc.adoptable), s.rewrite(s.Path(), sc.lines)
 }

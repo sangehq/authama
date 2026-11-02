@@ -42,7 +42,9 @@ reports/
 cleaned/
 *.bak
 
-# Go
+# Go (sshmgr is the deprecated compatibility binary)
+/authama
+/authama.exe
 /sshmgr
 /sshmgr.exe
 *.test
@@ -53,7 +55,7 @@ cleaned/
 # src/: output belongs to the repository, so there is one build/ and not one
 # per module. Only targets.txt is tracked; the rest is generated:
 #   build/targets.txt  the release matrix (TRACKED)
-#   build/sshmgr       `make build` output
+#   build/authama      `make build` output (plus build/sshmgr, the deprecated alias)
 #   build/dist/        GoReleaser and src/scripts/build-all.sh artifacts
 /build/*
 !/build/targets.txt

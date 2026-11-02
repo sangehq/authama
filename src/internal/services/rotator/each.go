@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// RotateEach rotates the keys named, one after another, as `sshmgr rotate`
+// RotateEach rotates the keys named, one after another, as `authama ssh rotate`
 // does for a selection: a key that fails is reported and left as it was, and
 // the rest go on. save runs after every committed key, so an interrupted batch
 // keeps what it finished. next, when set, runs before each key, and an error

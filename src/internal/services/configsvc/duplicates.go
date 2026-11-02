@@ -8,7 +8,7 @@ import (
 	"github.com/simtabi/authama/src/internal/core/renderer"
 )
 
-// Duplicate is a Host pattern that sshmgr's managed files define more than once.
+// Duplicate is a Host pattern that authama's managed files define more than once.
 // ssh uses only the first, so the later blocks are dead weight that reads as
 // if it applied.
 type Duplicate struct {

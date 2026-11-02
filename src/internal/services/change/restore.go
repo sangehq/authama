@@ -10,7 +10,7 @@ import (
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
-// SnapshotRestore is `sshmgr snapshots restore <id> --yes`: put back the
+// SnapshotRestore is `authama ssh snapshots restore <id> --yes`: put back the
 // config, known_hosts and public keys a snapshot holds, after snapshotting
 // ~/.ssh as it is now. snapshotsDir is the real home's: a preview restores from
 // it into the copy, where it has no snapshot of its own to take, and apply

@@ -1,4 +1,4 @@
-// sshmgr web UI: the whole of its own JavaScript. Every page works without it;
+// authama web UI: the whole of its own JavaScript. Every page works without it;
 // this only adds conveniences on top, and never builds HTML from strings.
 (function () {
   "use strict";

@@ -2,9 +2,9 @@
 #
 # Authentication Access Manager installer for macOS and Linux.
 #
-# Installs two binaries from the same release: authama, and sshmgr - the same
-# program under its original name (sshmgr 3.x and earlier), kept for scripts, aliases and the
-# ProxyCommand lines `authama ssh vm` writes. A release from before authama
+# Installs authama, and beside it sshmgr: the same program under its old name,
+# deprecated (it prints a notice), kept so scripts, aliases and ProxyCommand
+# lines written by older releases keep working. A release from before authama
 # existed installs sshmgr alone.
 #
 #   curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash
@@ -20,7 +20,7 @@ REPO="authama"
 BINARY="authama"
 COMPAT="sshmgr"
 
-# AUTHAMA_INSTALL_DIR, else the original name SSHMGR_INSTALL_DIR, else /usr/local/bin.
+# AUTHAMA_INSTALL_DIR, else the deprecated SSHMGR_INSTALL_DIR, else /usr/local/bin.
 INSTALL_DIR="${AUTHAMA_INSTALL_DIR:-${SSHMGR_INSTALL_DIR:-/usr/local/bin}}"
 
 err()  { printf 'error: %s\n' "$*" >&2; exit 1; }
@@ -115,11 +115,13 @@ fetch() {
   fi
 }
 
-fetch "$COMPAT" || err "${VERSION} has no ${COMPAT}_${os}_${arch}."
-installed="$COMPAT"
 if fetch "$BINARY"; then
-  installed="$BINARY $COMPAT"
+  installed="$BINARY"
+  # The deprecated compatibility name, while releases still carry it.
+  fetch "$COMPAT" && installed="$BINARY $COMPAT"
 else
+  fetch "$COMPAT" || err "${VERSION} has no ${BINARY}_${os}_${arch}."
+  installed="$COMPAT"
   info "note: ${VERSION} predates ${BINARY}; installing ${COMPAT} only."
 fi
 
@@ -153,6 +155,9 @@ info ""
 for b in $installed; do
   info "Installed ${b} to ${INSTALL_DIR}/${b}"
 done
+case " $installed " in
+  *" $BINARY "*" $COMPAT "*) info "${COMPAT} is a deprecated alias of ${BINARY}; use ${BINARY}." ;;
+esac
 info ""
 info "Settings live in ${XDG_CONFIG_HOME:-$HOME/.config}/authama (.env and authama.json, loaded at startup)."
 info "A 0.1.0 home in ~/.config/ssh-manager is copied there on the first run and kept."
