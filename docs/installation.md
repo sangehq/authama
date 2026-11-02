@@ -2,7 +2,7 @@
 
 How to get `authama` onto a machine, and where it keeps its state once it is there.
 
-Every install path puts `authama` on `PATH`, and beside it `sshmgr`, the former
+`make build` produces `authama`, and beside it `sshmgr`, the former
 name, kept as a deprecated alias for existing scripts and `ProxyCommand` lines. It
 accepts the same commands but prints a one-line deprecation notice on stderr
 (not for `vm proxy` or shell completion, where stderr reaches ssh or the shell),
@@ -26,63 +26,49 @@ macOS, Linux and Windows are all first-class, each validated on its own CI runne
 
 ## Install
 
-From a release binary:
+authama is built from source. Binary releases are on hold until the maintainer
+decides otherwise, so this page offers no download, package-manager or
+`go install` path. You need Go (the version `src/go.mod` names), `git` and `make`.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash
+git clone https://github.com/simtabi/authama ~/src/authama
+make -C ~/src/authama build      # -> build/authama, and build/sshmgr (the deprecated alias)
+install -m 0755 ~/src/authama/build/authama ~/.local/bin/authama
+install -m 0755 ~/src/authama/build/sshmgr  ~/.local/bin/sshmgr   # only if a script still needs it
 authama doctor          # verify deps, perms, agent, known_hosts, drift, token-file modes
 ```
 
-The script installs `authama` and the `sshmgr` alias into `/usr/local/bin` (override with
-`AUTHAMA_INSTALL_DIR`; the old `SSHMGR_INSTALL_DIR` still works), verifies each
-against the release checksums, and installs shell completions for both. It asks
-for `sudo` only when the directory is not writable, so a per-user directory needs
-none. A version argument pins the release; without one it takes the latest:
+Any directory on `PATH` works in place of `~/.local/bin`. On Windows, run the
+same `git clone` and `make build` from Git Bash (or `go -C src build -o
+..\build\authama.exe ./cmd/authama` from PowerShell), then put `build\authama.exe`
+in a directory on your user `PATH`.
+
+A version is a tag: check one out to build exactly that release.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh \
-  | AUTHAMA_INSTALL_DIR="$HOME/.local/bin" bash -s v0.1.3
+git -C ~/src/authama fetch --tags
+git -C ~/src/authama checkout v0.1.3
+make -C ~/src/authama build
 ```
 
-On Windows:
-
-```powershell
-irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex
-# pin a version or a directory (the old SSHMGR_* names still work)
-$env:AUTHAMA_VERSION = 'v0.1.3'; irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex
-```
-
-It installs into `%LOCALAPPDATA%\Programs\authama` and adds it to the user
-`PATH`. Upgrading from 0.1.0, it also takes the old
-`%LOCALAPPDATA%\Programs\ssh-manager` folder off the user `PATH`; the files in it
-are left alone, so delete that folder when you like.
-
-### Package managers
-
-The packages are named `authama` from 0.1.2 on (before that they were published
-as `sshmgr`) and install both binaries. Upgrading from the `sshmgr` packages is
-covered in [migration.md](migration.md#to-012-authama-everywhere-sshmgr-deprecated).
+### Updating
 
 ```sh
-# Homebrew (macOS and Linux)
-brew install --cask simtabi/tap/authama
+git -C ~/src/authama pull --ff-only
+make -C ~/src/authama build
+install -m 0755 ~/src/authama/build/authama ~/.local/bin/authama
 ```
 
-```powershell
-# Scoop (Windows)
-scoop bucket add simtabi https://github.com/simtabi/scoop-bucket
-scoop install simtabi/authama
-```
+`authama version` reports the commit it was built from, so a build from a branch
+is still identifiable.
 
-Linux packages (`.deb`, `.rpm`, `.apk`) for `amd64`, `arm64`, `386` and `armv6`/`armv7`
-are attached to every release and install `/usr/bin/authama` and `/usr/bin/sshmgr`:
+### Earlier binary releases
 
-```sh
-curl -fsSLO https://github.com/simtabi/authama/releases/latest/download/authama_linux_amd64.deb
-sudo apt install ./authama_linux_amd64.deb      # Debian, Ubuntu
-sudo dnf install ./authama_linux_amd64.rpm      # Fedora, RHEL (download the .rpm instead)
-sudo apk add --allow-untrusted ./authama_linux_amd64.apk   # Alpine (the .apk)
-```
+0.1.0 to 0.1.3 were published with binaries, archives, Linux packages, a Homebrew
+cask and a Scoop manifest. Those stay where they are, and an existing install
+keeps working, but none of those channels is updated while releases are on
+hold: build from source to get anything newer. [Migration](migration.md) covers
+moving an `sshmgr` install to `authama`.
 
 ### Docker
 
@@ -90,40 +76,9 @@ No runtime image is published: authama manages files in your home directory, so
 it belongs on the host. The repository's [dev container](#dev-container) is for
 working on authama itself, with a scoped home that never touches your real files.
 
-With the Go toolchain:
-
-```sh
-go install github.com/simtabi/authama/src/cmd/authama@latest
-go install github.com/simtabi/authama/src/cmd/sshmgr@latest   # the deprecated alias, only if a script still needs it
-```
-
-The `src` segment is load-bearing: it is the subdirectory the Go module lives
-in. There is no major-version suffix, because versions restarted at v0.1.0.
-The releases before the restart were published as
-`github.com/simtabi/ssh-manager/src/v3` (v3.6.1 alone as
-`github.com/simtabi/authama/src/v3`); they are no longer maintained.
-
-To build the current `main` instead of the last release — useful for a fix that
-has landed but not shipped — name the branch:
-
-```sh
-go install github.com/simtabi/authama/src/cmd/authama@main
-```
-
-Go turns that into a pseudo-version (`v0.1.3-0.20261102100209-4d6289dd4059`) and
-the binary reports it, so a build from a branch is still identifiable. It needs
-no tag and no release, which also makes it the way in when a release is pending.
-
-Or download the binary for your platform from
-[Releases](https://github.com/simtabi/authama/releases) and put it on `PATH`.
-Every artifact is checksummed and carries a build-provenance attestation
-(`gh attestation verify <file> --repo simtabi/authama`).
-
 ### Shell completion
 
-`install.sh` installs bash and zsh completions when it can write to a completion
-directory. After any other install (Go, a downloaded binary), generate them
-yourself:
+Generate completions from the binary you built:
 
 ```sh
 authama completion bash > ~/.local/share/bash-completion/completions/authama
@@ -133,14 +88,6 @@ authama completion fish > ~/.config/fish/completions/authama.fish
 
 On Windows, add `authama completion powershell | Out-String | Invoke-Expression`
 to your PowerShell profile.
-
-## From a clone
-
-```sh
-git clone https://github.com/simtabi/authama && cd authama
-make build                # -> build/authama (and build/sshmgr, the deprecated alias)
-./build/authama doctor
-```
 
 `make` is the development front door: `make check` runs the same gate as CI
 (gofmt, build, vet, tests) plus lint. There is no bootstrap step.

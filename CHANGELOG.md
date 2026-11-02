@@ -18,6 +18,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The release workflow no longer starts on a tag push. Binary releases are on hold, and a release
   runs only when dispatched by hand on a `v[0-9]*` tag with `-f confirm=release-go`; a test fails
   if an automatic trigger returns.
+- The README and installation guide build authama from source only: no download, package-manager
+  or `go install` path is offered while binary releases are on hold. The 0.1.0 to 0.1.3 channels
+  are described as frozen, not removed.
 - Tests generate every token, password and passphrase at run time (`internal/util/testcred`)
   instead of spelling them as literals, and a hygiene test fails on a credential literal in any
   test file.

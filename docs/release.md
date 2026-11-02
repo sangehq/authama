@@ -1,8 +1,10 @@
 # Release
 
-Tag-driven. A `v*` tag builds a static binary per OS/arch and attaches them,
-with checksums, to a GitHub Release. Install the binary, or build from source
-with `go install github.com/simtabi/authama/src/cmd/authama@latest`.
+Tag-driven, and on hold. A `vX.Y.Z` tag records a version; a binary release is
+built from it only when dispatched by hand with a confirmation (below), which
+builds a static binary per OS/arch and attaches them, with checksums, to a GitHub
+Release. Until binary releases resume, users build from source
+([installation](installation.md#install)).
 
 ## Two tags per release
 
