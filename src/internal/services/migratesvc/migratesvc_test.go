@@ -10,16 +10,18 @@ import (
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
-// home isolates ~/.sshmgr detection by pointing HOME at a clean temp dir, and
-// returns the standard home (ConfigDir) and its legacy "sshmgr" sibling.
+// setup isolates legacy detection by pointing HOME at a clean temp dir, and
+// returns the current home (base/authama) and its 0.1.0 "ssh-manager" sibling.
 func setup(t *testing.T) (paths.Paths, string, string) {
 	t.Helper()
 	base := t.TempDir()
 	t.Setenv("HOME", base)
 	t.Setenv("USERPROFILE", base) // paths.home() reads this on Windows
-	cfg := filepath.Join(base, "ssh-manager")
-	legacy := filepath.Join(base, "sshmgr")
-	return paths.Paths{ConfigDir: cfg, SSHDir: filepath.Join(base, ".ssh")}, cfg, legacy
+	t.Setenv("APPDATA", filepath.Join(base, "AppData", "Roaming"))
+	cfg := filepath.Join(base, "authama")
+	legacy := filepath.Join(base, "ssh-manager")
+	return paths.Paths{ConfigDir: cfg, SSHDir: filepath.Join(base, ".ssh"),
+		StateRoot: filepath.Join(base, "state", "authama")}, cfg, legacy
 }
 
 func mkLegacy(t *testing.T, legacy, content string) {
@@ -43,21 +45,32 @@ func TestMigrateNoLegacy(t *testing.T) {
 	}
 }
 
-func TestMigrateMovesIn(t *testing.T) {
+// Migration copies: the old folder stays, marked, so an older binary still
+// works and a second run finds nothing to do.
+func TestMigrateCopiesInAndMarksTheOldHome(t *testing.T) {
 	p, cfg, legacy := setup(t)
 	mkLegacy(t, legacy, "legacy")
 	res, err := Migrate(p, false, "TS")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !res.Moved || res.Message != "migrated "+legacy+" -> "+cfg {
-		t.Errorf("move-in result = %+v", res)
+	if !res.Moved || res.Legacy != legacy || res.Home != cfg || !strings.Contains(res.Message, "kept") {
+		t.Errorf("copy-in result = %+v", res)
 	}
-	if _, err := os.Stat(filepath.Join(cfg, "manifest.json")); err != nil {
-		t.Error("legacy not moved into the standard home")
+	if b, err := os.ReadFile(filepath.Join(cfg, "manifest.json")); err != nil || string(b) != "legacy" {
+		t.Errorf("legacy not copied into the current home: %q %v", b, err)
 	}
-	if _, err := os.Stat(legacy); err == nil {
-		t.Error("legacy dir should be gone after move")
+	if b, err := os.ReadFile(filepath.Join(legacy, "manifest.json")); err != nil || string(b) != "legacy" {
+		t.Errorf("the old home was not kept intact: %q %v", b, err)
+	}
+	if _, err := os.Stat(filepath.Join(legacy, paths.MigratedMarker)); err != nil {
+		t.Errorf("no marker in the old home: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(cfg, paths.MigratedMarker)); err == nil {
+		t.Error("the marker was copied into the new home")
+	}
+	if res, err := Migrate(p, false, "TS"); err != nil || res.Moved {
+		t.Errorf("a marked home was migrated again: %+v %v", res, err)
 	}
 }
 
@@ -74,20 +87,100 @@ func TestMigrateBothExist(t *testing.T) {
 		t.Errorf("both-exist without force should error, got %v", err)
 	}
 
-	// Force -> backup aside, legacy wins.
+	// Force -> the current home moved aside, replaced by a copy of the legacy one.
 	res, err := Migrate(p, true, "TS")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !res.Moved || res.Backup == "" {
+	if !res.Moved || res.Backup != cfg+".replaced-TS" {
 		t.Errorf("force result = %+v", res)
 	}
 	got, _ := os.ReadFile(filepath.Join(cfg, "manifest.json"))
 	if string(got) != "legacy" {
-		t.Errorf("after force, standard home should hold legacy data, got %q", got)
+		t.Errorf("after force, the current home should hold legacy data, got %q", got)
 	}
 	if b, _ := os.ReadFile(filepath.Join(res.Backup, "manifest.json")); string(b) != "standard" {
-		t.Errorf("backup should hold the previous standard data, got %q", b)
+		t.Errorf("backup should hold the previous data, got %q", b)
+	}
+	if _, err := os.Stat(filepath.Join(legacy, "manifest.json")); err != nil {
+		t.Error("the legacy home was removed")
+	}
+}
+
+// First-run migration acts only when there is no home yet, and never in a
+// sandbox.
+func TestAutoMigrateRunsOnlyOnTheFirstRun(t *testing.T) {
+	p, cfg, legacy := setup(t)
+	mkLegacy(t, legacy, "legacy")
+	dev := p
+	dev.DevRoot = t.TempDir()
+	if _, did, err := AutoMigrate(dev); did || err != nil {
+		t.Errorf("a sandbox migrated: %v %v", did, err)
+	}
+	if _, did, err := AutoMigrate(p); !did || err != nil {
+		t.Fatalf("first run did not migrate: %v %v", did, err)
+	}
+	if _, err := os.Stat(filepath.Join(cfg, "manifest.json")); err != nil {
+		t.Fatal(err)
+	}
+	// A second legacy home appearing later is not pulled over the current one.
+	mkLegacy(t, filepath.Join(filepath.Dir(cfg), "sshmgr"), "older")
+	if _, did, _ := AutoMigrate(p); did {
+		t.Error("AutoMigrate acted although the home exists")
+	}
+}
+
+// On Windows 0.1.0 kept its home in %APPDATA%\ssh-manager; 0.1.1 moves it to
+// %USERPROFILE%\.config\authama like every other OS.
+func TestTheWindowsAppDataHomeIsALegacyHome(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("%APPDATA% is a Windows location")
+	}
+	p, cfg, _ := setup(t)
+	old := filepath.Join(os.Getenv("APPDATA"), "ssh-manager")
+	mkLegacy(t, old, "appdata")
+	if _, did, err := AutoMigrate(p); !did || err != nil {
+		t.Fatalf("the %%APPDATA%% home was not migrated: %v %v", did, err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(cfg, "manifest.json")); string(b) != "appdata" {
+		t.Errorf("got %q", b)
+	}
+}
+
+// State folders leave the config home for the state home; one already there
+// is reported, not merged.
+func TestRelocateStateMovesWhatIsFreeAndReportsTheRest(t *testing.T) {
+	p, cfg, _ := setup(t)
+	for _, sub := range []string{"log", "snapshots", "dist"} {
+		if err := os.MkdirAll(filepath.Join(cfg, sub), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		_ = os.WriteFile(filepath.Join(cfg, sub, "f"), []byte(sub), 0o600)
+	}
+	if err := os.MkdirAll(filepath.Join(p.State(), "dist"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	moved, conflicts, err := RelocateState(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(moved, ",") != "log,snapshots" {
+		t.Errorf("moved = %v", moved)
+	}
+	if len(conflicts) != 1 || conflicts[0] != filepath.Join(cfg, "dist") {
+		t.Errorf("conflicts = %v", conflicts)
+	}
+	if b, _ := os.ReadFile(filepath.Join(p.State(), "log", "f")); string(b) != "log" {
+		t.Error("log did not arrive in the state home")
+	}
+	if _, err := os.Stat(filepath.Join(cfg, "dist", "f")); err != nil {
+		t.Error("the conflicting folder was touched")
+	}
+	// Nothing to do when the state home is the config home.
+	same := p
+	same.StateRoot = ""
+	if m, c, err := RelocateState(same); len(m)+len(c) != 0 || err != nil {
+		t.Errorf("same home: %v %v %v", m, c, err)
 	}
 }
 

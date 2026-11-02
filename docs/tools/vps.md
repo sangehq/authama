@@ -48,7 +48,7 @@ Put it in `.env` (gitignored) - or use a **per-host** `token_env` if you
 have several accounts on one provider.
 
 > **Anything else with a REST key API** can be added with **no code** via
-> `kind: rest` in `~/.config/ssh-manager/providers.json` - see
+> `kind: rest` in `~/.config/authama/providers.json` - see
 > [providers.md](providers.md#add-a-rest-provider-with-no-code-kind-rest).
 
 ### Add / update / remove
@@ -71,12 +71,13 @@ base64 body, so a rename in the dashboard doesn't confuse rotation/removal.
 
 `deploy` is **idempotent**: if the key is already in the account (matched by
 body) it isn't duplicated - and if its dashboard title drifted, authama **renames**
-it back to the canonical `ssh-manager <file>` rather than erroring.
+it back to the canonical `authama <file>` rather than erroring (titles from
+earlier versions, `ssh-manager <file>` and `sshmgr <file>`, are recognised too).
 
 ### Adding another provider account (per-host token)
 
 ```json
-// ~/.config/ssh-manager/manifest.json - two DigitalOcean accounts, separate tokens
+// ~/.config/authama/manifest.json - two DigitalOcean accounts, separate tokens
 {"alias": "do-personal", "hostname": "cloud.digitalocean.com", "user": "root",
  "provider": "digitalocean", "token_env": "DO_TOKEN_PERSONAL"}
 ```
@@ -176,7 +177,7 @@ Every feature of the original standalone VPS key tool has a home in authama:
 | `Provider` REST base (token, session, retry/backoff) | `src/internal/core/providers/cloud.go` + `src/internal/util/httpjson` (stdlib net/http + bounded retry) |
 | `DigitalOcean` / `Vultr` / `Hetzner` / `Linode` / `Scaleway` | same-named adapters in `src/internal/core/providers/cloud.go` |
 | `list_keys` | `verify` / `list_deployed` |
-| `add_key` | `deploy` (idempotent; renames a stale `ssh-manager …` title) |
+| `add_key` | `deploy` (idempotent; renames a stale or pre-0.1.1 `ssh-manager …` title to `authama …`) |
 | `rename_key` | `rename` (+ auto on re-deploy) |
 | `delete_key` | `remove` (matched by key body) |
 | `GenericSpec` + `config.json` `extra_providers` (no-code provider) | `kind: "rest"` + `rest` block in `providers.json` (`src/internal/core/providers/cloud.go`, `GenericRest`) |

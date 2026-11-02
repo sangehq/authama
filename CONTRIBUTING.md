@@ -28,9 +28,10 @@ make build               # -> build/authama and build/sshmgr (empties build/ fir
 make doctor              # verify the environment, using the binary you just built
 ```
 
-There is no bootstrap step: Go 1.26 is the only prerequisite. authama's home
-is the OS config dir (`~/.config/ssh-manager`); set
-`SSH_MANAGER_HOME=$PWD/.devhome` to sandbox a throwaway one while developing.
+There is no bootstrap step: Go 1.26 is the only prerequisite. authama's config
+home is `~/.config/authama` and its state home `~/.local/state/authama`; set
+`AUTHAMA_CONFIG_DIR="$PWD/.devhome"` to sandbox a throwaway one (state included)
+while developing, or use `--dev-root` to sandbox `~/.ssh` as well.
 
 ## Before you push
 

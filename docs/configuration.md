@@ -1,6 +1,8 @@
 # Configuration
 
-Everything SSH lives in the **manifest** (`~/.config/ssh-manager/manifest.json`) - the single
+authama's own settings live in two files in the config home, `.env` and
+`authama.json`, described [below](#settings-env-and-authamajson). Everything SSH
+lives in the **manifest** (`~/.config/authama/manifest.json`) - the single
 source of truth. You never hand-edit authama's part of `~/.ssh/config`; you edit the
 manifest (or use the `host`/`profile` verbs) and re-render. A JSON Schema for the
 manifest and inventory lives in `src/config/schema/` (and matches the Go models in `src/internal/core`,
@@ -12,10 +14,14 @@ is resolved. Auth tokens have their own config, described [below](#auth-tokens).
 `reconcile` / `config render` rewrite **only** the region between
 
 ```
-# Managed by ssh-manager - do not edit (run: sshmgr config render)
+# Managed by authama - do not edit (run: authama ssh config render)
 ...
-# End of ssh-manager-managed block - content outside it is preserved
+# End of authama-managed block - content outside it is preserved
 ```
+
+A block written by an earlier release (`# Managed by ssh-manager ...` or
+`# Managed by sshmgr ...`) is recognised as the managed block, and the next
+render rewrites it under the new markers in place.
 
 Anything above or below that block is left untouched, so edits injected by other
 tools survive a re-render. In particular, an OrbStack preamble (which must sit at
@@ -28,7 +34,7 @@ no other foreign line is moved:
 # Added by OrbStack: 'orb' SSH host for Linux machines
 Include ~/.orbstack/ssh/config
 
-# Managed by ssh-manager - do not edit (run: sshmgr config render)
+# Managed by authama - do not edit (run: authama ssh config render)
 
 Match all
 Include ~/.ssh/profiles/internal/config   # only when a profile has a category
@@ -37,7 +43,7 @@ Host github-alice                          # uncategorized profiles render inlin
     ...
 Host *
     ...
-# End of ssh-manager-managed block - content outside it is preserved
+# End of authama-managed block - content outside it is preserved
 ```
 
 To add your own static SSH directives, put them outside the managed block (above
@@ -154,7 +160,7 @@ while it is set.
 
 ### `vm`
 
-A host with `vm` is a local VM. authama renders `ProxyCommand "<sshmgr>" vm proxy <alias>` for it (one of
+A host with `vm` is a local VM. authama renders `ProxyCommand "<authama>" vm proxy <alias>` for it (one of
 the two ProxyCommands authama writes, with `proxy` below; `raw_options` still may not set one), and resolves the
 VM's address through its hypervisor on each connection.
 
@@ -185,7 +191,7 @@ export skips it (Termius ignores ProxyCommand). See
 
 ### `provider` / `token_env`
 
-A host's `provider` names an adapter in `~/.config/ssh-manager/providers.json` (GitHub/GitLab,
+A host's `provider` names an adapter in `~/.config/authama/providers.json` (GitHub/GitLab,
 the cloud-VPS REST adapters, a `kind: rest` provider, `generic-ssh`, or a
 web-panel/manual entry). `token_env` overrides which env var that host's adapter
 reads for its credential - so several accounts on one provider stay separate. See
@@ -339,24 +345,133 @@ characters; `hostname`/`user` may not contain whitespace, newlines, or a leading
 `ProxyJump` (a host, not a command) is allowed. `key_scope` must be `per_service`
 or `shared`.
 
-## `.env` (gitignored)
+## <a name="settings-env-and-authamajson"></a>Settings: `.env` and `authama.json`
 
-Secrets/refs (age recipient, per-host provider tokens) belong in
-`~/.config/ssh-manager/.env`. A committed `.env-example` documents the shape with
-empty values, and `authama init` seeds your `.env` from it. The `.env` is **never**
-committed (it's gitignored, mode 0600) and is **excluded from the encrypted bundle**.
+### Where things live
 
-authama reads these variables from its **process environment**; it does not load
-the `.env` file by itself. Export them from your shell profile, or load the file
-into the shell before running it (`authama token apply --source FILE` reads a
-`VAR=value` file directly for the token commands):
+| | Default | Override |
+|---|---|---|
+| Config home | `~/.config/authama` on every OS (`%USERPROFILE%\.config\authama` on Windows) | `$AUTHAMA_CONFIG_DIR`, else `$XDG_CONFIG_HOME/authama` (an absolute value only) |
+| State home | `~/.local/state/authama` | `$AUTHAMA_STATE_DIR`, else `$XDG_STATE_HOME/authama`; with `$AUTHAMA_CONFIG_DIR` set, the config home itself |
+| `.env` | `<config home>/.env` | - |
+| `authama.json` | `<config home>/authama.json` | - |
 
-```sh
-set -a; . ~/.config/ssh-manager/.env; set +a      # export every variable in .env
+The config home holds what you write or back up: `.env`, `authama.json`, the
+manifest, inventory, providers, token config and the age identity. The state
+home holds what authama writes for itself: `log/audit.log`, `log/history.db`,
+`snapshots/` and `dist/`. `authama settings path` prints all four locations and
+whether each file loaded.
+
+### Precedence
+
+```
+command-line flags  >  environment  >  .env  >  authama.json  >  built-in defaults
 ```
 
-Because the file is sourced by a shell, wrap any value that contains spaces or
-special characters in double quotes.
+At startup (every command except `help`, `version` and `completion`) authama
+reads `.env`, then `authama.json`, and sets only what is still unset - a
+variable already in the environment, under its current or a legacy name, is never
+replaced by a file. `authama settings show --effective` lists every setting with
+its value and where it came from (secret values are never printed).
+
+### `.env`
+
+Secrets and references (the age recipient, provider tokens, the variables the
+token commands read) and any `AUTHAMA_*` setting. `authama init` seeds it at mode
+0600 from the shipped `.env-example`; it is gitignored and **excluded from the
+encrypted bundle**.
+
+```sh
+# comments and blank lines are ignored
+AUTHAMA_SNAPSHOT_RETAIN=20
+export GH_TOKEN="cmd:keyring get authama gh"   # an `export ` prefix is accepted
+TENANTS="landlord panel api socket queue"      # quote values with spaces or special characters
+SINGLE='kept $literally'                        # single quotes: no escapes
+```
+
+- `KEY=value`, with an optional `export ` prefix. Double-quoted values support
+  `\n`, `\t`, `\"` and `\\`; single-quoted values are literal; an unquoted value
+  ends at ` #`.
+- A malformed line is skipped with a warning naming its line number, never its
+  content.
+- A missing file is fine. A file readable by group or others is **not loaded**:
+  authama says so and suggests `chmod 600` (or `authama doctor --fix`). Windows
+  has no POSIX mode bits, so the check does not apply there.
+- `AUTHAMA_CONFIG_DIR`, `AUTHAMA_DEV_ROOT` and `AUTHAMA_NO_DOTENV` decide which
+  file is read, so they are honoured only from the real environment; in `.env`
+  they are ignored with a warning.
+- `--no-dotenv` or `AUTHAMA_NO_DOTENV=1` skips the file for that run.
+
+Earlier releases did not load the file, and the docs suggested
+`set -a; . ~/.config/ssh-manager/.env; set +a` in a shell profile. That still
+works (exported variables win over the file) but is no longer needed; drop it so
+the shell does not hold your tokens. `authama token apply --source FILE` still
+reads any other `VAR=value` file for the token commands.
+
+### `authama.json`
+
+Non-secret settings, validated against
+[`docs/schema/authama.schema.json`](schema/authama.schema.json) (JSON Schema
+2020-12). Unknown keys, wrong types and out-of-range values are errors: a command
+stops and lists every problem, and `authama settings validate` checks the file on
+demand. `authama settings init` writes a starter with every setting at its
+default.
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/simtabi/authama/main/docs/schema/authama.schema.json",
+  "version": 1,
+  "paths":   { "state_dir": "~/.local/state/authama", "age_identity_file": "~/.config/authama/age-identity.txt" },
+  "backup":  { "snapshot_retain": 10, "old_key_max_age_days": 90 },
+  "ssh":     { "auto_pin": true },
+  "history": { "enabled": true },
+  "git":     { "mode": "profile" },
+  "tokens":  { "docker_creds_store": "refuse" },
+  "notifications": { "desktop": true }
+}
+```
+
+| Key | Environment variable | Default |
+|---|---|---|
+| `paths.state_dir` | `AUTHAMA_STATE_DIR` | `$XDG_STATE_HOME/authama` or `~/.local/state/authama` |
+| `paths.age_identity_file` | `AUTHAMA_AGE_IDENTITY_FILE` | `<config home>/age-identity.txt` |
+| `paths.tokens_config` | `AUTHAMA_TOKENS_CONFIG` | see [Auth tokens](#auth-tokens) |
+| `paths.tokens_catalog` | `AUTHAMA_TOKENS_CATALOG` | the built-in catalog |
+| `backup.age_recipient` | `AUTHAMA_AGE_RECIPIENT` | unset (`ssh bundle` needs it) |
+| `backup.snapshot_retain` | `AUTHAMA_SNAPSHOT_RETAIN` | `10` (at least 1) |
+| `backup.old_key_max_age_days` | `AUTHAMA_OLD_KEY_MAX_AGE_DAYS` | `90` (`0` turns the check off) |
+| `ssh.auto_pin` | `AUTHAMA_AUTO_PIN` | `true` |
+| `history.enabled` | `AUTHAMA_HISTORY` | `true` |
+| `git.mode` | `AUTHAMA_GIT_MODE` | the manifest's `defaults.git.mode`, else `profile` |
+| `tokens.docker_creds_store` | `AUTHAMA_DOCKER_CREDS_STORE` | ask at a terminal, else refuse |
+| `notifications.desktop` | `AUTHAMA_NOTIFICATIONS` | `true` |
+
+Paths may start with `~/`. A secret never goes in `authama.json`; put it in
+`.env`. Only the environment can set `AUTHAMA_CONFIG_DIR`, `AUTHAMA_DEV_ROOT`
+and `AUTHAMA_NO_DOTENV`.
+
+### The `settings` commands
+
+`settings` is its own group so it cannot be confused with `ssh config`, which
+renders `~/.ssh/config`:
+
+```sh
+authama settings path              # config home, state home, .env, authama.json
+authama settings show --effective  # every setting, its value and its source
+authama settings validate          # schema-check authama.json, syntax- and mode-check .env
+authama settings init              # write a starter authama.json
+```
+
+### Old variable names
+
+Every `AUTHAMA_*` name above replaced an earlier one, which is still read with a
+one-line deprecation notice on stderr: `SSH_MANAGER_HOME` and
+`SSH_MANAGER_CONFIG_DIR` (now `AUTHAMA_CONFIG_DIR`), `SSHMGR_DEV_ROOT`,
+`SSHMGR_GIT_MODE`, and `SSH_MANAGER_<NAME>` for the rest (for example
+`SSH_MANAGER_AGE_RECIPIENT` → `AUTHAMA_AGE_RECIPIENT`). When both spellings are
+set, the `AUTHAMA_*` one wins. See [Migration](migration.md).
+
+### Token values
 
 To avoid storing a token at rest, set its value to `cmd:<command>` - the command
 runs at use-time and its trimmed stdout is the token (so it integrates with any
@@ -384,7 +499,7 @@ environment variables, never secrets: `authama token apply` reads the variables
 and writes each tool's credential file. It is found in this order:
 
 1. `--config FILE`
-2. `$SSH_MANAGER_TOKENS_CONFIG`
+2. `$AUTHAMA_TOKENS_CONFIG` (or `tokens_config` in `authama.json`)
 3. `./authama-tokens.json` (a project's own)
 4. `<home>/tokens.json` (`authama token init` writes a starter one)
 5. auth-token-manager's locations, read with a deprecation notice until
@@ -394,26 +509,28 @@ and writes each tool's credential file. It is found in this order:
 6. otherwise a built-in default: `GH_TOKEN` as Composer's github.com token
 
 The file's shape, each entry kind, and `_settings.docker_creds_store` (`login`
-or `refuse` for registries Docker keeps in a credential store) are in
+or `refuse` for registries Docker keeps in a credential store;
+`--docker-creds-store` and `$AUTHAMA_DOCKER_CREDS_STORE` take precedence over it) are in
 [`token`](tools/tokens.md). The files it writes are the tools' own, at their
 usual paths, honouring `COMPOSER_HOME`, `NPM_CONFIG_USERCONFIG`,
 `DOCKER_CONFIG`, `NETRC` and `XDG_CONFIG_HOME` (and `APPDATA` on Windows).
-`$SSH_MANAGER_TOKENS_CATALOG` (or auth-token-manager's
+`$AUTHAMA_TOKENS_CATALOG` (or auth-token-manager's
 `$AUTH_TOKEN_MANAGER_CATALOG`) replaces the built-in service catalog; see
 [`token` › A custom catalog](tools/tokens.md#a-custom-catalog).
 
 ## Operation history
 
-Every command that changes something is recorded in `~/.config/ssh-manager/log/history.db`, beside
+Every command that changes something is recorded in `log/history.db` in the
+state home (`~/.local/state/authama/log/history.db` by default), beside
 `audit.log`. `authama history` reads it; token writes and removals are recorded too,
-with the target and host but never the value. Set `SSH_MANAGER_HISTORY=0` to record nothing; `audit.log` is
+with the target and host but never the value. Set `AUTHAMA_HISTORY=0` (or `"history": {"enabled": false}` in `authama.json`) to record nothing; `audit.log` is
 written either way. See [`history`](tools/history.md).
 
 ## Dev mode
 
-`--dev-root <dir>` (or `$SSHMGR_DEV_ROOT`) points the whole tool at a scratch
+`--dev-root <dir>` (or `$AUTHAMA_DEV_ROOT`) points the whole tool at a scratch
 directory: `<dir>/ssh` stands in for `~/.ssh` and `<dir>/config` for the config
-home, and `<dir>/home` for your home directory, where the token commands write
+and state homes (its `.env` and `authama.json` are the ones loaded), and `<dir>/home` for your home directory, where the token commands write
 `auth.json`, `.npmrc` and the rest. The tools' own path variables
 (`COMPOSER_HOME`, `NPM_CONFIG_USERCONFIG`, `DOCKER_CONFIG`, `NETRC`,
 `XDG_CONFIG_HOME`, `APPDATA`) are ignored in dev mode, and `docker login` is

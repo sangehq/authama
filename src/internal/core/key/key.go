@@ -1,4 +1,4 @@
-// Package key implements the ssh-manager key-naming convention. Name grammar:
+// Package key implements the authama key-naming convention. Name grammar:
 // <profile>_<service>-<algo> with
 // exactly one underscore (the profile prefix); the rest is kebab-case.
 package key
@@ -35,7 +35,7 @@ func BuildKeyName(profile, service, algo string) (string, error) {
 func SplitKeyName(name string) (profile, remainder string, err error) {
 	profile, remainder, found := strings.Cut(name, "_")
 	if !found || remainder == "" {
-		return "", "", fmt.Errorf("not a ssh-manager key name: %q", name)
+		return "", "", fmt.Errorf("not an authama key name: %q", name)
 	}
 	return profile, remainder, nil
 }

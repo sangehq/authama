@@ -1,6 +1,6 @@
 # providers - deploy to any VCS / service (cloud, enterprise, self-hosted)
 
-Providers are **config-driven** (`~/.config/ssh-manager/providers.json`) and pluggable. A host
+Providers are **config-driven** (`~/.config/authama/providers.json`) and pluggable. A host
 names a provider; the provider's `kind` selects the adapter and its
 `host` points it at a specific instance - so the *same* adapter serves
 `github.com` and GitHub Enterprise, `gitlab.com` and a self-hosted GitLab, etc.
@@ -71,13 +71,13 @@ Copy a template entry, set `host` + (optionally) `token_env`, and reference its
 name from a host:
 
 ```json
-// ~/.config/ssh-manager/providers.json
+// ~/.config/authama/providers.json
 "gitlab-acme": {"category": "vcs", "kind": "gitlab", "host": "gitlab.acme.io",
                 "cli": "glab", "token_env": "GLAB_ACME_TOKEN"}
 ```
 
 ```json
-// ~/.config/ssh-manager/manifest.json - a host using it
+// ~/.config/authama/manifest.json - a host using it
 {"alias": "acme", "hostname": "gitlab.acme.io", "user": "git",
  "provider": "gitlab-acme", "token_env": "GLAB_ACME_TOKEN",
  "key_name": "work_acme-ed25519"}
@@ -97,7 +97,7 @@ Any cloud with a simple key API (one auth header, a list field, create/delete by
 id) can be added purely in config - no adapter class:
 
 ```json
-// ~/.config/ssh-manager/providers.json
+// ~/.config/authama/providers.json
 "acme-cloud": {"category": "vps", "kind": "rest", "token_env": "ACME_TOKEN",
   "rest": {"base_url": "https://api.acme.com/v1", "list_path": "/ssh_keys",
            "list_field": "ssh_keys", "id_field": "id", "name_field": "name",

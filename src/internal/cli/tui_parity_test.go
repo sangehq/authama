@@ -83,12 +83,12 @@ func TestTuiDeployAsksBeforeItWrites(t *testing.T) {
 // the CLI refuses to start without an encrypted backup. The TUI rotated anyway.
 func TestTuiRotateRefusesWithoutAKeyBackup(t *testing.T) {
 	releaseHeldLock(t)
-	t.Setenv("SSH_MANAGER_AGE_RECIPIENT", "")
+	t.Setenv("AUTHAMA_AGE_RECIPIENT", "")
 	tt, buf := tuiWith(t)
 	tt.pr.(*scriptPrompter).answers = []string{"rotate", onlyKey(t, tt), "q"}
 	accepting(tt).run()
 	out := buf.String()
-	if !strings.Contains(out, "SSH_MANAGER_AGE_RECIPIENT") {
+	if !strings.Contains(out, "AUTHAMA_AGE_RECIPIENT") {
 		t.Errorf("rotate should stop and name the missing backup recipient:\n%s", out)
 	}
 	noSnapshots(t, tt, "rotate without a backup")
@@ -103,7 +103,7 @@ func TestTuiRotateRefusesWithoutAKeyBackup(t *testing.T) {
 func TestTuiReconcileLocksBeforeItReads(t *testing.T) {
 	releaseHeldLock(t)
 	mutation.Release()
-	t.Setenv("SSH_MANAGER_AUTO_PIN", "0")
+	t.Setenv("AUTHAMA_AUTO_PIN", "0")
 	tt, _ := tuiWith(t, "reconcile", "q")
 	declining(tt).run()
 	if tuiRecorded(t, tt, "reconcile") {

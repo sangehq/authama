@@ -60,7 +60,7 @@ func (p ExportPaths) expandHost(h RenderHost) RenderHost {
 // FlatHeader opens a flat export. It is deliberately not the managed header:
 // sshmgr owns the files it renders under ~/.ssh, and a copy of an export
 // carrying that header would be treated as one of them.
-const FlatHeader = "# ssh-manager flat export - every host inline, absolute paths, no Include.\n" +
+const FlatHeader = "# authama flat export - every host inline, absolute paths, no Include.\n" +
 	"# Generated from the manifest by `authama ssh config export --flat`; ssh does not read this file\n" +
 	"# unless you point it here. Edit the manifest, not this copy, and export again.\n"
 

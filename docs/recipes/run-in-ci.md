@@ -5,8 +5,8 @@ Non-interactive, sandboxed, and failing loudly.
 ```yaml
 - name: Check the SSH config is in sync
   env:
-    SSH_MANAGER_HOME: ${{ github.workspace }}/.sshmgr
-    SSH_MANAGER_AUTO_PIN: "0"      # no ssh-keyscan; the runner has no network trust
+    AUTHAMA_CONFIG_DIR: ${{ github.workspace }}/.authama
+    AUTHAMA_AUTO_PIN: "0"      # no ssh-keyscan; the runner has no network trust
   run: |
     authama init
     authama ssh reconcile --no-pin --yes
@@ -16,9 +16,9 @@ Non-interactive, sandboxed, and failing loudly.
 
 The pieces that matter:
 
-- **`SSH_MANAGER_HOME`** points the whole config home at the workspace, so
+- **`AUTHAMA_CONFIG_DIR`** points the whole config home at the workspace, so
   nothing touches the runner's real `~/.config`.
-- **`SSH_MANAGER_AUTO_PIN=0`** stops `reconcile` reaching for `ssh-keyscan`.
+- **`AUTHAMA_AUTO_PIN=0`** stops `reconcile` reaching for `ssh-keyscan`.
   Without it a runner with no route to your hosts spends its timeout on every one.
 - **`--strict`** turns every dangling-key state fatal. Without it `doctor` warns
   about a key that is declared but never minted and still exits 0.

@@ -2,11 +2,11 @@ package cli
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
 	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
@@ -22,7 +22,7 @@ import (
 const devRootFlag = "dev-root"
 
 // devRootOf returns the sandbox root for this invocation: the flag if given,
-// else $SSHMGR_DEV_ROOT, else "".
+// else $AUTHAMA_DEV_ROOT (or the legacy $SSHMGR_DEV_ROOT), else "".
 //
 // The flag is read off the root command rather than a package-level variable so
 // that a test building its own command tree gets its own value - a global here
@@ -33,7 +33,7 @@ func devRootOf(c *cobra.Command) string {
 			return v
 		}
 	}
-	return os.Getenv(paths.DevRootEnv)
+	return envnames.Get(nil, paths.DevRootEnv)
 }
 
 // resolvePaths is the single place the on-disk layout is decided.
@@ -57,6 +57,15 @@ func resolvePaths(c *cobra.Command) (paths.Paths, error) {
 			brand.Command+": dev mode - writing under %s, not %s\n", p.DevRoot, paths.Resolve(nil, "", "").SSHDir)
 	}
 	return p, nil
+}
+
+// quietPaths is resolvePaths without the dev-mode banner, which the command
+// prints itself.
+func quietPaths(c *cobra.Command) (paths.Paths, error) {
+	if root := devRootOf(c); root != "" {
+		return paths.ResolveDev(nil, "", root)
+	}
+	return paths.Resolve(nil, "", ""), nil
 }
 
 // refuseInDevMode blocks the actions a sandbox cannot contain.

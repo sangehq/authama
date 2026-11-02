@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// $SSH_MANAGER_SNAPSHOT_RETAIN was documented but never read.
+// $AUTHAMA_SNAPSHOT_RETAIN was documented but never read.
 func TestSnapshotRetainHonoursEnv(t *testing.T) {
 	for _, tc := range []struct {
 		raw  string
@@ -24,7 +24,7 @@ func TestSnapshotRetainHonoursEnv(t *testing.T) {
 		{"lots", defaultSnapshotRetain},
 	} {
 		t.Run(tc.raw, func(t *testing.T) {
-			t.Setenv("SSH_MANAGER_SNAPSHOT_RETAIN", tc.raw)
+			t.Setenv("AUTHAMA_SNAPSHOT_RETAIN", tc.raw)
 			if got := snapshotRetain(); got != tc.want {
 				t.Errorf("retain %q = %d, want %d", tc.raw, got, tc.want)
 			}

@@ -35,7 +35,7 @@ LDFLAGS := -s -w -X github.com/simtabi/authama/src/internal/version.Version=$(VE
 GO      := go -C $(MODULE)
 
 .PHONY: help build build-all test vet fmt fmt-check lint lint-all ci check ci-linux e2e feature-check docker-shell docker-run docker-down \
-        cross dist clean doctor reconcile render rotate bundle tabler-check tabler-update tabler-vendor
+        cross dist clean doctor reconcile render rotate bundle settings generate tabler-check tabler-update tabler-vendor
 
 help:  ## list targets
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | sed -E 's/:.*## /\t/' | sort
@@ -158,6 +158,10 @@ e2e: ## end-to-end smoke in a throwaway sandbox
 # called "feature-check" most obviously promises. A pattern that has to be kept
 # in step with test names drifts the moment one is renamed, and says nothing when
 # it does.
+generate: ## regenerate docs/reference/cli.md and docs/schema/authama.schema.json from the code
+	UPDATE_CLI_REFERENCE=1 $(GO) test ./internal/cli/ -run TestCLIReferenceIsCurrent
+	UPDATE_SETTINGS_SCHEMA=1 $(GO) test ./internal/services/settings/ -run TestSchemaIsCurrent
+
 feature-check: ## exercise every command with assertions
 	$(GO) test -count=1 ./internal/cli/
 
@@ -205,6 +209,10 @@ clean: ## empty build/, keeping only the files git tracks there
 # --- running the tool against your own config -------------------------------
 # These build first and run the binary you just built, never an installed one,
 # so what you exercise is what you changed.
+
+settings: build ## where the config and state homes are, and every setting with its source
+	$(BIN) settings path
+	$(BIN) settings show --effective
 
 doctor: build ## verify environment (FIX=1 to auto-fix perms first)
 	$(BIN) doctor $(if $(FIX),--fix,)

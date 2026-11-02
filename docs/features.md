@@ -8,7 +8,7 @@ shared commands at the top level. SSH verbs are listed by their short name
 per-command feature check (`make feature-check`, which exercises every command in
 a sandbox). Run all three with `make test e2e feature-check`.
 
-The mental model: the **manifest** in `~/.config/ssh-manager/manifest.json` is the single source
+The mental model: the **manifest** in `~/.config/authama/manifest.json` is the single source
 of truth; `~/.ssh` is generated, reproducible output. Profiles model *identity*
 (work · personal · acme · ...), not technology, and everything for an identity
 lives isolated under `~/.ssh/profiles/<profile>/`, or `~/.ssh/profiles/<category>/<profile>/`
@@ -18,26 +18,32 @@ when the profile has a category.
 
 | Command | What it does | Tests |
 |---|---|---|
-| `init` | Create/converge the per-user home (OS-standard, e.g. `~/.config/ssh-manager`): every run (re)creates the dir structure (`log/`, `snapshots/`, `.state/`) + re-asserts perms (dirs 700, secrets 600) and seeds any **missing** starter files (manifest, inventory, `.env`) - never clobbering existing ones. `providers.json` is not seeded (the shipped catalog is used unless you create your own). | U·E·F |
+| `init` | Create/converge the per-user homes (`~/.config/authama` for config, `~/.local/state/authama` for state): every run (re)creates the dir structure (`log/`, `snapshots/`, `.state/`) + re-asserts perms (dirs 700, secrets 600) and seeds any **missing** starter files (manifest, inventory, `.env`) - never clobbering existing ones. `providers.json` is not seeded (the shipped catalog is used unless you create your own). | U·E·F |
 | `init --force` | Overwrite the seed files with fresh defaults, **in place** (no backup). | U·F |
-| `init --force --backup` | Same, but first copy the old files into `~/.config/ssh-manager/.state/init-backup-<ts>/`. | U·F |
-| `migrate [--force] [-y]` | Move a legacy `~/.sshmgr` to the **resolved** home (`$SSH_MANAGER_HOME` override-aware; auto-migration handles the simple case on any command; this resolves the stranded both-exist case `doctor` warns about - `--force` backs up the current home and replaces it). | U |
+| `init --force --backup` | Same, but first copy the old files into `~/.config/authama/.state/init-backup-<ts>/`. | U·F |
+| `migrate [--force] [-y]` | Copy a pre-0.1.1 home (`~/.config/ssh-manager`, `%APPDATA%\ssh-manager` on Windows, `~/.config/sshmgr`, `~/.sshmgr`) into the **resolved** home and mark the old one `MIGRATED-TO-AUTHAMA.txt` (`$AUTHAMA_CONFIG_DIR` override-aware; auto-migration handles the first run on any command; this resolves the stranded both-exist case `doctor` warns about - `--force` backs up the current home and replaces it). | U |
+| `settings path [--json]` | Print the config home, state home, `.env` and `authama.json` locations and whether each loaded. | U |
+| `settings show [--effective] [--json]` | Print `authama.json`, or with `--effective` every setting's value and where it came from (flag, environment, `.env`, `authama.json`, default). Secret values are never printed. | U |
+| `settings validate [FILE]` | Check `authama.json` (or FILE) against its schema and `.env`'s syntax and permissions; lists every problem, exit ≠0 on any. | U |
+| `settings init [--force]` | Create a starter `authama.json` with every setting at its default. | U |
 | `doctor` | Verify the environment: deps, perms, agent, known_hosts, ≤1-old-key invariant, config drift, orphan/duplicate keys, alias collisions, and the modes of the token credential files (a loose one is a warning; `--strict` fails on it). Prints the **resolved home**, `~/.ssh`, and the active provider-catalog source; warns about a stranded legacy home. | U·E·F |
 | `doctor --fix` | Re-assert canonical perms on every tool-managed path (`~/.ssh` tree + home secrets + token credential files). | U·F |
 | `doctor --json` | Machine-readable report for scripting/monitoring. | U |
-| `doctor --strict` | Treat every dangling-key state as a failure, not only the blocking ones (for CI). | U |
+| `doctor --strict` | Exit non-zero on any warning, dangling-key states included (for CI); never reports clean when there are warnings. | U |
 | `version` / `--version` | Print the version. | F |
 
-Home resolution: `$SSH_MANAGER_HOME` (alias `$SSH_MANAGER_CONFIG_DIR`) if set, else the
-OS-standard config dir + `ssh-manager` folder (`~/.config/ssh-manager` on Linux/macOS,
-`%APPDATA%\ssh-manager` on Windows). A legacy `~/.sshmgr` is auto-migrated. No
+Home resolution: `$AUTHAMA_CONFIG_DIR` (or the pre-0.1.1 `$SSH_MANAGER_HOME`) if
+set, else `$XDG_CONFIG_HOME/authama`, else `~/.config/authama` - the same on every
+OS, Windows included. State (logs, history, snapshots, bundles) goes to
+`$AUTHAMA_STATE_DIR`, else `$XDG_STATE_HOME/authama`, else
+`~/.local/state/authama`. A pre-0.1.1 home is copied in on the first run. No
 project-local mode. See [installation.md](installation.md) for the full layout.
 
 ## Build & verify `~/.ssh`
 
 | Command | What it does | Tests |
 |---|---|---|
-| `reconcile [--no-pin] [--passphrase] [-y]` | Make `~/.ssh` match the manifest: build the profile tree, **mint missing keys**, render config, set perms, and **auto-pin each profile's `known_hosts`** for reachable hosts (`--no-pin` or `SSH_MANAGER_AUTO_PIN=0` to skip). Snapshots `~/.ssh` first. | U·E·F |
+| `reconcile [--no-pin] [--passphrase] [-y]` | Make `~/.ssh` match the manifest: build the profile tree, **mint missing keys**, render config, set perms, and **auto-pin each profile's `known_hosts`** for reachable hosts (`--no-pin` or `AUTHAMA_AUTO_PIN=0` to skip). Snapshots `~/.ssh` first. | U·E·F |
 | `reconcile --dry-run` | Preview the plan; write nothing. | E·F |
 | `keygen <profile\|host> [--no-pin] [--no-key-backup]` | Targeted key generation; warns + **skips** keys that already exist; auto-pins the affected profiles' `known_hosts` for reachable hosts. | U·E·F |
 | `keygen ... --force [--yes]` | Overwrite existing keys (prompted; `~/.ssh` snapshotted first). | U·E·F |

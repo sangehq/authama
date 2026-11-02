@@ -445,7 +445,7 @@ func (t *tui) audit() {
 
 // reconcile follows reconcileApply, the CLI's applying half: preview as the
 // confirmation, asked without the lock; then lock, preview again and stop if
-// anything moved, snapshot, apply, pin unless SSH_MANAGER_AUTO_PIN turns it
+// anything moved, snapshot, apply, pin unless AUTHAMA_AUTO_PIN turns it
 // off, then warn about keys nothing uses.
 func (t *tui) reconcile() {
 	var m *manifest.Manifest
@@ -581,7 +581,7 @@ func (t *tui) rotate() {
 	}
 	// `rotate` stops without an encrypted backup, because rotating discards
 	// the key before the one it archives. The TUI has no --no-key-backup, so
-	// it always needs SSH_MANAGER_AGE_RECIPIENT; the error says so.
+	// it always needs AUTHAMA_AGE_RECIPIENT; the error says so.
 	lockForMutation(t.p)
 	if err := t.p.RefuseOutsideSandbox("rotate"); err != nil {
 		t.print("error: " + err.Error())

@@ -93,11 +93,11 @@ func TestASandboxMayNotOverlapTheRealTree(t *testing.T) {
 func TestTheEnvironmentVariableSandboxesToo(t *testing.T) {
 	editHome(t)
 	sandbox := filepath.Join(t.TempDir(), "sandbox")
-	t.Setenv("SSHMGR_DEV_ROOT", sandbox)
+	t.Setenv("AUTHAMA_DEV_ROOT", sandbox)
 
 	run(t, "init")
 	if _, err := os.Stat(filepath.Join(sandbox, "config", "manifest.json")); err != nil {
-		t.Errorf("$SSHMGR_DEV_ROOT did not redirect the run: %v", err)
+		t.Errorf("$AUTHAMA_DEV_ROOT did not redirect the run: %v", err)
 	}
 }
 
@@ -107,7 +107,7 @@ func TestTheFlagBeatsTheEnvironmentVariable(t *testing.T) {
 	editHome(t)
 	fromEnv := filepath.Join(t.TempDir(), "from-env")
 	fromFlag := filepath.Join(t.TempDir(), "from-flag")
-	t.Setenv("SSHMGR_DEV_ROOT", fromEnv)
+	t.Setenv("SSHMGR_DEV_ROOT", fromEnv) // the legacy spelling still counts, and still loses to the flag
 
 	run(t, "--dev-root", fromFlag, "init")
 	if _, err := os.Stat(filepath.Join(fromFlag, "config", "manifest.json")); err != nil {
@@ -248,8 +248,8 @@ func TestDevModeRefusesEveryVerbThatReachesATarget(t *testing.T) {
 // never run).
 func TestRotateIsRefusedInDevModeBeforeItWritesABackup(t *testing.T) {
 	editHome(t)
-	t.Setenv("SSH_MANAGER_AGE_RECIPIENT", "")
-	t.Setenv("SSH_MANAGER_AUTO_PIN", "0")
+	t.Setenv("AUTHAMA_AGE_RECIPIENT", "")
+	t.Setenv("AUTHAMA_AUTO_PIN", "0")
 	sandbox := filepath.Join(t.TempDir(), "sandbox")
 	run(t, "--dev-root", sandbox, "init")
 	run(t, "--dev-root", sandbox, "profile", "add", "work")

@@ -1,4 +1,4 @@
-// Package manifest is the ssh-manager manifest domain model. The manifest is
+// Package manifest is the authama manifest domain model. The manifest is
 // the single source of truth;
 // this package loads/validates it and exposes the per-host key resolution the
 // renderer and reconciler depend on (per_service default, shared opt-in).

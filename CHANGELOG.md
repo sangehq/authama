@@ -6,17 +6,72 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-02
+
+The rename to authama is complete: one config home, `AUTHAMA_*` variable names, and settings
+files that authama loads itself. Everything from 0.1.0 keeps working and moves over on the first run.
+
+### Added
+
+- **`<config home>/.env` is loaded at startup.** A variable already in the environment is never
+  replaced. Supports comments, an `export ` prefix, and single- or double-quoted values; a missing file is
+  fine, and a malformed line is skipped with a warning naming its line number, never its content. A
+  `.env` readable by group or others is not loaded (`chmod 600` or `doctor --fix`). `--no-dotenv` or
+  `AUTHAMA_NO_DOTENV=1` skips it for a run.
+- **`authama.json`**: optional non-secret settings in the config home, validated against
+  `docs/schema/authama.schema.json` (JSON Schema 2020-12). An invalid file stops the command with
+  every problem listed.
+- Precedence, documented and tested: command-line flags > environment > `.env` > `authama.json` >
+  defaults.
+- **`authama settings`** (`path`, `show [--effective]`, `validate`, `init`): where the files are,
+  every setting's value and source (secrets never printed), schema validation, and a starter file.
+  It is a separate group from `ssh config`, which renders `~/.ssh/config`.
+- A separate **state home** for history, the audit log, snapshots and bundles:
+  `$AUTHAMA_STATE_DIR`, else `$XDG_STATE_HOME/authama`, else `~/.local/state/authama`.
+- `make settings` and `make generate` (regenerates the CLI reference and the settings schema).
+
+### Changed
+
+- **Config home is `~/.config/authama` on every OS**, Windows included
+  (`%USERPROFILE%\.config\authama`, no longer `%APPDATA%`). `$AUTHAMA_CONFIG_DIR` overrides it, then
+  `$XDG_CONFIG_HOME/authama`.
+- **First-run migration.** When no config dir is set and `~/.config/authama` does not exist, the
+  0.1.0 home (`~/.config/ssh-manager`, on Windows also `%APPDATA%\ssh-manager`, or an older
+  `~/.config/sshmgr` / `~/.sshmgr`) is copied in, its logs, history, snapshots and bundles move to
+  the state home, and the old directory is kept with a `MIGRATED-TO-AUTHAMA.txt` marker. Logged
+  once. `authama migrate` now copies rather than moves.
+- **`AUTHAMA_*` variable names.** `SSH_MANAGER_*`, `SSHMGR_DEV_ROOT` and `SSHMGR_GIT_MODE` still
+  work, with a deprecation notice; the new name wins when both are set.
+- The managed block in `~/.ssh/config` is branded authama; blocks written under the ssh-manager or
+  sshmgr markers are recognised and rewritten in place on the next render.
+- Bundles are named `authama-<stamp>.age`; `ssh restore` still reads `ssh-manager-*.age`.
+- Provider key titles, desktop notifications, the recover message, temp directories and the web
+  session cookie use the authama name; a re-deploy renames an `ssh-manager …` key title.
+- `--dev-root` help names `$AUTHAMA_DEV_ROOT` and the legacy `$SSHMGR_DEV_ROOT`.
+- `install.ps1` installs into `%LOCALAPPDATA%\Programs\authama` and takes the 0.1.0
+  `Programs\ssh-manager` folder off the user `PATH` (its files are left alone). Both installers
+  say where settings live.
+- The package homepage (Homebrew, Scoop, winget, deb/rpm/apk) is https://github.com/simtabi/authama.
+- `.env-example` uses the `AUTHAMA_*` names and quotes values with spaces or special characters.
+
+### Fixed
+
+- `doctor --strict` exits non-zero on any warning and never reports a clean tree while listing
+  warnings.
+- `history` records a host's resolved alias instead of the raw `--host` spec, and `history --host`
+  still finds entries written by 0.1.0.
+- The `.env` parser no longer takes `KEY=   # note` as the value `# note`.
+
 ### Documentation
 
+- Configuration, installation, migration, architecture and every recipe and tool page describe the
+  new homes, `.env` loading, `authama.json` and the `AUTHAMA_*` names. The `set -a; . .env` workaround
+  is gone (it still works, but is not needed).
 - Every install channel is documented: the install scripts (with a pinned version
   and a per-user directory), Homebrew, Scoop, `go install`, and the `.deb`/`.rpm`/`.apk`
   packages. The README gains a feature overview.
 - The quick start adds `--provider github`, so the host it creates is the GitHub
   host the later `ssh list --type vcs` step expects.
-- `.env` documentation says what authama actually does: it reads provider tokens
-  and settings from the process environment and does not load the home `.env` by
-  itself. The seeded `.env` template says how to load it, and values with spaces
-  or special characters are shown in double quotes.
 - Branding is consistent (Authentication Access Manager, `authama`, with `sshmgr`
   as the compatibility name) across CONTRIBUTING, SECURITY, the issue templates
   and the docs; examples use placeholder identities only.
@@ -1237,5 +1292,6 @@ generalised beyond Composer, packaged for PyPI, and given an interactive UI.
 ##### Security
 - Owner-only hardening now applies on Windows (ACL), not just POSIX `chmod`.
 
-[Unreleased]: https://github.com/simtabi/authama/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/simtabi/authama/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/simtabi/authama/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/simtabi/authama/releases/tag/v0.1.0

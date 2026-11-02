@@ -100,7 +100,7 @@ func TestDirectoriesAndTheAgeIdentityAreCovered(t *testing.T) {
 }
 
 // The identity file is only conventionally named age-identity.txt; a user who
-// points SSH_MANAGER_AGE_IDENTITY_FILE at another name in the same directory
+// points AUTHAMA_AGE_IDENTITY_FILE at another name in the same directory
 // gets a file that decrypts every bundle, so the glob has to catch it wherever
 // it sits - and so do bundles written to the config home rather than dist/.
 func TestIdentitiesAndBundlesAreCoveredWhereverTheyLandInTheHome(t *testing.T) {

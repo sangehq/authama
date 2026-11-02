@@ -234,7 +234,7 @@ func capture(p paths.Paths) (map[string]string, error) {
 // copyHome makes the private copy a preview runs in: owner-only, removed
 // afterwards, holding no private key.
 func copyHome(p paths.Paths) (paths.Paths, func(), error) {
-	dir, err := os.MkdirTemp("", "sshmgr-preview-")
+	dir, err := os.MkdirTemp("", "authama-preview-")
 	if err != nil {
 		return paths.Paths{}, nil, err
 	}

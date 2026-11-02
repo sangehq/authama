@@ -23,6 +23,7 @@ import (
 	"github.com/simtabi/authama/src/internal/services/keysvc"
 	"github.com/simtabi/authama/src/internal/services/mutation"
 	"github.com/simtabi/authama/src/internal/services/rotator"
+	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
@@ -48,7 +49,7 @@ var jobFields = map[string][]string{
 }
 
 // bundleRe is what a bundle the web restores is named, as bundler writes it.
-var bundleRe = regexp.MustCompile(`^ssh-manager-[0-9]{8}-[0-9]{6}(-[0-9]+)?\.age$`)
+var bundleRe = regexp.MustCompile(`^(authama|ssh-manager)-[0-9]{8}-[0-9]{6}(-[0-9]+)?\.age$`)
 
 // jobSpec is a job ready to start: what it is, what it will do, and the steps.
 type jobSpec struct {
@@ -128,7 +129,7 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 		return jobSpec{
 			scope: mutation.Scope{Command: "rotate", Args: args, Source: history.SourceWeb, Subjects: subjects},
 			what: []string{
-				"writes an encrypted backup of ~/.ssh and the config first, so it needs SSH_MANAGER_AGE_RECIPIENT",
+				"writes an encrypted backup of ~/.ssh and the config first, so it needs AUTHAMA_AGE_RECIPIENT",
 				"mints a new " + key + ", deploys it to every host that uses the key, and proves each login",
 				"moves the current key to old/, replacing any earlier predecessor, once every target is done",
 				"asks you to paste the new public key where a target takes it by hand, and waits",
@@ -270,7 +271,7 @@ func rotateKeysSpec(f url.Values, h home, retain int) (jobSpec, error) {
 	return jobSpec{
 		scope: mutation.Scope{Command: "rotate", Args: append(args, "--yes"), Source: history.SourceWeb, Subjects: subjects},
 		what: []string{
-			"writes an encrypted backup of ~/.ssh and the config first, so it needs SSH_MANAGER_AGE_RECIPIENT",
+			"writes an encrypted backup of ~/.ssh and the config first, so it needs AUTHAMA_AGE_RECIPIENT",
 			fmt.Sprintf("rotates %d key(s), one after another: %s", len(names), strings.Join(names, ", ")),
 			"a key that fails is left as it was, and the rest go on",
 			"asks you to paste a new public key wherever a target takes it by hand, and waits",
@@ -337,7 +338,7 @@ func manualPaste(j *jobs.Job) rotator.ManualStep {
 }
 
 // bundleRestoreSpec is `sshmgr restore <bundle> --yes`, for a bundle in the
-// config home's dist/, with the identity from SSH_MANAGER_AGE_IDENTITY_FILE.
+// config home's dist/, with the identity from AUTHAMA_AGE_IDENTITY_FILE.
 // The web takes no identity, and no passphrase for one.
 func bundleRestoreSpec(f url.Values, h home, retain int) (jobSpec, error) {
 	b := strings.TrimSpace(f.Get("bundle"))
@@ -351,7 +352,7 @@ func bundleRestoreSpec(f url.Values, h home, retain int) (jobSpec, error) {
 	return jobSpec{
 		scope: mutation.Scope{Command: "restore", Args: []string{b, "--yes"}, Source: history.SourceWeb},
 		what: []string{
-			"decrypts " + b + " with the identity in SSH_MANAGER_AGE_IDENTITY_FILE, which cannot have a passphrase here",
+			"decrypts " + b + " with the identity in AUTHAMA_AGE_IDENTITY_FILE, which cannot have a passphrase here",
 			"lays its keys and config-home files back over what is there, snapshotting ~/.ssh first",
 			"then sets every mode right and renders ~/.ssh/config",
 		},
@@ -360,9 +361,9 @@ func bundleRestoreSpec(f url.Values, h home, retain int) (jobSpec, error) {
 }
 
 func bundleRestoreJob(j *jobs.Job, p paths.Paths, retain int, path string) error {
-	ident := os.Getenv("SSH_MANAGER_AGE_IDENTITY_FILE")
+	ident := envnames.Get(nil, envnames.AgeIdentityFile)
 	if ident == "" {
-		return errors.New("SSH_MANAGER_AGE_IDENTITY_FILE is not set where authama serve runs; restore from a terminal " +
+		return errors.New("AUTHAMA_AGE_IDENTITY_FILE is not set where authama serve runs; restore from a terminal " +
 			"with `authama ssh restore " + filepath.Base(path) + " -i <identity>`")
 	}
 	mutation.SnapshotBeforeMutation(p, retain)

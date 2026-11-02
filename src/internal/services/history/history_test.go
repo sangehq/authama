@@ -347,3 +347,21 @@ func TestTheStoreHoldsNoKeyMaterial(t *testing.T) {
 		t.Fatalf("scanned %d values; the scan is not reaching the data", n)
 	}
 }
+
+// Before 0.1.1 `host apply --host "<spec>"` recorded the flag's raw text as the
+// host subject. Those rows are still found by the alias - and only by a whole
+// alias, so "web" does not match "web1" and "_" is not a wildcard.
+func TestAHostFilterStillFindsRawSpecEntries(t *testing.T) {
+	s := open(t)
+	recordOp(t, s, "host apply", []Subject{{Kind: KindHost, Name: "[web1 1.2.3.4 deploy,db_1 5.6.7.8 root]"}})
+	recordOp(t, s, "host add", []Subject{{Kind: KindHost, Name: "web1"}})
+	for alias, want := range map[string]int{"web1": 2, "db_1": 1, "web": 0, "dbx1": 0} {
+		ops, err := s.Query(Filter{Host: alias})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(ops) != want {
+			t.Errorf("--host %s matched %d operations, want %d", alias, len(ops), want)
+		}
+	}
+}

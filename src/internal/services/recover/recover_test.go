@@ -177,7 +177,7 @@ func TestTheSnippetRunsAndSurvivesQuotesInTheComment(t *testing.T) {
 		t.Errorf("the key appears %d times after two runs, want 1", n)
 	}
 	// It promises a backup before it edits.
-	if _, err := os.Stat(ak + ".ssh-manager.bak"); err != nil {
+	if _, err := os.Stat(ak + ".authama.bak"); err != nil {
 		t.Errorf("no backup of authorized_keys was taken: %v", err)
 	}
 	if runtime.GOOS != "windows" {

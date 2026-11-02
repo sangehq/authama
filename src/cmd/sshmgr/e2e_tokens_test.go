@@ -43,8 +43,8 @@ func TestTokenEndToEnd(t *testing.T) {
 		"PATH=" + os.Getenv("PATH"),
 		"HOME=" + home,
 		"USERPROFILE=" + home,
-		"SSH_MANAGER_HOME=" + filepath.Join(home, "cfg"),
-		"SSH_MANAGER_AUTO_PIN=0",
+		"AUTHAMA_CONFIG_DIR=" + filepath.Join(home, "cfg"),
+		"AUTHAMA_AUTO_PIN=0",
 		"GH_TOKEN=SECRET_E2E_GH",
 		"NPM_TOKEN=SECRET_E2E_NPM",
 		// Set on purpose: dev mode must ignore them.

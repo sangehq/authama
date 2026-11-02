@@ -19,9 +19,10 @@ private keys and config, and the auth-token files package managers and git
 read. A few invariants are security-load-bearing - please flag any regression
 in these:
 
-- **Secrets never touch git.** Private keys live in `~/.ssh`; the per-user home
-  (the OS-standard config dir, e.g. `~/.config/ssh-manager`) holds `.env`,
-  `age-identity.txt`, `*.age` bundles, `log/audit.log`, and `snapshots/`. Both live
+- **Secrets never touch git.** Private keys live in `~/.ssh`; the config home
+  (`~/.config/authama`) holds `.env` and `age-identity.txt`, and the state home
+  (`~/.local/state/authama`) holds `*.age` bundles, `log/audit.log`, and
+  `snapshots/`. authama refuses to load a `.env` that other users can read. All live
   outside any repository; in the project checkout the equivalent paths are also
   gitignored, and a `gitleaks` CI job scanning the full history is the safety
   net.

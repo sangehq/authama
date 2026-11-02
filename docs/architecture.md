@@ -104,20 +104,43 @@ The token feature follows the same layering as the SSH side:
   when it is stale or when a command has no example that parses.
 
 Names (`Authentication Access Manager`, `authama`, `sshmgr`) come from
-`internal/brand`, so a rename is one edit. The module path, the config home and
-the `SSH_MANAGER_*` variables deliberately did not change.
+`internal/brand`, so a rename is one edit. Environment variable names come from
+`internal/util/envnames`: each `AUTHAMA_*` name lists its pre-0.1.1 spellings
+(`SSH_MANAGER_*`, `SSHMGR_*`), which are still read with a one-line deprecation
+notice. The Go module path is unchanged.
 
 ## Key flows
 
-### Home + config resolution (manifest first; user, else shipped default)
+### Startup: homes, .env and authama.json
+
+Every command except `help`, `version` and `completion` runs the same startup
+before it does anything else (`internal/cli/startup.go`):
+
+1. Resolve the config home and the state home (below).
+2. On the first run only, copy a pre-0.1.1 home into the new one
+   (`internal/services/migratesvc`).
+3. Load `<config home>/.env` into the process environment, never over a
+   variable that is already set under any spelling (`internal/services/settings`).
+   Skipped by `--no-dotenv` or `AUTHAMA_NO_DOTENV=1`; refused when the file is
+   readable by group or others.
+4. Load `<config home>/authama.json`, validate it against its schema, and apply
+   whatever is still unset. An invalid file stops the command with every problem
+   listed.
+
+So the precedence is: flags > real environment > `.env` > `authama.json` >
+built-in defaults.
 
 ```mermaid
 flowchart TD
-    S[command starts] --> O{SSH_MANAGER_HOME or<br/>SSH_MANAGER_CONFIG_DIR set?}
+    S[command starts] --> O{AUTHAMA_CONFIG_DIR set?<br/>legacy SSH_MANAGER_HOME too}
     O -- yes --> OV[home = override, absolutized]
-    O -- no --> STD[home = OS-standard ssh-manager dir<br/>XDG_CONFIG_HOME/ssh-manager or ~/.config/ssh-manager<br/>APPDATA/ssh-manager on Windows]
-    STD --> MIG{legacy ~/.sshmgr exists<br/>AND new home absent?}
-    MIG -- yes --> MOVE[migrate: move ~/.sshmgr to home]
+    O -- no --> X{XDG_CONFIG_HOME set<br/>and absolute?}
+    X -- yes --> XH[home = XDG_CONFIG_HOME/authama]
+    X -- no --> STD[home = ~/.config/authama<br/>on every OS, Windows included]
+    XH --> MIG
+    STD --> MIG{home absent AND a legacy home exists?<br/>~/.config/ssh-manager, %APPDATA%\ssh-manager,<br/>~/.config/sshmgr, ~/.sshmgr}
+    MIG -- yes --> COPY[copy it in, mark the old one<br/>MIGRATED-TO-AUTHAMA.txt, keep it]
+    COPY --> R
     MIG -- no --> R[resolved home]
     MOVE --> R
     OV --> R

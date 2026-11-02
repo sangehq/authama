@@ -84,7 +84,7 @@ func TestProxyCommandQuoting(t *testing.T) {
 		t.Errorf("ProxyBinary(%s) = %q", got, ProxyBinary(got))
 	}
 	pinSelf(t, `/weird"dir/sshmgr`)
-	if got := ProxyCommandFor("devbox"); got != `"sshmgr" vm proxy devbox` {
+	if got := ProxyCommandFor("devbox"); got != `"authama" vm proxy devbox` {
 		t.Errorf("a path with a quote must fall back to the bare name: %s", got)
 	}
 	if ProxyBinary("ssh -W %h:%p jump") != "" {

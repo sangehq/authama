@@ -58,17 +58,17 @@ func snippet(keyName, pubkey string) string {
 	safeKey := strings.ReplaceAll(pubkey, "'", "'\\''")
 	safeBody := strings.ReplaceAll(body, "'", "'\\''")
 	return "#!/bin/sh\n" +
-		"# ssh-manager recovery: paste into a locked-out server's console to re-add this key.\n" +
+		"# authama recovery: paste into a locked-out server's console to re-add this key.\n" +
 		"# key: " + keyName + "\n" +
 		"set -e\n" +
 		"KEY='" + safeKey + "'\n" +
 		"BODY='" + safeBody + "'\n" +
 		"AK=\"$HOME/.ssh/authorized_keys\"\n" +
 		"mkdir -p \"$HOME/.ssh\"; chmod 700 \"$HOME/.ssh\"; touch \"$AK\"\n" +
-		"cp \"$AK\" \"$AK.ssh-manager.bak\" 2>/dev/null || true\n" +
+		"cp \"$AK\" \"$AK.authama.bak\" 2>/dev/null || true\n" +
 		"grep -qF \"$BODY\" \"$AK\" || printf '%s\\n' \"$KEY\" >> \"$AK\"\n" +
 		"chmod 600 \"$AK\"\n" +
-		"echo \"ssh-manager: key in place. Test SSH from another terminal before closing this console.\"\n"
+		"echo \"authama: key in place. Test SSH from another terminal before closing this console.\"\n"
 }
 
 func exists(path string) bool { _, err := os.Stat(path); return err == nil }

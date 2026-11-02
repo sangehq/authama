@@ -33,6 +33,7 @@ func SecretPerms(p paths.Paths) []perms.ManagedPath {
 		{Path: p.SnapshotsDir(), Mode: DirMode},
 		{Path: p.DistDir(), Mode: DirMode},
 		{Path: p.EnvFile(), Mode: FileMode},
+		{Path: p.SettingsFile(), Mode: FileMode},
 		{Path: p.AgeIdentity(), Mode: FileMode},
 		{Path: p.AuditLog(), Mode: FileMode},
 		{Path: p.HistoryDB(), Mode: FileMode},
@@ -44,6 +45,9 @@ func SecretPerms(p paths.Paths) []perms.ManagedPath {
 		{Path: p.Providers(), Mode: FileMode},
 		{Path: p.ExpiryCache(), Mode: FileMode},
 		{Path: p.NotifyCache(), Mode: FileMode},
+	}
+	if paths.SeparateState(p) {
+		items = append(items, perms.ManagedPath{Path: p.State(), Mode: DirMode})
 	}
 	for _, pat := range []string{
 		filepath.Join(p.DistDir(), "*.age"),

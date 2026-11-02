@@ -30,7 +30,7 @@ for the hosts they can reach (trust-on-first-use, like ssh's
   entry, so a later genuine key change is still rejected (not silently accepted);
 - **unreachable / VPN-gated** hosts are skipped (pin them later, see below);
 - disable it with `reconcile --no-pin` / `keygen --no-pin`, or globally with
-  `SSH_MANAGER_AUTO_PIN=0` (e.g. air-gapped or fully scripted/deterministic runs).
+  `AUTHAMA_AUTO_PIN=0` (e.g. air-gapped or fully scripted/deterministic runs).
 
 ### Initialize trust stores: `knownhosts init`
 

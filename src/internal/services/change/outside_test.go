@@ -78,16 +78,16 @@ func TestPurgeShowsTheKeysItDeletesAndNeedsABackup(t *testing.T) {
 	p := home(t)
 	key := filepath.Join(p.SSHDir, "profiles", "work", "work_gh-ed25519")
 
-	t.Setenv("SSH_MANAGER_AGE_RECIPIENT", "")
+	t.Setenv("AUTHAMA_AGE_RECIPIENT", "")
 	plan, err := Preview(p, ProfilePurge("work"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(plan.Err, "SSH_MANAGER_AGE_RECIPIENT") {
+	if !strings.Contains(plan.Err, "AUTHAMA_AGE_RECIPIENT") {
 		t.Errorf("a purge with no backup recipient should be refused: %q", plan.Err)
 	}
 
-	t.Setenv("SSH_MANAGER_AGE_RECIPIENT", "age1placeholderforthepreviewonly")
+	t.Setenv("AUTHAMA_AGE_RECIPIENT", "age1placeholderforthepreviewonly")
 	plan, err = Preview(p, ProfilePurge("work"))
 	if err != nil {
 		t.Fatal(err)
@@ -125,7 +125,7 @@ func TestCategoryMoveNamesTheKeysItMoves(t *testing.T) {
 // The bundles a --keep would remove are listed, counting the new one.
 func TestBundleListsTheBundlesItPrunes(t *testing.T) {
 	p := home(t)
-	t.Setenv("SSH_MANAGER_AGE_RECIPIENT", "age1placeholderforthepreviewonly")
+	t.Setenv("AUTHAMA_AGE_RECIPIENT", "age1placeholderforthepreviewonly")
 	if err := os.MkdirAll(p.DistDir(), 0o700); err != nil {
 		t.Fatal(err)
 	}

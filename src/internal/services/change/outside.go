@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -20,6 +19,7 @@ import (
 	"github.com/simtabi/authama/src/internal/services/lifecycle"
 	"github.com/simtabi/authama/src/internal/services/notifier"
 	"github.com/simtabi/authama/src/internal/services/snapshots"
+	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
@@ -149,8 +149,8 @@ func ProfilePurge(name string) Change {
 // backupReady reports why an encrypted bundle cannot be written now, before
 // anything is shown as if it could be.
 func backupReady() error {
-	if os.Getenv("SSH_MANAGER_AGE_RECIPIENT") == "" {
-		return errors.New("this needs an encrypted backup first, and SSH_MANAGER_AGE_RECIPIENT is not set: " +
+	if envnames.Get(nil, envnames.AgeRecipient) == "" {
+		return errors.New("this needs an encrypted backup first, and AUTHAMA_AGE_RECIPIENT is not set: " +
 			"set it to an age recipient (age-keygen -o <identity>) and restart authama serve")
 	}
 	if _, err := exec.LookPath("age"); err != nil {
@@ -209,7 +209,7 @@ func Bundle(keep int) Change {
 		OnApply: func(p paths.Paths, out io.Writer) error {
 			stamp := time.Now().Format("20060102-150405")
 			res, err := bundler.New(p.SSHDir, p.ConfigDir, bundler.AgeCipher{}).
-				Bundle(os.Getenv("SSH_MANAGER_AGE_RECIPIENT"), p.DistDir(), stamp)
+				Bundle(envnames.Get(nil, envnames.AgeRecipient), p.DistDir(), stamp)
 			if err != nil {
 				return err
 			}

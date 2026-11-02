@@ -12,7 +12,7 @@ one of three modes after proving the new URL works.
 ## Choosing the mode
 
 `git use` takes the mode from, in order: the first argument when it names a mode, `--mode`,
-`$SSHMGR_GIT_MODE`, `defaults.git.mode` in the manifest, then `profile`.
+`$AUTHAMA_GIT_MODE`, `defaults.git.mode` in the manifest, then `profile`.
 
 ## Choosing the profile
 
@@ -46,7 +46,7 @@ $ authama ssh git status ~/code/acme/*
 authama ssh git use profile ~/code/*/ --dry-run   # show every rewrite, change nothing
 authama ssh git use profile ~/code/*/ --yes       # rewrite, each URL checked first
 authama ssh git use https .                        # back to HTTPS in this checkout
-SSHMGR_GIT_MODE=ssh authama ssh git use .          # one-off override of the default
+AUTHAMA_GIT_MODE=ssh authama ssh git use .          # one-off override of the default
 ```
 
 What it does per checkout:

@@ -143,7 +143,7 @@ type AuditKey struct {
 type AppEngine struct {
 	P paths.Paths
 	// Retain is how many snapshots a change keeps, as the CLI's
-	// $SSH_MANAGER_SNAPSHOT_RETAIN; zero means 10.
+	// $AUTHAMA_SNAPSHOT_RETAIN; zero means 10.
 	Retain int
 }
 

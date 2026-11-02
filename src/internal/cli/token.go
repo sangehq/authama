@@ -17,6 +17,7 @@ import (
 	"github.com/simtabi/authama/src/internal/platform"
 	"github.com/simtabi/authama/src/internal/services/mutation"
 	"github.com/simtabi/authama/src/internal/services/tokensvc"
+	"github.com/simtabi/authama/src/internal/util/envnames"
 )
 
 // The token group: credentials package managers and git read from their own
@@ -61,7 +62,8 @@ func tokenEnv(c *cobra.Command) (tokensvc.Env, error) {
 }
 
 // useTokenCatalog runs before every token command: it installs the catalog
-// $SSH_MANAGER_TOKENS_CATALOG (or auth-token-manager's
+// $AUTHAMA_TOKENS_CATALOG (or its older names $SSH_MANAGER_TOKENS_CATALOG and
+// auth-token-manager's
 // $AUTH_TOKEN_MANAGER_CATALOG) names, says so when the variable is the old one
 // or names no file, and refuses to go on with a catalog that does not load.
 func useTokenCatalog(c *cobra.Command, _ []string) error {
@@ -348,11 +350,20 @@ func writeTokenTargets(tio tokenIO, env tokensvc.Env, set *tokens.Set, targets [
 }
 
 // dockerMode settles what to do with registries Docker keeps in a credential
-// store: the flag, then the config's _settings.docker_creds_store, then a
-// question when someone can answer; without one, refuse and warn.
+// store: the flag, then $AUTHAMA_DOCKER_CREDS_STORE (which .env or
+// authama.json's tokens.docker_creds_store may supply), then the token
+// config's _settings.docker_creds_store, then a question when someone can
+// answer; without one, refuse and warn.
 func dockerMode(tio tokenIO, set *tokens.Set, dest, flag string, cfg *tokens.Config) (string, error) {
 	if flag != "" {
 		return flag, nil
+	}
+	if m := strings.TrimSpace(envnames.Get(nil, envnames.DockerCredsStore)); m != "" {
+		if !tokensvc.ValidDockerMode(m) {
+			return "", fmt.Errorf("$%s must be one of %s, not %q", envnames.DockerCredsStore,
+				strings.Join(tokensvc.DockerModes(), ", "), m)
+		}
+		return m, nil
 	}
 	if cfg != nil {
 		if m := cfg.Setting("docker_creds_store"); m != "" {

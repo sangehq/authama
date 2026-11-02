@@ -3,7 +3,7 @@
 Two commands write a copy of the managed config for a tool that cannot read the split layout: `config export --flat`
 for anything that reads one `ssh_config`, and `termius export` for the Termius app.
 
-Both are opt-in and read-only towards `~/.ssh`. They write under `~/.config/ssh-manager/exports/` (mode 0600, since
+Both are opt-in and read-only towards `~/.ssh`. They write under `~/.config/authama/exports/` (mode 0600, since
 the files list every host and key path), and they refuse any target inside `~/.ssh`, however the path is spelled: containment is
 checked by inode, so another case on APFS or a symlinked directory is caught too. The split config, `~/.ssh/config` and `profiles/<category>/config`, stays exactly as it was.
 
@@ -16,7 +16,7 @@ the top-level file, so it finds no hosts there and falls back to bare addresses 
 ## `authama ssh config export --flat`
 
 ```bash
-authama ssh config export --flat                     # ~/.config/ssh-manager/exports/ssh_config
+authama ssh config export --flat                     # ~/.config/authama/exports/ssh_config
 authama ssh config export --flat --out ~/flat.conf   # another file
 authama ssh config export --flat --out -             # stdout
 ```
@@ -40,7 +40,7 @@ Termius keeps hosts in its own encrypted vault and has no command line or API to
 it. It writes the CSV Termius's importer reads instead:
 
 ```bash
-authama ssh termius export                      # ~/.config/ssh-manager/exports/termius-hosts.csv
+authama ssh termius export                      # ~/.config/authama/exports/termius-hosts.csv
 authama ssh termius export --open               # macOS: also open Termius and show the file in Finder
 authama ssh termius export --skip uni           # leave a host out (repeatable)
 authama ssh termius export --include-git        # also git hosts

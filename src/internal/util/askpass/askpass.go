@@ -17,27 +17,29 @@ import (
 	"io"
 	"os"
 	"strings"
+
+	"github.com/simtabi/authama/src/internal/util/envnames"
 )
 
 const (
 	// modeVar marks a re-execution of sshmgr as its own askpass helper.
-	modeVar = "SSHMGR_ASKPASS_MODE"
+	modeVar = envnames.AskpassMode
 	// secretVar carries the passphrase to that helper. A process environment is
 	// readable only by its own user and root, unlike argv, which is readable by
 	// every local user.
-	secretVar = "SSHMGR_ASKPASS_SECRET"
+	secretVar = envnames.AskpassSecret
 )
 
 // Serving reports whether this process was executed by ssh-keygen as an askpass
 // helper rather than invoked by the user. ssh-keygen passes the prompt text as an
 // argument, which is not a sshmgr command, so this has to be checked before the
 // command line is parsed.
-func Serving() bool { return os.Getenv(modeVar) == "1" }
+func Serving() bool { return envnames.Get(nil, modeVar) == "1" }
 
 // Serve writes the passphrase for ssh-keygen to read and reports the process
 // exit code.
 func Serve(w io.Writer) int {
-	_, _ = fmt.Fprintln(w, os.Getenv(secretVar))
+	_, _ = fmt.Fprintln(w, envnames.Get(nil, secretVar))
 	return 0
 }
 

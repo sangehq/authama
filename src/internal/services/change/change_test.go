@@ -20,7 +20,7 @@ const privateMarker = "-----BEGIN OPENSSH PRIVATE KEY-----"
 
 func home(t *testing.T) paths.Paths {
 	t.Helper()
-	t.Setenv("SSH_MANAGER_AUTO_PIN", "0")
+	t.Setenv("AUTHAMA_AUTO_PIN", "0")
 	base := t.TempDir()
 	p := paths.Paths{SSHDir: filepath.Join(base, ".ssh"), ConfigDir: filepath.Join(base, "cfg")}
 	write := func(path, body string) {
@@ -98,7 +98,7 @@ func TestPreviewChangesNothingAndShowsTheChange(t *testing.T) {
 	if !rendered {
 		t.Errorf("the preview does not show what it renders into ~/.ssh: %v", got)
 	}
-	if !strings.Contains(plan.Output, "added host db") || strings.Contains(plan.Output, "sshmgr-preview-") {
+	if !strings.Contains(plan.Output, "added host db") || strings.Contains(plan.Output, "authama-preview-") {
 		t.Errorf("output = %q", plan.Output)
 	}
 	if _, err := os.Stat(p.HistoryDB()); err == nil {

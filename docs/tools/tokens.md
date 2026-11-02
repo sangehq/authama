@@ -47,7 +47,7 @@ you never edit those files by hand.
 
 ```sh
 authama token init                             # a starter tokens.json in the config home
-$EDITOR ~/.config/ssh-manager/tokens.json      # keep the hosts you use
+$EDITOR ~/.config/authama/tokens.json      # keep the hosts you use
 authama token status                           # which variables are still missing
 GH_TOKEN="$(op read op://Private/GitHub/token)" authama token apply
 authama token list
@@ -75,9 +75,9 @@ questions the auth-token-manager menu did: the tool, the provider (from
 Found in this order, first match wins:
 
 1. `--config FILE`
-2. `$SSH_MANAGER_TOKENS_CONFIG`
+2. `$AUTHAMA_TOKENS_CONFIG`
 3. `./authama-tokens.json` in the current directory
-4. `tokens.json` in the config home (`~/.config/ssh-manager/tokens.json`)
+4. `tokens.json` in the config home (`~/.config/authama/tokens.json`)
 5. the auth-token-manager locations - `$AUTH_TOKEN_MANAGER_CONFIG`,
    `$COMPOSER_AUTH_CONFIG`, `./auth-token-manager.json`,
    `~/.config/auth-token-manager.json` - read with a deprecation notice
@@ -127,7 +127,7 @@ The Composer services, provider shortcuts and enterprise hosts come from a
 catalog built into the binary (`authama token providers` lists it). To add a
 service without waiting for a release, copy
 [`catalog.json`](../../src/internal/core/tokens/catalog.json), edit it, and
-point `$SSH_MANAGER_TOKENS_CATALOG` at it. auth-token-manager's
+point `$AUTHAMA_TOKENS_CATALOG` at it. auth-token-manager's
 `$AUTH_TOKEN_MANAGER_CATALOG` is still read, with a deprecation notice. A
 variable naming a file that is not there warns and uses the built-in catalog;
 a file that does not parse, or names a target other than composer, npm,
@@ -153,7 +153,7 @@ variables:
 
 ## Try it without touching your real files
 
-`--dev-root DIR` (or `$SSHMGR_DEV_ROOT`) puts every target file under
+`--dev-root DIR` (or `$AUTHAMA_DEV_ROOT`) puts every target file under
 `DIR/home`, hides `COMPOSER_HOME`, `NPM_CONFIG_USERCONFIG`, `DOCKER_CONFIG`,
 `NETRC`, `XDG_CONFIG_HOME` and `APPDATA` so nothing can redirect a write, and
 refuses any write outside the sandbox. `docker login` is refused there too,

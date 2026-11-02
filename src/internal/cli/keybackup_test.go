@@ -9,6 +9,9 @@ import (
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
+// invalidRecipient is deliberately not an age recipient (see dotenvRecipient).
+const invalidRecipient = "age1thisisnotavalidrecipient"
+
 func fixture(t *testing.T) paths.Paths {
 	t.Helper()
 	base := t.TempDir()
@@ -28,7 +31,7 @@ func fixture(t *testing.T) paths.Paths {
 // held every private key. Now that it does not, an operation that discards a key
 // has to stop rather than proceed with no way back.
 func TestNoRecipientRefusesToDestroyKeys(t *testing.T) {
-	t.Setenv("SSH_MANAGER_AGE_RECIPIENT", "")
+	t.Setenv("AUTHAMA_AGE_RECIPIENT", "")
 	var out strings.Builder
 
 	err := backupKeysBeforeDestroying(fixture(t), &out, false)
@@ -36,7 +39,7 @@ func TestNoRecipientRefusesToDestroyKeys(t *testing.T) {
 		t.Fatal("expected a refusal when no backup can be written")
 	}
 	// The message has to say how to get unstuck, both ways.
-	for _, want := range []string{"SSH_MANAGER_AGE_RECIPIENT", "--no-key-backup"} {
+	for _, want := range []string{"AUTHAMA_AGE_RECIPIENT", "--no-key-backup"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("the refusal should mention %s: %v", want, err)
 		}
@@ -45,7 +48,7 @@ func TestNoRecipientRefusesToDestroyKeys(t *testing.T) {
 
 // The opt-out proceeds, but says plainly what it is giving up.
 func TestOptOutWarnsInsteadOfRefusing(t *testing.T) {
-	t.Setenv("SSH_MANAGER_AGE_RECIPIENT", "")
+	t.Setenv("AUTHAMA_AGE_RECIPIENT", "")
 	var out strings.Builder
 
 	if err := backupKeysBeforeDestroying(fixture(t), &out, true); err != nil {
@@ -63,14 +66,14 @@ func TestBackupIsWrittenWhenRecipientIsSet(t *testing.T) {
 		t.Skip("age not installed")
 	}
 	recipient, _ := ageIdentity(t)
-	t.Setenv("SSH_MANAGER_AGE_RECIPIENT", recipient)
+	t.Setenv("AUTHAMA_AGE_RECIPIENT", recipient)
 	p := fixture(t)
 	var out strings.Builder
 
 	if err := backupKeysBeforeDestroying(p, &out, false); err != nil {
 		t.Fatal(err)
 	}
-	bundles, _ := filepath.Glob(filepath.Join(p.DistDir(), "ssh-manager-*.age"))
+	bundles, _ := filepath.Glob(filepath.Join(p.DistDir(), "authama-*.age"))
 	if len(bundles) != 1 {
 		t.Fatalf("expected one bundle in %s, got %v", p.DistDir(), bundles)
 	}
@@ -92,7 +95,7 @@ func TestBadRecipientAbortsRatherThanContinuing(t *testing.T) {
 	if !hasAge() {
 		t.Skip("age not installed")
 	}
-	t.Setenv("SSH_MANAGER_AGE_RECIPIENT", "age1thisisnotavalidrecipient")
+	t.Setenv("AUTHAMA_AGE_RECIPIENT", invalidRecipient)
 	p := fixture(t)
 	var out strings.Builder
 

@@ -94,13 +94,13 @@ func TestAJobIsReviewedStartedAndStreamed(t *testing.T) {
 // Rotate writes the encrypted backup first, so with no recipient it stops
 // before anything else, and says what is missing.
 func TestRotateFromTheWebNeedsABackupFirst(t *testing.T) {
-	t.Setenv("SSH_MANAGER_AGE_RECIPIENT", "")
+	t.Setenv("AUTHAMA_AGE_RECIPIENT", "")
 	s, _, _ := newTestServer(t)
 	t.Cleanup(mutation.Release)
 	c := signIn(t, s)
 	start := c.change("/jobs", url.Values{"action": {"rotate"}, "key": {fixtureKey(t, c)}})
 	v := waitJob(t, s, strings.TrimPrefix(start.Header().Get("Location"), "/jobs/"))
-	if v.State != jobs.Failed || !strings.Contains(v.Err, "SSH_MANAGER_AGE_RECIPIENT") {
+	if v.State != jobs.Failed || !strings.Contains(v.Err, "AUTHAMA_AGE_RECIPIENT") {
 		t.Errorf("job = %s %q", v.State, v.Err)
 	}
 }
@@ -157,7 +157,7 @@ func liveOps(t *testing.T, s *Server) []history.Op {
 // Rotating a profile's keys reviews the keys it will rotate, then writes the
 // backup first, so with no recipient it stops before anything else.
 func TestRotatingAProfileListsItsKeysAndNeedsABackup(t *testing.T) {
-	t.Setenv("SSH_MANAGER_AGE_RECIPIENT", "")
+	t.Setenv("AUTHAMA_AGE_RECIPIENT", "")
 	s, _, _ := newTestServer(t)
 	t.Cleanup(mutation.Release)
 	c := signIn(t, s)
@@ -169,7 +169,7 @@ func TestRotatingAProfileListsItsKeysAndNeedsABackup(t *testing.T) {
 	}
 	start := c.change("/jobs", url.Values{"action": {"rotate-keys"}, "all": {"1"}})
 	v := waitJob(t, s, strings.TrimPrefix(start.Header().Get("Location"), "/jobs/"))
-	if v.State != jobs.Failed || !strings.Contains(v.Err, "SSH_MANAGER_AGE_RECIPIENT") {
+	if v.State != jobs.Failed || !strings.Contains(v.Err, "AUTHAMA_AGE_RECIPIENT") {
 		t.Errorf("job = %s %q", v.State, v.Err)
 	}
 	if rec := c.change("/jobs/review", url.Values{"action": {"rotate-keys"}, "profile": {"nosuch"}}); rec.Code != http.StatusBadRequest {
@@ -180,7 +180,7 @@ func TestRotatingAProfileListsItsKeysAndNeedsABackup(t *testing.T) {
 // A bundle restore takes only a bundle named as sshmgr names them, from dist/,
 // and decrypts only with the identity in the environment.
 func TestBundleRestoreTakesABundleFromDistAndTheIdentityFromTheEnvironment(t *testing.T) {
-	t.Setenv("SSH_MANAGER_AGE_IDENTITY_FILE", "")
+	t.Setenv("AUTHAMA_AGE_IDENTITY_FILE", "")
 	s, p, _ := newTestServer(t)
 	t.Cleanup(mutation.Release)
 	c := signIn(t, s)
@@ -201,7 +201,7 @@ func TestBundleRestoreTakesABundleFromDistAndTheIdentityFromTheEnvironment(t *te
 	}
 	start := c.change("/jobs", url.Values{"action": {"bundle-restore"}, "bundle": {name}})
 	v := waitJob(t, s, strings.TrimPrefix(start.Header().Get("Location"), "/jobs/"))
-	if v.State != jobs.Failed || !strings.Contains(v.Err, "SSH_MANAGER_AGE_IDENTITY_FILE") {
+	if v.State != jobs.Failed || !strings.Contains(v.Err, "AUTHAMA_AGE_IDENTITY_FILE") {
 		t.Errorf("job = %s %q", v.State, v.Err)
 	}
 }

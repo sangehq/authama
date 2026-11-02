@@ -99,7 +99,7 @@ func newConfigExportCmd() *cobra.Command {
 		Short: "Write the config as one file for another tool (never touches ~/.ssh)",
 		Long: "Write a copy of the managed config for a tool that cannot read the split layout.\n\n" +
 			"--flat puts every host inline, with absolute key paths and no Include or Match, in\n" +
-			"~/.config/ssh-manager/exports/ssh_config (or --out, or - for stdout). The files\n" +
+			"<config home>/exports/ssh_config (or --out, or - for stdout). The files\n" +
 			"`config render` writes under ~/.ssh are left exactly as they are: no target inside ~/.ssh is accepted.",
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
@@ -124,7 +124,7 @@ func newConfigExportCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&flat, "flat", false, "every host inline in one file, absolute paths, no Include")
-	cmd.Flags().StringVarP(&out, "out", "o", "", "where to write (default ~/.config/ssh-manager/exports/ssh_config; - for stdout)")
+	cmd.Flags().StringVarP(&out, "out", "o", "", "where to write (default <config home>/exports/ssh_config; - for stdout)")
 	return cmd
 }
 
@@ -196,7 +196,7 @@ func newTermiusCmd() *cobra.Command {
 			return nil
 		},
 	}
-	export.Flags().StringVarP(&out, "out", "o", "", "where to write (default ~/.config/ssh-manager/exports/termius-hosts.csv; - for stdout)")
+	export.Flags().StringVarP(&out, "out", "o", "", "where to write (default <config home>/exports/termius-hosts.csv; - for stdout)")
 	export.Flags().BoolVar(&includeGit, "include-git", false, "also export git hosts (user git, or a github or gitlab provider), which are not shells")
 	export.Flags().StringArrayVar(&skip, "skip", nil, "leave out this alias (repeatable)")
 	export.Flags().BoolVar(&open, "open", false, "macOS: open Termius and show the file in Finder")

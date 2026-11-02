@@ -270,12 +270,14 @@ func TestEndToEnd(t *testing.T) {
 		mustRun(t, run, "reconcile") // mint it back for the bundle round trip
 	})
 
-	t.Run("doctor is clean on a freshly reconciled tree", func(t *testing.T) {
+	// The fixture's hosts are unreachable, so they stay unpinned: that is a
+	// warning, which passes the verdict but is counted rather than called clean.
+	t.Run("doctor passes a freshly reconciled tree", func(t *testing.T) {
 		out, errOut, code := run("", "doctor")
 		if code != 0 {
 			t.Fatalf("doctor exited %d:\n%s%s", code, out, errOut)
 		}
-		if !strings.Contains(out, "doctor: clean") {
+		if !strings.Contains(out, "doctor: clean") && !strings.Contains(out, "doctor: no errors, ") {
 			t.Errorf("doctor:\n%s", out)
 		}
 	})
@@ -302,7 +304,7 @@ func TestEndToEnd(t *testing.T) {
 		}
 
 		mustRun(t, run, "bundle", "-r", recipient, "-o", dir)
-		matches, err := filepath.Glob(filepath.Join(dir, "ssh-manager-*.age"))
+		matches, err := filepath.Glob(filepath.Join(dir, "authama-*.age"))
 		if err != nil || len(matches) == 0 {
 			t.Fatalf("no bundle was written: %v", err)
 		}

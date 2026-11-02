@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	// ManagedHeader/ManagedEnd delimit the block ssh-manager owns in ~/.ssh/config.
-	ManagedHeader = "# Managed by ssh-manager - do not edit (run: sshmgr config render)"
-	ManagedEnd    = "# End of ssh-manager-managed block - content outside it is preserved"
+	// ManagedHeader/ManagedEnd delimit the block authama owns in ~/.ssh/config.
+	ManagedHeader = "# Managed by authama - do not edit (run: authama ssh config render)"
+	ManagedEnd    = "# End of authama-managed block - content outside it is preserved"
 	// RootConfig is the top-level config file's relative path under ~/.ssh.
 	// Every uncategorized profile's Host blocks live inline here. A profile
 	// with a category renders into profiles/<category>/config instead, which
@@ -24,10 +24,17 @@ const (
 	bannerWidth = 69
 )
 
-// Pre-rename markers, still recognized so a config written by the old "sshmgr"
-// name is cleanly re-owned (not duplicated) on the next render.
-var legacyHeaders = []string{"# Managed by sshmgr - do not edit (run: sshmgr config render)"}
-var legacyEnds = []string{"# End of sshmgr-managed block - content outside it is preserved"}
+// Markers written by earlier names (ssh-manager 2.x-3.x and authama 0.1.0, and
+// the "sshmgr" spelling before that), still recognized so a block they wrote is
+// re-owned and rewritten in place on the next render, never duplicated.
+var legacyHeaders = []string{
+	"# Managed by ssh-manager - do not edit (run: sshmgr config render)",
+	"# Managed by sshmgr - do not edit (run: sshmgr config render)",
+}
+var legacyEnds = []string{
+	"# End of ssh-manager-managed block - content outside it is preserved",
+	"# End of sshmgr-managed block - content outside it is preserved",
+}
 
 func isManagedHeader(s string) bool { return s == ManagedHeader || contains(legacyHeaders, s) }
 func isManagedEnd(s string) bool    { return s == ManagedEnd || contains(legacyEnds, s) }

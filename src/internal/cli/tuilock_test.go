@@ -36,7 +36,7 @@ func (w *lockWatch) Confirm(msg string) bool {
 
 func watched(t *testing.T, answers ...string) (*tui, *lockWatch, *bytes.Buffer) {
 	t.Helper()
-	t.Setenv("SSH_MANAGER_AUTO_PIN", "0")
+	t.Setenv("AUTHAMA_AUTO_PIN", "0")
 	tt, buf := tuiWith(t)
 	w := &lockWatch{scriptPrompter: &scriptPrompter{answers: answers, confirm: true}}
 	tt.pr = w

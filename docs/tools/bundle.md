@@ -23,13 +23,13 @@ It does not carry the files authama renders from the manifest: a category's
 config that `~/.ssh/config` Includes. An older bundle that carries them still
 restores; those members are skipped and named in the summary.
 
-...into a single `ssh-manager-<stamp>.age`, alongside two sidecars:
+...into a single `authama-<stamp>.age`, alongside two sidecars:
 
 - `*.age.sha256` - checksum (verified before any restore)
 - `*.age.contents` - plaintext list of filenames
 
 Without `--output`, bundles are written to `<home>/dist/` (e.g.
-`~/.config/ssh-manager/dist/`), owner-only (0700). Pass `--output DIR` to write
+`~/.local/state/authama/dist/`), owner-only (0700). Pass `--output DIR` to write
 elsewhere (e.g. an external drive).
 
 **`.env` is deliberately excluded** - it holds the age recipient/identity refs
@@ -38,8 +38,8 @@ separately in your password manager.
 
 ## Recipient (where the decryption identity lives)
 
-Set the recipient via `--recipient` or `$SSH_MANAGER_AGE_RECIPIENT`. On restore, the
-decryption identity comes from `--identity` or `$SSH_MANAGER_AGE_IDENTITY_FILE` (a path
+Set the recipient via `--recipient` or `$AUTHAMA_AGE_RECIPIENT`. On restore, the
+decryption identity comes from `--identity` or `$AUTHAMA_AGE_IDENTITY_FILE` (a path
 to an age identity file). Where you keep that identity is up to you:
 
 1. **Password manager** - store the age identity in 1Password/Bitwarden and write
@@ -63,10 +63,10 @@ manifest so `~/.ssh` is immediately usable. Then `authama ssh load <profile>` to
 keys to the agent.
 
 ```sh
-export SSH_MANAGER_AGE_RECIPIENT="age1ql3z7hjy54pw3hyww5ayyfg7z..."
-authama ssh bundle -o ~/Backups            # writes ~/Backups/ssh-manager-<stamp>.age (+ sidecars)
+export AUTHAMA_AGE_RECIPIENT="age1..."      # your public key, from age-keygen
+authama ssh bundle -o ~/Backups            # writes ~/Backups/authama-<stamp>.age (+ sidecars)
 # ... new machine ...
-authama ssh restore ~/Backups/ssh-manager-<stamp>.age -i age-identity.txt
+authama ssh restore ~/Backups/authama-<stamp>.age -i age-identity.txt
 ```
 
 ---

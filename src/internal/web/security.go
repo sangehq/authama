@@ -12,7 +12,7 @@ import (
 )
 
 // SessionCookie is the cookie a valid token is exchanged for.
-const SessionCookie = "sshmgr_session"
+const SessionCookie = "authama_session"
 
 // csrfField is the form field, and csrfHeader the request header, that carry
 // the per-session CSRF token on every state-changing request.

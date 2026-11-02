@@ -13,7 +13,7 @@ const notifyHour = "09:00"
 // notifyHour so it cannot drift from the other two platforms.
 func timerUnit() string {
 	return `[Unit]
-Description=ssh-manager key-expiry notifier (daily)
+Description=authama key-expiry notifier (daily)
 
 [Timer]
 OnCalendar=*-*-* ` + notifyHour + `:00

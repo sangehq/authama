@@ -5,11 +5,13 @@
 // new command with it. Every user-facing mention of either goes through these
 // constants, so the next rename is an edit here and not a search across the tree.
 //
-// The repository (simtabi/authama), its folder and the Go module path
-// (github.com/simtabi/authama/src) followed the name at 0.1.0. What does NOT
-// change, on purpose: the config home (~/.config/ssh-manager) and the
-// environment variables (SSH_MANAGER_*, SSHMGR_DEV_ROOT). Renaming those would
-// strand every existing install's data and every script that sets them.
+// The repository (simtabi/authama) and the Go module path
+// (github.com/simtabi/authama/src) followed the name at 0.1.0; the config home
+// (~/.config/authama) and the environment variables (AUTHAMA_*) at 0.1.1.
+// What is kept for migration only: the sshmgr command (LegacyCommand), the
+// old variable names (SSH_MANAGER_*, SSHMGR_*; honored with a deprecation
+// notice, see envnames), the old home (copied over once, see migratesvc), and
+// the old managed-block markers and bundle names, which are still recognized.
 package brand
 
 import "strings"
@@ -32,7 +34,7 @@ const (
 // TopLevel lists the commands that sit directly under Command. Every other
 // verb lives in the ssh group; a test in the cli package keeps this list equal
 // to the command tree.
-var TopLevel = []string{"version", "doctor", "init", "migrate", "tui", "history", "serve", "ssh", "token"}
+var TopLevel = []string{"version", "doctor", "init", "migrate", "settings", "tui", "history", "serve", "ssh", "token"}
 
 // Line spells a command the way a user types it now: a top-level verb as
 // `authama <verb>`, an SSH verb (as the history and the web record it) as

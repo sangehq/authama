@@ -12,7 +12,7 @@ authama --dev-root ./sandbox doctor
 Or set it once for a shell:
 
 ```sh
-export SSHMGR_DEV_ROOT="./sandbox"
+export AUTHAMA_DEV_ROOT="./sandbox"
 authama ssh reconcile
 ```
 
@@ -30,7 +30,7 @@ sandbox/
 ```
 
 It is deliberately **one** root and not two independent overrides. The config
-home has had `$SSH_MANAGER_HOME` for a long time and `~/.ssh` had nothing, so the
+home has had `$AUTHAMA_CONFIG_DIR` for a long time and `~/.ssh` had nothing, so the
 only way to get a scratch tree was to move `$HOME` — which also moves the
 ssh-agent socket and the launchd session, changing what you are testing. Two
 separate knobs would allow something worse: a run with its config redirected and

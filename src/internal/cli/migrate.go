@@ -9,12 +9,12 @@ import (
 	"github.com/simtabi/authama/src/internal/services/migratesvc"
 )
 
-// newMigrateCmd is the native migrate verb: move a legacy home to the standard one.
+// newMigrateCmd is the native migrate verb: copy a legacy home into the authama one.
 func newMigrateCmd() *cobra.Command {
 	var force, yes bool
 	cmd := &cobra.Command{
 		Use:   "migrate",
-		Short: "Move a legacy home to the standard location",
+		Short: "Copy a pre-0.1.1 home (ssh-manager, sshmgr) into the authama home; the old one is kept and marked",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			p, err := resolvePaths(c)
@@ -22,7 +22,7 @@ func newMigrateCmd() *cobra.Command {
 				return err
 			}
 			if err := confirmChange(c,
-				"migrate moves a legacy home into "+p.ConfigDir+
+				"migrate copies a legacy home into "+p.ConfigDir+
 					"; with --force the current home is backed up aside and replaced.", yes); err != nil {
 				return err
 			}

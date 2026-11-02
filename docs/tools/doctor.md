@@ -7,7 +7,7 @@ auth-token files, with an exit code that is a verdict rather than a success flag
 authama doctor           # report
 authama doctor --fix     # report, and repair what it can
 authama doctor --json    # the same report, for a script
-authama doctor --strict  # every dangling-key state is fatal (CI)
+authama doctor --strict  # any warning fails the run (CI)
 ```
 
 ## What it checks
@@ -17,11 +17,11 @@ authama doctor --strict  # every dangling-key state is fatal (CI)
 | `os` / `runtime` | the platform, and that the binary needs no interpreter |
 | `hard deps` | OpenSSH is present: `ssh`, `ssh-keygen`, `ssh-add`, `ssh-keyscan` |
 | `optional` | which of `age`, `sops`, `gh`, `glab`, `age-plugin-yubikey` are missing |
-| `home` / `ssh` | the resolved config home and `~/.ssh`, so an override is visible |
+| `home` / `state` / `ssh` | the resolved config home, the state home (when it is separate) and `~/.ssh`, so an override is visible |
 | `providers` | whether the catalog is the shipped default or a user file |
 | `agent` | whether `ssh-agent` is running and how many keys it holds |
 | `1Password` | when a profile uses `key_store: 1password`: that `op` is on PATH, the agent socket exists, and the agent serves the profile's vault (`agent.toml`) |
-| `proxy` | every `ProxyCommand` authama rendered names a binary that still exists: the sshmgr binary for VM hosts (an upgrade that moved it fails the verdict, and `authama ssh config render` rewrites the path) and `cloudflared` for Cloudflare Access hosts (install it, then re-render) |
+| `proxy` | every `ProxyCommand` authama rendered names a binary that still exists: the authama binary for VM hosts (an upgrade that moved it fails the verdict, and `authama ssh config render` rewrites the path) and `cloudflared` for Cloudflare Access hosts (install it, then re-render) |
 | `MISSING tool` | a command the manifest relies on is not on PATH: the hypervisor CLI behind a VM host (its address comes from it at connect time), and `git` once `defaults.git` is set (fails the verdict) |
 | `clipboard` | no clipboard tool was found, so `termius keys` needs `--print` (advice; never fails the verdict) |
 | `known_hosts` | whether the trust store exists, and which hosts are unpinned |
@@ -32,7 +32,7 @@ authama doctor --strict  # every dangling-key state is fatal (CI)
 | raw-option overlaps | a `raw_options` key that duplicates a field authama already writes for that host (informational) |
 | dangling keys | declared-but-missing, half a pair, on disk but untracked, unwired |
 | duplicate keys | the same key material under two profiles |
-| stale predecessors | archived keys older than `SSH_MANAGER_OLD_KEY_MAX_AGE_DAYS` |
+| stale predecessors | archived keys older than `AUTHAMA_OLD_KEY_MAX_AGE_DAYS` |
 | auth tokens | after the SSH report, under `=== auth tokens ===`: each installed credential file (Composer's `auth.json`, `.npmrc`, Docker's `config.json`, `.git-credentials`, `.netrc`) and whether it is owner-only. A file others can read is a warning, and fails the verdict under `--strict`. The same check, plus `.gitignore` coverage for a project, is `authama token audit` |
 
 ## Exit codes
@@ -49,8 +49,10 @@ which is what CI wants. `token audit` always fails on it.
 
 Without `--strict`, a key that is declared but has never been minted is a warning
 and does not fail the run: it is an ordinary state on a machine that has not
-reconciled yet. With `--strict` every dangling state is fatal, which is what makes
-it usable as a CI gate.
+reconciled yet. With `--strict` every warning - dangling keys, loose token files,
+alias collisions, unpinned hosts and the rest - fails the run with a non-zero
+exit, and the summary never says the tree is clean while warnings are listed.
+That is what makes it usable as a CI gate.
 
 ## `--fix`
 

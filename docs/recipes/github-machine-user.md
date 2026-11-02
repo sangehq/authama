@@ -27,9 +27,9 @@ only speaks SSH, or a server that pulls with a key.
 3. Create a token for the machine user that can manage its SSH keys: a
    fine-grained token with the account permission *Git SSH keys: read and
    write*, or a classic token with `admin:public_key`.
-4. Put a reference to the token in `~/.config/ssh-manager/.env`, and export it
-   into the environment authama runs in (it reads `token_env` variables from the
-   process environment - see [`.env`](../configuration.md#env-gitignored)):
+4. Put a reference to the token in `~/.config/authama/.env`; authama loads that
+   file at startup, and a variable already exported in your shell wins over it
+   (see [`.env`](../configuration.md#env)):
 
    ```sh
    GH_TOKEN_ACME="op://Acme/acme-bot/token"

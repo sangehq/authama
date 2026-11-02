@@ -27,6 +27,7 @@ import (
 
 	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/util/paths"
 	"github.com/simtabi/authama/src/internal/version"
 )
@@ -64,7 +65,15 @@ func newRootCmd() *cobra.Command {
 	// would produce a run that reads the sandbox and writes the real tree.
 	root.SetFlagErrorFunc(unknownCommandBeforeFlags)
 	root.PersistentFlags().String(devRootFlag, "",
-		"run against a sandbox directory instead of ~/.ssh (also $"+paths.DevRootEnv+")")
+		"run against a sandbox directory instead of ~/.ssh (also $"+paths.DevRootEnv+
+			", or the legacy $"+strings.Join(envnames.Legacy(paths.DevRootEnv), ", $")+")")
+	root.PersistentFlags().Bool(noDotenvFlag, false,
+		"do not read <config home>/.env this run (also $"+envnames.NoDotenv+"=1)")
+	// Start-up - first-run migration, .env and authama.json - runs ahead of
+	// every command, including those with a pre-run of their own (traversal
+	// hooks: the root's runs first).
+	cobra.EnableTraverseRunHooks = true
+	root.PersistentPreRunE = startup
 
 	// Commands that serve both features.
 	root.AddCommand(newVersionCmd())
@@ -74,6 +83,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newTuiCmd())
 	root.AddCommand(newHistoryCmd())
 	root.AddCommand(newServeCmd())
+	root.AddCommand(newSettingsCmd())
 	// `ui` was serve's alias, one edit from `tui`: still accepted, never shown.
 	ui := newServeCmd()
 	ui.Use, ui.Hidden = "ui", true
@@ -83,7 +93,7 @@ func newRootCmd() *cobra.Command {
 	// The two feature groups.
 	ssh := &cobra.Command{
 		Use:   sshGroup,
-		Short: "SSH keys, profiles, hosts, config and trust (every former top-level sshmgr verb, still accepted there)",
+		Short: "SSH keys, profiles, hosts, config and trust (every former top-level verb, still accepted there)",
 		Args:  cobra.ArbitraryArgs,
 		RunE:  groupHelp,
 	}

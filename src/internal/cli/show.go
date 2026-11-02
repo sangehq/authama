@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/core/inventory"
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/core/renderer"
@@ -222,7 +223,9 @@ func writePins(out io.Writer, kh *knownhosts.Service, indent string, host manife
 	for _, e := range entries {
 		owner := "user-owned"
 		if e.Tagged {
-			owner = "sshmgr"
+			// Written by this tool. The on-disk tag stays "sshmgr" so lines pinned
+			// by any release remain recognizable; the label names the tool.
+			owner = brand.Command
 		}
 		form := "plaintext"
 		if e.Hashed {

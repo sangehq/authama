@@ -124,9 +124,29 @@ func scopeFor(c *cobra.Command, args []string) mutation.Scope {
 			s.DryRun = true
 		}
 		s.Args = append(s.Args, "--"+f.Name+"="+recordedValue(f))
-		if kind := recordedFlags[f.Name]; kind != "" && f.Value.String() != "" {
-			s.Subjects = append(s.Subjects, history.Subject{Kind: kind, Name: f.Value.String()})
+		kind := recordedFlags[f.Name]
+		if kind == "" || f.Value.String() == "" {
+			return
 		}
+		// A repeatable flag records each value. `host apply --host` takes a
+		// whole spec, "<alias> <host>[:port] <user> [role]", and the host it
+		// names is the alias - the name `history --host` is asked for - not
+		// the line as typed.
+		if sv, ok := f.Value.(pflag.SliceValue); ok {
+			for _, v := range sv.GetSlice() {
+				name := v
+				if kind == history.KindHost {
+					if fields := strings.Fields(v); len(fields) > 0 {
+						name = fields[0]
+					}
+				}
+				if name != "" {
+					s.Subjects = append(s.Subjects, history.Subject{Kind: kind, Name: name})
+				}
+			}
+			return
+		}
+		s.Subjects = append(s.Subjects, history.Subject{Kind: kind, Name: f.Value.String()})
 	})
 	return s
 }

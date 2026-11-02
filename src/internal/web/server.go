@@ -44,7 +44,7 @@ type Options struct {
 	BindAddr string
 
 	// Retain is how many snapshots a snapshot restore keeps when it snapshots
-	// first, as SSH_MANAGER_SNAPSHOT_RETAIN sets for the CLI. 0 means 10.
+	// first, as AUTHAMA_SNAPSHOT_RETAIN sets for the CLI. 0 means 10.
 	Retain int
 
 	// Now is the clock. Nil means time.Now.

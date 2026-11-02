@@ -6,8 +6,52 @@ auth-token-manager merged in. It has two features, under two groups:
 - `authama ssh …` - SSH keys, profiles, hosts, config and trust (all of v3's `sshmgr`).
 - `authama token …` - package-manager and git auth tokens (all of auth-token-manager).
 
-`doctor`, `init`, `migrate`, `history`, `serve`, `tui` and `version` stay at
-the top level, because they cover both.
+`doctor`, `init`, `migrate`, `settings`, `history`, `serve`, `tui` and
+`version` stay at the top level, because they cover both.
+
+## To 0.1.1: the authama config home and AUTHAMA_* names
+
+0.1.1 finishes the rename. What changes, and what happens on its own:
+
+| What | 0.1.0 and earlier | 0.1.1 |
+|---|---|---|
+| Config home | `~/.config/ssh-manager` (`%APPDATA%\ssh-manager` on Windows) | `~/.config/authama` on every OS (`%USERPROFILE%\.config\authama` on Windows); `$AUTHAMA_CONFIG_DIR`, else `$XDG_CONFIG_HOME/authama`, overrides it |
+| State | inside the config home | `~/.local/state/authama` (`$AUTHAMA_STATE_DIR`, else `$XDG_STATE_HOME/authama`): `log/`, `snapshots/`, `dist/` |
+| `.env` | read only if your shell exported it (`set -a; . .env; set +a`) | loaded at startup; the environment still wins; `--no-dotenv` / `AUTHAMA_NO_DOTENV=1` skips it |
+| Settings file | none | optional `authama.json`, schema-validated (see [Configuration](configuration.md#settings-env-and-authamajson)) |
+| Variables | `SSH_MANAGER_*`, `SSHMGR_DEV_ROOT`, `SSHMGR_GIT_MODE` | `AUTHAMA_*`; the old names still work, with a deprecation notice |
+| Managed block in `~/.ssh/config` | `# Managed by ssh-manager …` | `# Managed by authama …`; the old markers are recognised and rewritten on the next render |
+| Bundles | `ssh-manager-<stamp>.age` | `authama-<stamp>.age`; `ssh restore` still reads the old names |
+| Provider key titles | `ssh-manager <file>` | `authama <file>`; a re-deploy renames the old title |
+| Windows install folder | `%LOCALAPPDATA%\Programs\ssh-manager` | `%LOCALAPPDATA%\Programs\authama`; `install.ps1` takes the old folder off `PATH` and leaves its files |
+
+**The first run moves you over.** When no config dir is set explicitly and
+`~/.config/authama` does not exist, the first command (anything but `help`,
+`version` or `completion`) copies the old home - `~/.config/ssh-manager`, on
+Windows also `%APPDATA%\ssh-manager`, or an older `~/.config/sshmgr` or
+`~/.sshmgr` - into `~/.config/authama`, moves `log/`, `snapshots/` and `dist/`
+into the state home, writes `MIGRATED-TO-AUTHAMA.txt` into the old directory and
+says so once on stderr. The old directory is kept, so 0.1.0 still runs against
+it if you go back. A directory carrying the marker is never migrated again.
+
+If you set `SSH_MANAGER_HOME` yourself, nothing is copied: authama uses that
+directory (and keeps state in it), with a notice to rename the variable to
+`AUTHAMA_CONFIG_DIR`. `authama migrate` does the copy on demand, and
+`authama migrate --force` replaces a home that already exists (it is backed up
+aside first).
+
+After upgrading:
+
+```sh
+authama settings path              # where everything is now
+authama settings show --effective  # every setting and where it came from
+authama doctor
+```
+
+Then rename `SSH_MANAGER_*` / `SSHMGR_*` in your shell profile and `.env`
+(`SSH_MANAGER_HOME` → `AUTHAMA_CONFIG_DIR`, `SSHMGR_DEV_ROOT` →
+`AUTHAMA_DEV_ROOT`, `SSH_MANAGER_<NAME>` → `AUTHAMA_<NAME>`), and drop any
+`set -a; . ~/.config/ssh-manager/.env; set +a` line - the file is loaded for you.
 
 ## From sshmgr v3
 
@@ -19,9 +63,9 @@ Nothing you have stops working.
 | SSH verbs | `sshmgr reconcile`, `sshmgr host add …` | `authama ssh reconcile`, `authama ssh host add …`. The top-level spellings (`authama reconcile`, `sshmgr reconcile`) still work; they are hidden from help |
 | Shared verbs | `sshmgr doctor`, `sshmgr serve` | `authama doctor`, `authama serve` |
 | `ui` | alias of `serve` | still works, deprecated: use `serve` (web) or `tui` (terminal) |
-| Config home | `~/.config/ssh-manager` | unchanged |
-| Variables | `SSH_MANAGER_*`, `SSHMGR_DEV_ROOT` | unchanged |
-| `~/.ssh` | managed-block markers, `known_hosts` tags | unchanged, so a v3 tree reconciles with no diff |
+| Config home | `~/.config/ssh-manager` | `~/.config/authama` from 0.1.1, copied in on the first run ([above](#to-011-the-authama-config-home-and-authama_-names)) |
+| Variables | `SSH_MANAGER_*`, `SSHMGR_DEV_ROOT` | `AUTHAMA_*` from 0.1.1; the old names still work, with a notice |
+| `~/.ssh` | managed-block markers, `known_hosts` tags | the `known_hosts` tags are unchanged; the managed block's markers are rewritten under the authama name on the next render, with no other diff |
 | `vm` ProxyCommand | `sshmgr vm proxy …` | unchanged; `sshmgr` stays installed for it |
 | Repository and Go module | `github.com/simtabi/ssh-manager`, module `github.com/simtabi/ssh-manager/src/v3` | `github.com/simtabi/authama`, module `github.com/simtabi/authama/src` (v3.6.1 alone was published as `.../authama/src/v3`). GitHub redirects the old repository URLs, so old clones and the old `install.sh`/`install.ps1` URLs keep working |
 | Version | 3.6.1 | **0.1.0**: authama restarted its version numbers. The 3.x tags and GitHub releases were removed; their history is in the [CHANGELOG](../CHANGELOG.md#pre-010-history-formerly-ssh-manager-1x361-and-auth-token-manager-0x). A package manager may treat 0.1.0 as older than 3.6.x; see below |
@@ -66,13 +110,13 @@ and all 158 of its pytest cases ported to Go.
 
 ```sh
 authama token import --dry-run  # parses it and says where it would go
-authama token import            # copies it to ~/.config/ssh-manager/tokens.json
+authama token import            # copies it to ~/.config/authama/tokens.json
 ```
 
 Until you do, the old locations (`$AUTH_TOKEN_MANAGER_CONFIG`,
 `$COMPOSER_AUTH_CONFIG`, `./auth-token-manager.json`,
 `~/.config/auth-token-manager.json`) are still read, with a deprecation notice.
-The new locations win: `--config`, `$SSH_MANAGER_TOKENS_CONFIG`,
+The new locations win: `--config`, `$AUTHAMA_TOKENS_CONFIG`,
 `./authama-tokens.json`, then `tokens.json` in the config home. The file format
 is unchanged.
 
@@ -149,7 +193,7 @@ commands) and `--list --json` (with and without secrets).
 | `AUTH_TOKEN_MANAGER_CONFIG`, `COMPOSER_AUTH_CONFIG`, `./auth-token-manager.json`, `~/.config/auth-token-manager.json` | still read, with a deprecation notice, after the new locations; `token import` moves the file | `TestTokenApplyReadsALegacyConfigWithANotice`, `TestTokenImportFromALegacyLocationOrAFile` |
 | `SHELL` (alias rc file, export syntax) | the same, plus PowerShell and cmd | `TestEnvExportShellVariants`, `TestDetectShellPowerShell` |
 | Windows owner-only ACL (`icacls`, `USERNAME`) | the same | `util/perms/windows_acl_test.go`, `TestOwnerOnlyAndPermsOnWindows` |
-| `AUTH_TOKEN_MANAGER_CATALOG` (a replacement `catalog.json`) | `SSH_MANAGER_TOKENS_CATALOG`; the old name is still read, with a deprecation notice | `TestTokenCatalogOverride` |
+| `AUTH_TOKEN_MANAGER_CATALOG` (a replacement `catalog.json`) | `AUTHAMA_TOKENS_CATALOG`; the old name is still read, with a deprecation notice | `TestTokenCatalogOverride` |
 | `ATM_DEBUG` (show the Python traceback) | dropped | Go errors are already one line; there is no traceback to show |
 | 0600 atomic writes | the same (owner-only ACL on Windows) | `TestTheTUIStoresATokenInTheSandbox`, E |
 
@@ -253,7 +297,7 @@ way went unnoticed. (November 2026, on `main` after v3.6.1.)
 | Missing | Since | Now |
 |---|---|---|
 | `--no-passphrase` on `keygen`, `reconcile`, `rotate` | dropped silently in 2.0.0 (the notes claimed the same command surface) | accepted again, hidden, as the spelling of the default; exclusive with `--passphrase` (`TestNoPassphraseIsAcceptedAndExclusive`, and `v1Surface` in `surface_test.go`) |
-| `$AUTH_TOKEN_MANAGER_CATALOG` (use a replacement catalog) | lost in the Go port, which embedded the catalog | `$SSH_MANAGER_TOKENS_CATALOG`, and the old name with a notice (`TestTokenCatalogOverride`) |
+| `$AUTH_TOKEN_MANAGER_CATALOG` (use a replacement catalog) | lost in the Go port, which embedded the catalog | `$AUTHAMA_TOKENS_CATALOG`, and the old name with a notice (`TestTokenCatalogOverride`) |
 
 **Confirmed present:** every other command, alias and flag of every Go tag (as
 `authama ssh …` or the hidden top-level spelling), every v1 Python command and

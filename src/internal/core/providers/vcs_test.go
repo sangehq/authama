@@ -90,7 +90,7 @@ func TestGitHubDeployAddsAndIsIdempotent(t *testing.T) {
 		if !strings.Contains(log, "[ssh-key] [add]") {
 			t.Errorf("expected an ssh-key add call:\n%s", log)
 		}
-		if !strings.Contains(log, "[--title] [ssh-manager work_gh-ed25519.pub]") {
+		if !strings.Contains(log, "[--title] [authama work_gh-ed25519.pub]") {
 			t.Errorf("title should be derived from the key filename:\n%s", log)
 		}
 	})

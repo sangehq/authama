@@ -15,7 +15,7 @@ It prints an address like this:
 
 ```text
 Authentication Access Manager web UI: http://127.0.0.1:7822/?token=…
-reading /Users/you/.config/ssh-manager (read-only)
+reading /Users/you/.config/authama (read-only)
 press Ctrl-C to stop
 ```
 
@@ -104,7 +104,7 @@ new directory. The copy holds them only as placeholders, so the preview lists ea
 would remove or create, by path, without its contents. That list is bound to the confirmation too.
 
 **Deleting a profile's key files** always writes an encrypted backup of `~/.ssh` and the config
-first, as the CLI does, so it needs `SSH_MANAGER_AGE_RECIPIENT` set where `authama serve` runs, and
+first, as the CLI does, so it needs `AUTHAMA_AGE_RECIPIENT` set where `authama serve` runs, and
 `age` installed. There is no `--no-key-backup` on the web.
 
 **Changes with effects outside the copy.** Prune and fix list what they would do outside the copied
@@ -151,10 +151,10 @@ A key's page offers each as a **job**:
 - **Rotate asks you to paste a key.** A target that takes the key by hand, such as a panel, pauses
   the job with the new public key shown for copying. Confirm once it is pasted; authama then logs in
   with it to prove it. Rotate writes an encrypted backup first, so it needs
-  `SSH_MANAGER_AGE_RECIPIENT`.
+  `AUTHAMA_AGE_RECIPIENT`.
 - **Rotating many keys** reviews the keys it will rotate, then rotates each a host uses in turn. A
   key that fails is left as it was, and the rest go on. Cancel stops before the next key.
-- **Restoring a bundle** decrypts with the identity file in `SSH_MANAGER_AGE_IDENTITY_FILE`, as set
+- **Restoring a bundle** decrypts with the identity file in `AUTHAMA_AGE_IDENTITY_FILE`, as set
   where `authama serve` runs; the web takes no identity and no passphrase. Only a bundle in the config
   home's `dist/`, named as `authama ssh bundle` names them, can be restored here.
 - **Cancel** stops a job at its next step, never inside one. A rotate waiting on you is answered no.

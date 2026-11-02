@@ -145,7 +145,7 @@ nfpms:
     ids: [sshmgr, authama]
     package_name: sshmgr
     vendor: Simtabi LLC
-    homepage: "https://opensource.simtabi.com/products/simtabi/ssh-manager"
+    homepage: "https://github.com/simtabi/authama"
     maintainer: "Imani Manyara <imani@simtabi.com>"
     description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
     license: MIT
@@ -191,7 +191,7 @@ homebrew_casks:
         private_key: '{{ envOrDefault "HOMEBREW_TAP_DEPLOY_KEY" "" }}'
     directory: Casks
     binaries: [authama, sshmgr]
-    homepage: "https://opensource.simtabi.com/products/simtabi/ssh-manager"
+    homepage: "https://github.com/simtabi/authama"
     description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
     hooks:
       post:
@@ -223,7 +223,7 @@ scoops:
         url: git@github.com:simtabi/scoop-bucket.git
         private_key: '{{ envOrDefault "SCOOP_BUCKET_DEPLOY_KEY" "" }}'
     directory: bucket
-    homepage: "https://opensource.simtabi.com/products/simtabi/ssh-manager"
+    homepage: "https://github.com/simtabi/authama"
     description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
     license: MIT
     # Scoop publishes on its own switch: SKIP_SCOOP, else SKIP_WINDOWS_PKGS, else skipped. `or` takes the
@@ -239,7 +239,7 @@ winget:
     publisher: Simtabi
     ids: [archive]
     license: MIT
-    homepage: "https://opensource.simtabi.com/products/simtabi/ssh-manager"
+    homepage: "https://github.com/simtabi/authama"
     short_description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
     description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
     publisher_url: "https://simtabi.com"

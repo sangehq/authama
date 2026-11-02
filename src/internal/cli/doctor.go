@@ -48,6 +48,7 @@ func newDoctorCmd() *cobra.Command {
 			// The token files (auth.json, .npmrc, docker's config.json, the git
 			// credential store, .netrc) hold secrets, so the doctor checks them
 			// for owner-only perms too; --fix tightens them.
+			setLines, setFailed := settingsSummary(p)
 			tokEnv := tokensvc.NewEnv(p, tokenGetenv, tokenLookup, "")
 			findings, tokFailed, tokFixed := tokEnv.HomeFiles(fix)
 			if jsonOut {
@@ -65,6 +66,10 @@ func newDoctorCmd() *cobra.Command {
 				}
 				_, _ = fmt.Fprintln(out, rep.Format())
 				writeDoctorTokens(out, findings)
+				_, _ = fmt.Fprintln(out, "\n=== settings ===")
+				for _, l := range setLines {
+					_, _ = fmt.Fprintln(out, l)
+				}
 				if tokFailed && !strict {
 					_, _ = fmt.Fprintln(out, "note: a token file others can read is a warning here (doctor --fix tightens it); "+
 						"--strict makes it fail, as it does in CI.")
@@ -73,7 +78,7 @@ func newDoctorCmd() *cobra.Command {
 			// The token check is new in 4.0. A machine whose doctor passed on
 			// 3.x must still pass on 4.0, so a loose token file warns, and fails
 			// only under --strict, the CI mode.
-			if !rep.OK() || tokFailed && strict {
+			if !rep.OK() || tokFailed && strict || setFailed {
 				return errNotClean
 			}
 			return nil
