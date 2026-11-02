@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/core/manifest"
 )
 
 // `host apply` - the upsert verb for compact host specs.

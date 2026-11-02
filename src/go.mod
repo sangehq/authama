@@ -1,4 +1,4 @@
-module github.com/simtabi/authama/src/v3
+module github.com/simtabi/authama/src
 
 go 1.26.0
 

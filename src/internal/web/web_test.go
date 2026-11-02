@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/v3/internal/tabler"
+	"github.com/simtabi/authama/src/internal/tabler"
 )
 
 // Every page renders against a real home, through the real engine, and says
@@ -248,7 +248,7 @@ func TestStaleAssetHashIsNotFound(t *testing.T) {
 	}
 }
 
-const module = "github.com/simtabi/authama/src/v3"
+const module = "github.com/simtabi/authama/src"
 
 // The web layer must never reach internal/cli: it holds the TUI and the
 // process-wide state of one command run, which a long-lived server serving

@@ -6,10 +6,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/simtabi/authama/src/v3/internal/core/tokens"
-	"github.com/simtabi/authama/src/v3/internal/util/fs"
-	"github.com/simtabi/authama/src/v3/internal/util/log"
-	"github.com/simtabi/authama/src/v3/internal/util/perms"
+	"github.com/simtabi/authama/src/internal/core/tokens"
+	"github.com/simtabi/authama/src/internal/util/fs"
+	"github.com/simtabi/authama/src/internal/util/log"
+	"github.com/simtabi/authama/src/internal/util/perms"
 )
 
 // SecretMode is the mode every rendered credential file gets.

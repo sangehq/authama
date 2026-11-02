@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/simtabi/authama/src/v3/internal/brand"
+	"github.com/simtabi/authama/src/internal/brand"
 )
 
 // The command surface, checked against the implementation it was ported from.

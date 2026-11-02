@@ -8,12 +8,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/v3/internal/core/inventory"
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
-	"github.com/simtabi/authama/src/v3/internal/platform"
-	"github.com/simtabi/authama/src/v3/internal/services/knownhosts"
-	"github.com/simtabi/authama/src/v3/internal/services/reconciler"
-	"github.com/simtabi/authama/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/core/inventory"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/simtabi/authama/src/internal/services/knownhosts"
+	"github.com/simtabi/authama/src/internal/services/reconciler"
+	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
 // newReconcileCmd is the native reconcile verb: apply the manifest to ~/.ssh

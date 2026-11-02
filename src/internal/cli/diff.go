@@ -6,10 +6,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
-	"github.com/simtabi/authama/src/v3/internal/platform"
-	"github.com/simtabi/authama/src/v3/internal/services/configsvc"
-	"github.com/simtabi/authama/src/v3/internal/util/fs"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/simtabi/authama/src/internal/services/configsvc"
+	"github.com/simtabi/authama/src/internal/util/fs"
 )
 
 // newDiffCmd is the native diff verb: preview the manifest vs. on-disk reality -

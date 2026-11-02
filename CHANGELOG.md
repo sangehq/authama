@@ -6,6 +6,32 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-02
+
+First release under the authama name, with version numbers restarted at 0.1.0. authama (Authentication
+Access Manager) is one static, dependency-free binary that manages two kinds of credentials:
+
+- **SSH** (`authama ssh …`, formerly ssh-manager 3.6.1): per-profile keys, a split `~/.ssh/config`
+  rendered from one manifest, a single pinned `known_hosts` trust store, staged zero-downtime key
+  rotation with rollback, deploy to 25 providers, expiry reminders, encrypted bundles, snapshots, devbox
+  and Cloudflare Access hosts.
+- **Auth tokens** (`authama token …`, formerly auth-token-manager 0.3.0): Composer `auth.json`, `.npmrc`,
+  Docker `config.json`, git credentials and `.netrc`, built from a config that names environment
+  variables, never secrets; list, copy, set, delete, audit and import, owner-only atomic writes.
+- **Shared:** `doctor`, `init`, `migrate`, `history`, a terminal UI (`tui`) and a local web UI (`serve`).
+
+Two binaries ship: `authama`, and `sshmgr`, the same program under its original name so existing scripts,
+aliases and `ProxyCommand` lines keep working. Config stays in `~/.config/ssh-manager`, and a 3.x setup
+needs no migration. See [migration](docs/migration.md).
+
+### Changed
+
+- **Versions restart at 0.1.0.** The ssh-manager 1.x–3.6.1 and auth-token-manager tags and GitHub
+  releases were removed; their history is kept below.
+- **The Go module is `github.com/simtabi/authama/src`** (no `/v3`):
+  `go install github.com/simtabi/authama/src/cmd/authama@latest`. The old `.../src/v3` path still resolves
+  through the Go proxy for 3.6.1 and earlier, but is no longer maintained.
+
 ### Fixed
 
 - **`--no-passphrase` works again on `keygen`, `reconcile` and `rotate`.** v1 accepted it; the 2.0.0 Go
@@ -24,9 +50,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   of sshmgr and auth-token-manager against this release, with what was restored and what was dropped on
   purpose.
 
-## [3.6.1] - 2026-11-01
+## Pre-0.1.0 history (formerly ssh-manager 1.x–3.6.1 and auth-token-manager 0.x)
 
-### Changed
+These releases came before the restart at 0.1.0. Their tags and GitHub releases were removed on
+2026-11-02; each ssh-manager heading links to the commit its tag pointed at. auth-token-manager's
+repository is no longer published; its code was ported at `20dda1e` (see [migration](docs/migration.md)).
+
+### ssh-manager
+
+#### ssh-manager 3.6.1 - 2026-11-01 ([tree f317e01](https://github.com/simtabi/authama/tree/f317e01e2010d16dc16e66516f93b1bd6a3d7b53))
+
+##### Changed
 
 - **The repository is now `simtabi/authama`** (was `simtabi/ssh-manager`), and the Go module path follows it:
   `github.com/simtabi/authama/src/v3`, so `go install github.com/simtabi/authama/src/v3/cmd/authama@latest`
@@ -34,7 +68,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   path. GitHub redirects the old URLs, so existing clones, the installers' old raw URLs and release
   download links keep working. Both binaries, the config home and the Windows install folder are unchanged.
 
-### Fixed
+##### Fixed
 
 - **Releases publish the Scoop manifest without breaking the bucket's branch protection.** v3.6.0's release
   failed pushing straight to `simtabi/scoop-bucket`'s `master`, which requires a pull request; the manifest now
@@ -42,9 +76,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   attestation steps now run even when GoReleaser fails after publishing - v3.6.0 shipped without an
   attestation because of that failure.
 
-## [3.6.0] - 2026-11-01
+#### ssh-manager 3.6.0 - 2026-11-01 ([tree 7848e5e](https://github.com/simtabi/authama/tree/7848e5e44213bd2368352560225f27d183dafaac))
 
-### Added
+##### Added
 
 - **Auth token management, merged from auth-token-manager.** The new `token` group builds the credential
   files Composer (`auth.json`), npm (`.npmrc`), Docker (`config.json`), git (`.git-credentials`) and curl
@@ -141,7 +175,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   shorthand for `--key-scope shared` (`--shared=false` for `per_service`), and the two are refused together only
   when they disagree.
 
-### Changed
+##### Changed
 
 - **`doctor` checks token-file modes.** A credential file others can read is a warning, so a machine that
   passed before still passes; `doctor --strict` (as in CI) fails on it, and `--fix` tightens it.
@@ -185,7 +219,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `-----BEGIN `; it now reads the public key's wire format, or the private key's PEM block and nothing after it
   (an OpenSSH key through its clear public half, so a passphrase-protected key still passes).
 
-### Fixed
+##### Fixed
 
 - **A bundle could overwrite another written in the same second.** Bundles were named for the second they were
   written in, and the second truncated the first. A `bundle` followed by a purge's backup, or a purge followed by a
@@ -215,9 +249,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`snapshots restore` and `snapshots prune` take the advisory lock**, in the CLI and the TUI, so neither can run
   under another sshmgr command writing the same tree.
 
-## [3.5.0] - 2026-10-26
+#### ssh-manager 3.5.0 - 2026-10-26 ([tree 05d3fa6](https://github.com/simtabi/authama/tree/05d3fa6e03f61e0312f26321d3d62a92fe152698))
 
-### Added
+##### Added
 
 - **`sshmgr termius keys [ALIAS]` - get each key into Termius.** Termius's CSV import has no key column, so imported
   hosts stop at SSH key selection. With no alias it lists every exported host with its Termius key label (the key
@@ -251,7 +285,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   stop a connection or a `sshmgr git` command that the rest of the report calls healthy. A missing clipboard tool is
   reported as advice (JSON `clipboard`), since `termius keys --print` works without one.
 
-### Fixed
+##### Fixed
 
 - **An alias, hostname or user that ssh refuses is rejected when it is added.** `host add`, `host apply` and
   `import` accepted shell metacharacters such as `;`, `&`, `|`, `$` or backticks, which ssh refuses at connect time
@@ -291,11 +325,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   CHANGELOG section after GoReleaser as a backstop, and a test fails if either
   regresses.
 
-## [3.4.0] - 2026-10-24
+#### ssh-manager 3.4.0 - 2026-10-24 ([tree 087ead1](https://github.com/simtabi/authama/tree/087ead11e86b96056bbd029daf412459dfe68688))
 
 3.3.0 was never tagged; its changes (git remote modes, devboxes) ship in this release.
 
-### Added
+##### Added
 
 - **Cloudflare Access hosts.** `sshmgr host add|edit ... --proxy cloudflared`
   (manifest `proxy: {kind: cloudflared}`) renders
@@ -334,7 +368,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `doctor` fails when a rendered VM ProxyCommand names an sshmgr binary that no
   longer exists (`stale_proxy` in `--json`); `config render` rewrites it.
 
-### Fixed
+##### Fixed
 
 - **Audit of 2026-10-21: security.** Dev mode no longer lets `rotate`,
   `rollback`, the TUI deploy or `--revoke` reach real servers, and dev-mode
@@ -394,9 +428,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The `knownhosts` docs and feature catalog still described per-profile trust
   stores at mode 0644; there is one hashed store at 0600.
 
-## [3.2.0] - 2026-10-19
+#### ssh-manager 3.2.0 - 2026-10-19 ([tree b7169cc](https://github.com/simtabi/authama/tree/b7169cc91f6e8e54810ded30d2ad3707207aafca))
 
-### Added
+##### Added
 
 - **Keys can live in 1Password.** A profile with `"key_store": "1password"` and
   an `op_vault` keeps its private keys as SSH Key items in that vault, created
@@ -426,7 +460,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   when the directory was already moved by hand. Profiles without a category, and
   every existing manifest, render exactly as before.
 
-### Fixed
+##### Fixed
 
 - **The install command could not fetch its script.**
   `https://opensource.simtabi.com/install/ssh-manager` — the URL in the README,
@@ -450,7 +484,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `.exe` names it asks for and nothing else, which is not a property to rest a
   checksum gate on; it is anchored on the filename field now, like the shell one.
 
-### Removed
+##### Removed
 
 - **Every remaining reference to the previous implementation's language.** No
   source file mentions it, and neither do the docs, the test names or the tag
@@ -468,7 +502,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   for people who had installed pre-commit. The interpreter-related entries in `.gitignore`,
   `.editorconfig` and `dependabot.yml` went with it.
 
-### Changed
+##### Changed
 
 - **GitHub verify checks the account.** When a deploy's API token and an ssh
   login are both available, GitHub must greet the key as the account the token
@@ -487,9 +521,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   paths that exist nowhere, and the ones that were resolvable required knowing a
   tag to resolve them. What each test asserts is now stated in the test.
 
-## [3.1.1] - 2026-08-06
+#### ssh-manager 3.1.1 - 2026-08-06 ([tree 3b9cfe0](https://github.com/simtabi/authama/tree/3b9cfe0930a2ea80d0ab3c2aa4b0875b268d143c))
 
-### Security
+##### Security
 
 - **Restoring a snapshot or a bundle can no longer write outside its
   destination.** Both extractors validated member names and then checked that
@@ -503,9 +537,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   code was being scanned, and confirmed by a test that fails against the
   previous implementation.
 
-## [3.1.0] - 2026-08-06
+#### ssh-manager 3.1.0 - 2026-08-06 ([tree 6c0098b](https://github.com/simtabi/authama/tree/6c0098b46f7ed5fdb2fa07396cc24ea138439275))
 
-### Added
+##### Added
 
 
 - **The interactive menu opens with a banner.** It names the binary and build
@@ -533,7 +567,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A project icon at `docs/assets/sshmgr.svg` — a single scalable mark for the
   docs site, the repository's social preview and a favicon.
 
-### Changed
+##### Changed
 
 - **`make build` empties `build/` first, every time.** A stale binary is not
   hypothetical: a bug was reported against this tool from a binary built one
@@ -570,7 +604,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `build/sshmgr` instead of `bin/sshmgr`, and `build/dist/` holds the release
   artifacts as before. There is no `bin/` any more.
 
-### Fixed
+##### Fixed
 
 - **A `go install` build no longer reports the wrong version.** It applies no
   ldflags, so the binary fell back to the hardcoded `2.0.0-dev` — two major
@@ -608,7 +642,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   as a side effect of a release build.
 
 
-## [3.0.0] - 2026-08-06
+#### ssh-manager 3.0.0 - 2026-08-06 ([tree a860264](https://github.com/simtabi/authama/tree/a860264c44ade2610d38e147491b360aa946cc5e))
 
 The previous implementation is gone from the tree, the verification matrix is
 closed, and the documentation describes what ships.
@@ -618,7 +652,7 @@ Major rather than minor for two reasons, both below under **Changed**: the
 action beyond running `reconcile` once — but a script that passed `--user` will
 fail, and that is what a major version is for.
 
-### Changed
+##### Changed
 
 - **`~/.ssh` layout.** One inline `config` holds every `Host` entry, grouped by a
   profile banner with `Host *` last, instead of a root config plus a per-profile
@@ -638,7 +672,7 @@ fail, and that is what a major version is for.
   script that passes it will fail rather than being ignored. Drop it; `--all`
   covers every host in the manifest, which is what `--user` aggregated.
 
-### Added
+##### Added
 
 - `key add`, `key list`, `key delete` — declare, mint and remove a key
   independently of the host that uses it, with a guarded delete that refuses
@@ -653,7 +687,7 @@ fail, and that is what a major version is for.
   `--no-key-backup` to accept an overwrite that cannot be undone.
 - `SSH_MANAGER_OLD_KEY_MAX_AGE_DAYS` — when an archived predecessor is called stale.
 
-### Fixed
+##### Fixed
 
 - **Rotation could lose a key on a crash.** Commit renamed four files with no
   rollback; an interruption between them left the tree without a usable pair.
@@ -695,7 +729,7 @@ fail, and that is what a major version is for.
 - `host edit`'s flags, and `--provider`, `--token-env` and `--key-name` on
   `host add`, had no help text at all.
 
-### Security
+##### Security
 
 - Passphrases reach `ssh-keygen` through the askpass protocol rather than the
   command line, where any local user could read them from the process list.
@@ -708,7 +742,7 @@ fail, and that is what a major version is for.
 - CodeQL scans Go. It was configured for the wrong language, so the Go code had never been
   analysed.
 
-### Removed
+##### Removed
 
 - The v1 implementation and its test suite, preserved at the `v1-final`
   tag. The binary has had no interpreter since 2.0.0; this removes the parity
@@ -717,7 +751,7 @@ fail, and that is what a major version is for.
   every platform instead of macOS alone — and the last interpreter executing in CI
   went with them.
 
-## [2.0.0] - 2026-06-17
+#### ssh-manager 2.0.0 - 2026-06-17 ([tree f9b67c6](https://github.com/simtabi/authama/tree/f9b67c65a7ee7de90afc1726c2fe1cd72357ba85))
 
 ssh-manager is **rewritten in Go** as a single self-contained binary - no interpreter
 runtime to install. Behavior is unchanged: the same `manifest.json` /
@@ -725,7 +759,7 @@ runtime to install. Behavior is unchanged: the same `manifest.json` /
 managed-block markers, the same `sshmgr` command surface and `SSH_MANAGER_*`
 environment variables. A v1 home works as-is.
 
-### Changed
+##### Changed
 
 - **Pure Go, no interpreter.** Every verb (init, import, migrate, reconcile, keygen,
   config, diff, validate, doctor, profile, host, providers, net, knownhosts,
@@ -741,7 +775,7 @@ environment variables. A v1 home works as-is.
   cron / schtasks) are all reimplemented natively. Bundles and `~/.ssh` snapshots
   remain interoperable with v1.
 
-### Notes
+##### Notes
 
 - The list/view/expiry views now print plain text rather than the v1 `rich`
   tables; the data shown is the same.
@@ -749,13 +783,13 @@ environment variables. A v1 home works as-is.
   parity reference in `src/`. (Since removed - see Unreleased. The reference is
   now the `v1-final` tag.)
 
-## [0.1.0] - 2026-06-16
+#### ssh-manager 0.1.0 - 2026-06-16 ([tree 5ca46aa](https://github.com/simtabi/authama/tree/5ca46aabf620de5fee3a81087c5429811939c10c))
 
 First public release. ssh-manager manages SSH keys and `~/.ssh/config` from a single
 manifest - reproducible output, profile-based isolation, and safety guarantees
 (atomic writes, advisory locking, snapshot-before-mutate, load-bearing perms).
 
-### Added
+##### Added
 
 **Core lifecycle**
 
@@ -842,7 +876,7 @@ manifest - reproducible output, profile-based isolation, and safety guarantees
 - `--yes`/`-y` on destructive verbs (plus `--revoke` on the deletes) for
   non-interactive / scripted use.
 
-### Platforms
+##### Platforms
 
 - **macOS**, **Linux**, and **Windows** are all first-class. macOS/Linux: launchd /
   systemd-user-or-cron schedulers, Keychain / `notify-send`, `UseKeychain` on macOS
@@ -850,7 +884,7 @@ manifest - reproducible output, profile-based isolation, and safety guarantees
   by real-binary tests **and a full reconcile/perms/config e2e** on the
   windows-latest CI runner.
 
-### Security & robustness
+##### Security & robustness
 
 - **Manifest input is hardened.** Names that become filesystem paths (profile,
   alias, key_name) reject `/`, `\`, `..`, leading `-`, whitespace, glob `*?`, and
@@ -870,7 +904,7 @@ manifest - reproducible output, profile-based isolation, and safety guarantees
   refuse a symlinked `~/.ssh`; the audit log redacts secret-named fields; scheduled
   jobs handle executable paths containing spaces.
 
-### Fixed
+##### Fixed
 
 - **Robust legacy-home migration.** The `~/.sshmgr` to standard-dir move is now
   serialized under an advisory lock with a re-check, and uses `os.rename` (which
@@ -968,7 +1002,7 @@ manifest - reproducible output, profile-based isolation, and safety guarantees
   package version has a single source (v1's package metadata); `--version` flag
   added.
 
-### Quality
+##### Quality
 
 - Typed throughout, linted, and covered by a unit
   suite plus an end-to-end smoke (`make e2e`). Output uses **rich**, prompts use
@@ -977,14 +1011,214 @@ manifest - reproducible output, profile-based isolation, and safety guarantees
   Windows, plus CodeQL, secret scanning (gitleaks), and pre-commit. Releases
   build and attach artifacts to a GitHub Release on a `v*` tag.
 
-[Unreleased]: https://github.com/simtabi/authama/compare/v3.6.1...HEAD
-[3.6.1]: https://github.com/simtabi/authama/compare/v3.6.0...v3.6.1
-[3.6.0]: https://github.com/simtabi/authama/compare/v3.5.0...v3.6.0
-[3.5.0]: https://github.com/simtabi/authama/compare/v3.4.0...v3.5.0
-[3.4.0]: https://github.com/simtabi/authama/compare/v3.2.0...v3.4.0
-[3.2.0]: https://github.com/simtabi/authama/compare/v3.1.1...v3.2.0
-[3.1.1]: https://github.com/simtabi/authama/compare/v3.1.0...v3.1.1
-[3.1.0]: https://github.com/simtabi/authama/compare/v3.0.0...v3.1.0
-[3.0.0]: https://github.com/simtabi/authama/compare/v2.0.0...v3.0.0
-[2.0.0]: https://github.com/simtabi/authama/compare/v0.1.0...v2.0.0
+### auth-token-manager
+
+#### auth-token-manager 0.3.0 - 2026-10-13
+
+##### Fixed
+- **Piped output is no longer hard-wrapped at 80 columns.** `--env` exports and
+  emitted JSON used to be broken across lines when stdout was a pipe, which
+  corrupted `eval "$(auth-token-manager --env)"` and machine-read output. Shell
+  exports and rendered file content now also bypass markup interpretation, so a
+  token containing `[bracketed]` text survives verbatim.
+- **`--template --project DIR` no longer touches the global credential files.**
+  It now writes only the project-scoped targets (composer, npm) into the project
+  dir; previously the docker/git/netrc placeholders were merged into
+  `~/.docker/config.json`, `~/.git-credentials`, and `~/.netrc` — where they
+  could *replace* real credentials for hosts like `github.com` and `ghcr.io`.
+- **A malformed line in `.git-credentials` (e.g. a non-numeric port) no longer
+  crashes `--list`/inventory** with a traceback. The line is listed under a
+  best-effort host key and can still be `--remove`d.
+- **Writing refuses to overwrite a file it could not read.** Previously, if an
+  existing auth file was unreadable (permissions, I/O error), the merge treated
+  it as absent and overwrote it — silently dropping every credential in it. Now
+  it aborts with a clear error instead.
+- **Revealed secrets render verbatim in tables.** Values containing `[...]` were
+  interpreted as rich markup and silently altered in `--list --show-secrets` and
+  the interactive list.
+- `--doctor` now checks the `--project` dir's `.gitignore` (not the current
+  directory's) when `--project` is given, and ignores commented-out lines.
+- fish `--env` exports escape backslashes, so a value ending in `\` can't break
+  the quoting.
+- **cmd.exe `--env` exports are now safe for values containing quotes.** The
+  quoted `set "NAME=value"` form breaks when the value itself embeds `"` (every
+  `COMPOSER_AUTH` JSON does): each quote toggles cmd's parsing mid-line, exposing
+  slices of the value to `& | < > ^` interpretation. Such values now use the
+  unquoted form with every cmd-special caret-escaped, which parses
+  deterministically; quote-free values keep the clean quoted form.
+- `save_config` no longer leaves a stray `.tmp` file behind if writing fails;
+  the interactive edit flow now surfaces file-hardening warnings.
+- `make build` failed because the `build` package was never installed; the
+  target now installs it into the venv first (and creates the venv if needed).
+
+##### Changed
+- `--target` now also filters `--list` and `--stdout`, not just which files are
+  written. New optional `targets=` filter on `AuthTokenManager.to_json()`.
+- **Bulk "env var not set" skips are summarised.** With a starter config (37
+  example hosts), every render printed a 37-line warning wall; more than six
+  such skips now collapse into one per-target summary line. Config *mistakes*
+  (unknown service, unsupported type) still print verbatim.
+- The dev container restarts across Docker daemon/VM restarts
+  (`restart: unless-stopped`, configurable via `ATM_RESTART`).
+- **Docs no longer call `rich`/`questionary` "optional".** They are required
+  dependencies of the package (every pip/pipx/uv install includes them — the
+  interactive manager is the default experience); the stdlib fallback exists for
+  the no-install paths (zipapp, source checkout), where everything but `--ui`
+  works. README, `docs/installation.md`, and a `pyproject.toml` comment now say
+  exactly that.
+- The release workflow now smoke-tests the standalone binary on **all three**
+  OSes (previously Windows was skipped), and runs `--services` + `--list` so a
+  build that silently drops the bundled catalog/templates fails the release.
+
+##### Added
+- **Fully containerized usage (Docker).** New `Dockerfile` (Ubuntu 24.04,
+  non-root, minimal apt set) + `compose.yaml` + `.env.example`: commands run
+  inside a container named after the project while the tokens and config files
+  land on the **host**, via a home-directory bind mount (directories, not single
+  files — the tool's atomic rename would fail with `EBUSY` over a single-file
+  mount). Hardened with `cap_drop: ALL`, `no-new-privileges`, `pids_limit`,
+  `init`, configurable UID/GID, and an allowlisting `.dockerignore`. New Make
+  targets: `docker-shell` (enter), `docker-run`, `docker-check`,
+  `docker-build`, `docker-up`, `docker-down`, `docker-clean`. The container
+  reuses the project Makefile unchanged via the `VENV` override. Fully
+  documented in `docs/container.md`.
+- **System-wide distribution.** Documented and wired up every install path:
+  `uv tool`/`uvx`, `pipx`, `pip`, **Homebrew** (`simtabi/homebrew-tap` formula in
+  `packaging/`), **standalone single-file binaries** (no Python needed — built by
+  PyInstaller in `release.yml` for Linux/macOS/Windows and attached to each GitHub
+  Release), the `.pyz` zipapp, and the source launcher. New `make binary` target
+  and a `[build]` extra. `docs/installation.md` covers them all.
+- **Cleaner errors.** Unexpected `OSError`s (e.g. an unwritable target dir) now
+  print a one-line `error: …` instead of a traceback; set `ATM_DEBUG=1` for the
+  full traceback.
+- **Richer token listing + show/hide secrets + clipboard copy.** `--list` (and the
+  interactive list) now shows one table with **Tool · Host · What it's for · User ·
+  Secret · File**, including a human description of each token and its file path.
+  Secrets are masked by default; `--show-secrets` reveals them but **requires an
+  interactive confirmation** (and `--yes`/`-y` when piped/non-interactive, so a
+  stray flag in a script can't dump secrets to a log). `--list --json` emits a
+  machine-readable inventory. New
+  `--copy TARGET HOST` (and a "Copy a token" menu item) put a token on the OS
+  clipboard **without printing it**. Long values (revealed tokens, file paths)
+  **wrap onto multiple lines instead of being truncated** with an ellipsis, in
+  both the rich and the no-`rich` table. New public API: `describe()`,
+  `inventory(reveal=…)`, and `platform.copy_to_clipboard()`.
+- **Interactive credential manager is the default.** Run `auth-token-manager` at a
+  terminal and follow the prompts: pick **tool** → **provider** (GitHub, GitLab,
+  Bitbucket, Docker Hub, npm, …) → **Cloud or Self-hosted / Enterprise** → URL (if
+  self-hosted) → **type the token** (hidden input). It writes straight to the right
+  auth file. Also browse / edit / remove installed tokens.
+- **Full parity between interactive and flags.** Every action has a non-interactive
+  equivalent: `--list` (installed tokens + paths, masked, works without `rich`),
+  `--add` (secret read from **stdin** or a hidden prompt — never argv), and
+  `--remove TARGET HOST`. `--add` takes `--target` or `--service` (Composer),
+  `--host`, `--username`, `--scope`. Dispatch lives once in `apply_credential`.
+- **Browse the system.** `inventory()` reads every auth file and reports host /
+  type / username / masked token / file path; `remove_installed()` deletes one.
+- **Shell aliases manager** (`auth-token-manager-aliases`): install/update/remove
+  `atm`, `atm-ui`, `atm-doctor`, `atm-init` via an idempotent managed block
+  (conda/`blockinfile` style) in the right rc file; backs up, writes atomically,
+  preserves mode. `… print` emits the lines for `eval`.
+- **`Makefile`** of common tasks (`make help`) — the `run`/`ui`/`aliases-*` targets
+  work straight from a checkout.
+- **Runs with or without `pip install`.** `rich`/`questionary` are optional at
+  runtime (stdlib fallback); added a repo-root launcher and a single-file `zipapp`.
+- **More registry providers** (all in the catalog): Composer now knows `packeton`,
+  `nexus`, `gemfury`, and `unlock-sh` (all `http-basic`); Gemfury and unlock.sh are
+  also npm provider quick-picks.
+- **Per-tool config templates** in `config/templates/` plus `--init --target`.
+- **Non-destructive merge** for every target (preserves entries it doesn't manage).
+- **OS-aware path resolution** honoring `$NPM_CONFIG_USERCONFIG`, `$DOCKER_CONFIG`,
+  `$NETRC`, Git's `$XDG_CONFIG_HOME/git/credentials`, and Windows locations.
+
+##### Changed
+- **Externalized the catalog to `config/catalog.json`.** Targets, the Composer
+  service catalog + token-method map, enterprise/cloud hosts, the provider catalog,
+  per-target fields, and the built-in default config live in one JSON file loaded by
+  `catalog.py`; the module constants are typed views onto it. **Adding a
+  service/provider is a config edit, not code.** Bundled into the wheel and zipapp.
+  Removed the dead `_COMPOSER_TOKEN_SECTIONS`; de-duplicated the default config.
+- The interactive UI now stores typed-in tokens directly (no env-var config / no
+  `.env`); the flag + env-var-reference mode remains for CI/automation.
+- Added a friendly Python-3.10+ guard to the launcher and entrypoint (a clear
+  message instead of a traceback on an old interpreter).
+
+##### Fixed
+- **`--template` no longer writes placeholder secrets into real auth files** — it
+  *prints* the skeleton (writing only with `--project`).
+- `--env` no longer claims "wrote a file" for non-Composer targets; `--target X`
+  with nothing to write prints a clear message and scopes its warnings.
+- `inventory()`/`--list` no longer crashes on a malformed `machine X login` netrc
+  line (`IndexError`).
+- `to_git_credentials` preserves a given URL scheme (a scheme-prefixed host no
+  longer produced a protocol-less, invalid line).
+- Removing an npm host now also drops its orphaned `@scope:registry=` line.
+- The no-`rich` output path no longer crashes on a console that can't encode a
+  glyph (e.g. a legacy-codepage Windows terminal) — it falls back to `replace`.
+- `make ui` runs from the venv (with `rich`/`questionary`) and auto-creates it if
+  missing, instead of failing under the system python.
+- `inventory()`/`--list` now also lists legacy npm `:_auth=` lines and Docker
+  `identitytoken` logins, and a git host with a path (e.g. `dev.azure.com/org`)
+  round-trips for listing and removal.
+- `make ui` now auto-creates a **runtime-only** venv (package + `rich` +
+  `questionary`), not the full `[dev]` toolchain.
+- `inventory()`/`--list` now also reads the legacy npm split-credential form
+  (`:username=` + `:_password=`).
+- **netrc data-loss fix:** removing a `machine` no longer destroys a sibling that
+  shared the same physical line — `.netrc` parsing/removal is now token-oriented
+  (multiple machines per line are handled; `macdef`/comment files fall back to the
+  safe line-based path). Multi-machine lines are now also listed correctly.
+- **git ports preserved:** a credential host with an explicit port
+  (`git.acme:8443`) now round-trips for listing and removal and no longer collides
+  with the same host on the default port.
+
+##### Security
+- Ran a full security review (no `eval`/`exec`/`shell`/network; secrets never in
+  argv or logs; auth files written `0600`/owner-only via atomic temp files).
+  Documented that `--env` output intentionally contains the token; made the
+  non-secret config save with normal (umask) perms instead of `0600`.
+
+##### Notes
+- Tested and CI-covered on Python 3.10–3.14.
+
+#### auth-token-manager 0.2.0 - 2026-06-08
+
+Never tagged. This version is commit `8027c61`; the first tag is v0.3.0.
+
+A ground-up rework: renamed from `composer-auth` to **`auth-token-manager`**,
+generalised beyond Composer, packaged for PyPI, and given an interactive UI.
+
+##### Added
+- **Multi-provider rendering.** New targets beyond Composer: npm (`.npmrc`),
+  Docker (`config.json`), Git (`git-credentials`), and `.netrc`.
+- **Interactive manager** (`--ui`) built on `rich` + `questionary`: list / add /
+  update / remove entries with live "resolvable" status.
+- **Cloud vs self-hosted / enterprise** host selection in the UI for VCS
+  services, with a reminder to register self-hosted domains under
+  `github-domains` / `gitlab-domains` in `composer.json`.
+- **`--doctor`** (replaces `--check`): per-target perms, `.gitignore`, and
+  Composer shadowing report across every present target.
+- **`--target`** flag to render only selected targets; **`--version`**.
+- Cross-platform secret hardening: `0600` on POSIX, an explicit `icacls` ACL on
+  Windows; shell-aware env exports (bash/zsh, fish, PowerShell, cmd).
+- Proper Python package (`src/` layout, `pyproject.toml`, `py.typed`), `mypy
+  --strict` clean, `ruff` clean, and a `pytest` suite.
+
+##### Changed
+- Config is now **target-grouped** (`{"composer": {...}, "npm": {...}}`); the
+  legacy bare/`credentials` Composer-only shape is still accepted.
+- Config filename is `auth-token-manager.json`; env var is
+  `$AUTH_TOKEN_MANAGER_CONFIG` (legacy `$COMPOSER_AUTH_CONFIG` still honoured).
+- The single class is renamed `ComposerAuth` → `AuthTokenManager`.
+- `--stdout` now prints a **redacted** summary across targets (no secrets).
+
+##### Fixed
+- `${VAR}` expansion no longer treats a present-but-empty env var as "unset".
+- `to_env()` is shell-aware (was POSIX-only, breaking PowerShell/cmd).
+- Git credential username/password are URL-encoded.
+
+##### Security
+- Owner-only hardening now applies on Windows (ACL), not just POSIX `chmod`.
+
+[Unreleased]: https://github.com/simtabi/authama/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/simtabi/authama/releases/tag/v0.1.0

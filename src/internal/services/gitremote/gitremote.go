@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/core/manifest"
 )
 
 // Git is the slice of git this package needs, so tests can stand in for the network.

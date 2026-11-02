@@ -23,10 +23,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
-	"github.com/simtabi/authama/src/v3/internal/util/fs"
-	"github.com/simtabi/authama/src/v3/internal/util/netcheck"
-	"github.com/simtabi/authama/src/v3/internal/util/perms"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/util/fs"
+	"github.com/simtabi/authama/src/internal/util/netcheck"
+	"github.com/simtabi/authama/src/internal/util/perms"
 )
 
 // knownHostsMode is owner-only. A trust store is not a public key file: it is the

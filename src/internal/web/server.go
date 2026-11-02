@@ -18,7 +18,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/simtabi/authama/src/v3/internal/services/jobs"
+	"github.com/simtabi/authama/src/internal/services/jobs"
 )
 
 // Options configures a Server.

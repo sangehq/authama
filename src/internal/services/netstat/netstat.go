@@ -6,8 +6,8 @@ package netstat
 import (
 	"time"
 
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
-	"github.com/simtabi/authama/src/v3/internal/util/netcheck"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/util/netcheck"
 )
 
 const probeTimeout = 4 * time.Second

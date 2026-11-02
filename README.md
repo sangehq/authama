@@ -17,8 +17,8 @@ Two features in a single static binary with no runtime dependencies:
   variables, never secrets.
 
 macOS, Linux and Windows are all first-class; OpenSSH is the only requirement
-for the SSH side. `sshmgr`, the v3 name, ships alongside `authama` as the same
-program, so existing scripts keep working. Coming from sshmgr v3 or
+for the SSH side. `sshmgr`, the original name, ships alongside `authama` as the same
+program, so existing scripts keep working. Coming from sshmgr 3.x or
 auth-token-manager? See the [migration guide](docs/migration.md).
 
 ## Install
@@ -29,7 +29,7 @@ authama doctor
 ```
 
 Windows: `irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex`. Also
-`go install github.com/simtabi/authama/src/v3/cmd/authama@latest`, or a binary from [Releases](https://github.com/simtabi/authama/releases). Every path, and where
+`go install github.com/simtabi/authama/src/cmd/authama@latest`, or a binary from [Releases](https://github.com/simtabi/authama/releases). Every path, and where
 per-user state lives, is in [docs/installation.md](docs/installation.md).
 
 ## Quick start guide and usage
@@ -91,7 +91,7 @@ else is in the [documentation index](#documentation).
 - [Getting started](docs/getting-started.md) — first run, from `init` to a deployed key.
 - [Configuration](docs/configuration.md) — the manifest, profiles, hosts, `.env`, environment variables.
 - [Architecture](docs/architecture.md) — packages, key flows, and why the v2 layout is what it is.
-- [Migration](docs/migration.md) — from sshmgr v3 and from auth-token-manager, with a feature-parity table.
+- [Migration](docs/migration.md) — from sshmgr 3.x and from auth-token-manager, with a feature-parity table.
 - [Release](docs/release.md) — the tag-driven GoReleaser flow.
 
 ### Reference

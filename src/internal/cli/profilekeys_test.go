@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/core/manifest"
 )
 
 // G8: profile add takes the same --key-scope profile edit does, and both take

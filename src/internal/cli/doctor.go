@@ -8,10 +8,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
-	"github.com/simtabi/authama/src/v3/internal/platform"
-	"github.com/simtabi/authama/src/v3/internal/services/doctor"
-	"github.com/simtabi/authama/src/v3/internal/services/tokensvc"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/simtabi/authama/src/internal/services/doctor"
+	"github.com/simtabi/authama/src/internal/services/tokensvc"
 )
 
 // newDoctorCmd is the native (engine-free) doctor verb: diagnose deps, perms,

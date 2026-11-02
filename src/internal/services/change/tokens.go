@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/simtabi/authama/src/v3/internal/core/tokens"
-	"github.com/simtabi/authama/src/v3/internal/services/tokensvc"
-	"github.com/simtabi/authama/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/core/tokens"
+	"github.com/simtabi/authama/src/internal/services/tokensvc"
+	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
 // The token changes write credential files outside the home - ~/.npmrc,

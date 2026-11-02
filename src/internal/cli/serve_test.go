@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/v3/internal/services/mutation"
+	"github.com/simtabi/authama/src/internal/services/mutation"
 )
 
 // blockingListener stands in for a bound socket: Accept blocks until Close,

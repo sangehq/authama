@@ -6,7 +6,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/core/manifest"
 )
 
 // Parity reference: v1's facade (1066-1078)

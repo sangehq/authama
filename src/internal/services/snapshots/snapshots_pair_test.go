@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/v3/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
 // keygen mints an unencrypted ed25519 pair at priv, replacing any pair there -

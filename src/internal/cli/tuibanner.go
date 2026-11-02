@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/v3/internal/brand"
-	"github.com/simtabi/authama/src/v3/internal/core/manifest"
-	"github.com/simtabi/authama/src/v3/internal/services/overview"
-	"github.com/simtabi/authama/src/v3/internal/util/paths"
-	"github.com/simtabi/authama/src/v3/internal/version"
+	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/services/overview"
+	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/version"
 )
 
 // The banner answers the three questions someone opening an interactive session

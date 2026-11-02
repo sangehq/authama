@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/v3/internal/core/tokens"
+	"github.com/simtabi/authama/src/internal/core/tokens"
 )
 
 // The token group's CLI, tested the way auth-token-manager's own CLI tests

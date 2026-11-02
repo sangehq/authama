@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/simtabi/authama/src/v3/internal/brand"
-	"github.com/simtabi/authama/src/v3/internal/platform"
+	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/platform"
 
 	"github.com/spf13/cobra"
 )

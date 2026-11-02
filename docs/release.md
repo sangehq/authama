@@ -2,7 +2,7 @@
 
 Tag-driven. A `v*` tag builds a static binary per OS/arch and attaches them,
 with checksums, to a GitHub Release. Install the binary, or build from source
-with `go install github.com/simtabi/authama/src/v3/cmd/sshmgr@latest`.
+with `go install github.com/simtabi/authama/src/cmd/sshmgr@latest`.
 
 ## Two tags per release
 
@@ -12,7 +12,7 @@ interchangeable:
 | Tag | Read by | Why |
 |---|---|---|
 | `vX.Y.Z` | GoReleaser, the installers, `git describe` | the release proper, and the only one a human writes |
-| `src/vX.Y.Z` | the Go module proxy, and nothing else | Go resolves a subdirectory module through a tag prefixed with that subdirectory, so `go install .../src/v3@vX.Y.Z` finds nothing without it |
+| `src/vX.Y.Z` | the Go module proxy, and nothing else | Go resolves a subdirectory module through a tag prefixed with that subdirectory, so `go install .../src@vX.Y.Z` finds nothing without it |
 
 They cannot be collapsed into one. OSS GoReleaser rejects `src/vX.Y.Z` outright
 ("current tag is not semver"), and `monorepo.tag_prefix`, which exists for this,

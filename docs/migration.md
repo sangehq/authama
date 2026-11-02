@@ -23,8 +23,22 @@ Nothing you have stops working.
 | Variables | `SSH_MANAGER_*`, `SSHMGR_DEV_ROOT` | unchanged |
 | `~/.ssh` | managed-block markers, `known_hosts` tags | unchanged, so a v3 tree reconciles with no diff |
 | `vm` ProxyCommand | `sshmgr vm proxy …` | unchanged; `sshmgr` stays installed for it |
-| Repository and Go module | `github.com/simtabi/ssh-manager`, module `github.com/simtabi/ssh-manager/src/v3` | `github.com/simtabi/authama`, module `github.com/simtabi/authama/src/v3`. GitHub redirects the old repository URLs, so old clones, release downloads and the old `install.sh`/`install.ps1` URLs keep working; `go install` needs the new path for releases after v3.6.0 |
+| Repository and Go module | `github.com/simtabi/ssh-manager`, module `github.com/simtabi/ssh-manager/src/v3` | `github.com/simtabi/authama`, module `github.com/simtabi/authama/src` (v3.6.1 alone was published as `.../authama/src/v3`). GitHub redirects the old repository URLs, so old clones and the old `install.sh`/`install.ps1` URLs keep working |
+| Version | 3.6.1 | **0.1.0**: authama restarted its version numbers. The 3.x tags and GitHub releases were removed; their history is in the [CHANGELOG](../CHANGELOG.md#pre-010-history-formerly-ssh-manager-1x361-and-auth-token-manager-0x). A package manager may treat 0.1.0 as older than 3.6.x; see below |
 | Install | `install.sh`, `install.ps1`, release archives | the same installers and archives now carry both binaries (so do the Homebrew, Scoop, winget and deb/rpm/apk packages, once [release](release.md) publishes them) |
+
+Because 0.1.0 sorts below 3.6.x, a package manager that only moves forward
+may leave you on 3.6.x. If `authama version` still says 3.6.x after an upgrade,
+reinstall once:
+
+```sh
+brew reinstall --cask simtabi/tap/sshmgr                  # Homebrew
+scoop update; scoop uninstall sshmgr; scoop install simtabi/sshmgr   # Scoop
+go install github.com/simtabi/authama/src/cmd/authama@latest         # Go: the new module path
+```
+
+The install scripts always fetch the latest release, so `install.sh` and
+`install.ps1` need nothing special.
 
 Behaviour changes to know about:
 

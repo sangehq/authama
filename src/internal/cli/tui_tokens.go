@@ -5,9 +5,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/simtabi/authama/src/v3/internal/core/tokens"
-	"github.com/simtabi/authama/src/v3/internal/platform"
-	"github.com/simtabi/authama/src/v3/internal/services/tokensvc"
+	"github.com/simtabi/authama/src/internal/core/tokens"
+	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/simtabi/authama/src/internal/services/tokensvc"
 )
 
 // secretPrompter is the optional half of the prompter seam that reads a value

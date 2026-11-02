@@ -17,7 +17,7 @@ on:
   # Recovery path for when a tag push does not trigger anything - which is not
   # theoretical: during the 2026-08-06 Actions incident webhook delivery was
   # throttled and pushes stopped starting runs. Dispatch it with --ref pointing
-  # at the tag, e.g. `gh workflow run release.yml --ref v3.0.1`.
+  # at the tag, e.g. `gh workflow run release.yml --ref v0.1.0`.
   #
   # It stays tag-driven either way: GoReleaser reads the version from the ref it
   # is run against, so dispatching this on a branch fails at "current tag is not
@@ -58,10 +58,10 @@ jobs:
       - uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
 
       # `go install` needs a tag named after the module's subdirectory: the
-      # module is github.com/simtabi/authama/src/v3, so Go looks for
-      # src/v3.0.1 and ignores v3.0.1 entirely. GoReleaser cannot be driven from
+      # module is github.com/simtabi/authama/src, so Go looks for
+      # src/v0.1.0 and ignores v0.1.0 entirely. GoReleaser cannot be driven from
       # the prefixed tag - OSS rejects it as non-semver - so the release runs off
-      # v3.0.1 and mirrors src/v3.0.1 onto the same commit here, where it cannot
+      # v0.1.0 and mirrors src/v0.1.0 onto the same commit here, where it cannot
       # be forgotten. src/... does not match this workflow's v[0-9]* trigger, so
       # pushing it starts no second run.
       #
