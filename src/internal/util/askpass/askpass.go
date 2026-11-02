@@ -8,7 +8,7 @@
 // whenever a terminal exists.
 //
 // What does work is the askpass protocol: ssh-keygen executes the program named
-// by SSH_ASKPASS and reads the passphrase from its standard output. sshmgr names
+// by SSH_ASKPASS and reads the passphrase from its standard output. authama names
 // itself, so no separate helper binary has to be installed or trusted.
 package askpass
 
@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	// modeVar marks a re-execution of sshmgr as its own askpass helper.
+	// modeVar marks a re-execution of authama as its own askpass helper.
 	modeVar = envnames.AskpassMode
 	// secretVar carries the passphrase to that helper. A process environment is
 	// readable only by its own user and root, unlike argv, which is readable by
@@ -32,7 +32,7 @@ const (
 
 // Serving reports whether this process was executed by ssh-keygen as an askpass
 // helper rather than invoked by the user. ssh-keygen passes the prompt text as an
-// argument, which is not a sshmgr command, so this has to be checked before the
+// argument, which is not a authama command, so this has to be checked before the
 // command line is parsed.
 func Serving() bool { return envnames.Get(nil, modeVar) == "1" }
 

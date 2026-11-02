@@ -9,9 +9,9 @@ import (
 // newCleanCmd sweeps what deleting things leaves behind: trust-store pins for
 // hosts the manifest no longer has, and interrupted-write residue.
 //
-// Only lines sshmgr wrote (or was explicitly asked to adopt) are ever removed.
+// Only lines authama wrote (or was explicitly asked to adopt) are ever removed.
 // A pin the user made by hand is left alone, because a trust store is not
-// sshmgr's to tidy - and a pin for a host any profile still resolves survives
+// authama's to tidy - and a pin for a host any profile still resolves survives
 // too, since pruning is reference counted rather than owned.
 func newCleanCmd() *cobra.Command {
 	var dryRun, adopt, yes bool
@@ -33,7 +33,7 @@ func newCleanCmd() *cobra.Command {
 			// up other commands.
 			if !dryRun {
 				if err := confirmChange(c,
-					"clean removes known_hosts pins tagged sshmgr that no host needs, "+
+					"clean removes known_hosts pins tagged authama (sshmgr before 0.1.2) that no host needs, "+
 						"stale inventory records, and write residue.\nRun with --dry-run first to see what.", yes); err != nil {
 					return err
 				}

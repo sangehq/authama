@@ -223,8 +223,8 @@ func writePins(out io.Writer, kh *knownhosts.Service, indent string, host manife
 	for _, e := range entries {
 		owner := "user-owned"
 		if e.Tagged {
-			// Written by this tool. The on-disk tag stays "sshmgr" so lines pinned
-			// by any release remain recognizable; the label names the tool.
+			// Written by this tool: tagged "authama", or "sshmgr" by a release
+			// before 0.1.2. Either way the label names the tool.
 			owner = brand.Command
 		}
 		form := "plaintext"

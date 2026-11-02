@@ -23,7 +23,7 @@ func TestDevModeWritesNothingOutsideItsRoot(t *testing.T) {
 	}
 	// A file that must survive byte for byte.
 	canary := filepath.Join(realSSH, "config")
-	const canaryText = "# hand-written, not managed by sshmgr\nHost example\n  User me\n"
+	const canaryText = "# hand-written, not managed by authama\nHost example\n  User me\n"
 	if err := os.WriteFile(canary, []byte(canaryText), 0o600); err != nil {
 		t.Fatal(err)
 	}

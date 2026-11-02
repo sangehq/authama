@@ -2,9 +2,11 @@
 
 How to get `authama` onto a machine, and where it keeps its state once it is there.
 
-Every install path puts two binaries on `PATH`: `authama`, and `sshmgr`, the
-original name, kept for existing scripts and `ProxyCommand` lines. They are the same
-program; use either.
+Every install path puts `authama` on `PATH`, and beside it `sshmgr`, the former
+name, kept as a deprecated alias for existing scripts and `ProxyCommand` lines. It
+accepts the same commands but prints a one-line deprecation notice on stderr
+(not for `vm proxy` or shell completion, where stderr reaches ssh or the shell),
+and it will be removed in a future release: switch scripts to `authama`.
 
 ## Requirements
 
@@ -31,7 +33,7 @@ curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/in
 authama doctor          # verify deps, perms, agent, known_hosts, drift, token-file modes
 ```
 
-The script installs `authama` and `sshmgr` into `/usr/local/bin` (override with
+The script installs `authama` and the `sshmgr` alias into `/usr/local/bin` (override with
 `AUTHAMA_INSTALL_DIR`; the old `SSHMGR_INSTALL_DIR` still works), verifies each
 against the release checksums, and installs shell completions for both. It asks
 for `sudo` only when the directory is not writable, so a per-user directory needs
@@ -57,28 +59,29 @@ are left alone, so delete that folder when you like.
 
 ### Package managers
 
-The packages are published under the compatibility name `sshmgr` and install
-both binaries.
+The packages are named `authama` from 0.1.2 on (before that they were published
+as `sshmgr`) and install both binaries. Upgrading from the `sshmgr` packages is
+covered in [migration.md](migration.md#to-012-authama-everywhere-sshmgr-deprecated).
 
 ```sh
 # Homebrew (macOS and Linux)
-brew install --cask simtabi/tap/sshmgr
+brew install --cask simtabi/tap/authama
 ```
 
 ```powershell
 # Scoop (Windows)
 scoop bucket add simtabi https://github.com/simtabi/scoop-bucket
-scoop install simtabi/sshmgr
+scoop install simtabi/authama
 ```
 
 Linux packages (`.deb`, `.rpm`, `.apk`) for `amd64`, `arm64`, `386` and `armv6`/`armv7`
 are attached to every release and install `/usr/bin/authama` and `/usr/bin/sshmgr`:
 
 ```sh
-curl -fsSLO https://github.com/simtabi/authama/releases/latest/download/sshmgr_linux_amd64.deb
-sudo apt install ./sshmgr_linux_amd64.deb      # Debian, Ubuntu
-sudo dnf install ./sshmgr_linux_amd64.rpm      # Fedora, RHEL (download the .rpm instead)
-sudo apk add --allow-untrusted ./sshmgr_linux_amd64.apk   # Alpine (the .apk)
+curl -fsSLO https://github.com/simtabi/authama/releases/latest/download/authama_linux_amd64.deb
+sudo apt install ./authama_linux_amd64.deb      # Debian, Ubuntu
+sudo dnf install ./authama_linux_amd64.rpm      # Fedora, RHEL (download the .rpm instead)
+sudo apk add --allow-untrusted ./authama_linux_amd64.apk   # Alpine (the .apk)
 ```
 
 ### Docker
@@ -91,7 +94,7 @@ With the Go toolchain:
 
 ```sh
 go install github.com/simtabi/authama/src/cmd/authama@latest
-go install github.com/simtabi/authama/src/cmd/sshmgr@latest   # the compat name, if you want it
+go install github.com/simtabi/authama/src/cmd/sshmgr@latest   # the deprecated alias, only if a script still needs it
 ```
 
 The `src` segment is load-bearing: it is the subdirectory the Go module lives
@@ -120,7 +123,7 @@ Every artifact is checksummed and carries a build-provenance attestation
 
 ```sh
 git clone https://github.com/simtabi/authama && cd authama
-make build                # -> build/authama and build/sshmgr
+make build                # -> build/authama (and build/sshmgr, the deprecated alias)
 ./build/authama doctor
 ```
 
@@ -133,7 +136,7 @@ For working on authama without a local Go toolchain, the repository root has a
 `Dockerfile` and `compose.yaml`:
 
 ```sh
-make docker-shell                       # a shell with Go, git, make and OpenSSH; authama and sshmgr built
+make docker-shell                       # a shell with Go, git, make and OpenSSH; authama (and the sshmgr alias) built
 make docker-run ARGS="token list"       # one command
 make docker-down
 ```

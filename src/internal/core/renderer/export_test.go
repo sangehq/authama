@@ -56,7 +56,7 @@ func TestFlatConfigInlinesEveryHostWithAbsolutePaths(t *testing.T) {
 		t.Errorf("Host * must come last, or its values override every host's:\n%s", out)
 	}
 	if IsManagedFile(out) {
-		t.Error("the export must not carry the managed header: sshmgr would then treat a copy as a file it owns")
+		t.Error("the export must not carry the managed header: authama would then treat a copy as a file it owns")
 	}
 }
 
@@ -230,7 +230,7 @@ func TestCloudflaredHostRendersItsProxyCommand(t *testing.T) {
 // must read the cloudflared ProxyCommand as well as the VM one.
 func TestProxyBinaryReadsBothRenderedProxies(t *testing.T) {
 	for value, want := range map[string]string{
-		`"/usr/local/bin/sshmgr" vm proxy devbox`:                  "/usr/local/bin/sshmgr",
+		`"/usr/local/bin/authama" vm proxy devbox`:                 "/usr/local/bin/authama",
 		`"/opt/homebrew/bin/cloudflared" access ssh --hostname %h`: "/opt/homebrew/bin/cloudflared",
 		`"cloudflared" access ssh --hostname %h`:                   "cloudflared",
 		`nc %h %p`:                                                 "",

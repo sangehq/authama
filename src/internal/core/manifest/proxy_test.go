@@ -16,7 +16,7 @@ func hostFrom(t *testing.T, raw string) (*Manifest, error) {
 }
 
 // A Cloudflare Access host is reached through `cloudflared access ssh`; the
-// manifest names the kind, and only kinds sshmgr knows how to render.
+// manifest names the kind, and only kinds authama knows how to render.
 func TestProxyKindsAreValidated(t *testing.T) {
 	if _, err := hostFrom(t, `{"alias":"ssh-web-00","hostname":"ssh-web-00.simtabi.com","user":"adm-imani",
 		"proxy":{"kind":"cloudflared"}}`); err != nil {

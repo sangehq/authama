@@ -19,7 +19,7 @@ const (
 // GitModes lists the modes in the order they are documented.
 var GitModes = []string{GitModeProfile, GitModeSSH, GitModeHTTPS}
 
-// GitDefaults configures `sshmgr git`. Absent, the mode is profile and no
+// GitDefaults configures `authama ssh git`. Absent, the mode is profile and no
 // `Host github.com` block is rendered, so a manifest without it renders as before.
 type GitDefaults struct {
 	// Mode is the default remote mode; empty means profile.
@@ -39,7 +39,7 @@ func (g *GitDefaults) EffectiveMode() string {
 	return g.Mode
 }
 
-// Hypervisors sshmgr can resolve a devbox's address through.
+// Hypervisors authama can resolve a devbox's address through.
 const (
 	HypervisorParallels = "parallels"
 	HypervisorVMPal     = "vmpal"
@@ -55,7 +55,7 @@ var Hypervisors = []string{HypervisorParallels, HypervisorVMPal, HypervisorVMwar
 	HypervisorUTM, HypervisorLima, HypervisorOrbStack, HypervisorPodman}
 
 // VMSpec marks a host as a local VM: its address comes from the hypervisor at
-// connect time (`sshmgr vm proxy`), because a VM's IP changes and a static
+// connect time (`authama ssh vm proxy`), because a VM's IP changes and a static
 // HostName goes stale.
 type VMSpec struct {
 	Hypervisor string `json:"hypervisor"`

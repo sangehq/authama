@@ -48,6 +48,9 @@ func newNotifyCmd() *cobra.Command {
 			if err := scheduler.Install(command, scheduler.Label); err != nil {
 				return err
 			}
+			// A job a release before 0.1.2 installed under the old label would
+			// fire beside this one.
+			scheduler.Remove(scheduler.LegacyLabel)
 			_, _ = fmt.Fprintf(c.OutOrStdout(), "installed scheduled notifier: %s\n", command)
 			return nil
 		},

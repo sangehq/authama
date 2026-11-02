@@ -17,14 +17,15 @@ Two features in a single static binary with no runtime dependencies:
   variables, never secrets.
 
 macOS, Linux and Windows are all first-class; OpenSSH is the only requirement
-for the SSH side. `sshmgr`, the original name, ships alongside `authama` as the same
-program, so existing scripts keep working. Coming from sshmgr 3.x or
-auth-token-manager? See the [migration guide](docs/migration.md).
+for the SSH side. `sshmgr`, the former name, still ships beside `authama` as a
+deprecated alias (same commands, plus a one-line notice on stderr) so existing
+scripts keep working; it will be removed in a future release. Coming from
+sshmgr 3.x or auth-token-manager? See the [migration guide](docs/migration.md).
 
 ## Install
 
 ```sh
-# macOS / Linux: installs authama and sshmgr, checksum-verified
+# macOS / Linux: installs authama (and the deprecated sshmgr alias), checksum-verified
 curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash
 authama doctor
 ```
@@ -32,10 +33,10 @@ authama doctor
 | Channel | Command |
 |---------|---------|
 | Windows (PowerShell) | `irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 \| iex` |
-| Homebrew | `brew install --cask simtabi/tap/sshmgr` |
-| Scoop | `scoop bucket add simtabi https://github.com/simtabi/scoop-bucket; scoop install simtabi/sshmgr` |
+| Homebrew | `brew install --cask simtabi/tap/authama` |
+| Scoop | `scoop bucket add simtabi https://github.com/simtabi/scoop-bucket; scoop install simtabi/authama` |
 | Go | `go install github.com/simtabi/authama/src/cmd/authama@latest` |
-| deb / rpm / apk | `sshmgr_linux_<arch>.{deb,rpm,apk}` from [Releases](https://github.com/simtabi/authama/releases) |
+| deb / rpm / apk | `authama_linux_<arch>.{deb,rpm,apk}` from [Releases](https://github.com/simtabi/authama/releases) |
 
 Every channel, pinning a version, a per-user install directory, and where
 per-user state lives are in [docs/installation.md](docs/installation.md). There is
@@ -172,7 +173,7 @@ else is in the [documentation index](#documentation).
 
 ## Community
 
-[Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [Code of conduct](CODE_OF_CONDUCT.md) · [Changelog](CHANGELOG.md)
+[Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [Code of conduct](code-of-conduct.md) · [Changelog](CHANGELOG.md)
 
 ## License
 

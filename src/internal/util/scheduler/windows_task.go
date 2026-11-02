@@ -34,3 +34,9 @@ func schtasksArgs(command, label string) []string {
 	return []string{"schtasks", "/Create", "/TN", label, "/TR", command,
 		"/SC", "DAILY", "/ST", notifyHour, "/F"}
 }
+
+// schtasksDeleteArgs is the argv that removes a task; /F skips the prompt for
+// the same reason as in schtasksArgs.
+func schtasksDeleteArgs(label string) []string {
+	return []string{"schtasks", "/Delete", "/TN", label, "/F"}
+}

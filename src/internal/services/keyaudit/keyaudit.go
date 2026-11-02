@@ -292,7 +292,7 @@ func (s *Service) untracked(owned map[manifest.KeyRef]bool) ([]Finding, map[mani
 			KeyName: strings.TrimSuffix(base, ".pub"),
 		}
 		// Ownership is by location, not by name alone: a declared key sitting in
-		// another directory than the manifest resolves is one sshmgr cannot find,
+		// another directory than the manifest resolves is one authama cannot find,
 		// which is what happens when profiles are moved into a category by hand.
 		expected := s.m.KeyPath(s.sshDir, ref)
 		misplaced := filepath.Dir(path) != filepath.Dir(expected)
@@ -360,7 +360,7 @@ var managedInSSHDir = map[string]bool{
 	"authorized_keys": true, "environment": true, "rc": true, "profiles": true,
 }
 
-// loose finds key-shaped files sitting directly in ~/.ssh: the pre-sshmgr keys a
+// loose finds key-shaped files sitting directly in ~/.ssh: the pre-authama keys a
 // user already had. Detection is by pairing (a file with a .pub sibling) or by a
 // .pub that parses as a public key - never by reading private key material.
 func (s *Service) loose() []Finding {

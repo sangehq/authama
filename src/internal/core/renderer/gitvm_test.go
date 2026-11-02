@@ -31,7 +31,7 @@ func pinSelf(t *testing.T, path string) {
 }
 
 func TestGitHubBlockRendersBeforeHostStar(t *testing.T) {
-	pinSelf(t, "/opt/homebrew/bin/sshmgr")
+	pinSelf(t, "/opt/homebrew/bin/authama")
 	out, err := RenderRootConfig(mustManifest(t, gitVMJSON), false)
 	if err != nil {
 		t.Fatal(err)
@@ -60,14 +60,14 @@ func TestNoGitProfileMeansNoGitHubBlock(t *testing.T) {
 	}
 }
 
-func TestVMHostGetsSshmgrProxyCommandAndOthersDoNot(t *testing.T) {
-	pinSelf(t, "/opt/homebrew/bin/sshmgr")
+func TestVMHostGetsOwnProxyCommandAndOthersDoNot(t *testing.T) {
+	pinSelf(t, "/opt/homebrew/bin/authama")
 	out, err := RenderRootConfig(mustManifest(t, gitVMJSON), false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out, `    ProxyCommand "/opt/homebrew/bin/sshmgr" vm proxy devbox`+"\n") {
-		t.Errorf("devbox lacks the sshmgr ProxyCommand:\n%s", out)
+	if !strings.Contains(out, `    ProxyCommand "/opt/homebrew/bin/authama" vm proxy devbox`+"\n") {
+		t.Errorf("devbox lacks the authama ProxyCommand:\n%s", out)
 	}
 	if n := strings.Count(out, "ProxyCommand"); n != 1 {
 		t.Errorf("%d ProxyCommand lines, want 1 (only the VM host)", n)
@@ -75,25 +75,25 @@ func TestVMHostGetsSshmgrProxyCommandAndOthersDoNot(t *testing.T) {
 }
 
 func TestProxyCommandQuoting(t *testing.T) {
-	pinSelf(t, `C:\Program Files\sshmgr\sshmgr.exe`)
+	pinSelf(t, `C:\Program Files\authama\authama.exe`)
 	got := ProxyCommandFor("devbox")
-	if got != `"C:\Program Files\sshmgr\sshmgr.exe" vm proxy devbox` {
+	if got != `"C:\Program Files\authama\authama.exe" vm proxy devbox` {
 		t.Errorf("backslashes must stay single (ssh does not unescape): %s", got)
 	}
-	if ProxyBinary(got) != `C:\Program Files\sshmgr\sshmgr.exe` {
+	if ProxyBinary(got) != `C:\Program Files\authama\authama.exe` {
 		t.Errorf("ProxyBinary(%s) = %q", got, ProxyBinary(got))
 	}
-	pinSelf(t, `/weird"dir/sshmgr`)
+	pinSelf(t, `/weird"dir/authama`)
 	if got := ProxyCommandFor("devbox"); got != `"authama" vm proxy devbox` {
 		t.Errorf("a path with a quote must fall back to the bare name: %s", got)
 	}
 	if ProxyBinary("ssh -W %h:%p jump") != "" {
-		t.Error("a foreign ProxyCommand is not sshmgr's")
+		t.Error("a foreign ProxyCommand is not authama's")
 	}
 }
 
 // Pinned against OpenSSH: plain github.com resolves to the configured key, and the VM alias to the
-// sshmgr ProxyCommand.
+// authama ProxyCommand.
 func TestSSHResolvesGitHubAndTheVMProxy(t *testing.T) {
 	if _, err := exec.LookPath("ssh"); err != nil {
 		t.Skip("no ssh client")
@@ -101,7 +101,7 @@ func TestSSHResolvesGitHubAndTheVMProxy(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("covered on Linux and macOS")
 	}
-	pinSelf(t, "/usr/local/bin/sshmgr")
+	pinSelf(t, "/usr/local/bin/authama")
 	out, err := RenderRootConfig(mustManifest(t, gitVMJSON), false)
 	if err != nil {
 		t.Fatal(err)
@@ -125,7 +125,7 @@ func TestSSHResolvesGitHubAndTheVMProxy(t *testing.T) {
 	if got := get("github.com", "identityfile"); !strings.HasSuffix(got, "/profiles/imanimanyara/imanimanyara_github-ed25519") {
 		t.Errorf("github.com identityfile = %q", got)
 	}
-	if got := get("devbox", "proxycommand"); !strings.Contains(got, "/usr/local/bin/sshmgr") || !strings.Contains(got, "vm proxy devbox") {
+	if got := get("devbox", "proxycommand"); !strings.Contains(got, "/usr/local/bin/authama") || !strings.Contains(got, "vm proxy devbox") {
 		t.Errorf("devbox proxycommand = %q", got)
 	}
 }

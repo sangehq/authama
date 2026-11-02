@@ -38,7 +38,7 @@ func warnDangling(out io.Writer, p paths.Paths, m *manifest.Manifest) {
 
 // recheck is the second half of asking before locking. A command that asks a
 // person first must not hold the lock while they read - that blocks every
-// other sshmgr command for as long as they take - so it asks unlocked, then
+// other authama command for as long as they take - so it asks unlocked, then
 // takes the lock here and works out again what its question showed. If that
 // moved, the person agreed to something that is no longer what would happen,
 // and nothing is done. A command that asks nobody (--yes, no terminal) takes

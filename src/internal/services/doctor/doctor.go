@@ -58,18 +58,18 @@ type Report struct {
 	// CLI, or no agent socket. Empty when no profile uses 1Password.
 	OnePassword []string
 	// StaleProxy lists rendered VM ProxyCommands whose authama binary no longer exists (an upgrade
-	// moved it); `sshmgr config render` rewrites them.
+	// moved it); `authama ssh config render` rewrites them.
 	StaleProxy []string
 	// ShadowedHosts lists managed aliases a foreign block above the managed
 	// block overrides: ssh reads it first, so the manifest's values never
-	// apply. sshmgr does not edit that content, so the user has to.
+	// apply. authama does not edit that content, so the user has to.
 	ShadowedHosts []string
 	// RawOptionOverlaps lists raw_options keys that duplicate a managed line.
 	// The rendered config already resolves the managed value; this is advice.
 	RawOptionOverlaps []string
 	// NeededTools lists commands the manifest relies on that are not on PATH: a
 	// VM host's hypervisor CLI (its address comes from it at connect time), and
-	// git once defaults.git configures `sshmgr git`.
+	// git once defaults.git configures `authama ssh git`.
 	NeededTools []string
 	// Clipboard is set when no clipboard tool is found. Advice only: `termius
 	// keys` then needs --print.
@@ -724,8 +724,8 @@ func sortedIntKeys(m map[string]int) []string {
 
 func jsonIndent(v any) ([]byte, error) { return json.MarshalIndent(v, "", "  ") }
 
-// staleProxies reads the rendered configs (root and every category's) for sshmgr's VM ProxyCommands
-// and reports each whose binary path is gone. A bare "sshmgr" resolves through PATH.
+// staleProxies reads the rendered configs (root and every category's) for this tool's VM ProxyCommands
+// and reports each whose binary path is gone. A bare name ("authama", or "sshmgr" from a release before 0.1.2) resolves through PATH.
 func staleProxies(ssh string, m *manifest.Manifest) []string {
 	files := []string{filepath.Join(ssh, "config")}
 	for _, c := range m.Categories() {

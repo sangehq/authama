@@ -35,7 +35,7 @@ func e2eHome(t *testing.T) (runner, string) {
 			t.Skipf("%s is required for the end-to-end flow", bin)
 		}
 	}
-	run, home := sshmgr(t)
+	run, home := authama(t)
 	if _, errOut, code := run("", "init"); code != 0 {
 		t.Fatalf("init exited %d: %s", code, errOut)
 	}

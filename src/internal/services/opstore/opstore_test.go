@@ -48,7 +48,7 @@ func TestCreateReturnsThePublicKeyAndNeverAsksForThePrivateOne(t *testing.T) {
 		t.Errorf("argv = %s, want %s", argv, want)
 	}
 	if strings.Contains(string(argv), "private") || strings.Contains(string(argv), "reveal") {
-		t.Errorf("sshmgr must never read a private key out of 1Password: %s", argv)
+		t.Errorf("authama must never read a private key out of 1Password: %s", argv)
 	}
 }
 

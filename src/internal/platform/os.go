@@ -17,7 +17,7 @@ func IsWindows() bool { return runtime.GOOS == "windows" }
 // IsLinux reports whether this is Linux.
 func IsLinux() bool { return runtime.GOOS == "linux" }
 
-// FirstClass reports whether this OS is one sshmgr is tested on. Elsewhere it
+// FirstClass reports whether this OS is one authama is tested on. Elsewhere it
 // still builds and mostly works, but the platform layer falls back to generic
 // behaviour and preflight says so.
 func FirstClass() bool { return IsMacOS() || IsLinux() || IsWindows() }

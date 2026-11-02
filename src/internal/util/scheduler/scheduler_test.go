@@ -7,10 +7,10 @@ import (
 )
 
 func TestBuildPlist(t *testing.T) {
-	p := buildPlist("ssh_manager.expiry", `"/opt/my apps/sshmgr" audit --notify`)
+	p := buildPlist(Label, `"/opt/my apps/authama" audit --notify`)
 	for _, want := range []string{
-		"<key>Label</key><string>ssh_manager.expiry</string>",
-		"        <string>/opt/my apps/sshmgr</string>", // quoted path stays one arg
+		"<key>Label</key><string>authama.expiry</string>",
+		"        <string>/opt/my apps/authama</string>", // quoted path stays one arg
 		"        <string>audit</string>",
 		"        <string>--notify</string>",
 		"<key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer>",
@@ -23,8 +23,8 @@ func TestBuildPlist(t *testing.T) {
 }
 
 func TestBuildService(t *testing.T) {
-	s := buildService("/x/sshmgr audit --notify")
-	if !strings.Contains(s, "ExecStart=/x/sshmgr audit --notify") {
+	s := buildService("/x/authama audit --notify")
+	if !strings.Contains(s, "ExecStart=/x/authama audit --notify") {
 		t.Errorf("service unit wrong:\n%s", s)
 	}
 	if !strings.Contains(buildService("a %p b"), "ExecStart=a %%p b") {
@@ -37,12 +37,23 @@ func TestShlexSplit(t *testing.T) {
 		in   string
 		want []string
 	}{
-		{`/usr/bin/sshmgr audit --notify`, []string{"/usr/bin/sshmgr", "audit", "--notify"}},
-		{`"/opt/my apps/sshmgr" audit`, []string{"/opt/my apps/sshmgr", "audit"}},
+		{`/usr/bin/authama audit --notify`, []string{"/usr/bin/authama", "audit", "--notify"}},
+		{`"/opt/my apps/authama" audit`, []string{"/opt/my apps/authama", "audit"}},
 	}
 	for _, c := range cases {
 		if got := shlexSplit(c.in); !reflect.DeepEqual(got, c.want) {
 			t.Errorf("shlexSplit(%q)=%v want %v", c.in, got, c.want)
 		}
+	}
+}
+
+// The job moved to a new label at 0.1.2; installing removes the old one, which
+// only works while the two differ.
+func TestLabels(t *testing.T) {
+	if Label != "authama.expiry" || LegacyLabel != "ssh_manager.expiry" {
+		t.Errorf("Label=%q LegacyLabel=%q", Label, LegacyLabel)
+	}
+	if got := schtasksDeleteArgs(LegacyLabel); !reflect.DeepEqual(got, []string{"schtasks", "/Delete", "/TN", "ssh_manager.expiry", "/F"}) {
+		t.Errorf("delete argv = %q", got)
 	}
 }

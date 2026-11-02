@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/simtabi/authama/src/internal/brand"
 )
 
 // Ports the exit-code half of v1's smoke tests, and closes the
@@ -16,7 +18,7 @@ import (
 // spawning a process". It can - it just has to build the binary and run it.
 //
 // Everything else in the suite tests packages. This tests the program: that
-// cmd/sshmgr links, that the cobra tree is reachable through it, and that the
+// cmd/authama links, that the cobra tree is reachable through it, and that the
 // exit codes a script or a cron job sees are the documented ones. The contract
 // is v1's CLI - 0 on success (:147 doctor's
 // `0 if report.ok else 1`), 1 on everything else (:59-62 _fail), 1 and silent on
@@ -25,9 +27,9 @@ import (
 // runner runs the built binary against an isolated home.
 type runner func(stdin string, args ...string) (stdout, stderr string, code int)
 
-// sshmgr builds the binary once and returns a runner over an isolated home,
+// authama builds the binary once and returns a runner over an isolated home,
 // plus that home, so a test can inspect the tree the binary produced.
-func sshmgr(t *testing.T) (runner, string) {
+func authama(t *testing.T) (runner, string) {
 	t.Helper()
 	if testing.Short() {
 		t.Skip("builds a binary")
@@ -35,13 +37,13 @@ func sshmgr(t *testing.T) (runner, string) {
 	if _, err := exec.LookPath("go"); err != nil {
 		t.Skip("no go toolchain to build with")
 	}
-	bin := filepath.Join(t.TempDir(), "sshmgr")
+	bin := filepath.Join(t.TempDir(), "authama")
 	if runtime.GOOS == "windows" {
 		bin += ".exe"
 	}
 	build := exec.Command("go", "build", "-o", bin, ".")
 	if out, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("building cmd/sshmgr: %v\n%s", err, out)
+		t.Fatalf("building cmd/authama: %v\n%s", err, out)
 	}
 
 	home := t.TempDir()
@@ -74,7 +76,7 @@ func sshmgr(t *testing.T) (runner, string) {
 }
 
 func TestTheBinaryReportsItsVersionAndExitsZero(t *testing.T) {
-	run, _ := sshmgr(t)
+	run, _ := authama(t)
 
 	for _, args := range [][]string{{"--version"}, {"version"}} {
 		out, errOut, code := run("", args...)
@@ -106,7 +108,7 @@ func TestTheBinaryReportsItsVersionAndExitsZero(t *testing.T) {
 // Every failure is exit 1 - there is no second failure code to distinguish, and
 // a script only needs to know whether it worked.
 func TestFailuresExitOneAndExplainThemselvesOnStderr(t *testing.T) {
-	run, _ := sshmgr(t)
+	run, _ := authama(t)
 
 	for _, tc := range []struct {
 		args []string
@@ -138,7 +140,7 @@ func TestInitReconcileDoctorRunEndToEnd(t *testing.T) {
 	if _, err := exec.LookPath("ssh-keygen"); err != nil {
 		t.Skip("ssh-keygen not on PATH")
 	}
-	run, home := sshmgr(t)
+	run, home := authama(t)
 
 	for _, args := range [][]string{
 		{"init"},
@@ -182,7 +184,7 @@ func TestInitReconcileDoctorRunEndToEnd(t *testing.T) {
 // its own: the user just answered the question, and "sshmgr: aborted" under
 // their own "n" reads like a fault rather than the answer they gave.
 func TestADeclinedConfirmationExitsOneAndSaysNothingExtra(t *testing.T) {
-	run, _ := sshmgr(t)
+	run, _ := authama(t)
 	if _, errOut, code := run("", "init"); code != 0 {
 		t.Fatalf("init exited %d: %s", code, errOut)
 	}
@@ -212,7 +214,7 @@ func TestADeclinedConfirmationExitsOneAndSaysNothingExtra(t *testing.T) {
 // .build/feature-check.sh that shelled out to an interpreter to validate it - the last
 // an executing interpreter anywhere in this repo's CI.
 func TestDoctorJSONIsMachineReadable(t *testing.T) {
-	run, _ := sshmgr(t)
+	run, _ := authama(t)
 	if _, errOut, code := run("", "init"); code != 0 {
 		t.Fatalf("init exited %d: %s", code, errOut)
 	}
@@ -248,7 +250,8 @@ func TestDoctorJSONIsMachineReadable(t *testing.T) {
 
 // cmd/authama is the primary binary and cmd/sshmgr its compatibility build.
 // They are one program: the same version line, the same groups, and both
-// accept the v3 top-level SSH spellings.
+// accept the v3 top-level SSH spellings. sshmgr is the deprecated name: it says
+// so, once, on stderr, and authama never does.
 func TestTheAuthamaAndSshmgrBinariesAreOneProgram(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds a binary")
@@ -256,25 +259,33 @@ func TestTheAuthamaAndSshmgrBinariesAreOneProgram(t *testing.T) {
 	if _, err := exec.LookPath("go"); err != nil {
 		t.Skip("no go toolchain to build with")
 	}
-	run, _ := sshmgr(t)
-	bin := filepath.Join(t.TempDir(), "authama")
+	run, _ := authama(t)
+	bin := filepath.Join(t.TempDir(), "sshmgr")
 	if runtime.GOOS == "windows" {
 		bin += ".exe"
 	}
-	if out, err := exec.Command("go", "build", "-o", bin, "../authama").CombinedOutput(); err != nil {
-		t.Fatalf("building cmd/authama: %v\n%s", err, out)
+	if out, err := exec.Command("go", "build", "-o", bin, "../sshmgr").CombinedOutput(); err != nil {
+		t.Fatalf("building cmd/sshmgr: %v\n%s", err, out)
 	}
 	for _, args := range [][]string{{"version"}, {"ssh", "--help"}, {"token", "--help"}, {"list", "--help"}} {
-		want, _, wc := run("", args...)
+		want, wantErr, wc := run("", args...)
 		cmd := exec.Command(bin, args...)
 		cmd.Env = append(os.Environ(), "HOME="+t.TempDir())
+		var stderr strings.Builder
+		cmd.Stderr = &stderr
 		got, err := cmd.Output()
 		if err != nil || wc != 0 {
-			t.Errorf("%v: authama %v, sshmgr exit %d", args, err, wc)
+			t.Errorf("%v: sshmgr %v, authama exit %d", args, err, wc)
 			continue
 		}
 		if string(got) != want {
-			t.Errorf("%v differs:\nauthama: %s\nsshmgr:  %s", args, got, want)
+			t.Errorf("%v differs:\nauthama: %s\nsshmgr:  %s", args, want, got)
+		}
+		if stderr.String() != brand.DeprecationNotice+"\n" {
+			t.Errorf("%v: sshmgr stderr = %q, want the deprecation notice alone", args, stderr.String())
+		}
+		if strings.Contains(wantErr, "deprecated") {
+			t.Errorf("%v: authama printed a deprecation notice: %q", args, wantErr)
 		}
 	}
 }

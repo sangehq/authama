@@ -1,7 +1,7 @@
 // Package tabler vendors the Tabler assets the web UI embeds: it resolves and
 // pins versions, downloads and integrity-checks the npm tarballs, cuts the
 // icon subset, and writes the licence texts, the hash manifest and the
-// repository's THIRD_PARTY_NOTICES.md. The tablervendor command drives it; the
+// repository's third-party-notices.md. The tablervendor command drives it; the
 // web package's tests use it to check the committed files still agree.
 package tabler
 
@@ -439,7 +439,7 @@ func (v *Vendor) Run(latest bool) error {
 	if err := writeFile(filepath.Join(v.AssetDir, "MANIFEST.sha256"), Manifest(vendored)); err != nil {
 		return err
 	}
-	if err := writeFile(filepath.Join(v.Root, "THIRD_PARTY_NOTICES.md"), Notices(licences)); err != nil {
+	if err := writeFile(filepath.Join(v.Root, "third-party-notices.md"), Notices(licences)); err != nil {
 		return err
 	}
 	v.Log("vendored %s %s, %s %s (%d icons); notices and hashes rewritten",
@@ -455,7 +455,7 @@ func CoreLicenceURL(version string) string {
 }
 
 // Licences pairs each vendored package with its licence text, keyed by the
-// file name under LICENSES/. The order is the order THIRD_PARTY_NOTICES.md
+// file name under LICENSES/. The order is the order third-party-notices.md
 // lists them in.
 func Licences(vers Versions, texts map[string][]byte) []Licence {
 	return []Licence{
@@ -497,7 +497,7 @@ func Manifest(files map[string][]byte) []byte {
 	return b.Bytes()
 }
 
-// Notices renders THIRD_PARTY_NOTICES.md from the licence texts.
+// Notices renders third-party-notices.md from the licence texts.
 func Notices(ls []Licence) []byte {
 	var b bytes.Buffer
 	b.WriteString("# Third-party notices\n\n")

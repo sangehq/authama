@@ -9,6 +9,48 @@ auth-token-manager merged in. It has two features, under two groups:
 `doctor`, `init`, `migrate`, `settings`, `history`, `serve`, `tui` and
 `version` stay at the top level, because they cover both.
 
+## To 0.1.2: authama everywhere, sshmgr deprecated
+
+0.1.2 moves the last places that still said `sshmgr` - release assets, packages, the Homebrew cask
+and the Scoop manifest - to `authama`. Your config, keys and `~/.ssh` need nothing.
+
+| What | 0.1.1 and earlier | 0.1.2 |
+|---|---|---|
+| `sshmgr` binary | the same program | still installed, still runs every command, but prints a one-line deprecation notice on stderr (not for `vm proxy` or completion); it will be removed in a future release |
+| Release assets | `sshmgr_<os>_<arch>.tar.gz`/`.zip`, `sshmgr_linux_<arch>.{deb,rpm,apk}` | `authama_*` (the bare `sshmgr_<os>_<arch>` binaries are still attached) |
+| Homebrew | `brew install --cask simtabi/tap/sshmgr` | `brew install --cask simtabi/tap/authama`; the tap renames `sshmgr` to `authama` |
+| Scoop | `simtabi/sshmgr` | `simtabi/authama`; `simtabi/sshmgr` is still published, deprecated |
+| deb / rpm / apk | package `sshmgr` | package `authama`, which replaces `sshmgr` |
+| `known_hosts` tag | `sshmgr` | `authama`; old `sshmgr` tags are still recognized |
+| Expiry reminder job | `ssh_manager.expiry` | `authama.expiry`; `notify install` removes the old job |
+| Remote lock and temp files on servers | `.ssh-manager.lock`, `authorized_keys.ssh-manager.*` | `.authama.lock`, `authorized_keys.authama.*` |
+| VM `ProxyCommand` | the binary that rendered it | always `authama` |
+
+To move over:
+
+```sh
+# Homebrew: the rename is picked up on update; if it is not, swap the casks
+brew update && brew upgrade
+brew list --cask sshmgr >/dev/null 2>&1 && brew uninstall --cask sshmgr && brew install --cask simtabi/tap/authama
+
+# Scoop
+scoop uninstall sshmgr; scoop install simtabi/authama
+
+# deb / rpm / apk: install the authama package; it replaces sshmgr
+sudo apt install ./authama_linux_amd64.deb
+
+# install.sh / install.ps1 / go install: nothing changes, they install authama
+
+# then, once:
+authama ssh config render        # rewrites VM ProxyCommand lines to authama
+authama ssh notify install       # only if you use expiry reminders: moves the job to its new name
+authama doctor
+```
+
+Then replace `sshmgr` with `authama` in scripts and aliases (top-level SSH verbs become
+`authama ssh <verb>`; the old spellings keep working). Deploy from 0.1.2 on every machine that
+writes to the same server, since the old and new remote lock names do not exclude each other.
+
 ## To 0.1.1: the authama config home and AUTHAMA_* names
 
 0.1.1 finishes the rename. What changes, and what happens on its own:
@@ -59,14 +101,14 @@ Nothing you have stops working.
 
 | What | Before | Now |
 |---|---|---|
-| Binary | `sshmgr` | `authama`; `sshmgr` still ships beside it and is the same program |
+| Binary | `sshmgr` | `authama`; `sshmgr` still ships beside it as a deprecated alias ([0.1.2](#to-012-authama-everywhere-sshmgr-deprecated)) |
 | SSH verbs | `sshmgr reconcile`, `sshmgr host add …` | `authama ssh reconcile`, `authama ssh host add …`. The top-level spellings (`authama reconcile`, `sshmgr reconcile`) still work; they are hidden from help |
 | Shared verbs | `sshmgr doctor`, `sshmgr serve` | `authama doctor`, `authama serve` |
 | `ui` | alias of `serve` | still works, deprecated: use `serve` (web) or `tui` (terminal) |
 | Config home | `~/.config/ssh-manager` | `~/.config/authama` from 0.1.1, copied in on the first run ([above](#to-011-the-authama-config-home-and-authama_-names)) |
 | Variables | `SSH_MANAGER_*`, `SSHMGR_DEV_ROOT` | `AUTHAMA_*` from 0.1.1; the old names still work, with a notice |
-| `~/.ssh` | managed-block markers, `known_hosts` tags | the `known_hosts` tags are unchanged; the managed block's markers are rewritten under the authama name on the next render, with no other diff |
-| `vm` ProxyCommand | `sshmgr vm proxy …` | unchanged; `sshmgr` stays installed for it |
+| `~/.ssh` | managed-block markers, `known_hosts` tags | the managed block's markers are rewritten under the authama name on the next render, with no other diff; new `known_hosts` pins are tagged `authama` from 0.1.2, and `sshmgr`-tagged ones are still recognized |
+| `vm` ProxyCommand | `sshmgr vm proxy …` | keeps working, since `sshmgr` stays installed; the next `authama ssh config render` points it at `authama` |
 | Repository and Go module | `github.com/simtabi/ssh-manager`, module `github.com/simtabi/ssh-manager/src/v3` | `github.com/simtabi/authama`, module `github.com/simtabi/authama/src` (v3.6.1 alone was published as `.../authama/src/v3`). GitHub redirects the old repository URLs, so old clones and the old `install.sh`/`install.ps1` URLs keep working |
 | Version | 3.6.1 | **0.1.0**: authama restarted its version numbers. The 3.x tags and GitHub releases were removed; their history is in the [CHANGELOG](../CHANGELOG.md#pre-010-history-formerly-ssh-manager-1x361-and-auth-token-manager-0x). A package manager may treat 0.1.0 as older than 3.6.x; see below |
 | Install | `install.sh`, `install.ps1`, release archives | the same installers and archives now carry both binaries (so do the Homebrew, Scoop, winget and deb/rpm/apk packages, once [release](release.md) publishes them) |
@@ -76,8 +118,8 @@ may leave you on 3.6.x. If `authama version` still says 3.6.x after an upgrade,
 reinstall once:
 
 ```sh
-brew reinstall --cask simtabi/tap/sshmgr                  # Homebrew
-scoop update; scoop uninstall sshmgr; scoop install simtabi/sshmgr   # Scoop
+brew reinstall --cask simtabi/tap/authama                 # Homebrew
+scoop update; scoop uninstall sshmgr; scoop install simtabi/authama  # Scoop
 go install github.com/simtabi/authama/src/cmd/authama@latest         # Go: the new module path
 ```
 

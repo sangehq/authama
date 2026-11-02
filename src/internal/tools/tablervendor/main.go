@@ -7,7 +7,7 @@
 //
 // Both download the npm tarballs, verify each against the registry's sha512
 // integrity before extracting anything, and rewrite every vendored file, the
-// licence texts, MANIFEST.sha256 and the repository's THIRD_PARTY_NOTICES.md
+// licence texts, MANIFEST.sha256 and the repository's third-party-notices.md
 // together, so a version can never move without its notices and hashes.
 package main
 

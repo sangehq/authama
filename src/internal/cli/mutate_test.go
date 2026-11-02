@@ -66,7 +66,7 @@ func configText(t *testing.T, p paths.Paths) string {
 }
 
 // The invariant: a command that changes the manifest leaves ~/.ssh/config
-// matching it. Before, every edit verb printed "run sshmgr reconcile to apply"
+// matching it. Before, every edit verb printed "run authama reconcile to apply"
 // and left the file stale, so the tool finished by creating exactly the drift
 // that `diff` and `doctor` then reported.
 func TestManifestEditsRenderTheConfig(t *testing.T) {

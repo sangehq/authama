@@ -44,7 +44,7 @@ func writeArchiveWith(t *testing.T, members [][2]string) string {
 // it, so it has to be well formed.
 var privKeyBody = testOpenSSHKey("none")
 
-// A bundle carries keys and the manifest, not files sshmgr renders from the
+// A bundle carries keys and the manifest, not files authama renders from the
 // manifest: a rendered category config is rebuilt on restore, and carrying it
 // let a forged bundle plant a config the root config Includes. A key that
 // happens to be named config is still a key, and is still bundled.

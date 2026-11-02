@@ -1,4 +1,4 @@
-// Package platform isolates the OS-specific behaviour sshmgr needs, so the rest
+// Package platform isolates the OS-specific behaviour authama needs, so the rest
 // of the tree can stay free of runtime.GOOS branches: terminal handling for
 // reading secrets without echoing them (here), and the OS predicates every other
 // package asks its questions through (os.go).

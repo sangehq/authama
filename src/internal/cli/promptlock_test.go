@@ -15,7 +15,7 @@ import (
 )
 
 // W2: a command that asks a person must not hold the lock while they read,
-// because every other sshmgr command waits on it for as long as they take.
+// because every other authama command waits on it for as long as they take.
 // These tests say a person is at the terminal and answer from a reader that
 // notes, at the moment it is read, whether the lock is held.
 

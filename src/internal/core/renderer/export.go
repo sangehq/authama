@@ -58,7 +58,7 @@ func (p ExportPaths) expandHost(h RenderHost) RenderHost {
 }
 
 // FlatHeader opens a flat export. It is deliberately not the managed header:
-// sshmgr owns the files it renders under ~/.ssh, and a copy of an export
+// authama owns the files it renders under ~/.ssh, and a copy of an export
 // carrying that header would be treated as one of them.
 const FlatHeader = "# authama flat export - every host inline, absolute paths, no Include.\n" +
 	"# Generated from the manifest by `authama ssh config export --flat`; ssh does not read this file\n" +
@@ -124,7 +124,7 @@ type TermiusExport struct {
 // row per host Termius can reach: group = profile, label = alias, tags = the
 // host's tags. Two kinds are left out and reported:
 //
-//   - VM hosts, which are reached only through sshmgr's ProxyCommand, which
+//   - VM hosts, which are reached only through authama's ProxyCommand, which
 //     Termius ignores (its docs say so), so a row would be a dead host;
 //   - git hosts (user git, or a github or gitlab provider), which are not
 //     shells, unless IncludeGit is set;

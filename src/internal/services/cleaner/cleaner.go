@@ -2,9 +2,9 @@
 // for hosts the manifest no longer has, stale inventory records, and
 // interrupted-write residue.
 //
-// Only lines sshmgr wrote (or was explicitly asked to adopt) are ever removed.
+// Only lines authama wrote (or was explicitly asked to adopt) are ever removed.
 // A pin the user made by hand is left alone, because a trust store is not
-// sshmgr's to tidy - and a pin for a host any profile still resolves survives
+// authama's to tidy - and a pin for a host any profile still resolves survives
 // too, since pruning is reference counted rather than owned.
 package cleaner
 
@@ -20,7 +20,7 @@ import (
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
-// Run is `sshmgr clean` after its confirmation, with the lock held. With
+// Run is `authama ssh clean` after its confirmation, with the lock held. With
 // dryRun it reports and touches nothing. beforeWrite runs once, after the
 // report is worked out and before anything is changed.
 func Run(p paths.Paths, out io.Writer, adopt, dryRun bool, beforeWrite func()) error {

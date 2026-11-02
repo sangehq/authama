@@ -24,7 +24,7 @@ type Target struct {
 	// Unattended is set when nobody can answer a prompt - a deploy started
 	// from the web UI. ssh and ssh-copy-id then run with stdin closed and
 	// BatchMode=yes, so a password prompt fails at once instead of reaching
-	// the terminal sshmgr serve was started from, and their output goes
+	// the terminal authama serve was started from, and their output goes
 	// here. nil keeps the terminal, where a password can be typed (W12).
 	Unattended io.Writer
 }

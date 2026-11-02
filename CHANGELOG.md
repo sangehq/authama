@@ -6,6 +6,44 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-02
+
+The final rename: authama is the only primary name. Release assets, packages, the Homebrew cask and
+the Scoop manifest are all `authama`; `sshmgr` remains only as a deprecated alias that still runs
+every command. Upgrading is covered in [docs/migration.md](docs/migration.md#to-012-authama-everywhere-sshmgr-deprecated).
+
+### Changed
+
+- **Release assets are named `authama_*`**: archives (`authama_<os>_<arch>.tar.gz`/`.zip`), the
+  bare binaries, the Linux packages (`authama_linux_<arch>.{deb,rpm,apk}`) and the source tarball
+  (`authama_<version>_source.tar.gz`). The bare `sshmgr_<os>_<arch>` binaries are still attached for
+  the deprecated alias. `install.sh` and `install.ps1` fetch `authama` and treat `sshmgr` as
+  optional; against a release from before 0.1.2 they still fall back to the old asset names.
+- **The Linux packages are named `authama`** and declare `Replaces`/`Conflicts`/`Provides: sshmgr`,
+  so installing one upgrades an installed `sshmgr` package in place.
+- **Homebrew: the cask is `simtabi/tap/authama`.** The tap maps `sshmgr` to `authama`
+  (`cask_renames.json`), and the `sshmgr` cask is gone.
+- **Scoop: the manifest is `simtabi/authama`.** `simtabi/sshmgr` is still published, marked
+  deprecated, and tells you to switch on install (Scoop has no renames).
+- **`sshmgr` is deprecated.** It runs the same commands but prints one line on stderr pointing at
+  `authama`, except for `vm proxy` (ssh reads its stderr) and shell completion. It will be removed in
+  a future release.
+- **VM `ProxyCommand` points at `authama`**, even when the config is rendered through `sshmgr`: the
+  `authama` beside it, else the one on `PATH`. Run `authama ssh config render` once to rewrite older
+  lines.
+- **`known_hosts` pins are tagged `authama`.** Pins tagged `sshmgr` by earlier releases are still
+  recognized as this tool's own (`clean`, `known-hosts show`, pruning).
+- **The expiry reminder job is `authama.expiry`.** `authama ssh notify install` removes the old `ssh_manager.expiry` job (launchd, systemd or cron, or the
+  Windows scheduled task) after installing the new one.
+- **The remote `authorized_keys` lock, temp and backup files are `~/.ssh/.authama.lock`,
+  `authorized_keys.authama.XXXXXX` and `authorized_keys.authama.bak.*`** (were `ssh-manager`). An older release running against the same server at the same moment does not
+  share the lock, so upgrade every machine that deploys to a shared server.
+- Web UI and docs show `AUTHAMA_AGE_RECIPIENT` and `authama` throughout; the remaining
+  `sshmgr`/`ssh-manager` spellings are the deprecated alias and the migration and compatibility
+  paths.
+- Markdown file names are lowercase: `code-of-conduct.md`, `third-party-notices.md` (in every
+  archive) and `.github/pull_request_template.md`.
+
 ## [0.1.1] - 2026-11-02
 
 The rename to authama is complete: one config home, `AUTHAMA_*` variable names, and settings
@@ -1292,6 +1330,7 @@ generalised beyond Composer, packaged for PyPI, and given an interactive UI.
 ##### Security
 - Owner-only hardening now applies on Windows (ACL), not just POSIX `chmod`.
 
-[Unreleased]: https://github.com/simtabi/authama/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/simtabi/authama/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/simtabi/authama/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/simtabi/authama/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/simtabi/authama/releases/tag/v0.1.0

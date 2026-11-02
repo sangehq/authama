@@ -12,7 +12,7 @@ It opens a browser at `http://127.0.0.1:7822/?token=…` and listens on this mac
 on a sandbox first, so nothing touches your real `~/.ssh`:
 
 ```sh
-authama --dev-root ~/sshmgr-sandbox serve
+authama --dev-root ~/authama-sandbox serve
 ```
 
 ## Make a change

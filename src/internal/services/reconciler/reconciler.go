@@ -478,7 +478,7 @@ func (r *Reconciler) mintInOnePassword(ref manifest.KeyRef, pub string, overwrit
 //
 // The key forms matter because `keygen` is the one command whose whole purpose
 // is a single key, and it was the only selector in the tool that would not
-// accept one - `sshmgr keygen work/work_gh-ed25519` was an unknown target.
+// accept one - `authama ssh keygen work/work_gh-ed25519` was an unknown target.
 func planMatches(selector string, ref manifest.KeyRef, hosts []manifest.Host) bool {
 	if selector == "" || selector == ref.Profile ||
 		selector == ref.KeyName || selector == ref.String() {

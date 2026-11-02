@@ -166,7 +166,7 @@ func mintPair(t *testing.T, path, comment string) string {
 }
 
 // Detail exists to answer the one question a Row cannot: is the key on disk
-// still the key the inventory is describing? A key regenerated outside sshmgr -
+// still the key the inventory is describing? A key regenerated outside authama -
 // a bare ssh-keygen over the same path, a restore from somewhere else - leaves
 // the record's deployments and expiry describing a key that is gone, while every
 // listing still shows them as current.

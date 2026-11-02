@@ -274,7 +274,7 @@ func hashFile(path string) string {
 }
 
 // warn says once per process that history is not being recorded. The command
-// itself carries on: audit.log still has the events, and `sshmgr history`
+// itself carries on: audit.log still has the events, and `authama history`
 // reports the shortfall.
 func warn(err error) {
 	if warned {

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# ssh-manager fixkeys - recover authorized_keys from a provider web/recovery console.
+# authama fixkeys - recover authorized_keys from a provider web/recovery console.
 #
 # Use this when you're locked out of SSH and the only way in is the provider's
 # console (DigitalOcean Recovery Console, GCP serial/browser SSH, Hetzner, ...).

@@ -55,11 +55,11 @@ func TestServeWritesTheSecretAndOneNewline(t *testing.T) {
 }
 
 func TestEnvironCarriesTheHandshake(t *testing.T) {
-	env := Environ("/usr/local/bin/sshmgr", "s3cret")
+	env := Environ("/usr/local/bin/authama", "s3cret")
 	got := asMap(t, env)
 
 	for name, want := range map[string]string{
-		"SSH_ASKPASS":         "/usr/local/bin/sshmgr",
+		"SSH_ASKPASS":         "/usr/local/bin/authama",
 		"SSH_ASKPASS_REQUIRE": "force",
 		modeVar:               "1",
 		secretVar:             "s3cret",
@@ -85,7 +85,7 @@ func TestEnvironDropsInheritedValuesRatherThanShadowingThem(t *testing.T) {
 	t.Setenv("SSH_ASKPASS", "/tmp/evil")
 	t.Setenv("SSH_ASKPASS_REQUIRE", "never")
 
-	env := Environ("/usr/local/bin/sshmgr", "the-real-secret")
+	env := Environ("/usr/local/bin/authama", "the-real-secret")
 
 	counts := map[string]int{}
 	for _, kv := range env {
@@ -102,7 +102,7 @@ func TestEnvironDropsInheritedValuesRatherThanShadowingThem(t *testing.T) {
 	if got[secretVar] != "the-real-secret" {
 		t.Errorf("secret = %q, want the one we passed, not the inherited value", got[secretVar])
 	}
-	if got["SSH_ASKPASS"] != "/usr/local/bin/sshmgr" {
+	if got["SSH_ASKPASS"] != "/usr/local/bin/authama" {
 		t.Errorf("SSH_ASKPASS = %q; an inherited helper path must not survive", got["SSH_ASKPASS"])
 	}
 }
@@ -115,7 +115,7 @@ func TestSecretTravelsOnlyInTheEnvironment(t *testing.T) {
 	// again in the environment, and a high-entropy literal next to the word
 	// "secret" is what a secret scanner is built to flag.
 	const secret = "THE-TEST-VALUE"
-	env := Environ("/usr/local/bin/sshmgr", secret)
+	env := Environ("/usr/local/bin/authama", secret)
 
 	found := false
 	for _, kv := range env {

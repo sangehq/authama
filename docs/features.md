@@ -65,7 +65,7 @@ project-local mode. See [installation.md](installation.md) for the full layout.
 | `key regen-pub [selectors...] [--category] [--all] [--dry-run]` | Rebuild `.pub` files from the private key or the 1Password item; reports unchanged / created / rewritten / skipped. Never changes a private key. | U |
 | `key add <profile> <name> [--type] [--rotate-after-days] [--host] [--passphrase]` | Declare a key on a profile and mint it. Without `--host` the key is minted **unwired**: it exists and nothing uses it, which `doctor` then reports. | U |
 | `key delete <profile/key> [--purge] [--revoke] [--yes] [--no-key-backup]` | Remove the declaration and the inventory record. **Refuses while any host still resolves to the key** — a `Host` block pointing at a missing `IdentityFile` fails as a bare "Permission denied (publickey)" with nothing naming the cause. `--purge` also deletes the files. | U |
-| `clean [--dry-run] [--adopt] [-y]` | Prune stale `known_hosts` pins, stale inventory records and write residue. Only removes pins tagged `sshmgr`; `--adopt` opts an untagged pin that matches a manifest host into management, since an untagged pin is presumed to be yours. | U |
+| `clean [--dry-run] [--adopt] [-y]` | Prune stale `known_hosts` pins, stale inventory records and write residue. Only removes pins tagged `authama` (or `sshmgr`, from releases before 0.1.2); `--adopt` opts an untagged pin that matches a manifest host into management, since an untagged pin is presumed to be yours. | U |
 
 ## Inspect
 
@@ -124,7 +124,7 @@ bounded SSH-level reachability probe first, so a down or VPN-gated host (includi
 | `git status [PATH...]` | Each checkout's GitHub remote mode (profile, ssh, https), owner/repo and profile. | U·F |
 | `git use [MODE] [PATH...] [--mode] [--profile] [--dry-run] [--yes]` | Point checkouts' origin at profile SSH, plain SSH or HTTPS; the new URL must pass `git ls-remote` before origin is rewritten. | U·F |
 | `vm list` | Every installed hypervisor's VMs, and which manifest host uses each; missing hypervisors say so. | U·F |
-| `vm add PROFILE ALIAS --hypervisor H --vm NAME -u USER [--key-name] [-y]` | Add a local VM as a host; its address is resolved at connect time through `ProxyCommand "<sshmgr>" vm proxy ALIAS`. | U·F |
+| `vm add PROFILE ALIAS --hypervisor H --vm NAME -u USER [--key-name] [-y]` | Add a local VM as a host; its address is resolved at connect time through `ProxyCommand "<authama>" vm proxy ALIAS`. | U·F |
 | `vm docker-context ALIAS` | Create or update a Docker context `ssh://ALIAS` for a VM host. | U·F |
 | `notify install\|test [-y]` | Scheduled desktop expiry reminders (launchd / systemd-user-or-cron / schtasks). | U·F |
 | `tui` (or a bare `authama` on a terminal) | Interactive arrow-key UI over the whole facade, SSH and auth tokens. | U |

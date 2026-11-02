@@ -42,7 +42,7 @@
         <table class="table table-vcenter card-table">
           <caption class="visually-hidden">known_hosts lines for {{.Token}}</caption>
           <thead><tr><th scope="col">Type</th><th scope="col">Fingerprint</th><th scope="col">Form</th><th scope="col">Owner</th></tr></thead>
-          <tbody>{{range .Pins}}<tr><td>{{if .Marker}}{{.Marker}} {{end}}{{.Keytype}}</td><td class="text-break"><code>{{.Fingerprint}}</code></td><td>{{if .Hashed}}hashed{{else}}plaintext{{end}}</td><td>{{if .Tagged}}sshmgr{{else}}user-owned{{end}}</td></tr>{{end}}</tbody>
+          <tbody>{{range .Pins}}<tr><td>{{if .Marker}}{{.Marker}} {{end}}{{.Keytype}}</td><td class="text-break"><code>{{.Fingerprint}}</code></td><td>{{if .Hashed}}hashed{{else}}plaintext{{end}}</td><td>{{if .Tagged}}authama{{else}}user-owned{{end}}</td></tr>{{end}}</tbody>
         </table>
       </div>
       {{else}}<div class="card-body text-secondary">Not pinned. Run <code>authama ssh knownhosts pin {{.Detail.Alias}}</code> in a terminal.</div>{{end}}

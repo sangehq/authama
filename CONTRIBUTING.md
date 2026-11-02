@@ -3,7 +3,7 @@
 Where this file is silent, the [Simtabi contributing guide](https://github.com/simtabi/.github/blob/HEAD/CONTRIBUTING.md) applies.
 
 Thanks for your interest! Authentication Access Manager (`authama`, also
-installed under its original name `sshmgr`) is a Simtabi LLC open-source project.
+installed under its former name `sshmgr` as a deprecated alias) is a Simtabi LLC open-source project.
 
 ## Ground rules (the invariants)
 
@@ -24,7 +24,7 @@ around it.
 
 ```sh
 git clone https://github.com/simtabi/authama && cd authama
-make build               # -> build/authama and build/sshmgr (empties build/ first, every time)
+make build               # -> build/authama and build/sshmgr (the deprecated alias) (empties build/ first, every time)
 make doctor              # verify the environment, using the binary you just built
 ```
 
@@ -107,7 +107,7 @@ not one per module — and nothing goes anywhere else:
 | Path | What | Tracked |
 |---|---|---|
 | `build/targets.txt` | the release target matrix | yes |
-| `build/sshmgr` | `make build` output | no |
+| `build/authama`, `build/sshmgr` | `make build` output (sshmgr is the deprecated alias) | no |
 | `build/dist/` | GoReleaser and `src/scripts/build-all.sh` artifacts | no |
 
 `make clean` empties it, keeping `targets.txt`. There was a `bin/` alongside it

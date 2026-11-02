@@ -27,7 +27,7 @@ import (
 // Precedent: internal/cli/exit_test.go::TestNoCommandCallsOsExit already reads
 // this package's own source for the same kind of guarantee.
 
-// repoRoot is two levels up from cmd/sshmgr.
+// repoRoot is two levels up from cmd/authama.
 func repoRoot(t *testing.T) string {
 	t.Helper()
 	root, err := filepath.Abs(filepath.Join("..", ".."))
@@ -160,7 +160,7 @@ func TestTheLayersPointOneWay(t *testing.T) {
 // nowhere for one to hide. One CLI framework and one database driver, and
 // everything else the binary links is their own closure.
 //
-// It asks the toolchain what ./cmd/sshmgr links rather than parsing go.mod,
+// It asks the toolchain what ./cmd/authama links rather than parsing go.mod,
 // because the two answer different questions. go.mod records test requirements
 // too - surface_test.go imports pflag to name cobra's own flag type - and a
 // test-only requirement says nothing about what ships. The go.mod version of
@@ -170,7 +170,7 @@ func TestTheBinaryLinksOnlyItsTwoChosenDependencies(t *testing.T) {
 	if _, err := exec.LookPath("go"); err != nil {
 		t.Skip("no go toolchain")
 	}
-	cmd := exec.Command("go", "list", "-deps", "-f", "{{with .Module}}{{.Path}}{{end}}", "./cmd/sshmgr")
+	cmd := exec.Command("go", "list", "-deps", "-f", "{{with .Module}}{{.Path}}{{end}}", "./cmd/authama")
 	cmd.Dir = repoRoot(t)
 	out, err := cmd.Output()
 	if err != nil {
@@ -265,20 +265,20 @@ func TestTheToolRunsOnlyTheBinariesItDeclares(t *testing.T) {
 		// Windows ACLs.
 		"icacls",
 		// macOS: opens a provider's key page when a deploy must be done by hand,
-		// and `sshmgr serve`'s address; xdg-open and rundll32 open it on Linux and Windows.
+		// and `authama serve`'s address; xdg-open and rundll32 open it on Linux and Windows.
 		"open", "xdg-open", "rundll32",
-		// git: `sshmgr git` reads and rewrites origin, after proving the new URL with ls-remote.
+		// git: `authama ssh git` reads and rewrites origin, after proving the new URL with ls-remote.
 		"git",
-		// docker: `sshmgr vm docker-context` creates or updates an ssh:// context.
+		// docker: `authama ssh vm docker-context` creates or updates an ssh:// context.
 		"docker",
-		// cloudflared: looked up to write a Cloudflare Access host's ProxyCommand; ssh runs it, sshmgr never does.
+		// cloudflared: looked up to write a Cloudflare Access host's ProxyCommand; ssh runs it, authama never does.
 		"cloudflared",
-		// Hypervisor CLIs (`sshmgr vm`), each optional: a missing one is listed as not installed.
+		// Hypervisor CLIs (`authama ssh vm`), each optional: a missing one is listed as not installed.
 		"prlctl", "vmpal", "vmrun", "utmctl", "limactl", "orb", "podman",
-		// Itself: the scheduled notifier runs `sshmgr audit --notify`, and it
-		// prefers an installed sshmgr on PATH over the running binary's own path
-		// so the job survives the binary moving.
-		"sshmgr",
+		// Itself: the scheduled notifier runs `authama audit --notify`, and it
+		// prefers an installed authama (else the deprecated sshmgr) on PATH over
+		// the running binary's own path so the job survives the binary moving.
+		"authama", "sshmgr",
 	} {
 		declared[b] = true
 	}

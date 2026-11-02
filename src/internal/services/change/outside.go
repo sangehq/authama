@@ -29,7 +29,7 @@ import (
 // The rest act outside the home altogether, in OnApply, and say what they will
 // do in Effects, which the confirmation is bound to.
 
-// HostApply is `sshmgr host apply <profile> --host <spec>... --yes`, with
+// HostApply is `authama ssh host apply <profile> --host <spec>... --yes`, with
 // --create-profile or --category for a profile that does not exist yet.
 // Each spec is `<alias> <host>[:port] <user> [role]`.
 func HostApply(profile string, specs []editor.HostSpec, create bool, category string) Change {
@@ -83,7 +83,7 @@ func HostApply(profile string, specs []editor.HostSpec, create bool, category st
 	}
 }
 
-// ProfileCategory is `sshmgr profile edit <name> --category <category>`: it
+// ProfileCategory is `authama ssh profile edit <name> --category <category>`: it
 // moves the profile's key directory, private keys and all, and the inventory
 // records follow. "" returns it to the flat layout.
 func ProfileCategory(name, category string) Change {
@@ -116,7 +116,7 @@ func ProfileCategory(name, category string) Change {
 	}
 }
 
-// ProfilePurge is `sshmgr profile delete <name> --purge --yes`: everything
+// ProfilePurge is `authama ssh profile delete <name> --purge --yes`: everything
 // ProfileDelete removes, and the profile's key files too. It never runs
 // without the encrypted backup the CLI writes first; the web has no
 // --no-key-backup.
@@ -159,7 +159,7 @@ func backupReady() error {
 	return nil
 }
 
-// Clean is `sshmgr clean --yes [--adopt]`: stale pins, stale inventory
+// Clean is `authama ssh clean --yes [--adopt]`: stale pins, stale inventory
 // records and write residue. The residue is swept by the snapshot apply takes
 // first, as the CLI's is.
 func Clean(adopt bool) Change {
@@ -182,7 +182,7 @@ func Clean(adopt bool) Change {
 	}
 }
 
-// Bundle is `sshmgr bundle [--keep N]`: an age-encrypted backup of ~/.ssh
+// Bundle is `authama ssh bundle [--keep N]`: an age-encrypted backup of ~/.ssh
 // and the config, written to the config home's dist/. It takes no snapshot,
 // as the CLI's does not: it changes nothing a snapshot would hold.
 func Bundle(keep int) Change {
@@ -225,7 +225,7 @@ func Bundle(keep int) Change {
 	}
 }
 
-// VMDockerContext is `sshmgr vm docker-context <alias>`: create, or update,
+// VMDockerContext is `authama ssh vm docker-context <alias>`: create, or update,
 // the Docker context ssh://<alias> for a VM host.
 func VMDockerContext(alias string) Change {
 	return Change{
@@ -256,7 +256,7 @@ func VMDockerContext(alias string) Change {
 	}
 }
 
-// NotifyTest is `sshmgr notify test`: one test desktop notification.
+// NotifyTest is `authama ssh notify test`: one test desktop notification.
 func NotifyTest() Change {
 	return Change{
 		Command: "notify test", NoSnapshot: true,
@@ -279,7 +279,7 @@ func NotifyTest() Change {
 	}
 }
 
-// AuditNotify is the --notify half of `sshmgr audit --notify`: the desktop
+// AuditNotify is the --notify half of `authama ssh audit --notify`: the desktop
 // alert for keys that need attention, if one is due. It is gated by the same
 // daily or weekly cadence, so asking twice in a day sends one.
 func AuditNotify() Change {

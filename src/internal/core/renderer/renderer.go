@@ -65,7 +65,7 @@ type RenderHost struct {
 	IdentityAgent string
 	KnownHosts    string
 	RawOptions    manifest.OrderedOptions
-	// ProxyCommand is set by sshmgr for a VM host (never from raw_options, which may not hold one).
+	// ProxyCommand is set by authama for a VM host (never from raw_options, which may not hold one).
 	ProxyCommand string
 }
 
@@ -90,7 +90,7 @@ const hashKnownHostsKey = "HashKnownHosts"
 
 // hashKnownHosts is the value for hashing host names ssh pins by itself.
 //
-// sshmgr hashes the names it writes, but ssh appends its own entry whenever the
+// authama hashes the names it writes, but ssh appends its own entry whenever the
 // user accepts an unknown host at the prompt, and it writes plaintext unless told
 // otherwise. Without this the trust store drifts back to a readable inventory one
 // accepted host at a time. An explicit value in global_options wins, so this is a
@@ -105,7 +105,7 @@ func hashKnownHosts(opts manifest.OrderedOptions) string {
 }
 
 // profileBanner marks where one profile's host blocks begin in the flat file,
-// so a reader (or `sshmgr show`) can scan the single config the way separate
+// so a reader (or `authama ssh show`) can scan the single config the way separate
 // per-profile files used to make obvious.
 func profileBanner(name string) string {
 	prefix := "# --- profile: " + name + " "
@@ -238,7 +238,7 @@ func RenderRootConfig(m *manifest.Manifest, emitUseKeychain bool) (string, error
 
 // RenderCategoryConfig renders profiles/<category>/config: the Host blocks of
 // every profile in that category, in manifest (file) order. It carries the
-// managed header so sshmgr can tell a file it wrote from one a user wrote
+// managed header so authama can tell a file it wrote from one a user wrote
 // there by hand, and no Host * block - the root config's applies to every
 // host, wherever its block lives.
 func RenderCategoryConfig(m *manifest.Manifest, category string) (string, error) {
@@ -318,14 +318,14 @@ func writeProfile(b *strings.Builder, pname string, hosts []RenderHost) {
 }
 
 // IsManagedFile reports whether content opens with the managed header (or the
-// pre-rename one) - i.e. whether sshmgr wrote it.
+// pre-rename one) - i.e. whether authama wrote it.
 func IsManagedFile(content string) bool {
 	first, _, _ := strings.Cut(content, "\n")
 	return isManagedHeader(strings.TrimSpace(first))
 }
 
 // RenderHostBlockFor renders the Host block one manifest host produces - byte
-// for byte what RenderRootConfig emits for it. `sshmgr show` uses it to answer
+// for byte what RenderRootConfig emits for it. `authama ssh show` uses it to answer
 // "what does this alias actually do" from the manifest, without asking the user
 // to find the block in a file that now holds every profile's hosts at once.
 func RenderHostBlockFor(m *manifest.Manifest, profile string, host manifest.Host) (string, error) {

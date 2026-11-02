@@ -41,8 +41,8 @@ func TestParse(t *testing.T) {
 		ok                         bool
 		mode, owner, repo, profile string
 	}{
-		{"https://github.com/simtabi/ssh-manager.git", true, "https", "simtabi", "ssh-manager", ""},
-		{"https://github.com/simtabi/ssh-manager", true, "https", "simtabi", "ssh-manager", ""},
+		{"https://github.com/simtabi/authama.git", true, "https", "simtabi", "authama", ""},
+		{"https://github.com/simtabi/authama", true, "https", "simtabi", "authama", ""},
 		{"https://x-access-token@github.com/simtabi/osaat.git", true, "https", "simtabi", "osaat", ""},
 		{"git@github.com:laranail/emojis.git", true, "ssh", "laranail", "emojis", ""},
 		{"ssh://git@github.com/laranail/emojis.git", true, "ssh", "laranail", "emojis", ""},

@@ -1,4 +1,4 @@
-// Package overview is the state of an sshmgr home at a glance: where it
+// Package overview is the state of an authama home at a glance: where it
 // operates, what it holds, and what needs attention, each problem paired with
 // the command that fixes it. The TUI's banner and the web overview both read it.
 package overview

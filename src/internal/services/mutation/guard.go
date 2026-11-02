@@ -1,5 +1,5 @@
 // Package mutation is the guard every command that changes state goes
-// through: the advisory lock that serializes sshmgr processes, the crash-residue
+// through: the advisory lock that serializes authama processes, the crash-residue
 // sweep, and the ~/.ssh snapshot that makes the change reversible.
 //
 // It moved here from the command layer so that something other than the CLI -
@@ -83,7 +83,7 @@ func Release() {
 
 // Scoped runs fn as one operation under the lock and releases the lock when fn
 // returns. It is for a long-lived process: a CLI command holds the lock until
-// it exits, which a server cannot do without blocking every other sshmgr
+// it exits, which a server cannot do without blocking every other authama
 // command for as long as it runs. fn must not call Scoped itself.
 func Scoped(p paths.Paths, s Scope, fn func() error) error {
 	// The CLI installs the sink at start-up; a caller that is not the CLI may

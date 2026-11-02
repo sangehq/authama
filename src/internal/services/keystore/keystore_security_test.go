@@ -11,7 +11,7 @@ import (
 	"github.com/simtabi/authama/src/internal/util/askpass"
 )
 
-// TestMain mirrors cmd/sshmgr: when ssh-keygen executes this binary as its
+// TestMain mirrors cmd/authama: when ssh-keygen executes this binary as its
 // askpass helper it must answer with the passphrase instead of running tests.
 func TestMain(m *testing.M) {
 	if askpass.Serving() {
@@ -32,7 +32,7 @@ func fakeKeygen(t *testing.T, exitCode int) string {
 	dir := t.TempDir()
 	record := filepath.Join(dir, "argv")
 	script := `#!/bin/sh
-for a in "$@"; do printf '%s\n' "$a" >> "$SSHMGR_TEST_ARGV"; done
+for a in "$@"; do printf '%s\n' "$a" >> "$AUTHAMA_TEST_ARGV"; done
 for a in "$@"; do
   if [ "$a" = "-lf" ]; then
     echo "256 SHA256:ZmFrZWZpbmdlcnByaW50Zm9ydGVzdGluZ29ubHk test (ED25519)"
@@ -44,18 +44,18 @@ for a in "$@"; do
   if [ "$prev" = "-f" ]; then out="$a"; fi
   prev="$a"
 done
-if [ -n "$out" ] && [ "$SSHMGR_TEST_EXIT" = "0" ]; then
+if [ -n "$out" ] && [ "$AUTHAMA_TEST_EXIT" = "0" ]; then
   printf 'PRIVATE KEY-----\n' > "$out"
   printf 'ssh-ed25519 AAAAfake test\n' > "$out.pub"
 fi
-exit "$SSHMGR_TEST_EXIT"
+exit "$AUTHAMA_TEST_EXIT"
 `
 	bin := filepath.Join(dir, "ssh-keygen")
 	if err := os.WriteFile(bin, []byte(script), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("SSHMGR_TEST_ARGV", record)
-	t.Setenv("SSHMGR_TEST_EXIT", map[bool]string{true: "0", false: "1"}[exitCode == 0])
+	t.Setenv("AUTHAMA_TEST_ARGV", record)
+	t.Setenv("AUTHAMA_TEST_EXIT", map[bool]string{true: "0", false: "1"}[exitCode == 0])
 	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	return record
 }

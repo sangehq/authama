@@ -17,3 +17,12 @@ func Install(command, label string) error {
 	argv := schtasksArgs(command, label)
 	return exec.Command(argv[0], argv[1:]...).Run()
 }
+
+// Remove deletes the scheduled task named label, if there is one.
+func Remove(label string) {
+	if _, err := exec.LookPath("schtasks"); err != nil {
+		return
+	}
+	argv := schtasksDeleteArgs(label)
+	_ = exec.Command(argv[0], argv[1:]...).Run()
+}

@@ -355,7 +355,7 @@ type Defaults struct {
 	// KeyComment is the ssh-keygen -C template every profile inherits; empty
 	// means DefaultKeyComment.
 	KeyComment string `json:"key_comment,omitempty"`
-	// Git configures `sshmgr git` and the rendered `Host github.com` block.
+	// Git configures `authama ssh git` and the rendered `Host github.com` block.
 	Git *GitDefaults `json:"git,omitempty"`
 }
 
@@ -641,7 +641,7 @@ var managedHostOptions = map[string]string{
 	"hostname":           `set "hostname" instead`,
 	"user":               `set "user" instead`,
 	"port":               `set "port" instead`,
-	"userknownhostsfile": `pin host keys with authama ssh knownhosts pin instead (sshmgr keeps every pin in ~/.ssh/known_hosts)`,
+	"userknownhostsfile": `pin host keys with authama ssh knownhosts pin instead (authama keeps every pin in ~/.ssh/known_hosts)`,
 }
 
 // ManagedHostOption reports whether a raw_options key duplicates a line the
@@ -667,7 +667,7 @@ func RawOptionOverlaps(m *Manifest) []string {
 				}
 				if strings.EqualFold(k, "port") && (h.Port == 0 || h.Port == 22) {
 					// No managed Port line is written at the default, so this
-					// one does apply - but sshmgr's own pinning and deploys read
+					// one does apply - but authama's own pinning and deploys read
 					// the field and would talk to port 22.
 					out = append(out, fmt.Sprintf("%s/%s: raw_options %q is the port ssh uses, but authama "+
 						"reads the port field and would pin and deploy on 22 - move it to \"port\" instead",
@@ -1313,7 +1313,7 @@ var defaultGlobalOptions = [][2]string{
 	{"ServerAliveInterval", "60"},
 }
 
-// Starter returns a minimal valid manifest for `sshmgr init` - defaults and no
+// Starter returns a minimal valid manifest for `authama init` - defaults and no
 // profiles. Off macOS, the UseKeychain option is dropped. Mirrors Manifest.starter.
 func Starter(emitUseKeychain bool) *Manifest {
 	pairs := defaultGlobalOptions

@@ -65,7 +65,7 @@ func fixture(t *testing.T) paths.Paths {
 	}
 	write(t, filepath.Join(oldDir, "work_gh-ed25519"), "OLD PRIVATE\n", 0o600)
 
-	// One pin for github.com, tagged as sshmgr-owned, shared by both profiles.
+	// One pin for github.com, tagged as authama-owned, shared by both profiles.
 	if _, err := knownhosts.New(p.SSHDir).Add([]string{"github.com ssh-ed25519 AAAA"}); err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func loadManifest(t *testing.T, p paths.Paths) *manifest.Manifest {
 	return m
 }
 
-// Without --purge the profile disappears from every piece of state sshmgr owns,
+// Without --purge the profile disappears from every piece of state authama owns,
 // the config is re-rendered on the spot rather than left stale until the next
 // reconcile, and the key files survive so the delete stays recoverable.
 func TestDeleteProfileCleansStateButKeepsKeys(t *testing.T) {
@@ -161,7 +161,7 @@ func TestDeleteProfilePurgeRemovesKeysAndDirectory(t *testing.T) {
 	}
 }
 
-// A purge deletes what sshmgr created. Anything else in the directory is
+// A purge deletes what authama created. Anything else in the directory is
 // somebody's file, so the directory stays and the user is told.
 func TestPurgeLeavesUnmanagedFilesAlone(t *testing.T) {
 	p := fixture(t)
@@ -173,7 +173,7 @@ func TestPurgeLeavesUnmanagedFilesAlone(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !onDisk(stray) {
-		t.Fatal("purge deleted a file sshmgr did not create")
+		t.Fatal("purge deleted a file authama did not create")
 	}
 	if !onDisk(filepath.Dir(stray)) {
 		t.Error("the directory holding it should have been kept")

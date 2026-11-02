@@ -10,20 +10,20 @@ import (
 	"github.com/simtabi/authama/src/internal/services/preflight"
 )
 
-func TestStaleProxiesReportsOnlyMissingSshmgrPaths(t *testing.T) {
+func TestStaleProxiesReportsOnlyMissingOwnPaths(t *testing.T) {
 	ssh := t.TempDir()
 	self, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg := "Host devbox\n    ProxyCommand \"/gone/after/upgrade/sshmgr\" vm proxy devbox\n\n" +
+	cfg := "Host devbox\n    ProxyCommand \"/gone/after/upgrade/authama\" vm proxy devbox\n\n" +
 		"Host lab\n    ProxyCommand \"" + self + "\" vm proxy lab\n\n" +
 		"Host jump\n    ProxyCommand ssh -W %h:%p bastion\n"
 	if err := os.WriteFile(filepath.Join(ssh, "config"), []byte(cfg), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	got := staleProxies(ssh, manifest.Starter(false))
-	if len(got) != 1 || !strings.Contains(got[0], "/gone/after/upgrade/sshmgr") {
+	if len(got) != 1 || !strings.Contains(got[0], "/gone/after/upgrade/authama") {
 		t.Fatalf("stale = %v, want only the missing path", got)
 	}
 	base := Report{ConfigInSync: true, Preflight: preflight.Report{RuntimeOK: true}}

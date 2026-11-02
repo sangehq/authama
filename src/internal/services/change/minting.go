@@ -45,7 +45,7 @@ func refuseOnePassword(m *manifest.Manifest, profiles ...string) error {
 	return nil
 }
 
-// Reconcile is `sshmgr reconcile --yes --no-pin`: mint every missing key,
+// Reconcile is `authama ssh reconcile --yes --no-pin`: mint every missing key,
 // record keys already on disk, render the config, fix modes.
 func Reconcile() Change {
 	return Change{
@@ -73,7 +73,7 @@ func Reconcile() Change {
 	}
 }
 
-// Keygen is `sshmgr keygen <profile|alias> --no-pin --yes`, without --force:
+// Keygen is `authama ssh keygen <profile|alias> --no-pin --yes`, without --force:
 // it mints the target's missing keys and leaves every existing one alone.
 func Keygen(target string) Change {
 	return Change{
@@ -141,7 +141,7 @@ func ownerOf(m *manifest.Manifest, target string) (string, bool) {
 	return "", false
 }
 
-// KeyAdd is `sshmgr key add <profile> <name> [--type] [--host]`: declare the
+// KeyAdd is `authama ssh key add <profile> <name> [--type] [--host]`: declare the
 // key, mint it, and wire it to a host when one is named.
 func KeyAdd(profile, name, keyType, host string) Change {
 	args := []string{profile, name}
@@ -196,7 +196,7 @@ func KeyAdd(profile, name, keyType, host string) Change {
 	}
 }
 
-// ProvidersExport is `sshmgr providers --export`, without --force: write the
+// ProvidersExport is `authama ssh providers --export`, without --force: write the
 // shipped provider catalog into the home to customize, unless one is there.
 func ProvidersExport() Change {
 	return Change{
@@ -219,7 +219,7 @@ func ProvidersExport() Change {
 	}
 }
 
-// SnapshotsPrune is `sshmgr snapshots prune --keep <n>`. It takes no
+// SnapshotsPrune is `authama ssh snapshots prune --keep <n>`. It takes no
 // snapshot of its own first, which would push one more out.
 func SnapshotsPrune(keep int) Change {
 	return Change{
@@ -248,7 +248,7 @@ func SnapshotsPrune(keep int) Change {
 	}
 }
 
-// DoctorFix is the --fix half of `sshmgr doctor --fix`: set every config-home
+// DoctorFix is the --fix half of `authama doctor --fix`: set every config-home
 // and ~/.ssh path back to its canonical mode.
 func DoctorFix() Change {
 	return Change{

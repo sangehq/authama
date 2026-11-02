@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// DefaultKeyComment is the comment sshmgr writes when neither the profile nor
+// DefaultKeyComment is the comment authama writes when neither the profile nor
 // the defaults set key_comment: the one every release before key_comment wrote.
 const DefaultKeyComment = "{profile}/{alias} {date}"
 
@@ -22,7 +22,7 @@ var keyCommentTokens = []string{"{profile}", "{alias}", "{key}", "{date}", "{dev
 // keyCommentHostname reads the machine name for {device}; tests swap it.
 var keyCommentHostname = os.Hostname
 
-// checkKeyComment refuses a template ssh-keygen -C would mangle or sshmgr cannot
+// checkKeyComment refuses a template ssh-keygen -C would mangle or authama cannot
 // expand: a control character (a newline splits the .pub line), or a brace that
 // is not one of keyCommentTokens, which is almost always a typo.
 func checkKeyComment(field, tmpl string) error {
@@ -44,7 +44,7 @@ func checkKeyComment(field, tmpl string) error {
 // KeyCommentTemplate resolves the key_comment template for a profile: the
 // profile's own, else the defaults', else DefaultKeyComment. It and KeyComment
 // are functions, not Manifest methods, to keep that type from regrowing into a
-// facade (cmd/sshmgr's layering test caps its method count).
+// facade (cmd/authama's layering test caps its method count).
 func KeyCommentTemplate(m *Manifest, profile string) string {
 	if t := m.Profiles[profile].KeyComment; t != "" {
 		return t

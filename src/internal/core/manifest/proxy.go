@@ -7,9 +7,9 @@ import "fmt"
 // browser sign-in, so no SSH port has to be open to the internet.
 const ProxyCloudflared = "cloudflared"
 
-// ProxyKinds are the proxies sshmgr can render. raw_options may not set a
+// ProxyKinds are the proxies authama can render. raw_options may not set a
 // ProxyCommand (it would run any command ssh is given), so each supported
-// proxy is a field sshmgr writes itself, as it does for VM hosts.
+// proxy is a field authama writes itself, as it does for VM hosts.
 var ProxyKinds = []string{ProxyCloudflared}
 
 // ProxySpec routes a host's connections through a proxy command.

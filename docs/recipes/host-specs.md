@@ -67,7 +67,7 @@ A JSON array works too, of spec strings or objects:
 - A missing profile is refused unless you pass `--create-profile` or
   `--category <name>` (which implies it). If the batch is then refused, the
   new profile is removed again.
-- Without `--reconcile`, new hosts have no key until you run `sshmgr
+- Without `--reconcile`, new hosts have no key until you run `authama ssh
   reconcile`. With it, the reconcile preview is shown and confirmed as usual
   (`-y` skips the prompt; `--no-pin` skips known_hosts auto-pinning).
 

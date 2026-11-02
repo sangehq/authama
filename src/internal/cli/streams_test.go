@@ -75,7 +75,7 @@ func TestReadPassphraseAcceptsAnEmptyLine(t *testing.T) {
 }
 
 // notify test reports a missing backend on the command's error stream, so
-// `sshmgr notify test > log` does not silently discard the one line that
+// `authama ssh notify test > log` does not silently discard the one line that
 // explains why nothing appeared on screen.
 func TestNotifyTestReportsAMissingBackendOnStderr(t *testing.T) {
 	editHome(t)
@@ -198,7 +198,7 @@ func TestReleasingTheHeldLockClosesItRatherThanForgettingIt(t *testing.T) {
 	}
 }
 
-// A bare `sshmgr` opens the menu on a terminal and prints help everywhere else.
+// A bare `authama` opens the menu on a terminal and prints help everywhere else.
 // The fallback is the load-bearing half: a TUI given a pipe would read whatever
 // is on it as menu answers, so a script that runs the binary with no arguments
 // would select an action nobody chose.
@@ -218,7 +218,7 @@ func TestABareInvocationFallsBackToHelpWithoutATerminal(t *testing.T) {
 	if !strings.Contains(out.String(), "Available Commands:") {
 		t.Errorf("expected help without a terminal:\n%s", out.String())
 	}
-	if strings.Contains(out.String(), "ssh-manager:\n  1)") {
+	if strings.Contains(out.String(), ":\n  1)") {
 		t.Error("the menu was opened without a terminal; piped input would be read as answers")
 	}
 }

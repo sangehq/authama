@@ -51,7 +51,7 @@ func TestASecondProcessWaitsForTheLock(t *testing.T) {
 
 	done := filepath.Join(filepath.Dir(lp), "child-got-it")
 	child := exec.Command(os.Args[0], "-test.run=^TestLockChildProcess$", "-test.v")
-	child.Env = append(os.Environ(), "SSHMGR_LOCK_CHILD=1", "SSHMGR_LOCK_PATH="+lp, "SSHMGR_LOCK_DONE="+done)
+	child.Env = append(os.Environ(), "AUTHAMA_LOCK_CHILD=1", "AUTHAMA_LOCK_PATH="+lp, "AUTHAMA_LOCK_DONE="+done)
 	if err := child.Start(); err != nil {
 		t.Fatalf("starting the second process: %v", err)
 	}
@@ -84,15 +84,15 @@ func TestASecondProcessWaitsForTheLock(t *testing.T) {
 // TestLockChildProcess is the second process for the test above. It is inert
 // unless the parent asked for it.
 func TestLockChildProcess(t *testing.T) {
-	if os.Getenv("SSHMGR_LOCK_CHILD") != "1" {
+	if os.Getenv("AUTHAMA_LOCK_CHILD") != "1" {
 		t.Skip("helper process; driven by TestASecondProcessWaitsForTheLock")
 	}
-	rel, err := Acquire(os.Getenv("SSHMGR_LOCK_PATH"))
+	rel, err := Acquire(os.Getenv("AUTHAMA_LOCK_PATH"))
 	if err != nil {
 		t.Fatalf("child acquire: %v", err)
 	}
 	defer rel()
-	if err := os.WriteFile(os.Getenv("SSHMGR_LOCK_DONE"), []byte("got it\n"), 0o600); err != nil {
+	if err := os.WriteFile(os.Getenv("AUTHAMA_LOCK_DONE"), []byte("got it\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 }

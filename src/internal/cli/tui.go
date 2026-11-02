@@ -262,7 +262,7 @@ func newTuiCmd() *cobra.Command {
 	}
 }
 
-// runTUI is the entry point for both `sshmgr tui` and a bare `sshmgr` on a
+// runTUI is the entry point for both `authama tui` and a bare `authama` on a
 // terminal, so the two cannot drift into behaving differently.
 func runTUI(c *cobra.Command) error {
 	out := c.OutOrStdout()
@@ -304,7 +304,7 @@ func (t *tui) run() {
 			mutation.End(mutation.Outcome{})
 			// The lock is scoped to the action, as the web's is. A CLI command
 			// holds it until it exits; a menu that did the same would block
-			// every other sshmgr command for as long as it stayed open.
+			// every other authama command for as long as it stayed open.
 			mutation.Release()
 		}
 		t.print("")

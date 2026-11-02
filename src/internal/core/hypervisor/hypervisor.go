@@ -30,11 +30,11 @@ type Endpoint struct {
 	Port int
 }
 
-// ErrOwnKeys means the hypervisor runs its own SSH access and keys (OrbStack, Podman): sshmgr lists
+// ErrOwnKeys means the hypervisor runs its own SSH access and keys (OrbStack, Podman): authama lists
 // the machine and can point a Docker context at it, but does not take its keys over.
 var ErrOwnKeys = errors.New("this hypervisor manages its own SSH access and keys")
 
-// ErrNotSupported means the hypervisor's CLI cannot do this without more than sshmgr has (VMware
+// ErrNotSupported means the hypervisor's CLI cannot do this without more than authama has (VMware
 // runs guest commands only with guest credentials).
 var ErrNotSupported = errors.New("not supported by this hypervisor's CLI")
 
@@ -262,7 +262,7 @@ func (d vmware) Start(vm string) error {
 	return err
 }
 
-// Exec: vmrun runs guest programs only with -gu/-gp guest credentials, which sshmgr does not hold.
+// Exec: vmrun runs guest programs only with -gu/-gp guest credentials, which authama does not hold.
 func (vmware) Exec(string, ...string) ([]byte, error) { return nil, ErrNotSupported }
 
 // --- UTM ---------------------------------------------------------------------------------------
@@ -297,7 +297,7 @@ func (d utm) Address(vm string) (Endpoint, error) {
 		return Endpoint{}, err
 	}
 	for _, line := range strings.Split(string(out), "\n") {
-		// The first IPv4 address; IPv6 link-local entries need a zone sshmgr cannot know.
+		// The first IPv4 address; IPv6 link-local entries need a zone authama cannot know.
 		if ip := strings.TrimSpace(line); ip != "" && strings.Count(ip, ".") == 3 {
 			return Endpoint{Host: ip, Port: 22}, nil
 		}

@@ -1,4 +1,4 @@
-// Package scheduler installs the daily job that runs `sshmgr audit --notify`,
+// Package scheduler installs the daily job that runs `authama ssh audit --notify`,
 // ported from the platforms/*.install_scheduler layer: a launchd agent on macOS, a
 // systemd --user timer (else cron) on Linux, a schtasks task on Windows. The job
 // fires at 09:00 daily. Pure template/quoting helpers live here; the OS-specific
@@ -8,7 +8,12 @@ package scheduler
 import "strings"
 
 // Label is the scheduler job label/name.
-const Label = "ssh_manager.expiry"
+const Label = "authama.expiry"
+
+// LegacyLabel is the label releases before 0.1.2 installed the job under.
+// Installing under Label removes a job left under it, so the two never both
+// fire; nothing else reads it.
+const LegacyLabel = "ssh_manager.expiry"
 
 const plistTmpl = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

@@ -137,7 +137,7 @@ type AuditKey struct {
 	Deployments               []inventory.Deployment
 }
 
-// AppEngine reads one sshmgr home through the same services the CLI uses.
+// AppEngine reads one authama home through the same services the CLI uses.
 // It loads the manifest and inventory on every call: the CLI may change them
 // at any moment, and a page must show what is there now.
 type AppEngine struct {
@@ -235,7 +235,7 @@ func (e AppEngine) Profiles() ([]ProfileView, error) {
 	return out, nil
 }
 
-// Hosts lists every host, grouped by profile, as `sshmgr list` does.
+// Hosts lists every host, grouped by profile, as `authama ssh list` does.
 func (e AppEngine) Hosts() ([]query.ProfileGroup, error) {
 	m, err := e.manifest()
 	if err != nil {
@@ -244,7 +244,7 @@ func (e AppEngine) Hosts() ([]query.ProfileGroup, error) {
 	return query.New(m, e.inventory(), e.P.Providers()).Groups("", "", "", "")
 }
 
-// Host is one host as `sshmgr show <alias>` reports it.
+// Host is one host as `authama ssh show <alias>` reports it.
 func (e AppEngine) Host(alias string) (HostView, error) {
 	m, err := e.manifest()
 	if err != nil {
@@ -282,7 +282,7 @@ func knownHostsToken(h manifest.Host) string {
 	return fmt.Sprintf("[%s]:%d", h.Hostname, h.Port)
 }
 
-// Keys lists every key, as `sshmgr key list` does.
+// Keys lists every key, as `authama ssh key list` does.
 func (e AppEngine) Keys() ([]keysvc.Row, error) {
 	m, err := e.manifest()
 	if err != nil {
@@ -490,13 +490,13 @@ func (e AppEngine) Op(id string) (OpView, error) {
 	return v, nil
 }
 
-// Doctor runs the same checks as `sshmgr doctor`, without --fix.
+// Doctor runs the same checks as `authama doctor`, without --fix.
 func (e AppEngine) Doctor() (doctor.Report, error) {
 	m, _ := manifest.Load(e.P.Manifest())
 	return doctor.New(e.P, m, platform.EmitUseKeychain()).Run(false), nil
 }
 
-// Audit is `sshmgr audit` as data: deployments, expiry, recent activity.
+// Audit is `authama ssh audit` as data: deployments, expiry, recent activity.
 func (e AppEngine) Audit(now time.Time) (AuditView, error) {
 	m, err := e.manifest()
 	if err != nil {
@@ -534,8 +534,8 @@ func splitRef(s string) (string, bool) {
 	return s, ok && prof != "" && key != "" && !strings.Contains(key, "/")
 }
 
-// Exports a page can download. Each is rendered the way `sshmgr config export
-// --flat` and `sshmgr termius export` render it, and none is written anywhere.
+// Exports a page can download. Each is rendered the way `authama ssh config export
+// --flat` and `authama ssh termius export` render it, and none is written anywhere.
 const (
 	ExportFlat    = "ssh_config"
 	ExportTermius = "termius-hosts.csv"

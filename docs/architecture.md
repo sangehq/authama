@@ -2,7 +2,7 @@
 
 ```mermaid
 flowchart TD
-    MAIN[cmd/authama · cmd/sshmgr · thin entrypoints] --> CLI[internal/cli · the cobra tree]
+    MAIN[cmd/authama · cmd/sshmgr deprecated alias · thin entrypoints] --> CLI[internal/cli · the cobra tree]
     CLI --> SVC[internal/services<br/>reconciler · deployer · rotator · bundler ·<br/>notifier · editor · doctor · lifecycle · tokensvc · …]
     CLI --> WEB[internal/web · the serve UI]
     WEB --> SVC
@@ -18,7 +18,7 @@ flowchart TD
 There is no facade. `internal/cli` is where composition happens, and it is a
 leaf: nothing under `internal/` imports it. `internal/core` is the domain and
 depends on nothing above it. Both directions are asserted by
-`src/cmd/sshmgr/layering_test.go`, along with a ceiling on methods-per-type - the
+`src/cmd/authama/layering_test.go`, along with a ceiling on methods-per-type - the
 Python version's facade type carried 54 and every verb hung off it.
 
 The repository has two roots. Everything the Go toolchain reads lives under
@@ -30,9 +30,10 @@ at the root and not one per module.
 ```
 src/                # THE GO MODULE. go.mod is here, so every `go` command runs
                     #   here - the Makefile uses `go -C src` for exactly this.
-  cmd/authama/      # thin entrypoint; calls internal/cli and nothing else
-  cmd/sshmgr/       # the same, under its original name; also holds the repo-wide
-                    #   invariant tests (layering, hygiene, e2e)
+  cmd/authama/      # thin entrypoint; calls internal/cli and nothing else. Also
+                    #   holds the repo-wide invariant tests (layering, hygiene, e2e)
+  cmd/sshmgr/       # the deprecated alias: the same program under its former name,
+                    #   printing a one-line deprecation notice on stderr
   internal/
     cli/            # the cobra tree, one file per verb. The ONLY package that
                     #   imports cobra, and the only place services are composed.
@@ -61,7 +62,7 @@ src/                # THE GO MODULE. go.mod is here, so every `go` command runs
   .golangci.yml
 build/              # everything build-related, and the only place anything is
                     #   generated. targets.txt (the release matrix) is the one
-                    #   tracked file; build/authama and build/sshmgr are `make build` output and
+                    #   tracked file; build/authama and build/sshmgr (the alias) are `make build` output and
                     #   build/dist/ is GoReleaser's. `make clean` empties it.
 docs/  README.md  CHANGELOG.md  LICENSE  Makefile  .github/
 ```
@@ -103,7 +104,7 @@ The token feature follows the same layering as the SSH side:
 - `docs/reference/cli.md` is generated from the command tree, and a test fails
   when it is stale or when a command has no example that parses.
 
-Names (`Authentication Access Manager`, `authama`, `sshmgr`) come from
+Names (`Authentication Access Manager`, `authama`, the deprecated `sshmgr`) come from
 `internal/brand`, so a rename is one edit. Environment variable names come from
 `internal/util/envnames`: each `AUTHAMA_*` name lists its pre-0.1.1 spellings
 (`SSH_MANAGER_*`, `SSHMGR_*`), which are still read with a one-line deprecation
@@ -234,8 +235,8 @@ that identity's profile directory, and nothing crosses profiles:
 │                                   #   `Host *` last. Foreign content outside the
 │                                   #   markers is preserved verbatim.
 ├── known_hosts                     # 600 - ONE hashed trust store. Lines this tool
-│                                   #   pinned carry an `sshmgr` comment tag, so it
-│                                   #   only ever prunes its own.
+│                                   #   pinned carry an `authama` comment tag (`sshmgr`
+│                                   #   before 0.1.2), so it only ever prunes its own.
 └── profiles/
     ├── work/                       # an uncategorized profile: keys only
     │   ├── work_hpc-ed25519        # 600 - private key, never leaves the machine
@@ -313,8 +314,8 @@ The isolation that actually matters — a host is only ever offered its own key 
 comes from `IdentityFile` plus a **per-host** `IdentitiesOnly yes`, which the
 rendered config states explicitly for every host. So the guarantee is
 stronger and the layout is simpler. The one trust store is hashed, and every line
-this tool writes carries an `sshmgr` comment tag so pruning only ever removes its
-own.
+this tool writes carries an `authama` comment tag (`sshmgr` before 0.1.2, still
+recognized) so pruning only ever removes its own.
 
 This is the one place the Go implementation deliberately does not match the Python version's
 output. Everything else does.

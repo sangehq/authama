@@ -42,7 +42,7 @@ func renderCLIReference(root *cobra.Command) string {
 	w("     src/internal/cli/clireference_test.go. Do not edit by hand:\n")
 	w("     UPDATE_CLI_REFERENCE=1 go test ./internal/cli/ -run TestCLIReferenceIsCurrent -->\n\n")
 	w("Every `%s` command, with its flags and examples, exactly as `--help` prints\n", brand.Command)
-	w("them. `%s` is the same program and accepts the same commands. The feature\n", brand.LegacyCommand)
+	w("them. `%s`, the deprecated former name, accepts the same commands. The feature\n", brand.LegacyCommand)
 	w("pages under [docs/tools](../tools/) explain what each one is for; this page is the\n")
 	w("complete list. [Choosing between similar commands](#choosing-between-similar-commands)\n")
 	w("is at the end.\n\n")

@@ -558,7 +558,7 @@ func TestAQuotedIdentityFileIsFoundAndAdopted(t *testing.T) {
 }
 
 // The same alias declared twice with IdentityFiles in two different profiles
-// used to import as two hosts - one per profile - which sshmgr's own validation
+// used to import as two hosts - one per profile - which authama's own validation
 // rejects ("declared more than once"), so import reported success and every
 // later command failed. ssh honours the first block; so does import.
 func TestTheSameAliasInTwoProfilesImportsOnce(t *testing.T) {
@@ -585,7 +585,7 @@ Host gh
 	}
 }
 
-// Import must never save a manifest sshmgr then refuses to load. A flat profile
+// Import must never save a manifest authama then refuses to load. A flat profile
 // "work" and a profile categorized under "work" both own profiles/work/, which
 // validation rejects; import has to report that rather than write it.
 func TestRunNeverSavesAnInvalidManifest(t *testing.T) {

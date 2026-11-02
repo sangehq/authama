@@ -61,7 +61,7 @@ type snapshotsPage struct {
 }
 
 // pages holds the page handlers, kept off Server so neither type grows into
-// the facade cmd/sshmgr's layering test guards against.
+// the facade cmd/authama's layering test guards against.
 type pages struct{ s *Server }
 
 // fail renders an engine error: a name that matched nothing is a 404, and

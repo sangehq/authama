@@ -96,7 +96,7 @@ func TestRemoveTakesOneKeyAndLeavesTheRest(t *testing.T) {
 	}
 	// The rewrite is preceded by a timestamped backup, so a bad removal is
 	// recoverable from the server itself - which may be the only way back in.
-	backups, err := filepath.Glob(ak + ".ssh-manager.bak.*")
+	backups, err := filepath.Glob(ak + ".authama.bak.*")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +154,7 @@ func TestRemoveReportsFalseWhenTheKeyIsNotThere(t *testing.T) {
 	if !strings.Contains(string(body), otherBody) {
 		t.Error("a no-op removal rewrote the file anyway")
 	}
-	if backups, _ := filepath.Glob(ak + ".ssh-manager.bak.*"); len(backups) != 0 {
+	if backups, _ := filepath.Glob(ak + ".authama.bak.*"); len(backups) != 0 {
 		t.Error("a no-op removal should not leave a backup behind")
 	}
 }

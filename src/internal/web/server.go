@@ -1,4 +1,4 @@
-// Package web is the `sshmgr serve` command's localhost web UI.
+// Package web is the `authama serve` command's localhost web UI.
 //
 // Server-rendered html/template pages over the same services the CLI and the
 // TUI call, with a little vanilla JavaScript and Tabler's CSS, all embedded in
@@ -23,7 +23,7 @@ import (
 
 // Options configures a Server.
 type Options struct {
-	// Engine reads the sshmgr home. Required.
+	// Engine reads the authama home. Required.
 	Engine Engine
 
 	// Token is the launch token printed in the URL. Required.

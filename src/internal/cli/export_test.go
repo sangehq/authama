@@ -184,7 +184,7 @@ func TestTermiusExportOpen(t *testing.T) {
 }
 
 // Under --out - the CSV owns stdout and the report goes to stderr, so
-// `sshmgr termius export --out - > hosts.csv` yields a clean file.
+// `authama ssh termius export --out - > hosts.csv` yields a clean file.
 func TestTermiusExportToStdoutKeepsTheReportOnStderr(t *testing.T) {
 	exportHome(t)
 	root := newRootCmd()

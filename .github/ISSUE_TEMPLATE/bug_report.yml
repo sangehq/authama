@@ -15,7 +15,7 @@ body:
       label: Steps to reproduce
       description: The exact commands run (redact secrets).
       placeholder: |
-        1. sshmgr reconcile
+        1. authama ssh reconcile
         2. ...
     validations:
       required: true
@@ -36,5 +36,5 @@ body:
   - type: textarea
     id: doctor
     attributes:
-      label: "`sshmgr doctor` output"
+      label: "`authama doctor` output"
       render: shell

@@ -7,11 +7,14 @@
 //
 // The repository (simtabi/authama) and the Go module path
 // (github.com/simtabi/authama/src) followed the name at 0.1.0; the config home
-// (~/.config/authama) and the environment variables (AUTHAMA_*) at 0.1.1.
-// What is kept for migration only: the sshmgr command (LegacyCommand), the
-// old variable names (SSH_MANAGER_*, SSHMGR_*; honored with a deprecation
-// notice, see envnames), the old home (copied over once, see migratesvc), and
-// the old managed-block markers and bundle names, which are still recognized.
+// (~/.config/authama) and the environment variables (AUTHAMA_*) at 0.1.1; the
+// release archives, the Linux packages, the Homebrew cask and the Scoop
+// manifest at 0.1.2. What is kept for migration only: the sshmgr command
+// (LegacyCommand, deprecated: it prints DeprecationNotice), the old variable
+// names (SSH_MANAGER_*, SSHMGR_*; honored with a deprecation notice, see
+// envnames), the old home (copied over once, see migratesvc), and the old
+// managed-block markers, known_hosts tag, bundle names and scheduler label,
+// which are still recognized.
 package brand
 
 import "strings"
@@ -24,8 +27,14 @@ const (
 	Command = "authama"
 
 	// LegacyCommand is the name the tool shipped under before. It is still
-	// installed beside Command and behaves identically, so no script breaks.
+	// installed beside Command and behaves identically, so no script breaks,
+	// but it is deprecated: it prints DeprecationNotice on stderr.
 	LegacyCommand = "sshmgr"
+
+	// DeprecationNotice is the one line the LegacyCommand binary prints on
+	// stderr before it runs.
+	DeprecationNotice = LegacyCommand + " is deprecated and will be removed in a future release; run " +
+		Command + " instead (same commands)"
 
 	// Summary is the one-line description under the name.
 	Summary = "SSH keys & config, and package-manager / git auth tokens, in one tool"
