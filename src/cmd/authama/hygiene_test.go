@@ -232,3 +232,53 @@ func TestMarkdownFileNamesAreLowercase(t *testing.T) {
 		}
 	}
 }
+
+// minTestFiles is the floor for TestTestsGenerateTheirCredentials: 170 tracked
+// *_test.go files on 2026-11-02. A glob that stops matching would otherwise
+// report a clean tree having read nothing.
+const minTestFiles = 150
+
+// credentialLiteral matches what a secret scanner reports in a test: a value
+// shaped like a provider token, a SECRET_* placeholder, or any literal assigned
+// to a field, variable or environment key named for a credential.
+var credentialLiteral = regexp.MustCompile(
+	`"(?:ghp|gho|ghs|ghu|github_pat|glpat|npm|xox[abp])[_-][A-Za-z0-9_]+"` +
+		`|"SECRET_[A-Z0-9_]+"` +
+		`|(?:^|[\s,{(])(?:[Pp]assword|[Pp]assphrase|[Ss]ecret|[Tt]oken)\s*(?::|=|:=)\s*"[^"]+"` +
+		`|\["[A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD)[A-Z0-9_]*"\]\s*=\s*"[^"]+"`)
+
+// credentialExempt marks a line whose literal must be exact bytes (a test
+// vector, a fingerprinted key). It goes on the line above, so the literal's
+// own line never shows up in a diff because of the marker.
+const credentialExempt = "@credential-literal-exempt:"
+
+// Tests get credentials from internal/util/testcred at run time. A literal is a
+// scanner incident somebody closes by hand, however obviously fake it is.
+func TestTestsGenerateTheirCredentials(t *testing.T) {
+	root, files := trackedFiles(t)
+	inspected := 0
+	for _, f := range files {
+		if !strings.HasPrefix(f, "src/") || !strings.HasSuffix(f, "_test.go") {
+			continue
+		}
+		inspected++
+		body, err := os.ReadFile(filepath.Join(root, f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		lines := strings.Split(string(body), "\n")
+		for i, line := range lines {
+			if strings.HasPrefix(strings.TrimSpace(line), "//") || !credentialLiteral.MatchString(line) {
+				continue
+			}
+			if i > 0 && strings.Contains(lines[i-1], credentialExempt) {
+				continue
+			}
+			t.Errorf("%s:%d: credential literal in a test; use testcred.Secret or testcred.Token: %s",
+				f, i+1, strings.TrimSpace(line))
+		}
+	}
+	if inspected < minTestFiles {
+		t.Fatalf("inspected %d test files, want at least %d: the file list is not matching", inspected, minTestFiles)
+	}
+}

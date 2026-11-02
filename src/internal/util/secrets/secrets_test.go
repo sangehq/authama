@@ -7,10 +7,17 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/simtabi/authama/src/internal/util/testcred"
+)
+
+// Generated per run (internal/util/testcred), never written down.
+var (
+	credGhpToken123 = testcred.Token("ghp", "plain")
 )
 
 func TestResolvePlainAndEmpty(t *testing.T) {
-	if got := Resolve("ghp_token123"); got != "ghp_token123" {
+	if got := Resolve(credGhpToken123); got != credGhpToken123 {
 		t.Errorf("plain value should pass through, got %q", got)
 	}
 	if got := Resolve(""); got != "" {

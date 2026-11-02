@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/simtabi/authama/src/internal/util/askpass"
+	"github.com/simtabi/authama/src/internal/util/testcred"
 )
 
 // TestMain mirrors cmd/authama: when ssh-keygen executes this binary as its
@@ -20,7 +21,8 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-const testPassphrase = "correct-horse-battery-staple"
+// Generated per run (internal/util/testcred), never written down.
+var testPassphrase = testcred.Secret("passphrase")
 
 // fakeKeygen puts a recording stand-in for ssh-keygen at the front of PATH and
 // returns the path of the file capturing each invocation's arguments.

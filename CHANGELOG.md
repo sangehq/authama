@@ -6,6 +6,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The issue-template security link names `security@simtabi.com`, the disclosure inbox, instead of
+  the community address.
+- `.github/pull_request_template.md` is `.github/PULL_REQUEST_TEMPLATE.md`, the name the org
+  standard requires; the lowercase-markdown hygiene test lists it as a conventional name.
+- CI verifies the gitleaks tarball against its published SHA-256 before installing it.
+- CI, the release workflow and the Makefile set `GOPRIVATE`/`GONOSUMDB` for `github.com/simtabi/*`,
+  so our own builds never feed a version into the public Go proxy or checksum database.
+- Tests generate every token, password and passphrase at run time (`internal/util/testcred`)
+  instead of spelling them as literals, and a hygiene test fails on a credential literal in any
+  test file.
+
 ## [0.1.3] - 2026-11-02
 
 Local VMs look after themselves: `ssh vm sync` keeps every VM host matching its VM, the hypervisors
