@@ -6,6 +6,55 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-02
+
+Local VMs look after themselves: `ssh vm sync` keeps every VM host matching its VM, the hypervisors
+you use are configured (with a generic command driver for any other tool), a loose devbox key can be
+adopted with a guided command, and `doctor --fix` runs the same upkeep.
+
+### Added
+
+- **`authama ssh vm sync`** asks each VM host's hypervisor what became of its VM. A running VM gets its
+  host key pinned when nothing is pinned, its public key re-installed in the guest when the guest
+  refuses it, and Docker context `ssh://<alias>` refreshed. A VM that is gone has the manifest backed up,
+  then its host entry (never its key files) and the Docker context authama made removed (exported
+  first). A suspended or stopped VM is reported and never started, stopped or deleted. Removal needs
+  a successful, non-empty listing; a second run changes nothing. `--dry-run`, `--yes`, `--quiet`,
+  `--no-probe` and `--repin`.
+- **A daily sync**: `ssh vm sync --install-schedule` (and `--remove-schedule`) runs `sync --quiet --yes`
+  at 09:30 with launchd, systemd or cron, or Task Scheduler.
+- **Configurable hypervisors.** `vm.hypervisors` in `authama.json` or `AUTHAMA_VM_HYPERVISORS="parallels,vmpal"`
+  in `.env` names the hypervisors you use; the others are not queried. A `hypervisors` section adds a
+  **command driver** for any VM tool: `list`, `address` and optional `start` and `exec` argv arrays with
+  `{vm}`. Drivers live in a registry, so a new built-in is one registration.
+- **Declared devboxes.** A `devboxes` section (profile, hypervisor, VM, guest user, key) lists the VM hosts
+  sync should keep; sync adds a missing one and copies its loose key pair into the profile. Never pruned.
+- **`authama ssh vm adopt-key`** turns a loose `~/.ssh` key into a VM host's managed key: it copies the
+  pair (verified; the originals stay unless `--move`), adds the host and re-renders the config. At a
+  terminal it picks the key, hypervisor, VM and user interactively.
+- **`doctor`**: VM hosts and their state, unpinned VM hosts, stale authama pins in `known_hosts`, and the
+  enabled hypervisors. A loose key whose name or comment suggests a devbox gets an `adopt-key` fix.
+  New JSON keys `unpinned_vm_hosts`, `stale_pins` and `vm`, after every existing key.
+- **Web UI: a VMs page** (`/vms`) with the VM hosts, a previewed sync (and `--repin`), the hypervisors
+  and their VMs, the declared devboxes, an adopt-key form and the daily-sync schedule.
+- Settings `vm.prune_gone` (`AUTHAMA_VM_PRUNE_GONE`) and `vm.repin_changed` (`AUTHAMA_VM_REPIN`).
+- Docs for shell completion, the web UI's third-party licences page, and the six service packages
+  `architecture.md` did not list.
+
+### Changed
+
+- **`doctor --fix`** also runs the VM sync and removes stale authama pins from `known_hosts`, after a
+  confirmation that lists them (declining fixes permissions only). `doctor --dry-run` shows the plan;
+  `--yes` skips the confirmation. Every change is backed up first.
+- Docker contexts authama creates carry the description `managed by authama`, so only those are ever
+  removed.
+- CI also runs weekly on `main` (Monday 06:00 UTC), so drift after a merge shows up; the release
+  workflow pins GoReleaser to `~> v2` instead of `latest`.
+- The README's H1 is the command name, and its feature list moved to the top of `docs/features.md`.
+- `docs/reference/cli.md` ends with the docs-index footer every other page has.
+- **`init --backup` help and the `ssh` group's help** say where the backup goes and that the bare
+  top-level verbs still work.
+
 ### Fixed
 
 - **Docs corrected against the code.** SECURITY.md no longer says a key passphrase goes on
@@ -20,20 +69,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `AUTHAMA_AGE_IDENTITY_FILE` points at it, and the docs now say so.
 - **The web UI places bundles in the state home's `dist/`**, where they are, not the config home's.
 - The 0.1.2 entry named `known-hosts show`; the command that shows pins is `ssh show`.
-
-### Changed
-
-- CI also runs weekly on `main` (Monday 06:00 UTC), so drift after a merge shows up; the release
-  workflow pins GoReleaser to `~> v2` instead of `latest`.
-- The README's H1 is the command name, and its feature list moved to the top of `docs/features.md`.
-- `docs/reference/cli.md` ends with the docs-index footer every other page has.
-- **`init --backup` help and the `ssh` group's help** say where the backup goes and that the bare
-  top-level verbs still work.
-
-### Added
-
-- Docs for shell completion, the web UI's third-party licences page, and the six service packages
-  `architecture.md` did not list.
 
 ## [0.1.2] - 2026-11-02
 
@@ -1359,7 +1394,8 @@ generalised beyond Composer, packaged for PyPI, and given an interactive UI.
 ##### Security
 - Owner-only hardening now applies on Windows (ACL), not just POSIX `chmod`.
 
-[Unreleased]: https://github.com/simtabi/authama/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/simtabi/authama/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/simtabi/authama/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/simtabi/authama/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/simtabi/authama/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/simtabi/authama/releases/tag/v0.1.0

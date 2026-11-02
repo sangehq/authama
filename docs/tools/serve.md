@@ -35,6 +35,7 @@ when that port is taken.
 | Keys | every key with its fingerprint and expiry. A key's page shows where the key is deployed and every operation that touched it |
 | Snapshots | every snapshot. A snapshot's page diffs it against `~/.ssh` now or against another snapshot |
 | History | the [`history`](history.md), filtered the same way. An operation's page shows its events and the manifest before and after |
+| VMs | the VM hosts and their VMs' state, the pending `ssh vm sync` plan, the enabled hypervisors and their VMs, the declared devboxes, the loose keys that could be adopted, and whether the daily sync is scheduled |
 | Tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret) and the token audit, as `authama token list` and `authama token audit` print, and which token config is in use |
 | Doctor, Audit | the reports `authama doctor` and `authama ssh audit` print |
 | Third-party licences | the licences of the web UI's bundled front-end assets (Tabler, Tabler Icons, Bootstrap, Popper), at `/about/licenses` |
@@ -53,6 +54,9 @@ These changes can be made from the pages:
 | Add a host, or a VM host | Hosts | `authama ssh host add`, `authama ssh vm add` |
 | Add or update hosts from specs | Hosts | `authama ssh host apply --host … --yes` |
 | Create a VM host's Docker context | the host's page | `authama ssh vm docker-context` |
+| Sync the VM hosts with their VMs (optionally replacing changed pins) | VMs | `authama ssh vm sync --yes` (`--repin`) |
+| Adopt a loose key as a VM host's key | VMs | `authama ssh vm adopt-key <key> <profile> <alias> --hypervisor … --vm … --user … --yes` |
+| Install or remove the daily VM sync | VMs | `authama ssh vm sync --install-schedule` / `--remove-schedule` |
 | Edit a host's hostname, user, port or tags | the host's page | `authama ssh host edit` |
 | Delete a host and its pins | the host's page | `authama ssh host delete --yes` |
 | Delete a declared key that no host uses | Keys | `authama ssh key delete --yes` |
