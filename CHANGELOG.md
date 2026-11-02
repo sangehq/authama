@@ -15,6 +15,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - CI verifies the gitleaks tarball against its published SHA-256 before installing it.
 - CI, the release workflow and the Makefile set `GOPRIVATE`/`GONOSUMDB` for `github.com/simtabi/*`,
   so our own builds never feed a version into the public Go proxy or checksum database.
+- The release workflow no longer starts on a tag push. Binary releases are on hold, and a release
+  runs only when dispatched by hand on a `v[0-9]*` tag with `-f confirm=release-go`; a test fails
+  if an automatic trigger returns.
 - Tests generate every token, password and passphrase at run time (`internal/util/testcred`)
   instead of spelling them as literals, and a hygiene test fails on a credential literal in any
   test file.
