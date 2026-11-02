@@ -33,6 +33,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Tests generate every token, password and passphrase at run time (`internal/util/testcred`)
   instead of spelling them as literals, and a hygiene test fails on a credential literal in any
   test file, the TypeScript browser tests under `e2e/web` included.
+- A CI run whose only failures are jobs GitHub never gave a runner (the macOS arm64 pool's "not
+  acquired" failure) is re-run once on its own by the new `requeue.yml`. A run with any real failure,
+  a second attempt, or a run superseded by a newer one is left alone.
 
 ### Fixed
 
