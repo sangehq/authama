@@ -30,7 +30,7 @@ Every command also takes the global flag:
   - [`authama settings path`](#authama-settings-path) - Print where the config home, state home, .env and authama.json are
   - [`authama settings show`](#authama-settings-show) - Print authama.json, or with --effective every setting's value and where it came from
   - [`authama settings validate`](#authama-settings-validate) - Check authama.json (or FILE) against the schema, and .env's syntax and permissions
-- [`authama ssh`](#authama-ssh) - SSH keys, profiles, hosts, config and trust (every former top-level verb, still accepted there)
+- [`authama ssh`](#authama-ssh) - SSH keys, profiles, hosts, config and trust (every former top-level verb; the bare top-level spelling still works, hidden)
   - [`authama ssh audit`](#authama-ssh-audit) - Deployment, expiry, and hygiene report
   - [`authama ssh bundle`](#authama-ssh-bundle) - Write an encrypted backup of keys + state (read back with restore)
   - [`authama ssh clean`](#authama-ssh-clean) - Remove stale known_hosts pins, stale records and write residue
@@ -204,7 +204,7 @@ Examples:
 Flags:
 
 ```
-      --backup   with --force, copy the old files into <home>/.state/ before overwriting
+      --backup   with --force, copy the old files into the state home's .state/ before overwriting
   -f, --force    overwrite manifest/inventory/.env with fresh defaults
 ```
 
@@ -376,7 +376,7 @@ Examples:
 
 ## authama ssh
 
-SSH keys, profiles, hosts, config and trust (every former top-level verb, still accepted there).
+SSH keys, profiles, hosts, config and trust (every former top-level verb; the bare top-level spelling still works, hidden).
 
 ```
 authama ssh

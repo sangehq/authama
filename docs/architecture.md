@@ -47,7 +47,11 @@ src/                # THE GO MODULE. go.mod is here, so every `go` command runs
                     #   query, keystore, agent, preflight, doctor, snapshots,
                     #   validate, recover, initsvc, migratesvc, netstat, keyaudit,
                     #   keysvc, lifecycle, tokensvc (token I/O), change (the
-                    #   web UI's previewable changes), history, jobs, …
+                    #   web UI's previewable changes), history, jobs, settings,
+                    #   cleaner (stale pins and records), dockerctx (VM Docker
+                    #   contexts), gitremote (a checkout's origin transport),
+                    #   opstore (keys kept in 1Password), overview (the TUI
+                    #   banner and web overview), pubkeys (regenerate .pub)
     platform/       # build-tagged OS predicates and terminal handling
                     #   (*_darwin.go, *_linux.go, *_windows.go, *_other.go)
     web/            # serve: routes, templates, the preview/confirm engine

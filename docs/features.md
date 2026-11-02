@@ -20,12 +20,12 @@ when the profile has a category.
 |---|---|---|
 | `init` | Create/converge the per-user homes (`~/.config/authama` for config, `~/.local/state/authama` for state): every run (re)creates the dir structure (`log/`, `snapshots/`, `.state/`) + re-asserts perms (dirs 700, secrets 600) and seeds any **missing** starter files (manifest, inventory, `.env`) - never clobbering existing ones. `providers.json` is not seeded (the shipped catalog is used unless you create your own). | U·E·F |
 | `init --force` | Overwrite the seed files with fresh defaults, **in place** (no backup). | U·F |
-| `init --force --backup` | Same, but first copy the old files into `~/.config/authama/.state/init-backup-<ts>/`. | U·F |
+| `init --force --backup` | Same, but first copy the old files into `~/.local/state/authama/.state/init-backup-<ts>/` (the state home). | U·F |
 | `migrate [--force] [-y]` | Copy a pre-0.1.1 home (`~/.config/ssh-manager`, `%APPDATA%\ssh-manager` on Windows, `~/.config/sshmgr`, `~/.sshmgr`) into the **resolved** home and mark the old one `MIGRATED-TO-AUTHAMA.txt` (`$AUTHAMA_CONFIG_DIR` override-aware; auto-migration handles the first run on any command; this resolves the stranded both-exist case `doctor` warns about - `--force` backs up the current home and replaces it). | U |
 | `settings path [--json]` | Print the config home, state home, `.env` and `authama.json` locations and whether each loaded. | U |
 | `settings show [--effective] [--json]` | Print `authama.json`, or with `--effective` every setting's value and where it came from (flag, environment, `.env`, `authama.json`, default). Secret values are never printed. | U |
 | `settings validate [FILE]` | Check `authama.json` (or FILE) against its schema and `.env`'s syntax and permissions; lists every problem, exit ≠0 on any. | U |
-| `settings init [--force]` | Create a starter `authama.json` with every setting at its default. | U |
+| `settings init [--force]` | Create a starter `authama.json` (only `$schema` and `version`; every setting stays at its default until you add it). | U |
 | `doctor` | Verify the environment: deps, perms, agent, known_hosts, ≤1-old-key invariant, config drift, orphan/duplicate keys, alias collisions, and the modes of the token credential files (a loose one is a warning; `--strict` fails on it). Prints the **resolved home**, `~/.ssh`, and the active provider-catalog source; warns about a stranded legacy home. | U·E·F |
 | `doctor --fix` | Re-assert canonical perms on every tool-managed path (`~/.ssh` tree + home secrets + token credential files). | U·F |
 | `doctor --json` | Machine-readable report for scripting/monitoring. | U |

@@ -6,6 +6,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Docs corrected against the code.** SECURITY.md no longer says a key passphrase goes on
+  `ssh-keygen`'s command line (it goes through askpass and stdin) or that each profile has its own
+  `known_hosts` (there is one hashed store). `.state/`, `dist/` and the `init --backup` copy are
+  placed in the state home, where they live. `serve` shows its real start-up line, `settings init`
+  is described as the minimal starter it writes, and install examples pin v0.1.2.
+- **`init --backup` help and the `ssh` group's help** say where the backup goes and that the bare
+  top-level verbs still work.
+
+### Added
+
+- Docs for shell completion, the web UI's third-party licences page, and the six service packages
+  `architecture.md` did not list.
+
 ## [0.1.2] - 2026-11-02
 
 The final rename: authama is the only primary name. Release assets, packages, the Homebrew cask and

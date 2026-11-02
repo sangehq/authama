@@ -28,7 +28,7 @@ restores; those members are skipped and named in the summary.
 - `*.age.sha256` - checksum (verified before any restore)
 - `*.age.contents` - plaintext list of filenames
 
-Without `--output`, bundles are written to `<home>/dist/` (e.g.
+Without `--output`, bundles are written to the state home's `dist/` (e.g.
 `~/.local/state/authama/dist/`), owner-only (0700). Pass `--output DIR` to write
 elsewhere (e.g. an external drive).
 

@@ -1,6 +1,6 @@
 # `doctor` — check, and repair, the managed tree
 
-Twelve checks over the environment, the config home and `~/.ssh`, then the
+Checks over the environment, the config home and `~/.ssh`, then the
 auth-token files, with an exit code that is a verdict rather than a success flag.
 
 ```sh
@@ -16,7 +16,7 @@ authama doctor --strict  # any warning fails the run (CI)
 |---|---|
 | `os` / `runtime` | the platform, and that the binary needs no interpreter |
 | `hard deps` | OpenSSH is present: `ssh`, `ssh-keygen`, `ssh-add`, `ssh-keyscan` |
-| `optional` | which of `age`, `sops`, `gh`, `glab`, `age-plugin-yubikey` are missing |
+| `optional` | which of `age`, `sops`, `gitleaks`, `gh`, `glab`, `age-plugin-yubikey` are missing |
 | `home` / `state` / `ssh` | the resolved config home, the state home (when it is separate) and `~/.ssh`, so an override is visible |
 | `providers` | whether the catalog is the shipped default or a user file |
 | `agent` | whether `ssh-agent` is running and how many keys it holds |

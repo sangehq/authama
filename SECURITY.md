@@ -27,9 +27,10 @@ in these:
   gitignored, and a `gitleaks` CI job scanning the full history is the safety
   net.
 - **Key passphrases.** When you generate passphrase-protected keys, the
-  passphrase is passed to `ssh-keygen` on its command line (it has no stdin
-  channel for generation), so it is briefly visible to other local users via
-  `ps`/`/proc`. Avoid passphrase generation on shared multi-user hosts.
+  passphrase reaches `ssh-keygen` through the askpass protocol (authama acts as
+  its own askpass helper) and on stdin, never on its command line, so it does
+  not show in `ps`/`/proc`. Only the empty passphrase of an unprotected key is
+  passed as `-N ""`.
 - **Provider tokens at rest.** A provider `token_env` (e.g. `GH_TOKEN`) in the
   home `.env` is plaintext at mode `0600`. To keep it out of plaintext, set the
   value to `cmd:<command>` and the token is fetched at use-time from any secret
@@ -38,10 +39,11 @@ in these:
   `"cmd:keyring get authama gh_token"`, or `"cmd:age -d -i <id> token.age"`.
 - **Permissions are enforced.** Directories `700`, private keys + `config` `600`,
   `.pub` + `known_hosts` `644` - set on create and re-asserted by `doctor`.
-- **Per-profile isolation.** Everything for an identity lives under
-  `~/.ssh/profiles/<profile>/` - keys, config, and its **own** `known_hosts`. With
-  `IdentitiesOnly yes` + per-profile `UserKnownHostsFile`, neither a key nor a
-  trusted host key ever bleeds across identities (even on a shared host).
+- **Per-profile isolation.** An identity's keys and config live under
+  `~/.ssh/profiles/<profile>/`, and every host renders `IdentitiesOnly yes`, so a
+  host is only ever offered the keys of its own profile. Trusted host keys are
+  kept in one hashed store, `~/.ssh/known_hosts`, shared by every profile (see
+  `authama ssh knownhosts`).
 - **The encrypted bundle never contains `.env`** (it holds the age recipient
   refs that unlock the bundle).
 - **Token files are owner-only and written atomically.** `auth.json`, `.npmrc`,

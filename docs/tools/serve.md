@@ -15,7 +15,7 @@ It prints an address like this:
 
 ```text
 Authentication Access Manager web UI: http://127.0.0.1:7822/?token=…
-reading /Users/you/.config/authama (read-only)
+home /Users/you/.config/authama (changes are previewed before they are made)
 press Ctrl-C to stop
 ```
 
@@ -37,6 +37,7 @@ when that port is taken.
 | History | the [`history`](history.md), filtered the same way. An operation's page shows its events and the manifest before and after |
 | Tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret) and the token audit, as `authama token list` and `authama token audit` print, and which token config is in use |
 | Doctor, Audit | the reports `authama doctor` and `authama ssh audit` print |
+| Third-party licences | the licences of the web UI's bundled front-end assets (Tabler, Tabler Icons, Bootstrap, Popper), at `/about/licenses` |
 
 ## Changes
 
@@ -155,13 +156,14 @@ A key's page offers each as a **job**:
 - **Rotating many keys** reviews the keys it will rotate, then rotates each a host uses in turn. A
   key that fails is left as it was, and the rest go on. Cancel stops before the next key.
 - **Restoring a bundle** decrypts with the identity file in `AUTHAMA_AGE_IDENTITY_FILE`, as set
-  where `authama serve` runs; the web takes no identity and no passphrase. Only a bundle in the config
+  where `authama serve` runs; the web takes no identity and no passphrase. Only a bundle in the state
   home's `dist/`, named as `authama ssh bundle` names them, can be restored here.
 - **Cancel** stops a job at its next step, never inside one. A rotate waiting on you is answered no.
 
 Some changes are terminal-only:
 
-- rotating, overwriting a key (`keygen --force`), and passphrases;
+- rotating with any option but `--allow-unverified`, overwriting a key (`keygen --force`), and
+  passphrases;
 - revoking a key from its targets (`--revoke`), and restoring a bundle from anywhere but `dist/`, or
   with an identity that has a passphrase;
 - pinning host keys (`knownhosts init`, `knownhosts pin`): a scan reaches every host, and trusting

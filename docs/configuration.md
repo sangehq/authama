@@ -414,8 +414,8 @@ Non-secret settings, validated against
 [`docs/schema/authama.schema.json`](schema/authama.schema.json) (JSON Schema
 2020-12). Unknown keys, wrong types and out-of-range values are errors: a command
 stops and lists every problem, and `authama settings validate` checks the file on
-demand. `authama settings init` writes a starter with every setting at its
-default.
+demand. `authama settings init` writes a starter (only `$schema` and `version`), so
+every setting stays at its default until you add it.
 
 ```json
 {
@@ -464,7 +464,7 @@ authama settings init              # write a starter authama.json
 
 ### Old variable names
 
-Every `AUTHAMA_*` name above replaced an earlier one, which is still read with a
+Most `AUTHAMA_*` names above replaced an earlier one, which is still read with a
 one-line deprecation notice on stderr: `SSH_MANAGER_HOME` and
 `SSH_MANAGER_CONFIG_DIR` (now `AUTHAMA_CONFIG_DIR`), `SSHMGR_DEV_ROOT`,
 `SSHMGR_GIT_MODE`, and `SSH_MANAGER_<NAME>` for the rest (for example
@@ -499,7 +499,7 @@ environment variables, never secrets: `authama token apply` reads the variables
 and writes each tool's credential file. It is found in this order:
 
 1. `--config FILE`
-2. `$AUTHAMA_TOKENS_CONFIG` (or `tokens_config` in `authama.json`)
+2. `$AUTHAMA_TOKENS_CONFIG` (or `paths.tokens_config` in `authama.json`)
 3. `./authama-tokens.json` (a project's own)
 4. `<home>/tokens.json` (`authama token init` writes a starter one)
 5. auth-token-manager's locations, read with a deprecation notice until
