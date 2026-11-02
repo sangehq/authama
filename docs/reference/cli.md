@@ -86,10 +86,12 @@ Every command also takes the global flag:
     - [`authama ssh termius keys`](#authama-ssh-termius-keys) - List the Termius key label for each host, or copy one host's private key to the clipboard
   - [`authama ssh validate`](#authama-ssh-validate) - Check keypairs parse, match, and have safe perms
   - [`authama ssh view`](#authama-ssh-view) - One host as ssh will use it: resolved config, key and deployment status (the connect view)
-  - [`authama ssh vm`](#authama-ssh-vm) - Local VMs as SSH hosts: list them, add one, and connect through the hypervisor
+  - [`authama ssh vm`](#authama-ssh-vm) - Local VMs as SSH hosts: list, add, adopt a key, keep in sync, connect through the hypervisor
     - [`authama ssh vm add`](#authama-ssh-vm-add) - Add a VM as a host: its address comes from the hypervisor at connect time
+    - [`authama ssh vm adopt-key`](#authama-ssh-vm-adopt-key) - Bring a loose ~/.ssh key under management as a devbox VM host's key
     - [`authama ssh vm docker-context`](#authama-ssh-vm-docker-context) - Create or update a Docker context ssh://<alias> for a VM host
     - [`authama ssh vm list`](#authama-ssh-vm-list) - List every hypervisor's VMs, and which manifest host uses each
+    - [`authama ssh vm sync`](#authama-ssh-vm-sync) - Keep VM hosts in step with their hypervisors: pins, guest keys, Docker contexts, gone VMs
 - [`authama token`](#authama-token) - Package-manager and git auth tokens: Composer, npm, Docker, git, netrc
   - [`authama token apply`](#authama-token-apply) - Resolve the token config from the environment and write each tool's credential file
   - [`authama token audit`](#authama-token-audit) - Check the credential files are owner-only and .gitignore covers them; write nothing
@@ -126,9 +128,11 @@ Examples:
 Flags:
 
 ```
-      --fix      auto-fix perms first
-      --json     machine-readable output (scripting)
-      --strict   for CI: treat every dangling-key state as a failure, not only the blocking ones, and fail on a token file others can read
+  -n, --dry-run   with --fix: show what it would do, change nothing
+      --fix       fix first: perms, stale authama pins, and a VM sync (backs up before removing)
+      --json      machine-readable output (scripting)
+      --strict    for CI: treat every dangling-key state as a failure, not only the blocking ones, and fail on a token file others can read
+  -y, --yes       with --fix: do the upkeep without confirming (implied when there is no terminal)
 ```
 
 ## authama history
@@ -413,7 +417,7 @@ Subcommands:
 - [`termius`](#authama-ssh-termius) - Export hosts for the Termius app
 - [`validate`](#authama-ssh-validate) - Check keypairs parse, match, and have safe perms
 - [`view`](#authama-ssh-view) - One host as ssh will use it: resolved config, key and deployment status (the connect view)
-- [`vm`](#authama-ssh-vm) - Local VMs as SSH hosts: list them, add one, and connect through the hypervisor
+- [`vm`](#authama-ssh-vm) - Local VMs as SSH hosts: list, add, adopt a key, keep in sync, connect through the hypervisor
 
 ## authama ssh audit
 
@@ -1595,9 +1599,14 @@ Examples:
 ## authama ssh vm
 
 A VM's IP changes, so a VM host renders ProxyCommand "<authama>" vm proxy <alias>:
-each connection asks the hypervisor for the VM's current address. Supported:
+each connection asks the hypervisor for the VM's current address. Built in:
 parallels, vmpal, vmware, utm, lima, orbstack, podman. OrbStack and Podman run their own SSH and keys;
 they are listed, and get a Docker context, but authama does not take their keys over.
+
+Which hypervisors you use is vm.hypervisors (AUTHAMA_VM_HYPERVISORS); any other tool can be
+added as a command driver in authama.json's "hypervisors" section, and the VMs you work
+in declared in its "devboxes" section (docs/tools/vm.md). `vm sync` keeps the hosts in
+step with the VMs; `vm adopt-key` turns a key you already use for a VM into a VM host.
 
 ```
 authama ssh vm
@@ -1606,8 +1615,10 @@ authama ssh vm
 Subcommands:
 
 - [`add`](#authama-ssh-vm-add) - Add a VM as a host: its address comes from the hypervisor at connect time
+- [`adopt-key`](#authama-ssh-vm-adopt-key) - Bring a loose ~/.ssh key under management as a devbox VM host's key
 - [`docker-context`](#authama-ssh-vm-docker-context) - Create or update a Docker context ssh://<alias> for a VM host
 - [`list`](#authama-ssh-vm-list) - List every hypervisor's VMs, and which manifest host uses each
+- [`sync`](#authama-ssh-vm-sync) - Keep VM hosts in step with their hypervisors: pins, guest keys, Docker contexts, gone VMs
 
 ## authama ssh vm add
 
@@ -1620,17 +1631,52 @@ authama ssh vm add <profile> <alias> [flags]
 Examples:
 
 ```sh
-  authama ssh vm add lab dev --hypervisor orbstack --vm ubuntu --user me
+  authama ssh vm add lab dev --hypervisor parallels --vm Ubuntu --user me
 ```
 
 Flags:
 
 ```
-      --hypervisor string   parallels, vmpal, vmware, utm, lima, orbstack, podman
+      --hypervisor string   parallels, vmpal, vmware, utm, lima, orbstack, podman, or a custom one from authama.json
       --key-name string     use this key instead of the derived <profile>_<alias>-<algo> name
   -u, --user string         guest user
       --vm string           the VM's name as the hypervisor lists it (see 'authama ssh vm list')
   -y, --yes                 add without confirming (implied when there is no terminal)
+```
+
+## authama ssh vm adopt-key
+
+adopt-key takes a key you already use for a VM (say ~/.ssh/docker-tunnel), copies it into
+a profile as the key of a new VM host, records it, and re-renders ~/.ssh/config. The
+original stays where it is unless --move; the private key is copied, never read into
+memory for anything else. Run `authama ssh vm sync` afterwards to pin the guest's host
+key, install the public key in the guest if it lacks it, and create the Docker context.
+
+At a terminal, whatever is missing is asked for: the key from the loose keys in ~/.ssh,
+the VM from the enabled hypervisors' VMs (authama.json vm.hypervisors).
+
+```
+authama ssh vm adopt-key [<key> [<profile> [<alias>]]] [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh vm adopt-key
+  authama ssh vm adopt-key devbox-key devbox devbox --hypervisor parallels --vm Ubuntu --user me --dry-run
+```
+
+Flags:
+
+```
+      --docker-context      also create Docker context ssh://<alias>
+  -n, --dry-run             show what would happen and change nothing
+      --hypervisor string   the VM's hypervisor: parallels, vmpal, vmware, utm, lima, orbstack, podman
+      --key-name string     the adopted key's name in the profile (default: the file's name)
+      --move                remove the originals from ~/.ssh once the copy is verified identical
+  -u, --user string         guest user
+      --vm string           the VM's name as the hypervisor lists it (see 'authama ssh vm list')
+  -y, --yes                 adopt without confirming or asking (implied when there is no terminal)
 ```
 
 ## authama ssh vm docker-context
@@ -1659,6 +1705,43 @@ Examples:
 
 ```sh
   authama ssh vm list
+```
+
+## authama ssh vm sync
+
+For every VM host, ask its hypervisor what became of the VM:
+  running    pin its host key when nothing is pinned, re-install the host's public key in
+             the guest when the guest refuses it, create or refresh Docker context ssh://<alias>
+  gone       back up the manifest, remove the host entry (never its key files) and the
+             Docker context authama made for it (exported first)
+  suspended  reported and left alone - sync never starts, stops or deletes a VM
+It also adds the devboxes authama.json declares, and removes Docker contexts authama made
+whose host is gone. Running it twice changes nothing the second time.
+
+--install-schedule runs `sync --quiet --yes` daily with launchd, systemd/cron or Task Scheduler.
+
+```
+authama ssh vm sync [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh vm sync --dry-run
+  authama ssh vm sync --yes
+  authama ssh vm sync --install-schedule
+```
+
+Flags:
+
+```
+  -n, --dry-run            show the plan and change nothing
+      --install-schedule   run a quiet sync daily (sync --quiet --yes) with this system's scheduler
+      --no-probe           ask the hypervisors only; do not connect to running guests
+  -q, --quiet              print only what changed and errors (for a scheduled run)
+      --remove-schedule    remove the scheduled sync
+      --repin              replace a VM host's pin when the guest's host key changed (vm.repin_changed)
+  -y, --yes                apply without confirming (implied when there is no terminal)
 ```
 
 ## authama token

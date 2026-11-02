@@ -14,7 +14,7 @@ func Schema() ([]byte, error) {
 		"$schema": obj{"type": "string", "description": "The schema this file follows (for editors)."},
 		"version": obj{"const": Version, "description": "The authama.json format version."},
 	}
-	for _, sec := range sectionNames() {
+	for _, sec := range scalarSectionNames() {
 		sp := obj{}
 		for _, s := range Specs {
 			if s.Section != sec {
@@ -43,6 +43,9 @@ func Schema() ([]byte, error) {
 			sp[s.Name] = p
 		}
 		props[sec] = obj{"type": "object", "additionalProperties": false, "properties": sp}
+	}
+	for k, v := range structuredSchema() {
+		props[k] = v
 	}
 	doc := obj{
 		"$schema":              "https://json-schema.org/draft/2020-12/schema",

@@ -170,8 +170,8 @@ VM's address through its hypervisor on each connection.
 ```
 
 `hypervisor` is one of `parallels`, `vmpal`, `vmware`, `utm`, `lima` (OrbStack and Podman keep their own
-SSH and are not hosts); `name` is the VM as the hypervisor lists it, spaces allowed. See
-[tools/vm.md](tools/vm.md).
+SSH and are not hosts); `name` is the VM as the hypervisor lists it, spaces allowed. A custom hypervisor declared in
+`authama.json`'s `hypervisors` section is accepted too. See [tools/vm.md](tools/vm.md).
 
 ### `proxy`
 
@@ -387,6 +387,7 @@ AUTHAMA_SNAPSHOT_RETAIN=20
 export GH_TOKEN="cmd:keyring get authama gh"   # an `export ` prefix is accepted
 TENANTS="landlord panel api socket queue"      # quote values with spaces or special characters
 SINGLE='kept $literally'                        # single quotes: no escapes
+AUTHAMA_VM_HYPERVISORS="parallels,vmpal"         # the hypervisors you use
 ```
 
 - `KEY=value`, with an optional `export ` prefix. Double-quoted values support
@@ -427,7 +428,8 @@ every setting stays at its default until you add it.
   "history": { "enabled": true },
   "git":     { "mode": "profile" },
   "tokens":  { "docker_creds_store": "refuse" },
-  "notifications": { "desktop": true }
+  "notifications": { "desktop": true },
+  "vm":      { "hypervisors": "parallels,vmpal", "prune_gone": true, "repin_changed": false }
 }
 ```
 
@@ -445,6 +447,13 @@ every setting stays at its default until you add it.
 | `git.mode` | `AUTHAMA_GIT_MODE` | the manifest's `defaults.git.mode`, else `profile` |
 | `tokens.docker_creds_store` | `AUTHAMA_DOCKER_CREDS_STORE` | ask at a terminal, else refuse |
 | `notifications.desktop` | `AUTHAMA_NOTIFICATIONS` | `true` |
+| `vm.hypervisors` | `AUTHAMA_VM_HYPERVISORS` | every built-in driver and every custom one |
+| `vm.prune_gone` | `AUTHAMA_VM_PRUNE_GONE` | `true` (`ssh vm sync` removes the host of a VM that is gone) |
+| `vm.repin_changed` | `AUTHAMA_VM_REPIN` | `false` (`ssh vm sync` reports a changed guest host key) |
+
+Two sections are not settings but declarations: `hypervisors` adds a command driver for a VM tool
+authama has no driver for, and `devboxes` names the VM hosts `ssh vm sync` keeps. Both are described,
+with examples, in [tools/vm.md](tools/vm.md#choosing-your-hypervisors).
 
 Paths may start with `~/`. A secret never goes in `authama.json`; put it in
 `.env`. Only the environment can set `AUTHAMA_CONFIG_DIR`, `AUTHAMA_DEV_ROOT`

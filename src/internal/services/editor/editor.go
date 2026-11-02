@@ -522,6 +522,10 @@ func editHostIn(m *manifest.Manifest, profile, alias string, f HostFields) error
 	if f.Proxy != nil {
 		host.Proxy = proxySpec(*f.Proxy)
 	}
+	if f.VM != nil {
+		vm := *f.VM
+		host.VM = &vm
+	}
 	if f.SetTags != nil {
 		host.Tags = nil
 		for _, t := range *f.SetTags {

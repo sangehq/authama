@@ -8,8 +8,8 @@ import (
 )
 
 // The rename to authama changed what people read, never what scripts parse.
-// doctor --json keeps every 3.x key, in the 3.x order, and only gains
-// "tokens" at the end; its values never carry a command spelling, so the
+// doctor --json keeps every 3.x key, in the 3.x order, and only gains keys
+// after them (0.1.3's VM upkeep, then "tokens"); its values never carry a command spelling, so the
 // `authama ssh` forms cannot leak into it. history --json stores the bare
 // command ("profile add"), as 3.x did.
 
@@ -17,6 +17,9 @@ var doctorKeys3x = []string{"ok", "home", "ssh_dir", "providers_source", "prefli
 	"known_hosts", "config_in_sync", "perm_issues", "old_keys", "stale_old_keys", "orphan_keys",
 	"dangling_keys", "duplicate_keys", "unpinned_hosts", "alias_collisions", "stale_proxy",
 	"shadowed_hosts", "raw_option_overlaps", "needed_tools", "clipboard", "stranded_legacy_home"}
+
+// doctorKeys013 are the keys 0.1.3 added, after every 3.x key.
+var doctorKeys013 = []string{"unpinned_vm_hosts", "stale_pins", "vm"}
 
 func orderedKeys(t *testing.T, js string) []string {
 	t.Helper()
@@ -53,7 +56,7 @@ func TestMachineReadableOutputKeepsTheV3Shape(t *testing.T) {
 	run("init")
 	js := run("doctor", "--json")
 	got := orderedKeys(t, js)
-	want := append(append([]string{}, doctorKeys3x...), "tokens")
+	want := append(append(append([]string{}, doctorKeys3x...), doctorKeys013...), "tokens")
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("doctor --json keys changed:\n got %v\nwant %v", got, want)
 	}

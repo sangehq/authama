@@ -263,7 +263,7 @@ func TestStaleInventoryExcludesMissingAndArchived(t *testing.T) {
 // any private key, and never proposed for deletion.
 func TestLooseKeysInSSHDirAreReportedNotTouched(t *testing.T) {
 	f := newFixture(t)
-	pub := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExample imani@laptop\n"
+	pub := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJ imani@laptop\n" // not a managed key's blob
 	write := func(name, body string) {
 		if err := os.WriteFile(filepath.Join(f.ssh, name), []byte(body), 0o600); err != nil {
 			t.Fatal(err)
@@ -474,5 +474,53 @@ func TestOnePasswordKeyNeedsOnlyItsPublicHalf(t *testing.T) {
 	unrecorded := keysvc.Row{Vault: "Simtabi", PublicOnDisk: true, Hosts: []string{"gh"}}
 	if got := Notes(unrecorded); len(got) != 1 || got[0] != Unrecorded {
 		t.Errorf("no inventory record: notes = %v, want [unrecorded]", got)
+	}
+}
+
+// A loose key named or commented like a devbox's is pointed at vm adopt-key,
+// and the original left behind by an adoption is called a copy - neither is
+// ever touched.
+func TestLooseDevboxKeyAndAdoptedLeftover(t *testing.T) {
+	f := newFixture(t)
+	write := func(name, body string) {
+		if err := os.WriteFile(filepath.Join(f.ssh, name), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("docker-tunnel", "PRIVATE\n")
+	write("docker-tunnel.pub", "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEB me@mac\n")
+	write("work.pub", "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC me@devbox\n")
+	write("plain.pub", "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD me@laptop\n")
+	// A managed key whose blob the leftover shares.
+	dir := filepath.Join(f.ssh, "profiles", "lab")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "adopted.pub"), []byte("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	write("leftover.pub", "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE x\n")
+
+	byName := map[string]Finding{}
+	for _, fd := range audit(t, f, false).ByState(Loose) {
+		byName[fd.Subject] = fd
+	}
+	if fix := byName["docker-tunnel"].Fix; !strings.Contains(fix, "vm adopt-key docker-tunnel") {
+		t.Errorf("devbox-named key: fix = %q", fix)
+	}
+	if fix := byName["work"].Fix; !strings.Contains(fix, "vm adopt-key work") {
+		t.Errorf("devbox-commented key: fix = %q", fix)
+	}
+	if fix := byName["plain"].Fix; !strings.Contains(fix, "ssh import") {
+		t.Errorf("plain key: fix = %q", fix)
+	}
+	if d := byName["leftover"].Detail; !strings.Contains(d, "copy of ~/.ssh/profiles/lab/adopted") {
+		t.Errorf("leftover: detail = %q", d)
+	}
+	if LooksLikeDevbox("vmail", "") != "" {
+		t.Error("vmail is not a VM")
+	}
+	if _, err := os.Stat(filepath.Join(f.ssh, "docker-tunnel")); err != nil {
+		t.Error("the audit touched docker-tunnel")
 	}
 }

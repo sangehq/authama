@@ -1,0 +1,124 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" "VMs"}}
+<p class="text-secondary">VM hosts as their hypervisors see them now, and what <code>authama ssh vm sync</code> would do. Nothing here connects to a guest; a sync does, for running VMs only. Stopped and suspended VMs are reported and never touched.</p>
+<div class="card mb-3">
+  <div class="card-header"><h2 class="card-title">VM hosts</h2></div>
+  {{if .Hosts}}
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <caption class="visually-hidden">VM hosts and their state</caption>
+      <thead><tr><th scope="col">Alias</th><th scope="col">Profile</th><th scope="col">Hypervisor</th><th scope="col">VM</th><th scope="col">State</th><th scope="col">Note</th></tr></thead>
+      <tbody>
+        {{range .Hosts}}
+        <tr>
+          <th scope="row"><code>{{.Alias}}</code>{{if .Declared}} <span class="badge bg-blue-lt">declared</span>{{end}}</th>
+          <td>{{.Profile}}</td>
+          <td>{{.Hypervisor}}</td>
+          <td>{{.VM}}</td>
+          <td><span class="badge {{statusClass .State}}">{{.State}}</span></td>
+          <td class="text-secondary">{{orDash .Note}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}<div class="card-body text-secondary">No VM hosts. Add one on the Hosts page, adopt a loose key below, or declare a devbox in authama.json.</div>{{end}}
+</div>
+<div class="card mb-3">
+  <div class="card-header"><h2 class="card-title">Sync</h2></div>
+  <div class="card-body">
+    {{if .Pending}}<p>A sync would:</p><ul>{{range .Pending}}<li>{{.}}</li>{{end}}</ul>
+    {{else}}<p class="text-secondary">Without connecting to a guest, a sync has nothing to do. The preview also checks running guests' keys and pins.</p>{{end}}
+    {{if .Notes}}<p class="mb-1">Notes:</p><ul class="text-secondary">{{range .Notes}}<li>{{.}}</li>{{end}}</ul>{{end}}
+    {{if not $.ReadOnly}}
+    {{template "change_open" $}}<input type="hidden" name="action" value="vm-sync">
+      <label class="form-check"><input class="form-check-input" type="checkbox" name="repin" value="1"><span class="form-check-label">replace the pin of a guest whose host key changed (<code>--repin</code>)</span></label>
+      <button type="submit" class="btn btn-primary">Preview sync</button>
+    </form>
+    {{end}}
+    <p class="text-secondary small mt-2 mb-0">A sync backs the manifest up first and takes a snapshot of <code>~/.ssh</code>; a Docker context it removes is exported first.</p>
+  </div>
+</div>
+<div class="row row-cards">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Hypervisors</h2></div>
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <caption class="visually-hidden">Hypervisor drivers</caption>
+          <thead><tr><th scope="col">Name</th><th scope="col">Driver</th><th scope="col">Status</th><th scope="col">VMs</th></tr></thead>
+          <tbody>
+            {{range .Drivers}}
+            <tr>
+              <th scope="row"><code>{{.Name}}</code></th>
+              <td class="text-secondary">{{.Kind}}</td>
+              <td>{{if not .Enabled}}<span class="badge bg-secondary-lt">disabled</span>{{else if not .CLI}}<span class="badge bg-secondary-lt">not installed</span>{{else}}<span class="badge bg-green-lt">enabled</span>{{end}}</td>
+              <td>{{if .Err}}<span class="text-danger">{{.Err}}</span>{{else}}{{range .VMs}}<div>{{.Name}} <span class="text-secondary">({{.State}})</span></div>{{else}}<span class="text-secondary">-</span>{{end}}{{end}}</td>
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+      <div class="card-body text-secondary small">
+        {{if .Unknown}}<p class="text-warning">Enabled but unknown: {{join .Unknown ", "}}.</p>{{end}}
+        Choose the hypervisors you use with <code>vm.hypervisors</code> in authama.json or <code>AUTHAMA_VM_HYPERVISORS</code>; add one of your own under <code>hypervisors</code> (a command driver).
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Declared devboxes</h2></div>
+      {{if .Devboxes}}
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <caption class="visually-hidden">Devboxes declared in authama.json</caption>
+          <thead><tr><th scope="col">Alias</th><th scope="col">Profile</th><th scope="col">VM</th><th scope="col">User</th><th scope="col">Key</th></tr></thead>
+          <tbody>
+            {{range .Devboxes}}
+            <tr><th scope="row"><code>{{.Alias}}</code></th><td>{{.Profile}}</td><td>{{.Hypervisor}}: {{.VM}}</td><td>{{.User}}</td><td>{{orDash .Key}}</td></tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+      {{else}}<div class="card-body text-secondary">None. Declare one under <code>devboxes</code> in authama.json and a sync adds it.</div>{{end}}
+    </div>
+  </div>
+</div>
+{{if not $.ReadOnly}}
+<div class="row row-cards mt-1">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Adopt a loose key onto a VM</h2></div>
+      <div class="card-body">
+        {{if .Loose}}
+        {{template "change_open" $}}<input type="hidden" name="action" value="vm-adopt-key">
+          <div class="row g-2">
+            <div class="col-sm-6"><label class="form-label" for="ak-key">Loose key</label><select class="form-select" id="ak-key" name="key">{{range .Loose}}<option value="{{.Name}}">{{.Name}}{{if .Devbox}} (looks like a devbox key){{end}}</option>{{end}}</select></div>
+            <div class="col-sm-6"><label class="form-label" for="ak-profile">Profile</label><input class="form-control" id="ak-profile" name="profile" list="ak-profiles" value="devbox" required autocomplete="off" spellcheck="false"><datalist id="ak-profiles">{{range .Profiles}}<option value="{{.}}">{{end}}</datalist></div>
+            <div class="col-sm-6"><label class="form-label" for="ak-alias">Alias</label><input class="form-control" id="ak-alias" name="alias" required autocomplete="off" spellcheck="false"></div>
+            <div class="col-sm-6"><label class="form-label" for="ak-hv">Hypervisor</label><select class="form-select" id="ak-hv" name="hypervisor">{{range hypervisors}}{{if and (ne . "orbstack") (ne . "podman")}}<option value="{{.}}">{{.}}</option>{{end}}{{end}}</select></div>
+            <div class="col-sm-6"><label class="form-label" for="ak-vm">VM name</label><input class="form-control" id="ak-vm" name="vm" required autocomplete="off" spellcheck="false" list="ak-vms"><datalist id="ak-vms">{{range .Drivers}}{{range .VMs}}<option value="{{.Name}}">{{end}}{{end}}</datalist></div>
+            <div class="col-sm-6"><label class="form-label" for="ak-user">Guest user</label><input class="form-control" id="ak-user" name="user" required autocomplete="off" spellcheck="false"></div>
+          </div>
+          <p class="text-secondary small mt-2 mb-2">Copies the keypair into the profile (the loose files stay) and adds the VM host. The manifest is backed up first. Run a sync afterwards to install the key on the guest.</p>
+          <button type="submit" class="btn btn-primary">Preview</button>
+        </form>
+        {{else}}<p class="text-secondary mb-0">No loose keypairs in <code>~/.ssh</code>.</p>{{end}}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Daily sync</h2></div>
+      <div class="card-body">
+        <p class="text-secondary">Runs <code>{{.Schedule}}</code> every day at 09:30 (launchd, a systemd timer or cron, or Task Scheduler).</p>
+        <div class="d-flex flex-wrap gap-2">
+          {{template "change_open" $}}<input type="hidden" name="action" value="vm-schedule"><input type="hidden" name="install" value="1"><button type="submit" class="btn btn-outline-primary">Preview installing</button></form>
+          {{template "change_open" $}}<input type="hidden" name="action" value="vm-schedule"><input type="hidden" name="install" value=""><button type="submit" class="btn btn-outline-secondary">Preview removing</button></form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
+{{end}}{{end}}

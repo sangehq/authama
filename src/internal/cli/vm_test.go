@@ -136,7 +136,7 @@ esac`)
 		t.Errorf("second run: %s", out)
 	}
 	b, _ := os.ReadFile(log)
-	if !strings.Contains(string(b), "context create devbox --docker host=ssh://devbox") {
+	if !strings.Contains(string(b), "context create devbox --description managed by authama --docker host=ssh://devbox") {
 		t.Errorf("docker calls:\n%s", b)
 	}
 	if _, err := runErr(t, "vm", "docker-context", "nope"); err == nil {

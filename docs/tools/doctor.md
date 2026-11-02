@@ -5,7 +5,8 @@ auth-token files, with an exit code that is a verdict rather than a success flag
 
 ```sh
 authama doctor           # report
-authama doctor --fix     # report, and repair what it can
+authama doctor --fix     # report, and repair what it can (perms, VM sync, stale pins)
+authama doctor --fix --dry-run  # what --fix would change
 authama doctor --json    # the same report, for a script
 authama doctor --strict  # any warning fails the run (CI)
 ```
@@ -25,6 +26,9 @@ authama doctor --strict  # any warning fails the run (CI)
 | `MISSING tool` | a command the manifest relies on is not on PATH: the hypervisor CLI behind a VM host (its address comes from it at connect time), and `git` once `defaults.git` is set (fails the verdict) |
 | `clipboard` | no clipboard tool was found, so `termius keys` needs `--print` (advice; never fails the verdict) |
 | `known_hosts` | whether the trust store exists, and which hosts are unpinned |
+| `VM hosts` | each VM host, its hypervisor and VM, and the VM's state (running, suspended, stopped, gone, or a hypervisor that is not enabled); what `ssh vm sync` would do; VM hosts not pinned yet; names in `vm.hypervisors` that match no driver |
+| stale pins | `known_hosts` entries authama wrote for hosts no longer in the manifest |
+| loose keys | key pairs in `~/.ssh` no profile manages. One whose name or comment suggests a devbox (`docker-tunnel`, `devbox`, a hypervisor's name, ...) gets the fix `authama ssh vm adopt-key <key> --hypervisor ... --vm ...` instead of the generic one |
 | `config drift` | whether the rendered block still matches the manifest |
 | `perms` | every managed path whose mode is not what it should be |
 | alias collisions | the same Host alias in more than one profile, so ssh applies only the first (warning) |
@@ -56,13 +60,25 @@ That is what makes it usable as a CI gate.
 
 ## `--fix`
 
-Repairs permissions, and only permissions. It re-asserts the canonical mode on
-every managed path in `~/.ssh`, on the config-home secrets and on the installed
-token files (0600) — the same
-enumeration the check walks, so the two cannot disagree about what is managed.
+Repairs permissions: it re-asserts the canonical mode on every managed path in
+`~/.ssh`, on the config-home secrets and on the installed token files (0600) — the
+same enumeration the check walks, so the two cannot disagree about what is managed.
 
-It does not mint keys, render config or pin hosts. Those are `reconcile` and
-`knownhosts pin`, and they are separate because they change more than metadata.
+Since 0.1.3 it also does the low-risk upkeep, after one confirmation that lists it:
+
+- **VM sync** — the same plan as [`authama ssh vm sync`](vm.md#authama-ssh-vm-sync): pin running VM
+  hosts, re-install a missing guest key, refresh Docker contexts, and remove the host entry and
+  Docker context of a VM that is gone (the manifest is backed up first; key files are never touched;
+  suspended and stopped VMs are left alone).
+- **Stale pins** — removes `known_hosts` entries authama wrote for hosts no longer in the manifest
+  (`~/.ssh` is snapshotted first).
+
+Declining the confirmation fixes permissions only. `--dry-run` (`-n`) prints the plan and changes
+nothing; `--yes` (`-y`) skips the confirmation, as for a scheduled run. To run the upkeep daily, use
+`authama ssh vm sync --install-schedule`.
+
+It does not mint keys, render config for drift, or pin hosts that are not VMs. Those are `reconcile`,
+`ssh config render` and `knownhosts pin`, and they stay separate because they change more than metadata.
 
 ## `--json`
 
@@ -77,7 +93,8 @@ Keys: `ok`, `home`, `ssh_dir`, `preflight_ok`, `providers_source`, `agent`,
 `known_hosts`, `config_in_sync`, `perm_issues`, `orphan_keys`, `duplicate_keys`,
 `unpinned_hosts`, `alias_collisions`, `stale_proxy`, `old_keys`, `stale_old_keys`,
 `dangling_keys`, `stranded_legacy_home`, `shadowed_hosts`, `raw_option_overlaps`, `needed_tools`, `clipboard` (`null` when a
-clipboard tool was found).
+clipboard tool was found), and since 0.1.3 `unpinned_vm_hosts`, `stale_pins` and `vm` (the VM hosts, their
+state and the pending sync actions).
 
 `tokens` is `{"ok": bool, "findings": [{"level", "target", "text"}]}`. Its `ok` is
 separate from the top-level `ok`, which stays the SSH verdict; the exit code

@@ -92,6 +92,13 @@ var Specs = []Spec{
 		Doc: "Record every change in the history database (`authama history`)."},
 	{Section: "notifications", Name: "desktop", Env: envnames.Notifications, Kind: KindBool, Default: "true",
 		Doc: "Show desktop notifications for keys due for rotation and dangling keys."},
+	{Section: "vm", Name: "hypervisors", Env: envnames.VMHypervisors, Kind: KindString,
+		Default: "every built-in driver and every custom one in the hypervisors section",
+		Doc:     "The hypervisors you have and use, comma-separated (e.g. \"parallels,vmpal\"). `ssh vm list`, `ssh vm sync`, doctor and the web UI query only these; a VM host on another hypervisor is reported, never changed."},
+	{Section: "vm", Name: "prune_gone", Env: envnames.VMPruneGone, Kind: KindBool, Default: "true",
+		Doc: "Let `ssh vm sync` remove the host entry (never its key files) and Docker context of a VM its hypervisor no longer has. Off: sync only reports it."},
+	{Section: "vm", Name: "repin_changed", Env: envnames.VMRepin, Kind: KindBool, Default: "false",
+		Doc: "Let `ssh vm sync` replace a VM host's known_hosts pin when the guest's host key changed (a rebuilt VM), as `--repin` does. Off: sync reports it."},
 }
 
 // Find returns the spec for a dotted key.
@@ -109,6 +116,9 @@ func Find(key string) (Spec, bool) {
 type File struct {
 	Path   string
 	Values map[string]string
+	// VM holds the structured "hypervisors" and "devboxes" sections, which
+	// have no environment variable.
+	VM VMConfig
 }
 
 // ValidationError lists every problem found in an authama.json.
@@ -162,6 +172,10 @@ func Parse(path string, b []byte) (*File, error) {
 		if name == "$schema" || name == "version" {
 			continue
 		}
+		if structured[name] {
+			bad.Problems = append(bad.Problems, parseStructured(f, name, top[name])...)
+			continue
+		}
 		if !sections[name] {
 			bad.Problems = append(bad.Problems, fmt.Sprintf("%s: unknown section (known: %s)", name, strings.Join(sectionNames(), ", ")))
 			continue
@@ -187,6 +201,7 @@ func Parse(path string, b []byte) (*File, error) {
 			f.Values[spec.Key()] = v
 		}
 	}
+	bad.Problems = append(bad.Problems, f.VM.crossCheck()...)
 	if len(bad.Problems) > 0 {
 		return nil, bad
 	}
@@ -314,6 +329,16 @@ func sectionNames() []string {
 		if !seen[s.Section] {
 			seen[s.Section] = true
 			out = append(out, s.Section)
+		}
+	}
+	return append(out, structuredNames...)
+}
+
+func scalarSectionNames() []string {
+	var out []string
+	for _, s := range sectionNames() {
+		if !structured[s] {
+			out = append(out, s)
 		}
 	}
 	return out

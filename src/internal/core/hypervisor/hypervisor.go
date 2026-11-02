@@ -22,7 +22,14 @@ type VM struct {
 	Name    string
 	State   string
 	Running bool
+	// ID is the hypervisor's own identifier, when it has one besides the name.
+	ID string
+	// Guest is the guest OS family when the hypervisor reports it ("windows", "linux").
+	Guest string
 }
+
+// Matches reports whether v is the VM a manifest names as name.
+func (v VM) Matches(name string) bool { return v.Name == name || (v.ID != "" && v.ID == name) }
 
 // Endpoint is where a VM's SSH server answers right now.
 type Endpoint struct {
@@ -51,7 +58,9 @@ type Driver interface {
 	Exec(vm string, argv ...string) ([]byte, error)
 }
 
-// For returns the driver for a manifest hypervisor name.
+// For returns the driver for a manifest hypervisor name: a built-in one, or a
+// command driver authama.json declares. It ignores the enabled list, so a host
+// on a hypervisor the user later turned off still resolves when ssh connects.
 func For(name string) (Driver, error) {
 	for _, d := range All() {
 		if d.Name() == name {
@@ -61,9 +70,15 @@ func For(name string) (Driver, error) {
 	return nil, fmt.Errorf("unknown hypervisor %q", name)
 }
 
-// All returns every driver, in the documented order.
-func All() []Driver {
+// Builtin returns the built-in drivers, in the documented order.
+func Builtin() []Driver {
 	return []Driver{parallels{}, vmpal{}, vmware{}, utm{}, lima{}, orbstack{}, podman{}}
+}
+
+// All returns every driver: the built-in ones, then the registered command
+// drivers in name order.
+func All() []Driver {
+	return append(Builtin(), registered()...)
 }
 
 // Available reports whether d's CLI was found.
@@ -170,6 +185,7 @@ type vmpalVM struct {
 	ID           string `json:"id"`
 	State        string `json:"state"`
 	LocalAddress string `json:"localAddress"`
+	Guest        string `json:"guest"`
 }
 
 func (d vmpal) list() ([]vmpalVM, error) {
@@ -187,7 +203,7 @@ func (d vmpal) List() ([]VM, error) {
 	raw, err := d.list()
 	var vms []VM
 	for _, v := range raw {
-		vms = append(vms, VM{Name: v.Name, State: v.State, Running: v.State == "running"})
+		vms = append(vms, VM{Name: v.Name, State: v.State, Running: v.State == "running", ID: v.ID, Guest: strings.ToLower(v.Guest)})
 	}
 	return vms, err
 }

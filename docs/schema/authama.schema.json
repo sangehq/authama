@@ -31,6 +31,58 @@
       },
       "type": "object"
     },
+    "devboxes": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "docker_context": {
+            "default": true,
+            "description": "Keep a Docker context ssh://<alias>.",
+            "type": "boolean"
+          },
+          "hypervisor": {
+            "description": "A built-in hypervisor (parallels, vmpal, vmware, utm, lima) or one from the hypervisors section.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "key": {
+            "description": "The key name the host uses; a loose ~/.ssh/<key> pair is adopted (copied) when the profile has no key of that name.",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+            "type": "string"
+          },
+          "profile": {
+            "description": "The profile the host belongs to (created when missing).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "user": {
+            "description": "The guest user.",
+            "pattern": "^[A-Za-z0-9_][A-Za-z0-9._-]{0,31}$",
+            "type": "string"
+          },
+          "vm": {
+            "description": "The VM's name as the hypervisor lists it.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "profile",
+          "hypervisor",
+          "vm",
+          "user"
+        ],
+        "type": "object"
+      },
+      "description": "Devboxes authama keeps as SSH hosts, by alias. `ssh vm sync` adds a declared devbox that is not a host yet and adopts its loose key (a copy) when the profile lacks it.",
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$"
+      },
+      "type": "object"
+    },
     "git": {
       "additionalProperties": false,
       "properties": {
@@ -54,6 +106,70 @@
           "description": "Record every change in the history database (`authama history`). Sets $AUTHAMA_HISTORY. Default: true.",
           "type": "boolean"
         }
+      },
+      "type": "object"
+    },
+    "hypervisors": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "description": "Prints where the VM's SSH server answers: host or host:port.",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "description": {
+            "description": "Shown by `ssh vm list`.",
+            "type": "string"
+          },
+          "exec": {
+            "description": "Runs a command in the guest; the guest argv is appended (optional; lets `ssh vm sync` re-install a missing key).",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "list": {
+            "description": "Lists the VMs: a JSON array of {\"name\",\"state\"} (optional boolean \"running\"), or one name<TAB>state per line. running, started and up mean running.",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "start": {
+            "description": "Starts the VM (optional; without it `ssh` to a stopped VM fails instead of starting it).",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "list",
+          "address"
+        ],
+        "type": "object"
+      },
+      "description": "Custom hypervisors: a command driver per name, for a VM tool authama has no built-in driver for. Each value is an argv array (no shell); {vm} is replaced with the VM's name. Enable one by naming it in vm.hypervisors (or leave that unset).",
+      "propertyNames": {
+        "not": {
+          "enum": [
+            "parallels",
+            "vmpal",
+            "vmware",
+            "utm",
+            "lima",
+            "orbstack",
+            "podman"
+          ]
+        },
+        "pattern": "^[a-z][a-z0-9_-]{0,31}$"
       },
       "type": "object"
     },
@@ -122,6 +238,27 @@
     "version": {
       "const": 1,
       "description": "The authama.json format version."
+    },
+    "vm": {
+      "additionalProperties": false,
+      "properties": {
+        "hypervisors": {
+          "description": "The hypervisors you have and use, comma-separated (e.g. \"parallels,vmpal\"). `ssh vm list`, `ssh vm sync`, doctor and the web UI query only these; a VM host on another hypervisor is reported, never changed. Sets $AUTHAMA_VM_HYPERVISORS. Default: every built-in driver and every custom one in the hypervisors section.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "prune_gone": {
+          "default": true,
+          "description": "Let `ssh vm sync` remove the host entry (never its key files) and Docker context of a VM its hypervisor no longer has. Off: sync only reports it. Sets $AUTHAMA_VM_PRUNE_GONE. Default: true.",
+          "type": "boolean"
+        },
+        "repin_changed": {
+          "default": false,
+          "description": "Let `ssh vm sync` replace a VM host's known_hosts pin when the guest's host key changed (a rebuilt VM), as `--repin` does. Off: sync reports it. Sets $AUTHAMA_VM_REPIN. Default: false.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
     }
   },
   "title": "authama settings (authama.json)",

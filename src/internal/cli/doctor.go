@@ -3,15 +3,20 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/platform"
 	"github.com/simtabi/authama/src/internal/services/doctor"
+	"github.com/simtabi/authama/src/internal/services/knownhosts"
 	"github.com/simtabi/authama/src/internal/services/tokensvc"
+	"github.com/simtabi/authama/src/internal/services/vmsync"
+	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
 // newDoctorCmd is the native (engine-free) doctor verb: diagnose deps, perms,
@@ -19,7 +24,7 @@ import (
 // SSH report is not clean, matching v1; the token-file check warns, and fails
 // only under --strict.
 func newDoctorCmd() *cobra.Command {
-	var fix, jsonOut, strict bool
+	var fix, jsonOut, strict, dryRun, yes bool
 	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Diagnose deps, perms, agent, known_hosts, drift, dangling keys, and token-file perms",
@@ -34,15 +39,49 @@ func newDoctorCmd() *cobra.Command {
 			svc := doctor.New(p, m, platform.EmitUseKeychain())
 
 			out := c.OutOrStdout()
+			if dryRun && !fix {
+				return fmt.Errorf("--dry-run goes with --fix: it shows what --fix would do")
+			}
+			if fix && dryRun {
+				return doctorFixDryRun(c, p, m, svc)
+			}
 			if fix {
 				// --fix changes modes in the config home and ~/.ssh, so it is a
-				// mutation like any other: serialized, and on the record.
+				// mutation like any other: serialized, and on the record. Its
+				// upkeep - vm sync, stale pins - is worked out first, asked
+				// about without the lock, then worked out again under it.
+				up, err := planUpkeep(p, m)
+				if err != nil {
+					return err
+				}
+				agreed := true
+				if !up.empty() && !jsonOut {
+					summary := "doctor --fix will also:\n  - " + strings.Join(up.lines(), "\n  - ")
+					if err := confirmChange(c, summary, yes); err != nil {
+						if !errors.Is(err, errAborted) {
+							return err
+						}
+						agreed = false
+						_, _ = fmt.Fprintln(out, "skipped the VM sync and the stale pins; fixing perms only")
+					}
+				}
 				lockForMutation(p)
 				for _, change := range svc.FixPerms() {
 					if !jsonOut {
 						_, _ = fmt.Fprintln(out, "fixed perms:", change)
 					}
 				}
+				if agreed && !up.empty() {
+					w := out
+					if jsonOut {
+						w = io.Discard
+					}
+					if err := runUpkeep(p, up, w); err != nil {
+						_, _ = fmt.Fprintln(c.ErrOrStderr(), "doctor --fix:", err)
+					}
+				}
+				m, _ = manifest.Load(p.Manifest())
+				svc = doctor.New(p, m, platform.EmitUseKeychain())
 			}
 			rep := svc.Run(strict)
 			// The token files (auth.json, .npmrc, docker's config.json, the git
@@ -84,11 +123,103 @@ func newDoctorCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&fix, "fix", false, "auto-fix perms first")
+	cmd.Flags().BoolVar(&fix, "fix", false, "fix first: perms, stale authama pins, and a VM sync (backs up before removing)")
+	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "with --fix: show what it would do, change nothing")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "with --fix: do the upkeep without confirming (implied when there is no terminal)")
 	cmd.Flags().BoolVar(&jsonOut, "json", false, "machine-readable output (scripting)")
 	cmd.Flags().BoolVar(&strict, "strict", false,
 		"for CI: treat every dangling-key state as a failure, not only the blocking ones, and fail on a token file others can read")
 	return cmd
+}
+
+// upkeep is what doctor --fix does beyond perms: the VM sync, and removing
+// tagged pins no manifest host uses.
+type upkeep struct {
+	sync      *vmsync.Syncer
+	plan      vmsync.Plan
+	stalePins int
+}
+
+func (u upkeep) empty() bool { return u.plan.Empty() && u.stalePins == 0 }
+
+func (u upkeep) lines() []string {
+	out := u.plan.Lines()
+	if u.stalePins > 0 {
+		out = append(out, fmt.Sprintf("remove %d stale authama pin(s) from known_hosts (hosts no longer in the manifest)", u.stalePins))
+	}
+	return out
+}
+
+func planUpkeep(p paths.Paths, m *manifest.Manifest) (upkeep, error) {
+	var u upkeep
+	u.sync = newSyncer(p, vmConfig(p), vmsync.DefaultOptions(nil))
+	plan, err := u.sync.Plan()
+	if err != nil && m != nil {
+		return u, err
+	}
+	u.plan = plan
+	if m != nil {
+		if c, err := knownhosts.New(p.SSHDir).PruneCandidates(m); err == nil {
+			u.stalePins = len(c)
+		}
+	}
+	return u, nil
+}
+
+func runUpkeep(p paths.Paths, up upkeep, w io.Writer) error {
+	// What was agreed to must still be what would happen.
+	again, err := up.sync.Plan()
+	if err != nil {
+		return err
+	}
+	if strings.Join(again.Lines(), "\n") != strings.Join(up.plan.Lines(), "\n") {
+		return errChanged
+	}
+	var errs []error
+	if !again.Empty() {
+		if err := runVMSync(w, p, up.sync, again, false); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if m, err := manifest.Load(p.Manifest()); err == nil {
+		if cands, _ := knownhosts.New(p.SSHDir).PruneCandidates(m); len(cands) > 0 {
+			snapshotBeforeMutation(p)
+			n, err := knownhosts.New(p.SSHDir).Prune(m)
+			if err != nil {
+				errs = append(errs, err)
+			} else {
+				_, _ = fmt.Fprintf(w, "done: removed %d stale authama pin(s) from known_hosts\n", n)
+			}
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func doctorFixDryRun(c *cobra.Command, p paths.Paths, m *manifest.Manifest, svc *doctor.Service) error {
+	out := c.OutOrStdout()
+	rep := svc.Run(false)
+	_, _ = fmt.Fprintln(out, "doctor --fix would:")
+	n := 0
+	for _, issue := range rep.PermIssues {
+		_, _ = fmt.Fprintln(out, "  - fix the mode of "+issue)
+		n++
+	}
+	up, err := planUpkeep(p, m)
+	if err != nil {
+		return err
+	}
+	for _, l := range up.lines() {
+		_, _ = fmt.Fprintln(out, "  - "+l)
+		n++
+	}
+	if n == 0 {
+		_, _ = fmt.Fprintln(out, "  nothing: modes, pins and VM hosts are all in order")
+	}
+	for _, note := range up.plan.Notes {
+		_, _ = fmt.Fprintln(out, "note: "+note)
+	}
+	_, _ = fmt.Fprintln(out, "dry run: nothing changed")
+	return nil
 }
 
 func writeDoctorTokens(w io.Writer, fs []tokensvc.Finding) {
