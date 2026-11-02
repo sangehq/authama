@@ -16,6 +16,11 @@
 # choose another. Directories, not single files, are mounted because the tool
 # writes atomically by rename, and renaming over a single-file bind mount fails
 # with EBUSY.
+#
+# Inside the container authama keeps its settings in /home/dev/.config/authama
+# (.env and authama.json, loaded at startup) and its state - history, logs,
+# snapshots, bundles - in /home/dev/.local/state/authama, both inside that
+# mounted home. Pass AUTHAMA_NO_DOTENV=1 through `environment:` to skip .env.
 
 name: authama
 

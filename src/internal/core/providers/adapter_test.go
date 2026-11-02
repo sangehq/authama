@@ -54,10 +54,10 @@ func TestManualDeploy(t *testing.T) {
 }
 
 func TestKeyTitle(t *testing.T) {
-	if got := keyTitle("k.pub", "ABCDEFGHIJKLMNOPQRST"); got != "ssh-manager k.pub ABCDEFGHIJKL" {
+	if got := keyTitle("k.pub", "ABCDEFGHIJKLMNOPQRST"); got != "authama k.pub ABCDEFGHIJKL" {
 		t.Errorf("keyTitle = %q (want 12-char body fragment)", got)
 	}
-	if got := keyTitle("k.pub", ""); got != "ssh-manager k.pub" {
+	if got := keyTitle("k.pub", ""); got != "authama k.pub" {
 		t.Errorf("keyTitle no-body = %q", got)
 	}
 }

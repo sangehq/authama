@@ -16,7 +16,7 @@ re-renders. The profile's `Host` blocks move out of the root config into
 with one `Include` per category:
 
 ```
-# Managed by ssh-manager - do not edit (run: sshmgr config render)
+# Managed by authama - do not edit (run: authama ssh config render)
 
 Match all
 Include ~/.ssh/profiles/internal/config

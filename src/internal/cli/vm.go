@@ -23,7 +23,7 @@ func newVMCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "vm",
 		Short: "Local VMs as SSH hosts: list them, add one, and connect through the hypervisor",
-		Long: "A VM's IP changes, so a VM host renders ProxyCommand \"<sshmgr>\" vm proxy <alias>:\n" +
+		Long: "A VM's IP changes, so a VM host renders ProxyCommand \"<authama>\" vm proxy <alias>:\n" +
 			"each connection asks the hypervisor for the VM's current address. Supported:\n" +
 			strings.Join(manifest.Hypervisors, ", ") + ". OrbStack and Podman run their own SSH and keys;\n" +
 			"they are listed, and get a Docker context, but authama does not take their keys over.",

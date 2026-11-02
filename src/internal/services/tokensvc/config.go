@@ -8,13 +8,14 @@ import (
 	"strings"
 
 	"github.com/simtabi/authama/src/internal/core/tokens"
+	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/util/fs"
 	"github.com/simtabi/authama/src/internal/util/log"
 )
 
 // Config file names and variables.
 const (
-	ConfigEnv        = "SSH_MANAGER_TOKENS_CONFIG"
+	ConfigEnv        = envnames.TokensConfig
 	LocalConfigName  = "authama-tokens.json"
 	LegacyConfigName = "auth-token-manager.json"
 	legacyEnv        = "AUTH_TOKEN_MANAGER_CONFIG"
@@ -30,7 +31,7 @@ type ConfigSource struct {
 }
 
 // FindConfig discovers the token config: --config, then
-// $SSH_MANAGER_TOKENS_CONFIG, ./authama-tokens.json, <config home>/tokens.json,
+// $AUTHAMA_TOKENS_CONFIG, ./authama-tokens.json, <config home>/tokens.json,
 // and then, deprecated, auth-token-manager's own locations. It returns a
 // zero ConfigSource when there is none.
 func (e Env) FindConfig(explicit string) (ConfigSource, error) {
@@ -42,7 +43,7 @@ func (e Env) FindConfig(explicit string) (ConfigSource, error) {
 		return ConfigSource{Path: p}, nil
 	}
 	var cands []ConfigSource
-	if v := e.getenv(ConfigEnv); v != "" {
+	if v := envnames.Get(e.getenv, ConfigEnv); v != "" {
 		cands = append(cands, ConfigSource{Path: e.abs(v)})
 	}
 	cands = append(cands,

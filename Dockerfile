@@ -12,6 +12,8 @@
 #   OUTSIDE /workspace, so the bind-mounted source cannot shadow them.
 # - Non-root user `dev` with a build-time UID/GID, so files written into the
 #   mounted home keep the host user's ownership.
+# - authama's config home is /home/dev/.config/authama and its state home
+#   /home/dev/.local/state/authama, so both land in that mounted home.
 
 ARG GO_VERSION=1.26
 FROM golang:${GO_VERSION}

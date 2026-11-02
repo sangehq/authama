@@ -3,13 +3,13 @@ package cli
 import (
 	"fmt"
 	"io"
-	"os"
 	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/simtabi/authama/src/internal/services/bundler"
 	"github.com/simtabi/authama/src/internal/services/keystore"
+	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
@@ -34,7 +34,7 @@ func newBundleCmd() *cobra.Command {
 			lockForMutation(p)
 			recip := recipient
 			if recip == "" {
-				recip = os.Getenv("SSH_MANAGER_AGE_RECIPIENT")
+				recip = envnames.Get(nil, envnames.AgeRecipient)
 			}
 			dest := output
 			if dest == "" {
@@ -55,7 +55,7 @@ func newBundleCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&recipient, "recipient", "r", "", "age recipient (else $SSH_MANAGER_AGE_RECIPIENT)")
+	cmd.Flags().StringVarP(&recipient, "recipient", "r", "", "age recipient (else $AUTHAMA_AGE_RECIPIENT)")
 	cmd.Flags().StringVarP(&output, "output", "o", "", "destination dir (else config-dir/dist)")
 	cmd.Flags().IntVar(&keep, "keep", 0, "after bundling, keep only the newest N bundles (0 keeps all)")
 	return cmd
@@ -88,7 +88,7 @@ func newRestoreCmd() *cobra.Command {
 			lockForMutation(p)
 			ident := identity
 			if ident == "" {
-				if env := os.Getenv("SSH_MANAGER_AGE_IDENTITY_FILE"); env != "" {
+				if env := envnames.Get(nil, envnames.AgeIdentityFile); env != "" {
 					ident = env
 				}
 			}
@@ -106,7 +106,7 @@ func newRestoreCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&identity, "identity", "i", "", "age identity file (else $SSH_MANAGER_AGE_IDENTITY_FILE)")
+	cmd.Flags().StringVarP(&identity, "identity", "i", "", "age identity file (else $AUTHAMA_AGE_IDENTITY_FILE)")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the confirmation prompt")
 	return cmd
 }

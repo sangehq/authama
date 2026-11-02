@@ -85,7 +85,7 @@ diagnose() {
   say ""; say "If perms look wrong use 'fix permissions'. If sshd blocks you, edit $s and: systemctl restart ssh"
 }
 
-say "=== ssh-manager fixkeys: authorized_keys recovery ==="
+say "=== authama fixkeys: authorized_keys recovery ==="
 [ "$(id -u)" -ne 0 ] && say "Note: not root - you can only manage your own user."
 pick_user; ensure_file
 while true; do

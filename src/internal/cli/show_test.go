@@ -122,7 +122,7 @@ func TestShowHostReportsConfigKeyAndPins(t *testing.T) {
 		"work/work_gh-ed25519", "expires on:   2027-01-01",
 		"gh-work via manual (verified)",
 		// The pin, decoded out of a hashed store, and attributed.
-		"[github.com]:443", "ssh-ed25519", "hashed", "sshmgr",
+		"[github.com]:443", "ssh-ed25519", "[hashed, authama]",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("show output missing %q:\n%s", want, got)

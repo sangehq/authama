@@ -1,4 +1,4 @@
-// Package perms centralizes the file modes ssh-manager enforces and applies them
+// Package perms centralizes the file modes authama enforces and applies them
 // in a platform-correct way - POSIX chmod on Unix, ACLs via icacls on Windows.
 // Ported.set_perms layer.
 package perms

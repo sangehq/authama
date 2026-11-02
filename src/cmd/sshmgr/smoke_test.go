@@ -49,8 +49,8 @@ func sshmgr(t *testing.T) (runner, string) {
 	env := append(os.Environ(),
 		"HOME="+home,
 		"USERPROFILE="+home,
-		"SSH_MANAGER_HOME="+cfg,
-		"SSH_MANAGER_AUTO_PIN=0", // no network reach during a test
+		"AUTHAMA_CONFIG_DIR="+cfg,
+		"AUTHAMA_AUTO_PIN=0", // no network reach during a test
 	)
 	run := func(stdin string, args ...string) (string, string, int) {
 		t.Helper()

@@ -505,7 +505,7 @@ func restoreByID(sshDir, snapshotsDir, devRoot string, retain int, id string) (R
 	}
 	// Snapshotting the current tree can prune the oldest - possibly `chosen`.
 	// Restore from a temp copy that pruning cannot reach.
-	tmp, err := os.MkdirTemp("", "sshmgr-restore-")
+	tmp, err := os.MkdirTemp("", "authama-restore-")
 	if err != nil {
 		return Result{}, err
 	}

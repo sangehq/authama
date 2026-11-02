@@ -134,7 +134,7 @@ func (g GitHub) Deploy(t Target) DeployOutcome {
 	if rows != nil && want != "" && hasKeyBody(rows, want) {
 		return DeployOutcome{Method: "github-gh", Verified: true, Detail: "already present"}
 	}
-	title := "ssh-manager " + baseName(t.PubkeyPath)
+	title := KeyTitlePrefix + baseName(t.PubkeyPath)
 	_, stderr, code := runEnv(30*time.Second, g.env(t), "gh", "ssh-key", "add", t.PubkeyPath, "--title", title)
 	if code != 0 {
 		return DeployOutcome{Method: "github-gh", Detail: strings.TrimSpace(stderr), Error: true}
@@ -300,7 +300,7 @@ func (g GitLab) Deploy(t Target) DeployOutcome {
 	if rows != nil && want != "" && hasKeyBody(rows, want) {
 		return DeployOutcome{Method: "gitlab-glab", Verified: true, Detail: "already present"}
 	}
-	title := "ssh-manager " + baseName(t.PubkeyPath)
+	title := KeyTitlePrefix + baseName(t.PubkeyPath)
 	_, stderr, code := runEnv(30*time.Second, g.env(t), "glab", "ssh-key", "add", t.PubkeyPath, "--title", title)
 	if code != 0 {
 		return DeployOutcome{Method: "gitlab-glab", Detail: strings.TrimSpace(stderr), Error: true}

@@ -821,7 +821,7 @@ func TestTokenDeleteAsksAtATerminal(t *testing.T) {
 
 // auth-token-manager read its catalog from $AUTH_TOKEN_MANAGER_CATALOG when
 // set, so a Composer service could be added without a release. authama reads
-// $SSH_MANAGER_TOKENS_CATALOG, and still the old name with a notice.
+// $AUTHAMA_TOKENS_CATALOG (or its 0.1.0 name), and still the oldest name with a notice.
 func TestTokenCatalogOverride(t *testing.T) {
 	b := tokenSandbox(t)
 	t.Cleanup(func() { _ = tokens.UseCatalog("") })
@@ -840,7 +840,7 @@ func TestTokenCatalogOverride(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, v := range []string{"SSH_MANAGER_TOKENS_CATALOG", "AUTH_TOKEN_MANAGER_CATALOG"} {
+	for _, v := range []string{"AUTHAMA_TOKENS_CATALOG", "SSH_MANAGER_TOKENS_CATALOG", "AUTH_TOKEN_MANAGER_CATALOG"} {
 		b.env = map[string]string{v: path}
 		out := b.ok(t, "", "providers")
 		if !strings.Contains(out, "acme-forge") {
@@ -852,7 +852,7 @@ func TestTokenCatalogOverride(t *testing.T) {
 	}
 
 	// A missing file warns and falls back, as auth-token-manager did.
-	b.env = map[string]string{"SSH_MANAGER_TOKENS_CATALOG": filepath.Join(t.TempDir(), "nope.json")}
+	b.env = map[string]string{"AUTHAMA_TOKENS_CATALOG": filepath.Join(t.TempDir(), "nope.json")}
 	out := b.ok(t, "", "providers")
 	if !strings.Contains(out, "not a file") || strings.Contains(out, "acme-forge") {
 		t.Errorf("missing catalog file:\n%s", out)
@@ -865,7 +865,7 @@ func TestTokenCatalogOverride(t *testing.T) {
 	if err := os.WriteFile(path, []byte(`{"targets":["composer","pip"]}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	b.env = map[string]string{"SSH_MANAGER_TOKENS_CATALOG": path}
+	b.env = map[string]string{"AUTHAMA_TOKENS_CATALOG": path}
 	if out, err := b.run(t, "", "providers"); err == nil || !strings.Contains(err.Error(), "unknown target") {
 		t.Errorf("a catalog naming an unknown target was used: %v\n%s", err, out)
 	}

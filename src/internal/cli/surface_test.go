@@ -98,7 +98,7 @@ var goOnly = map[string]string{
 	"show":       "D1 - reconciles manifest, key files, rendered config and trust store in one view",
 	"clean":      "D1 - prunes stale pins and records left by deletions",
 
-	"doctor --strict": "D7 - CI gate: escalates every dangling-key state to fatal",
+	"doctor --strict": "settings - CI gate: escalates every dangling-key state to fatal",
 
 	// Categories group profiles under profiles/<category>/ with one Include per
 	// category. v1 had only the flat layout.
@@ -257,6 +257,15 @@ var goOnly = map[string]string{
 	"token examples --json":           "tokens - atm --template --stdout, masked JSON",
 	"token init":                      "tokens - atm --init",
 	"token init --target":             "tokens - atm --init --target",
+	"settings":                        "settings - user settings (authama.json + .env), named apart from ssh config",
+	"settings path":                   "settings - where the config home, state home, .env and authama.json are",
+	"settings path --json":            "settings",
+	"settings show":                   "settings - the settings file as validated",
+	"settings show --effective":       "settings - every setting with its effective value and source",
+	"settings show --json":            "settings",
+	"settings validate":               "settings - check authama.json against the schema and .env for malformed lines",
+	"settings init":                   "settings - write a starter authama.json",
+	"settings init --force":           "settings",
 	"token providers":                 "tokens - atm --services, plus the catalog's known registries and git hosts",
 	"token audit":                     "tokens - atm --doctor",
 	"token audit --config":            "tokens - atm --config with --doctor",

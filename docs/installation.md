@@ -50,9 +50,10 @@ irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.p
 $env:AUTHAMA_VERSION = 'v0.1.0'; irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex
 ```
 
-It installs into `%LOCALAPPDATA%\Programs\ssh-manager` (the folder keeps the
-project's old name so an upgrade lands where the earlier install already is) and
-adds it to the user `PATH`.
+It installs into `%LOCALAPPDATA%\Programs\authama` and adds it to the user
+`PATH`. Upgrading from 0.1.0, it also takes the old
+`%LOCALAPPDATA%\Programs\ssh-manager` folder off the user `PATH`; the files in it
+are left alone, so delete that folder when you like.
 
 ### Package managers
 
@@ -156,37 +157,49 @@ which fails with `EBUSY` over a single-file bind mount. If you run into trouble:
 The `.env` and the rest of the per-user home are created by `authama init`, which
 seeds `.env` from the shipped `.env-example` at mode `0600`.
 
-## The per-user home (OS-standard config dir)
+## The per-user homes: config and state
 
-All of a user's authama state lives in **one** per-user home - a single `ssh-manager`
-folder (the project's original name, kept so existing setups keep working) in the OS-standard config location:
+authama keeps your **settings and secrets** in one config home and its
+**runtime state** in a separate state home. The config home is the same
+`~/.config/authama` on every OS, Windows included
+(`%USERPROFILE%\.config\authama`), so a dotfiles repo or a backup script has one
+path to know.
 
-| OS | Default home |
-|----|--------------|
-| Linux / macOS | `$XDG_CONFIG_HOME/ssh-manager` if set, else `~/.config/ssh-manager` |
-| Windows | `%APPDATA%\ssh-manager` |
+| What | Where (first match wins) |
+|------|--------------------------|
+| Config home | `$AUTHAMA_CONFIG_DIR` → `$XDG_CONFIG_HOME/authama` (absolute values only) → `~/.config/authama` |
+| State home | `$AUTHAMA_STATE_DIR` → the config home itself, when `$AUTHAMA_CONFIG_DIR` was set → `$XDG_STATE_HOME/authama` → `~/.local/state/authama` |
 
 ```
-<home>/                             # e.g. ~/.config/ssh-manager
+~/.config/authama/                  # config home: what you edit or back up
+├── .env                            # secrets and AUTHAMA_* settings (0600), loaded at startup
+├── authama.json                    # OPTIONAL - non-secret settings, validated against a schema
 ├── manifest.json  inventory.json   # manifest is the source of truth
 ├── providers.json                  # OPTIONAL - else the shipped default catalog is used
-├── .env  age-identity.txt          # secrets (0600)
+├── age-identity.txt                # bundle decryption key (0600)
 ├── tokens.json                     # OPTIONAL - the token config (env var names, no secrets)
-├── log/audit.log                   # accountability log
-├── snapshots/                      # reversible ~/.ssh backups
-├── dist/                           # exported encrypted bundles (ssh-manager-<stamp>.age)
 └── .state/                         # transient: .lock, expiry/notify caches
+
+~/.local/state/authama/             # state home: written by authama, safe to lose
+├── log/audit.log  log/history.db   # accountability log and command history
+├── snapshots/                      # reversible ~/.ssh backups
+└── dist/                           # exported encrypted bundles (authama-<stamp>.age)
 ```
 
-authama resolves the home in this order:
+Setting `$AUTHAMA_CONFIG_DIR` keeps everything in that one directory (handy for
+tests and for running several configurations side by side) unless
+`$AUTHAMA_STATE_DIR` is set too. `authama settings path` and `authama doctor`
+print both resolved homes. `~/.ssh` itself is unchanged - it's the generated
+output.
 
-1. `$SSH_MANAGER_HOME` (alias `$SSH_MANAGER_CONFIG_DIR`) if set - explicit override (tests / multiple configs)
-2. otherwise the OS-standard dir above
-
-A legacy `~/.sshmgr` home (from older versions) is **auto-migrated** to the
-standard location on first run. `~/.ssh` itself is unchanged - it's the generated
-output. `authama doctor` prints the resolved home so it's always clear where state
-lives.
+**Upgrading from 0.1.0 or earlier.** On the first run without an explicit
+`$AUTHAMA_CONFIG_DIR`, when `~/.config/authama` does not exist yet, authama copies
+the old home in - `~/.config/ssh-manager` (on Windows also
+`%APPDATA%\ssh-manager`), or an older `~/.config/sshmgr` or `~/.sshmgr` - moves
+logs, history, snapshots and bundles into the state home, writes
+`MIGRATED-TO-AUTHAMA.txt` into the old directory and leaves it in place. It says
+so once on stderr. The old `SSH_MANAGER_*` / `SSHMGR_*` variable names keep
+working, with a deprecation notice. See [Migration](migration.md).
 
 ### Configuration precedence (user first, then shipped default)
 

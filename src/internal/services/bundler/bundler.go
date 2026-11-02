@@ -133,12 +133,12 @@ func New(sshDir, configDir string, cipher Cipher) *Bundler {
 	return &Bundler{sshDir: sshDir, configDir: configDir, cipher: cipher}
 }
 
-// Bundle tars the keys + config models, encrypts to dest/ssh-manager-<stamp>.age,
+// Bundle tars the keys + config models, encrypts to dest/authama-<stamp>.age,
 // and writes the .sha256 + .contents sidecars. The tar is piped directly into the
 // cipher, so the plaintext archive exists only in memory.
 func (b *Bundler) Bundle(recipient, destDir, stamp string) (BundleResult, error) {
 	if recipient == "" {
-		return BundleResult{}, fmt.Errorf("no age recipient - set SSH_MANAGER_AGE_RECIPIENT or pass --recipient")
+		return BundleResult{}, fmt.Errorf("no age recipient - set AUTHAMA_AGE_RECIPIENT or pass --recipient")
 	}
 	if err := os.MkdirAll(destDir, 0o700); err != nil {
 		return BundleResult{}, err
@@ -151,9 +151,9 @@ func (b *Bundler) Bundle(recipient, destDir, stamp string) (BundleResult, error)
 	var agePath string
 	var contents []string
 	for n := 0; ; n++ {
-		agePath = filepath.Join(destDir, "ssh-manager-"+stamp+".age")
+		agePath = filepath.Join(destDir, BundlePrefix+stamp+".age")
 		if n > 0 {
-			agePath = filepath.Join(destDir, fmt.Sprintf("ssh-manager-%s-%d.age", stamp, n))
+			agePath = filepath.Join(destDir, fmt.Sprintf("%s%s-%d.age", BundlePrefix, stamp, n))
 		}
 		var err error
 		contents, err = b.encryptTo(agePath, recipient)

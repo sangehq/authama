@@ -9,6 +9,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
@@ -22,7 +23,7 @@ import (
 // replacement, and no configured recipient is a hard stop rather than a shrug,
 // because the alternative is losing a key with no way back.
 func BackupBeforeDestroying(p paths.Paths, out io.Writer, skip bool) error {
-	recipient := os.Getenv("SSH_MANAGER_AGE_RECIPIENT")
+	recipient := envnames.Get(nil, envnames.AgeRecipient)
 	if skip {
 		if recipient == "" {
 			_, _ = fmt.Fprintln(out, "WARNING: proceeding without a key backup - anything this "+
@@ -32,7 +33,7 @@ func BackupBeforeDestroying(p paths.Paths, out io.Writer, skip bool) error {
 	}
 	if recipient == "" {
 		return errors.New("this destroys key material and there is no encrypted backup to fall " +
-			"back on; set SSH_MANAGER_AGE_RECIPIENT to an age recipient (age-keygen -o " +
+			"back on; set AUTHAMA_AGE_RECIPIENT to an age recipient (age-keygen -o " +
 			"<identity>) so a bundle can be written first, or pass --no-key-backup to accept " +
 			"that the replaced key is gone for good")
 	}
@@ -65,9 +66,21 @@ func Prune(dir string, keep int) []string {
 	return removed
 }
 
-// Sorted lists the bundles in dir, oldest first: the order Prune removes them in.
+// BundlePrefix starts every bundle file name. Bundles written before 0.1.1 are
+// named with LegacyBundlePrefix and are still listed, pruned and restorable.
+const (
+	BundlePrefix       = "authama-"
+	LegacyBundlePrefix = "ssh-manager-"
+)
+
+// Sorted lists the bundles in dir, under either name, oldest first: the order
+// Prune removes them in.
 func Sorted(dir string) []string {
-	matches, _ := filepath.Glob(filepath.Join(dir, "ssh-manager-*.age"))
+	var matches []string
+	for _, p := range []string{BundlePrefix, LegacyBundlePrefix} {
+		m, _ := filepath.Glob(filepath.Join(dir, p+"*.age"))
+		matches = append(matches, m...)
+	}
 	sort.Slice(matches, func(i, j int) bool {
 		fi, errI := os.Stat(matches[i])
 		fj, errJ := os.Stat(matches[j])

@@ -33,7 +33,7 @@ Each change is in **History**, with source `web`.
 3. A target that takes the key by hand, such as a panel, pauses a rotation with the new public key
    to copy. Paste it there, then **Done, carry on**.
 
-A rotation writes an encrypted backup first, so set `SSH_MANAGER_AGE_RECIPIENT` before you start
+A rotation writes an encrypted backup first, so set `AUTHAMA_AGE_RECIPIENT` before you start
 `authama serve`. A target that needs a password is deployed from a terminal: `authama ssh deploy <key>`.
 
 ## Look without changing anything

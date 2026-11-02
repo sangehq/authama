@@ -72,7 +72,7 @@ for working on authama itself.
 mints anything:
 
 ```sh
-authama init                      # create ~/.config/ssh-manager (dirs, perms, seed files)
+authama init                      # create ~/.config/authama (dirs, perms, seed files)
 authama ssh profile add work
 authama ssh host add work gh -H github.com -u git --provider github   # or edit manifest.json
 authama ssh host apply work web1 203.0.113.10 deploy web   # add-or-update from a compact spec

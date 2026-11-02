@@ -21,7 +21,7 @@ On the new machine:
 
 ```sh
 authama init
-authama ssh restore ~/Backups/ssh-manager-*.age -i ~/age-identity.txt
+authama ssh restore ~/Backups/authama-*.age -i ~/age-identity.txt
 authama ssh validate                          # every pair parses and matches
 authama doctor
 ```
@@ -34,7 +34,7 @@ On the new machine, sign in to 1Password and run `authama ssh key regen-pub --al
 `restore` overlays: a key already on disk that the bundle does not contain — one
 minted since the backup — survives. It replaces only what it has a copy of.
 
-> Set `SSH_MANAGER_AGE_RECIPIENT` and `SSH_MANAGER_AGE_IDENTITY_FILE` to skip the
+> Set `AUTHAMA_AGE_RECIPIENT` and `AUTHAMA_AGE_IDENTITY_FILE` to skip the
 > flags. The recipient is also what lets `keygen --force` write a backup before
 > destroying a key, instead of refusing.
 

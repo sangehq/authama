@@ -27,7 +27,7 @@ const plistTmpl = `<?xml version="1.0" encoding="UTF-8"?>
 `
 
 const serviceTmpl = `[Unit]
-Description=ssh-manager key-expiry notifier
+Description=authama key-expiry notifier
 
 [Service]
 Type=oneshot

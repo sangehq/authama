@@ -140,8 +140,8 @@ func TestComposePreservesForeignAndReownsLegacy(t *testing.T) {
 	if !strings.Contains(out, "Added by OrbStack") {
 		t.Error("OrbStack preamble must be preserved")
 	}
-	if strings.Count(out, "Managed by ssh-manager") != 1 {
-		t.Errorf("managed block must appear once (re-owned), got %d", strings.Count(out, "Managed by ssh-manager"))
+	if strings.Count(out, "Managed by authama") != 1 {
+		t.Errorf("managed block must appear once (re-owned), got %d", strings.Count(out, "Managed by authama"))
 	}
 	if ComposeRootConfig(out, managed) != out {
 		t.Error("compose must be idempotent")
@@ -159,6 +159,25 @@ func TestComposePreservesForeignAndReownsLegacy(t *testing.T) {
 	}
 	if !strings.Contains(out2, "pre-line") || !strings.Contains(out2, "post-line") {
 		t.Error("foreign content around the legacy block must be preserved")
+	}
+
+	// The ssh-manager markers (2.x-3.x, 0.1.0) are re-owned the same way: one
+	// authama block in the old one's place, nothing of the old markers left.
+	old := "pre-line\n# Managed by ssh-manager - do not edit (run: sshmgr config render)\n" +
+		"old body\n# End of ssh-manager-managed block - content outside it is preserved\npost-line\n"
+	out3 := ComposeRootConfig(old, managed)
+	if strings.Contains(out3, "ssh-manager") || strings.Contains(out3, "old body") {
+		t.Errorf("the ssh-manager block should be replaced, got:\n%s", out3)
+	}
+	if strings.Count(out3, ManagedHeader) != 1 || strings.Count(out3, ManagedEnd) != 1 {
+		t.Errorf("want exactly one authama block, got:\n%s", out3)
+	}
+	if strings.Index(out3, "pre-line") > strings.Index(out3, ManagedHeader) ||
+		strings.Index(out3, "post-line") < strings.Index(out3, ManagedEnd) {
+		t.Error("foreign content must stay where it was, around the block")
+	}
+	if ComposeRootConfig(out3, managed) != out3 {
+		t.Error("re-owning must be idempotent")
 	}
 }
 

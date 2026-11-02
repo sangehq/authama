@@ -11,16 +11,17 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/simtabi/authama/src/internal/services/snapshots"
+	"github.com/simtabi/authama/src/internal/util/envnames"
 )
 
 const defaultSnapshotRetain = 10
 
-// snapshotRetain is how many ~/.ssh snapshots to keep. $SSH_MANAGER_SNAPSHOT_RETAIN
+// snapshotRetain is how many ~/.ssh snapshots to keep. $AUTHAMA_SNAPSHOT_RETAIN
 // overrides it - the variable was documented but never actually read. A value of 0
 // or less is rejected rather than honoured, since "keep none" would silently
 // disable the rollback safety net for every subsequent command.
 func snapshotRetain() int {
-	raw := os.Getenv("SSH_MANAGER_SNAPSHOT_RETAIN")
+	raw := envnames.Get(nil, envnames.SnapshotRetain)
 	if raw == "" {
 		return defaultSnapshotRetain
 	}

@@ -92,7 +92,7 @@ func stateOf(t *testing.T, p paths.Paths) map[string]string {
 	// a snapshot before every change it makes, where the CLI's config render,
 	// providers --export and doctor --fix take none.
 	out["snapshots"] = fmt.Sprint(len(snapshots.List(p.SnapshotsDir())))
-	bundles, _ := filepath.Glob(filepath.Join(p.DistDir(), "ssh-manager-*.age"))
+	bundles, _ := filepath.Glob(filepath.Join(p.DistDir(), "authama-*.age"))
 	out["bundles"] = fmt.Sprint(len(bundles))
 	for _, f := range []string{p.Manifest(), p.Inventory()} {
 		if fi, err := os.Stat(f); err == nil {
@@ -185,9 +185,9 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 		if !hasAge() {
 			t.Skip("age not installed")
 		}
-		if os.Getenv("SSH_MANAGER_AGE_RECIPIENT") == "" {
+		if os.Getenv("AUTHAMA_AGE_RECIPIENT") == "" {
 			recipient, _ := ageIdentity(t)
-			t.Setenv("SSH_MANAGER_AGE_RECIPIENT", recipient)
+			t.Setenv("AUTHAMA_AGE_RECIPIENT", recipient)
 		}
 	}
 	// The token changes write outside the home. Each side gets its own token

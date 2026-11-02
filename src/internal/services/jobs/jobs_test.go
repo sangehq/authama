@@ -14,7 +14,7 @@ import (
 
 func home(t *testing.T) paths.Paths {
 	t.Helper()
-	t.Setenv("SSH_MANAGER_HISTORY", "0")
+	t.Setenv("AUTHAMA_HISTORY", "0")
 	base := t.TempDir()
 	t.Cleanup(mutation.Release)
 	return paths.Paths{SSHDir: filepath.Join(base, ".ssh"), ConfigDir: filepath.Join(base, "cfg")}

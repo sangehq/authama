@@ -18,7 +18,7 @@ import (
 )
 
 // editHome sets up a real home for a command to run against: $HOME for ~/.ssh
-// and $SSH_MANAGER_HOME for the config, both under t.TempDir(), with a starter
+// and $AUTHAMA_CONFIG_DIR for the config, both under t.TempDir(), with a starter
 // manifest already in place.
 func editHome(t *testing.T) paths.Paths {
 	t.Helper()
@@ -32,9 +32,9 @@ func editHome(t *testing.T) paths.Paths {
 	// real home - reconciling, rendering and minting keys into it.
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
-	t.Setenv("SSH_MANAGER_HOME", cfg)
+	t.Setenv("AUTHAMA_CONFIG_DIR", cfg)
 	// Snapshots and auto-pin both reach for the network/filesystem otherwise.
-	t.Setenv("SSH_MANAGER_AUTO_PIN", "0")
+	t.Setenv("AUTHAMA_AUTO_PIN", "0")
 	releaseHeldLock(t)
 	p := paths.Paths{SSHDir: filepath.Join(home, ".ssh"), ConfigDir: cfg}
 	if err := manifest.Starter(false).Save(p.Manifest()); err != nil {
@@ -525,7 +525,7 @@ func TestRotateAllRotatesEveryWiredKey(t *testing.T) {
 		t.Skip("ssh-keygen not on PATH")
 	}
 	p := editHome(t)
-	t.Setenv("SSH_MANAGER_AGE_RECIPIENT", "")
+	t.Setenv("AUTHAMA_AGE_RECIPIENT", "")
 	run(t, "profile", "add", "work")
 	run(t, "host", "add", "work", "panel-a", "-H", "ploi-a.example", "-u", "x", "--provider", "ploi")
 	run(t, "host", "add", "work", "panel-b", "-H", "ploi-b.example", "-u", "x", "--provider", "ploi")

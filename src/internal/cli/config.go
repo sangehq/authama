@@ -93,7 +93,7 @@ func newConfigCmd() *cobra.Command {
 			}
 			if !dryRun {
 				if err := confirmChange(c,
-					"render rewrites the ssh-manager block in "+p.SSHDir+
+					"render rewrites the authama block in "+p.SSHDir+
 						"/config from the manifest.\nContent outside the markers is preserved.", renderYes); err != nil {
 					return err
 				}

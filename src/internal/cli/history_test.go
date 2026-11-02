@@ -172,7 +172,7 @@ func TestEachTuiChangeIsItsOwnOperation(t *testing.T) {
 	releaseHeldLock(t)
 	tt, _ := tuiWith(t)
 	tt.pr.(*scriptPrompter).answers = []string{"reconcile", "snapshots", "", "q"}
-	t.Setenv("SSH_MANAGER_AUTO_PIN", "0")
+	t.Setenv("AUTHAMA_AUTO_PIN", "0")
 	accepting(tt).run()
 	var tui []history.Op
 	for _, o := range liveOps(t, tt.p) {
@@ -222,5 +222,22 @@ func TestScopedReleasesTheLockWhenItReturns(t *testing.T) {
 	ops := historyOps(t, p, history.Filter{Source: history.SourceWeb})
 	if len(ops) != 1 || ops[0].Result != history.ResultOK {
 		t.Errorf("the scoped run was recorded as %+v", ops)
+	}
+}
+
+// `host apply --host` takes a whole spec; history records the alias in it, the
+// name `history --host` is asked for, not the line as typed.
+func TestHostApplyRecordsTheAliasNotTheSpec(t *testing.T) {
+	p := editHome(t)
+	run(t, "profile", "add", "work")
+	run(t, "host", "apply", "work", "--host", "web1 10.0.0.1 deploy", "--host", "web2 10.0.0.2:2222 deploy", "--yes")
+	ops := historyOps(t, p, history.Filter{Host: "web2"})
+	if len(ops) == 0 || ops[0].Command != "host apply" {
+		t.Fatalf("history --host web2 = %+v, want the host apply", ops)
+	}
+	for _, sub := range ops[0].Subjects {
+		if sub.Kind == history.KindHost && strings.ContainsAny(sub.Name, " []") {
+			t.Errorf("a host subject is the raw spec: %q", sub.Name)
+		}
 	}
 }

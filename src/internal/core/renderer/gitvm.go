@@ -6,21 +6,23 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/simtabi/authama/src/internal/brand"
+
 	"github.com/simtabi/authama/src/internal/core/manifest"
 )
 
-// SelfPath returns the sshmgr binary a VM host's ProxyCommand runs. A variable so tests pin it.
+// SelfPath returns the authama binary a VM host's ProxyCommand runs. A variable so tests pin it.
 var SelfPath = defaultSelfPath
 
 // defaultSelfPath prefers the PATH entry (a package manager's stable symlink, such as
-// /opt/homebrew/bin/sshmgr) over the resolved executable, whose versioned Cellar path disappears on
+// /opt/homebrew/bin/authama) over the resolved executable, whose versioned Cellar path disappears on
 // the next upgrade. `doctor` reports a recorded path that has gone; `config render` rewrites it.
 func defaultSelfPath() string {
 	self, err := os.Executable()
 	if err != nil {
-		return "sshmgr"
+		return brand.Command
 	}
-	if onPath, err := exec.LookPath("sshmgr"); err == nil {
+	if onPath, err := exec.LookPath(brand.Command); err == nil {
 		a, errA := os.Stat(onPath)
 		b, errB := os.Stat(self)
 		if errA == nil && errB == nil && os.SameFile(a, b) {
@@ -30,7 +32,7 @@ func defaultSelfPath() string {
 	return self
 }
 
-// ProxyCommandFor is the ProxyCommand a VM host renders: sshmgr asks the hypervisor for the
+// ProxyCommandFor is the ProxyCommand a VM host renders: authama asks the hypervisor for the
 // VM's current address on each connection.
 //
 // The path is double-quoted literally, not with Go's %q: ssh does not unescape, so %q would double
@@ -39,7 +41,7 @@ func defaultSelfPath() string {
 func ProxyCommandFor(alias string) string {
 	self := SelfPath()
 	if strings.Contains(self, `"`) {
-		self = "sshmgr"
+		self = brand.Command
 	}
 	return `"` + self + `" vm proxy ` + alias
 }

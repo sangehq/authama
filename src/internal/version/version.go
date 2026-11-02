@@ -25,7 +25,7 @@ import (
 // itself 2.0.0.
 const devDefault = "dev"
 
-// Version is the ssh-manager version. Release builds override it through
+// Version is the authama version. Release builds override it through
 // -ldflags "-X .../internal/version.Version=..."; otherwise it is recovered from
 // the build info Go embeds.
 var Version = devDefault

@@ -18,7 +18,7 @@ The manifest is the single source of truth. `~/.ssh` is **generated output**:
 ## First run
 
 ```sh
-authama init                  # create ~/.config/ssh-manager (dirs, perms, seed files)
+authama init                  # create ~/.config/authama (dirs, perms, seed files)
 ```
 
 `init` seeds an **empty** manifest. Add profiles and hosts before `reconcile`
@@ -96,9 +96,9 @@ The second feature writes the credential files Composer, npm, Docker, git and
 curl read. Its config names environment variables, never the secrets themselves:
 
 ```sh
-authama token init                  # a starter ~/.config/ssh-manager/tokens.json
-$EDITOR ~/.config/ssh-manager/tokens.json
-export GH_TOKEN="$(op read op://Private/GitHub/token)"   # or set it in CI
+authama token init                  # a starter ~/.config/authama/tokens.json
+$EDITOR ~/.config/authama/tokens.json
+export GH_TOKEN="$(op read op://Private/GitHub/token)"   # or put GH_TOKEN="op://Private/GitHub/token" in ~/.config/authama/.env, or set it in CI
 authama token status                # which variables are still missing
 authama token apply --dry-run       # what would be written, secrets masked
 authama token apply                 # write auth.json, .npmrc, ... (0600, merged)

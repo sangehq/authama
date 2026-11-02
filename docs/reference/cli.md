@@ -13,7 +13,8 @@ is at the end.
 Every command also takes the global flag:
 
 ```
-      --dev-root string   run against a sandbox directory instead of ~/.ssh (also $SSHMGR_DEV_ROOT)
+      --dev-root string   run against a sandbox directory instead of ~/.ssh (also $AUTHAMA_DEV_ROOT, or the legacy $SSHMGR_DEV_ROOT)
+      --no-dotenv         do not read <config home>/.env this run (also $AUTHAMA_NO_DOTENV=1)
 ```
 
 ## Contents
@@ -22,9 +23,14 @@ Every command also takes the global flag:
 - [`authama history`](#authama-history) - List the changes authama has made, newest first
   - [`authama history show`](#authama-history-show) - Show one operation: its events and what it changed in the manifest
 - [`authama init`](#authama-init) - Create/converge the per-user home
-- [`authama migrate`](#authama-migrate) - Move a legacy home to the standard location
+- [`authama migrate`](#authama-migrate) - Copy a pre-0.1.1 home (ssh-manager, sshmgr) into the authama home; the old one is kept and marked
 - [`authama serve`](#authama-serve) - Open the web UI on this machine
-- [`authama ssh`](#authama-ssh) - SSH keys, profiles, hosts, config and trust (every former top-level sshmgr verb, still accepted there)
+- [`authama settings`](#authama-settings) - Your settings files (.env and authama.json): where they are, what is in effect, validate, create
+  - [`authama settings init`](#authama-settings-init) - Create a starter authama.json (schema reference and version; every setting at its default)
+  - [`authama settings path`](#authama-settings-path) - Print where the config home, state home, .env and authama.json are
+  - [`authama settings show`](#authama-settings-show) - Print authama.json, or with --effective every setting's value and where it came from
+  - [`authama settings validate`](#authama-settings-validate) - Check authama.json (or FILE) against the schema, and .env's syntax and permissions
+- [`authama ssh`](#authama-ssh) - SSH keys, profiles, hosts, config and trust (every former top-level verb, still accepted there)
   - [`authama ssh audit`](#authama-ssh-audit) - Deployment, expiry, and hygiene report
   - [`authama ssh bundle`](#authama-ssh-bundle) - Write an encrypted backup of keys + state (read back with restore)
   - [`authama ssh clean`](#authama-ssh-clean) - Remove stale known_hosts pins, stale records and write residue
@@ -204,7 +210,7 @@ Flags:
 
 ## authama migrate
 
-Move a legacy home to the standard location.
+Copy a pre-0.1.1 home (ssh-manager, sshmgr) into the authama home; the old one is kept and marked.
 
 ```
 authama migrate [flags]
@@ -267,9 +273,110 @@ Flags:
       --token-file string        also write the sign-in address to this file, mode 0600, for scripts
 ```
 
+## authama settings
+
+authama reads two files from its config home at start-up:
+
+  .env           KEY=value lines: tokens, and any AUTHAMA_* setting
+  authama.json   settings, checked against a schema (https://raw.githubusercontent.com/simtabi/authama/main/docs/schema/authama.schema.json)
+
+Precedence: command-line flags > environment > .env > authama.json > defaults.
+A variable already in the environment is never replaced by a file; --no-dotenv
+or $AUTHAMA_NO_DOTENV=1 skips .env for a run.
+
+```
+authama settings
+```
+
+Subcommands:
+
+- [`init`](#authama-settings-init) - Create a starter authama.json (schema reference and version; every setting at its default)
+- [`path`](#authama-settings-path) - Print where the config home, state home, .env and authama.json are
+- [`show`](#authama-settings-show) - Print authama.json, or with --effective every setting's value and where it came from
+- [`validate`](#authama-settings-validate) - Check authama.json (or FILE) against the schema, and .env's syntax and permissions
+
+## authama settings init
+
+Create a starter authama.json (schema reference and version; every setting at its default).
+
+```
+authama settings init [flags]
+```
+
+Examples:
+
+```sh
+  authama settings init
+  authama settings init --force
+```
+
+Flags:
+
+```
+  -f, --force   replace an existing authama.json
+```
+
+## authama settings path
+
+Print where the config home, state home, .env and authama.json are.
+
+```
+authama settings path [flags]
+```
+
+Examples:
+
+```sh
+  authama settings path
+  authama settings path --json
+```
+
+Flags:
+
+```
+      --json   machine-readable output (scripting)
+```
+
+## authama settings show
+
+Print authama.json, or with --effective every setting's value and where it came from.
+
+```
+authama settings show [flags]
+```
+
+Examples:
+
+```sh
+  authama settings show
+  authama settings show --effective   # every setting, its value and where it came from
+```
+
+Flags:
+
+```
+      --effective   every setting with its value in effect and its source
+      --json        machine-readable output (with --effective)
+```
+
+## authama settings validate
+
+Check authama.json (or FILE) against the schema, and .env's syntax and permissions.
+
+```
+authama settings validate [FILE]
+```
+
+Examples:
+
+```sh
+  authama settings validate
+  authama settings validate ./authama.json
+```
+
 ## authama ssh
 
-SSH keys, profiles, hosts, config and trust (every former top-level sshmgr verb, still accepted there).
+SSH keys, profiles, hosts, config and trust (every former top-level verb, still accepted there).
 
 ```
 authama ssh
@@ -353,7 +460,7 @@ Flags:
 ```
       --keep int           after bundling, keep only the newest N bundles (0 keeps all)
   -o, --output string      destination dir (else config-dir/dist)
-  -r, --recipient string   age recipient (else $SSH_MANAGER_AGE_RECIPIENT)
+  -r, --recipient string   age recipient (else $AUTHAMA_AGE_RECIPIENT)
 ```
 
 ## authama ssh clean
@@ -417,7 +524,7 @@ Examples:
 Write a copy of the managed config for a tool that cannot read the split layout.
 
 --flat puts every host inline, with absolute key paths and no Include or Match, in
-~/.config/ssh-manager/exports/ssh_config (or --out, or - for stdout). The files
+<config home>/exports/ssh_config (or --out, or - for stdout). The files
 `config render` writes under ~/.ssh are left exactly as they are: no target inside ~/.ssh is accepted.
 
 ```
@@ -435,7 +542,7 @@ Flags:
 
 ```
       --flat         every host inline in one file, absolute paths, no Include
-  -o, --out string   where to write (default ~/.config/ssh-manager/exports/ssh_config; - for stdout)
+  -o, --out string   where to write (default <config home>/exports/ssh_config; - for stdout)
 ```
 
 ## authama ssh config render
@@ -561,7 +668,7 @@ Examples:
 ## authama ssh git use
 
 Point each checkout's origin at a mode. The mode is the first argument when it
-names one, else --mode, else $SSHMGR_GIT_MODE, else defaults.git.mode, else profile.
+names one, else --mode, else $AUTHAMA_GIT_MODE, else defaults.git.mode, else profile.
 A new URL is checked with git ls-remote before origin is rewritten, so a checkout
 never ends up with a remote it cannot authenticate to. Non-GitHub origins are skipped.
 
@@ -581,7 +688,7 @@ Flags:
 
 ```
       --dry-run          show what would change, touch nothing
-      --mode string      profile, ssh or https (overrides $SSHMGR_GIT_MODE and the manifest)
+      --mode string      profile, ssh or https (overrides $AUTHAMA_GIT_MODE and the manifest)
       --profile string   use this profile's key instead of the owner's mapping
   -y, --yes              rewrite without confirming (implied when there is no terminal)
 ```
@@ -1230,13 +1337,13 @@ authama ssh restore <bundle.age> [flags]
 Examples:
 
 ```sh
-  authama ssh restore ~/backup/ssh-manager-20261101-094319.age --identity ~/.age/key.txt
+  authama ssh restore ~/backup/authama-20261101-094319.age --identity ~/.age/key.txt
 ```
 
 Flags:
 
 ```
-  -i, --identity string   age identity file (else $SSH_MANAGER_AGE_IDENTITY_FILE)
+  -i, --identity string   age identity file (else $AUTHAMA_AGE_IDENTITY_FILE)
   -y, --yes               skip the confirmation prompt
 ```
 
@@ -1422,7 +1529,7 @@ Flags:
 ```
       --include-git        also export git hosts (user git, or a github or gitlab provider), which are not shells
       --open               macOS: open Termius and show the file in Finder
-  -o, --out string         where to write (default ~/.config/ssh-manager/exports/termius-hosts.csv; - for stdout)
+  -o, --out string         where to write (default <config home>/exports/termius-hosts.csv; - for stdout)
       --skip stringArray   leave out this alias (repeatable)
 ```
 
@@ -1487,7 +1594,7 @@ Examples:
 
 ## authama ssh vm
 
-A VM's IP changes, so a VM host renders ProxyCommand "<sshmgr>" vm proxy <alias>:
+A VM's IP changes, so a VM host renders ProxyCommand "<authama>" vm proxy <alias>:
 each connection asks the hypervisor for the VM's current address. Supported:
 parallels, vmpal, vmware, utm, lima, orbstack, podman. OrbStack and Podman run their own SSH and keys;
 they are listed, and get a Docker context, but authama does not take their keys over.
@@ -1560,7 +1667,7 @@ Builds the credential files Composer, npm, Docker, git and curl read, from a
 config that names environment variables (never secrets), and lists, copies or
 removes what is installed. Files are written atomically and owner-only.
 
-Config: --config, $SSH_MANAGER_TOKENS_CONFIG, ./authama-tokens.json, or tokens.json in the config home.
+Config: --config, $AUTHAMA_TOKENS_CONFIG, ./authama-tokens.json, or tokens.json in the config home.
 
 ```
 authama token

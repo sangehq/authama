@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/util/fs"
 	"github.com/simtabi/authama/src/internal/util/netcheck"
 	"github.com/simtabi/authama/src/internal/util/perms"
@@ -505,9 +506,9 @@ func (s *Service) Init(m *manifest.Manifest, profile string, allProfiles, force 
 	return report, nil
 }
 
-// autoPinDisabled is true when SSH_MANAGER_AUTO_PIN is set to a falsy string.
+// autoPinDisabled is true when AUTHAMA_AUTO_PIN is set to a falsy string.
 func autoPinDisabled(getenv func(string) string) bool {
-	switch strings.ToLower(strings.TrimSpace(getenv("SSH_MANAGER_AUTO_PIN"))) {
+	switch strings.ToLower(strings.TrimSpace(envnames.Get(getenv, envnames.AutoPin))) {
 	case "0", "false", "no", "off":
 		return true
 	default:
@@ -518,7 +519,7 @@ func autoPinDisabled(getenv func(string) string) bool {
 // AutoPin creates/updates each profile's known_hosts with its hosts' keys so a
 // freshly minted profile works without a separate pin. Trust-on-first-use only
 // (never overrides an already-pinned host), skips unreachable hosts (short 2s
-// probe, since the caller holds the lock), and is disabled by SSH_MANAGER_AUTO_PIN
+// probe, since the caller holds the lock), and is disabled by AUTHAMA_AUTO_PIN
 // =0/false/no/off. Returns {profile: keys added}. Mirrors facade._auto_pin.
 func (s *Service) AutoPin(m *manifest.Manifest, profiles map[string]bool, getenv func(string) string) map[string]int {
 	if autoPinDisabled(getenv) {

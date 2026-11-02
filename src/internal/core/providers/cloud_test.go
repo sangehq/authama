@@ -86,7 +86,7 @@ func TestDeployAddsAKeyThatIsNotThere(t *testing.T) {
 	if out.Method != "digitalocean-api" {
 		t.Errorf("method = %q, want the adapter's own name", out.Method)
 	}
-	if len(ops.added) != 1 || !strings.HasPrefix(ops.added[0], "ssh-manager ") {
+	if len(ops.added) != 1 || !strings.HasPrefix(ops.added[0], "authama ") {
 		t.Errorf("added %v, want one key titled by us", ops.added)
 	}
 }
@@ -118,7 +118,7 @@ func TestDeployRenamesOurStaleTitleButNeverAUserLabel(t *testing.T) {
 		if !out.Verified || !strings.Contains(out.Detail, "renamed") {
 			t.Fatalf("we should recognise and re-title our own key: %+v", out)
 		}
-		if got := ops.renamed["9"]; !strings.HasPrefix(got, "ssh-manager ") {
+		if got := ops.renamed["9"]; !strings.HasPrefix(got, "authama ") {
 			t.Errorf("renamed to %q, want the current title format", got)
 		}
 		if len(ops.added) != 0 {

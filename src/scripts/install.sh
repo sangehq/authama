@@ -153,3 +153,6 @@ info ""
 for b in $installed; do
   info "Installed ${b} to ${INSTALL_DIR}/${b}"
 done
+info ""
+info "Settings live in ${XDG_CONFIG_HOME:-$HOME/.config}/authama (.env and authama.json, loaded at startup)."
+info "A 0.1.0 home in ~/.config/ssh-manager is copied there on the first run and kept."

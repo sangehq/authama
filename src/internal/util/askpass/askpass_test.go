@@ -77,7 +77,7 @@ func TestEnvironCarriesTheHandshake(t *testing.T) {
 
 // The one that matters. getenv returns the first match, so an inherited value
 // left in place would win over the appended override - and an inherited
-// SSHMGR_ASKPASS_SECRET is attacker-controlled input deciding what passphrase
+// AUTHAMA_ASKPASS_SECRET is attacker-controlled input deciding what passphrase
 // protects a freshly minted key.
 func TestEnvironDropsInheritedValuesRatherThanShadowingThem(t *testing.T) {
 	t.Setenv(secretVar, "attacker-supplied")

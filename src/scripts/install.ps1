@@ -28,9 +28,11 @@ param(
 $ErrorActionPreference = 'Stop'
 $owner   = 'simtabi'
 $repo    = 'authama'
-# The install folder keeps the repository's old name, so an upgrade lands where
-# the previous install (and the user PATH entry it added) already is.
-$dirName = 'ssh-manager'
+# Releases up to 0.1.0 installed into Programs\ssh-manager; 0.1.1 and later
+# install into Programs\authama and take the old folder off the user PATH (its
+# files are left alone, so nothing a user put there is lost).
+$dirName    = 'authama'
+$oldDirName = 'ssh-manager'
 $binBase = 'authama'
 $compat  = 'sshmgr'
 
@@ -48,6 +50,7 @@ switch ($env:PROCESSOR_ARCHITECTURE) {
   default { throw "unsupported architecture: $($env:PROCESSOR_ARCHITECTURE)" }
 }
 
+$defaultDir = -not $InstallDir
 if (-not $InstallDir) { $InstallDir = Join-Path $env:LOCALAPPDATA "Programs\$dirName" }
 
 if (-not $Version) {
@@ -121,6 +124,17 @@ finally {
 
 # Add the install dir to the user PATH if it isn't already there.
 $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+if ($defaultDir) {
+  # An earlier install's folder would shadow or duplicate this one: drop it from
+  # the user PATH (only the entry - its files stay where they are).
+  $oldDir = Join-Path $env:LOCALAPPDATA "Programs\$oldDirName"
+  $parts = @($userPath -split ';' | Where-Object { $_ -and $_ -ne $oldDir })
+  if ($parts.Count -ne @($userPath -split ';' | Where-Object { $_ }).Count) {
+    $userPath = $parts -join ';'
+    [Environment]::SetEnvironmentVariable('Path', $userPath, 'User')
+    Write-Host "Removed the old install folder $oldDir from your user PATH (its files are untouched; delete it when you like)."
+  }
+}
 if (($userPath -split ';') -notcontains $InstallDir) {
   [Environment]::SetEnvironmentVariable('Path', "$userPath;$InstallDir", 'User')
   Write-Host "Added $InstallDir to your user PATH (restart your shell to pick it up)."
@@ -129,3 +143,5 @@ $env:Path += ";$InstallDir"
 
 & (Join-Path $InstallDir "$($installed[-1]).exe") version
 foreach ($name in $installed) { Write-Host "Installed $name to $InstallDir\$name.exe" }
+Write-Host "Settings live in $env:USERPROFILE\.config\authama (.env and authama.json, loaded at startup);"
+Write-Host "a 0.1.0 home in $env:APPDATA\ssh-manager is copied there on the first run and kept."

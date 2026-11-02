@@ -1,7 +1,18 @@
-// Package migratesvc moves a legacy home (~/.config/sshmgr from before the rename,
-// or the older ~/.sshmgr) to the OS-standard home, ported from facade.migrate_home.
-// It is the guided path for when both already exist (auto-migration can't handle
-// that); doctor flags such a stranded legacy home.
+// Package migratesvc brings a home from an earlier release to the current
+// layout.
+//
+// The config home moved twice: ~/.sshmgr and ~/.config/sshmgr (sshmgr), then
+// ~/.config/ssh-manager (%APPDATA%\ssh-manager on Windows; ssh-manager and
+// authama 0.1.0), and now ~/.config/authama on every OS. Migration COPIES the
+// newest legacy home into the current one and leaves the old folder where it
+// was, with a MIGRATED-TO-AUTHAMA.txt marker in it, so an older binary still
+// installed beside this one keeps working and nothing is lost if the copy is
+// not what the user wanted. It runs once on its own (AutoMigrate, the first
+// time authama starts with no home), and `authama migrate` is the guided path
+// for when both homes already exist.
+//
+// The tool's own state - log/, snapshots/, dist/ and .state/ - then moves out
+// of the config home into the state home (RelocateState) when those differ.
 package migratesvc
 
 import (
@@ -9,7 +20,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
+	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/util/homeperms"
 	"github.com/simtabi/authama/src/internal/util/paths"
 	"github.com/simtabi/authama/src/internal/util/perms"
@@ -22,49 +35,119 @@ type Result struct {
 	Home    string
 	Backup  string
 	Message string
+	// Relocated lists the state folders moved to the state home.
+	Relocated []string
 }
 
 // Format renders the message.
 func (r Result) Format() string { return r.Message }
 
-// Migrate moves the legacy home into the standard home. If the standard home is
-// absent, the legacy is moved in. If both exist, it refuses unless force - with
-// force the current home is backed up aside (using stamp) and replaced with the
-// legacy one. Mirrors facade.migrate_home (sans the advisory lock).
+// Migrate copies the newest legacy home into the current home. If the current
+// home is absent, the legacy one is copied in. If both exist, it refuses
+// unless force - with force the current home is moved aside (using stamp) and
+// replaced by the copy. The legacy folder is kept and marked either way.
 func Migrate(p paths.Paths, force bool, stamp string) (Result, error) {
 	home := p.ConfigDir
 	legacy := p.FirstLegacyHome()
 	if legacy == "" {
-		sibling := filepath.Join(filepath.Dir(home), "sshmgr")
-		return Result{Home: home, Legacy: sibling, Message: fmt.Sprintf("no legacy home to migrate (home: %s)", home)}, nil
+		return Result{Home: home, Message: fmt.Sprintf("no legacy home to migrate (home: %s)", home)}, nil
 	}
 	if err := os.MkdirAll(filepath.Dir(home), 0o700); err != nil {
 		return Result{}, err
 	}
-	if !exists(home) {
-		if err := moveDir(legacy, home); err != nil {
+	backup := ""
+	if exists(home) {
+		if !force {
+			return Result{}, fmt.Errorf("both %s and %s exist - inspect them, then re-run "+
+				"`authama migrate --force` to move the current home aside and replace it with a copy of the legacy one",
+				legacy, home)
+		}
+		backup = filepath.Join(filepath.Dir(home), filepath.Base(home)+".replaced-"+stamp)
+		if err := os.Rename(home, backup); err != nil {
 			return Result{}, err
 		}
-		tighten(p)
-		return Result{Moved: true, Legacy: legacy, Home: home, Message: fmt.Sprintf("migrated %s -> %s", legacy, home)}, nil
 	}
-	if !force {
-		return Result{}, fmt.Errorf("both %s and %s exist - inspect them, then re-run "+
-			"`authama migrate --force` to back up the current home and replace it with the legacy one",
-			legacy, home)
-	}
-	backup := filepath.Join(filepath.Dir(home), filepath.Base(home)+".replaced-"+stamp)
-	if err := os.Rename(home, backup); err != nil {
+	res, err := copyIn(p, legacy)
+	if err != nil {
 		return Result{}, err
 	}
-	if err := moveDir(legacy, home); err != nil {
-		return Result{}, err
+	res.Backup = backup
+	if backup != "" {
+		res.Message += "; previous home moved to " + backup
+	}
+	return res, nil
+}
+
+// AutoMigrate is the first-run migration: when the current home does not
+// exist yet and a legacy one does, copy it in. It does nothing in a sandbox
+// or when the home exists, and reports whether it acted.
+func AutoMigrate(p paths.Paths) (Result, bool, error) {
+	if p.IsDev() || exists(p.ConfigDir) {
+		return Result{}, false, nil
+	}
+	legacy := p.FirstLegacyHome()
+	if legacy == "" {
+		return Result{}, false, nil
+	}
+	if err := os.MkdirAll(filepath.Dir(p.ConfigDir), 0o700); err != nil {
+		return Result{}, false, err
+	}
+	res, err := copyIn(p, legacy)
+	return res, err == nil, err
+}
+
+// copyIn copies legacy to the (absent) home, marks the legacy folder, and
+// tightens the copy's modes. A failed copy is removed, so a retry starts
+// clean.
+func copyIn(p paths.Paths, legacy string) (Result, error) {
+	home := p.ConfigDir
+	if err := copyTree(legacy, home); err != nil {
+		_ = os.RemoveAll(home)
+		return Result{}, fmt.Errorf("copying %s to %s: %w", legacy, home, err)
+	}
+	note := fmt.Sprintf("%s copied this folder to %s on %s.\n"+
+		"%s no longer reads it. It is kept so an older release still installed\n"+
+		"keeps working and nothing is lost; delete it once you are happy with the\n"+
+		"new location.\n", brand.Command, home, time.Now().Format(time.RFC3339), brand.Command)
+	if err := os.WriteFile(filepath.Join(legacy, paths.MigratedMarker), []byte(note), 0o600); err != nil {
+		return Result{}, fmt.Errorf("copied %s to %s, but could not mark the old folder: %w", legacy, home, err)
 	}
 	tighten(p)
-	return Result{
-		Moved: true, Legacy: legacy, Home: home, Backup: backup,
-		Message: fmt.Sprintf("migrated %s -> %s; previous home backed up to %s", legacy, home, backup),
-	}, nil
+	return Result{Moved: true, Legacy: legacy, Home: home,
+		Message: fmt.Sprintf("copied %s -> %s (the old folder is kept, marked %s)", legacy, home, paths.MigratedMarker)}, nil
+}
+
+// RelocateState moves the state folders a config home from before 0.1.1 holds
+// (log/, snapshots/, dist/, .state/) into a separate state home. A folder
+// already present in the state home is left where it is and reported, never
+// merged. It does nothing when the state home is the config home.
+func RelocateState(p paths.Paths) (moved, conflicts []string, err error) {
+	if !paths.SeparateState(p) || p.IsDev() {
+		return nil, nil, nil
+	}
+	for _, sub := range paths.StateSubdirs {
+		src := filepath.Join(p.ConfigDir, sub)
+		fi, statErr := os.Lstat(src)
+		if statErr != nil || !fi.IsDir() {
+			continue
+		}
+		dst := filepath.Join(p.State(), sub)
+		if exists(dst) {
+			conflicts = append(conflicts, src)
+			continue
+		}
+		if err := os.MkdirAll(p.State(), 0o700); err != nil {
+			return moved, conflicts, err
+		}
+		if err := moveDir(src, dst); err != nil {
+			return moved, conflicts, fmt.Errorf("moving %s to %s: %w", src, dst, err)
+		}
+		moved = append(moved, sub)
+	}
+	if len(moved) > 0 {
+		tighten(p)
+	}
+	return moved, conflicts, nil
 }
 
 // tighten re-asserts the canonical modes on the freshly migrated home.
@@ -104,6 +187,11 @@ func copyTree(src, dst string) error {
 			return err
 		}
 		target := filepath.Join(dst, rel)
+		// The lock belongs to the process holding it in the old home, and a
+		// marker from an earlier migration describes that folder, not this one.
+		if rel == filepath.Join(".state", ".lock") || rel == paths.MigratedMarker {
+			return nil
+		}
 		if fi.IsDir() {
 			return os.MkdirAll(target, fi.Mode().Perm())
 		}

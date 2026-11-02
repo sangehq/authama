@@ -62,15 +62,36 @@ func (r restProvider) ManageURL(Target) string {
 	return r.dashboard
 }
 
+// KeyTitlePrefix starts the title of every key this tool uploads. Titles from
+// earlier names are in legacyTitlePrefixes, so such a key is still recognized as
+// ours and renamed to the current title rather than treated as foreign.
+const KeyTitlePrefix = "authama "
+
+var legacyTitlePrefixes = []string{"ssh-manager ", "sshmgr "}
+
+// ownedTitle reports whether a remote key's title marks it as uploaded by this
+// tool under any of its names.
+func ownedTitle(name string) bool {
+	if strings.HasPrefix(name, KeyTitlePrefix) {
+		return true
+	}
+	for _, p := range legacyTitlePrefixes {
+		if strings.HasPrefix(name, p) {
+			return true
+		}
+	}
+	return false
+}
+
 func keyTitle(filename, body string) string {
 	if body == "" {
-		return "ssh-manager " + filename
+		return KeyTitlePrefix + filename
 	}
 	frag := body
 	if len(frag) > 12 {
 		frag = frag[:12]
 	}
-	return "ssh-manager " + filename + " " + frag
+	return KeyTitlePrefix + filename + " " + frag
 }
 
 func (r restProvider) Deploy(t Target) DeployOutcome {
@@ -89,7 +110,7 @@ func (r restProvider) Deploy(t Target) DeployOutcome {
 		if k.Body == "" || authkeys.KeyBody(k.Body) != want {
 			continue
 		}
-		owned := strings.HasPrefix(k.Name, "ssh-manager ") || strings.HasPrefix(k.Name, "sshmgr ")
+		owned := ownedTitle(k.Name)
 		if k.Name != title && owned {
 			if ok, _ := r.ops.renameKey(token, k.ID, title); ok {
 				return DeployOutcome{Method: method, Verified: true, Detail: "already present; renamed to '" + title + "'"}

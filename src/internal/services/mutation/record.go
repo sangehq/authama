@@ -10,6 +10,7 @@ import (
 
 	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/services/history"
+	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/util/log"
 	"github.com/simtabi/authama/src/internal/util/paths"
 	"github.com/simtabi/authama/src/internal/version"
@@ -51,9 +52,13 @@ var (
 	warned    bool
 	suspended int
 	// Disabled turns recording off. The tests that are not about history set
-	// it, and so does $SSH_MANAGER_HISTORY=0.
-	Disabled = os.Getenv("SSH_MANAGER_HISTORY") == "0"
+	// it; $AUTHAMA_HISTORY=0 does too (see off), read at use rather than at
+	// start-up so a value from .env or authama.json applies.
+	Disabled = false
 )
+
+// off reports whether recording is turned off.
+func off() bool { return Disabled || envnames.Get(nil, envnames.History) == "0" }
 
 // Begin starts a scope. Scopes nest: the TUI is one scope, and every action
 // chosen from its menu is its own scope inside it, recorded separately.
@@ -99,7 +104,7 @@ func End(o Outcome) {
 // opening is called by the guard each time a command takes the lock. The
 // first call in a scope opens its operation; later ones do nothing.
 func opening(p paths.Paths) {
-	if Disabled {
+	if off() {
 		return
 	}
 	recMu.Lock()
@@ -200,7 +205,7 @@ func recordSnapshot(snap string, snapErr error) {
 // sinkEvent files an audit event under the operation that raised it. An
 // event outside any scope, or from another config home, is left to audit.log.
 func sinkEvent(e log.Event) {
-	if Disabled {
+	if off() {
 		return
 	}
 	recMu.Lock()

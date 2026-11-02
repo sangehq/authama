@@ -369,6 +369,15 @@ func (s *Store) Query(f Filter) ([]Op, error) {
 		if name == "" {
 			continue
 		}
+		if kind == KindHost {
+			// Releases before 0.1.1 recorded `host apply --host` as the flag's
+			// raw text - "[web1 1.2.3.4 deploy,web2 ...]" - rather than the
+			// aliases in it. Those rows are still found by the alias.
+			where = append(where, `exists (select 1 from subjects s where s.op_id = ops.op_id and s.kind = ? and `+
+				`(s.name = ? or s.name like ? escape '\' or s.name like ? escape '\'))`)
+			args = append(args, kind, name, "["+likeEscape(name)+" %", "%,"+likeEscape(name)+" %")
+			continue
+		}
 		where = append(where, `exists (select 1 from subjects s where s.op_id = ops.op_id and s.kind = ? and s.name = ?)`)
 		args = append(args, kind, name)
 	}

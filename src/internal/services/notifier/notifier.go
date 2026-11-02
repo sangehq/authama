@@ -11,11 +11,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/core/expiry"
 	"github.com/simtabi/authama/src/internal/core/inventory"
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/services/keyaudit"
 	"github.com/simtabi/authama/src/internal/util/desktop"
+	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/util/fs"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
@@ -147,12 +149,15 @@ func (n *Notifier) Notify(now time.Time, force bool) bool {
 		}
 		parts = append(parts, fmt.Sprintf("%s is %s", f.Subject, f.State))
 	}
-	title := "ssh-manager - keys due for rotation"
+	title := brand.Name + " - keys due for rotation"
 	switch {
 	case len(attention) == 0:
-		title = "ssh-manager - dangling keys"
+		title = brand.Name + " - dangling keys"
 	case len(dangling) > 0:
-		title = "ssh-manager - keys need attention"
+		title = brand.Name + " - keys need attention"
+	}
+	if !DesktopEnabled() {
+		return false
 	}
 	if !desktop.Notify(title, strings.Join(parts, "; ")) {
 		return false // no backend - don't mark notified, retry later
@@ -163,7 +168,7 @@ func (n *Notifier) Notify(now time.Time, force bool) bool {
 
 // Test posts a test desktop notification.
 func (n *Notifier) Test() bool {
-	return desktop.Notify("ssh-manager", "test notification - the notifier is wired up.")
+	return desktop.Notify(brand.Name, "test notification - the notifier is wired up.")
 }
 
 func (n *Notifier) read(path string) map[string]any {
@@ -204,4 +209,16 @@ func joinAny(items []any) string {
 		}
 	}
 	return strings.Join(parts, "\n")
+}
+
+// DesktopEnabled reports whether desktop notifications may be shown:
+// $AUTHAMA_NOTIFICATIONS (or authama.json's notifications.desktop) set to a
+// false value turns them off; the reminder job then runs and records nothing
+// to show.
+func DesktopEnabled() bool {
+	switch strings.ToLower(strings.TrimSpace(envnames.Get(nil, envnames.Notifications))) {
+	case "0", "false", "no", "off":
+		return false
+	}
+	return true
 }

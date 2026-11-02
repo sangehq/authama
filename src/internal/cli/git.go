@@ -2,24 +2,24 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/services/gitremote"
+	"github.com/simtabi/authama/src/internal/util/envnames"
 )
 
 // gitModeEnv overrides defaults.git.mode for one command.
-const gitModeEnv = "SSHMGR_GIT_MODE"
+const gitModeEnv = envnames.GitMode
 
-// resolveGitMode picks the mode: an explicit choice, then SSHMGR_GIT_MODE, then
+// resolveGitMode picks the mode: an explicit choice, then AUTHAMA_GIT_MODE (or SSHMGR_GIT_MODE), then
 // defaults.git.mode, then profile.
 func resolveGitMode(explicit string, m *manifest.Manifest) (string, error) {
 	mode := explicit
 	if mode == "" {
-		mode = os.Getenv(gitModeEnv)
+		mode = envnames.Get(nil, gitModeEnv)
 	}
 	if mode == "" {
 		mode = m.Defaults.Git.EffectiveMode()

@@ -28,7 +28,7 @@ It opens with a header describing the session:
 ```text
   authama v0.1.0  darwin/arm64   built 2026-11-02 from d7ea28f
 
-  home      ~/.config/ssh-manager   (providers: shipped default)
+  home      ~/.config/authama   (providers: shipped default)
   ssh       ~/.ssh
   manifest  5 profiles, 7 hosts, 7 keys
   agent     running, 2 keys loaded
@@ -130,9 +130,9 @@ released when the change ends, so an open menu never holds up another authama
 command between changes, and no question waits for your answer while holding it.
 Reconcile shows its dry run as the question, then takes the lock and works the
 dry run out again; if the manifest moved while you were deciding, it stops and
-changes nothing. It pins host keys afterwards unless `SSH_MANAGER_AUTO_PIN=0`. Deploy is refused in dev mode. Rotate writes an
+changes nothing. It pins host keys afterwards unless `AUTHAMA_AUTO_PIN=0`. Deploy is refused in dev mode. Rotate writes an
 encrypted key backup first, as `authama ssh rotate` does, so it needs
-`SSH_MANAGER_AGE_RECIPIENT`; the TUI has no `--no-key-backup`, so without a
+`AUTHAMA_AGE_RECIPIENT`; the TUI has no `--no-key-backup`, so without a
 recipient it stops and says so.
 
 It needs an interactive terminal. In a script or a pipe it prints a hint and

@@ -44,7 +44,7 @@ func assertUntouched(t *testing.T, sshDir string, before map[string]string) {
 func TestConfigExportFlatWritesOneFileAndLeavesTheSplitConfigAlone(t *testing.T) {
 	sshDir, before := exportHome(t)
 	out := run(t, "config", "export", "--flat")
-	path := filepath.Join(os.Getenv("SSH_MANAGER_HOME"), "exports", "ssh_config")
+	path := filepath.Join(os.Getenv("AUTHAMA_CONFIG_DIR"), "exports", "ssh_config")
 	if !strings.Contains(out, path) {
 		t.Errorf("the command should say where it wrote:\n%s", out)
 	}
@@ -69,7 +69,7 @@ func TestConfigExportFlatToStdout(t *testing.T) {
 	if !strings.Contains(out, "Host oribi-web\n") {
 		t.Errorf("--out - should print the export:\n%s", out)
 	}
-	if _, err := os.Stat(filepath.Join(os.Getenv("SSH_MANAGER_HOME"), "exports")); err == nil {
+	if _, err := os.Stat(filepath.Join(os.Getenv("AUTHAMA_CONFIG_DIR"), "exports")); err == nil {
 		t.Error("--out - must not write a file")
 	}
 	assertUntouched(t, sshDir, before)
@@ -127,7 +127,7 @@ func TestConfigExportNeedsAFormat(t *testing.T) {
 func TestTermiusExportWritesTheCSVAndListsKeys(t *testing.T) {
 	sshDir, before := exportHome(t)
 	out := run(t, "termius", "export")
-	path := filepath.Join(os.Getenv("SSH_MANAGER_HOME"), "exports", "termius-hosts.csv")
+	path := filepath.Join(os.Getenv("AUTHAMA_CONFIG_DIR"), "exports", "termius-hosts.csv")
 	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, out)

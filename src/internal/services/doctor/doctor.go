@@ -28,6 +28,7 @@ import (
 	"github.com/simtabi/authama/src/internal/services/opstore"
 	"github.com/simtabi/authama/src/internal/services/preflight"
 	"github.com/simtabi/authama/src/internal/util/clipboard"
+	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/util/fs"
 	"github.com/simtabi/authama/src/internal/util/homeperms"
 	"github.com/simtabi/authama/src/internal/util/paths"
@@ -38,6 +39,7 @@ import (
 type Report struct {
 	Preflight          preflight.Report
 	Home               string
+	State              string // the state home, when it is not Home
 	SSHDir             string
 	PermIssues         []string
 	AgentStatus        string
@@ -55,7 +57,7 @@ type Report struct {
 	// OnePassword lists what stops a 1Password profile from working: no op
 	// CLI, or no agent socket. Empty when no profile uses 1Password.
 	OnePassword []string
-	// StaleProxy lists rendered VM ProxyCommands whose sshmgr binary no longer exists (an upgrade
+	// StaleProxy lists rendered VM ProxyCommands whose authama binary no longer exists (an upgrade
 	// moved it); `sshmgr config render` rewrites them.
 	StaleProxy []string
 	// ShadowedHosts lists managed aliases a foreign block above the managed
@@ -72,6 +74,33 @@ type Report struct {
 	// Clipboard is set when no clipboard tool is found. Advice only: `termius
 	// keys` then needs --print.
 	Clipboard string
+	// Strict is set by Run(strict=true), the CI mode: every warning then counts
+	// against the verdict, so `doctor --strict` never says clean over one.
+	Strict bool
+}
+
+// Warnings lists the problems that are reported but, outside --strict, do not
+// fail the verdict: they need the user (a VPN, a rename, a cleanup), not a
+// broken setup. Advice (raw_options overlaps, a missing clipboard tool) is not
+// a warning.
+func (r Report) Warnings() []string {
+	var w []string
+	for _, h := range r.UnpinnedHosts {
+		w = append(w, "host key not pinned: "+h)
+	}
+	for _, a := range r.AliasCollisions {
+		w = append(w, "alias used in more than one profile: "+a)
+	}
+	if len(r.DuplicateKeys) > 0 {
+		w = append(w, "keys share a fingerprint: "+strings.Join(r.DuplicateKeys, ", "))
+	}
+	for _, k := range r.StaleOldKeys {
+		w = append(w, "archived predecessor past retention: "+k)
+	}
+	if r.StrandedLegacyHome != "" {
+		w = append(w, "legacy home not migrated: "+r.StrandedLegacyHome)
+	}
+	return w
 }
 
 // OK is the overall verdict.
@@ -81,6 +110,9 @@ type Report struct {
 // result nothing acts on is not a check. Which states are fatal is keyaudit's
 // call, not this one's (--strict makes all of them fatal).
 func (r Report) OK() bool {
+	if r.Strict && len(r.Warnings()) > 0 {
+		return false
+	}
 	if !r.Preflight.OK() || len(r.PermIssues) > 0 || !r.ConfigInSync || len(r.OnePassword) > 0 || len(r.StaleProxy) > 0 ||
 		len(r.ShadowedHosts) > 0 || len(r.NeededTools) > 0 {
 		return false
@@ -96,11 +128,22 @@ func (r Report) OK() bool {
 	return true
 }
 
+func stateIfSeparate(p paths.Paths) string {
+	if paths.SeparateState(p) {
+		return p.State()
+	}
+	return ""
+}
+
 // Format renders the human-readable report (mirrors DoctorReport.format; the
 // preflight block carries the Go runtime line in place of an interpreter version).
 func (r Report) Format() string {
 	lines := []string{preflight.Format(r.Preflight), ""}
-	if r.Home != "" {
+	switch {
+	case r.Home != "" && r.State != "":
+		lines = append(lines, fmt.Sprintf("home:  %s  (config + secrets)", r.Home),
+			fmt.Sprintf("state: %s  (history, logs, snapshots, bundles)", r.State))
+	case r.Home != "":
 		lines = append(lines, fmt.Sprintf("home: %s  (config + secrets + logs + snapshots live here)", r.Home))
 	}
 	if r.SSHDir != "" {
@@ -192,16 +235,21 @@ func (r Report) Format() string {
 			lines = append(lines, "  "+k)
 		}
 		lines = append(lines, "  -> remove them once the rotation is confirmed good "+
-			"(keep them longer with SSH_MANAGER_OLD_KEY_MAX_AGE_DAYS)")
+			"(keep them longer with AUTHAMA_OLD_KEY_MAX_AGE_DAYS)")
 	}
 	lines = append(lines, r.Dangling.Lines()...)
 	if len(r.DuplicateKeys) > 0 {
 		lines = append(lines, "WARNING: keys reuse the same fingerprint (blast radius): "+strings.Join(r.DuplicateKeys, ", "))
 	}
 	lines = append(lines, "")
-	if r.OK() {
+	switch n := len(r.Warnings()); {
+	case r.OK() && n > 0:
+		lines = append(lines, fmt.Sprintf("doctor: no errors, %d warning(s) (--strict fails on them)", n))
+	case r.OK():
 		lines = append(lines, "doctor: clean")
-	} else {
+	case r.Strict && n > 0:
+		lines = append(lines, fmt.Sprintf("doctor: issues found (--strict: %d warning(s) count as failures)", n))
+	default:
 		lines = append(lines, "doctor: issues found")
 	}
 	return strings.Join(lines, "\n")
@@ -302,10 +350,12 @@ func (s *Service) Run(strict bool) Report {
 	rep := Report{
 		Preflight:       preflight.Check(),
 		Home:            s.p.ConfigDir,
+		State:           stateIfSeparate(s.p),
 		SSHDir:          s.p.SSHDir,
 		ProvidersSource: s.providersSource(),
 		ConfigInSync:    true,
 		OldKeys:         map[string]int{},
+		Strict:          strict,
 	}
 	if legacy := s.p.FirstLegacyHome(); legacy != "" && fs.Exists(s.p.ConfigDir) {
 		rep.StrandedLegacyHome = legacy
@@ -459,13 +509,13 @@ func knownHostsPresent(ssh string) bool {
 const DefaultOldKeyMaxAge = 90 * 24 * time.Hour
 
 // OldKeyMaxAge is the staleness threshold, overridable with
-// $SSH_MANAGER_OLD_KEY_MAX_AGE_DAYS. A value of 0 or less disables the check
+// $AUTHAMA_OLD_KEY_MAX_AGE_DAYS. A value of 0 or less disables the check
 // rather than marking everything stale, so the escape hatch is not a footgun.
 func OldKeyMaxAge(get func(string) string) time.Duration {
 	if get == nil {
 		get = os.Getenv
 	}
-	raw := strings.TrimSpace(get("SSH_MANAGER_OLD_KEY_MAX_AGE_DAYS"))
+	raw := strings.TrimSpace(envnames.Get(get, envnames.OldKeyMaxAgeDays))
 	if raw == "" {
 		return DefaultOldKeyMaxAge
 	}

@@ -1,0 +1,129 @@
+{
+  "$id": "https://raw.githubusercontent.com/simtabi/authama/main/docs/schema/authama.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "User settings for authama. Precedence: command-line flags > environment > <config home>/.env > authama.json > defaults.",
+  "properties": {
+    "$schema": {
+      "description": "The schema this file follows (for editors).",
+      "type": "string"
+    },
+    "backup": {
+      "additionalProperties": false,
+      "properties": {
+        "age_recipient": {
+          "description": "The age recipient (public key) bundles are encrypted to. Required for `ssh bundle` and the backups destructive commands take first. Sets $AUTHAMA_AGE_RECIPIENT.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "old_key_max_age_days": {
+          "default": 90,
+          "description": "Days an archived predecessor key may stay before doctor flags it; 0 turns the check off. Sets $AUTHAMA_OLD_KEY_MAX_AGE_DAYS. Default: 90.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "snapshot_retain": {
+          "default": 10,
+          "description": "How many ~/.ssh snapshots to keep. Sets $AUTHAMA_SNAPSHOT_RETAIN. Default: 10.",
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "git": {
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "description": "How `ssh git` rewrites remotes. Sets $AUTHAMA_GIT_MODE. Default: the manifest's defaults.git.mode, else profile.",
+          "enum": [
+            "profile",
+            "ssh",
+            "https"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "history": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": true,
+          "description": "Record every change in the history database (`authama history`). Sets $AUTHAMA_HISTORY. Default: true.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "notifications": {
+      "additionalProperties": false,
+      "properties": {
+        "desktop": {
+          "default": true,
+          "description": "Show desktop notifications for keys due for rotation and dangling keys. Sets $AUTHAMA_NOTIFICATIONS. Default: true.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "paths": {
+      "additionalProperties": false,
+      "properties": {
+        "age_identity_file": {
+          "description": "The age identity (private key) `ssh restore` decrypts bundles with. Sets $AUTHAMA_AGE_IDENTITY_FILE.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "state_dir": {
+          "description": "Where authama keeps its own state: the history database and audit log, snapshots, bundles, the lock and caches. Sets $AUTHAMA_STATE_DIR. Default: $XDG_STATE_HOME/authama or ~/.local/state/authama.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "tokens_catalog": {
+          "description": "A catalog.json to use instead of the built-in token services and providers. Sets $AUTHAMA_TOKENS_CATALOG. Default: the built-in catalog.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "tokens_config": {
+          "description": "The token config: which environment variables build which registry credential. Sets $AUTHAMA_TOKENS_CONFIG. Default: ./authama-tokens.json, else <config home>/tokens.json.",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ssh": {
+      "additionalProperties": false,
+      "properties": {
+        "auto_pin": {
+          "default": true,
+          "description": "Pin a new host's key on first use (trust on first use) when a profile is minted. Sets $AUTHAMA_AUTO_PIN. Default: true.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "tokens": {
+      "additionalProperties": false,
+      "properties": {
+        "docker_creds_store": {
+          "description": "What to do with registries Docker keeps in a credential store: store them with `docker login` or refuse and warn. Sets $AUTHAMA_DOCKER_CREDS_STORE. Default: ask at a terminal, else refuse.",
+          "enum": [
+            "login",
+            "refuse"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "version": {
+      "const": 1,
+      "description": "The authama.json format version."
+    }
+  },
+  "title": "authama settings (authama.json)",
+  "type": "object"
+}

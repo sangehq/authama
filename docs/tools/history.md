@@ -1,7 +1,7 @@
 # `history`
 
 `authama history` lists every change authama has made, newest first, from a SQLite database at
-`~/.config/ssh-manager/log/history.db`.
+`~/.local/state/authama/log/history.db`.
 
 ## What is recorded
 
@@ -70,7 +70,7 @@ It takes any unique prefix of the operation id, which `history` prints in its la
 
 ## Turning it off
 
-`SSH_MANAGER_HISTORY=0` records nothing. `audit.log` is written as before.
+`AUTHAMA_HISTORY=0` records nothing. `audit.log` is written as before.
 
 ## Where it lives
 

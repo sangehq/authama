@@ -32,7 +32,7 @@ keys are excluded. To clear several at once, rotate them as a batch: a category
    `authama ssh notify test` fires a test notification.
 
 All of this is config-driven from `defaults.warn_before_days` and
-`defaults.expiry_check` in the manifest (`SSH_MANAGER_SNAPSHOT_RETAIN` and the cadence
+`defaults.expiry_check` in the manifest (`AUTHAMA_SNAPSHOT_RETAIN` and the cadence
 caches live in the config-dir, gitignored).
 
 ```sh
