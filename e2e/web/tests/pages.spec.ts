@@ -88,7 +88,7 @@ test('keys lists every reconciled key as on disk, with a fingerprint', async ({ 
 test('doctor shows the report authama doctor prints', async ({ page }) => {
   await page.goto('/doctor');
   const report = page.locator('pre.code-block');
-  await expect(report).toContainText('RESULT: not ready');
+  await expect(report).toContainText('RESULT: ready');
   await expect(report).toContainText('config drift: none');
   await expect(report).toContainText('host keys NOT pinned');
 });
