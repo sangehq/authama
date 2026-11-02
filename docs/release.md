@@ -88,6 +88,17 @@ deprecated alias).
 The release body and the provenance attestation run even if GoReleaser fails after
 publishing, so a late publisher failure no longer leaves a release unattested.
 
+## Winget
+
+Winget is **not a published channel yet**. `src/.goreleaser.yaml` carries a manifest for
+`Simtabi.authama`, but it only publishes when the repository variable `SKIP_WINDOWS_PKGS`
+is `false`, and that variable is unset, so every release skips it. Turning it on needs
+the `simtabi/winget-pkgs` fork of `microsoft/winget-pkgs` (it does not exist; checked
+2026-11-02 with `gh api repos/simtabi/winget-pkgs`, which answers 404) and a
+`TAP_GITHUB_TOKEN` able to open a pull request there. Until both exist, no doc lists
+winget as an install method. Scoop does not depend on it: it has its own switch,
+`SKIP_SCOOP`, which is `false`.
+
 ## GitHub Actions hygiene
 
 Keep action versions current via Dependabot (weekly); re-pin on every merged

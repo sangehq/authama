@@ -91,7 +91,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
-          version: latest
+          version: "~> v2"
           args: release --clean --config src/.goreleaser.yaml --release-notes=${{ runner.temp }}/release_notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -102,8 +102,8 @@ jobs:
           # credentials GoReleaser uses for those two.
           HOMEBREW_TAP_DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
           SCOOP_BUCKET_DEPLOY_KEY: ${{ secrets.SCOOP_BUCKET_DEPLOY_KEY }}
-          # Scoop/Winget publishing is skipped until the bucket/fork exist. Set
-          # repo variable SKIP_WINDOWS_PKGS to "false" to enable it.
+          # Winget publishing is skipped until the simtabi/winget-pkgs fork exists
+          # (docs/release.md#winget). Set repo variable SKIP_WINDOWS_PKGS to "false" to enable it.
           SKIP_WINDOWS_PKGS: ${{ vars.SKIP_WINDOWS_PKGS || 'true' }}
           # Scoop's own switch; empty falls back to SKIP_WINDOWS_PKGS (see the GoReleaser config).
           SKIP_SCOOP: ${{ vars.SKIP_SCOOP }}

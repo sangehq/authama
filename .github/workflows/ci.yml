@@ -10,11 +10,15 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [main]
+  # Weekly run on main: nothing re-runs after a merge, so this is what catches drift there
+  # (a dependency release, two green PRs that interact) and keeps the Tests badge current.
+  schedule:
+    - cron: '0 6 * * 1'
 
 permissions:
   contents: read
 
-# Cancel superseded runs on the same ref (not on main pushes, which we keep).
+# Cancel superseded pull-request runs on the same ref; scheduled and manual runs on main finish.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}

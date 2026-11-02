@@ -338,7 +338,7 @@ func (e AppEngine) Snapshots() ([]SnapshotView, error) {
 	return out, nil
 }
 
-// BundleView is one encrypted bundle in the config home's dist/.
+// BundleView is one encrypted bundle in the state home's dist/.
 type BundleView struct {
 	Name    string
 	Written time.Time

@@ -13,6 +13,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `known_hosts` (there is one hashed store). `.state/`, `dist/` and the `init --backup` copy are
   placed in the state home, where they live. `serve` shows its real start-up line, `settings init`
   is described as the minimal starter it writes, and install examples pin v0.1.2.
+- **winget is no longer listed as an install method.** No release has published it: its GoReleaser
+  manifest waits on a `simtabi/winget-pkgs` fork that does not exist yet. `docs/release.md` now says so.
+- **The age identity has no default path.** `docs/configuration.md` said `paths.age_identity_file`
+  defaults to `<config home>/age-identity.txt`; nothing reads that file unless `--identity` or
+  `AUTHAMA_AGE_IDENTITY_FILE` points at it, and the docs now say so.
+- **The web UI places bundles in the state home's `dist/`**, where they are, not the config home's.
+- The 0.1.2 entry named `known-hosts show`; the command that shows pins is `ssh show`.
+
+### Changed
+
+- CI also runs weekly on `main` (Monday 06:00 UTC), so drift after a merge shows up; the release
+  workflow pins GoReleaser to `~> v2` instead of `latest`.
+- The README's H1 is the command name, and its feature list moved to the top of `docs/features.md`.
+- `docs/reference/cli.md` ends with the docs-index footer every other page has.
 - **`init --backup` help and the `ssh` group's help** say where the backup goes and that the bare
   top-level verbs still work.
 
@@ -47,7 +61,7 @@ every command. Upgrading is covered in [docs/migration.md](docs/migration.md#to-
   `authama` beside it, else the one on `PATH`. Run `authama ssh config render` once to rewrite older
   lines.
 - **`known_hosts` pins are tagged `authama`.** Pins tagged `sshmgr` by earlier releases are still
-  recognized as this tool's own (`clean`, `known-hosts show`, pruning).
+  recognized as this tool's own (`clean`, `ssh show`, pruning).
 - **The expiry reminder job is `authama.expiry`.** `authama ssh notify install` removes the old `ssh_manager.expiry` job (launchd, systemd or cron, or the
   Windows scheduled task) after installing the new one.
 - **The remote `authorized_keys` lock, temp and backup files are `~/.ssh/.authama.lock`,

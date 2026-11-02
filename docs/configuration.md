@@ -434,7 +434,7 @@ every setting stays at its default until you add it.
 | Key | Environment variable | Default |
 |---|---|---|
 | `paths.state_dir` | `AUTHAMA_STATE_DIR` | `$XDG_STATE_HOME/authama` or `~/.local/state/authama` |
-| `paths.age_identity_file` | `AUTHAMA_AGE_IDENTITY_FILE` | `<config home>/age-identity.txt` |
+| `paths.age_identity_file` | `AUTHAMA_AGE_IDENTITY_FILE` | unset (`ssh restore` needs this or `--identity`; the web UI's restore needs this) |
 | `paths.tokens_config` | `AUTHAMA_TOKENS_CONFIG` | see [Auth tokens](#auth-tokens) |
 | `paths.tokens_catalog` | `AUTHAMA_TOKENS_CATALOG` | the built-in catalog |
 | `backup.age_recipient` | `AUTHAMA_AGE_RECIPIENT` | unset (`ssh bundle` needs it) |

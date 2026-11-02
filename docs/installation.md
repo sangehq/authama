@@ -194,7 +194,7 @@ path to know.
 ├── authama.json                    # OPTIONAL - non-secret settings, validated against a schema
 ├── manifest.json  inventory.json   # manifest is the source of truth
 ├── providers.json                  # OPTIONAL - else the shipped default catalog is used
-├── age-identity.txt                # bundle decryption key (0600)
+├── age-identity.txt                # OPTIONAL - a place for the bundle decryption key (0600); point AUTHAMA_AGE_IDENTITY_FILE or --identity at it
 └── tokens.json                     # OPTIONAL - the token config (env var names, no secrets)
 
 ~/.local/state/authama/             # state home: written by authama, safe to lose

@@ -267,7 +267,7 @@ scoops:
 # Winget (Microsoft's default Windows package manager). Publishes a manifest to
 # a simtabi/winget-pkgs fork and opens a PR to microsoft/winget-pkgs. Package id
 # is Simtabi.authama (never published under the old name). Gated behind
-# SKIP_WINDOWS_PKGS until the fork exists.
+# SKIP_WINDOWS_PKGS until the fork exists (it does not yet; docs/release.md#winget).
 winget:
   - name: authama
     publisher: Simtabi
