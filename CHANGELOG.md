@@ -6,6 +6,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Browser tests for the web UI.** `e2e/web/` holds Playwright tests that start `authama serve`
+  against a throwaway home (a temp `HOME` and XDG homes, seeded from the example manifest) and drive
+  every page, a change from preview to apply, a stale preview being refused, and a bundle restore job
+  whose event stream is read to the end. An axe pass over the same pages fails on serious or critical
+  violations in the light and the dark theme. Run it with `make e2e-web`; CI runs it on Linux in the
+  new `web-e2e` job.
+
+### Fixed
+
+- **Changes made from the web UI in Chromium were refused as cross-origin.** The server sent
+  `Referrer-Policy: no-referrer`, under which Chromium sends `Origin: null` on the page's own form
+  posts, and the same-origin check refuses that. It now sends `Referrer-Policy: same-origin`, which
+  still sends no referrer to another site. Found by the new browser tests.
+- **Four contrast failures in the web UI**, found by the axe pass: the outline delete button on a
+  card footer in the light theme, the Cancel link button on a review page in both themes, and `code`
+  in the overview's attention rows and in alerts in the dark theme.
+
 ## [0.1.3] - 2026-11-02
 
 Local VMs look after themselves: `ssh vm sync` keeps every VM host matching its VM, the hypervisors
