@@ -6,6 +6,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Browser tests for the web UI.** `e2e/web/` holds Playwright tests that start `authama serve`
+  against a throwaway home (a temp `HOME` and XDG homes, seeded from the example manifest) and drive
+  every page, a change from preview to apply, a stale preview being refused, and a bundle restore job
+  whose event stream is read to the end. An axe pass over the same pages fails on serious or critical
+  violations in the light and the dark theme. Run it with `make e2e-web`; CI runs it on Linux in the
+  new `web-e2e` job.
+
 ### Fixed
 
 - **Docs corrected against the code.** SECURITY.md no longer says a key passphrase goes on

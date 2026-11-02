@@ -1,0 +1,5 @@
+# Never commit a lock file (see /opensource/CLAUDE.md, Dependency conventions).
+package-lock.json
+node_modules/
+test-results/
+playwright-report/
