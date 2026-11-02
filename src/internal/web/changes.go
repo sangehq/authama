@@ -55,6 +55,9 @@ var actionFields = map[string][]string{
 	"audit-notify":      {},
 	"token-delete":      {"target", "host"},
 	"token-apply":       {},
+	"vm-sync":           {"repin"},
+	"vm-adopt-key":      {"key", "profile", "alias", "hypervisor", "vm", "user"},
+	"vm-schedule":       {"install"},
 }
 
 // nameRe is what a profile, alias or key name may be on the web: the
@@ -270,12 +273,8 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch = change.KeyDelete(manifest.KeyRef{Profile: n("profile"), KeyName: n("key")})
 	case "vm-add":
 		hv := pl("hypervisor")
-		known := false
-		for _, h := range manifest.Hypervisors {
-			known = known || h == hv
-		}
-		if !known {
-			errs = append(errs, badForm("hypervisor must be one of %s", strings.Join(manifest.Hypervisors, ", ")))
+		if !knownHypervisor(hv) {
+			errs = append(errs, badForm("hypervisor must be one of %s", strings.Join(manifest.KnownHypervisors(), ", ")))
 		}
 		vm, user := pl("vm"), pl("user")
 		if vm == "" || user == "" {
@@ -310,6 +309,20 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch = change.SnapshotsPrune(keep)
 	case "doctor-fix":
 		ch = change.DoctorFix()
+	case "vm-sync":
+		ch = change.VMSync(checked(f, "repin"))
+	case "vm-adopt-key":
+		hv := pl("hypervisor")
+		if !knownHypervisor(hv) {
+			errs = append(errs, badForm("hypervisor must be one of %s", strings.Join(manifest.KnownHypervisors(), ", ")))
+		}
+		vm, user := pl("vm"), pl("user")
+		if vm == "" || user == "" {
+			errs = append(errs, badForm("adopting a key onto a VM needs the VM's name and a guest user"))
+		}
+		ch = change.VMAdoptKey(n("key"), n("profile"), n("alias"), hv, vm, user)
+	case "vm-schedule":
+		ch = change.VMSchedule(checked(f, "install"))
 	case "host-apply":
 		specs, err := hostSpecs(f)
 		errs = append(errs, err)
@@ -437,4 +450,13 @@ func (h pages) renderChange(w http.ResponseWriter, r *http.Request, status int, 
 		Destroy: strings.HasSuffix(action, "-delete"),
 		Purge:   action == "profile-delete" && checked(r.PostForm, "purge"),
 	}))
+}
+
+func knownHypervisor(hv string) bool {
+	for _, h := range manifest.KnownHypervisors() {
+		if h == hv {
+			return true
+		}
+	}
+	return false
 }

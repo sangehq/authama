@@ -1,11 +1,15 @@
-// Package scheduler installs the daily job that runs `authama ssh audit --notify`,
+// Package scheduler installs authama's daily jobs - `authama ssh audit --notify`
+// (Label) and `authama ssh vm sync --quiet --yes` (VMSyncLabel) -
 // ported from the platforms/*.install_scheduler layer: a launchd agent on macOS, a
 // systemd --user timer (else cron) on Linux, a schtasks task on Windows. The job
 // fires at 09:00 daily. Pure template/quoting helpers live here; the OS-specific
 // install lives in build-tagged files.
 package scheduler
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+)
 
 // Label is the scheduler job label/name.
 const Label = "authama.expiry"
@@ -14,6 +18,33 @@ const Label = "authama.expiry"
 // Installing under Label removes a job left under it, so the two never both
 // fire; nothing else reads it.
 const LegacyLabel = "ssh_manager.expiry"
+
+// VMSyncLabel is the job `authama ssh vm sync --install-schedule` installs.
+const VMSyncLabel = "authama.vmsync"
+
+// job is what each label's job is called, and when it runs.
+type job struct{ description, at string }
+
+var jobs = map[string]job{
+	Label:       {"authama key-expiry notifier", notifyHour},
+	LegacyLabel: {"authama key-expiry notifier", notifyHour},
+	VMSyncLabel: {"authama VM host sync", vmSyncHour},
+}
+
+func jobFor(label string) job {
+	if j, ok := jobs[label]; ok {
+		return j
+	}
+	return job{"authama " + label, notifyHour}
+}
+
+// hourMinute splits "HH:MM" into the numbers launchd and cron want ("9", "30").
+func hourMinute(at string) (string, string) {
+	h, m, _ := strings.Cut(at, ":")
+	hi, _ := strconv.Atoi(h)
+	mi, _ := strconv.Atoi(m)
+	return strconv.Itoa(hi), strconv.Itoa(mi)
+}
 
 const plistTmpl = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -25,14 +56,14 @@ const plistTmpl = `<?xml version="1.0" encoding="UTF-8"?>
 %ARGS%
     </array>
     <key>StartCalendarInterval</key>
-    <dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>%HOUR%</integer><key>Minute</key><integer>%MINUTE%</integer></dict>
     <key>RunAtLoad</key><false/>
 </dict>
 </plist>
 `
 
 const serviceTmpl = `[Unit]
-Description=authama key-expiry notifier
+Description=%DESCRIPTION%
 
 [Service]
 Type=oneshot
@@ -45,13 +76,18 @@ func buildPlist(label, command string) string {
 	for _, tok := range shlexSplit(command) {
 		args = append(args, "        <string>"+xmlEscape(tok)+"</string>")
 	}
-	p := strings.ReplaceAll(plistTmpl, "%LABEL%", label)
+	h, m := hourMinute(jobFor(label).at)
+	p := strings.NewReplacer("%LABEL%", label, "%HOUR%", h, "%MINUTE%", m).Replace(plistTmpl)
 	return strings.ReplaceAll(p, "%ARGS%", strings.Join(args, "\n"))
 }
 
-// buildService renders the systemd .service unit (% escaped for ExecStart).
-func buildService(command string) string {
-	return strings.ReplaceAll(serviceTmpl, "%COMMAND%", strings.ReplaceAll(command, "%", "%%"))
+// buildService renders the expiry notifier's systemd .service unit.
+func buildService(command string) string { return buildServiceFor(Label, command) }
+
+// buildServiceFor renders the systemd .service unit for label (% escaped for ExecStart).
+func buildServiceFor(label, command string) string {
+	s := strings.ReplaceAll(serviceTmpl, "%DESCRIPTION%", jobFor(label).description)
+	return strings.ReplaceAll(s, "%COMMAND%", strings.ReplaceAll(command, "%", "%%"))
 }
 
 func xmlEscape(s string) string {

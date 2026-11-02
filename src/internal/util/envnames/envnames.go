@@ -35,6 +35,9 @@ const (
 	Notifications    = "AUTHAMA_NOTIFICATIONS"
 	AskpassMode      = "AUTHAMA_ASKPASS_MODE"
 	AskpassSecret    = "AUTHAMA_ASKPASS_SECRET"
+	VMHypervisors    = "AUTHAMA_VM_HYPERVISORS"
+	VMPruneGone      = "AUTHAMA_VM_PRUNE_GONE"
+	VMRepin          = "AUTHAMA_VM_REPIN"
 )
 
 // legacy maps a current name to the names earlier releases read, in the order
@@ -68,6 +71,7 @@ func Names() []string {
 		AgeIdentityFile, AgeRecipient, AskpassMode, AskpassSecret, AutoPin, ConfigDir,
 		DevRoot, DockerCredsStore, GitMode, History, NoDotenv, Notifications,
 		OldKeyMaxAgeDays, SnapshotRetain, StateDir, TokensCatalog, TokensConfig,
+		VMHypervisors, VMPruneGone, VMRepin,
 	}
 	sort.Strings(out)
 	return out

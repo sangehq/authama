@@ -22,13 +22,17 @@ import (
 func newVMCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "vm",
-		Short: "Local VMs as SSH hosts: list them, add one, and connect through the hypervisor",
+		Short: "Local VMs as SSH hosts: list, add, adopt a key, keep in sync, connect through the hypervisor",
 		Long: "A VM's IP changes, so a VM host renders ProxyCommand \"<authama>\" vm proxy <alias>:\n" +
-			"each connection asks the hypervisor for the VM's current address. Supported:\n" +
+			"each connection asks the hypervisor for the VM's current address. Built in:\n" +
 			strings.Join(manifest.Hypervisors, ", ") + ". OrbStack and Podman run their own SSH and keys;\n" +
-			"they are listed, and get a Docker context, but authama does not take their keys over.",
+			"they are listed, and get a Docker context, but authama does not take their keys over.\n\n" +
+			"Which hypervisors you use is vm.hypervisors (AUTHAMA_VM_HYPERVISORS); any other tool can be\n" +
+			"added as a command driver in authama.json's \"hypervisors\" section, and the VMs you work\n" +
+			"in declared in its \"devboxes\" section (docs/tools/vm.md). `vm sync` keeps the hosts in\n" +
+			"step with the VMs; `vm adopt-key` turns a key you already use for a VM into a VM host.",
 	}
-	cmd.AddCommand(newVMListCmd(), newVMAddCmd(), newVMProxyCmd(), newVMDockerContextCmd())
+	cmd.AddCommand(newVMListCmd(), newVMAddCmd(), newVMSyncCmd(), newVMAdoptKeyCmd(), newVMProxyCmd(), newVMDockerContextCmd())
 	return cmd
 }
 
@@ -50,8 +54,16 @@ func newVMListCmd() *cobra.Command {
 			}
 			out := c.OutOrStdout()
 			for _, d := range hypervisor.All() {
+				tag := ""
+				if hypervisor.IsCustom(d) {
+					tag = "  [" + hypervisor.Describe(d) + "]"
+				}
+				if !hypervisor.IsEnabled(d.Name()) {
+					_, _ = fmt.Fprintf(out, "%-10s disabled (not in vm.hypervisors)%s\n", d.Name(), tag)
+					continue
+				}
 				if !hypervisor.Available(d) {
-					_, _ = fmt.Fprintf(out, "%-10s not installed\n", d.Name())
+					_, _ = fmt.Fprintf(out, "%-10s not installed%s\n", d.Name(), tag)
 					continue
 				}
 				vms, err := d.List()
@@ -70,6 +82,19 @@ func newVMListCmd() *cobra.Command {
 					_, _ = fmt.Fprintf(out, "%-10s %-30s %s%s\n", d.Name(), v.Name, v.State, host)
 				}
 			}
+			for _, n := range hypervisor.UnknownEnabled() {
+				_, _ = fmt.Fprintf(out, "%-10s enabled in vm.hypervisors, but no such driver (add it under \"hypervisors\" in authama.json)\n", n)
+			}
+			if p, err := resolvePaths(c); err == nil {
+				cfg := vmConfig(p)
+				if aliases := cfg.DevboxAliases(); len(aliases) > 0 {
+					_, _ = fmt.Fprintln(out, "devboxes declared in authama.json:")
+					for _, a := range aliases {
+						d := cfg.Devboxes[a]
+						_, _ = fmt.Fprintf(out, "  %-20s %s %q user %s profile %s\n", a, d.Hypervisor, d.VM, d.User, d.Profile)
+					}
+				}
+			}
 			return nil
 		},
 	}
@@ -85,6 +110,9 @@ func newVMAddCmd() *cobra.Command {
 		RunE: func(c *cobra.Command, args []string) error {
 			if hv == manifest.HypervisorOrbStack || hv == manifest.HypervisorPodman {
 				return fmt.Errorf("%s manages its own SSH access and keys; use `authama ssh vm docker-context` instead of a host", hv)
+			}
+			if !hypervisor.IsEnabled(hv) {
+				_, _ = fmt.Fprintf(c.ErrOrStderr(), "warning: %s is not in vm.hypervisors; `vm sync` will leave this host alone until it is\n", hv)
 			}
 			if err := confirmChange(c, fmt.Sprintf("vm add records %s as a %s VM host and re-renders ~/.ssh/config.",
 				args[1], hv), yes); err != nil {
@@ -107,11 +135,11 @@ func newVMAddCmd() *cobra.Command {
 				return err
 			}
 			_, _ = fmt.Fprintf(c.OutOrStdout(), "added VM host %s to %s (%s %q); run `authama ssh reconcile` to mint its key, "+
-				"then install the public key in the guest\n", alias, args[0], hv, vmName)
+				"then `authama ssh vm sync` to pin the guest and install the public key in it\n", alias, args[0], hv, vmName)
 			return applyManifestEdit(c, p)
 		},
 	}
-	c.Flags().StringVar(&hv, "hypervisor", "", strings.Join(manifest.Hypervisors, ", "))
+	c.Flags().StringVar(&hv, "hypervisor", "", strings.Join(manifest.KnownHypervisors(), ", ")+", or a custom one from authama.json")
 	c.Flags().StringVar(&vmName, "vm", "", "the VM's name as the hypervisor lists it (see 'authama ssh vm list')")
 	c.Flags().StringVarP(&user, "user", "u", "", "guest user")
 	c.Flags().StringVar(&keyName, "key-name", "", "use this key instead of the derived <profile>_<alias>-<algo> name")

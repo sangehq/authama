@@ -37,20 +37,27 @@ import (
 
 // Report is the full doctor diagnosis.
 type Report struct {
-	Preflight          preflight.Report
-	Home               string
-	State              string // the state home, when it is not Home
-	SSHDir             string
-	PermIssues         []string
-	AgentStatus        string
-	KnownHosts         bool
-	OldKeys            map[string]int // key_name -> archived count
-	StaleOldKeys       []string       // archived predecessors past the retention window
-	ConfigInSync       bool
-	OrphanKeys         []string
-	Dangling           keyaudit.Report
-	DuplicateKeys      []string
-	UnpinnedHosts      []string
+	Preflight     preflight.Report
+	Home          string
+	State         string // the state home, when it is not Home
+	SSHDir        string
+	PermIssues    []string
+	AgentStatus   string
+	KnownHosts    bool
+	OldKeys       map[string]int // key_name -> archived count
+	StaleOldKeys  []string       // archived predecessors past the retention window
+	ConfigInSync  bool
+	OrphanKeys    []string
+	Dangling      keyaudit.Report
+	DuplicateKeys []string
+	UnpinnedHosts []string
+	// UnpinnedVMHosts are the VM hosts with no pin: `vm sync` pins them
+	// while their VM runs (a VM's address is not a hostname keyscan can use).
+	UnpinnedVMHosts []string
+	// StalePins counts tagged known_hosts lines no manifest host uses.
+	StalePins int
+	// VM is the VM hosts and what `vm sync` would do; nil with none.
+	VM                 *VMStatus
 	AliasCollisions    []string
 	ProvidersSource    string // "user file" | "shipped default"
 	StrandedLegacyHome string
@@ -87,6 +94,17 @@ func (r Report) Warnings() []string {
 	var w []string
 	for _, h := range r.UnpinnedHosts {
 		w = append(w, "host key not pinned: "+h)
+	}
+	for _, h := range r.UnpinnedVMHosts {
+		w = append(w, "VM host key not pinned: "+h)
+	}
+	if r.VM != nil {
+		for _, g := range r.VM.Gone {
+			w = append(w, "VM no longer exists: "+g)
+		}
+		for _, a := range r.VM.Undeclared {
+			w = append(w, "devbox declared in authama.json but not a host yet: "+a)
+		}
 	}
 	for _, a := range r.AliasCollisions {
 		w = append(w, "alias used in more than one profile: "+a)
@@ -184,6 +202,7 @@ func (r Report) Format() string {
 		lines = append(lines, "  -> run: authama ssh knownhosts pin --all   "+
 			"(VPN-gated hosts: connect the VPN first)")
 	}
+	lines = append(lines, r.vmLines()...)
 	if len(r.AliasCollisions) > 0 {
 		lines = append(lines, "WARNING: the same Host alias is used in >1 profile - ssh "+
 			"applies the FIRST match, so the others are shadowed:")
@@ -287,6 +306,10 @@ func (r Report) JSON() ([]byte, error) {
 		NeededTools        []string       `json:"needed_tools"`
 		Clipboard          *string        `json:"clipboard"`
 		StrandedLegacyHome *string        `json:"stranded_legacy_home"`
+		// Added in 0.1.3, after every 3.x key so a 3.x parser is unaffected.
+		UnpinnedVMHosts []string  `json:"unpinned_vm_hosts"`
+		StalePins       int       `json:"stale_pins"`
+		VM              *VMStatus `json:"vm"`
 	}
 	nz := func(s []string) []string {
 		if s == nil {
@@ -305,6 +328,7 @@ func (r Report) JSON() ([]byte, error) {
 		PermIssues: nz(r.PermIssues), OldKeys: old, StaleOldKeys: nz(r.StaleOldKeys),
 		OrphanKeys: nz(r.OrphanKeys), DanglingKeys: danglingRows(r.Dangling),
 		DuplicateKeys: nz(r.DuplicateKeys), UnpinnedHosts: nz(r.UnpinnedHosts),
+		UnpinnedVMHosts: nz(r.UnpinnedVMHosts), StalePins: r.StalePins, VM: r.VM,
 		AliasCollisions: nz(r.AliasCollisions), StaleProxy: nz(r.StaleProxy),
 		ShadowedHosts: nz(r.ShadowedHosts), RawOptionOverlaps: nz(r.RawOptionOverlaps),
 		NeededTools: nz(r.NeededTools), Clipboard: strOrNil(r.Clipboard),
@@ -386,7 +410,9 @@ func (s *Service) Run(strict bool) Report {
 			rep.OrphanKeys = append(rep.OrphanKeys, f.Subject)
 		}
 		rep.DuplicateKeys = duplicateKeys(ssh)
-		rep.UnpinnedHosts = s.unpinnedHosts(ssh)
+		rep.UnpinnedHosts, rep.UnpinnedVMHosts = s.unpinnedHosts(ssh)
+		rep.StalePins = s.stalePins()
+		rep.VM = s.vmStatus()
 		rep.AliasCollisions = aliasCollisions(s.m)
 		rep.OnePassword = onePasswordIssues(s.m)
 		rep.StaleProxy = staleProxies(ssh, s.m)
@@ -640,12 +666,11 @@ func duplicateKeys(ssh string) []string {
 	return dups
 }
 
-func (s *Service) unpinnedHosts(ssh string) []string {
+func (s *Service) unpinnedHosts(ssh string) (out, vms []string) {
 	rks, err := s.m.IterResolved()
 	if err != nil {
-		return nil
+		return nil, nil
 	}
-	var out []string
 	seen := map[string]bool{}
 	for _, rk := range rks {
 		h := rk.Host
@@ -660,10 +685,14 @@ func (s *Service) unpinnedHosts(ssh string) []string {
 			token = fmt.Sprintf("[%s]:%d", h.Hostname, h.Port)
 		}
 		if !knownhosts.HostInKnownHosts(kh, token) {
+			if h.VM != nil {
+				vms = append(vms, fmt.Sprintf("%s (%s %q)", h.Alias, h.VM.Hypervisor, h.VM.Name))
+				continue
+			}
 			out = append(out, fmt.Sprintf("%s (%s)", h.Alias, h.Hostname))
 		}
 	}
-	return out
+	return out, vms
 }
 
 func aliasCollisions(m *manifest.Manifest) []string {

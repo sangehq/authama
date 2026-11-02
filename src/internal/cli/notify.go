@@ -2,15 +2,10 @@ package cli
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
-	"strings"
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/platform"
 	"github.com/simtabi/authama/src/internal/services/notifier"
 	"github.com/simtabi/authama/src/internal/util/scheduler"
 )
@@ -83,35 +78,8 @@ func newNotifyCmd() *cobra.Command {
 	return cmd
 }
 
-// schedulerExe is the quoted invocation for the scheduled job. The authama on
-// PATH if present, then the sshmgr compatibility binary, else this binary; quoted so a path with spaces stays one token
-// (double quotes on Windows, shell-quote on POSIX). Mirrors facade._scheduler_exe.
-func schedulerExe() string {
-	exe := ""
-	for _, name := range brand.Commands() {
-		if p, err := exec.LookPath(name); err == nil {
-			exe = p
-			break
-		}
-	}
-	if exe == "" {
-		if self, e := os.Executable(); e == nil {
-			exe = self
-		} else {
-			exe = brand.Command
-		}
-	}
-	if platform.IsWindows() {
-		return `"` + exe + `"`
-	}
-	return shellQuote(exe)
-}
+// schedulerExe is the quoted invocation for the scheduled job; see scheduler.Exe.
+func schedulerExe() string { return scheduler.Exe() }
 
-// shellQuote quotes a string for POSIX shells (shlex.quote): bare if safe, else
-// single-quoted with embedded quotes escaped.
-func shellQuote(s string) string {
-	if s != "" && !strings.ContainsAny(s, " \t\n\"'\\$`&|;<>()*?[]{}~#!") {
-		return s
-	}
-	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
-}
+// shellQuote quotes a string for POSIX shells; see scheduler.ShellQuote.
+func shellQuote(s string) string { return scheduler.ShellQuote(s) }

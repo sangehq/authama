@@ -9,14 +9,22 @@ package scheduler
 // no test could see more than one of them at a time.
 const notifyHour = "09:00"
 
+// vmSyncHour is when the daily VM host sync runs: after the notifier, so
+// the two never queue on the lock.
+const vmSyncHour = "09:30"
+
 // timerUnit is the systemd timer that drives the notifier, built from
 // notifyHour so it cannot drift from the other two platforms.
-func timerUnit() string {
+func timerUnit() string { return timerUnitFor(Label) }
+
+// timerUnitFor is the systemd timer for label's job.
+func timerUnitFor(label string) string {
+	j := jobFor(label)
 	return `[Unit]
-Description=authama key-expiry notifier (daily)
+Description=` + j.description + ` (daily)
 
 [Timer]
-OnCalendar=*-*-* ` + notifyHour + `:00
+OnCalendar=*-*-* ` + j.at + `:00
 Persistent=true
 
 [Install]
@@ -32,7 +40,7 @@ WantedBy=timers.target
 // an existing task, so overwriting is the intended behaviour, not a shortcut.
 func schtasksArgs(command, label string) []string {
 	return []string{"schtasks", "/Create", "/TN", label, "/TR", command,
-		"/SC", "DAILY", "/ST", notifyHour, "/F"}
+		"/SC", "DAILY", "/ST", jobFor(label).at, "/F"}
 }
 
 // schtasksDeleteArgs is the argv that removes a task; /F skips the prompt for

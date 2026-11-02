@@ -72,7 +72,9 @@ var commandExamples = map[string][]string{
 	"ssh termius export":    {"ssh termius export --open", "ssh termius export --include-git --skip bastion --out ./hosts.csv"},
 	"ssh validate":          {"ssh validate", "ssh validate work"},
 	"ssh view":              {"ssh view web1"},
-	"ssh vm add":            {"ssh vm add lab dev --hypervisor orbstack --vm ubuntu --user me"},
+	"ssh vm add":            {"ssh vm add lab dev --hypervisor parallels --vm Ubuntu --user me"},
+	"ssh vm sync":           {"ssh vm sync --dry-run", "ssh vm sync --yes", "ssh vm sync --install-schedule"},
+	"ssh vm adopt-key":      {"ssh vm adopt-key", "ssh vm adopt-key devbox-key devbox devbox --hypervisor parallels --vm Ubuntu --user me --dry-run"},
 	"ssh vm docker-context": {"ssh vm docker-context dev"},
 	"ssh vm list":           {"ssh vm list"},
 }

@@ -55,6 +55,7 @@ var positional = map[string][]string{
 	"recover":           {history.KindKey},
 	"knownhosts pin":    {history.KindHost},
 	"vm docker-context": {history.KindHost},
+	"vm adopt-key":      {history.KindKey, history.KindProfile, history.KindHost},
 	"load":              {history.KindProfile},
 	"init":              {history.KindProfile},
 }

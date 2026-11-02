@@ -360,11 +360,78 @@ var managedInSSHDir = map[string]bool{
 	"authorized_keys": true, "environment": true, "rc": true, "profiles": true,
 }
 
-// loose finds key-shaped files sitting directly in ~/.ssh: the pre-authama keys a
-// user already had. Detection is by pairing (a file with a .pub sibling) or by a
-// .pub that parses as a public key - never by reading private key material.
+// loose reports the key-shaped files sitting directly in ~/.ssh (LooseKeys),
+// with the fix that suits each: a leftover copy of a key authama manages, a
+// key that looks like a devbox's, or any other.
 func (s *Service) loose() []Finding {
-	entries, err := os.ReadDir(s.sshDir)
+	keys := LooseKeys(s.sshDir)
+	out := make([]Finding, 0, len(keys))
+	for _, k := range keys {
+		f := Finding{State: Loose, Subject: k.Name,
+			Detail: "a key in ~/.ssh that no Host block uses",
+			Fix:    "authama ssh import   (bring it under management), or leave it alone",
+		}
+		switch {
+		case k.CopyOf != "":
+			f.Detail = "a leftover copy of ~/.ssh/" + k.CopyOf + ", which authama manages (adopted)"
+			f.Fix = "once ssh through the managed copy works, remove ~/.ssh/" + k.Name + " and " + k.Name +
+				".pub yourself (authama never deletes a key it did not make)"
+		case k.Devbox:
+			f.Detail = "a key in ~/.ssh that no Host block uses; its " + k.Hint + " suggests a devbox VM"
+			f.Fix = "adopt it onto its VM: authama ssh vm adopt-key " + k.Name +
+				" <profile> <alias> --hypervisor <hypervisor> --vm <vm name> --user <guest user>   " +
+				"(pick the VM from `authama ssh vm list`; or declare it under devboxes in authama.json and run `authama ssh vm sync`)"
+		}
+		out = append(out, f)
+	}
+	return out
+}
+
+// LooseKey is a key-shaped file directly in ~/.ssh.
+type LooseKey struct {
+	Name    string `json:"name"`
+	Comment string `json:"comment,omitempty"`
+	Type    string `json:"type,omitempty"`
+	// Devbox is set when the name or comment suggests a VM's key (devbox,
+	// docker, tunnel, vm, or a hypervisor's name); Hint says which.
+	Devbox bool   `json:"devbox,omitempty"`
+	Hint   string `json:"hint,omitempty"`
+	// CopyOf is the managed key (relative to ~/.ssh) whose public key this
+	// one's is - the original left behind by `vm adopt-key` without --move.
+	CopyOf string `json:"copy_of,omitempty"`
+}
+
+var devboxWords = []string{"devbox", "docker", "tunnel", "vm", "lima", "orb", "parallels", "vmpal", "utm",
+	"podman", "multipass", "vagrant", "colima", "wsl"}
+
+// LooksLikeDevbox reports which word in a key's name or comment suggests a VM
+// ("" when none does). Words are matched whole, on '-', '_', '.', '@' and
+// space boundaries, so "vm" matches "docker-vm" but not "vmail".
+func LooksLikeDevbox(name, comment string) string {
+	check := func(label, s string) string {
+		for _, w := range strings.FieldsFunc(strings.ToLower(s), func(r rune) bool {
+			return r == '-' || r == '_' || r == '.' || r == '@' || r == ' ' || r == '/'
+		}) {
+			for _, d := range devboxWords {
+				if w == d {
+					return label + " (\"" + d + "\")"
+				}
+			}
+		}
+		return ""
+	}
+	if h := check("name", name); h != "" {
+		return h
+	}
+	return check("comment", comment)
+}
+
+// LooseKeys finds key-shaped files sitting directly in ~/.ssh: the pre-authama
+// keys a user already had. Detection is by pairing (a file with a .pub sibling)
+// or by a .pub that parses as a public key - never by reading private key
+// material.
+func LooseKeys(sshDir string) []LooseKey {
+	entries, err := os.ReadDir(sshDir)
 	if err != nil {
 		return nil
 	}
@@ -376,26 +443,63 @@ func (s *Service) loose() []Finding {
 		}
 		switch {
 		case strings.HasSuffix(name, ".pub"):
-			body, err := os.ReadFile(filepath.Join(s.sshDir, name))
+			body, err := os.ReadFile(filepath.Join(sshDir, name))
 			if err != nil || !authkeys.IsValidPublicKey(strings.TrimSpace(string(body))) {
 				continue
 			}
 			stems[strings.TrimSuffix(name, ".pub")] = true
 		default:
-			if _, err := os.Lstat(filepath.Join(s.sshDir, name+".pub")); err == nil {
+			if _, err := os.Lstat(filepath.Join(sshDir, name+".pub")); err == nil {
 				stems[name] = true
 			}
 		}
 	}
-	out := make([]Finding, 0, len(stems))
+	managed := managedBlobs(sshDir)
+	out := make([]LooseKey, 0, len(stems))
 	for stem := range stems {
-		out = append(out, Finding{
-			State: Loose, Subject: stem,
-			Detail: "a key in ~/.ssh that no Host block uses",
-			Fix:    "authama ssh import   (bring it under management), or leave it alone",
-		})
+		k := LooseKey{Name: stem}
+		if b, err := os.ReadFile(filepath.Join(sshDir, stem+".pub")); err == nil {
+			f := strings.Fields(strings.TrimSpace(string(b)))
+			if len(f) >= 2 {
+				k.Type = f[0]
+				k.CopyOf = managed[f[1]]
+			}
+			if len(f) >= 3 {
+				k.Comment = strings.Join(f[2:], " ")
+			}
+		}
+		if k.Hint = LooksLikeDevbox(stem, k.Comment); k.Hint != "" {
+			k.Devbox = true
+		}
+		out = append(out, k)
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Subject < out[j].Subject })
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+// managedBlobs maps each public key blob under ~/.ssh/profiles to its path
+// relative to ~/.ssh.
+func managedBlobs(sshDir string) map[string]string {
+	out := map[string]string{}
+	root := filepath.Join(sshDir, "profiles")
+	_ = filepath.WalkDir(root, func(path string, e os.DirEntry, err error) error {
+		if err != nil || e.IsDir() || !strings.HasSuffix(path, ".pub") {
+			return nil
+		}
+		if strings.Contains(filepath.ToSlash(path), "/old/") {
+			return nil
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+		if f := strings.Fields(string(b)); len(f) >= 2 {
+			if rel, err := filepath.Rel(sshDir, strings.TrimSuffix(path, ".pub")); err == nil {
+				out[f[1]] = filepath.ToSlash(rel)
+			}
+		}
+		return nil
+	})
 	return out
 }
 
