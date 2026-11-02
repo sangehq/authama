@@ -32,7 +32,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   are described as frozen, not removed.
 - Tests generate every token, password and passphrase at run time (`internal/util/testcred`)
   instead of spelling them as literals, and a hygiene test fails on a credential literal in any
-  test file.
+  test file, the TypeScript browser tests under `e2e/web` included.
 
 ### Fixed
 
