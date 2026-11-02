@@ -184,6 +184,10 @@ removing one that the baseline lists means the test fails, which is the point.
 - Subject ≤ 72 chars, imperative mood; body explains *why*. No emoji.
 - Keep PRs small, green, and scoped to one concern. Update `CHANGELOG.md` and
   `README.md` as verbs land.
+- If CI does not start on a push, look at the PR's merge state first: GitHub
+  starts no `pull_request` run while the PR conflicts with `main`. Resolve the
+  conflict rather than dispatching CI by hand, which tests the branch and not
+  the merge.
 - A `test (macos-latest)` leg that fails after about 15 minutes with no step
   run never got a runner. `requeue.yml` re-runs it once on its own; re-run it
   by hand only if that second attempt strands too.
