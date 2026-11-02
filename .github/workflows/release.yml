@@ -32,6 +32,13 @@ concurrency:
 permissions:
   contents: read
 
+# Our own modules are fetched from git, never through proxy.golang.org or
+# sum.golang.org. The tag this job builds is still fetched by the public proxy
+# once it is pushed; this keeps the build itself from being what feeds it.
+env:
+  GOPRIVATE: github.com/simtabi/*
+  GONOSUMDB: github.com/simtabi/*
+
 jobs:
   goreleaser:
     # Linux cross-compiles every target (pure Go) and builds the native
