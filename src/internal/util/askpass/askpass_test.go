@@ -5,6 +5,13 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/simtabi/authama/src/internal/util/testcred"
+)
+
+// Generated per run (internal/util/testcred), never written down.
+var (
+	credAskpass = testcred.Secret("askpass")
 )
 
 // This package has no v1 counterpart to be in parity with - it exists
@@ -55,14 +62,14 @@ func TestServeWritesTheSecretAndOneNewline(t *testing.T) {
 }
 
 func TestEnvironCarriesTheHandshake(t *testing.T) {
-	env := Environ("/usr/local/bin/authama", "s3cret")
+	env := Environ("/usr/local/bin/authama", credAskpass)
 	got := asMap(t, env)
 
 	for name, want := range map[string]string{
 		"SSH_ASKPASS":         "/usr/local/bin/authama",
 		"SSH_ASKPASS_REQUIRE": "force",
 		modeVar:               "1",
-		secretVar:             "s3cret",
+		secretVar:             credAskpass,
 	} {
 		if got[name] != want {
 			t.Errorf("%s = %q, want %q", name, got[name], want)
@@ -111,10 +118,10 @@ func TestEnvironDropsInheritedValuesRatherThanShadowingThem(t *testing.T) {
 // this asserts the secret is in the environment and that nothing about the
 // helper handshake asks for it as an argument.
 func TestSecretTravelsOnlyInTheEnvironment(t *testing.T) {
-	// A marker, not a plausible secret: the test only needs a value it can find
-	// again in the environment, and a high-entropy literal next to the word
-	// "secret" is what a secret scanner is built to flag.
-	const secret = "THE-TEST-VALUE"
+	// Generated, not written down: the test only needs a value it can find
+	// again in the environment, and any literal under the name "secret" is
+	// what a secret scanner is built to flag.
+	secret := testcred.Secret("marker")
 	env := Environ("/usr/local/bin/authama", secret)
 
 	found := false

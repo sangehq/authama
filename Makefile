@@ -15,6 +15,12 @@ PKG     := ./cmd/authama
 # The deprecated compatibility build: the same program under its old name; it prints a deprecation notice.
 COMPAT_BIN := build/sshmgr
 COMPAT_PKG := ./cmd/sshmgr
+
+# Our own modules come from git, never proxy.golang.org or sum.golang.org, so a
+# local build cannot feed a version into the public cache. Overridable.
+export GOPRIVATE ?= github.com/simtabi/*
+export GONOSUMDB ?= github.com/simtabi/*
+
 # A release carries two tags on the same commit, and this matches the first:
 #
 #   v0.1.0      the release. GoReleaser, the installers and `git describe` use

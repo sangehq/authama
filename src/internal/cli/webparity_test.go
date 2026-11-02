@@ -21,6 +21,14 @@ import (
 	"github.com/simtabi/authama/src/internal/services/mutation"
 	"github.com/simtabi/authama/src/internal/services/snapshots"
 	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/util/testcred"
+)
+
+// Generated per run (internal/util/testcred), never written down.
+var (
+	credSecretA      = testcred.Secret("secreta")
+	credSecretB      = testcred.Secret("secretb")
+	credSecretParity = testcred.Secret("secretparity")
 )
 
 // Every change the web offers must leave the home exactly as the CLI command
@@ -200,10 +208,10 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 			dir := t.TempDir()
 			t.Setenv("NPM_CONFIG_USERCONFIG", filepath.Join(dir, ".npmrc"))
 			t.Setenv("COMPOSER_HOME", filepath.Join(dir, "composer"))
-			t.Setenv("GH_TOKEN", "SECRET_PARITY")
+			t.Setenv("GH_TOKEN", credSecretParity)
 			tokenFiles[side] = dir
 			if seed {
-				body := "//registry.npmjs.org/:_authToken=SECRET_A\n//npm.example.com/:_authToken=SECRET_B\n"
+				body := "//registry.npmjs.org/:_authToken=" + credSecretA + "\n//npm.example.com/:_authToken=" + credSecretB + "\n"
 				if err := os.WriteFile(filepath.Join(dir, ".npmrc"), []byte(body), 0o600); err != nil {
 					t.Fatal(err)
 				}
@@ -377,9 +385,9 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 		{"notify test", []string{"notify", "test"}, change.NotifyTest(), nil, notifier, sameCalls},
 		{"audit notify", []string{"audit", "--notify"}, change.AuditNotify(), nil, notifier, nil},
 		{"token delete", []string{"token", "delete", "npm", "npm.example.com"},
-			change.TokenDelete("npm", "npm.example.com"), nil, tokenSide(true), sameTokenFiles(".npmrc", "SECRET_A", "npm.example.com")},
+			change.TokenDelete("npm", "npm.example.com"), nil, tokenSide(true), sameTokenFiles(".npmrc", credSecretA, "npm.example.com")},
 		{"token apply", []string{"token", "apply", "--no-env-hint"}, change.TokenApply(), nil, tokenSide(false),
-			sameTokenFiles(filepath.Join("composer", "auth.json"), "SECRET_PARITY", "")},
+			sameTokenFiles(filepath.Join("composer", "auth.json"), credSecretParity, "")},
 		{"vm sync", []string{"vm", "sync", "--yes"}, change.VMSync(false), goneVM, limaLists, nil},
 		{"vm adopt-key", []string{"vm", "adopt-key", "loose-vm", "work", "devbox", "--hypervisor", "parallels", "--vm", "Ubuntu", "-u", "dev", "--yes"},
 			change.VMAdoptKey("loose-vm", "work", "devbox", "parallels", "Ubuntu", "dev"), loose, nil, nil},

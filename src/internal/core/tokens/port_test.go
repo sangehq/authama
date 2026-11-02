@@ -11,6 +11,16 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/simtabi/authama/src/internal/util/testcred"
+)
+
+// Generated per run (internal/util/testcred), never written down.
+var (
+	credBitbucket = testcred.Secret("bitbucket")
+	credGhpX      = testcred.Token("ghp", "ghpx")
+	credNpmrc     = testcred.Secret("npmrc")
+	credRedacted  = testcred.Secret("redacted")
 )
 
 func tok(target, host, token string) Credential {
@@ -33,7 +43,7 @@ func composerOf(t *testing.T, s *Set) map[string]any {
 func TestTargetsComeOutInInsertionOrder(t *testing.T) {
 	s := NewSet()
 	s.Add(tok(Composer, "github.com", "tok"))
-	s.Add(Credential{Target: NPM, Host: "registry.npmjs.org", Kind: KindToken, Token: "n"})
+	s.Add(Credential{Target: NPM, Host: "registry.npmjs.org", Kind: KindToken, Token: testcred.Secret("ordering")})
 	if !slices.Equal(s.Targets(), []string{"composer", "npm"}) {
 		t.Fatal(s.Targets())
 	}
@@ -67,7 +77,7 @@ func TestTheLastWriteWins(t *testing.T) {
 
 func TestRemove(t *testing.T) {
 	s := NewSet()
-	s.Add(Credential{Target: NPM, Host: "r", Kind: KindToken, Token: "t"})
+	s.Add(Credential{Target: NPM, Host: "r", Kind: KindToken, Token: testcred.Secret("remove")})
 	if !s.Remove(NPM, "r") || s.Remove(NPM, "r") || s.Len("") != 0 {
 		t.Fatal("remove")
 	}
@@ -77,9 +87,9 @@ func TestComposerShapes(t *testing.T) {
 	s := NewSet()
 	s.Add(tok(Composer, "github.com", "g"))
 	s.Add(bas(Composer, "repo.magento.com", "pub", "priv"))
-	s.Add(Credential{Target: Composer, Host: "bitbucket.org", Kind: KindPair, Mechanism: "bitbucket-oauth", Key: "k", Secret: "s"})
+	s.Add(Credential{Target: Composer, Host: "bitbucket.org", Kind: KindPair, Mechanism: "bitbucket-oauth", Key: "k", Secret: credBitbucket})
 	s.Add(Credential{Target: Composer, Host: "h.org", Kind: KindHeaders, Mechanism: "custom-headers", Headers: []string{"API-TOKEN: x"}})
-	want := `{"bitbucket-oauth":{"bitbucket.org":{"consumer-key":"k","consumer-secret":"s"}},` +
+	want := `{"bitbucket-oauth":{"bitbucket.org":{"consumer-key":"k","consumer-secret":"` + credBitbucket + `"}},` +
 		`"custom-headers":{"h.org":["API-TOKEN: x"]},"github-oauth":{"github.com":"g"},` +
 		`"http-basic":{"repo.magento.com":{"password":"priv","username":"pub"}}}`
 	got, _ := json.Marshal(composerOf(t, s))
@@ -90,9 +100,9 @@ func TestComposerShapes(t *testing.T) {
 
 func TestNPMRCWithAScope(t *testing.T) {
 	s := NewSet()
-	s.Add(Credential{Target: NPM, Host: "registry.npmjs.org", Kind: KindToken, Token: "tok", Scope: "@org"})
+	s.Add(Credential{Target: NPM, Host: "registry.npmjs.org", Kind: KindToken, Token: credNpmrc, Scope: "@org"})
 	out := s.NPMRC()
-	if !strings.Contains(out, "@org:registry=https://registry.npmjs.org/") || !strings.Contains(out, "//registry.npmjs.org/:_authToken=tok") {
+	if !strings.Contains(out, "@org:registry=https://registry.npmjs.org/") || !strings.Contains(out, "//registry.npmjs.org/:_authToken="+credNpmrc) {
 		t.Fatal(out)
 	}
 }
@@ -130,10 +140,10 @@ func TestNetrcLine(t *testing.T) {
 
 func TestRedactedJSONHidesSecretsAndFiltersTargets(t *testing.T) {
 	s := NewSet()
-	s.Add(tok(Composer, "github.com", "supersecret"))
-	s.Add(Credential{Target: NPM, Host: "registry.npmjs.org", Kind: KindToken, Token: "ntok"})
+	s.Add(tok(Composer, "github.com", credRedacted))
+	s.Add(Credential{Target: NPM, Host: "registry.npmjs.org", Kind: KindToken, Token: testcred.Secret("redactednpm")})
 	all := s.RedactedJSON(nil)
-	if strings.Contains(all, "supersecret") || !strings.Contains(all, Mask) {
+	if strings.Contains(all, credRedacted) || !strings.Contains(all, Mask) {
 		t.Fatal(all)
 	}
 	var doc map[string]any
@@ -154,8 +164,8 @@ func resolveDoc(t *testing.T, doc string, env map[string]string) *Set {
 
 func TestConfigResolvesAndWarns(t *testing.T) {
 	s := resolveDoc(t, `{"composer":{"github.com":{"service":"github","env":"GH_TOKEN"},"x.org":{"service":"gitlab","env":"UNSET_X"}},"npm":{"r":{"env":"UNSET_X"}}}`,
-		map[string]string{"GH_TOKEN": "ghp_x"})
-	if composerOf(t, s)["github-oauth"].(map[string]any)["github.com"] != "ghp_x" || !strings.Contains(strings.Join(s.Warnings, "\n"), "x.org") {
+		map[string]string{"GH_TOKEN": credGhpX})
+	if composerOf(t, s)["github-oauth"].(map[string]any)["github.com"] != credGhpX || !strings.Contains(strings.Join(s.Warnings, "\n"), "x.org") {
 		t.Fatal(s.Warnings)
 	}
 }

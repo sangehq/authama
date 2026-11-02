@@ -18,6 +18,12 @@ on:
 permissions:
   contents: read
 
+# Our own modules are fetched from git, never through proxy.golang.org or
+# sum.golang.org, so a CI build can never feed a version into the public cache.
+env:
+  GOPRIVATE: github.com/simtabi/*
+  GONOSUMDB: github.com/simtabi/*
+
 # Cancel superseded pull-request runs on the same ref; scheduled and manual runs on main finish.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -180,8 +186,12 @@ jobs:
       - name: Install gitleaks
         run: |
           VERSION=8.30.1
-          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
-            | tar -xz gitleaks
+          # From the release's gitleaks_8.30.1_checksums.txt; bump both together.
+          SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+          curl -fsSL -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
+          echo "${SHA256}  gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks
           sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
       - name: Scan for secrets
         run: gitleaks detect --source . --redact --no-banner --exit-code 1

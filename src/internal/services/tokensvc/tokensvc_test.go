@@ -12,6 +12,12 @@ import (
 
 	"github.com/simtabi/authama/src/internal/core/tokens"
 	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/util/testcred"
+)
+
+// Generated per run (internal/util/testcred), never written down.
+var (
+	credGhpSecret = testcred.Token("ghp", "ghpsecret")
 )
 
 // sandbox is a token environment whose home, config and cwd are all under a
@@ -232,12 +238,12 @@ func TestInventoryListsEveryTarget(t *testing.T) {
 
 func TestInventoryMasksByDefaultAndRevealsOnRequest(t *testing.T) {
 	e, _ := sandbox(t)
-	write(t, e, set(gh("github.com", "ghp_SECRET")), tokens.Composer)
+	write(t, e, set(gh("github.com", credGhpSecret)), tokens.Composer)
 	m := e.Inventory("", false)[0]
 	if !m.SecretPresent || m.Secret != "" {
 		t.Fatalf("%+v", m)
 	}
-	if r := e.Inventory("", true)[0]; r.Secret != "ghp_SECRET" {
+	if r := e.Inventory("", true)[0]; r.Secret != credGhpSecret {
 		t.Fatalf("%+v", r)
 	}
 }
