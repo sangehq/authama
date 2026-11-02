@@ -48,6 +48,8 @@ adopted with a guided command, and `doctor --fix` runs the same upkeep.
   `--yes` skips the confirmation. Every change is backed up first.
 - Docker contexts authama creates carry the description `managed by authama`, so only those are ever
   removed.
+- The code of conduct is `CODE_OF_CONDUCT.md` again, the name the Simtabi conventions require
+  verbatim; 0.1.2 had lowercased it with the other Markdown files.
 - CI also runs weekly on `main` (Monday 06:00 UTC), so drift after a merge shows up; the release
   workflow pins GoReleaser to `~> v2` instead of `latest`.
 - The README's H1 is the command name, and its feature list moved to the top of `docs/features.md`.

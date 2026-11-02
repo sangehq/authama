@@ -152,7 +152,7 @@ else is in the [documentation index](#documentation).
 
 ## Community
 
-[Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [Code of conduct](code-of-conduct.md) · [Changelog](CHANGELOG.md)
+[Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [Code of conduct](CODE_OF_CONDUCT.md) · [Changelog](CHANGELOG.md)
 
 ## License
 
