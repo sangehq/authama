@@ -25,7 +25,7 @@ logs in with it before replacing the old key. Remove the old key from the panel
 afterwards; the report says where.
 
 ```sh
-authama ssh rotate simtabi/simtabi_oribi-web-ed25519
+authama ssh rotate acme/acme_app-web-ed25519
 ```
 
 A target that cannot be proven at all (a git web panel, a provider with no read

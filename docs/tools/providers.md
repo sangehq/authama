@@ -112,7 +112,7 @@ VPS provider. For an API with a non-Bearer header (e.g. Scaleway's
 `rename_path` (+ optional `rename_method`/`rename_field`) to support relabeling.
 
 If the API paginates, set `next_field` to the dotted path of the next-page URL in
-the response (e.g. `"next_field": "links.next"`); ssh-manager then follows it. Without
+the response (e.g. `"next_field": "links.next"`); authama then follows it. Without
 `next_field` the list is assumed to be a single page - set a large page size in
 `list_path` if your API needs one, or the listing may be truncated.
 

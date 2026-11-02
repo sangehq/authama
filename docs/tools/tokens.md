@@ -49,7 +49,7 @@ you never edit those files by hand.
 authama token init                             # a starter tokens.json in the config home
 $EDITOR ~/.config/ssh-manager/tokens.json      # keep the hosts you use
 authama token status                           # which variables are still missing
-GH_TOKEN=$(op read op://Private/GitHub/token) authama token apply
+GH_TOKEN="$(op read op://Private/GitHub/token)" authama token apply
 authama token list
 ```
 
@@ -184,8 +184,8 @@ project's `composer.json`; the menu reminds you after saving one:
 ```sh
 export GH_TOKEN=changeme                                      # plain shell
 authama token apply --source .env                            # VAR=value file (set variables win)
-export GH_TOKEN=$(op read "op://Dev/GitHub/token")           # 1Password
-export GH_TOKEN=$(security find-generic-password -s gh -w)   # macOS Keychain
+export GH_TOKEN="$(op read op://Dev/GitHub/token)"           # 1Password
+export GH_TOKEN="$(security find-generic-password -s gh -w)" # macOS Keychain
 ```
 
 Values are trimmed of a trailing newline or spaces, a common cause of "valid
@@ -201,7 +201,7 @@ token, still 401".
 ```
 
 ```sh
-NPM_TOKEN=$TOKEN authama token apply --target npm --project .   # a project .npmrc
+NPM_TOKEN="$TOKEN" authama token apply --target npm --project . # a project .npmrc
 npm ci
 ```
 

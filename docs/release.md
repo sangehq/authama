@@ -49,7 +49,7 @@ matching native one per OS. The binary version comes from the tag via ldflags
 
 1. Make the repo public and enable Issues.
 2. Set the metadata:
-   `gh repo edit simtabi/authama --homepage "https://opensource.simtabi.com/products/simtabi/ssh-manager"`,
+   `gh repo edit simtabi/authama --homepage "https://github.com/simtabi/authama#readme"`,
    topics `oss ssh ssh-keys ssh-config key-rotation cli go`.
 3. Create the `release` GitHub Environment (`release.yml` runs in it).
 4. Green on macOS, Linux and Windows: `make check`, `make e2e`, `make feature-check`.

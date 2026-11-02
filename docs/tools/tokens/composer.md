@@ -43,8 +43,8 @@ Add the host to `gitlab-domains` / `github-domains` in your `composer.json`
 the second a project-scoped file:
 
 ```sh
-GH_TOKEN=$(op read op://Simtabi/GitHub/token) \
-  authama token apply --target composer --project ~/code/simtabi-app
+GH_TOKEN="$(op read op://Acme/GitHub/token)" \
+  authama token apply --target composer --project ~/code/acme-app
 ```
 
 ## CI

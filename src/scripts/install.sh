@@ -3,14 +3,14 @@
 # Authentication Access Manager installer for macOS and Linux.
 #
 # Installs two binaries from the same release: authama, and sshmgr - the same
-# program under the name v3 shipped, kept for scripts, aliases and the
+# program under its original name (sshmgr 3.x and earlier), kept for scripts, aliases and the
 # ProxyCommand lines `authama ssh vm` writes. A release from before authama
 # existed installs sshmgr alone.
 #
 #   curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash
 #   curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash -s v0.1.0
 #
-# Windows users: use scripts/install.ps1 (irm ... | iex) or download the bare
+# Windows users: use src/scripts/install.ps1 (irm ... | iex) or download the bare
 # authama_windows_<arch>.exe / sshmgr_windows_<arch>.exe from the releases page.
 #
 set -euo pipefail
@@ -20,7 +20,7 @@ REPO="authama"
 BINARY="authama"
 COMPAT="sshmgr"
 
-# AUTHAMA_INSTALL_DIR, else the v3 name SSHMGR_INSTALL_DIR, else /usr/local/bin.
+# AUTHAMA_INSTALL_DIR, else the original name SSHMGR_INSTALL_DIR, else /usr/local/bin.
 INSTALL_DIR="${AUTHAMA_INSTALL_DIR:-${SSHMGR_INSTALL_DIR:-/usr/local/bin}}"
 
 err()  { printf 'error: %s\n' "$*" >&2; exit 1; }

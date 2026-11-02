@@ -6,7 +6,7 @@ SSH commands live under `authama ssh`; tokens under `authama token`.
 
 ## The mental model
 
-Profiles model **identity**, not technology. `work`, `personal`, `simtabi`,
+Profiles model **identity**, not technology. `work`, `personal`, `acme`,
 `development` are profiles; "github" is not. The same hostname can appear in two
 profiles and get a different key in each — that is the point, and it is what lets
 two accounts on one forge coexist without either being able to authenticate as
@@ -26,7 +26,7 @@ mints anything — three ways, whichever suits:
 
 ```sh
 authama ssh profile add work
-authama ssh host add work gh -H github.com -u git      # or edit manifest.json directly
+authama ssh host add work gh -H github.com -u git --provider github   # or edit manifest.json
 authama ssh host apply work web1 203.0.113.10 deploy web   # add-or-update from a compact spec
 ```
 
@@ -98,7 +98,7 @@ curl read. Its config names environment variables, never the secrets themselves:
 ```sh
 authama token init                  # a starter ~/.config/ssh-manager/tokens.json
 $EDITOR ~/.config/ssh-manager/tokens.json
-export GH_TOKEN=$(op read op://Private/GitHub/token)   # or set it in CI
+export GH_TOKEN="$(op read op://Private/GitHub/token)"   # or set it in CI
 authama token status                # which variables are still missing
 authama token apply --dry-run       # what would be written, secrets masked
 authama token apply                 # write auth.json, .npmrc, ... (0600, merged)

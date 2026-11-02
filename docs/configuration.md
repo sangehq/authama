@@ -1,13 +1,13 @@
 # Configuration
 
 Everything SSH lives in the **manifest** (`~/.config/ssh-manager/manifest.json`) - the single
-source of truth. You never hand-edit ssh-manager's part of `~/.ssh/config`; you edit the
+source of truth. You never hand-edit authama's part of `~/.ssh/config`; you edit the
 manifest (or use the `host`/`profile` verbs) and re-render. A JSON Schema for the
 manifest and inventory lives in `src/config/schema/` (and matches the Go models in `src/internal/core`,
 which reject unknown keys). See [installation.md](installation.md) for how the home
 is resolved. Auth tokens have their own config, described [below](#auth-tokens).
 
-## ssh-manager owns only a marked block of `~/.ssh/config`
+## authama owns only a marked block of `~/.ssh/config`
 
 `reconcile` / `config render` rewrite **only** the region between
 
@@ -33,7 +33,7 @@ Include ~/.orbstack/ssh/config
 Match all
 Include ~/.ssh/profiles/internal/config   # only when a profile has a category
 ...
-Host github-imanimanyara                   # uncategorized profiles render inline
+Host github-alice                          # uncategorized profiles render inline
     ...
 Host *
     ...
@@ -54,10 +54,10 @@ When the same host serves more than one identity - the classic case is a
 "personal": { "hosts": [
   { "alias": "github-personal", "hostname": "github.com", "user": "git",
     "provider": "github", "key_name": "personal_github-ed25519" } ] },
-"simtabi":  { "hosts": [
-  { "alias": "github-simtabi",  "hostname": "github.com", "user": "git",
-    "provider": "github", "token_env": "GH_TOKEN_SIMTABI",
-    "key_name": "simtabi_github-ed25519" } ] }
+"acme":     { "hosts": [
+  { "alias": "github-acme",  "hostname": "github.com", "user": "git",
+    "provider": "github", "token_env": "GH_TOKEN_ACME",
+    "key_name": "acme_github-ed25519" } ] }
 ```
 
 Why prefix:
@@ -66,8 +66,8 @@ Why prefix:
   If one identity claims the bare `github.com`, then `git@github.com:...` *always*
   resolves to that identity - the other one can never use a `github.com` remote
   (a silent collision). Distinct prefixed aliases make each identity explicit.
-- `key_name` is already profile-prefixed by ssh-manager's `<profile>_<service>-<algo>`
-  convention (e.g. `personal_github-ed25519`, `simtabi_github-ed25519`), so the key
+- `key_name` is already profile-prefixed by authama's `<profile>_<service>-<algo>`
+  convention (e.g. `personal_github-ed25519`, `acme_github-ed25519`), so the key
   *files* never collide. Apply the same discipline to the **alias** so the SSH
   *Host blocks* don't either.
 
@@ -76,9 +76,9 @@ requires it; it's the *alias* that selects the identity):
 
 ```sh
 git remote set-url origin git@github-personal:me/my-repo.git
-git remote set-url origin git@github-simtabi:simtabi/authama.git
+git remote set-url origin git@github-acme:acme/app.git
 # or, to rewrite a host globally for one account, use git's insteadOf:
-git config --global url."git@github-simtabi:simtabi/".insteadOf "git@github.com:simtabi/"
+git config --global url."git@github-acme:acme/".insteadOf "git@github.com:acme/"
 ```
 
 `IdentitiesOnly yes` plus the per-profile `IdentityFile`/`UserKnownHostsFile` then
@@ -86,7 +86,7 @@ guarantees each alias offers only its own key and trusts only its own host keys.
 
 > **The SSH `user` for GitHub/GitLab/Bitbucket must be `git`.** The account is
 > identified by the **key**, not the SSH username - so a custom `user` (e.g.
-> `imani_git`) breaks any plain `git@host:...` remote. Prefix the **alias** to
+> `alice_git`) breaks any plain `git@host:...` remote. Prefix the **alias** to
 > separate identities; never prefix the `user`. (For real login servers like a
 > VPS or a university host, `user` *is* the real account, e.g. `ploi`, `researcher`.)
 
@@ -103,7 +103,7 @@ guarantees each alias offers only its own key and trusts only its own host keys.
       "op_vault": null,                   // the 1Password vault holding this profile's keys
       "key_scope": "per_service",         // or "shared"
       "key_name": null,                    // set only when key_scope == "shared"
-      "key_comment": "imani-{device}-{date}", // optional: overrides defaults.key_comment
+      "key_comment": "alice-{device}-{date}", // optional: overrides defaults.key_comment
       "hosts": [
         {
           "alias": "hpc",                  // the ssh Host alias you type
@@ -159,7 +159,7 @@ the two ProxyCommands authama writes, with `proxy` below; `raw_options` still ma
 VM's address through its hypervisor on each connection.
 
 ```jsonc
-{"alias": "devbox", "hostname": "devbox", "user": "imani",
+{"alias": "devbox", "hostname": "devbox", "user": "dev",
  "vm": {"hypervisor": "parallels", "name": "Ubuntu 24.04"}}
 ```
 
@@ -174,7 +174,7 @@ A host with `proxy: {"kind": "cloudflared"}` is reached through Cloudflare Acces
 reaches the host with no SSH port open to the internet. `hostname` is the Access hostname.
 
 ```jsonc
-{"alias": "oribi-web", "hostname": "ssh-web-00.simtabi.com", "user": "adm-imani",
+{"alias": "app-web", "hostname": "ssh.example.com", "user": "admin",
  "proxy": {"kind": "cloudflared"}}
 ```
 
@@ -195,18 +195,18 @@ Mark a host that's only reachable over a VPN with `requires_vpn: true` (and an o
 
 ## Profiles model identity, not technology - everything lives under the profile
 
-A profile is *who you're being* (work · personal · simtabi · development ·
+A profile is *who you're being* (work · personal · acme · development ·
 school), not *what kind of service* a host is. **Everything for an identity lives
 under `~/.ssh/profiles/<profile>/`** (or `profiles/<category>/<profile>/`) - its
 keys, and nothing else - and nothing crosses profiles:
 
 - Two GitHub accounts are two profiles sharing `hostname: github.com` via distinct
-  aliases (`github.com` vs `github-simtabi`) and `IdentitiesOnly yes`, so each
+  aliases (`github.com` vs `github-acme`) and `IdentitiesOnly yes`, so each
   offers only its own key.
 - Every host renders `UserKnownHostsFile ~/.ssh/known_hosts` - one hashed store,
   not one per profile. Identity isolation comes from `IdentityFile` plus a
   per-host `IdentitiesOnly yes`, not from where the trust store lives. A
-  host key trusted as `personal` is **not** trusted as `simtabi` - even on the
+  host key trusted as `personal` is **not** trusted as `acme` - even on the
   same `github.com` host. Pin host keys with `authama ssh knownhosts pin --all`.
 
 ## Categories
@@ -251,7 +251,7 @@ file exists, list the vault as a whole:
 
 ```toml
 [[ssh-keys]]
-vault = "Simtabi"
+vault = "Acme"
 ```
 
 A whole-vault entry, not one per item: a rotation's `<key>.staged` item has to be
@@ -310,8 +310,8 @@ the field wrote.
 | `{device}` | this machine's short host name, lowercased (`mbp.local` → `mbp`) |
 
 ```sh
-authama ssh profile add oribi --key-comment 'imani-{device}-{date}'   # imani-mbp-2026-10-27
-authama ssh profile edit oribi --key-comment ''                         # back to defaults.key_comment
+authama ssh profile add app --key-comment 'alice-{device}-{date}'   # alice-mbp-2026-10-27
+authama ssh profile edit app --key-comment ''                         # back to defaults.key_comment
 ```
 
 A changed template applies to keys minted from then on, by `reconcile`, `key add` or `rotate`; an existing key
@@ -341,20 +341,31 @@ or `shared`.
 
 ## `.env` (gitignored)
 
-Secrets/refs (age recipient, per-host provider tokens) live
-in `~/.config/ssh-manager/.env`, read by `internal/util/secrets`. A committed `.env-example` documents
-the shape with empty values, and `authama init` seeds your `.env` from it. The
-`.env` is **never** committed (it's gitignored, mode 0600) and is **excluded from
-the encrypted bundle**.
+Secrets/refs (age recipient, per-host provider tokens) belong in
+`~/.config/ssh-manager/.env`. A committed `.env-example` documents the shape with
+empty values, and `authama init` seeds your `.env` from it. The `.env` is **never**
+committed (it's gitignored, mode 0600) and is **excluded from the encrypted bundle**.
+
+authama reads these variables from its **process environment**; it does not load
+the `.env` file by itself. Export them from your shell profile, or load the file
+into the shell before running it (`authama token apply --source FILE` reads a
+`VAR=value` file directly for the token commands):
+
+```sh
+set -a; . ~/.config/ssh-manager/.env; set +a      # export every variable in .env
+```
+
+Because the file is sourced by a shell, wrap any value that contains spaces or
+special characters in double quotes.
 
 To avoid storing a token at rest, set its value to `cmd:<command>` - the command
 runs at use-time and its trimmed stdout is the token (so it integrates with any
 secret manager and the secret never touches disk):
 
 ```sh
-GH_TOKEN=op://Private/GitHub/token                      # 1Password secret reference
-GH_TOKEN=cmd:op read op://Private/GitHub/token          # the same, spelled out
-GH_TOKEN=cmd:keyring get ssh-manager gh_token           # OS keyring
+GH_TOKEN="op://Private/GitHub/token"                    # 1Password secret reference
+GH_TOKEN="cmd:op read op://Private/GitHub/token"        # the same, spelled out
+GH_TOKEN="cmd:keyring get authama gh_token"             # OS keyring
 ```
 
 A value starting `op://` is read with `op read`, the whole reference as one

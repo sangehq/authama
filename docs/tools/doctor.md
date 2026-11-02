@@ -43,7 +43,7 @@ a script that only wants to know "did it run" should check for output rather tha
 the code.
 
 A token file with a loose mode is a **warning** by default, so a machine whose
-`~/.npmrc` was group-readable under sshmgr v3 still passes; the report says
+`~/.npmrc` was group-readable under sshmgr 3.x still passes; the report says
 `doctor --fix` (or a `chmod 600`) tightens it. With `--strict` it fails the run,
 which is what CI wants. `token audit` always fails on it.
 

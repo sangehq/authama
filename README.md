@@ -24,13 +24,45 @@ auth-token-manager? See the [migration guide](docs/migration.md).
 ## Install
 
 ```sh
+# macOS / Linux: installs authama and sshmgr, checksum-verified
 curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash
 authama doctor
 ```
 
-Windows: `irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex`. Also
-`go install github.com/simtabi/authama/src/cmd/authama@latest`, or a binary from [Releases](https://github.com/simtabi/authama/releases). Every path, and where
-per-user state lives, is in [docs/installation.md](docs/installation.md).
+| Channel | Command |
+|---------|---------|
+| Windows (PowerShell) | `irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 \| iex` |
+| Homebrew | `brew install --cask simtabi/tap/sshmgr` |
+| Scoop | `scoop bucket add simtabi https://github.com/simtabi/scoop-bucket; scoop install simtabi/sshmgr` |
+| Go | `go install github.com/simtabi/authama/src/cmd/authama@latest` |
+| deb / rpm / apk | `sshmgr_linux_<arch>.{deb,rpm,apk}` from [Releases](https://github.com/simtabi/authama/releases) |
+
+Every channel, pinning a version, a per-user install directory, and where
+per-user state lives are in [docs/installation.md](docs/installation.md). There is
+no runtime Docker image; the [dev container](docs/installation.md#dev-container) is
+for working on authama itself.
+
+## Features
+
+- **One manifest, reproducible `~/.ssh`.** Profiles (who you are) hold hosts
+  (where you go); `reconcile` mints missing keys and renders a managed block of
+  `~/.ssh/config`, leaving everything outside it alone.
+- **Isolated identities.** Per-profile keys, `IdentitiesOnly`, and profile-prefixed
+  aliases keep two GitHub accounts on one machine from acting as each other.
+- **Key delivery.** `deploy` installs a public key through `ssh-copy-id`, `gh`,
+  `glab`, a cloud provider's REST API (DigitalOcean, Hetzner, Vultr, Linode,
+  Scaleway, …) or a manual paste step.
+- **Safe rotation.** Staged, verified, zero-downtime `rotate` with rollback,
+  expiry reminders, and snapshots of `~/.ssh` before every write.
+- **Trust and reachability.** Host-key pinning (`knownhosts`), VPN-gated hosts
+  (`net`), Cloudflare Access proxies, and local VMs addressed by name (`vm`).
+- **Backups and recovery.** `age`-encrypted bundles, restore onto a new machine,
+  and a break-glass `recover` script.
+- **Auth tokens.** `auth.json`, `.npmrc`, Docker `config.json`,
+  `.git-credentials` and `.netrc` built from environment variables, owner-only and
+  atomic, with `audit` and masked listing.
+- **Three front ends.** The CLI, an interactive `tui`, and a local web UI (`serve`)
+  that previews every change; every change lands in `history`.
 
 ## Quick start guide and usage
 
@@ -42,7 +74,7 @@ mints anything:
 ```sh
 authama init                      # create ~/.config/ssh-manager (dirs, perms, seed files)
 authama ssh profile add work
-authama ssh host add work gh -H github.com -u git      # or edit manifest.json directly
+authama ssh host add work gh -H github.com -u git --provider github   # or edit manifest.json
 authama ssh host apply work web1 203.0.113.10 deploy web   # add-or-update from a compact spec
 authama ssh import ~/.ssh/config                       # or onboard an existing setup
 ```
@@ -63,7 +95,7 @@ Auth tokens:
 
 ```sh
 authama token init                # a starter tokens.json (env var names, no secrets)
-GH_TOKEN=$(op read op://Private/GitHub/token) authama token apply   # write auth.json, .npmrc, …
+GH_TOKEN="$(op read op://Private/GitHub/token)" authama token apply   # write auth.json, .npmrc, …
 authama token set --target npm --server registry.npmjs.org        # or one token, from a hidden prompt
 authama token list                # what is installed, secrets masked
 authama token show npm registry.npmjs.org   # one entry in full
@@ -90,7 +122,7 @@ else is in the [documentation index](#documentation).
 - [Installation](docs/installation.md) — install paths, requirements, and where per-user state lives.
 - [Getting started](docs/getting-started.md) — first run, from `init` to a deployed key.
 - [Configuration](docs/configuration.md) — the manifest, profiles, hosts, `.env`, environment variables.
-- [Architecture](docs/architecture.md) — packages, key flows, and why the v2 layout is what it is.
+- [Architecture](docs/architecture.md) — packages, key flows, and why the layout is what it is.
 - [Migration](docs/migration.md) — from sshmgr 3.x and from auth-token-manager, with a feature-parity table.
 - [Release](docs/release.md) — the tag-driven GoReleaser flow.
 

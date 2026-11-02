@@ -39,9 +39,9 @@ At a terminal, `rotate` stops there, shows the staged public key and where it
 goes, and waits:
 
 ```text
-oribi-web: this target takes the key by hand. paste simtabi_oribi-web-ed25519.pub at https://ploi.io/servers
+app-web: this target takes the key by hand. paste acme_app-web-ed25519.pub at https://ploi.io/servers
 
-ssh-ed25519 AAAAC3Nza... simtabi/oribi-web 2026-10-20
+ssh-ed25519 AAAAC3Nza... acme/app-web 2026-10-20
 
   Pasted it? authama will now log in with the new key to prove it [y/N]
 ```
@@ -69,7 +69,7 @@ category (`--category orgs`), or every key (`--all`):
 ```sh
 authama ssh rotate --all --dry-run          # list what would rotate
 authama ssh rotate --category clients
-authama ssh rotate simtabi imanimanyara/imanimanyara_github-ed25519
+authama ssh rotate acme alice/alice_github-ed25519
 ```
 
 A batch asks once, writes one encrypted backup and one snapshot, then rotates

@@ -33,14 +33,58 @@ authama doctor          # verify deps, perms, agent, known_hosts, drift, token-f
 
 The script installs `authama` and `sshmgr` into `/usr/local/bin` (override with
 `AUTHAMA_INSTALL_DIR`; the old `SSHMGR_INSTALL_DIR` still works), verifies each
-against the release checksums, and installs shell completions for both. Against a
-release older than authama it installs `sshmgr` alone.
+against the release checksums, and installs shell completions for both. It asks
+for `sudo` only when the directory is not writable, so a per-user directory needs
+none. A version argument pins the release; without one it takes the latest:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh \
+  | AUTHAMA_INSTALL_DIR="$HOME/.local/bin" bash -s v0.1.0
+```
 
 On Windows:
 
 ```powershell
 irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex
+# pin a version or a directory (the old SSHMGR_* names still work)
+$env:AUTHAMA_VERSION = 'v0.1.0'; irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex
 ```
+
+It installs into `%LOCALAPPDATA%\Programs\ssh-manager` (the folder keeps the
+project's old name so an upgrade lands where the earlier install already is) and
+adds it to the user `PATH`.
+
+### Package managers
+
+The packages are published under the compatibility name `sshmgr` and install
+both binaries.
+
+```sh
+# Homebrew (macOS and Linux)
+brew install --cask simtabi/tap/sshmgr
+```
+
+```powershell
+# Scoop (Windows)
+scoop bucket add simtabi https://github.com/simtabi/scoop-bucket
+scoop install simtabi/sshmgr
+```
+
+Linux packages (`.deb`, `.rpm`, `.apk`) for `amd64`, `arm64`, `386` and `armv6`/`armv7`
+are attached to every release and install `/usr/bin/authama` and `/usr/bin/sshmgr`:
+
+```sh
+curl -fsSLO https://github.com/simtabi/authama/releases/latest/download/sshmgr_linux_amd64.deb
+sudo apt install ./sshmgr_linux_amd64.deb      # Debian, Ubuntu
+sudo dnf install ./sshmgr_linux_amd64.rpm      # Fedora, RHEL (download the .rpm instead)
+sudo apk add --allow-untrusted ./sshmgr_linux_amd64.apk   # Alpine (the .apk)
+```
+
+### Docker
+
+No runtime image is published: authama manages files in your home directory, so
+it belongs on the host. The repository's [dev container](#dev-container) is for
+working on authama itself, with a scoped home that never touches your real files.
 
 With the Go toolchain:
 
@@ -74,7 +118,7 @@ Every artifact is checksummed and carries a build-provenance attestation
 ## From a clone
 
 ```sh
-git clone https://github.com/simtabi/authama && cd ssh-manager
+git clone https://github.com/simtabi/authama && cd authama
 make build                # -> build/authama and build/sshmgr
 ./build/authama doctor
 ```
@@ -114,8 +158,8 @@ seeds `.env` from the shipped `.env-example` at mode `0600`.
 
 ## The per-user home (OS-standard config dir)
 
-All of a user's ssh-manager state lives in **one** per-user home - a single `ssh-manager`
-folder in the OS-standard config location:
+All of a user's authama state lives in **one** per-user home - a single `ssh-manager`
+folder (the project's original name, kept so existing setups keep working) in the OS-standard config location:
 
 | OS | Default home |
 |----|--------------|
@@ -134,7 +178,7 @@ folder in the OS-standard config location:
 └── .state/                         # transient: .lock, expiry/notify caches
 ```
 
-`ssh-manager` resolves the home in this order:
+authama resolves the home in this order:
 
 1. `$SSH_MANAGER_HOME` (alias `$SSH_MANAGER_CONFIG_DIR`) if set - explicit override (tests / multiple configs)
 2. otherwise the OS-standard dir above

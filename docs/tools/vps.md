@@ -1,9 +1,9 @@
 # Managing SSH keys on VPS / cloud providers
 
-There are **two independent layers** of SSH keys on a cloud host, and ssh-manager
+There are **two independent layers** of SSH keys on a cloud host, and authama
 handles both:
 
-| Layer | What it is | ssh-manager provider |
+| Layer | What it is | authama provider |
 |---|---|---|
 | **Account keys** | Keys in your provider *dashboard*, offered when you **create** a server | `digitalocean` · `vultr` · `hetzner` · `linode` · `scaleway` (REST API) |
 | **Server keys** | `~/.ssh/authorized_keys` on a **running** server | `generic-ssh` (ssh-copy-id / authorized_keys) |
@@ -12,7 +12,7 @@ They don't affect each other: deleting an account key never touches a live
 server, and editing a server's `authorized_keys` never touches the dashboard.
 
 > **Provenance.** This functionality was consolidated from a standalone VPS
-> key-management tool. Every capability of that tool now lives in ssh-manager - see
+> key-management tool. Every capability of that tool now lives in authama - see
 > the [parity table](#appendix-vps-tool-parity) at the end.
 
 ---
@@ -21,7 +21,7 @@ server, and editing a server's `authorized_keys` never touches the dashboard.
 > **The cloud adapters' response shapes are pinned by tests, not by a live API
 > call.** No adapter here has been exercised against a real DigitalOcean, Vultr,
 > Hetzner, Linode or Scaleway account, in this implementation or the one it was
-> ported from — v1 tests stubbed the HTTP layer entirely. The endpoint
+> ported from — the Python version's tests stubbed the HTTP layer entirely. The endpoint
 > paths and JSON shapes are therefore assumptions that both implementations
 > agree on, which is what a port can prove and no more. DigitalOcean is
 > additionally exercised over a real local HTTP server, so the request path
@@ -70,7 +70,7 @@ to paste the key), so it still works unattended-less. Keys are matched by their
 base64 body, so a rename in the dashboard doesn't confuse rotation/removal.
 
 `deploy` is **idempotent**: if the key is already in the account (matched by
-body) it isn't duplicated - and if its dashboard title drifted, ssh-manager **renames**
+body) it isn't duplicated - and if its dashboard title drifted, authama **renames**
 it back to the canonical `ssh-manager <file>` rather than erroring.
 
 ### Adding another provider account (per-host token)
@@ -169,14 +169,14 @@ script still works; no SSH or interpreter needed on the server).
 
 ## Appendix: VPS-tool parity
 
-Every feature of the original standalone VPS key tool has a home in ssh-manager:
+Every feature of the original standalone VPS key tool has a home in authama:
 
-| Original tool (`providers` / `serverkeys` / `vpskeys` / `fixkeys.sh`) | ssh-manager |
+| Original tool (`providers` / `serverkeys` / `vpskeys` / `fixkeys.sh`) | authama |
 |---|---|
 | `Provider` REST base (token, session, retry/backoff) | `src/internal/core/providers/cloud.go` + `src/internal/util/httpjson` (stdlib net/http + bounded retry) |
 | `DigitalOcean` / `Vultr` / `Hetzner` / `Linode` / `Scaleway` | same-named adapters in `src/internal/core/providers/cloud.go` |
 | `list_keys` | `verify` / `list_deployed` |
-| `add_key` | `deploy` (idempotent; renames a stale ssh-manager title) |
+| `add_key` | `deploy` (idempotent; renames a stale `ssh-manager …` title) |
 | `rename_key` | `rename` (+ auto on re-deploy) |
 | `delete_key` | `remove` (matched by key body) |
 | `GenericSpec` + `config.json` `extra_providers` (no-code provider) | `kind: "rest"` + `rest` block in `providers.json` (`src/internal/core/providers/cloud.go`, `GenericRest`) |

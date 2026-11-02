@@ -2,7 +2,7 @@
 
 Some hosts are only reachable over a VPN (a campus/corporate git server, a private
 VPS, a host on an HTTPS-style port like `:443`). Without the VPN those hosts don't
-just fail - a naive `ssh` can **hang** on the banner exchange. ssh-manager makes every
+just fail - a naive `ssh` can **hang** on the banner exchange. authama makes every
 network action reachability-aware so it fails fast with an actionable message
 instead of hanging, and gives you a status indicator you can check first.
 

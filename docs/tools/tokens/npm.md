@@ -43,7 +43,7 @@ configured hosts are added or replaced.
 ## CI
 
 ```sh
-NPM_TOKEN=$TOKEN authama token apply --target npm --project .
+NPM_TOKEN="$TOKEN" authama token apply --target npm --project .
 npm ci
 ```
 

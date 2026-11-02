@@ -1,7 +1,7 @@
 # expiry & notifications - "always warn before a key is due"
 
 A raw SSH keypair **does not self-expire** (only OpenSSH *certificates* carry a
-hard validity window). So this is a **policy reminder** ssh-manager computes and
+hard validity window). So this is a **policy reminder** authama computes and
 surfaces - nothing breaks on the date; it's the cue to rotate.
 
 ## How it's computed

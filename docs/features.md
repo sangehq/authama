@@ -10,7 +10,7 @@ a sandbox). Run all three with `make test e2e feature-check`.
 
 The mental model: the **manifest** in `~/.config/ssh-manager/manifest.json` is the single source
 of truth; `~/.ssh` is generated, reproducible output. Profiles model *identity*
-(work · personal · simtabi · ...), not technology, and everything for an identity
+(work · personal · acme · ...), not technology, and everything for an identity
 lives isolated under `~/.ssh/profiles/<profile>/`, or `~/.ssh/profiles/<category>/<profile>/`
 when the profile has a category.
 
@@ -124,7 +124,7 @@ bounded SSH-level reachability probe first, so a down or VPN-gated host (includi
 | `tui` (or a bare `authama` on a terminal) | Interactive arrow-key UI over the whole facade, SSH and auth tokens. | U |
 
 Cross-cutting flags: `--yes`/`-y` on destructive verbs (with `--revoke` on deletes);
-`--passphrase` on key generation (a plain flag: leaving it off is the "no" answer; v1's
+`--passphrase` on key generation (a plain flag: leaving it off is the "no" answer; the Python version's
 `--no-passphrase` is still accepted, hidden, on `keygen`, `reconcile` and `rotate`).
 
 ## Auth tokens

@@ -63,7 +63,7 @@ manifest so `~/.ssh` is immediately usable. Then `authama ssh load <profile>` to
 keys to the agent.
 
 ```sh
-export SSH_MANAGER_AGE_RECIPIENT=age1ql3z7hjy54pw3hyww5ayyfg7z...
+export SSH_MANAGER_AGE_RECIPIENT="age1ql3z7hjy54pw3hyww5ayyfg7z..."
 authama ssh bundle -o ~/Backups            # writes ~/Backups/ssh-manager-<stamp>.age (+ sidecars)
 # ... new machine ...
 authama ssh restore ~/Backups/ssh-manager-<stamp>.age -i age-identity.txt
