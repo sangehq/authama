@@ -23,6 +23,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The code of conduct is `CODE_OF_CONDUCT.md` again, the name the Simtabi conventions require
+  verbatim; 0.1.2 had lowercased it with the other Markdown files.
 - CI also runs weekly on `main` (Monday 06:00 UTC), so drift after a merge shows up; the release
   workflow pins GoReleaser to `~> v2` instead of `latest`.
 - The README's H1 is the command name, and its feature list moved to the top of `docs/features.md`.
