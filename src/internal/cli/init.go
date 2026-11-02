@@ -36,6 +36,6 @@ func newInitCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "overwrite manifest/inventory/.env with fresh defaults")
-	cmd.Flags().BoolVar(&backup, "backup", false, "with --force, copy the old files into <home>/.state/ before overwriting")
+	cmd.Flags().BoolVar(&backup, "backup", false, "with --force, copy the old files into the state home's .state/ before overwriting")
 	return cmd
 }

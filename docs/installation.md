@@ -17,7 +17,7 @@ interpreter to keep current.
   `ssh-copy-id` is used when present; Microsoft's OpenSSH port does not ship it,
   so deployment falls back to plain `ssh` there.
 - Optional, each degrading to a manual path when absent: `age` and `age-keygen`
-  (encrypted bundles), `gh` and `glab` (VCS key deployment), `age-plugin-yubikey`,
+  (encrypted bundles), `sops`, `gitleaks`, `gh` and `glab` (VCS key deployment), `age-plugin-yubikey`,
   `docker` (only for `token apply` against a registry kept in a credential store).
 
 The auth-token side needs nothing: it writes the tools' files itself.
@@ -41,7 +41,7 @@ none. A version argument pins the release; without one it takes the latest:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh \
-  | AUTHAMA_INSTALL_DIR="$HOME/.local/bin" bash -s v0.1.0
+  | AUTHAMA_INSTALL_DIR="$HOME/.local/bin" bash -s v0.1.2
 ```
 
 On Windows:
@@ -49,7 +49,7 @@ On Windows:
 ```powershell
 irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex
 # pin a version or a directory (the old SSHMGR_* names still work)
-$env:AUTHAMA_VERSION = 'v0.1.0'; irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex
+$env:AUTHAMA_VERSION = 'v0.1.2'; irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex
 ```
 
 It installs into `%LOCALAPPDATA%\Programs\authama` and adds it to the user
@@ -99,9 +99,9 @@ go install github.com/simtabi/authama/src/cmd/sshmgr@latest   # the deprecated a
 
 The `src` segment is load-bearing: it is the subdirectory the Go module lives
 in. There is no major-version suffix, because versions restarted at v0.1.0.
-`github.com/simtabi/authama/src/v3/...` is the path of the releases before the
-restart (v3.6.1 and earlier); the Go proxy still serves them, but they are no
-longer maintained.
+The releases before the restart were published as
+`github.com/simtabi/ssh-manager/src/v3` (v3.6.1 alone as
+`github.com/simtabi/authama/src/v3`); they are no longer maintained.
 
 To build the current `main` instead of the last release — useful for a fix that
 has landed but not shipped — name the branch:
@@ -110,7 +110,7 @@ has landed but not shipped — name the branch:
 go install github.com/simtabi/authama/src/cmd/authama@main
 ```
 
-Go turns that into a pseudo-version (`v0.1.1-0.20261102073200-60ce5f9c4ee6`) and
+Go turns that into a pseudo-version (`v0.1.3-0.20261102100209-4d6289dd4059`) and
 the binary reports it, so a build from a branch is still identifiable. It needs
 no tag and no release, which also makes it the way in when a release is pending.
 
@@ -118,6 +118,21 @@ Or download the binary for your platform from
 [Releases](https://github.com/simtabi/authama/releases) and put it on `PATH`.
 Every artifact is checksummed and carries a build-provenance attestation
 (`gh attestation verify <file> --repo simtabi/authama`).
+
+### Shell completion
+
+`install.sh` installs bash and zsh completions when it can write to a completion
+directory. After any other install (Go, a downloaded binary), generate them
+yourself:
+
+```sh
+authama completion bash > ~/.local/share/bash-completion/completions/authama
+authama completion zsh  > "${fpath[1]}/_authama"
+authama completion fish > ~/.config/fish/completions/authama.fish
+```
+
+On Windows, add `authama completion powershell | Out-String | Invoke-Expression`
+to your PowerShell profile.
 
 ## From a clone
 
@@ -180,13 +195,13 @@ path to know.
 ├── manifest.json  inventory.json   # manifest is the source of truth
 ├── providers.json                  # OPTIONAL - else the shipped default catalog is used
 ├── age-identity.txt                # bundle decryption key (0600)
-├── tokens.json                     # OPTIONAL - the token config (env var names, no secrets)
-└── .state/                         # transient: .lock, expiry/notify caches
+└── tokens.json                     # OPTIONAL - the token config (env var names, no secrets)
 
 ~/.local/state/authama/             # state home: written by authama, safe to lose
 ├── log/audit.log  log/history.db   # accountability log and command history
 ├── snapshots/                      # reversible ~/.ssh backups
-└── dist/                           # exported encrypted bundles (authama-<stamp>.age)
+├── dist/                           # exported encrypted bundles (authama-<stamp>.age)
+└── .state/                         # transient: .lock, expiry/notify caches, init backups
 ```
 
 Setting `$AUTHAMA_CONFIG_DIR` keeps everything in that one directory (handy for
@@ -228,7 +243,7 @@ authama token init                # optional: a starter token config, then `auth
 `authama init` is safe to re-run: every run (re)creates the directory structure and
 re-asserts perms, and seeds any missing files **without** touching your existing
 manifest/`.env`. To reset the seed files to defaults, use `authama init --force` (it overwrites
-them in place). Add `--backup` to first copy the old ones into `<home>/.state/`.
+them in place). Add `--backup` to first copy the old ones into the state home's `.state/init-backup-<ts>/`.
 
 Passphrases are **off by default** but a conscious choice: pass `--passphrase` to
 `reconcile`, `keygen`, `key add` or `rotate` to protect the keys they mint. Without it nothing prompts.

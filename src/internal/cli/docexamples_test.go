@@ -115,6 +115,9 @@ func checkDocCommand(t *testing.T, rel string, n int, line string, inline bool) 
 	}
 	args := splitExample(brand.Command + " " + rest)
 	root := newRootCmd()
+	// cobra adds `completion` only when the root executes; add it here so the
+	// docs can show it.
+	root.InitDefaultCompletionCmd()
 	cmd, extra, err := root.Find(args)
 	where := rel + ":" + strconv.Itoa(n)
 	if err != nil {

@@ -93,9 +93,6 @@ publishing, so a late publisher failure no longer leaves a release unattested.
 Keep action versions current via Dependabot (weekly); re-pin on every merged
 dependency PR.
 
-For the org-wide OIDC reference across channels, see
-`/opensource/package-publishing-guide.md`.
-
 ---
 
 [← Docs index](../README.md#documentation)
