@@ -89,6 +89,7 @@ func newServeCmd() *cobra.Command {
 			srv, err := web.New(web.Options{
 				Engine:       web.AppEngine{P: p, Retain: snapshotRetain()},
 				Settings:     settingsView,
+				EventRoots:   eventRoots,
 				Retain:       snapshotRetain(),
 				Token:        token,
 				AllowedHosts: web.AllowedHosts(host, bound, allowHosts),

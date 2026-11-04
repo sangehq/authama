@@ -85,6 +85,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newMigrateCmd())
 	root.AddCommand(newTuiCmd())
 	root.AddCommand(newHistoryCmd())
+	root.AddCommand(newEventsCmd())
 	root.AddCommand(newServeCmd())
 	root.AddCommand(newSettingsCmd())
 	// `ui` was serve's alias, one edit from `tui`: still accepted, never shown.

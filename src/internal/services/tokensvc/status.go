@@ -69,3 +69,13 @@ func StatusOf(e Env, config, project string) (Status, error) {
 	}
 	return st, nil
 }
+
+// UserFiles is every tool's user credential file, whether it exists or not:
+// what the events tracker watches for the auth area.
+func UserFiles(e Env) []string {
+	var out []string
+	for _, t := range tokens.Targets() {
+		out = append(out, e.TargetPath(t, ""))
+	}
+	return out
+}

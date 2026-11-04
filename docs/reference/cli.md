@@ -20,6 +20,7 @@ Every command also takes the global flag:
 ## Contents
 
 - [`authama doctor`](#authama-doctor) - Diagnose deps, perms, agent, known_hosts, drift, dangling keys, and token-file perms
+- [`authama events`](#authama-events) - Every change seen to a file under ~/.ssh, the config home or a token file, newest first
 - [`authama history`](#authama-history) - List the changes authama has made, newest first
   - [`authama history show`](#authama-history-show) - Show one operation: its events and what it changed in the manifest
 - [`authama init`](#authama-init) - Create/converge the per-user home
@@ -135,6 +136,37 @@ Flags:
       --json      machine-readable output (scripting)
       --strict    for CI: treat every dangling-key state as a failure, not only the blocking ones, and fail on a token file others can read
   -y, --yes       with --fix: do the upkeep without confirming (implied when there is no terminal)
+```
+
+## authama events
+
+authama tracks the files it is responsible for - everything under ~/.ssh, the config
+home, and each tool's credential file - and records every change to them, whoever
+made it: authama, an editor, a package manager. Each run scans first, then lists.
+An event names the file and what changed (added, changed, removed, mode), never
+its contents. The web UI scans every 30 seconds while it runs.
+
+```
+authama events [flags]
+```
+
+Examples:
+
+```sh
+  authama events
+  authama events --since 24h --area auth
+  authama events --kind mode --json
+```
+
+Flags:
+
+```
+      --area string      only this area: ssh, config or auth
+      --json             machine-readable output (scripting)
+      --kind string      only this kind: added, changed, removed, mode or started
+      --limit int        at most this many (newest first); 0 is all
+      --no-scan          list what is recorded without scanning first
+      --since duration   only events newer than this, e.g. 24h
 ```
 
 ## authama history
