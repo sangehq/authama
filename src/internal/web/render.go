@@ -389,6 +389,9 @@ type view struct {
 	Data     any
 	// Bell is the newest file events, for the header's notifications menu.
 	Bell []events.Event
+	// BellNew is how many of them are from the last day: the bell's dot
+	// means "something changed recently", not "there was ever an event".
+	BellNew int
 	// User and Host are the account and machine the server runs as, and
 	// Initials the avatar's letters; Year is for the footer.
 	User, Host, Initials string
@@ -405,6 +408,11 @@ func (s *Server) newView(r *http.Request, nav, title string, data any) view {
 		v.CSRF = sess.csrf
 		if s.opts.EventRoots != nil {
 			v.Bell, _ = events.List(p, events.Filter{Limit: 6})
+			for _, e := range v.Bell {
+				if s.now().Sub(e.Time) < 24*time.Hour {
+					v.BellNew++
+				}
+			}
 		}
 	}
 	return v
@@ -505,5 +513,8 @@ func paletteItems(readOnly bool) []paletteItem {
 		paletteItem{"export-tokens", "Download the installed tokens as CSV", "/exports/tokens.csv", "download", "Export", "export csv tokens spreadsheet"},
 		paletteItem{"export-history", "Download the history as CSV", "/exports/history.csv", "download", "Export", "export csv history operations"},
 		paletteItem{"export-events", "Download the file events as CSV", "/exports/events.csv", "download", "Export", "export csv events audit"},
+		paletteItem{"export-profiles", "Download the profiles as CSV", "/exports/profiles.csv", "download", "Export", "export csv profiles spreadsheet"},
+		paletteItem{"export-snapshots", "Download the snapshots as CSV", "/exports/snapshots.csv", "download", "Export", "export csv snapshots backups"},
+		paletteItem{"export-deployments", "Download the key deployments as CSV", "/exports/deployments.csv", "download", "Export", "export csv deployments audit keys"},
 	)
 }

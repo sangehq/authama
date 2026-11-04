@@ -113,7 +113,18 @@ test('a token is added from the page, and its secret never reaches a page', asyn
   await page.getByRole('button', { name: 'Add a token' }).click();
   const form = page.locator('form', { has: page.locator('input[name="action"][value="token-set"]') });
   await expect(form).toBeVisible();
-  await form.getByLabel('Tool (when no service)').selectOption('npm');
+  // Only the fields the chosen tool uses show, and a hidden one is not sent.
+  const tool = form.getByLabel('Tool', { exact: true });
+  await tool.selectOption('composer');
+  await expect(form.getByLabel('Composer service')).toBeVisible();
+  await expect(form.getByLabel('npm scope')).toBeHidden();
+  await tool.selectOption('docker');
+  await expect(form.getByLabel('Docker credential store')).toBeVisible();
+  await expect(form.getByLabel('Composer service')).toBeHidden();
+  await tool.selectOption('npm');
+  await expect(form.getByLabel('npm scope')).toBeVisible();
+  await expect(form.getByLabel('User name')).toBeHidden();
+  await expect(form.getByLabel('Composer service')).toBeDisabled();
   await form.getByLabel('Server').fill(server);
   await form.getByLabel('Token or password').fill(secret);
   await form.getByRole('button', { name: 'Preview' }).click();

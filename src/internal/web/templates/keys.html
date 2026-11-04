@@ -1,7 +1,7 @@
 {{define "content"}}
 {{template "page_header" (header "SSH" "Keys" "Every key with its fingerprint and expiry, and the loose keys kept on purpose.")}}
 <div class="card">
-  <div class="card-header"><h2 class="card-title">Keys</h2>{{if .Data.Rows}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data.Rows}} in the manifest</span><a class="btn btn-sm btn-outline-secondary" href="/exports/keys.csv" download>{{icon "download"}}<span class="ms-1">CSV</span></a></div>{{end}}</div>
+  <div class="card-header"><h2 class="card-title">Keys</h2>{{if .Data.Rows}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data.Rows}} in the manifest</span>{{template "csv" "/exports/keys.csv"}}</div>{{end}}</div>
   {{if .Data.Rows}}
   <div class="table-responsive">
     <table class="table table-vcenter card-table table-hover" id="keys-table" data-table="keys">
@@ -26,7 +26,7 @@
   {{else}}{{template "empty" (empty "key" "No keys in the manifest yet" "Add one below, or add a host and reconcile.")}}{{end}}
 </div>
 <p class="text-secondary mt-2">A declared key no host uses can be deleted here: the declaration and its record go, the files stay. Rotation, overwriting a key, passphrases and keys kept in 1Password stay in the terminal: <code>authama ssh rotate</code>, <code>authama ssh keygen --force</code>, <code>--passphrase</code>.</p>
-<div class="card mt-3">
+<div class="card mt-3" id="loose">
   <div class="card-header"><h2 class="card-title">Reserved keys</h2></div>
   {{if .Data.Reserved}}
   <div class="table-responsive">

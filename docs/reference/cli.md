@@ -214,6 +214,7 @@ Flags:
       --profile string   only operations about this profile
       --since string     only operations started at or after this
       --source string    only operations from cli, tui, web or backfill
+      --token string     only operations about this token: TOOL or TOOL/HOST, e.g. npm/registry.npmjs.org
       --until string     only operations started at or before this
 ```
 
@@ -499,6 +500,7 @@ Examples:
 Flags:
 
 ```
+      --csv      print the deployments as CSV, one row per key and target, header first
       --notify   also fire the cadence-gated desktop alert
 ```
 
@@ -1590,7 +1592,7 @@ Subcommands:
 List local ~/.ssh snapshots (oldest -> newest).
 
 ```
-authama ssh snapshots list
+authama ssh snapshots list [flags]
 ```
 
 Aliases: `ls`
@@ -1599,6 +1601,12 @@ Examples:
 
 ```sh
   authama ssh snapshots list
+```
+
+Flags:
+
+```
+      --csv   print the snapshots as CSV, one row each, header first
 ```
 
 ## authama ssh snapshots prune
@@ -1988,8 +1996,9 @@ Flags:
 ## authama token copy
 
 Puts HOST's secret from TARGET's credential file on the clipboard, through
-pbcopy, wl-copy, xclip, xsel or clip, and prints only what it copied. Nothing
-is written to the terminal, the history or a file.
+pbcopy, wl-copy, xclip, xsel or clip, and prints only what it copied. The
+secret is written nowhere else; the history records that it was copied, and
+from which file, never the value.
 
 ```
 authama token copy TARGET HOST [flags]

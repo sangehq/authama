@@ -8,6 +8,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The web UI's slide-in forms are one column, each hint under its field**: the token, host and
+  profile panels no longer squeeze two fields side by side in a panel 400 pixels wide, where labels
+  wrapped and fields fell out of line. The token form starts with the tool and shows only the fields
+  that tool uses; a hidden field is disabled, so it is never sent. Each panel has a Cancel button.
+- **The overview's three summary cards share one layout**, a count, a bar and three badged rows, so
+  they line up: the token card's tool count comes from the catalog rather than a fixed 5, and the
+  snapshot card shows kept of the most kept, the oldest and newest, and how many still hold private
+  keys. The header bell's dot means an event in the last day, not that there was ever one.
+- **`token set --service` beside a `--target` other than composer is refused** instead of writing a
+  Composer token silently; the web form no longer drops the tool it was given either.
+
 - **Running `authama` on its own, on a terminal, opens the web UI**, as `authama serve` does with its
   defaults; `--dev-root` and `--no-dotenv` still apply. The menu it used to open is `authama tui`. With
   no terminal a bare run still prints help, since `serve` would hang a script.
@@ -20,10 +31,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- **CSV export everywhere a list is shown.** `--csv` on `ssh list`, `ssh key list`, `token list`,
-  `history` and `events`, and a download on each matching web page, with the same columns. A token
-  list never puts a secret in one (`--csv --reveal` is refused), and a cell a spreadsheet would run as a
-  formula is neutralised.
+- **CSV export everywhere a list is shown.** `--csv` on `ssh list`, `ssh key list`, `ssh audit`
+  (one row per key and deployment), `ssh snapshots list`, `token list`, `history` and `events`, and a
+  download on each matching web page, plus the profiles list, with the same columns. History and
+  Events downloads keep the page's filters, and the history's carries each operation's subjects and
+  events. A token list never puts a secret in one (`--csv --reveal` is refused), and a cell a
+  spreadsheet would run as a formula is neutralised.
+- **Reading a secret is on the record.** `token copy`, and `token show` or `token list` with
+  `--reveal`, each record an operation with a `token.copied` or `token.revealed` event naming the token
+  and its file, never the value. Token commands are about a token subject, `TOOL/HOST`, which
+  `authama history --token` (and a Token filter on the History page) finds; `--until` is on the page
+  too. The history database moves to schema 2 to allow it, rebuilt in place with every row kept; an
+  older authama opens a schema-2 database read-only.
 - **The events log is tamper-evident**: each line is chained by SHA-256 to the one before, and
   `authama events --verify` (and the Events page) catches a line edited, removed or inserted, or a log
   cut short.

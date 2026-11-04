@@ -5,7 +5,7 @@
 {{template "page_header" (header "SSH" "Hosts" "Every host, by profile, as it is rendered into ~/.ssh/config." (panel "Add a host" "add-host" "plus") (action "SSH config" "/ssh-config" "file-code"))}}
 {{end}}
 <div class="card mb-3">
-  <div class="card-header"><h2 class="card-title">Hosts</h2><div class="card-actions"><a class="btn btn-sm btn-outline-secondary" href="/exports/hosts.csv" download>{{icon "download"}}<span class="ms-1">CSV</span></a></div></div>
+  <div class="card-header"><h2 class="card-title">Hosts</h2><div class="card-actions">{{template "csv" "/exports/hosts.csv"}}</div></div>
   {{if .Data}}
   <div class="table-responsive">
     <table class="table table-vcenter card-table table-hover" id="hosts-table" data-table="hosts">
@@ -29,18 +29,21 @@
   {{else}}{{template "empty" (empty "server" "No profiles yet" "Add a profile first, then its hosts.")}}{{end}}
 </div>
 {{if and (not .ReadOnly) .Data}}
-{{template "panel_open" (header "add-host" "Add a host" "")}}
+{{template "panel_open" (header "add-host" "Add a host" "A host in a profile's config. Its key is minted by authama ssh reconcile in a terminal.")}}
         {{template "change_open" .}}<input type="hidden" name="action" value="host-add">
-          <div class="row g-2">
-            <div class="col-sm-6"><label class="form-label" for="h-profile">Profile</label><select class="form-select" id="h-profile" name="profile">{{range .Data}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div>
-            <div class="col-sm-6"><label class="form-label" for="h-alias">Alias</label><input class="form-control" id="h-alias" name="alias" required autocomplete="off" spellcheck="false"></div>
-            <div class="col-sm-6"><label class="form-label" for="h-hostname">Hostname</label><input class="form-control" id="h-hostname" name="hostname" required autocomplete="off" spellcheck="false"></div>
-            <div class="col-sm-3"><label class="form-label" for="h-user">User</label><input class="form-control" id="h-user" name="user" required autocomplete="off" spellcheck="false"></div>
-            <div class="col-sm-3"><label class="form-label" for="h-port">Port</label><input class="form-control" id="h-port" name="port" inputmode="numeric" value="22"></div>
-            <div class="col-12"><label class="form-label" for="h-tags">Tags <span class="text-secondary">(comma-separated)</span></label><input class="form-control" id="h-tags" name="tags" autocomplete="off" spellcheck="false"></div>
+          <div class="mb-3"><label class="form-label required" for="h-profile">Profile</label><select class="form-select" id="h-profile" name="profile">{{range .Data}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div>
+          <div class="mb-3"><label class="form-label required" for="h-alias">Alias</label><input class="form-control" id="h-alias" name="alias" required autocomplete="off" spellcheck="false"><small class="form-hint">The name you type after <code>ssh</code>.</small></div>
+          <div class="mb-3"><label class="form-label required" for="h-hostname">Hostname</label><input class="form-control" id="h-hostname" name="hostname" required autocomplete="off" spellcheck="false" placeholder="203.0.113.10 or web1.example.com"></div>
+          <div class="row g-3 mb-3">
+            <div class="col-8"><label class="form-label required" for="h-user">User</label><input class="form-control" id="h-user" name="user" required autocomplete="off" spellcheck="false"></div>
+            <div class="col-4"><label class="form-label" for="h-port">Port</label><input class="form-control" id="h-port" name="port" type="number" min="1" max="65535" inputmode="numeric" value="22"></div>
           </div>
-          <p class="text-secondary small mt-2 mb-2">Its key is minted by <code>authama ssh reconcile</code> in a terminal.</p>
-          <button type="submit" class="btn btn-primary">Preview</button>
+          <div class="mb-3"><label class="form-label" for="h-tags">Tags</label><input class="form-control" id="h-tags" name="tags" autocomplete="off" spellcheck="false" placeholder="prod, web"><small class="form-hint">Comma-separated.</small></div>
+          <div class="d-flex align-items-center gap-2 pt-3 border-top">
+            <span class="text-secondary small me-auto">The same as <code>authama ssh host add</code>.</span>
+            <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
+            <button type="submit" class="btn btn-primary">Preview</button>
+          </div>
         </form>
 {{template "panel_close"}}
 <div class="row row-cards mt-1">

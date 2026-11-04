@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -11,14 +12,16 @@ import (
 
 	"github.com/simtabi/authama/src/internal/core/inventory"
 	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/services/exports"
 	"github.com/simtabi/authama/src/internal/services/notifier"
+	"github.com/simtabi/authama/src/internal/util/csvout"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
 // newAuditCmd is the native audit verb: deployment + expiry + hygiene summary plus
 // recent activity. --notify also fires the cadence-gated desktop alert.
 func newAuditCmd() *cobra.Command {
-	var notify bool
+	var notify, asCSV bool
 	cmd := &cobra.Command{
 		Use:   "audit",
 		Short: "Deployment, expiry, and hygiene report",
@@ -27,6 +30,16 @@ func newAuditCmd() *cobra.Command {
 			p, err := resolvePaths(c)
 			if err != nil {
 				return err
+			}
+			if asCSV {
+				if notify {
+					return errors.New("--csv prints the deployments only: drop --notify")
+				}
+				inv, err := inventory.Load(p.Inventory())
+				if err != nil {
+					return err
+				}
+				return csvout.Write(c.OutOrStdout(), exports.Deployments(inv))
 			}
 			m, err := manifest.Load(p.Manifest())
 			if err != nil {
@@ -41,6 +54,7 @@ func newAuditCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&notify, "notify", false, "also fire the cadence-gated desktop alert")
+	cmd.Flags().BoolVar(&asCSV, "csv", false, "print the deployments as CSV, one row per key and target, header first")
 	return cmd
 }
 

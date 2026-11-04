@@ -4,15 +4,20 @@
 package exports
 
 import (
+	"os"
+	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/simtabi/authama/src/internal/core/inventory"
 	"github.com/simtabi/authama/src/internal/core/tokens"
 	"github.com/simtabi/authama/src/internal/services/events"
 	"github.com/simtabi/authama/src/internal/services/history"
 	"github.com/simtabi/authama/src/internal/services/keysvc"
 	"github.com/simtabi/authama/src/internal/services/query"
+	"github.com/simtabi/authama/src/internal/services/snapshots"
 	"github.com/simtabi/authama/src/internal/util/csvout"
 )
 
@@ -46,11 +51,92 @@ func Tokens(items []tokens.Installed) csvout.Table {
 	return t
 }
 
-// History is `history`: one row per operation.
+// History is `history`: one row per operation, with what it was about
+// ("kind:name" each) and the audit events it raised, so a reviewer can see
+// "token.revealed" against npm/registry.npmjs.org without opening the op.
 func History(ops []history.Op) csvout.Table {
-	t := csvout.Table{Header: []string{"op_id", "started_at", "finished_at", "command", "args", "result", "source", "user", "machine", "snapshot"}}
+	t := csvout.Table{Header: []string{"op_id", "started_at", "finished_at", "command", "args", "result", "source", "user", "machine", "snapshot", "subjects", "events"}}
 	for _, o := range ops {
-		t.Rows = append(t.Rows, []string{o.OpID, o.StartedAt, o.FinishedAt, o.Command, strings.Join(o.Args, " "), o.Result, o.Source, o.OSUser, o.Machine, o.Snapshot})
+		subs := make([]string, 0, len(o.Subjects))
+		for _, s := range o.Subjects {
+			subs = append(subs, s.Kind+":"+s.Name)
+		}
+		evs := make([]string, 0, len(o.Events))
+		for _, e := range o.Events {
+			evs = append(evs, e.Event)
+		}
+		t.Rows = append(t.Rows, []string{o.OpID, o.StartedAt, o.FinishedAt, o.Command, strings.Join(o.Args, " "), o.Result, o.Source,
+			o.OSUser, o.Machine, o.Snapshot, strings.Join(subs, " "), strings.Join(evs, " ")})
+	}
+	return t
+}
+
+// Deployments is `ssh audit --csv`: one row per place each key is deployed,
+// and one row with no target for a key deployed nowhere, ordered by key path.
+func Deployments(inv *inventory.Inventory) csvout.Table {
+	t := csvout.Table{Header: []string{"key_path", "fingerprint", "status", "target", "method", "verified", "date"}}
+	if inv == nil {
+		return t
+	}
+	fps := make([]string, 0, len(inv.Keys))
+	for fp := range inv.Keys {
+		fps = append(fps, fp)
+	}
+	sort.Slice(fps, func(i, j int) bool {
+		a, b := inv.Keys[fps[i]], inv.Keys[fps[j]]
+		if a.Path != b.Path {
+			return a.Path < b.Path
+		}
+		return fps[i] < fps[j]
+	})
+	for _, fp := range fps {
+		rec := inv.Keys[fp]
+		status := "deployed"
+		if rec.NeedsRedeploy() {
+			status = "needs-redeploy"
+		}
+		if len(rec.Deployments) == 0 {
+			t.Rows = append(t.Rows, []string{rec.Path, fp, status, "", "", "", ""})
+		}
+		for _, d := range rec.Deployments {
+			date := ""
+			if d.Date != nil {
+				date = *d.Date
+			}
+			t.Rows = append(t.Rows, []string{rec.Path, fp, status, d.Target, d.Method, strconv.FormatBool(d.Verified), date})
+		}
+	}
+	return t
+}
+
+// Snapshots is `ssh snapshots list --csv`: every snapshot file in list,
+// oldest first as list orders them, with its size and whether it predates
+// key exclusion and so holds private keys.
+func Snapshots(list []string) csvout.Table {
+	t := csvout.Table{Header: []string{"snapshot", "taken", "bytes", "holds_private_keys"}}
+	for _, s := range list {
+		var taken time.Time
+		var size int64
+		if fi, err := os.Stat(s); err == nil {
+			taken, size = fi.ModTime(), fi.Size()
+		}
+		t.Rows = append(t.Rows, []string{filepath.Base(s), stamp(taken), strconv.FormatInt(size, 10),
+			strconv.FormatBool(snapshots.HoldsKeyMaterial(s))})
+	}
+	return t
+}
+
+// Profile is one row of Profiles: what the profiles page shows of each.
+type Profile struct {
+	Name, Category, KeyScope, KeyStore, KeyComment string
+	Hosts, Keys                                    int
+}
+
+// Profiles is the profiles page's list, one row per profile.
+func Profiles(rows []Profile) csvout.Table {
+	t := csvout.Table{Header: []string{"profile", "category", "key_scope", "key_store", "hosts", "keys", "key_comment"}}
+	for _, r := range rows {
+		t.Rows = append(t.Rows, []string{r.Name, r.Category, r.KeyScope, r.KeyStore, strconv.Itoa(r.Hosts), strconv.Itoa(r.Keys), r.KeyComment})
 	}
 	return t
 }

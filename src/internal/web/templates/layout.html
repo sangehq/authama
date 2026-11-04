@@ -29,7 +29,7 @@
         </div>
         {{if .Authed}}
         <div class="nav-item dropdown d-none d-md-flex me-3">
-          <a href="#" class="nav-link px-0" data-bs-toggle="dropdown" tabindex="0" aria-label="Recent file events" aria-expanded="false">{{icon "bell"}}{{if .Bell}}<span class="badge bg-red"></span>{{end}}</a>
+          <a href="#" class="nav-link px-0" data-bs-toggle="dropdown" tabindex="0" aria-label="Recent file events{{if .BellNew}}: {{.BellNew}} in the last day{{end}}" aria-expanded="false">{{icon "bell"}}{{if .BellNew}}<span class="badge bg-red"></span>{{end}}</a>
           <div class="dropdown-menu dropdown-menu-arrow dropdown-menu-end dropdown-menu-card">
             <div class="card">
               <div class="card-header"><h3 class="card-title">Recent file events</h3></div>

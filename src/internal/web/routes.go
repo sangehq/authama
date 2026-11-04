@@ -10,9 +10,11 @@ import (
 	"time"
 
 	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/core/inventory"
 	"github.com/simtabi/authama/src/internal/services/events"
 	"github.com/simtabi/authama/src/internal/services/exports"
 	"github.com/simtabi/authama/src/internal/services/history"
+	"github.com/simtabi/authama/src/internal/services/snapshots"
 	"github.com/simtabi/authama/src/internal/util/csvout"
 )
 
@@ -92,9 +94,11 @@ type dashboard struct {
 	Overview
 	KeysOnDisk, Reserved, Loose int
 	Tokens, TokenFiles          int
-	TokensFailed                bool
-	Snapshots                   int
-	LastSnapshot                time.Time
+	TokenTools                  int // tools authama writes a credential file for
+	TokensFailed, TokenConfig   bool
+	Snapshots, SnapshotRetain   int
+	SnapshotsWithKeys           int // from before key exclusion: they hold private keys
+	FirstSnapshot, LastSnapshot time.Time
 	ProfileRows                 []ProfileView
 	MaxHosts                    int
 	Events                      []EventRow
@@ -117,7 +121,8 @@ func (h pages) handleOverview(w http.ResponseWriter, r *http.Request) {
 		d.Reserved, d.Loose = len(kv.Reserved), len(kv.Loose)
 	}
 	if tv, err := h.s.opts.Engine.Tokens(); err == nil {
-		d.Tokens, d.TokensFailed = len(tv.Items), tv.Failed
+		d.Tokens, d.TokensFailed, d.TokenConfig = len(tv.Items), tv.Failed, tv.HasConfig
+		d.TokenTools = len(tv.Status.Targets)
 		for _, t := range tv.Status.Targets {
 			if t.Exists {
 				d.TokenFiles++
@@ -125,8 +130,14 @@ func (h pages) handleOverview(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if snaps, err := h.s.opts.Engine.Snapshots(); err == nil {
-		d.Snapshots = len(snaps)
+		d.Snapshots, d.SnapshotRetain = len(snaps), h.s.opts.Retain
 		for _, s := range snaps {
+			if s.KeyBearing {
+				d.SnapshotsWithKeys++
+			}
+			if d.FirstSnapshot.IsZero() || s.Taken.Before(d.FirstSnapshot) {
+				d.FirstSnapshot = s.Taken
+			}
 			if s.Taken.After(d.LastSnapshot) {
 				d.LastSnapshot = s.Taken
 			}
@@ -233,10 +244,7 @@ const historyPageSize = 50
 
 func (h pages) handleHistory(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	f := history.Filter{
-		Host: q.Get("host"), Profile: q.Get("profile"), Key: q.Get("key"),
-		Since: q.Get("since"), Until: q.Get("until"), Command: q.Get("command"), Source: q.Get("source"),
-	}
+	f := historyFilter(q)
 	limit := historyPageSize
 	if n, err := strconv.Atoi(q.Get("limit")); err == nil && n > 0 && n <= 1000 {
 		limit = n
@@ -337,7 +345,7 @@ func (h pages) handleAudit(w http.ResponseWriter, r *http.Request) {
 // it: it is a page in another format.
 func (h pages) handleExport(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if t, ok, err := h.listCSV(name); ok {
+	if t, ok, err := h.listCSV(name, r.URL.Query()); ok {
 		if err != nil {
 			h.fail(w, r, err)
 			return
@@ -388,11 +396,39 @@ func (s *Server) licences() []licence {
 
 // csvLists are the lists the pages show that download as CSV, by file name:
 // the same columns as the CLI's --csv on each.
-var csvLists = []string{"hosts.csv", "keys.csv", "tokens.csv", "history.csv", "events.csv"}
+var csvLists = []string{"hosts.csv", "keys.csv", "tokens.csv", "history.csv", "events.csv",
+	"profiles.csv", "snapshots.csv", "deployments.csv"}
 
-// listCSV builds one of csvLists; ok is false for any other name. It is a
-// pages helper, not a handler, so it adds no route of its own.
-func (h pages) listCSV(name string) (t csvout.Table, ok bool, err error) {
+// historyFilter reads the history page's filters from its query; the page
+// and its CSV both use it, so a download is what the page shows.
+func historyFilter(q url.Values) history.Filter {
+	return history.Filter{
+		Host: q.Get("host"), Profile: q.Get("profile"), Key: q.Get("key"), Token: q.Get("token"),
+		Since: q.Get("since"), Until: q.Get("until"), Command: q.Get("command"), Source: q.Get("source"),
+	}
+}
+
+// eventsFilter reads the events page's filters, keeping only the areas and
+// kinds there are; anything else is no filter at all.
+func eventsFilter(q url.Values) events.Filter {
+	f := events.Filter{Area: strings.TrimSpace(q.Get("area")), Kind: strings.TrimSpace(q.Get("kind"))}
+	switch f.Area {
+	case "", events.AreaSSH, events.AreaConfig, events.AreaAuth:
+	default:
+		f.Area = ""
+	}
+	switch f.Kind {
+	case "", events.KindAdded, events.KindChanged, events.KindRemoved, events.KindMode, events.KindStarted:
+	default:
+		f.Kind = ""
+	}
+	return f
+}
+
+// listCSV builds one of csvLists, filtered by q as its page is; ok is false
+// for any other name. It is a pages helper, not a handler, so it adds no
+// route of its own.
+func (h pages) listCSV(name string, q url.Values) (t csvout.Table, ok bool, err error) {
 	e := h.s.opts.Engine
 	switch name {
 	case "hosts.csv":
@@ -405,11 +441,24 @@ func (h pages) listCSV(name string) (t csvout.Table, ok bool, err error) {
 		tv, err := e.Tokens()
 		return exports.Tokens(tv.Items), true, err
 	case "history.csv":
-		ops, err := e.History(history.Filter{Limit: 0})
+		ops, err := e.History(historyFilter(q))
 		return exports.History(ops), true, err
 	case "events.csv":
-		evs, err := events.List(e.Home(), events.Filter{})
+		evs, err := events.List(e.Home(), eventsFilter(q))
 		return exports.Events(evs), true, err
+	case "profiles.csv":
+		pv, err := e.Profiles()
+		rows := make([]exports.Profile, 0, len(pv))
+		for _, p := range pv {
+			rows = append(rows, exports.Profile{Name: p.Name, Category: p.Category, KeyScope: p.KeyScope,
+				KeyStore: p.KeyStore, KeyComment: p.KeyComment, Hosts: p.Hosts, Keys: p.Keys})
+		}
+		return exports.Profiles(rows), true, err
+	case "snapshots.csv":
+		return exports.Snapshots(snapshots.List(e.Home().SnapshotsDir())), true, nil
+	case "deployments.csv":
+		inv, err := inventory.Load(e.Home().Inventory())
+		return exports.Deployments(inv), true, err
 	}
 	return csvout.Table{}, false, nil
 }

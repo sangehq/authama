@@ -105,11 +105,11 @@ project-local mode. See [installation.md](installation.md) for the full layout.
 | `providers [--export [--force]]` | List the active provider catalog (your `<home>/providers.json` if present, else the shipped default) + whether each credential is set. `--export` writes an editable copy into the home. | U·E·F |
 | `net [selector]` | Per-host connection status + a VPN/tunnel indicator. Exit ≠0 if a `requires_vpn` host is unreachable. | U·F |
 | `expiry` | Per-key rotation-age table (ok / due_soon / overdue), from each key's stored `expires_on`. | U·E·F |
-| `audit [--notify]` | Where each key is deployed + expiry + hygiene + recent activity (optionally fire a desktop alert). | U·E·F |
+| `audit [--notify\|--csv]` | Where each key is deployed + expiry + hygiene + recent activity (optionally fire a desktop alert); `--csv` prints one row per key and deployment. | U·E·F |
 | `serve [--addr/--port/--allow-remote/--allow-host/--read-only/--no-open/--token-file]` (or a bare `authama` on a terminal) | The web UI on `127.0.0.1:7822`: overview, profiles, hosts, the rendered SSH config and its drift check, keys, VMs, auth tokens with their status, snapshots and their diffs, history, doctor, audit, settings. Makes the everyday changes, each previewed on a throwaway copy and made only if nothing moved since: profiles and hosts (one at a time or from specs), categories, deletes with or without key files, reconcile, keygen, key add, render, clean, prune, snapshot restore, bundles, doctor `--fix`, VM sync, key adoption and the daily-sync schedule, Docker contexts, notifications, tokens (add or replace one, apply the config, forget one, a starter `tokens.json`, import an auth-token-manager config), profile key comments, and a starter `authama.json`. Runs deploy, rotate (one key or many), rollback and bundle restore as jobs, with their output streamed. Downloads the flat `ssh_config` and the Termius CSV. Signs in with the token in the printed address. | U |
 | `events [--since/--area/--kind/--limit/--json/--csv/--no-scan/--verify]` | Every change seen to a tracked file - under `~/.ssh`, the config home, or a tool's credential file - by anyone, newest first: added, changed, removed, mode. Never a file's contents. Each line is chained by SHA-256 to the one before, and `--verify` catches a line edited, removed or inserted, or a log cut short. The web UI scans every 30 seconds and links each event to the operation that made it. | U |
 | `man [DIR]` | A troff manual page (section 1) for every command, in the sections every `--help` prints: NAME, SYNOPSIS, DESCRIPTION, ALIASES, COMMANDS, OPTIONS, EXAMPLES, SEE ALSO. | U |
-| `history [--host/--profile/--key/--since/--until/--command/--source/--limit/--json]`, `history show <op>` | Every change authama has made (SSH or token), newest first, from `log/history.db`: command, result, snapshot, audit events, and the manifest before and after. The first run imports `audit.log`, the inventory's dates and the snapshots. | U |
+| `history [--host/--profile/--key/--token/--since/--until/--command/--source/--limit/--json/--csv]`, `history show <op>` | Every change authama has made (SSH or token), and every token copied or revealed, newest first, from `log/history.db`: command, result, snapshot, audit events, and the manifest before and after. The first run imports `audit.log`, the inventory's dates and the snapshots. | U |
 
 ## Deploy, rotate, network/VPN
 
@@ -134,7 +134,7 @@ bounded SSH-level reachability probe first, so a down or VPN-gated host (includi
 |---|---|---|
 | `bundle [-r recipient] [-o dir] [--keep N]` | `age`-encrypted, off-machine backup of keys + manifest + inventory + providers. **Never** includes `.env`. | U·E·F |
 | `restore <bundle> [-i identity] [--yes]` | Decrypt and lay the **same** keys back (true recovery on a new machine). | U·E·F |
-| `snapshots list\|restore\|prune [--keep N]` | Local, reversible `~/.ssh` backups (every mutating command snapshots first; last 10 kept). `restore` takes `--yes`. | U·E·F |
+| `snapshots list\|restore\|prune [--keep N]` | Local, reversible `~/.ssh` backups (every mutating command snapshots first; last 10 kept). `list --csv` for a spreadsheet; `restore` takes `--yes`. | U·E·F |
 | `recover [key]` | Break-glass: with a key, a tailored shell snippet to paste into a locked-out console; without, the full interactive `fixkeys` tool (reads `/dev/tty`). | U·F |
 
 ## Editing, trust, scheduling, UI

@@ -15,56 +15,67 @@
 <div class="row row-cards mb-3">
   <div class="col-md-6 col-xl-4">
     <div class="card h-100">
-      <div class="card-body">
+      <div class="card-body d-flex flex-column">
         <div class="d-flex align-items-center mb-2">
           <div class="subheader">Key health</div>
-          <div class="ms-auto"><a class="small" href="/keys">Keys</a></div>
+          <a class="ms-auto small" href="/keys">Keys</a>
         </div>
         <div class="d-flex align-items-baseline mb-2">
           <div class="h1 mb-0 me-2">{{.KeysOnDisk}}/{{.Keys}}</div>
-          <div class="text-secondary">on disk</div>
+          <div class="text-secondary">keys on disk</div>
         </div>
         <div class="progress progress-sm mb-3" role="progressbar" aria-label="Keys on disk" aria-valuenow="{{pct .KeysOnDisk .Keys}}" aria-valuemin="0" aria-valuemax="100">
           <div class="progress-bar bg-primary pct-{{pct .KeysOnDisk .Keys}}"></div>
         </div>
-        <ul class="list-unstyled mb-0 small">
-          <li class="d-flex"><span>Due for rotation</span><span class="ms-auto">{{if .Expiry}}<span class="badge badge-warn">{{len .Expiry}}</span>{{else}}<span class="badge badge-ok">0</span>{{end}}</span></li>
-          <li class="d-flex mt-1"><span>Reserved on purpose</span><span class="ms-auto">{{.Reserved}}</span></li>
-          <li class="d-flex mt-1"><span>Loose in ~/.ssh</span><span class="ms-auto">{{if .Loose}}<span class="badge badge-warn">{{.Loose}}</span>{{else}}0{{end}}</span></li>
+        <ul class="list-unstyled mb-0 small mt-auto">
+          <li class="d-flex align-items-center"><span>Due for rotation</span><span class="ms-auto">{{if .Expiry}}<span class="badge badge-warn">{{len .Expiry}}</span>{{else}}<span class="badge badge-ok">0</span>{{end}}</span></li>
+          <li class="d-flex align-items-center mt-2"><span>Reserved on purpose</span><span class="ms-auto"><span class="badge badge-muted">{{.Reserved}}</span></span></li>
+          <li class="d-flex align-items-center mt-2"><span>Loose in ~/.ssh</span><span class="ms-auto">{{if .Loose}}<a class="badge badge-warn" href="/keys#loose" title="Files under ~/.ssh no profile owns">{{.Loose}}</a>{{else}}<span class="badge badge-ok">0</span>{{end}}</span></li>
         </ul>
       </div>
     </div>
   </div>
   <div class="col-md-6 col-xl-4">
     <div class="card h-100">
-      <div class="card-body">
+      <div class="card-body d-flex flex-column">
         <div class="d-flex align-items-center mb-2">
           <div class="subheader">Auth tokens</div>
-          <div class="ms-auto"><a class="small" href="/tokens">Auth tokens</a></div>
+          <a class="ms-auto small" href="/tokens">Tokens</a>
         </div>
         <div class="d-flex align-items-baseline mb-2">
           <div class="h1 mb-0 me-2">{{.Tokens}}</div>
-          <div class="text-secondary">installed, in {{.TokenFiles}} of 5 tools' files</div>
+          <div class="text-secondary">installed</div>
         </div>
-        <div class="progress progress-sm mb-3" role="progressbar" aria-label="Tools with a credential file" aria-valuenow="{{pct .TokenFiles 5}}" aria-valuemin="0" aria-valuemax="100">
-          <div class="progress-bar bg-azure pct-{{pct .TokenFiles 5}}"></div>
+        <div class="progress progress-sm mb-3" role="progressbar" aria-label="Tools with a credential file" aria-valuenow="{{pct .TokenFiles .TokenTools}}" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-bar bg-azure pct-{{pct .TokenFiles .TokenTools}}"></div>
         </div>
-        <p class="small mb-0">{{if .TokensFailed}}<span class="badge badge-bad">audit failed</span> <a href="/tokens#audit">see the findings</a>{{else}}<span class="badge badge-ok">audit ok</span> nothing for the token audit to report{{end}}</p>
+        <ul class="list-unstyled mb-0 small mt-auto">
+          <li class="d-flex align-items-center"><span>Tools with a credential file</span><span class="ms-auto"><span class="badge badge-muted">{{.TokenFiles}} of {{.TokenTools}}</span></span></li>
+          <li class="d-flex align-items-center mt-2"><span>Token config</span><span class="ms-auto">{{if .TokenConfig}}<span class="badge badge-ok">tokens.json</span>{{else}}<a class="badge badge-muted" href="/tokens#apply-config">none</a>{{end}}</span></li>
+          <li class="d-flex align-items-center mt-2"><span>Token audit</span><span class="ms-auto">{{if .TokensFailed}}<a class="badge badge-bad" href="/tokens#audit">failed</a>{{else}}<span class="badge badge-ok">ok</span>{{end}}</span></li>
+        </ul>
       </div>
     </div>
   </div>
   <div class="col-md-12 col-xl-4">
     <div class="card h-100">
-      <div class="card-body">
+      <div class="card-body d-flex flex-column">
         <div class="d-flex align-items-center mb-2">
           <div class="subheader">Snapshots</div>
-          <div class="ms-auto"><a class="small" href="/snapshots">Snapshots</a></div>
+          <a class="ms-auto small" href="/snapshots">Snapshots</a>
         </div>
         <div class="d-flex align-items-baseline mb-2">
-          <div class="h1 mb-0 me-2">{{.Snapshots}}</div>
-          <div class="text-secondary">kept of ~/.ssh</div>
+          <div class="h1 mb-0 me-2">{{.Snapshots}}{{if .SnapshotRetain}}/{{.SnapshotRetain}}{{end}}</div>
+          <div class="text-secondary">of ~/.ssh kept</div>
         </div>
-        <p class="small mb-0">{{if .Snapshots}}Newest: {{when .LastSnapshot}}. Every change takes one first.{{else}}None yet: the first change takes one.{{end}}</p>
+        <div class="progress progress-sm mb-3" role="progressbar" aria-label="Snapshots kept, of the most kept" aria-valuenow="{{pct .Snapshots .SnapshotRetain}}" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-bar bg-indigo pct-{{pct .Snapshots .SnapshotRetain}}"></div>
+        </div>
+        <ul class="list-unstyled mb-0 small mt-auto">
+          <li class="d-flex align-items-center"><span>Newest</span><span class="ms-auto text-secondary">{{if .Snapshots}}{{when .LastSnapshot}}{{else}}none yet{{end}}</span></li>
+          <li class="d-flex align-items-center mt-2"><span>Hold private keys</span><span class="ms-auto">{{if .SnapshotsWithKeys}}<a class="badge badge-warn" href="/snapshots" title="Taken before key exclusion; prune them when no longer needed">{{.SnapshotsWithKeys}}</a>{{else}}<span class="badge badge-ok">0</span>{{end}}</span></li>
+          <li class="d-flex align-items-center mt-2"><span>Oldest</span><span class="ms-auto text-secondary">{{if .Snapshots}}{{when .FirstSnapshot}}{{else}}none yet{{end}}</span></li>
+        </ul>
       </div>
     </div>
   </div>

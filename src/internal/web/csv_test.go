@@ -22,11 +22,14 @@ func TestEveryListDownloadsAsCSV(t *testing.T) {
 	t.Setenv("NPM_CONFIG_USERCONFIG", npmrc)
 	c := signIn(t, s)
 	heads := map[string]string{
-		"hosts.csv":   "profile,alias,hostname,provider,key,status,tags",
-		"keys.csv":    "key,profile,type,fingerprint,created,expires,hosts,on_disk,state",
-		"tokens.csv":  "tool,host,kind,description,user,secret_set,file",
-		"history.csv": "op_id,started_at,finished_at,command,args,result,source,user,machine,snapshot",
-		"events.csv":  "time,seen,kind,area,path,size,mode,detail",
+		"hosts.csv":       "profile,alias,hostname,provider,key,status,tags",
+		"keys.csv":        "key,profile,type,fingerprint,created,expires,hosts,on_disk,state",
+		"tokens.csv":      "tool,host,kind,description,user,secret_set,file",
+		"history.csv":     "op_id,started_at,finished_at,command,args,result,source,user,machine,snapshot,subjects,events",
+		"events.csv":      "time,seen,kind,area,path,size,mode,detail",
+		"profiles.csv":    "profile,category,key_scope,key_store,hosts,keys,key_comment",
+		"snapshots.csv":   "snapshot,taken,bytes,holds_private_keys",
+		"deployments.csv": "key_path,fingerprint,status,target,method,verified,date",
 	}
 	if len(heads) != len(csvLists) {
 		t.Fatalf("%d lists tested, %d served", len(heads), len(csvLists))
@@ -50,5 +53,27 @@ func TestEveryListDownloadsAsCSV(t *testing.T) {
 	}
 	if body := c.get("/exports/tokens.csv").Body.String(); !strings.Contains(body, "\nnpm,registry.npmjs.org,") || !strings.Contains(body, ",true,"+npmrc) {
 		t.Errorf("tokens.csv does not list the npm token as set:\n%s", body)
+	}
+}
+
+// A list's CSV is what its page shows: the history and events filters in the
+// query narrow the download the same way.
+func TestCSVKeepsThePagesFilters(t *testing.T) {
+	s, _, _ := newTestServer(t)
+	c := signIn(t, s)
+	f := historyFilter(map[string][]string{"token": {"npm"}, "command": {"token"}, "since": {"2026-01-01"}})
+	if f.Token != "npm" || f.Command != "token" || f.Since != "2026-01-01" {
+		t.Fatalf("historyFilter dropped a filter: %+v", f)
+	}
+	if ef := eventsFilter(map[string][]string{"area": {"auth"}, "kind": {"bogus"}}); ef.Area != "auth" || ef.Kind != "" {
+		t.Fatalf("eventsFilter = %+v, want area auth and no kind", ef)
+	}
+	all := c.get("/exports/history.csv").Body.String()
+	none := c.get("/exports/history.csv?command=no-such-command").Body.String()
+	if strings.Count(none, "\n") != 1 {
+		t.Errorf("a filter matching nothing still exported rows:\n%s", none)
+	}
+	if strings.Count(all, "\n") < strings.Count(none, "\n") {
+		t.Errorf("the unfiltered export is smaller than the filtered one")
 	}
 }

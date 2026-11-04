@@ -7,7 +7,7 @@
   <div class="card-header">
     <h2 class="card-title">File events</h2>
     <div class="card-actions d-flex align-items-center gap-2">
-      <a class="btn btn-sm btn-outline-secondary" href="/exports/events.csv" download>{{icon "download"}}<span class="ms-1">CSV</span></a>
+      {{template "csv" (print "/exports/events.csv?area=" .Area "&kind=" .Kind)}}
       <nav aria-label="Filter by area" class="btn-group">
         <a class="btn btn-sm{{if eq .Area ""}} btn-primary{{else}} btn-outline-secondary{{end}}" href="/events{{with .Kind}}?kind={{.}}{{end}}"{{if eq .Area ""}} aria-current="page"{{end}}>All</a>
         {{range (list "ssh" "auth" "config")}}<a class="btn btn-sm{{if eq $.Data.Area .}} btn-primary{{else}} btn-outline-secondary{{end}}" href="/events?area={{.}}{{with $.Data.Kind}}&amp;kind={{.}}{{end}}"{{if eq $.Data.Area .}} aria-current="page"{{end}}>{{.}}</a>{{end}}

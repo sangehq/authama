@@ -1,0 +1,3 @@
+{{/* A list's CSV download: `{{template "csv" "/exports/hosts.csv"}}`. A page
+     with filters passes them on, so the file holds what the page shows. */}}
+{{define "csv"}}<a class="btn btn-sm btn-outline-secondary" href="{{.}}" download>{{icon "download"}}<span class="ms-1">CSV</span></a>{{end}}

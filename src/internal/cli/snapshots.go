@@ -10,7 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/simtabi/authama/src/internal/services/exports"
 	"github.com/simtabi/authama/src/internal/services/snapshots"
+	"github.com/simtabi/authama/src/internal/util/csvout"
 	"github.com/simtabi/authama/src/internal/util/envnames"
 )
 
@@ -40,7 +42,8 @@ func newSnapshotsCmd() *cobra.Command {
 		Short: "List/restore/prune local ~/.ssh backups",
 	}
 
-	cmd.AddCommand(&cobra.Command{
+	var listCSV bool
+	list := &cobra.Command{
 		Use:   "list",
 		Short: "List local ~/.ssh snapshots (oldest -> newest)",
 		Args:  cobra.NoArgs,
@@ -50,6 +53,9 @@ func newSnapshotsCmd() *cobra.Command {
 				return err
 			}
 			snaps := snapshots.List(p.SnapshotsDir())
+			if listCSV {
+				return csvout.Write(c.OutOrStdout(), exports.Snapshots(snaps))
+			}
 			out := c.OutOrStdout()
 			if len(snaps) == 0 {
 				_, _ = fmt.Fprintln(out, "no snapshots yet")
@@ -77,7 +83,9 @@ func newSnapshotsCmd() *cobra.Command {
 			}
 			return nil
 		},
-	})
+	}
+	list.Flags().BoolVar(&listCSV, "csv", false, "print the snapshots as CSV, one row each, header first")
+	cmd.AddCommand(list)
 
 	var yes bool
 	restore := &cobra.Command{
