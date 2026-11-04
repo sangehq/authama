@@ -11,9 +11,13 @@
 
      A destructive item submits a form kept outside the menu, through its
      confirm modal; without the script it submits straight to the preview,
-     which asks again. The label names the row, for a screen reader. */}}
+     which asks again. The label names the row, for a screen reader.
+
+     The menu is positioned against the viewport (Popper's "fixed" strategy):
+     a table sits in .table-responsive, whose overflow would otherwise clip a
+     menu that opens past the table's edge. */}}
 {{define "menu_open"}}<div class="dropdown">
-  <button type="button" class="btn btn-sm btn-icon btn-ghost-secondary" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{.}}" title="{{.}}">{{icon "dots-vertical"}}</button>
+  <button type="button" class="btn btn-sm btn-icon btn-ghost-secondary" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="{{.}}" title="{{.}}">{{icon "dots-vertical"}}</button>
   <div class="dropdown-menu dropdown-menu-end">{{end}}
 {{define "menu_close"}}  </div>
 </div>{{end}}
