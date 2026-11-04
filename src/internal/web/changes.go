@@ -391,7 +391,9 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 	case "token-set":
 		spec := tokensvc.SetSpec{Target: strings.TrimSpace(f.Get("target")), Service: strings.TrimSpace(f.Get("service")),
 			Server: pl("server"), Username: pl("username"), Scope: pl("scope")}
-		if spec.Service != "" {
+		// The form's tool reads "composer" beside a service; any other tool
+		// beside one is a contradiction Check refuses, never a silent pick.
+		if spec.Service != "" && spec.Target == tokens.Composer {
 			spec.Target = ""
 		}
 		if _, err := spec.Check(); err != nil {
