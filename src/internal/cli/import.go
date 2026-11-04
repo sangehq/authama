@@ -23,9 +23,21 @@ import (
 func newImportCmd() *cobra.Command {
 	var dryRun, force, yes bool
 	cmd := &cobra.Command{
-		Use:   "import [path]",
-		Short: "Onboard an existing ~/.ssh into the manifest",
-		Args:  cobra.MaximumNArgs(1),
+		Use:   "import [PATH]",
+		Short: "Onboard an existing ssh setup - a config file or any folder of them - into the manifest",
+		Long: "Reads an ssh setup into the manifest and inventory, replacing them (a non-empty\n" +
+			"manifest needs --force, and both are backed up first). PATH defaults to\n" +
+			"~/.ssh/config and may be a config file or a folder:\n\n" +
+			"  a folder with a config file    that file, whose Includes pull in the rest\n" +
+			"                                 (config.d/, profiles/<name>/config, …)\n" +
+			"  a folder with ssh/config       that file, for a config home such as ~/.config\n" +
+			"  any other folder               every file named config or ending .conf, up to\n" +
+			"                                 four levels down, read in path order\n\n" +
+			"Relative Includes resolve against the folder, as ssh resolves them against\n" +
+			"~/.ssh. Importing another machine's copy of ~/.ssh, an IdentityFile under\n" +
+			"~/.ssh/ is looked for in that copy, and its keys are adopted into the\n" +
+			"profiles/ layout here.",
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			configPath := "~/.ssh/config"
 			if len(args) > 0 {

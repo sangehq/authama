@@ -43,7 +43,7 @@ var commandExamples = map[string][]string{
 	},
 	"ssh host delete":       {"ssh host delete work web1", "ssh host delete work web1 --purge --revoke --yes"},
 	"ssh host edit":         {"ssh host edit work web1 --port 2222", "ssh host edit work web1 --tag prod --untag staging"},
-	"ssh import":            {"ssh import --dry-run", "ssh import ~/old-laptop/.ssh --yes"},
+	"ssh import":            {"ssh import --dry-run", "ssh import ~/old-laptop/.ssh --yes", "ssh import ~/.config --dry-run"},
 	"ssh key add":           {"ssh key add work deploy --type ed25519", "ssh key add work deploy --host web1 --passphrase"},
 	"ssh key delete":        {"ssh key delete work/deploy", "ssh key delete work/deploy --revoke --purge --yes"},
 	"ssh key list":          {"ssh key list", "ssh key list work"},
