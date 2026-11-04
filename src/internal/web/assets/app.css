@@ -81,3 +81,8 @@ main:focus { outline: none; }
 .diff-hunk { color: var(--tblr-secondary); }
 :root[data-bs-theme=dark] .diff-add { color: #8fd8a0; background: #1d3324; }
 :root[data-bs-theme=dark] .diff-del { color: #ffa3a3; background: #3d2020; }
+
+/* Success text: Tabler's green is 2.7:1 on white (axe, the settings page's
+   "settings: ok"). The same hue as .badge-ok, at >= 5.7:1 in both themes. */
+.text-success { color: #1a6b2b !important; }
+:root[data-bs-theme=dark] .text-success { color: #8fd8a0 !important; }

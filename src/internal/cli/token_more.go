@@ -85,11 +85,7 @@ func newTokenShowCmd() *cobra.Command {
 // tokenStatus is `token status --json`; its field names are part of the
 // machine-readable surface and do not change.
 // The status types moved to tokensvc, where the web UI reads them too.
-type (
-	tokenStatus       = tokensvc.Status
-	tokenStatusConfig = tokensvc.StatusConfig
-	tokenStatusTarget = tokensvc.StatusTarget
-)
+type tokenStatus = tokensvc.Status
 
 func newTokenStatusCmd() *cobra.Command {
 	var config, project string
