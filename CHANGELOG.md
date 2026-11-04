@@ -11,14 +11,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Running `authama` on its own, on a terminal, opens the web UI**, as `authama serve` does with its
   defaults; `--dev-root` and `--no-dotenv` still apply. The menu it used to open is `authama tui`. With
   no terminal a bare run still prints help, since `serve` would hang a script.
-- **The web UI is redesigned on Tabler's vertical layout.** A sidebar groups the pages as SSH, Auth and
-  System and folds behind a menu button on a narrow screen; the top bar shows dev mode and read-only and
-  switches the theme; every page header names its section with a one-line summary; the overview's counts
-  are linked cards; empty lists use Tabler's empty state; and the host tables line up. Every page, form,
+- **The web UI is redesigned on Tabler's own layout**, as its preview dashboard has it: a header with
+  the name, the mode badges and the theme switch, then a menu with SSH, Auth and System dropdowns that
+  folds behind a button on a narrow screen. Every page header names its section, has a one-line summary
+  and links to its forms; the overview's counts are linked cards; empty lists use Tabler's empty state.
+  The custom stylesheet is down to the contrast fixes the accessibility pass needs. Every page, form,
   change and job works as before.
 
 ### Added
 
+- **Auth tokens are managed from the web UI.** The Auth tokens page adds or replaces a token (a
+  Composer service or npm, Docker, git or netrc, with the user name, npm scope and Docker
+  credential-store mode `token set` takes), writes a starter `tokens.json` (`token init`), imports an
+  auth-token-manager config (`token import`), and shows `token status` beside the list and the audit.
+  The secret is the one value a page sends: the server holds it in memory under a single-use reference
+  bound to the browser session, so no page, preview or confirmation carries it, and a secret on any
+  other form is refused.
+- **Profiles are managed in full from the web UI:** a new profile can be filed in a category and given
+  a key comment, and a profile's key comment can be changed (`profile add --category --key-comment`,
+  `profile edit --key-comment`).
+- An **SSH config** page: every file the manifest renders and whether `~/.ssh` matches it, as
+  `ssh config show` and `ssh config check` print, with the re-render and the flat export beside them.
 - `authama auth`, the same group as `authama token`; every `token` command answers under either name.
 - `help` in every command group: `authama ssh help deploy`, `authama auth help set` and
   `authama settings help init` print that command's help, as `authama help ssh deploy` does. A group used
@@ -29,7 +42,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- A web preview now shows `authama.json` with the other config files. It was left out of the preview's
+- A web preview now shows `authama.json` and `tokens.json` with the other config files. It was left out of the preview's
   copy, so a change writing it would have previewed as writing nothing.
 
 ### Security

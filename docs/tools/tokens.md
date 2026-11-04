@@ -10,7 +10,9 @@ commit. Every write merges into the existing file, atomically, owner-only
 (`0600`, or a user-only ACL on Windows).
 
 Every command has a full entry, with all its flags and examples, in the
-[command reference](../reference/cli.md#authama-token).
+[command reference](../reference/cli.md#authama-token). The web UI's **Auth tokens** page
+([`serve`](serve.md)) adds or replaces a token, applies the config, writes a starter or imports one,
+and forgets a token, each previewed first; revealing and copying stay in the terminal.
 
 | Command | What it does |
 |---|---|

@@ -33,10 +33,11 @@ when that port is taken.
 
 ## Pages
 
-A sidebar lists the pages in three groups: **SSH** (Profiles, Hosts, Keys, VMs, Snapshots), **Auth**
-(Auth tokens) and **System** (History, Doctor, Audit, Settings), with the Overview above them. On a
-narrow screen it folds behind a menu button. The bar along the top shows dev mode and read-only when
-they apply, and switches the theme between light, dark and the system's.
+The layout is Tabler's: a header with the name, dev mode and read-only when they apply, and the
+theme switch (light, dark or the system's), then a menu with the Overview and three dropdowns:
+**SSH** (Profiles, Hosts, SSH config, Keys, VMs, Snapshots), **Auth** (Auth tokens) and **System**
+(History, Doctor, Audit, Settings). On a narrow screen the menu folds behind a button. A page's
+header names its section and links to the forms further down it.
 
 | Page | Shows |
 |---|---|
@@ -47,7 +48,8 @@ they apply, and switches the theme between light, dark and the system's.
 | Snapshots | every snapshot. A snapshot's page diffs it against `~/.ssh` now or against another snapshot |
 | History | the [`history`](history.md), filtered the same way. An operation's page shows its events and the manifest before and after |
 | VMs | the VM hosts and their VMs' state, the pending `ssh vm sync` plan, the enabled hypervisors and their VMs, the declared devboxes (planned ones without a VM yet), the reserved keys, the loose keys that could be adopted, and whether the daily sync is scheduled |
-| Tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret) and the token audit, as `authama token list` and `authama token audit` print, and which token config is in use |
+| Auth tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret), each tool's file with its mode and how many entries are installed, configured and resolvable, what `token apply` would skip, and the token audit, as `authama token list`, `token status` and `token audit` print |
+| SSH config | every file the manifest renders into `~/.ssh` and whether the files on disk match it, as `authama ssh config show` and `ssh config check` print |
 | Doctor, Audit | the reports `authama doctor` and `authama ssh audit` print |
 | Settings | where the config home, state home, `.env` and `authama.json` are, every setting's value in effect and where it came from, and what `authama settings validate` reports, as `settings path`, `settings show --effective` and `settings validate` print them. The values are those the server started with |
 | Third-party licences | the licences of the web UI's bundled front-end assets (Tabler, Tabler Icons, Bootstrap, Popper), at `/about/licenses` |
@@ -58,7 +60,8 @@ These changes can be made from the pages:
 
 | Change | Where | The same as |
 |---|---|---|
-| Add a profile | Profiles | `authama ssh profile add` |
+| Add a profile, optionally in a category and with a key comment | Profiles | `authama ssh profile add [--category] [--key-comment]` |
+| Change a profile's key comment | Profiles | `authama ssh profile edit --key-comment` |
 | Change a profile's key scope | Profiles | `authama ssh profile edit --key-scope --key-name` |
 | Delete a profile | Profiles | `authama ssh profile delete --yes` |
 | Delete a profile and its key files | Profiles, ticking *and its key files* | `authama ssh profile delete --purge --yes` |
@@ -74,7 +77,7 @@ These changes can be made from the pages:
 | Delete a declared key that no host uses | Keys | `authama ssh key delete --yes` |
 | Reserve a loose key (keep it on purpose) | Keys | `authama ssh key reserve <key> --for … --note … --yes` |
 | Drop a key's reservation | Keys | `authama ssh key unreserve <key> --yes` |
-| Re-render `~/.ssh/config` | Overview | `authama ssh config render --yes` |
+| Re-render `~/.ssh/config` | Overview, SSH config | `authama ssh config render --yes` |
 | Reconcile: mint missing keys, record keys on disk, render | Overview | `authama ssh reconcile --yes --no-pin` |
 | Mint a profile's or host's missing keys | Keys | `authama ssh keygen <target> --no-pin --yes` |
 | Add a key, optionally wired to a host | Keys | `authama ssh key add` |
@@ -88,12 +91,21 @@ These changes can be made from the pages:
 | Send the desktop alert, if one is due | Audit | `authama ssh audit --notify` |
 | Send a test notification | Audit | `authama ssh notify test` |
 | Remove an installed token | Tokens | `authama token delete <target> <host>` |
-| Write the token config's credential files | Tokens | `authama token apply` (a Docker registry in a credential store follows `_settings.docker_creds_store`, and is refused when it is unset, since a page cannot prompt) |
+| Write the token config's credential files | Auth tokens | `authama token apply` (a Docker registry in a credential store follows `_settings.docker_creds_store`, and is refused when it is unset, since a page cannot prompt) |
+| Add or replace one token | Auth tokens | `authama token set --service\|--target --server [--username] [--scope] [--creds-store-mode]` |
+| Write a starter `tokens.json` | Auth tokens, when there is none | `authama token init [--target …]` |
+| Import an auth-token-manager config | Auth tokens, when the config in use is at its location | `authama token import` |
 
 The token apply resolves secrets from the environment `authama serve` was started
-in, so a variable set in another terminal is not seen. Storing, revealing and
-copying a token stay in the terminal (`token set`, `token list --reveal`,
-`token copy`): a page never receives or shows a secret.
+in, so a variable set in another terminal is not seen.
+
+**Adding a token is the one form that takes a secret.** The secret goes to the server with the
+preview, and straight into memory: the preview page and its confirmation carry a random reference
+in its place, never the secret. The reference works once, for the browser session that made it, for
+15 minutes, and is forgotten when the change is made; nothing writes it to disk but the tool's own
+credential file. The preview names the file and host it writes, and says the secret is not shown. A
+secret posted with any other form is refused. Revealing a stored token and copying one stay in the
+terminal (`token list --reveal`, `token copy`): a page never shows a secret.
 
 Each change takes two steps:
 
