@@ -17,6 +17,8 @@ type AboutView struct {
 	ConfigHome, StateHome, SSHDir   string
 	DevRoot                         string
 	Repository, Docs, Issues        string
+	User, Host                      string
+	Licences                        []licence
 }
 
 func (h systemPages) handleAbout(w http.ResponseWriter, r *http.Request) {
@@ -26,7 +28,8 @@ func (h systemPages) handleAbout(w http.ResponseWriter, r *http.Request) {
 		ConfigHome: p.ConfigDir, StateHome: p.State(), SSHDir: p.SSHDir, DevRoot: p.DevRoot,
 		Repository: "https://github.com/simtabi/authama",
 		Docs:       "https://opensource.simtabi.com/documentation/simtabi/authama/",
-		Issues:     "https://github.com/simtabi/authama/issues"}
+		Issues:     "https://github.com/simtabi/authama/issues",
+		User:       h.s.who.user, Host: h.s.who.host, Licences: h.s.licences()}
 	if bi, ok := debug.ReadBuildInfo(); ok {
 		for _, s := range bi.Settings {
 			switch s.Key {

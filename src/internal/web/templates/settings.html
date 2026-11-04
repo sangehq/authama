@@ -1,5 +1,18 @@
 {{define "content"}}{{with .Data}}
 {{template "page_header" (header "System" "Settings" "The settings files authama reads at start-up, and every setting's value in effect.")}}
+<div class="card mb-3" id="appearance">
+  <div class="card-body d-flex flex-wrap align-items-center gap-3">
+    <div class="me-auto">
+      <h2 class="card-title mb-1">Appearance</h2>
+      <p class="text-secondary mb-0">The colour theme for this browser. Following the system matches the light or dark setting of this computer.</p>
+    </div>
+    <div class="btn-group" role="group" aria-label="Colour theme">
+      <a href="?theme=light" class="btn btn-outline-secondary">{{icon "sun"}}<span class="ms-1">Light</span></a>
+      <a href="?theme=dark" class="btn btn-outline-secondary">{{icon "moon"}}<span class="ms-1">Dark</span></a>
+      <a href="?theme=auto" class="btn btn-outline-secondary">{{icon "device-desktop"}}<span class="ms-1">Follow the system</span></a>
+    </div>
+  </div>
+</div>
 <div class="row row-cards mb-3">
   <div class="col-lg-7">
     <div class="card h-100">

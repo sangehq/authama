@@ -48,6 +48,26 @@ func loadAssets() (*assetSet, error) {
 	if err != nil {
 		return nil, err
 	}
+	// The JavaScript is ES modules that import each other by relative path,
+	// so app.js and everything under js/ share one fingerprint, taken over
+	// all of them: a relative import lands under the same /assets/<hash>/ and
+	// still finds its file, and any change to any module moves them all.
+	group := sha256.New()
+	var mods []string
+	for name := range a.files {
+		if isModule(name) {
+			mods = append(mods, name)
+		}
+	}
+	sort.Strings(mods)
+	for _, name := range mods {
+		group.Write([]byte(name))
+		group.Write(a.files[name])
+	}
+	modHash := hex.EncodeToString(group.Sum(nil))[:12]
+	for _, name := range mods {
+		a.hashes[name] = modHash
+	}
 	sprite, ok := a.files["vendor/tabler-icons.svg"]
 	if !ok {
 		return nil, fmt.Errorf("web: the icon sprite is not embedded")
@@ -57,6 +77,9 @@ func loadAssets() (*assetSet, error) {
 	a.sprite = template.HTML(sprite) //nolint:gosec // trusted vendored file, see above
 	return a, nil
 }
+
+// isModule reports whether an asset is one of the UI's ES modules.
+func isModule(name string) bool { return name == "app.js" || strings.HasPrefix(name, "js/") }
 
 // url returns the fingerprinted URL of an asset. Asking for one that does not
 // exist fails the template, which the page tests turn into a failure rather
@@ -365,12 +388,17 @@ type view struct {
 	Data     any
 	// Bell is the newest file events, for the header's notifications menu.
 	Bell []events.Event
+	// User and Host are the account and machine the server runs as, and
+	// Initials the avatar's letters; Year is for the footer.
+	User, Host, Initials string
+	Year                 int
 }
 
 func (s *Server) newView(r *http.Request, nav, title string, data any) view {
 	p := s.opts.Engine.Home()
 	v := view{Title: title, Nav: nav, Version: s.opts.Version, ReadOnly: s.opts.ReadOnly, Data: data,
-		Home: p.ConfigDir, SSHDir: p.SSHDir, DevRoot: p.DevRoot}
+		Home: p.ConfigDir, SSHDir: p.SSHDir, DevRoot: p.DevRoot,
+		User: s.who.user, Host: s.who.host, Initials: s.who.initials(), Year: s.now().Year()}
 	if sess := sessionFrom(r.Context()); sess != nil {
 		v.Authed = true
 		v.CSRF = sess.csrf

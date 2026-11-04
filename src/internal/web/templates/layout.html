@@ -49,20 +49,16 @@
         </div>
         <div class="nav-item dropdown">
           <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-expanded="false">
-            <span class="avatar avatar-sm bg-primary-lt">{{icon "terminal-2"}}<span class="visually-hidden">{{brandCommand}} menu</span></span>
-            <div class="d-none d-xl-block ps-2">
-              <div>{{brandCommand}} {{.Version}}</div>
-              <div class="mt-1 small text-secondary">{{if .DevRoot}}dev mode{{else if .ReadOnly}}read-only{{else}}this machine{{end}}</div>
-            </div>
+            <span class="avatar avatar-sm avatar-initials" aria-hidden="true">{{.Initials}}</span>
+            <span class="d-none d-xl-inline ps-2 align-self-center">{{if .User}}{{.User}}{{else}}{{brandCommand}}{{end}}</span>
+            <span class="visually-hidden">: account menu</span>
           </a>
           <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
             <a href="/settings" class="dropdown-item">{{icon "settings"}}<span class="ms-2">Settings</span></a>
             <a href="/events" class="dropdown-item">{{icon "activity"}}<span class="ms-2">Events</span></a>
             <a href="/doctor" class="dropdown-item">{{icon "stethoscope"}}<span class="ms-2">Doctor</span></a>
             <div class="dropdown-divider"></div>
-            <a href="?theme=auto" class="dropdown-item">{{icon "device-desktop"}}<span class="ms-2">Follow the system theme</span></a>
-            <a href="/about" class="dropdown-item">{{icon "info-circle"}}<span class="ms-2">About</span></a>
-            <a href="/about/licenses" class="dropdown-item">{{icon "license"}}<span class="ms-2">Third-party licences</span></a>
+            <a href="/about" class="dropdown-item">{{icon "info-circle"}}<span class="ms-2">About {{brandCommand}}</span></a>
           </div>
         </div>
         {{end}}
@@ -74,13 +70,18 @@
     <div class="collapse navbar-collapse" id="navbar-menu">
       <div class="navbar">
         <div class="container-xl">
-          <nav class="w-100" aria-label="Main">
+          <nav class="d-flex flex-wrap align-items-center w-100" aria-label="Main">
             <ul class="navbar-nav">
               {{template "navlink" (navItem . "overview" "/" "layout-dashboard" "Overview")}}
               {{template "navgroup" (navGroup . "ssh" "key" "SSH" (navItem . "profiles" "/profiles" "users" "Profiles") (navItem . "hosts" "/hosts" "server" "Hosts") (navItem . "sshconfig" "/ssh-config" "file-code" "SSH config") (navItem . "keys" "/keys" "key" "Keys") (navItem . "vms" "/vms" "device-desktop" "VMs") (navItem . "snapshots" "/snapshots" "archive" "Snapshots"))}}
               {{template "navgroup" (navGroup . "auth" "cloud-lock" "Auth" (navItem . "tokens" "/tokens" "cloud-lock" "Auth tokens"))}}
               {{template "navgroup" (navGroup . "system" "settings" "System" (navItem . "history" "/history" "history" "History") (navItem . "events" "/events" "activity" "Events") (navItem . "doctor" "/doctor" "stethoscope" "Doctor") (navItem . "audit" "/audit" "shield-check" "Audit") (navItem . "settings" "/settings" "settings" "Settings") (navItem . "about" "/about" "info-circle" "About"))}}
             </ul>
+            <div class="session-strip ms-md-auto d-flex align-items-center gap-2 small text-secondary py-2 py-md-0">
+              {{icon "device-desktop"}}<span>Running as <strong class="text-body">{{if .User}}{{.User}}{{else}}this machine's user{{end}}</strong>{{if .Host}} on <strong class="text-body">{{.Host}}</strong>{{end}}</span>
+              {{if .DevRoot}}<span class="badge badge-warn">dev mode</span>{{end}}
+              {{if .ReadOnly}}<span class="badge badge-muted">read-only</span>{{end}}
+            </div>
           </nav>
         </div>
       </div>
@@ -100,18 +101,29 @@
     </main>
     <footer class="footer footer-transparent d-print-none">
       <div class="container-xl">
-        <ul class="list-inline list-inline-dots mb-0 text-secondary">
-          <li class="list-inline-item">{{brandCommand}} {{.Version}}</li>
-          {{if .Authed}}<li class="list-inline-item">home <code>{{.Home}}</code></li>{{end}}
-          {{if .ReadOnly}}<li class="list-inline-item">{{icon "lock"}} read-only</li>{{end}}
-          <li class="list-inline-item"><a class="link-secondary" href="/about/licenses">Third-party licences</a></li>
-        </ul>
+        <div class="row text-center align-items-center flex-row-reverse">
+          <div class="col-lg-auto ms-lg-auto">
+            <ul class="list-inline list-inline-dots mb-0">
+              {{if .Authed}}<li class="list-inline-item"><a href="/about" class="link-secondary">About</a></li>{{end}}
+              <li class="list-inline-item"><a href="https://opensource.simtabi.com/documentation/simtabi/{{brandCommand}}/" class="link-secondary" rel="noopener">Documentation</a></li>
+              <li class="list-inline-item"><a href="https://github.com/simtabi/{{brandCommand}}" class="link-secondary" rel="noopener">Source code</a></li>
+              {{if .Authed}}<li class="list-inline-item"><a href="/about#licences" class="link-secondary">Licences</a></li>{{end}}
+            </ul>
+          </div>
+          <div class="col-12 col-lg-auto mt-3 mt-lg-0">
+            <ul class="list-inline list-inline-dots mb-0">
+              <li class="list-inline-item">Copyright &copy; {{.Year}} Simtabi LLC</li>
+              <li class="list-inline-item"><span class="text-secondary">{{brandCommand}}</span> {{.Version}}</li>
+              {{if .ReadOnly}}<li class="list-inline-item">{{icon "lock"}} read-only</li>{{end}}
+            </ul>
+          </div>
+        </div>
       </div>
     </footer>
   </div>
 </div>
 <script src="{{asset "vendor/tabler/tabler.min.js"}}" defer></script>
-<script src="{{asset "app.js"}}" defer></script>
+<script type="module" src="{{asset "app.js"}}"></script>
 </body>
 </html>
 {{end}}

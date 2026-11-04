@@ -72,6 +72,7 @@ type Server struct {
 	assets   *assetSet
 	sessions sessions
 	secrets  secretStash
+	who      whoami
 	jobs     *jobs.Registry
 	handler  http.Handler
 }
@@ -96,7 +97,7 @@ func New(opts Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{opts: opts, pages: pages, assets: assets, jobs: jobs.NewRegistry()}
+	s := &Server{opts: opts, pages: pages, assets: assets, jobs: jobs.NewRegistry(), who: currentUser()}
 	s.handler = securityHeaders(s.hostCheck(s.auth(s.sameOrigin(s.routes()))))
 	return s, nil
 }

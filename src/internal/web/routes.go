@@ -358,11 +358,16 @@ type licence struct {
 }
 
 func (h pages) handleLicences(w http.ResponseWriter, r *http.Request) {
+	h.s.render(w, http.StatusOK, "licenses", h.s.newView(r, "about", "Third-party licences", h.s.licences()))
+}
+
+// licences are the bundled front-end assets' licence texts, as embedded.
+func (s *Server) licences() []licence {
 	var ls []licence
 	for _, name := range []string{"tabler", "tabler-icons", "bootstrap", "popper"} {
-		if body, ok := h.s.assets.files["vendor/LICENSES/"+name+".txt"]; ok {
+		if body, ok := s.assets.files["vendor/LICENSES/"+name+".txt"]; ok {
 			ls = append(ls, licence{Name: name, Text: string(body)})
 		}
 	}
-	h.s.render(w, http.StatusOK, "licenses", h.s.newView(r, "", "Third-party licences", ls))
+	return ls
 }
