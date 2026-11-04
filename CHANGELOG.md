@@ -6,6 +6,32 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Running `authama` on its own, on a terminal, opens the web UI**, as `authama serve` does with its
+  defaults; `--dev-root` and `--no-dotenv` still apply. The menu it used to open is `authama tui`. With
+  no terminal a bare run still prints help, since `serve` would hang a script.
+- **The web UI is redesigned on Tabler's vertical layout.** A sidebar groups the pages as SSH, Auth and
+  System and folds behind a menu button on a narrow screen; the top bar shows dev mode and read-only and
+  switches the theme; every page header names its section with a one-line summary; the overview's counts
+  are linked cards; empty lists use Tabler's empty state; and the host tables line up. Every page, form,
+  change and job works as before.
+
+### Added
+
+- `authama auth`, the same group as `authama token`; every `token` command answers under either name.
+- `help` in every command group: `authama ssh help deploy`, `authama auth help set` and
+  `authama settings help init` print that command's help, as `authama help ssh deploy` does. A group used
+  to read `help` as an unknown command.
+- A **Settings** page in the web UI: where the settings files are, every setting's value in effect and
+  where it came from, and what `settings validate` reports. When there is no `authama.json`, it offers a
+  previewed *Create a starter authama.json*, the same change as `authama settings init`.
+
+### Fixed
+
+- A web preview now shows `authama.json` with the other config files. It was left out of the preview's
+  copy, so a change writing it would have previewed as writing nothing.
+
 ### Security
 
 - The web UI's sign-in redirect is now guarded inline, on the exact value passed to `http.Redirect`, by a

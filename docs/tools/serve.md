@@ -6,10 +6,16 @@ and makes the everyday manifest and auth-token changes, each previewed before it
 ## Starting it
 
 ```sh
+authama                       # on a terminal: the same as `authama serve`
 authama serve                 # 127.0.0.1:7822, opens a browser
 authama serve --no-open       # print the address only
 authama --dev-root ./scratch serve
 ```
+
+A bare `authama` on a terminal runs `serve` with every flag at its default; the
+global `--dev-root` and `--no-dotenv` still apply. With no terminal (a pipe, a
+script, CI) a bare run prints help instead, since `serve` runs until Ctrl-C. The
+menu is `authama tui`.
 
 It prints an address like this:
 
@@ -27,6 +33,11 @@ when that port is taken.
 
 ## Pages
 
+A sidebar lists the pages in three groups: **SSH** (Profiles, Hosts, Keys, VMs, Snapshots), **Auth**
+(Auth tokens) and **System** (History, Doctor, Audit, Settings), with the Overview above them. On a
+narrow screen it folds behind a menu button. The bar along the top shows dev mode and read-only when
+they apply, and switches the theme between light, dark and the system's.
+
 | Page | Shows |
 |---|---|
 | Overview | the rows the `authama tui` menu prints at the top, each problem with the command that fixes it; counts; keys due for rotation; recent changes |
@@ -38,6 +49,7 @@ when that port is taken.
 | VMs | the VM hosts and their VMs' state, the pending `ssh vm sync` plan, the enabled hypervisors and their VMs, the declared devboxes (planned ones without a VM yet), the reserved keys, the loose keys that could be adopted, and whether the daily sync is scheduled |
 | Tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret) and the token audit, as `authama token list` and `authama token audit` print, and which token config is in use |
 | Doctor, Audit | the reports `authama doctor` and `authama ssh audit` print |
+| Settings | where the config home, state home, `.env` and `authama.json` are, every setting's value in effect and where it came from, and what `authama settings validate` reports, as `settings path`, `settings show --effective` and `settings validate` print them. The values are those the server started with |
 | Third-party licences | the licences of the web UI's bundled front-end assets (Tabler, Tabler Icons, Bootstrap, Popper), at `/about/licenses` |
 
 ## Changes
@@ -70,6 +82,7 @@ These changes can be made from the pages:
 | Restore a snapshot | the snapshot's page | `authama ssh snapshots restore <id> --yes` |
 | Fix file modes | Doctor | `authama doctor --fix` |
 | Write an editable `providers.json` | Doctor | `authama ssh providers --export` |
+| Create a starter `authama.json` | Settings, when there is none | `authama settings init` |
 | Remove stale pins and records, optionally adopting pins first | Doctor | `authama ssh clean --yes [--adopt]` |
 | Write an encrypted bundle | Snapshots | `authama ssh bundle [--keep]` |
 | Send the desktop alert, if one is due | Audit | `authama ssh audit --notify` |
@@ -85,7 +98,8 @@ copying a token stay in the terminal (`token set`, `token list --reveal`,
 Each change takes two steps:
 
 1. **Preview.** The change runs for real against a private, throwaway copy of the home. The copy
-   holds the config files, plus the files from `~/.ssh` that a snapshot may hold: config,
+   holds the config files (`manifest.json`, `inventory.json`, `providers.json` and `authama.json`; never
+   `.env` or the age identity), plus the files from `~/.ssh` that a snapshot may hold: config,
    `known_hosts` and public keys. No private key is copied. The page shows the command line it
    stands for, what authama would say, and a diff of every file the change would write.
 2. **Confirm.** authama takes the lock, then previews the change again. If the new preview differs

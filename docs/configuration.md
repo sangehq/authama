@@ -389,7 +389,8 @@ At startup (every command except `help`, `version` and `completion`) authama
 reads `.env`, then `authama.json`, and sets only what is still unset - a
 variable already in the environment, under its current or a legacy name, is never
 replaced by a file. `authama settings show --effective` lists every setting with
-its value and where it came from (secret values are never printed).
+its value and where it came from (secret values are never printed). The web UI's
+**Settings** page shows the same, with the files and their validation.
 
 ### `.env`
 

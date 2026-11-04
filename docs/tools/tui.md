@@ -4,14 +4,13 @@ A numbered stdin menu over the same services the CLI verbs use, so nothing is
 reimplemented and the two cannot drift.
 
 ```sh
-authama          # on a terminal, this opens the menu
-authama tui      # the same thing, explicitly
+authama tui      # open the menu
 ```
 
-Running the binary with no arguments opens the menu when standard input is a
-terminal. With any argument it is a plain CLI, and without a terminal — a pipe, a
-script, a CI job — it prints help instead. That fallback matters: a menu reading
-from a pipe would take whatever is on it as answers.
+Running the binary with no arguments opens the [web UI](serve.md) on a terminal,
+not the menu; `authama tui` is how the menu opens. With any other argument the
+binary is a plain CLI, and without a terminal (a pipe, a script, a CI job) a bare
+`authama` prints help. Earlier versions opened this menu on a bare run.
 
 ## What it is
 

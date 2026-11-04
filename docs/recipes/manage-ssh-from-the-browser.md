@@ -5,7 +5,7 @@ Open the web UI, make a change after seeing exactly what it writes, and run a de
 ## Start it
 
 ```sh
-authama serve
+authama          # on a terminal; the same as `authama serve`
 ```
 
 It opens a browser at `http://127.0.0.1:7822/?token=…` and listens on this machine only. To try it
