@@ -2,10 +2,9 @@
 // (`authama ssh ...`) and package-manager / git auth tokens (`authama token
 // ...`) in one self-contained Go binary.
 //
-// cmd/sshmgr builds the same program under its old name, deprecated: it
-// prints a one-line notice and then runs this one's code, so scripts, the
-// ProxyCommand lines older releases rendered into ~/.ssh/config and the
-// scheduled notifications that call `sshmgr` keep working. The end-to-end and
+// The sshmgr alias older releases shipped beside it is gone: `authama ssh
+// config render` rewrites a ProxyCommand that still names it, and doctor
+// reports a scheduled job whose binary has gone. The end-to-end and
 // repository invariant tests live in this package. internal/brand is where the
 // names live.
 package main

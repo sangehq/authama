@@ -56,12 +56,10 @@ func TestEveryDeclaredReleaseTargetCompiles(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// Targets are independent, and each spends most of its time in a
 			// single-threaded link, so they run side by side. Ten serial targets
-			// times two binaries took 4m43s on a macOS runner, against the e2e
-			// package's 5-minute budget.
+			// (then for two binaries) took 4m43s on a macOS runner, against the
+			// e2e package's 5-minute budget.
 			t.Parallel()
-			// Both binaries ship: authama, and sshmgr for compatibility. One
-			// invocation builds both, so their shared packages compile once.
-			cmd := exec.Command("go", "build", "-o", t.TempDir(), "./cmd/authama", "./cmd/sshmgr")
+			cmd := exec.Command("go", "build", "-o", t.TempDir(), "./cmd/authama")
 			cmd.Dir = moduleRoot
 			cmd.Env = append(os.Environ(),
 				"GOOS="+goos, "GOARCH="+goarch, "CGO_ENABLED=0")
@@ -69,7 +67,7 @@ func TestEveryDeclaredReleaseTargetCompiles(t *testing.T) {
 				cmd.Env = append(cmd.Env, "GOARM="+fields[2])
 			}
 			if out, err := cmd.CombinedOutput(); err != nil {
-				t.Errorf("%s is a declared release target and authama or sshmgr does not build:\n%s", name, out)
+				t.Errorf("%s is a declared release target and authama does not build:\n%s", name, out)
 			}
 		})
 		checked++

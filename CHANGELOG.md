@@ -6,6 +6,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Removed
+
+- **The `sshmgr` alias binary.** It shipped beside `authama` as a deprecated compatibility build
+  since 0.1.2 and is no longer built, released or installed: `make build`, both installers, the
+  archives, the Linux packages, the Homebrew cask and the Docker dev image carry `authama` alone,
+  and the `simtabi/sshmgr` Scoop manifest stops updating. An `sshmgr` already installed is left
+  alone; the installers name it and print the command that removes it. Everything older releases
+  wrote under the old name is still recognized. Before removing an old copy, run
+  `authama ssh config render` (a VM `ProxyCommand` that names it) and `authama ssh notify install`
+  (an expiry reminder job); see [docs/migration.md](docs/migration.md#removing-the-sshmgr-alias).
+
 ### Changed
 
 - **The web UI's slide-in forms are one column, each hint under its field**: the token, host and

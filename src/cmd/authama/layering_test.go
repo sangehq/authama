@@ -276,9 +276,9 @@ func TestTheToolRunsOnlyTheBinariesItDeclares(t *testing.T) {
 		// Hypervisor CLIs (`authama ssh vm`), each optional: a missing one is listed as not installed.
 		"prlctl", "vmpal", "vmrun", "utmctl", "limactl", "orb", "podman",
 		// Itself: the scheduled notifier runs `authama audit --notify`, and it
-		// prefers an installed authama (else the deprecated sshmgr) on PATH over
-		// the running binary's own path so the job survives the binary moving.
-		"authama", "sshmgr",
+		// prefers an installed authama on PATH over the running binary's own
+		// path so the job survives the binary moving.
+		"authama",
 	} {
 		declared[b] = true
 	}

@@ -135,8 +135,7 @@ A `port` other than 22 on the host wins over the hypervisor's (Lima and Podman f
    address, saying so on stderr.
 3. Connects and relays stdin/stdout, so ssh talks to the guest as if directly.
 
-The rendered path is always `authama`, even when `sshmgr` (the deprecated alias) renders the
-config, and prefers the `authama` on your `PATH` (a package manager's stable link) over the
+The rendered path is always `authama`, and prefers the `authama` on your `PATH` (a package manager's stable link) over the
 versioned file behind it. If an upgrade still moves it, `doctor` reports `vm proxy: … does not exist`
 and `authama ssh config render` rewrites it.
 

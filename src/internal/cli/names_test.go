@@ -288,7 +288,6 @@ func TestNoMessageTeachesTheOldSpelling(t *testing.T) {
 	rx := regexp.MustCompile(`\bsshmgr (` + strings.Join(verbs, "|") + `)\b`)
 	keep := map[string]bool{
 		"core/renderer/renderer.go": true, // the managed-block markers already on disk
-		"core/renderer/gitvm.go":    true, // ProxyCommand for the compat binary
 	}
 	root := filepath.Join("..")
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -318,27 +317,5 @@ func TestNoMessageTeachesTheOldSpelling(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
-	}
-}
-
-// Each binary's completion script registers under its own name, so the
-// sshmgr compatibility binary completes too.
-func TestCompletionIsNamedForTheBinary(t *testing.T) {
-	for _, c := range []struct{ argv0, want string }{
-		{"/usr/local/bin/authama", "authama"},
-		{"/usr/local/bin/sshmgr", "sshmgr"},
-		{`C:\bin\sshmgr.exe`, "sshmgr"},
-		{"/tmp/go-build/exe/main", "authama"},
-	} {
-		root := newRootCmd()
-		completeAs(root, []string{c.argv0, "completion", "zsh"})
-		if root.Name() != c.want {
-			t.Errorf("%s completion: root named %q, want %q", c.argv0, root.Name(), c.want)
-		}
-	}
-	root := newRootCmd()
-	completeAs(root, []string{"/usr/local/bin/sshmgr", "ssh", "list"})
-	if root.Name() != "authama" {
-		t.Errorf("a non-completion run renamed the root to %q", root.Name())
 	}
 }

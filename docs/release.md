@@ -71,8 +71,8 @@ GoReleaser publishes the cask and the Scoop manifest with the write deploy keys
 (on `simtabi/scoop-bucket`), each a repository secret that reaches its one
 repository and nothing else. `TAP_GITHUB_TOKEN` is read only for the Winget pull
 request. Every manifest downloads from this repository's release assets, which
-are named `authama_*` from 0.1.2 on (the bare `sshmgr_*` binaries are the
-deprecated alias).
+are named `authama_*` from 0.1.2 on. Releases up to 0.1.3 also attached bare
+`sshmgr_*` binaries, the deprecated alias; later ones do not.
 
 - **Homebrew:** the tap requires a pull request on `main`, with deploy keys as its
   one bypass actor, so the cask `Casks/authama.rb` is committed to `main` directly.
@@ -80,10 +80,9 @@ deprecated alias).
   gone: the tap's `cask_renames.json` maps `sshmgr` to `authama`, so `brew upgrade`
   moves an existing install over by itself.
 - **Scoop:** the bucket requires a pull request on `master` and has no bypass actor,
-  so GoReleaser pushes each manifest to its own branch instead: `authama-X.Y.Z`
-  for `bucket/authama.json`, and `sshmgr-X.Y.Z` for `bucket/sshmgr.json`, the
-  deprecated manifest kept current so existing installs still update and are told
-  to switch (Scoop has no rename). The
+  so GoReleaser pushes the manifest to its own branch instead: `authama-X.Y.Z`
+  for `bucket/authama.json`. The deprecated `bucket/sshmgr.json` is no longer
+  updated; the alias it installed was removed. The
   bucket's own workflow, `.github/workflows/auto-merge-manifest.yml`, runs on every
   push to an `sshmgr-*` or `authama-*` branch: it opens the pull request with its
   `GITHUB_TOKEN`, waits for the checks, and merges it, deleting the branch. Nothing

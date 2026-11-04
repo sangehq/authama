@@ -2,11 +2,9 @@
 
 How to get `authama` onto a machine, and where it keeps its state once it is there.
 
-`make build` produces `authama`, and beside it `sshmgr`, the former
-name, kept as a deprecated alias for existing scripts and `ProxyCommand` lines. It
-accepts the same commands but prints a one-line deprecation notice on stderr
-(not for `vm proxy` or shell completion, where stderr reaches ssh or the shell),
-and it will be removed in a future release: switch scripts to `authama`.
+`make build` produces `authama`. The `sshmgr` alias that releases up to 0.1.3
+installed beside it is gone; the [migration guide](migration.md#removing-the-sshmgr-alias)
+says how to clear one out.
 
 ## Requirements
 
@@ -32,9 +30,8 @@ decides otherwise, so this page offers no download, package-manager or
 
 ```sh
 git clone https://github.com/simtabi/authama ~/src/authama
-make -C ~/src/authama build      # -> build/authama, and build/sshmgr (the deprecated alias)
+make -C ~/src/authama build      # -> build/authama
 install -m 0755 ~/src/authama/build/authama ~/.local/bin/authama
-install -m 0755 ~/src/authama/build/sshmgr  ~/.local/bin/sshmgr   # only if a script still needs it
 authama doctor          # verify deps, perms, agent, known_hosts, drift, token-file modes
 ```
 
@@ -98,7 +95,7 @@ For working on authama without a local Go toolchain, the repository root has a
 `Dockerfile` and `compose.yaml`:
 
 ```sh
-make docker-shell                       # a shell with Go, git, make and OpenSSH; authama (and the sshmgr alias) built
+make docker-shell                       # a shell with Go, git, make and OpenSSH; authama built
 make docker-run ARGS="token list"       # one command
 make docker-down
 ```

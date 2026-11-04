@@ -14,7 +14,7 @@ within a few business days and will keep you updated on remediation progress.
 
 ## Scope notes for this project
 
-Authentication Access Manager (`authama`; `sshmgr` is its deprecated alias) manages SSH
+Authentication Access Manager (`authama`) manages SSH
 private keys and config, and the auth-token files package managers and git
 read. A few invariants are security-load-bearing - please flag any regression
 in these:

@@ -17,10 +17,8 @@ Two features in a single static binary with no runtime dependencies:
   variables, never secrets.
 
 macOS, Linux and Windows are all first-class; OpenSSH is the only requirement
-for the SSH side. `sshmgr`, the former name, still ships beside `authama` as a
-deprecated alias (same commands, plus a one-line notice on stderr) so existing
-scripts keep working; it will be removed in a future release. Coming from
-sshmgr 3.x or auth-token-manager? See the [migration guide](docs/migration.md).
+for the SSH side. `sshmgr`, the former name, is no longer built or installed.
+Coming from sshmgr or auth-token-manager? See the [migration guide](docs/migration.md).
 
 ## Install
 
@@ -30,7 +28,7 @@ version `src/go.mod` names), `git` and `make`.
 
 ```sh
 git clone https://github.com/simtabi/authama ~/src/authama
-make -C ~/src/authama build      # -> build/authama, and build/sshmgr (the deprecated alias)
+make -C ~/src/authama build      # -> build/authama
 install -m 0755 ~/src/authama/build/authama ~/.local/bin/authama
 authama doctor
 ```

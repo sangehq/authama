@@ -9,8 +9,9 @@
 // (github.com/simtabi/authama/src) followed the name at 0.1.0; the config home
 // (~/.config/authama) and the environment variables (AUTHAMA_*) at 0.1.1; the
 // release archives, the Linux packages, the Homebrew cask and the Scoop
-// manifest at 0.1.2. What is kept for migration only: the sshmgr command
-// (LegacyCommand, deprecated: it prints DeprecationNotice), the old variable
+// manifest at 0.1.2. The sshmgr binary that shipped beside authama as a
+// deprecated alias was removed after 0.1.3. What is kept for migration only:
+// the old name (LegacyCommand, recognized in what older releases wrote), the old variable
 // names (SSH_MANAGER_*, SSHMGR_*; honored with a deprecation notice, see
 // envnames), the old home (copied over once, see migratesvc), and the old
 // managed-block markers, known_hosts tag, bundle names and scheduler label,
@@ -26,15 +27,10 @@ const (
 	// Command is the binary and the command people type.
 	Command = "authama"
 
-	// LegacyCommand is the name the tool shipped under before. It is still
-	// installed beside Command and behaves identically, so no script breaks,
-	// but it is deprecated: it prints DeprecationNotice on stderr.
+	// LegacyCommand is the name the tool shipped under before. No binary of
+	// that name is built any more; it is kept so what older releases wrote
+	// under it (markers, tags, homes) is still recognized.
 	LegacyCommand = "sshmgr"
-
-	// DeprecationNotice is the one line the LegacyCommand binary prints on
-	// stderr before it runs.
-	DeprecationNotice = LegacyCommand + " is deprecated and will be removed in a future release; run " +
-		Command + " instead (same commands)"
 
 	// Summary is the one-line description under the name.
 	Summary = "SSH keys & config, and package-manager / git auth tokens, in one tool"
@@ -78,6 +74,3 @@ func Line(cmd string) string {
 	}
 	return Command + " ssh " + cmd
 }
-
-// Commands lists every name the binary answers to, the current one first.
-func Commands() []string { return []string{Command, LegacyCommand} }

@@ -98,8 +98,8 @@ jobs:
           AUTHAMA_INSTALL_DIR="$dir" bash src/scripts/install.sh
           test -x "$dir/authama"
           "$dir/authama" version
-          # sshmgr is the deprecated alias, installed while releases carry it.
-          if [ -e "$dir/sshmgr" ]; then "$dir/sshmgr" version; fi
+          # The sshmgr alias is no longer installed.
+          test ! -e "$dir/sshmgr"
           # The deprecated variable name still picks the directory.
           old="$(mktemp -d)/bin"
           SSHMGR_INSTALL_DIR="$old" bash src/scripts/install.sh
@@ -126,12 +126,8 @@ jobs:
             & $path -InstallDir $dir
             & (Join-Path $dir 'authama.exe') version
             if ($LASTEXITCODE -ne 0) { throw "authama version failed ($case)" }
-            # sshmgr is the deprecated alias, installed while releases carry it.
-            $sshmgr = Join-Path $dir 'sshmgr.exe'
-            if (Test-Path $sshmgr) {
-              & $sshmgr version
-              if ($LASTEXITCODE -ne 0) { throw "sshmgr version failed ($case)" }
-            }
+            # The sshmgr alias is no longer installed.
+            if (Test-Path (Join-Path $dir 'sshmgr.exe')) { throw "the installer still installs sshmgr.exe ($case)" }
           }
 
       - name: E2E smoke
@@ -274,7 +270,7 @@ jobs:
           Write-Output "src/scripts/install.ps1: no PSScriptAnalyzer findings"
       - name: The installers reconstruct the artifact names GoReleaser writes
         run: |
-          # Both installers build "{authama,sshmgr}_{os}_{arch}", and .goreleaser.yaml maps
+          # Both installers build "authama_{os}_{arch}", and .goreleaser.yaml maps
           # darwin -> macos and names archives and packages authama_. A drift here is
           # invisible until a release is cut.
           grep -q 'darwin' src/scripts/install.sh || { echo "install.sh no longer maps darwin"; exit 1; }

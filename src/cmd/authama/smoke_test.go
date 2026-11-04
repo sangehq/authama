@@ -9,8 +9,6 @@ import (
 	"runtime"
 	"strings"
 	"testing"
-
-	"github.com/simtabi/authama/src/internal/brand"
 )
 
 // Ports the exit-code half of v1's smoke tests, and closes the
@@ -124,7 +122,7 @@ func TestFailuresExitOneAndExplainThemselvesOnStderr(t *testing.T) {
 		if !strings.Contains(stderr, tc.want) {
 			t.Errorf("%v stderr = %q, want it to mention %q", tc.args, stderr, tc.want)
 		}
-		// Errors go to stderr so `sshmgr view x > file` leaves the file empty
+		// Errors go to stderr so `authama view x > file` leaves the file empty
 		// rather than containing an error message a later step would parse.
 		if strings.Contains(stdout, tc.want) {
 			t.Errorf("%v wrote its error to stdout:\n%s", tc.args, stdout)
@@ -181,7 +179,7 @@ func TestInitReconcileDoctorRunEndToEnd(t *testing.T) {
 }
 
 // A declined confirmation exits 1 like any other failure, but prints nothing of
-// its own: the user just answered the question, and "sshmgr: aborted" under
+// its own: the user just answered the question, and "authama: aborted" under
 // their own "n" reads like a fault rather than the answer they gave.
 func TestADeclinedConfirmationExitsOneAndSaysNothingExtra(t *testing.T) {
 	run, _ := authama(t)
@@ -196,7 +194,7 @@ func TestADeclinedConfirmationExitsOneAndSaysNothingExtra(t *testing.T) {
 	if code != 1 {
 		t.Errorf("declining exited %d, want 1", code)
 	}
-	if strings.Contains(stderr, "authama:") || strings.Contains(stderr, "sshmgr:") {
+	if strings.Contains(stderr, "authama:") {
 		t.Errorf("an abort printed an error line: %q", stderr)
 	}
 	if !strings.Contains(stdout, "[y/N]") {
@@ -243,49 +241,7 @@ func TestDoctorJSONIsMachineReadable(t *testing.T) {
 		}
 	}
 	// Errors never contaminate the document.
-	if strings.Contains(out, "authama:") || strings.Contains(out, "sshmgr:") {
+	if strings.Contains(out, "authama:") {
 		t.Errorf("a diagnostic leaked into the JSON payload:\n%s", out)
-	}
-}
-
-// cmd/authama is the primary binary and cmd/sshmgr its compatibility build.
-// They are one program: the same version line, the same groups, and both
-// accept the v3 top-level SSH spellings. sshmgr is the deprecated name: it says
-// so, once, on stderr, and authama never does.
-func TestTheAuthamaAndSshmgrBinariesAreOneProgram(t *testing.T) {
-	if testing.Short() {
-		t.Skip("builds a binary")
-	}
-	if _, err := exec.LookPath("go"); err != nil {
-		t.Skip("no go toolchain to build with")
-	}
-	run, _ := authama(t)
-	bin := filepath.Join(t.TempDir(), "sshmgr")
-	if runtime.GOOS == "windows" {
-		bin += ".exe"
-	}
-	if out, err := exec.Command("go", "build", "-o", bin, "../sshmgr").CombinedOutput(); err != nil {
-		t.Fatalf("building cmd/sshmgr: %v\n%s", err, out)
-	}
-	for _, args := range [][]string{{"version"}, {"ssh", "--help"}, {"token", "--help"}, {"list", "--help"}} {
-		want, wantErr, wc := run("", args...)
-		cmd := exec.Command(bin, args...)
-		cmd.Env = append(os.Environ(), "HOME="+t.TempDir())
-		var stderr strings.Builder
-		cmd.Stderr = &stderr
-		got, err := cmd.Output()
-		if err != nil || wc != 0 {
-			t.Errorf("%v: sshmgr %v, authama exit %d", args, err, wc)
-			continue
-		}
-		if string(got) != want {
-			t.Errorf("%v differs:\nauthama: %s\nsshmgr:  %s", args, want, got)
-		}
-		if stderr.String() != brand.DeprecationNotice+"\n" {
-			t.Errorf("%v: sshmgr stderr = %q, want the deprecation notice alone", args, stderr.String())
-		}
-		if strings.Contains(wantErr, "deprecated") {
-			t.Errorf("%v: authama printed a deprecation notice: %q", args, wantErr)
-		}
 	}
 }

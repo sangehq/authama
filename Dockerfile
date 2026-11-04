@@ -48,12 +48,11 @@ WORKDIR /workspace
 COPY --chown=${UID}:${GID} src/go.mod src/go.sum src/
 RUN go -C src mod download
 
-# Build authama (and sshmgr, its deprecated alias) into the image as well, so `authama` works before the
+# Build authama into the image as well, so `authama` works before the
 # first `make build`. Inside the container `make build` rebuilds from the live
 # source into build/ in the bind mount.
 COPY --chown=${UID}:${GID} src/ src/
-RUN go -C src build -trimpath -o /go/bin/authama ./cmd/authama \
- && go -C src build -trimpath -o /go/bin/sshmgr ./cmd/sshmgr
+RUN go -C src build -trimpath -o /go/bin/authama ./cmd/authama
 
 HEALTHCHECK --interval=60s --timeout=5s --start-period=5s --retries=3 \
   CMD ["authama", "version"]
