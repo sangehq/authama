@@ -11,7 +11,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/util/testcred"
 )
 
