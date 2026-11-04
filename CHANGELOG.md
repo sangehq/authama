@@ -33,8 +33,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`make man` writes them to `build/man`), and every `--help` prints the same sections: NAME, SYNOPSIS,
   DESCRIPTION, ALIASES, COMMANDS, OPTIONS, GLOBAL OPTIONS, EXAMPLES, SEE ALSO. Every `list` also
   answers `ls`, and every `delete` `rm`.
-- An **About** page, and Tabler's header: a theme toggle, a bell with the newest file events, and an
-  account-style menu.
+- An **About** page, with the third-party licences in it, and Tabler's header: a theme toggle, a bell
+  with the newest file events, and an account menu named for the system user the server runs as, with
+  a strip in the menu bar saying which user and machine. A Tabler footer with the copyright, version and
+  links; choosing to follow the system theme is on the Settings page.
+- **The UI's script is typed ES modules configured by data attributes**: a `Component` base with typed
+  options from `data-*`, a fluent `El` builder, and an `App` that chains `.use(...).start()`; the
+  table's API chains too. `tsc --strict` checks them in `make e2e-web`, with no build step between the
+  source and the binary.
 - **The dashboard** gains key health, auth tokens and snapshot cards, quick actions, hosts by profile
   and the newest file events. **Tables** sort by any column, with search, page size and pages for a
   long list; hosts are one table with a profile column. **Destructive actions** ask in a dialog before
