@@ -10,6 +10,8 @@ circle-x
 clock
 cloud-lock
 device-desktop
+download
+file-code
 git-compare
 history
 info-circle
@@ -19,10 +21,12 @@ license
 lock
 moon
 plus
+refresh
 server
 settings
 shield-check
 stethoscope
 sun
 terminal-2
+trash
 users

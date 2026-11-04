@@ -1,11 +1,18 @@
 {{/* A page's header: the section it belongs to, its title (the page's one h1),
-     and a one-line summary. Built with `header "Section" "Title" "Summary"`. */}}
+     a one-line summary, and links to the page's forms on the right. Built with
+     `header "Section" "Title" "Summary" (action "Label" "#form" "icon") …`. */}}
 {{define "page_header"}}<div class="page-header d-print-none mb-3">
-  <div class="row align-items-center">
+  <div class="row g-2 align-items-center">
     <div class="col">
       {{if .Pretitle}}<div class="page-pretitle">{{.Pretitle}}</div>{{end}}
       <h1 class="page-title">{{.Title}}</h1>
       {{if .Subtitle}}<p class="text-secondary mb-0 mt-1">{{.Subtitle}}</p>{{end}}
     </div>
+    {{if .Actions}}<div class="col-auto ms-auto d-print-none">
+      <div class="btn-list">
+        {{range $i, $a := .Actions}}<a href="{{$a.Href}}" class="btn {{if eq $i 0}}btn-primary{{else}}btn-outline-secondary{{end}}">{{icon $a.Icon}}<span class="ms-1">{{$a.Label}}</span></a>
+        {{end}}
+      </div>
+    </div>{{end}}
   </div>
 </div>{{end}}

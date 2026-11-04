@@ -185,8 +185,18 @@ func funcs(a *assetSet) template.FuncMap {
 		"empty": func(icon, title, text string) emptyState {
 			return emptyState{Icon: icon, Title: title, Text: text}
 		},
-		"header": func(pretitle, title, subtitle string) pageHeader {
-			return pageHeader{Pretitle: pretitle, Title: title, Subtitle: subtitle}
+		"header": func(pretitle, title, subtitle string, actions ...headerAction) pageHeader {
+			return pageHeader{Pretitle: pretitle, Title: title, Subtitle: subtitle, Actions: actions}
+		},
+		"action": func(label, href, icon string) headerAction {
+			return headerAction{Label: label, Href: href, Icon: icon}
+		},
+		"navGroup": func(_ view, key, icon, label string, items ...navItem) navGroup {
+			g := navGroup{Key: key, Icon: icon, Label: label, Items: items}
+			for _, it := range items {
+				g.Active = g.Active || it.Active
+			}
+			return g
 		},
 		"navItem": func(v view, key, href, icon, label string) navItem {
 			return navItem{Active: v.Nav == key, Href: href, Icon: icon, Label: label}
@@ -257,7 +267,14 @@ func parsePages(a *assetSet) (*pageSet, error) {
 
 // pageHeader is a page's header: the section, the title, and a one-line
 // summary under it.
-type pageHeader struct{ Pretitle, Title, Subtitle string }
+type pageHeader struct {
+	Pretitle, Title, Subtitle string
+	Actions                   []headerAction
+}
+
+// headerAction is a link at the right of a page header, to a form further
+// down the page; the first is the primary one.
+type headerAction struct{ Label, Href, Icon string }
 
 // emptyState is a list with nothing in it yet.
 type emptyState struct{ Icon, Title, Text string }
@@ -267,6 +284,13 @@ type stat struct {
 	Label              string
 	Count              int
 	Href, Icon, Colour string
+}
+
+// navGroup is a menu in the top bar: its pages, in a dropdown.
+type navGroup struct {
+	Key, Icon, Label string
+	Active           bool
+	Items            []navItem
 }
 
 type navItem struct {

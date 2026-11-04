@@ -1,3 +1,13 @@
 {{define "navlink"}}<li class="nav-item{{if .Active}} active{{end}}">
   <a class="nav-link" href="{{.Href}}"{{if .Active}} aria-current="page"{{end}}><span class="nav-link-icon d-md-none d-lg-inline-block">{{icon .Icon}}</span><span class="nav-link-title">{{.Label}}</span></a>
 </li>{{end}}
+
+{{/* A menu with its pages in a Tabler dropdown. It is marked active when one
+     of its pages is the current one. */}}
+{{define "navgroup"}}<li class="nav-item dropdown{{if .Active}} active{{end}}">
+  <a class="nav-link dropdown-toggle" href="#navbar-{{.Key}}" id="navbar-{{.Key}}" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false"><span class="nav-link-icon d-md-none d-lg-inline-block">{{icon .Icon}}</span><span class="nav-link-title">{{.Label}}</span></a>
+  <div class="dropdown-menu" aria-labelledby="navbar-{{.Key}}">
+    {{range .Items}}<a class="dropdown-item{{if .Active}} active{{end}}" href="{{.Href}}"{{if .Active}} aria-current="page"{{end}}>{{icon .Icon}}<span class="ms-2">{{.Label}}</span></a>
+    {{end}}
+  </div>
+</li>{{end}}
