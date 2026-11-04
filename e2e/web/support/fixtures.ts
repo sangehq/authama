@@ -17,10 +17,12 @@ export const pages: { path: string; heading: string }[] = [
   { path: '/keys/work/work_hpc-ed25519', heading: 'work_hpc-ed25519' },
   { path: '/snapshots', heading: 'Snapshots' },
   { path: '/history', heading: 'History' },
+  { path: '/events', heading: 'Events' },
   { path: '/doctor', heading: 'Doctor' },
   { path: '/audit', heading: 'Audit' },
   { path: '/tokens', heading: 'Auth tokens' },
   { path: '/settings', heading: 'Settings' },
+  { path: '/about', heading: 'About' },
   { path: '/about/licenses', heading: 'Third-party licences' },
 ];
 
