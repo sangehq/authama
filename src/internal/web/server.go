@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/simtabi/authama/src/internal/services/events"
 	"github.com/simtabi/authama/src/internal/services/jobs"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
@@ -48,6 +49,13 @@ type Options struct {
 	// settled at start-up, which the command that started the server owns,
 	// so it passes this in. Nil shows the files only, with no values.
 	Settings func(paths.Paths) SettingsView
+
+	// EventRoots names the files whose changes the events page records:
+	// ~/.ssh, the config home, the tools' credential files. Nil tracks
+	// nothing. The server scans them every EventInterval while it runs, and
+	// when the events page or the overview opens.
+	EventRoots    func(paths.Paths) []events.Tracked
+	EventInterval time.Duration
 
 	// Retain is how many snapshots a snapshot restore keeps when it snapshots
 	// first, as AUTHAMA_SNAPSHOT_RETAIN sets for the CLI. 0 means 10.
@@ -108,6 +116,9 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 	}
 	errc := make(chan error, 1)
 	go func() { errc <- srv.Serve(ln) }()
+	if s.opts.EventRoots != nil {
+		go s.watchEvents(ctx)
+	}
 	select {
 	case err := <-errc:
 		return err

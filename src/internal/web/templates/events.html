@@ -1,0 +1,36 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "System" "Events" "Every change seen to a file under ~/.ssh, the config home or a tool's credential file, whoever made it.")}}
+{{if not .Tracking}}<div class="alert alert-info" role="status">{{icon "info-circle"}}<span class="ms-1">This server was started without file tracking, so it records no new events. <code>authama events</code> scans from the terminal.</span></div>{{end}}
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">File events</h2>
+    <div class="card-actions">
+      <nav aria-label="Filter by area" class="btn-group">
+        <a class="btn btn-sm{{if eq .Area ""}} btn-primary{{else}} btn-outline-secondary{{end}}" href="/events{{with .Kind}}?kind={{.}}{{end}}"{{if eq .Area ""}} aria-current="page"{{end}}>All</a>
+        {{range (list "ssh" "auth" "config")}}<a class="btn btn-sm{{if eq $.Data.Area .}} btn-primary{{else}} btn-outline-secondary{{end}}" href="/events?area={{.}}{{with $.Data.Kind}}&amp;kind={{.}}{{end}}"{{if eq $.Data.Area .}} aria-current="page"{{end}}>{{.}}</a>{{end}}
+      </nav>
+    </div>
+  </div>
+  {{if .Rows}}
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table table-hover" id="events-table" data-table="events" data-page-size="25">
+      <caption class="visually-hidden">File events, newest first</caption>
+      <thead><tr><th scope="col">When</th><th scope="col">What</th><th scope="col">Area</th><th scope="col">File</th><th scope="col">Detail</th><th scope="col">By</th></tr></thead>
+      <tbody>
+        {{range .Rows}}
+        <tr>
+          <td class="text-nowrap text-secondary" data-sort="{{.Time.Format "2006-01-02T15:04:05"}}">{{when .Time}}</td>
+          <td><span class="badge {{eventBadge .Kind}}">{{.Kind}}</span></td>
+          <td>{{orDash .Area}}</td>
+          <td class="text-break">{{if .Path}}<code>{{.Path}}</code>{{else}}<span class="text-secondary">–</span>{{end}}</td>
+          <td class="text-secondary">{{orDash .Detail}}{{if .Mode}}{{if ne .Kind "mode"}} <span class="text-nowrap">· {{.Mode}}</span>{{end}}{{end}}</td>
+          <td>{{if .OpID}}<a href="/history/{{.OpID}}">{{.Command}}</a>{{else}}<span class="text-secondary">outside authama</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}{{template "empty" (empty "activity" "No file events yet" "The first scan records what it finds; every change after that shows here.")}}{{end}}
+  <div class="card-footer text-secondary">The same as <code>authama events</code>. Only the file, what changed and when are kept, never a file's contents. A change made by an authama command links to it in the history; anything else is outside authama.</div>
+</div>
+{{end}}{{end}}

@@ -7,7 +7,9 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/simtabi/authama/src/internal/services/events"
 	"github.com/simtabi/authama/src/internal/services/history"
 )
 
@@ -35,6 +37,8 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /tokens", h.handleTokens)
 	mux.HandleFunc("GET /settings", h.handleSettings)
 	mux.HandleFunc("GET /ssh-config", h.handleSSHConfig)
+	mux.HandleFunc("GET /events", h.handleEvents)
+	mux.HandleFunc("GET /about", h.handleAbout)
 	mux.HandleFunc("GET /exports/{name}", h.handleExport)
 	mux.HandleFunc("GET /about/licenses", h.handleLicences)
 	if !s.opts.ReadOnly {
@@ -78,13 +82,60 @@ func (h pages) fail(w http.ResponseWriter, r *http.Request, err error) {
 	h.s.renderError(w, r, http.StatusInternalServerError, "Could not read the authama home", err.Error())
 }
 
+// dashboard is the overview page: the menu's rows and counts, and a card each
+// for keys, tokens, snapshots, profiles and the newest file events.
+type dashboard struct {
+	Overview
+	KeysOnDisk, Reserved, Loose int
+	Tokens, TokenFiles          int
+	TokensFailed                bool
+	Snapshots                   int
+	LastSnapshot                time.Time
+	ProfileRows                 []ProfileView
+	MaxHosts                    int
+	Events                      []EventRow
+}
+
 func (h pages) handleOverview(w http.ResponseWriter, r *http.Request) {
 	ov, err := h.s.opts.Engine.Overview(h.s.now())
 	if err != nil {
 		h.fail(w, r, err)
 		return
 	}
-	h.s.render(w, http.StatusOK, "overview", h.s.newView(r, "overview", "Overview", ov))
+	h.s.scanEvents()
+	d := dashboard{Overview: ov}
+	if kv, err := h.s.opts.Engine.Keys(); err == nil {
+		for _, k := range kv.Rows {
+			if k.PrivateOnDisk {
+				d.KeysOnDisk++
+			}
+		}
+		d.Reserved, d.Loose = len(kv.Reserved), len(kv.Loose)
+	}
+	if tv, err := h.s.opts.Engine.Tokens(); err == nil {
+		d.Tokens, d.TokensFailed = len(tv.Items), tv.Failed
+		for _, t := range tv.Status.Targets {
+			if t.Exists {
+				d.TokenFiles++
+			}
+		}
+	}
+	if snaps, err := h.s.opts.Engine.Snapshots(); err == nil {
+		d.Snapshots = len(snaps)
+		for _, s := range snaps {
+			if s.Taken.After(d.LastSnapshot) {
+				d.LastSnapshot = s.Taken
+			}
+		}
+	}
+	if ps, err := h.s.opts.Engine.Profiles(); err == nil {
+		d.ProfileRows = ps
+		for _, p := range ps {
+			d.MaxHosts = max(d.MaxHosts, p.Hosts)
+		}
+	}
+	d.Events = h.s.recentEvents(events.Filter{Limit: 6})
+	h.s.render(w, http.StatusOK, "overview", h.s.newView(r, "overview", "Overview", d))
 }
 
 func (h pages) handleProfiles(w http.ResponseWriter, r *http.Request) {

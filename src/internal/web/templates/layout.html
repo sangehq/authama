@@ -19,14 +19,53 @@
     <div class="container-xl">
       {{if .Authed}}<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-menu" aria-controls="navbar-menu" aria-expanded="false" aria-label="Show the menu"><span class="navbar-toggler-icon"></span></button>{{end}}
       <a class="navbar-brand navbar-brand-autodark pe-0 pe-md-3" href="/">{{icon "terminal-2"}}<span class="ms-2">{{brandCommand}}</span></a>
-      <div class="navbar-nav flex-row order-md-last align-items-center gap-2">
-        {{if and .Authed .DevRoot}}<span class="badge badge-warn d-none d-sm-inline-flex">{{icon "alert-triangle"}}<span class="ms-1">dev mode</span></span>{{end}}
-        {{if .ReadOnly}}<span class="badge badge-muted d-none d-sm-inline-flex">{{icon "lock"}}<span class="ms-1">read-only</span></span>{{end}}
-        <div class="btn-group" role="group" aria-label="Colour theme">
-          <a href="?theme=light" class="btn btn-ghost-secondary btn-icon" title="Light theme">{{icon "sun"}}<span class="visually-hidden">Light theme</span></a>
-          <a href="?theme=dark" class="btn btn-ghost-secondary btn-icon" title="Dark theme">{{icon "moon"}}<span class="visually-hidden">Dark theme</span></a>
-          <a href="?theme=auto" class="btn btn-ghost-secondary btn-icon" title="Follow the system theme">{{icon "device-desktop"}}<span class="visually-hidden">Follow the system theme</span></a>
+      <div class="navbar-nav flex-row order-md-last">
+        <div class="nav-item d-none d-md-flex me-2">
+          <a href="?theme=dark" class="nav-link px-0 hide-theme-dark" title="Dark theme" data-bs-toggle="tooltip" data-bs-placement="bottom">{{icon "moon"}}<span class="visually-hidden">Dark theme</span></a>
+          <a href="?theme=light" class="nav-link px-0 hide-theme-light" title="Light theme" data-bs-toggle="tooltip" data-bs-placement="bottom">{{icon "sun"}}<span class="visually-hidden">Light theme</span></a>
         </div>
+        {{if .Authed}}
+        <div class="nav-item dropdown d-none d-md-flex me-3">
+          <a href="#" class="nav-link px-0" data-bs-toggle="dropdown" tabindex="0" aria-label="Recent file events" aria-expanded="false">{{icon "bell"}}{{if .Bell}}<span class="badge bg-red"></span>{{end}}</a>
+          <div class="dropdown-menu dropdown-menu-arrow dropdown-menu-end dropdown-menu-card">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Recent file events</h3></div>
+              {{if .Bell}}
+              <div class="list-group list-group-flush list-group-hoverable">
+                {{range .Bell}}<div class="list-group-item">
+                  <div class="row align-items-center">
+                    <div class="col-auto"><span class="status-dot {{eventDot .Kind}} d-block"></span></div>
+                    <div class="col text-truncate">
+                      <span class="text-body d-block text-truncate">{{.Kind}} {{base .Path}}</span>
+                      <div class="d-block text-secondary text-truncate mt-n1">{{.Area}} · {{when .Seen}}</div>
+                    </div>
+                  </div>
+                </div>{{end}}
+              </div>
+              {{else}}<div class="card-body text-secondary">No file events yet.</div>{{end}}
+              <div class="card-footer"><a href="/events" class="btn btn-outline-primary w-100">All events</a></div>
+            </div>
+          </div>
+        </div>
+        <div class="nav-item dropdown">
+          <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="avatar avatar-sm bg-primary-lt">{{icon "terminal-2"}}<span class="visually-hidden">{{brandCommand}} menu</span></span>
+            <div class="d-none d-xl-block ps-2">
+              <div>{{brandCommand}} {{.Version}}</div>
+              <div class="mt-1 small text-secondary">{{if .DevRoot}}dev mode{{else if .ReadOnly}}read-only{{else}}this machine{{end}}</div>
+            </div>
+          </a>
+          <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+            <a href="/settings" class="dropdown-item">{{icon "settings"}}<span class="ms-2">Settings</span></a>
+            <a href="/events" class="dropdown-item">{{icon "activity"}}<span class="ms-2">Events</span></a>
+            <a href="/doctor" class="dropdown-item">{{icon "stethoscope"}}<span class="ms-2">Doctor</span></a>
+            <div class="dropdown-divider"></div>
+            <a href="?theme=auto" class="dropdown-item">{{icon "device-desktop"}}<span class="ms-2">Follow the system theme</span></a>
+            <a href="/about" class="dropdown-item">{{icon "info-circle"}}<span class="ms-2">About</span></a>
+            <a href="/about/licenses" class="dropdown-item">{{icon "license"}}<span class="ms-2">Third-party licences</span></a>
+          </div>
+        </div>
+        {{end}}
       </div>
     </div>
   </header>
@@ -40,7 +79,7 @@
               {{template "navlink" (navItem . "overview" "/" "layout-dashboard" "Overview")}}
               {{template "navgroup" (navGroup . "ssh" "key" "SSH" (navItem . "profiles" "/profiles" "users" "Profiles") (navItem . "hosts" "/hosts" "server" "Hosts") (navItem . "sshconfig" "/ssh-config" "file-code" "SSH config") (navItem . "keys" "/keys" "key" "Keys") (navItem . "vms" "/vms" "device-desktop" "VMs") (navItem . "snapshots" "/snapshots" "archive" "Snapshots"))}}
               {{template "navgroup" (navGroup . "auth" "cloud-lock" "Auth" (navItem . "tokens" "/tokens" "cloud-lock" "Auth tokens"))}}
-              {{template "navgroup" (navGroup . "system" "settings" "System" (navItem . "history" "/history" "history" "History") (navItem . "doctor" "/doctor" "stethoscope" "Doctor") (navItem . "audit" "/audit" "shield-check" "Audit") (navItem . "settings" "/settings" "settings" "Settings"))}}
+              {{template "navgroup" (navGroup . "system" "settings" "System" (navItem . "history" "/history" "history" "History") (navItem . "events" "/events" "activity" "Events") (navItem . "doctor" "/doctor" "stethoscope" "Doctor") (navItem . "audit" "/audit" "shield-check" "Audit") (navItem . "settings" "/settings" "settings" "Settings") (navItem . "about" "/about" "info-circle" "About"))}}
             </ul>
           </nav>
         </div>

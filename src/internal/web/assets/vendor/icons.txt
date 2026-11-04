@@ -2,14 +2,19 @@
 # vendoring tool cuts exactly these out of @tabler/icons-sprite into
 # tabler-icons.svg, and fails if one no longer exists upstream. Add a name
 # here, then run `make tabler-vendor`.
+activity
+alert-circle
 alert-triangle
 archive
 arrow-left
+bell
+brand-github
 circle-check
 circle-x
 clock
 cloud-lock
 device-desktop
+dots-vertical
 download
 file-code
 git-compare
@@ -20,6 +25,7 @@ layout-dashboard
 license
 lock
 moon
+pencil
 plus
 refresh
 server
@@ -30,3 +36,5 @@ sun
 terminal-2
 trash
 users
+x
+arrow-back-up

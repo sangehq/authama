@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"net/http"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/core/expiry"
 	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/services/events"
 	"github.com/simtabi/authama/src/internal/services/history"
 )
 
@@ -179,6 +181,47 @@ func funcs(a *assetSet) template.FuncMap {
 			}
 			return strings.Join(parts, ", ")
 		},
+		"base": filepath.Base,
+		// pct is part of whole as a percentage, rounded to the 5% steps
+		// app.css has width classes for (no inline style passes the CSP).
+		"pct": func(part, whole int) int {
+			if whole <= 0 || part <= 0 {
+				return 0
+			}
+			p := (part*100 + whole/2) / whole
+			return min(100, (p+2)/5*5)
+		},
+		"sub": func(a, b int) int { return a - b },
+		"eventDot": func(kind string) string {
+			switch kind {
+			case events.KindAdded:
+				return "status-dot-animated status-green"
+			case events.KindRemoved:
+				return "status-red"
+			case events.KindMode:
+				return "status-yellow"
+			case events.KindChanged:
+				return "status-azure"
+			}
+			return "status-secondary"
+		},
+		"eventBadge": func(kind string) string {
+			switch kind {
+			case events.KindAdded:
+				return "badge-ok"
+			case events.KindRemoved:
+				return "badge-bad"
+			case events.KindMode:
+				return "badge-warn"
+			case events.KindChanged:
+				return "badge-info"
+			}
+			return "badge-muted"
+		},
+		"confirm": func(id, form, title, text, label string) confirmModal {
+			return confirmModal{ID: id, Form: form, Title: title, Text: text, Label: label}
+		},
+		"withPurge": func(m confirmModal) confirmModal { m.Purge = true; return m },
 		"stat": func(label string, count int, href, icon, colour string) stat {
 			return stat{Label: label, Count: count, Href: href, Icon: icon, Colour: colour}
 		},
@@ -190,6 +233,10 @@ func funcs(a *assetSet) template.FuncMap {
 		},
 		"action": func(label, href, icon string) headerAction {
 			return headerAction{Label: label, Href: href, Icon: icon}
+		},
+		// panel is an action that slides in the offcanvas panel with that id.
+		"panel": func(label, id, icon string) headerAction {
+			return headerAction{Label: label, Href: "#" + id, Icon: icon, Panel: id}
 		},
 		"navGroup": func(_ view, key, icon, label string, items ...navItem) navGroup {
 			g := navGroup{Key: key, Icon: icon, Label: label, Items: items}
@@ -274,10 +321,16 @@ type pageHeader struct {
 
 // headerAction is a link at the right of a page header, to a form further
 // down the page; the first is the primary one.
-type headerAction struct{ Label, Href, Icon string }
+type headerAction struct{ Label, Href, Icon, Panel string }
 
 // emptyState is a list with nothing in it yet.
 type emptyState struct{ Icon, Title, Text string }
+
+// confirmModal asks before a destructive action is previewed.
+type confirmModal struct {
+	ID, Form, Title, Text, Label string
+	Purge                        bool // offer "and its key files", for a profile delete
+}
 
 // stat is one count on the overview.
 type stat struct {
@@ -310,6 +363,8 @@ type view struct {
 	SSHDir   string
 	DevRoot  string
 	Data     any
+	// Bell is the newest file events, for the header's notifications menu.
+	Bell []events.Event
 }
 
 func (s *Server) newView(r *http.Request, nav, title string, data any) view {
@@ -319,6 +374,9 @@ func (s *Server) newView(r *http.Request, nav, title string, data any) view {
 	if sess := sessionFrom(r.Context()); sess != nil {
 		v.Authed = true
 		v.CSRF = sess.csrf
+		if s.opts.EventRoots != nil {
+			v.Bell, _ = events.List(p, events.Filter{Limit: 6})
+		}
 	}
 	return v
 }
