@@ -3,6 +3,7 @@ package events
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -69,6 +70,11 @@ func TestScanRecordsEveryChangeAndNoContents(t *testing.T) {
 		got[e.Path] = e.Kind + "/" + e.Area
 	}
 	want := map[string]string{npmrc: "added/auth", manifest: "changed/config", key: "mode/ssh", pub: "added/ssh"}
+	if runtime.GOOS == "windows" {
+		// Go's chmod on Windows sets only the read-only bit: 0600 to 0644 is
+		// no change there, so there is no mode event to see.
+		delete(want, key)
+	}
 	for path, w := range want {
 		if got[path] != w {
 			t.Errorf("%s: %q, want %q (all: %v)", filepath.Base(path), got[path], w, got)
@@ -94,7 +100,7 @@ func TestScanRecordsEveryChangeAndNoContents(t *testing.T) {
 		if strings.Contains(string(b), secret) || strings.Contains(string(b), "private") {
 			t.Errorf("%s holds a file's contents", filepath.Base(f))
 		}
-		if fi, _ := os.Stat(f); fi.Mode().Perm() != 0o600 {
+		if fi, _ := os.Stat(f); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
 			t.Errorf("%s is %o, want 0600", filepath.Base(f), fi.Mode().Perm())
 		}
 	}
@@ -103,11 +109,15 @@ func TestScanRecordsEveryChangeAndNoContents(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(all) != 6 || all[0].Kind != KindRemoved {
+	wantAll, wantSSH := 6, 3
+	if runtime.GOOS == "windows" {
+		wantAll, wantSSH = 5, 2
+	}
+	if len(all) != wantAll || all[0].Kind != KindRemoved {
 		t.Errorf("List = %d events, newest %+v", len(all), all[0])
 	}
-	if ssh, _ := List(p, Filter{Area: AreaSSH}); len(ssh) != 3 {
-		t.Errorf("ssh events = %d, want 3", len(ssh))
+	if ssh, _ := List(p, Filter{Area: AreaSSH}); len(ssh) != wantSSH {
+		t.Errorf("ssh events = %d, want %d", len(ssh), wantSSH)
 	}
 	if lim, _ := List(p, Filter{Limit: 2}); len(lim) != 2 {
 		t.Errorf("limit 2 gave %d", len(lim))
