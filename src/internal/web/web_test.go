@@ -40,8 +40,10 @@ func TestEveryPageRenders(t *testing.T) {
 		"/tokens":                               "authama token list",
 		"/settings":                             "authama.json",
 		"/ssh-config":                           "authama ssh config check",
+		"/events":                               "authama events",
+		"/about":                                "This build",
 	}
-	if len(pages) < 17 {
+	if len(pages) < 19 {
 		t.Fatal("the page list shrank")
 	}
 	for path, want := range pages {

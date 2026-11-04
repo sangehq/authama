@@ -86,3 +86,34 @@ main:focus { outline: none; }
    "settings: ok"). The same hue as .badge-ok, at >= 5.7:1 in both themes. */
 .text-success { color: #1a6b2b !important; }
 :root[data-bs-theme=dark] .text-success { color: #8fd8a0 !important; }
+
+/* Progress bar widths in 5% steps: a bar's width comes from a class, since
+   the CSP admits no inline style. */
+.pct-0 { width: 0%; }
+.pct-5 { width: 5%; }
+.pct-10 { width: 10%; }
+.pct-15 { width: 15%; }
+.pct-20 { width: 20%; }
+.pct-25 { width: 25%; }
+.pct-30 { width: 30%; }
+.pct-35 { width: 35%; }
+.pct-40 { width: 40%; }
+.pct-45 { width: 45%; }
+.pct-50 { width: 50%; }
+.pct-55 { width: 55%; }
+.pct-60 { width: 60%; }
+.pct-65 { width: 65%; }
+.pct-70 { width: 70%; }
+.pct-75 { width: 75%; }
+.pct-80 { width: 80%; }
+.pct-85 { width: 85%; }
+.pct-90 { width: 90%; }
+.pct-95 { width: 95%; }
+.pct-100 { width: 100%; }
+
+/* Sortable headers take the header cell's colour: Tabler's .table-sort grey is
+   below 4.5:1 on the header tint (axe, every sorted table). */
+.table-sort, .table-sort:hover, .table-sort.asc, .table-sort.desc { color: inherit; }
+/* Table header text: Tabler's grey is 4.38:1 on the header tint in the light
+   theme; one step darker clears 4.5:1. */
+:root:not([data-bs-theme=dark]) .table thead th { color: #5c5c5c; }

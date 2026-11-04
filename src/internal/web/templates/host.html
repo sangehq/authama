@@ -63,10 +63,11 @@
         </form>
       </div>
       <div class="card-footer">
-        {{template "change_open" $}}<input type="hidden" name="action" value="host-delete"><input type="hidden" name="profile" value="{{.Profile}}"><input type="hidden" name="alias" value="{{.Alias}}">
-          <button type="submit" class="btn btn-outline-danger">Delete host {{.Alias}} and its pins</button>
+        <form method="post" action="/changes/preview" id="f-host-delete"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="host-delete"><input type="hidden" name="profile" value="{{.Profile}}"><input type="hidden" name="alias" value="{{.Alias}}">
+          <button type="submit" class="btn btn-outline-danger" data-confirm="m-host-delete">{{icon "trash"}}<span class="ms-1">Delete host {{.Alias}} and its pins</span></button>
           <span class="text-secondary small ms-2">Its key files stay on disk.</span>
         </form>
+        {{template "confirm" (confirm "m-host-delete" "f-host-delete" (printf "Delete host %s?" .Alias) "Its manifest entry, its block in ~/.ssh/config and its pinned host keys go; its key files stay. You see the change before it is made." "Preview the delete")}}
         {{if $.Data.VM}}{{template "change_open" $}}<input type="hidden" name="action" value="vm-docker-context"><input type="hidden" name="alias" value="{{.Alias}}">
           <button type="submit" class="btn btn-outline-secondary mt-2">Create a Docker context for {{.Alias}}</button>
         </form>{{end}}

@@ -10,9 +10,23 @@
     </div>
     {{if .Actions}}<div class="col-auto ms-auto d-print-none">
       <div class="btn-list">
-        {{range $i, $a := .Actions}}<a href="{{$a.Href}}" class="btn {{if eq $i 0}}btn-primary{{else}}btn-outline-secondary{{end}}">{{icon $a.Icon}}<span class="ms-1">{{$a.Label}}</span></a>
+        {{range $i, $a := .Actions}}<a href="{{$a.Href}}" class="btn {{if eq $i 0}}btn-primary{{else}}btn-outline-secondary{{end}}"{{if $a.Panel}} data-bs-toggle="offcanvas" role="button" aria-controls="{{$a.Panel}}"{{end}}>{{icon $a.Icon}}<span class="ms-1">{{$a.Label}}</span></a>
         {{end}}
       </div>
     </div>{{end}}
   </div>
+</div>{{end}}
+
+
+{{/* A Tabler slide-in panel from the right, holding one form. The page writes
+     `{{template "panel_open" (header "" "Title" "")}}`-style markup itself;
+     this pair just frames it. */}}
+{{define "panel_open"}}<div class="offcanvas offcanvas-end" tabindex="-1" id="{{.Pretitle}}" aria-labelledby="{{.Pretitle}}-title">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title" id="{{.Pretitle}}-title">{{.Title}}</h2>
+    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body">
+    {{if .Subtitle}}<p class="text-secondary">{{.Subtitle}}</p>{{end}}{{end}}
+{{define "panel_close"}}  </div>
 </div>{{end}}
