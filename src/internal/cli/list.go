@@ -8,12 +8,15 @@ import (
 
 	"github.com/simtabi/authama/src/internal/core/inventory"
 	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/services/exports"
 	"github.com/simtabi/authama/src/internal/services/query"
+	"github.com/simtabi/authama/src/internal/util/csvout"
 )
 
 // newListCmd is the native list verb: profiles -> hosts (tree), filterable.
 func newListCmd() *cobra.Command {
 	var profile, provider, typ, tag string
+	var asCSV bool
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Filterable tree across profiles",
@@ -36,6 +39,9 @@ func newListCmd() *cobra.Command {
 				return err
 			}
 			out := c.OutOrStdout()
+			if asCSV {
+				return csvout.Write(out, exports.Hosts(groups))
+			}
 			filtered := profile != "" || provider != "" || typ != "" || tag != ""
 			if len(groups) == 0 && filtered {
 				_, _ = fmt.Fprintln(out, "no hosts match the filter")
@@ -59,6 +65,7 @@ func newListCmd() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&asCSV, "csv", false, "print the hosts as CSV, one row each, header first")
 	cmd.Flags().StringVar(&profile, "profile", "", "filter to one profile")
 	cmd.Flags().StringVar(&provider, "provider", "", "filter by provider")
 	cmd.Flags().StringVar(&typ, "type", "", "provider category, e.g. vcs")

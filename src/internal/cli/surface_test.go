@@ -101,6 +101,7 @@ var goOnly = map[string]string{
 	"clean":      "D1 - prunes stale pins and records left by deletions",
 
 	"doctor --strict": "settings - CI gate: escalates every dangling-key state to fatal",
+	"list --csv":      "exports - every host as CSV, the columns the web UI downloads",
 
 	// Categories group profiles under profiles/<category>/ with one Include per
 	// category. v1 had only the flat layout.

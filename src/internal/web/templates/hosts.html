@@ -5,7 +5,7 @@
 {{template "page_header" (header "SSH" "Hosts" "Every host, by profile, as it is rendered into ~/.ssh/config." (panel "Add a host" "add-host" "plus") (action "SSH config" "/ssh-config" "file-code"))}}
 {{end}}
 <div class="card mb-3">
-  <div class="card-header"><h2 class="card-title">Hosts</h2></div>
+  <div class="card-header"><h2 class="card-title">Hosts</h2><div class="card-actions"><a class="btn btn-sm btn-outline-secondary" href="/exports/hosts.csv" download>{{icon "download"}}<span class="ms-1">CSV</span></a></div></div>
   {{if .Data}}
   <div class="table-responsive">
     <table class="table table-vcenter card-table table-hover" id="hosts-table" data-table="hosts">

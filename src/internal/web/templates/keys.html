@@ -1,7 +1,7 @@
 {{define "content"}}
 {{template "page_header" (header "SSH" "Keys" "Every key with its fingerprint and expiry, and the loose keys kept on purpose.")}}
 <div class="card">
-  <div class="card-header"><h2 class="card-title">Keys</h2>{{if .Data.Rows}}<div class="card-actions text-secondary small">{{len .Data.Rows}} in the manifest</div>{{end}}</div>
+  <div class="card-header"><h2 class="card-title">Keys</h2>{{if .Data.Rows}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data.Rows}} in the manifest</span><a class="btn btn-sm btn-outline-secondary" href="/exports/keys.csv" download>{{icon "download"}}<span class="ms-1">CSV</span></a></div>{{end}}</div>
   {{if .Data.Rows}}
   <div class="table-responsive">
     <table class="table table-vcenter card-table table-hover" id="keys-table" data-table="keys">

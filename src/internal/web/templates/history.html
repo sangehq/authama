@@ -17,6 +17,7 @@
   </div>
 </form>
 <div class="card">
+  <div class="card-header"><h2 class="card-title">Operations</h2><div class="card-actions"><a class="btn btn-sm btn-outline-secondary" href="/exports/history.csv" download>{{icon "download"}}<span class="ms-1">CSV</span></a></div></div>
   {{template "op_table" .Ops}}
   {{if .More}}<div class="card-footer"><a href="{{.More}}">Show more</a></div>{{end}}
 </div>

@@ -14,8 +14,10 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/services/exports"
 	"github.com/simtabi/authama/src/internal/services/history"
 	"github.com/simtabi/authama/src/internal/services/mutation"
+	"github.com/simtabi/authama/src/internal/util/csvout"
 	"github.com/simtabi/authama/src/internal/util/lock"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
@@ -23,7 +25,7 @@ import (
 func newHistoryCmd() *cobra.Command {
 	var f history.Filter
 	var since, until string
-	var asJSON bool
+	var asJSON, asCSV bool
 	cmd := &cobra.Command{
 		Use:   "history",
 		Short: "List the changes authama has made, newest first",
@@ -55,6 +57,9 @@ func newHistoryCmd() *cobra.Command {
 				return err
 			}
 			out := c.OutOrStdout()
+			if asCSV {
+				return csvout.Write(out, exports.History(ops))
+			}
 			if asJSON {
 				enc := json.NewEncoder(out)
 				for _, o := range ops {
@@ -79,6 +84,7 @@ func newHistoryCmd() *cobra.Command {
 	fl.StringVar(&f.Source, "source", "", "only operations from cli, tui, web or backfill")
 	fl.IntVar(&f.Limit, "limit", 50, "at most this many operations (0 for all)")
 	fl.BoolVar(&asJSON, "json", false, "one JSON object per operation, its events nested")
+	fl.BoolVar(&asCSV, "csv", false, "one CSV row per operation, header first")
 
 	cmd.AddCommand(&cobra.Command{
 		Use:   "show <op_id>",

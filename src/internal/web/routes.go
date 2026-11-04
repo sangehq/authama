@@ -9,8 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/services/events"
+	"github.com/simtabi/authama/src/internal/services/exports"
 	"github.com/simtabi/authama/src/internal/services/history"
+	"github.com/simtabi/authama/src/internal/util/csvout"
 )
 
 // routes registers every page. Each takes names from the path, the query or
@@ -334,6 +337,17 @@ func (h pages) handleAudit(w http.ResponseWriter, r *http.Request) {
 // it: it is a page in another format.
 func (h pages) handleExport(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
+	if t, ok, err := h.listCSV(name); ok {
+		if err != nil {
+			h.fail(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+		w.Header().Set("Content-Disposition", `attachment; filename="`+brand.Command+"-"+name+`"`)
+		w.Header().Set("Cache-Control", "no-store")
+		_ = csvout.Write(w, t)
+		return
+	}
 	if name != ExportFlat && name != ExportTermius {
 		h.fail(w, r, ErrNotFound)
 		return
@@ -370,4 +384,32 @@ func (s *Server) licences() []licence {
 		}
 	}
 	return ls
+}
+
+// csvLists are the lists the pages show that download as CSV, by file name:
+// the same columns as the CLI's --csv on each.
+var csvLists = []string{"hosts.csv", "keys.csv", "tokens.csv", "history.csv", "events.csv"}
+
+// listCSV builds one of csvLists; ok is false for any other name. It is a
+// pages helper, not a handler, so it adds no route of its own.
+func (h pages) listCSV(name string) (t csvout.Table, ok bool, err error) {
+	e := h.s.opts.Engine
+	switch name {
+	case "hosts.csv":
+		groups, err := e.Hosts()
+		return exports.Hosts(groups), true, err
+	case "keys.csv":
+		kv, err := e.Keys()
+		return exports.Keys(kv.Rows), true, err
+	case "tokens.csv":
+		tv, err := e.Tokens()
+		return exports.Tokens(tv.Items), true, err
+	case "history.csv":
+		ops, err := e.History(history.Filter{Limit: 0})
+		return exports.History(ops), true, err
+	case "events.csv":
+		evs, err := events.List(e.Home(), events.Filter{})
+		return exports.Events(evs), true, err
+	}
+	return csvout.Table{}, false, nil
 }

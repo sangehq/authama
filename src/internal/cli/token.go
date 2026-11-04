@@ -15,8 +15,10 @@ import (
 	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/core/tokens"
 	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/simtabi/authama/src/internal/services/exports"
 	"github.com/simtabi/authama/src/internal/services/mutation"
 	"github.com/simtabi/authama/src/internal/services/tokensvc"
+	"github.com/simtabi/authama/src/internal/util/csvout"
 	"github.com/simtabi/authama/src/internal/util/envnames"
 )
 
@@ -124,7 +126,7 @@ func say(c *cobra.Command, format string, a ...any) {
 // --- list --------------------------------------------------------------
 
 func newTokenListCmd() *cobra.Command {
-	var asJSON, reveal, yes bool
+	var asJSON, asCSV, reveal, yes bool
 	var targets []string
 	var project string
 	cmd := &cobra.Command{
@@ -150,6 +152,12 @@ func newTokenListCmd() *cobra.Command {
 					items = append(items, it)
 				}
 			}
+			if asCSV {
+				if reveal {
+					return errors.New("--csv never holds a secret: drop --reveal")
+				}
+				return csvout.Write(c.OutOrStdout(), exports.Tokens(items))
+			}
 			if asJSON {
 				if items == nil {
 					items = []tokens.Installed{}
@@ -169,6 +177,7 @@ func newTokenListCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&asJSON, "json", false, "print the list as JSON")
+	cmd.Flags().BoolVar(&asCSV, "csv", false, "print the list as CSV, header first; never the secrets")
 	cmd.Flags().BoolVar(&reveal, "reveal", false, "show the secret values (asks first; --yes when not at a terminal)")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "reveal without asking")
 	targetsFlag(cmd, &targets, "only these tools")

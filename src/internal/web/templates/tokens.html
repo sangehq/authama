@@ -5,7 +5,7 @@
 {{template "page_header" (header "Auth" "Auth tokens" "Package-manager and git credentials: what is installed and how it audits. A secret is never shown." (panel "Add a token" "add-token" "plus") (action "Apply the config" "#apply-config" "refresh"))}}
 {{end}}
 <div class="card mb-3">
-  <div class="card-header"><h2 class="card-title">Installed</h2>{{if .Items}}<div class="card-actions text-secondary small">{{len .Items}} installed</div>{{end}}</div>
+  <div class="card-header"><h2 class="card-title">Installed</h2>{{if .Items}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Items}} installed</span><a class="btn btn-sm btn-outline-secondary" href="/exports/tokens.csv" download>{{icon "download"}}<span class="ms-1">CSV</span></a></div>{{end}}</div>
   {{if .Items}}
   <div class="table-responsive">
     <table class="table table-vcenter card-table table-hover" id="tokens-table" data-table="tokens">
