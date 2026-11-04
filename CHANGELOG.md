@@ -82,6 +82,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A web preview now shows `authama.json` and `tokens.json` with the other config files. It was left out of the preview's
   copy, so a change writing it would have previewed as writing nothing.
 
+### Changed (CI)
+
+- Pull requests test on Linux and Windows and run a darwin cross-check (build and vet for macOS arm64
+  and amd64); the full macOS test runs weekly and on dispatch. The required checks follow.
+
 ### Security
 
 - The web server refuses a request body over 1 MiB (413) before parsing it, holds headers to 64 KiB
