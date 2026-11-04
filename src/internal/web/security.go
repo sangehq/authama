@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
+	"errors"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -99,9 +100,23 @@ func securityHeaders(next http.Handler) http.Handler {
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("Cross-Origin-Opener-Policy", "same-origin")
 		h.Set("Cross-Origin-Resource-Policy", "same-origin")
+		// The UI uses no device API; a page that tried would be refused.
+		h.Set("Permissions-Policy", PermissionsPolicy)
+		// No form here is near this size (host specs, the largest, are held
+		// to 16 KiB); a bigger body is refused before it is parsed, rather
+		// than read into memory up to the form parser's 10 MB default.
+		if r.Body != nil && r.Method != http.MethodGet && r.Method != http.MethodHead {
+			r.Body = http.MaxBytesReader(w, r.Body, MaxBodyBytes)
+		}
 		next.ServeHTTP(w, r)
 	})
 }
+
+// PermissionsPolicy turns off every device API for these pages.
+const PermissionsPolicy = "camera=(), microphone=(), geolocation=(), usb=(), serial=(), bluetooth=(), payment=(), clipboard-read=(), display-capture=()"
+
+// MaxBodyBytes is the largest request body the server reads.
+const MaxBodyBytes = 1 << 20
 
 // hostCheck refuses any Host header outside the allowed set.
 func (s *Server) hostCheck(next http.Handler) http.Handler {
@@ -198,6 +213,16 @@ func (s *Server) sameOrigin(next http.Handler) http.Handler {
 			s.renderError(w, r, http.StatusForbidden, "Cross-origin request refused",
 				"Changes can only be made from this server's own pages.")
 			return
+		}
+		// Parse here, so a body over MaxBodyBytes is reported as what it is
+		// rather than as a missing CSRF token.
+		if err := r.ParseForm(); err != nil {
+			var tooBig *http.MaxBytesError
+			if errors.As(err, &tooBig) {
+				s.renderError(w, r, http.StatusRequestEntityTooLarge, "Too large",
+					"That form is larger than any change here sends.")
+				return
+			}
 		}
 		sess := sessionFrom(r.Context())
 		token := r.Header.Get(csrfHeader)

@@ -160,9 +160,21 @@ func TestEveryResponseCarriesTheSecurityHeaders(t *testing.T) {
 	} {
 		h := rec.Header()
 		if h.Get("Content-Security-Policy") != ContentSecurityPolicy || h.Get("X-Content-Type-Options") != "nosniff" ||
-			h.Get("X-Frame-Options") != "DENY" || h.Get("Referrer-Policy") != "same-origin" {
+			h.Get("X-Frame-Options") != "DENY" || h.Get("Referrer-Policy") != "same-origin" ||
+			h.Get("Permissions-Policy") != PermissionsPolicy {
 			t.Errorf("%s: headers %v", name, h)
 		}
+	}
+}
+
+// A body bigger than MaxBodyBytes is refused, not read into memory.
+func TestAnOversizedBodyIsRefused(t *testing.T) {
+	s, _, _ := newTestServer(t)
+	c := signIn(t, s)
+	f := addHost("db")
+	f.Set("specs", strings.Repeat("x", MaxBodyBytes+1))
+	if rec := c.change("/changes/preview", f); rec.Code != http.StatusRequestEntityTooLarge {
+		t.Errorf("an oversized body: %d, want 413", rec.Code)
 	}
 }
 

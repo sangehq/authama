@@ -113,7 +113,11 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 	srv := &http.Server{
 		Handler:           s.handler,
 		ReadHeaderTimeout: 10 * time.Second,
-		IdleTimeout:       2 * time.Minute,
+		// A body (a form) is read in 30 seconds or not at all. There is no
+		// WriteTimeout: a job's event stream stays open while the job runs.
+		ReadTimeout:    30 * time.Second,
+		IdleTimeout:    2 * time.Minute,
+		MaxHeaderBytes: 64 << 10,
 	}
 	errc := make(chan error, 1)
 	go func() { errc <- srv.Serve(ln) }()
