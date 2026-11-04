@@ -24,6 +24,9 @@
               {{if .Fingerprint}}<button type="button" class="dropdown-item" data-copy="{{.Fingerprint}}">{{icon "fingerprint"}}<span class="ms-2">Copy the fingerprint</span></button>{{end}}
               <button type="button" class="dropdown-item" data-copy="{{.IdentityFile}}">{{icon "copy"}}<span class="ms-2">Copy the identity file's path</span></button>
               <a class="dropdown-item" href="/history?key={{.Ref.KeyName}}&amp;profile={{.Ref.Profile}}">{{icon "history"}}<span class="ms-2">History</span></a>
+              {{if not $.ReadOnly}}<a class="dropdown-item" href="/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}#lifetime">{{icon "hourglass"}}<span class="ms-2">Set lifetime</span></a>
+              {{if not $.DevRoot}}<a class="dropdown-item" href="/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}">{{icon "recycle"}}<span class="ms-2">Rotate or roll back</span></a>
+              <a class="dropdown-item text-danger" href="/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}#revoke">{{icon "ban"}}<span class="ms-2">Revoke</span></a>{{end}}{{end}}
               {{if and (not $.ReadOnly) .Declared (not .Hosts)}}<div class="dropdown-divider"></div>
               <button type="submit" class="dropdown-item text-danger" form="f-key-{{.Ref.Profile}}-{{.Ref.KeyName}}" data-confirm="m-key-{{.Ref.Profile}}-{{.Ref.KeyName}}">{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
             {{template "menu_close"}}

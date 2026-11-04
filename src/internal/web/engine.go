@@ -118,8 +118,12 @@ type KeyView struct {
 	Detail keysvc.Detail
 	// PublicKey is the key's public key line, "" when there is none to show.
 	PublicKey string
-	Expiry    *expiry.Status
-	Ops       []history.Op
+	// Revoked is the date the key was revoked, "" when it was not; DefaultDays
+	// the lifetime a key without its own inherits.
+	Revoked     string
+	DefaultDays int
+	Expiry      *expiry.Status
+	Ops         []history.Op
 }
 
 // SnapshotView is one snapshot in the list.
@@ -377,7 +381,10 @@ func (e AppEngine) Key(ref string) (KeyView, error) {
 		if err != nil {
 			return KeyView{}, err
 		}
-		v := KeyView{Detail: d, PublicKey: publicKeyLine(d.PublicPath)}
+		v := KeyView{Detail: d, PublicKey: publicKeyLine(d.PublicPath), DefaultDays: m.Defaults.RotateAfterDays}
+		if revs, err := inventory.LoadRevocations(inventory.RevokedPath(e.P.Inventory())); err == nil && d.Fingerprint != "" {
+			v.Revoked = revs[d.Fingerprint].RevokedOn
+		}
 		if states, err := notifier.New(e.P, m).States(time.Now()); err == nil {
 			for i := range states {
 				if states[i].Profile == r.Profile && states[i].KeyName == r.KeyName {

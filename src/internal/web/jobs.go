@@ -17,6 +17,7 @@ import (
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/services/bundler"
 	"github.com/simtabi/authama/src/internal/services/deployer"
+	"github.com/simtabi/authama/src/internal/services/editor"
 	"github.com/simtabi/authama/src/internal/services/history"
 	"github.com/simtabi/authama/src/internal/services/jobs"
 	"github.com/simtabi/authama/src/internal/services/keystore"
@@ -42,6 +43,8 @@ var jobFields = map[string][]string{
 	"deploy":   {"key", "target"},
 	"rotate":   {"key", "allow_unverified"},
 	"rollback": {"key"},
+	// revoke removes a key from every target and records it as revoked.
+	"revoke": {"key", "reason"},
 	// rotate-keys rotates a profile's keys, or every key, one after another.
 	"rotate-keys": {"profile", "all", "allow_unverified"},
 	// bundle-restore lays a bundle from the state home's dist/ back.
@@ -135,6 +138,25 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 				"asks you to paste the new public key where a target takes it by hand, and waits",
 			},
 			run: func(j *jobs.Job) error { return rotateJob(j, h.p, retain, key, allow) },
+		}, nil
+	case "revoke":
+		reason, err := plain(f, "reason")
+		if err != nil {
+			return jobSpec{}, err
+		}
+		args := []string{key, "--yes"}
+		if reason != "" {
+			args = append(args, "--reason", reason)
+		}
+		return jobSpec{
+			scope: mutation.Scope{Command: "key revoke", Args: args, Source: history.SourceWeb, Subjects: subjects},
+			what: []string{
+				"asks every target " + key + " is deployed to, through its host's provider, to remove it",
+				"names each target it could not be removed from, for you to remove it there by hand",
+				"records the key as revoked, so deploy and rollback refuse it from then on",
+				"keeps the key's declaration, hosts and files: mint its successor next, with Rotate or keygen --force",
+			},
+			run: func(j *jobs.Job) error { return revokeJob(j, h.p, ref, reason) },
 		}, nil
 	default: // rollback
 		return jobSpec{
@@ -541,4 +563,25 @@ func (h jobPages) handleJobCancel(w http.ResponseWriter, r *http.Request) {
 	v, _ := j.View()
 	h.s.jobs.Cancel(v.ID)
 	http.Redirect(w, r, "/jobs/"+v.ID, http.StatusSeeOther)
+}
+
+// revokeJob is `authama ssh key revoke` after its confirmation.
+func revokeJob(j *jobs.Job, p paths.Paths, ref manifest.KeyRef, reason string) error {
+	mutation.LockForMutation(p)
+	if err := j.Step(); err != nil {
+		return err
+	}
+	res, err := editor.New(p).Unattended(j).RevokeKey(ref, reason)
+	if err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintf(j, "revoked %s (%s)\n", res.Key, res.Fingerprint)
+	if len(res.Removed) > 0 {
+		_, _ = fmt.Fprintf(j, "  removed from: %s\n", strings.Join(res.Removed, ", "))
+	}
+	if len(res.NotRemoved) > 0 {
+		_, _ = fmt.Fprintf(j, "  NOT removed from (remove it there by hand): %s\n", strings.Join(res.NotRemoved, ", "))
+		return errors.New("the key is revoked, but not every target could remove it; see above")
+	}
+	return nil
 }

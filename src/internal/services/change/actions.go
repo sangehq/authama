@@ -316,3 +316,28 @@ func ConfigRender() Change {
 		},
 	}
 }
+
+// KeyLifetime is `authama ssh key lifetime <profile/key> <days> --yes`, or
+// `--clear` for days 0: the key's lifetime and its expiry counted again.
+func KeyLifetime(ref manifest.KeyRef, days int) Change {
+	args := []string{ref.String(), fmt.Sprint(days), "--yes"}
+	if days == 0 {
+		args = []string{ref.String(), "--clear", "--yes"}
+	}
+	return Change{
+		Command: "key lifetime", Args: args,
+		Subjects: []history.Subject{{Kind: history.KindProfile, Name: ref.Profile}, {Kind: history.KindKey, Name: ref.KeyName}},
+		Run: func(p paths.Paths, out io.Writer) error {
+			res, err := editor.New(p).SetKeyLifetime(ref, days)
+			if err != nil {
+				return err
+			}
+			exp := res.ExpiresOn
+			if exp == "" {
+				exp = "when it is minted"
+			}
+			_, _ = fmt.Fprintf(out, "%s: %d days, expires %s\n", res.Key, res.Days, exp)
+			return nil
+		},
+	}
+}
