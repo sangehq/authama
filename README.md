@@ -114,6 +114,7 @@ else is in the [documentation index](#documentation).
 - [`deploy`](docs/tools/deploy.md) — installing a public key on its target.
 - [`providers`](docs/tools/providers.md) — the adapter catalog and how to extend it.
 - [VPS keys](docs/tools/vps.md) — cloud account keys and server keys.
+- [Key lifecycle](docs/tools/key-lifecycle.md) — a key's lifetime, rotation, regeneration and revocation, in one place.
 - [`rotate`](docs/tools/rotate.md) — zero-downtime staged rotation and rollback.
 - [`expiry`](docs/tools/expiry.md) — rotation age and scheduled reminders.
 - [`knownhosts`](docs/tools/knownhosts.md) — pinning host keys into the trust store.

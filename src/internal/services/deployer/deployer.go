@@ -106,6 +106,15 @@ func (d *Deployer) Deploy(selector, targetAlias string) (DeployReport, error) {
 	if err != nil {
 		return DeployReport{}, err
 	}
+	// A revoked key is never deployed again, wherever the request comes from.
+	revs, err := inventory.LoadRevocations(inventory.RevokedPath(d.p.Inventory()))
+	if err != nil {
+		return DeployReport{}, err
+	}
+	if r, revoked := revs[fp]; revoked {
+		return DeployReport{}, fmt.Errorf("key %s (%s) was revoked on %s and is never deployed again: "+
+			"mint a new one with `authama ssh keygen %s --force` or `authama ssh rotate %s`", ref, fp, r.RevokedOn, ref, ref)
+	}
 	pubText := ""
 	if b, err := os.ReadFile(pub); err == nil {
 		pubText = string(b)

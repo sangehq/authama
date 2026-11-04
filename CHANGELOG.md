@@ -19,6 +19,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **`--revoke` revokes.** `key delete`, `host delete` and `profile delete --revoke` called a stub
+  that revoked nothing, while their help said it removed the key from its targets. They now ask each
+  deployment's host's provider to remove it, as rotation does, and report each target they could
+  not revoke from rather than counting it as revoked.
+
 - **The web UI's slide-in forms are one column, each hint under its field**: the token, host and
   profile panels no longer squeeze two fields side by side in a panel 400 pixels wide, where labels
   wrapped and fields fell out of line. The token form starts with the tool and shows only the fields
@@ -41,6 +46,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   change and job works as before.
 
 ### Added
+
+- **Key lifecycle.** `authama ssh key lifetime` sets how long a key lives before rotation is due,
+  in days (1 to 1825) or as a preset (`annual`, `semiannual`, `quarterly`, `monthly`), per key or as
+  the default, and counts the expiry date again. `authama ssh key revoke` removes a key from every
+  target it is deployed to and records its fingerprint in `revoked.json`, so `deploy` and
+  `rollback` refuse it; the declaration, hosts and files stay, and each target it could not be
+  removed from is named. `recycle` is another name for `rotate`. A key's page in the web UI sets its
+  lifetime and revokes it, and shows its revocation; its row menu links to both. See
+  `docs/tools/key-lifecycle.md`.
 
 - **`make install` and `make uninstall`.** `install` builds, then copies `build/authama` to
   `~/.local/bin` (`BINDIR=` for elsewhere; `%LOCALAPPDATA%\Programs\authama` on Windows), and says

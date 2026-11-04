@@ -68,6 +68,7 @@ var actionFields = map[string][]string{
 	"token-init":        {"t_composer", "t_npm", "t_docker", "t_git", "t_netrc"},
 	"token-import":      {},
 	"token-config-edit": {"body"},
+	"key-lifetime":      {"key", "lifetime"},
 }
 
 // nameRe is what a profile, alias or key name may be on the web: the
@@ -427,6 +428,16 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 			}
 		}
 		ch = change.TokenInit(targets)
+	case "key-lifetime":
+		ref, err := keyRef(f)
+		errs = append(errs, err)
+		days := 0
+		if v := strings.TrimSpace(f.Get("lifetime")); v != "default" {
+			d, err := editor.ParseLifetime(v)
+			errs = append(errs, err)
+			days = d
+		}
+		ch = change.KeyLifetime(ref, days)
 	case "token-config-edit":
 		body := f.Get("body")
 		switch {

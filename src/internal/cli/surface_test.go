@@ -106,6 +106,16 @@ var goOnly = map[string]string{
 
 	"snapshots list --csv": "exports - every snapshot as CSV, the columns the web UI downloads",
 
+	// The key lifecycle: a lifetime per key or by default, and revocation that
+	// keeps the key declared. v1 had neither.
+	"key lifetime":           "key lifecycle - set a key's rotate_after_days and count its expiry again",
+	"key lifetime --default": "key lifecycle - the lifetime every key without its own inherits",
+	"key lifetime --clear":   "key lifecycle - drop a key's own lifetime",
+	"key lifetime --yes":     "key lifecycle",
+	"key revoke":             "key lifecycle - remove a key from every target, never deploy it again",
+	"key revoke --reason":    "key lifecycle - why, recorded with the revocation",
+	"key revoke --yes":       "key lifecycle",
+
 	// Categories group profiles under profiles/<category>/ with one Include per
 	// category. v1 had only the flat layout.
 	// Bulk key work: rotate a selection instead of one key at a time, and

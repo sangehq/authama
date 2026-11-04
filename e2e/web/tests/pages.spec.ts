@@ -172,3 +172,32 @@ test("a key's page shows its public key with a copy button", async ({ page, cont
   await page.getByRole('button', { name: 'Copy the public key' }).click();
   expect(await copied(page)).toEqual([(await pub.textContent())?.trim()]);
 });
+
+// A row's menu opens over the page, not inside the table's scrolling box: its
+// last item is on screen and is what a click there reaches, even for the last
+// row of a short table, where a clipped menu was cut off at the card's edge.
+for (const { path, table, label } of [
+  { path: '/profiles', table: '#profiles-table', label: /^Actions for profile / },
+  { path: '/keys', table: '#keys-table', label: /^Actions for key / },
+  { path: '/hosts', table: '#hosts-table', label: /^Actions for host / },
+]) {
+  test(`a row's menu is not clipped by its table on ${path}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(path);
+    await page.locator(`${table} tbody tr`).last().getByRole('button', { name: label }).click();
+    const menu = page.locator('.dropdown-menu.show');
+    // Fixed to the viewport, so no scrolling ancestor can clip it: a short
+    // table (two tokens, say) has room for the menu neither below nor above.
+    expect(await menu.evaluate((el) => getComputedStyle(el).position)).toBe('fixed');
+    const last = menu.locator('.dropdown-item').last();
+    await expect(last).toBeVisible();
+    await last.scrollIntoViewIfNeeded();
+    const box = await last.boundingBox();
+    expect(box, 'the last item has a box').not.toBeNull();
+    const reached = await page.evaluate(([x, y]) => {
+      const el = document.elementFromPoint(x, y);
+      return !!el?.closest('.dropdown-menu.show');
+    }, [box!.x + box!.width / 2, box!.y + box!.height / 2]);
+    expect(reached, 'the last item is on top where it is drawn').toBe(true);
+  });
+}

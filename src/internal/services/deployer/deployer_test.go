@@ -324,3 +324,21 @@ func TestRollbackAfterKeygenForceKeepsTheActiveKeyRecorded(t *testing.T) {
 		t.Errorf("the restored key's record is at %s, want %s", rec.Path, ident)
 	}
 }
+
+// A revoked key is never deployed again: the fingerprint in revoked.json
+// stops deploy before it reaches a target, and says what to do instead.
+func TestARevokedKeyIsNeverDeployed(t *testing.T) {
+	f := newFixture(t, manifestJSON)
+	first, err := New(f.p, f.m, f.inv).Deploy("panel_all-ed25519", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	revs := inventory.Revocations{first.Fingerprint: {Key: "panel/panel_all-ed25519", RevokedOn: "2026-11-04"}}
+	if err := revs.Save(inventory.RevokedPath(f.p.Inventory())); err != nil {
+		t.Fatal(err)
+	}
+	_, err = New(f.p, f.m, f.inv).Deploy("panel_all-ed25519", "")
+	if err == nil || !strings.Contains(err.Error(), "revoked on 2026-11-04") || !strings.Contains(err.Error(), "keygen") {
+		t.Fatalf("deploying a revoked key: err = %v, want the refusal naming what to do", err)
+	}
+}
