@@ -47,6 +47,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Four more token tools**: `pypi` (`~/.pypirc`, for `twine`, keeping `index-servers` in step),
+  `cargo` (`credentials.toml`, for crates.io and named registries), `gem` (`~/.gem/credentials`) and
+  `gradle` (`gradle.properties`, as `<repo>Username`/`<repo>Password`). Each merges into an existing
+  file keeping everything authama does not own, is listed, audited, deleted and set like the others,
+  and has a starter template and a docs page. pip, uv, Go, pnpm and Bun read a file `netrc` or `npm`
+  already writes, which the token docs now say. Dev mode hides `CARGO_HOME` and `GRADLE_USER_HOME`.
+
 - **Key lifecycle.** `authama ssh key lifetime` sets how long a key lives before rotation is due,
   in days (1 to 1825) or as a preset (`annual`, `semiannual`, `quarterly`, `monthly`), per key or as
   the default, and counts the expiry date again. `authama ssh key revoke` removes a key from every

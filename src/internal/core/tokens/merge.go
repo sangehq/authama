@@ -45,6 +45,9 @@ func (s *Set) Render(target string, existing string, present bool) (string, erro
 	case Netrc:
 		return s.mergeNetrc(existing), nil
 	}
+	if f, ok := formats[target]; ok {
+		return f.merge(s.Entries(target), existing), nil
+	}
 	return "", fmt.Errorf("unknown target: %s", target)
 }
 

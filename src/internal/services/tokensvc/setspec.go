@@ -65,7 +65,7 @@ func (s SetSpec) Check() (SetPlan, error) {
 		return pl, errors.New("--server is required")
 	}
 	switch {
-	case pl.Target == tokens.NPM || pl.Target == tokens.Composer && tokens.IsTokenMechanism(pl.Mechanism):
+	case tokens.TargetKind(pl.Target) == tokens.KindToken || pl.Target == tokens.Composer && tokens.IsTokenMechanism(pl.Mechanism):
 		pl.Token = true
 	case pl.Target == tokens.Composer && pl.Mechanism != "http-basic":
 		return pl, fmt.Errorf("%s (%s) takes more than one secret; add it to the token config instead", s.Service, pl.Mechanism)

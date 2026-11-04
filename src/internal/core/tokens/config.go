@@ -468,7 +468,11 @@ func (s *Set) Apply(target, mechanism, host string, c Credential) bool {
 	case Docker, Git, Netrc:
 		c.Kind = KindBasic
 	default:
-		return false
+		f, ok := formats[target]
+		if !ok {
+			return false
+		}
+		c.Kind = f.kind()
 	}
 	return s.Add(c)
 }

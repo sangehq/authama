@@ -109,7 +109,7 @@ else is in the [documentation index](#documentation).
 
 - [Command reference](docs/reference/cli.md) — every command and subcommand with its flags, aliases and examples, generated from the binary (a test keeps it current), plus a "which command do I want" table.
 - [Feature catalog](docs/features.md) — every command, what it does, and how it is tested.
-- [`token`](docs/tools/tokens.md) — auth tokens: apply, set, list, show, status, copy, delete, audit, import; per tool: [Composer](docs/tools/tokens/composer.md), [npm](docs/tools/tokens/npm.md), [Docker](docs/tools/tokens/docker.md), [git](docs/tools/tokens/git.md), [netrc](docs/tools/tokens/netrc.md).
+- [`token`](docs/tools/tokens.md) — auth tokens: apply, set, list, show, status, copy, delete, audit, import; per tool: [Composer](docs/tools/tokens/composer.md), [npm](docs/tools/tokens/npm.md), [Docker](docs/tools/tokens/docker.md), [git](docs/tools/tokens/git.md), [netrc](docs/tools/tokens/netrc.md), [PyPI](docs/tools/tokens/pypi.md), [Cargo](docs/tools/tokens/cargo.md), [RubyGems](docs/tools/tokens/gem.md), [Gradle](docs/tools/tokens/gradle.md).
 - [`doctor`](docs/tools/doctor.md) — what it checks (SSH and token files), `--fix`, `--json`, `--strict`.
 - [`deploy`](docs/tools/deploy.md) — installing a public key on its target.
 - [`providers`](docs/tools/providers.md) — the adapter catalog and how to extend it.

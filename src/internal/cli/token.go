@@ -271,7 +271,7 @@ func newTokenSetCmd() *cobra.Command {
 			return writeTokenTargets(cliTokenIO(c), env, set, []string{target}, project, mode, nil)
 		},
 	}
-	cmd.Flags().StringVar(&target, "target", "", "the tool: npm, docker, git or netrc (Composer uses --service)")
+	cmd.Flags().StringVar(&target, "target", "", "the tool: npm, docker, git, netrc, pypi, cargo, gem or gradle (Composer uses --service)")
 	cmd.Flags().StringVar(&service, "service", "", "a Composer service, e.g. github or gitlab (see token providers)")
 	cmd.Flags().StringVar(&server, "server", "", "the registry or git server, e.g. github.com or registry.npmjs.org")
 	cmd.Flags().StringVar(&username, "username", "", "the user name, for http-basic, docker, git and netrc")

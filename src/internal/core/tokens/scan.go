@@ -40,6 +40,10 @@ func Scan(target, text string) []Installed {
 		out = scanGit(text)
 	case Netrc:
 		out = scanNetrc(text)
+	default:
+		if f, ok := formats[target]; ok {
+			out = f.scan(text)
+		}
 	}
 	for i := range out {
 		out[i].Description = Describe(out[i].Target, out[i].Host)
@@ -419,6 +423,9 @@ func Purge(target, host, text string) string {
 		return strings.Join(keep, "\n")
 	case Netrc:
 		return purgeNetrc(host, text)
+	}
+	if f, ok := formats[target]; ok {
+		return f.purge(host, text)
 	}
 	return text
 }

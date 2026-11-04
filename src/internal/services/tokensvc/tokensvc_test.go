@@ -135,7 +135,7 @@ func TestAWriteLeavesNoTempFileAndOverwrites(t *testing.T) {
 func TestCheckupOfAnEmptyHomeIsClean(t *testing.T) {
 	e, _ := sandbox(t)
 	out, failed := e.Checkup(tokens.NewSet(), "")
-	if failed || len(out) != 5 || out[0].Level != "absent" {
+	if failed || len(out) != len(tokens.Targets()) || out[0].Level != "absent" {
 		t.Fatalf("%v %+v", failed, out)
 	}
 }
