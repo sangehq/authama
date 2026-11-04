@@ -13,7 +13,9 @@ From the inventory, per key: `expires_on = created + rotate_after_days`,
 - `due_soon` - within the largest `warn_before_days` threshold (default 30)
 - `overdue` - past `expires_on`
 
-`rotate` resets `created`/`expires_on`, clearing the warning. Archived `/old/`
+The lifetime is the key's own `rotate_after_days` or the default's; set either with
+`authama ssh key lifetime` (see [key lifecycle](key-lifecycle.md#lifetime)), which counts the
+expiry again. `rotate` resets `created`/`expires_on`, clearing the warning. Archived `/old/`
 keys are excluded. To clear several at once, rotate them as a batch: a category
 (`authama ssh rotate --category clients`) or everything (`authama ssh rotate --all`); see
 [Rotating a batch](rotate.md#rotating-a-batch).
