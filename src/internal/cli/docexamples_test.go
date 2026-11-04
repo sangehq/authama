@@ -153,13 +153,5 @@ func checkDocCommand(t *testing.T, rel string, n int, line string, inline bool) 
 }
 
 func isTopLevel(word string) bool {
-	if word == "help" || word == "completion" {
-		return true
-	}
-	for _, t := range brand.TopLevel {
-		if word == t {
-			return true
-		}
-	}
-	return false
+	return word == "help" || word == "completion" || brand.IsTopLevel(word)
 }

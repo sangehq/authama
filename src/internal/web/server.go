@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/simtabi/authama/src/internal/services/jobs"
+	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
 // Options configures a Server.
@@ -42,6 +43,11 @@ type Options struct {
 	// Version and BindAddr are shown in the footer.
 	Version  string
 	BindAddr string
+
+	// Settings reads the settings page for a home. The values in effect were
+	// settled at start-up, which the command that started the server owns,
+	// so it passes this in. Nil shows the files only, with no values.
+	Settings func(paths.Paths) SettingsView
 
 	// Retain is how many snapshots a snapshot restore keeps when it snapshots
 	// first, as AUTHAMA_SNAPSHOT_RETAIN sets for the CLI. 0 means 10.

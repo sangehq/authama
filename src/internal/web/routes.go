@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 
@@ -249,10 +250,14 @@ func (h pages) handleTokens(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h pages) handleSettings(w http.ResponseWriter, r *http.Request) {
-	v, err := h.s.opts.Engine.Settings()
-	if err != nil {
-		h.fail(w, r, err)
-		return
+	p := h.s.opts.Engine.Home()
+	var v SettingsView
+	if h.s.opts.Settings != nil {
+		v = h.s.opts.Settings(p)
+	} else {
+		_, err := os.Stat(p.SettingsFile())
+		v = SettingsView{ConfigHome: p.ConfigDir, StateHome: p.State(), Dotenv: p.EnvFile(),
+			Settings: p.SettingsFile(), HasSettings: err == nil}
 	}
 	h.s.render(w, http.StatusOK, "settings", h.s.newView(r, "settings", "Settings", v))
 }

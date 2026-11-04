@@ -57,7 +57,6 @@ type Engine interface {
 	Audit(now time.Time) (AuditView, error)
 	Export(name string, includeGit bool) (string, error)
 	Tokens() (TokensView, error)
-	Settings() (SettingsView, error)
 
 	// Preview runs a change on a private copy of the home; Apply makes it
 	// if a fresh preview under the lock still has the confirmed hash.
@@ -166,22 +165,6 @@ type AppEngine struct {
 	// Retain is how many snapshots a change keeps, as the CLI's
 	// $AUTHAMA_SNAPSHOT_RETAIN; zero means 10.
 	Retain int
-	// SettingsInfo reads the settings page for a home. The values in effect
-	// were settled at start-up, which the command that started the server
-	// owns, so it passes this in. Nil gives the files and their validation
-	// only, with no values.
-	SettingsInfo func(paths.Paths) SettingsView
-}
-
-// Settings is the settings page, as `authama settings path`, `show
-// --effective` and `validate` print it.
-func (e AppEngine) Settings() (SettingsView, error) {
-	if e.SettingsInfo != nil {
-		return e.SettingsInfo(e.P), nil
-	}
-	_, err := os.Stat(e.P.SettingsFile())
-	return SettingsView{ConfigHome: e.P.ConfigDir, StateHome: e.P.State(), Dotenv: e.P.EnvFile(),
-		Settings: e.P.SettingsFile(), HasSettings: err == nil}, nil
 }
 
 // Preview shows what ch would do, without doing it.
