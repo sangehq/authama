@@ -20,6 +20,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`authama events` and the web UI's Events page track every change to the files authama is
+  responsible for**: everything under `~/.ssh`, the config home, and each tool's credential file,
+  whoever made it. A scan records size, mode, modification time and a SHA-256 per file, never its
+  contents, and logs what was added, changed, removed or had its mode changed. The server scans every
+  30 seconds, links each event to the operation that made it, and shows the newest in the header bell.
+- **`authama ssh import` reads any layout, flat or nested.** PATH may be a config file or a folder: its
+  `config` and what that Includes, a config home's `ssh/config`, or every `config` and `*.conf` up to
+  four levels down. From another machine's copy of `~/.ssh`, an `IdentityFile ~/.ssh/<key>` is found
+  in that copy. The help's own example, a folder, used to fail as "no ssh config file".
+- **Manual pages and manual-style help.** `authama man [DIR]` writes a troff page for every command
+  (`make man` writes them to `build/man`), and every `--help` prints the same sections: NAME, SYNOPSIS,
+  DESCRIPTION, ALIASES, COMMANDS, OPTIONS, GLOBAL OPTIONS, EXAMPLES, SEE ALSO. Every `list` also
+  answers `ls`, and every `delete` `rm`.
+- An **About** page, and Tabler's header: a theme toggle, a bell with the newest file events, and an
+  account-style menu.
+- **The dashboard** gains key health, auth tokens and snapshot cards, quick actions, hosts by profile
+  and the newest file events. **Tables** sort by any column, with search, page size and pages for a
+  long list; hosts are one table with a profile column. **Destructive actions** ask in a dialog before
+  their preview, and adding a profile, host or token opens in a slide-in panel.
 - **Auth tokens are managed from the web UI.** The Auth tokens page adds or replaces a token (a
   Composer service or npm, Docker, git or netrc, with the user name, npm scope and Docker
   credential-store mode `token set` takes), writes a starter `tokens.json` (`token init`), imports an
@@ -42,6 +61,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- The Auth tokens page and the dashboard said a credential file was readable by others whenever the
+  token audit failed, including when what failed was the `.gitignore` check where the server runs.
 - A web preview now shows `authama.json` and `tokens.json` with the other config files. It was left out of the preview's
   copy, so a change writing it would have previewed as writing nothing.
 

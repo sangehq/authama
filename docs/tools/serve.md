@@ -33,15 +33,23 @@ when that port is taken.
 
 ## Pages
 
-The layout is Tabler's: a header with the name, dev mode and read-only when they apply, and the
-theme switch (light, dark or the system's), then a menu with the Overview and three dropdowns:
-**SSH** (Profiles, Hosts, SSH config, Keys, VMs, Snapshots), **Auth** (Auth tokens) and **System**
-(History, Doctor, Audit, Settings). On a narrow screen the menu folds behind a button. A page's
-header names its section and links to the forms further down it.
+The layout is Tabler's. The header holds the name, a theme toggle (light or dark), a bell listing the
+newest [file events](events.md), and a menu with Settings, Events, Doctor, *Follow the system theme*,
+About and the licences; it also says when the server is in dev mode or read-only. Under it, a menu
+holds the Overview and three dropdowns: **SSH** (Profiles, Hosts, SSH config, Keys, VMs, Snapshots),
+**Auth** (Auth tokens) and **System** (History, Events, Doctor, Audit, Settings, About). On a narrow
+screen it folds behind a button.
+
+- **Page headers** name the section, summarise the page, and hold its main actions.
+- **Adding** a profile, a host or a token opens its form in a panel that slides in from the right.
+- **Every destructive action** (deleting a profile, host, key or token, pruning snapshots, restoring
+  one, cleaning stale pins) asks in a dialog first, then previews, then asks again on the preview.
+- **Tables** sort by any column, and a list longer than ten rows gains a search box, a page size and
+  pages.
 
 | Page | Shows |
 |---|---|
-| Overview | the rows the `authama tui` menu prints at the top, each problem with the command that fixes it; counts; keys due for rotation; recent changes |
+| Overview | the rows the `authama tui` menu prints at the top, each problem with the command that fixes it; counts; key health, auth tokens and snapshots; quick actions; hosts by profile; the newest file events; keys due for rotation; recent changes |
 | Profiles | each profile's category, key scope, key store, and host and key counts |
 | Hosts | every host by profile. A host's page shows its manifest entry, its deployments, the block rendered into `~/.ssh/config`, and the host keys pinned for it |
 | Keys | every key with its fingerprint and expiry, and the reserved keys (loose keys kept on purpose). A key's page shows where the key is deployed and every operation that touched it |
@@ -51,6 +59,8 @@ header names its section and links to the forms further down it.
 | Auth tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret), each tool's file with its mode and how many entries are installed, configured and resolvable, what `token apply` would skip, and the token audit, as `authama token list`, `token status` and `token audit` print |
 | SSH config | every file the manifest renders into `~/.ssh` and whether the files on disk match it, as `authama ssh config show` and `ssh config check` print |
 | Doctor, Audit | the reports `authama doctor` and `authama ssh audit` print |
+| Events | every change seen to a tracked file, with the authama operation that made it, as [`authama events`](events.md) lists them; filtered by area |
+| About | this build (version, commit, Go, platform), where it keeps things, and links to the documentation, the source and the licences |
 | Settings | where the config home, state home, `.env` and `authama.json` are, every setting's value in effect and where it came from, and what `authama settings validate` reports, as `settings path`, `settings show --effective` and `settings validate` print them. The values are those the server started with |
 | Third-party licences | the licences of the web UI's bundled front-end assets (Tabler, Tabler Icons, Bootstrap, Popper), at `/about/licenses` |
 
