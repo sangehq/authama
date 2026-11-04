@@ -48,7 +48,10 @@ screen it folds behind a button.
 - **Every destructive action** (deleting a profile, host, key or token, pruning snapshots, restoring
   one, cleaning stale pins) asks in a dialog first, then previews, then asks again on the preview.
 - **Tables** sort by any column, and a list longer than ten rows gains a search box, a page size and
-  pages.
+  pages. Hosts, keys, auth tokens, history and events each download as CSV, with the same columns as
+  `--csv` on their command.
+- **The command palette**, Ctrl+K (⌘K on a Mac) or *Search* in the header, jumps to any page, opens
+  the add-a-profile, host or token panel, or starts a download, as you type.
 
 | Page | Shows |
 |---|---|
@@ -231,6 +234,11 @@ Some changes are terminal-only:
 
 ## Security
 
+- **Bounded requests.** A request body over 1 MiB is refused with 413 before it is parsed; headers
+  are held to 64 KiB, a body must arrive within 30 seconds, and `Permissions-Policy` turns off every
+  device API (camera, microphone, location, USB and the rest).
+- **CSV downloads** never hold a secret, and a cell that a spreadsheet would read as a formula (one
+  starting `=`, `+`, `-` or `@`) is written with a leading apostrophe.
 - **Loopback by default.** A non-loopback `--addr` is refused unless you pass `--allow-remote`, and
   even then it serves plain HTTP. An SSH tunnel is better:
   `ssh -L 7822:127.0.0.1:7822 <host>`.

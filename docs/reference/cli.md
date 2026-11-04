@@ -145,7 +145,9 @@ authama tracks the files it is responsible for - everything under ~/.ssh, the co
 home, and each tool's credential file - and records every change to them, whoever
 made it: authama, an editor, a package manager. Each run scans first, then lists.
 An event names the file and what changed (added, changed, removed, mode), never
-its contents. The web UI scans every 30 seconds while it runs.
+its contents. Each line is chained to the one before it by a SHA-256 hash, so
+--verify catches a line edited, removed or inserted after the fact, or a log
+cut short. The web UI scans every 30 seconds while it runs.
 
 ```
 authama events [flags]
@@ -157,17 +159,20 @@ Examples:
   authama events
   authama events --since 24h --area auth
   authama events --kind mode --json
+  authama events --verify
 ```
 
 Flags:
 
 ```
       --area string      only this area: ssh, config or auth
+      --csv              one CSV row per event, header first
       --json             machine-readable output (scripting)
       --kind string      only this kind: added, changed, removed, mode or started
       --limit int        at most this many (newest first); 0 is all
       --no-scan          list what is recorded without scanning first
       --since duration   only events newer than this, e.g. 24h
+      --verify           check the log's hash chain for edited, removed or inserted lines; exit non-zero if broken
 ```
 
 ## authama history
@@ -201,6 +206,7 @@ Flags:
 
 ```
       --command string   only this command ("host add"), or a group of them ("host")
+      --csv              one CSV row per operation, header first
       --host string      only operations about this host alias
       --json             one JSON object per operation, its events nested
       --key string       only operations about this key
@@ -1023,7 +1029,7 @@ Flags:
 Every key with its fingerprint, expiry, hosts and state.
 
 ```
-authama ssh key list [profile|alias|key]
+authama ssh key list [profile|alias|key] [flags]
 ```
 
 Aliases: `ls`
@@ -1033,6 +1039,12 @@ Examples:
 ```sh
   authama ssh key list
   authama ssh key list work
+```
+
+Flags:
+
+```
+      --csv   print the keys as CSV, one row each, header first
 ```
 
 ## authama ssh key regen-pub
@@ -1226,6 +1238,7 @@ Examples:
 Flags:
 
 ```
+      --csv               print the hosts as CSV, one row each, header first
       --profile string    filter to one profile
       --provider string   filter by provider
       --tag string        filter by host tag
@@ -2114,6 +2127,7 @@ Examples:
 Flags:
 
 ```
+      --csv              print the list as CSV, header first; never the secrets
       --json             print the list as JSON
       --project string   read the project's auth.json and .npmrc instead of the user ones
       --reveal           show the secret values (asks first; --yes when not at a terminal)

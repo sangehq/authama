@@ -20,6 +20,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **CSV export everywhere a list is shown.** `--csv` on `ssh list`, `ssh key list`, `token list`,
+  `history` and `events`, and a download on each matching web page, with the same columns. A token
+  list never puts a secret in one (`--csv --reveal` is refused), and a cell a spreadsheet would run as a
+  formula is neutralised.
+- **The events log is tamper-evident**: each line is chained by SHA-256 to the one before, and
+  `authama events --verify` (and the Events page) catches a line edited, removed or inserted, or a log
+  cut short.
+- **A command palette** in the web UI (Ctrl+K, ⌘K on a Mac): every page, the add forms and the
+  downloads, as you type. A link to a form in a panel (`/hosts#add-host`) now opens the panel, which
+  the dashboard's buttons needed and did not do.
 - **`authama events` and the web UI's Events page track every change to the files authama is
   responsible for**: everything under `~/.ssh`, the config home, and each tool's credential file,
   whoever made it. A scan records size, mode, modification time and a SHA-256 per file, never its
@@ -73,6 +83,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   copy, so a change writing it would have previewed as writing nothing.
 
 ### Security
+
+- The web server refuses a request body over 1 MiB (413) before parsing it, holds headers to 64 KiB
+  and a body to 30 seconds, and sends a `Permissions-Policy` that turns off every device API.
 
 - The web UI's sign-in redirect is now guarded inline, on the exact value passed to `http.Redirect`, by a
   pattern equal to `isLocalURL` (`/` alone, or `/` not followed by `/` or a backslash). Behaviour is unchanged:
