@@ -30,13 +30,18 @@ decides otherwise, so this page offers no download, package-manager or
 
 ```sh
 git clone https://github.com/simtabi/authama ~/src/authama
-make -C ~/src/authama build      # -> build/authama
-install -m 0755 ~/src/authama/build/authama ~/.local/bin/authama
+make -C ~/src/authama install    # builds, then copies build/authama to ~/.local/bin
 authama doctor          # verify deps, perms, agent, known_hosts, drift, token-file modes
 ```
 
-Any directory on `PATH` works in place of `~/.local/bin`. On Windows, run the
-same `git clone` and `make build` from Git Bash (or `go -C src build -o
+`make install` builds first, so what lands on `PATH` is the checkout as it is now, and says
+whether `~/.local/bin` is on your `PATH` and whether another `authama` shadows it. Any
+directory works: `make install BINDIR=/usr/local/bin`. `make uninstall` (with the same
+`BINDIR`) removes that one file, after checking it answers `version` as authama, and prints
+where your config and state homes are; it never touches them, `~/.ssh` or a token file.
+
+On Windows, `make install` from Git Bash puts it in `%LOCALAPPDATA%\Programs\authama`, where
+`install.ps1` does. Or run the same `git clone` and `make build` from Git Bash (or `go -C src build -o
 ..\build\authama.exe ./cmd/authama` from PowerShell), then put `build\authama.exe`
 in a directory on your user `PATH`.
 

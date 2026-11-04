@@ -38,7 +38,7 @@ LDFLAGS := -s -w -X github.com/simtabi/authama/src/internal/version.Version=$(VE
 GO      := go -C $(MODULE)
 
 .PHONY: help build build-all test vet fmt fmt-check lint lint-all ci check ci-linux e2e e2e-web feature-check docker-shell docker-run docker-down \
-        cross dist clean doctor reconcile render rotate bundle settings generate tabler-check tabler-update tabler-vendor man
+        cross dist clean install uninstall doctor reconcile render rotate bundle settings generate tabler-check tabler-update tabler-vendor man
 
 help:  ## list targets
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | sed -E 's/:.*## /\t/' | sort
@@ -223,6 +223,43 @@ clean: ## empty build/, keeping only the files git tracks there
 	@if [ -d build ]; then \
 		find build -mindepth 1 -maxdepth 1 $(foreach k,$(KEEP),! -name '$(k)') -exec rm -rf {} + ; \
 	fi
+
+# --- installing the binary you just built ------------------------------------
+# install copies build/authama to BINDIR, ~/.local/bin unless told otherwise
+# (%LOCALAPPDATA%\Programs\authama on Windows, where install.ps1 puts it too).
+# It builds first, so what lands on PATH is this checkout as it is now.
+# uninstall removes that one file, and only after the file answers `version` as
+# authama: a BINDIR typed wrong cannot delete something else. Neither touches the
+# config home, the state home, ~/.ssh or a token file; uninstall says where they
+# are so a full removal is a decision, not a side effect.
+ifeq ($(OS),Windows_NT)
+EXE    := .exe
+BINDIR ?= $(LOCALAPPDATA)/Programs/authama
+else
+EXE    :=
+BINDIR ?= $(HOME)/.local/bin
+endif
+INSTALLED := $(BINDIR)/authama$(EXE)
+
+install: build ## copy build/authama to BINDIR (default ~/.local/bin) and say whether it is on PATH
+	@mkdir -p "$(BINDIR)"
+	@cp "$(BIN)$(EXE)" "$(INSTALLED).tmp" && chmod 0755 "$(INSTALLED).tmp" && mv -f "$(INSTALLED).tmp" "$(INSTALLED)"
+	@echo "installed $(INSTALLED)  ->  $$("$(INSTALLED)" version | head -1)"
+	@case ":$$PATH:" in *":$(BINDIR):"*) ;; *) echo "note: $(BINDIR) is not on PATH; add it to your shell profile";; esac
+	@found="$$(command -v authama 2>/dev/null)"; if [ -n "$$found" ] && [ "$$found" != "$(INSTALLED)" ]; then \
+		echo "note: 'authama' on PATH resolves to $$found, not $(INSTALLED)"; fi
+
+uninstall: ## remove the authama binary from BINDIR (default ~/.local/bin); config, state and keys stay
+	@if [ ! -e "$(INSTALLED)" ]; then echo "nothing to remove: $(INSTALLED) does not exist"; exit 0; fi; \
+	case "$$("$(INSTALLED)" version 2>/dev/null | head -1)" in \
+		authama\ *) ;; \
+		*) echo "refusing: $(INSTALLED) does not answer 'version' as authama" >&2; exit 1;; \
+	esac; \
+	homes="$$("$(INSTALLED)" settings path 2>/dev/null | grep -E '^(config|state) home:')"; \
+	rm -f "$(INSTALLED)" && echo "removed $(INSTALLED)"; \
+	echo "kept, as they were: ~/.ssh, every token file, and"; \
+	printf '%s\n' "$$homes" | sed 's/^/  /'; \
+	if [ -e "$(BINDIR)/sshmgr$(EXE)" ]; then echo "note: an older sshmgr is still at $(BINDIR)/sshmgr$(EXE)"; fi
 
 # --- running the tool against your own config -------------------------------
 # These build first and run the binary you just built, never an installed one,

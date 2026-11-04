@@ -24,6 +24,8 @@ around it.
 ```sh
 git clone https://github.com/simtabi/authama && cd authama
 make build               # -> build/authama (empties build/ first, every time)
+make install             # build, then copy it to ~/.local/bin (BINDIR=... for elsewhere)
+make uninstall           # remove that binary again; config, state and keys stay
 make doctor              # verify the environment, using the binary you just built
 ```
 
