@@ -17,6 +17,7 @@ import (
 
 	"github.com/simtabi/authama/src/internal/core/inventory"
 	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/core/providers"
 	"github.com/simtabi/authama/src/internal/util/log"
 	"github.com/simtabi/authama/src/internal/util/paths"
 	"github.com/simtabi/authama/src/internal/util/perms"
@@ -29,8 +30,12 @@ import (
 // whatever happened to the key files, and only it can describe the outcome
 // truthfully.
 type DeleteResult struct {
-	Removed    string
-	Revoked    []string
+	Removed string
+	Revoked []string
+	// NotRevoked are targets the key is deployed to that could not be revoked
+	// from - the provider cannot remove keys, or the call failed - so the key
+	// must be removed there by hand.
+	NotRevoked []string
 	PrunedKeys []string
 }
 
@@ -380,9 +385,14 @@ func (e *Editor) DeleteKey(ref manifest.KeyRef, revoke bool) (DeleteResult, erro
 			continue
 		}
 		if revoke {
+			// The key is wired to no host now, but a deployment names the
+			// host it went to, and that host may still be declared.
+			pub := m.KeyPath(e.p.SSHDir, ref) + ".pub"
 			for _, d := range rec.Deployments {
-				if removeFromTarget() {
+				if h, ok := hostByAlias(m, d.Target); ok && e.removeFromTarget(h, pub) {
 					res.Revoked = append(res.Revoked, d.Target)
+				} else {
+					res.NotRevoked = append(res.NotRevoked, d.Target)
 				}
 			}
 		}
@@ -600,9 +610,9 @@ func findHost(m *manifest.Manifest, profile, alias string) (int, manifest.Host, 
 	return 0, manifest.Host{}, fmt.Errorf("unknown host %q in profile %q", alias, profile)
 }
 
-// revokeHost drops this host's deployment entry from the inventory record (and,
-// when adapters exist, would revoke the key from the remote target - a no-op for
-// now). The record itself is pruned later by pruneIdents.
+// revokeHost drops this host's deployment entry from the inventory record and,
+// under revoke, asks the host's provider to remove the key from the target
+// first. The record itself is pruned later by pruneIdents.
 func (e *Editor) revokeHost(m *manifest.Manifest, inv *inventory.Inventory, profile string, host manifest.Host, revoke bool, res *DeleteResult) {
 	kn, err := m.ResolvedKeyName(profile, host)
 	if err != nil {
@@ -620,8 +630,12 @@ func (e *Editor) revokeHost(m *manifest.Manifest, inv *inventory.Inventory, prof
 				break
 			}
 		}
-		if revoke && hasDep && removeFromTarget() {
-			res.Revoked = append(res.Revoked, host.Alias)
+		if revoke && hasDep {
+			if e.removeFromTarget(host, m.KeyPath(e.p.SSHDir, manifest.KeyRef{Profile: profile, KeyName: kn})+".pub") {
+				res.Revoked = append(res.Revoked, host.Alias)
+			} else {
+				res.NotRevoked = append(res.NotRevoked, host.Alias)
+			}
 		}
 		kept := rec.Deployments[:0:0]
 		for _, d := range rec.Deployments {
@@ -634,9 +648,35 @@ func (e *Editor) revokeHost(m *manifest.Manifest, inv *inventory.Inventory, prof
 	}
 }
 
-// removeFromTarget would call the provider adapter to revoke the key remotely.
-// The adapters are a later wave, so this is a no-op (matching the base provider).
-func removeFromTarget() bool { return false }
+// removeFromTarget asks host's provider to remove the public key at pubPath
+// from the target, as rotation does for a key it replaces: GitHub and GitLab
+// through their CLIs, a cloud API by its delete path, a server by editing its
+// authorized_keys. It is best-effort and reports false when the provider
+// cannot remove keys, the call fails, or there is no public key to match.
+func (e *Editor) removeFromTarget(host manifest.Host, path string) bool {
+	text, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	t := providers.Target{
+		Alias: host.Alias, Hostname: host.Hostname, User: host.User, Port: host.Port,
+		PubkeyPath: path, PubkeyText: strings.TrimSpace(string(text)), TokenEnv: deref(host.TokenEnv),
+		KnownHosts: filepath.Join(e.p.SSHDir, "known_hosts"),
+	}
+	return providers.Resolve(deref(host.Provider), e.p.Providers()).Remove(t)
+}
+
+// hostByAlias finds a declared host by its alias, in any profile.
+func hostByAlias(m *manifest.Manifest, alias string) (manifest.Host, bool) {
+	for _, name := range m.ProfileNames() {
+		for _, h := range m.Profiles[name].Hosts {
+			if h.Alias == alias {
+				return h, true
+			}
+		}
+	}
+	return manifest.Host{}, false
+}
 
 // pruneIdents drops inventory records for the affected key paths that nothing in
 // the surviving manifest owns any more.

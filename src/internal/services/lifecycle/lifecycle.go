@@ -45,6 +45,7 @@ type Options struct {
 type Result struct {
 	Removed       string   // "profile work" | "key work/work_gh-ed25519"
 	Revoked       []string // targets the key was revoked from
+	NotRevoked    []string // targets it is deployed to but could not be revoked from
 	PrunedRecords []string // inventory records dropped
 	RemovedFiles  []string // key files deleted (Purge only)
 	RemovedDirs   []string // directories deleted once empty (Purge only)
@@ -74,6 +75,7 @@ func (r Result) Format() string {
 		}
 	}
 	add("revoked from", r.Revoked)
+	add("NOT revoked from (remove the key there by hand)", r.NotRevoked)
 	add("pruned inventory", r.PrunedRecords)
 	add("removed files", r.RemovedFiles)
 	add("removed dirs", r.RemovedDirs)
@@ -146,7 +148,7 @@ func (s *Service) DeleteProfile(name string, opt Options) (Result, error) {
 		return Result{}, err
 	}
 	res := Result{
-		Removed: "profile " + name, Revoked: del.Revoked, PrunedRecords: del.PrunedKeys,
+		Removed: "profile " + name, Revoked: del.Revoked, NotRevoked: del.NotRevoked, PrunedRecords: del.PrunedKeys,
 	}
 	if before.Profiles[name].InOnePassword() {
 		res.VaultItems = append(res.VaultItems, fmt.Sprintf("profile %s's key items in vault %q",
@@ -198,7 +200,7 @@ func (s *Service) DeleteHost(profile, alias string, opt Options) (Result, error)
 	}
 	res := Result{
 		Removed: fmt.Sprintf("host %s (profile %s)", alias, profile),
-		Revoked: del.Revoked, PrunedRecords: del.PrunedKeys,
+		Revoked: del.Revoked, NotRevoked: del.NotRevoked, PrunedRecords: del.PrunedKeys,
 	}
 
 	after, err := manifest.Load(s.p.Manifest())
@@ -297,7 +299,7 @@ func (s *Service) DeleteKey(ref manifest.KeyRef, opt Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	res := Result{Removed: "key " + ref.String(), Revoked: del.Revoked, PrunedRecords: del.PrunedKeys}
+	res := Result{Removed: "key " + ref.String(), Revoked: del.Revoked, NotRevoked: del.NotRevoked, PrunedRecords: del.PrunedKeys}
 	if row.InOnePassword() {
 		res.VaultItems = append(res.VaultItems, fmt.Sprintf("item %q in vault %q", ref.KeyName, row.Vault))
 	}
