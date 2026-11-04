@@ -1,10 +1,13 @@
 {{define "content"}}{{with .Data}}
 {{template "page_header" (header "System" "Events" "Every change seen to a file under ~/.ssh, the config home or a tool's credential file, whoever made it.")}}
+{{if .Integrity.OK}}<div class="alert alert-success" role="status">{{icon "shield-check"}}<span class="ms-1">The events log is intact: {{.Integrity.Chained}} line(s) chained by hash{{if .Integrity.Unchained}}, {{.Integrity.Unchained}} from before the chain{{end}}. <code>authama events --verify</code> checks it from the terminal.</span></div>
+{{else}}<div class="alert alert-danger" role="alert">{{icon "alert-triangle"}}<span class="ms-1"><strong>The events log has been tampered with</strong>{{if .Integrity.Broken}} at line {{.Integrity.Broken}}{{end}}: {{.Integrity.Reason}}.</span></div>{{end}}
 {{if not .Tracking}}<div class="alert alert-info" role="status">{{icon "info-circle"}}<span class="ms-1">This server was started without file tracking, so it records no new events. <code>authama events</code> scans from the terminal.</span></div>{{end}}
 <div class="card">
   <div class="card-header">
     <h2 class="card-title">File events</h2>
-    <div class="card-actions">
+    <div class="card-actions d-flex align-items-center gap-2">
+      <a class="btn btn-sm btn-outline-secondary" href="/exports/events.csv" download>{{icon "download"}}<span class="ms-1">CSV</span></a>
       <nav aria-label="Filter by area" class="btn-group">
         <a class="btn btn-sm{{if eq .Area ""}} btn-primary{{else}} btn-outline-secondary{{end}}" href="/events{{with .Kind}}?kind={{.}}{{end}}"{{if eq .Area ""}} aria-current="page"{{end}}>All</a>
         {{range (list "ssh" "auth" "config")}}<a class="btn btn-sm{{if eq $.Data.Area .}} btn-primary{{else}} btn-outline-secondary{{end}}" href="/events?area={{.}}{{with $.Data.Kind}}&amp;kind={{.}}{{end}}"{{if eq $.Data.Area .}} aria-current="page"{{end}}>{{.}}</a>{{end}}

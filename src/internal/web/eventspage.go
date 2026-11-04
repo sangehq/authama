@@ -55,6 +55,7 @@ type EventsView struct {
 	Area, Kind string
 	Tracking   bool // the server tracks files; false when it was started without roots
 	Counts     map[string]int
+	Integrity  events.Integrity
 }
 
 // recentEvents reads the newest events, each matched to the operation it fell
@@ -107,6 +108,7 @@ func (h systemPages) handleEvents(w http.ResponseWriter, r *http.Request) {
 		v.Kind = ""
 	}
 	v.Rows = h.s.recentEvents(events.Filter{Area: v.Area, Kind: v.Kind, Limit: 1000})
+	v.Integrity, _ = events.Verify(h.s.opts.Engine.Home())
 	for _, e := range v.Rows {
 		v.Counts[e.Kind]++
 	}

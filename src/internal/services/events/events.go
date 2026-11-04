@@ -60,6 +60,10 @@ type Event struct {
 	Size   int64     `json:"size,omitempty"`
 	Mode   string    `json:"mode,omitempty"`
 	Detail string    `json:"detail,omitempty"`
+	// Hash chains the log: SHA-256 of the previous line's Hash and this
+	// event's other fields. An edited, removed or inserted line breaks the
+	// chain from there on (see Verify).
+	Hash string `json:"hash,omitempty"`
 }
 
 // Tracked is a file, or a directory walked for files, and its area. Skip
@@ -111,6 +115,9 @@ type fileState struct {
 
 type state struct {
 	Files map[string]fileState `json:"files"`
+	// Head is the Hash of the log's last line, so a log cut short (lines
+	// removed from its end) is caught too.
+	Head string `json:"head,omitempty"`
 }
 
 // StateFile and LogFile are where a home keeps the last scan and the events.
@@ -129,7 +136,7 @@ func Scan(p paths.Paths, roots []Tracked, now time.Time) ([]Event, error) {
 	if err != nil {
 		return nil, err
 	}
-	prev, err := load(StateFile(p))
+	prev, head, err := load(StateFile(p))
 	if err != nil {
 		return nil, err
 	}
@@ -139,10 +146,24 @@ func Scan(p paths.Paths, roots []Tracked, now time.Time) ([]Event, error) {
 	} else {
 		evs = diff(prev, current, now)
 	}
-	if err := save(StateFile(p), current); err != nil {
-		return nil, err
+	if len(evs) > 0 {
+		last, err := lastHash(LogFile(p))
+		if err != nil {
+			return nil, err
+		}
+		if last == "" {
+			last = head
+		}
+		for i := range evs {
+			evs[i].Hash = chain(last, evs[i])
+			last = evs[i].Hash
+		}
+		head = last
+		if err := appendLog(LogFile(p), evs); err != nil {
+			return nil, err
+		}
 	}
-	if err := appendLog(LogFile(p), evs); err != nil {
+	if err := save(StateFile(p), current, head); err != nil {
 		return nil, err
 	}
 	return evs, nil
@@ -298,29 +319,29 @@ func changed(p, c fileState) bool {
 	return p.Size != c.Size || p.ModTime != c.ModTime
 }
 
-func load(path string) (map[string]fileState, error) {
+func load(path string) (map[string]fileState, string, error) {
 	b, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
+		return nil, "", nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	var st state
 	if err := json.Unmarshal(b, &st); err != nil {
-		return nil, nil // an unreadable state is a fresh start, not a failure
+		return nil, "", nil // an unreadable state is a fresh start, not a failure
 	}
 	if st.Files == nil {
 		st.Files = map[string]fileState{}
 	}
-	return st.Files, nil
+	return st.Files, st.Head, nil
 }
 
-func save(path string, files map[string]fileState) error {
+func save(path string, files map[string]fileState, head string) error {
 	if err := ufs.EnsureDir(filepath.Dir(path), homeperms.DirMode); err != nil {
 		return err
 	}
-	b, err := json.Marshal(state{Files: files})
+	b, err := json.Marshal(state{Files: files, Head: head})
 	if err != nil {
 		return err
 	}
@@ -353,4 +374,107 @@ func appendLog(path string, evs []Event) error {
 		return err
 	}
 	return f.Close()
+}
+
+// chain is an event's hash: SHA-256 over the previous hash and the event's
+// fields, Hash left out, in their JSON form.
+func chain(prev string, e Event) string {
+	e.Hash = ""
+	b, _ := json.Marshal(e)
+	h := sha256.New()
+	h.Write([]byte(prev))
+	h.Write([]byte{0})
+	h.Write(b)
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// lastHash is the Hash of the log's last chained line, or "" for none.
+func lastHash(path string) (string, error) {
+	f, err := os.Open(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = f.Close() }()
+	last := ""
+	sc := bufio.NewScanner(f)
+	sc.Buffer(make([]byte, 64<<10), 1<<20)
+	for sc.Scan() {
+		var e Event
+		if json.Unmarshal(sc.Bytes(), &e) == nil && e.Hash != "" {
+			last = e.Hash
+		}
+	}
+	return last, sc.Err()
+}
+
+// Integrity is what Verify found.
+type Integrity struct {
+	Lines     int    // lines read
+	Chained   int    // lines carrying a hash
+	Unchained int    // lines from before the log was chained, at its start
+	Broken    int    // the first line (1-based) whose hash does not follow, 0 when none
+	Reason    string // why, when Broken or Truncated
+	Truncated bool   // the log ends before the head the state recorded
+}
+
+// OK reports whether the log is intact.
+func (i Integrity) OK() bool { return i.Broken == 0 && !i.Truncated }
+
+// Verify checks the events log's hash chain: every chained line must hash
+// from the one before it, and the last must be the head the state recorded.
+// Lines written before the log was chained, at its start, are counted, not
+// checked. Tamper evidence, not proof: someone who can rewrite the state
+// home can rewrite both files, but not one line without the chain showing it.
+func Verify(p paths.Paths) (Integrity, error) {
+	var in Integrity
+	_, head, err := load(StateFile(p))
+	if err != nil {
+		return in, err
+	}
+	f, err := os.Open(LogFile(p))
+	if errors.Is(err, os.ErrNotExist) {
+		if head != "" {
+			in.Truncated, in.Reason = true, "the events log is missing, but the state records a head"
+		}
+		return in, nil
+	}
+	if err != nil {
+		return in, err
+	}
+	defer func() { _ = f.Close() }()
+	prev := ""
+	sc := bufio.NewScanner(f)
+	sc.Buffer(make([]byte, 64<<10), 1<<20)
+	for sc.Scan() {
+		in.Lines++
+		var e Event
+		if err := json.Unmarshal(sc.Bytes(), &e); err != nil {
+			if in.Broken == 0 {
+				in.Broken, in.Reason = in.Lines, "the line is not a valid event"
+			}
+			continue
+		}
+		if e.Hash == "" {
+			if in.Chained > 0 && in.Broken == 0 {
+				in.Broken, in.Reason = in.Lines, "an unchained line after the chain began"
+			}
+			in.Unchained++
+			continue
+		}
+		in.Chained++
+		if in.Broken == 0 && chain(prev, e) != e.Hash {
+			in.Broken, in.Reason = in.Lines, "its hash does not follow from the line before (edited, removed or inserted)"
+		}
+		prev = e.Hash
+	}
+	if err := sc.Err(); err != nil {
+		return in, err
+	}
+	if in.Broken == 0 && head != "" && prev != head {
+		in.Truncated, in.Reason = true, "the log does not end at the head the state recorded (lines removed from its end)"
+	}
+	return in, nil
 }
