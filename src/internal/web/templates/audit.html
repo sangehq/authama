@@ -1,5 +1,5 @@
 {{define "content"}}{{with .Data}}
-{{template "page_header" "Audit"}}
+{{template "page_header" (header "System" "Audit" "Key age, expiry and hygiene, as authama ssh audit reports them.")}}
 <div class="card mb-3">
   <div class="card-header"><h2 class="card-title">Deployments</h2></div>
   {{if .Keys}}

@@ -1,7 +1,11 @@
+{{/* A page's header: the section it belongs to, its title (the page's one h1),
+     and a one-line summary. Built with `header "Section" "Title" "Summary"`. */}}
 {{define "page_header"}}<div class="page-header d-print-none mb-3">
   <div class="row align-items-center">
     <div class="col">
-      <h1 class="page-title">{{.}}</h1>
+      {{if .Pretitle}}<div class="page-pretitle">{{.Pretitle}}</div>{{end}}
+      <h1 class="page-title">{{.Title}}</h1>
+      {{if .Subtitle}}<p class="text-secondary mb-0 mt-1">{{.Subtitle}}</p>{{end}}
     </div>
   </div>
 </div>{{end}}

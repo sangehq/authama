@@ -179,6 +179,15 @@ func funcs(a *assetSet) template.FuncMap {
 			}
 			return strings.Join(parts, ", ")
 		},
+		"stat": func(label string, count int, href, icon, colour string) stat {
+			return stat{Label: label, Count: count, Href: href, Icon: icon, Colour: colour}
+		},
+		"empty": func(icon, title, text string) emptyState {
+			return emptyState{Icon: icon, Title: title, Text: text}
+		},
+		"header": func(pretitle, title, subtitle string) pageHeader {
+			return pageHeader{Pretitle: pretitle, Title: title, Subtitle: subtitle}
+		},
 		"navItem": func(v view, key, href, icon, label string) navItem {
 			return navItem{Active: v.Nav == key, Href: href, Icon: icon, Label: label}
 		},
@@ -244,6 +253,20 @@ func parsePages(a *assetSet) (*pageSet, error) {
 		ps.pages[n] = t
 	}
 	return ps, nil
+}
+
+// pageHeader is a page's header: the section, the title, and a one-line
+// summary under it.
+type pageHeader struct{ Pretitle, Title, Subtitle string }
+
+// emptyState is a list with nothing in it yet.
+type emptyState struct{ Icon, Title, Text string }
+
+// stat is one count on the overview.
+type stat struct {
+	Label              string
+	Count              int
+	Href, Icon, Colour string
 }
 
 type navItem struct {

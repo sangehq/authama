@@ -1,5 +1,5 @@
 {{define "content"}}{{with .Data}}
-{{template "page_header" "Doctor"}}
+{{template "page_header" (header "System" "Doctor" "The checks authama doctor runs, without --fix.")}}
 {{if .OK}}<div class="alert alert-success" role="status">{{icon "circle-check"}}<span class="ms-1">Every check passed.</span></div>
 {{else}}<div class="alert alert-warning" role="status">{{icon "alert-triangle"}}<span class="ms-1">Some checks need attention. <code>authama doctor --fix</code> repairs file modes, syncs VM hosts (see <a href="/vms">VMs</a>) and removes stale authama pins; the report says what to run for the rest.</span></div>{{end}}
 <div class="card"><div class="card-body"><pre class="code-block" tabindex="0">{{.Report}}</pre></div></div>

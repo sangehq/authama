@@ -81,3 +81,36 @@ main:focus { outline: none; }
 .diff-hunk { color: var(--tblr-secondary); }
 :root[data-bs-theme=dark] .diff-add { color: #8fd8a0; background: #1d3324; }
 :root[data-bs-theme=dark] .diff-del { color: #ffa3a3; background: #3d2020; }
+
+/* Layout: Tabler's vertical sidebar. Section labels group the links (each
+   list is labelled by its section), in a colour that keeps 4.5:1 on the
+   sidebar in both themes. */
+.nav-section { margin: 1rem 0 .25rem; padding: 0 .75rem; font-size: .6875rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #5c6670; }
+:root[data-bs-theme=dark] .nav-section { color: #a3adb8; }
+.navbar-vertical .navbar-brand .icon { width: 1.5rem; height: 1.5rem; }
+.navbar-vertical .nav-link.active, .navbar-vertical .nav-item.active > .nav-link { font-weight: 600; }
+.topbar { min-height: 3.5rem; border-bottom: 1px solid var(--tblr-border-color); }
+.page-pretitle { color: #5c6670; }
+:root[data-bs-theme=dark] .page-pretitle { color: #a3adb8; }
+.stat-link { color: inherit; text-decoration: none; }
+.stat-link:hover .h2, .stat-link:focus-visible .h2 { text-decoration: underline; }
+.stat-link:focus-visible { outline: 2px solid var(--tblr-primary); outline-offset: 2px; border-radius: var(--tblr-border-radius); }
+.navbar-vertical .navbar-brand { justify-content: flex-start; gap: .5rem; }
+/* Stat card icons: decorative, on a tint of their hue. */
+.stat-primary { color: #1a5fb4; background: #e2edf9; }
+.stat-azure { color: #0b6a8c; background: #def1f8; }
+.stat-indigo { color: #3e44a8; background: #e7e8f7; }
+.stat-green { color: #1a6b2b; background: #e3f3e6; }
+.stat-yellow { color: #6e4700; background: #fbefd5; }
+:root[data-bs-theme=dark] .stat-primary { color: #a6cbf6; background: #1c2a3b; }
+:root[data-bs-theme=dark] .stat-azure { color: #9fdcf2; background: #15303a; }
+:root[data-bs-theme=dark] .stat-indigo { color: #c1c4f5; background: #23253f; }
+:root[data-bs-theme=dark] .stat-green { color: #8fd8a0; background: #1d3324; }
+:root[data-bs-theme=dark] .stat-yellow { color: #f2c46e; background: #3a2f16; }
+.navbar.navbar-vertical .navbar-brand.navbar-brand-autodark { justify-content: flex-start; }
+/* One host table per profile: the same column widths in each, so they line up. */
+.table-hosts { table-layout: fixed; }
+.table-hosts th:nth-child(1) { width: 18%; } .table-hosts th:nth-child(2) { width: 18%; }
+.table-hosts th:nth-child(3) { width: 12%; } .table-hosts th:nth-child(4) { width: 28%; }
+.table-hosts th:nth-child(5) { width: 14%; } .table-hosts th:nth-child(6) { width: 10%; }
+.table-hosts td, .table-hosts th { overflow-wrap: anywhere; }

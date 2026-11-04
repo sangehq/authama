@@ -1,5 +1,5 @@
 {{define "content"}}{{with .Data}}
-{{template "page_header" "Review the change"}}
+{{template "page_header" (header "Change" "Review the change" "What this change would write, run against a private copy of the home. Nothing has changed yet.")}}
 {{if .Stale}}<div class="alert alert-warning" role="alert">{{icon "alert-triangle"}}<span class="ms-1"><strong>Something changed since you looked</strong>, so nothing was written. This is what the change would do now. Confirm again if it is still what you want.</span></div>{{end}}
 <div class="card mb-3">
   <div class="card-body">

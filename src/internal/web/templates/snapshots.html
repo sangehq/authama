@@ -1,7 +1,8 @@
 {{define "content"}}
-{{template "page_header" "Snapshots"}}
+{{template "page_header" (header "SSH" "Snapshots" "")}}
 <p class="text-secondary">Every command that changes <code>~/.ssh</code> archives its config, <code>known_hosts</code> and public keys first. Private keys are never in a snapshot.</p>
 <div class="card">
+  <div class="card-header"><h2 class="card-title">Snapshots</h2>{{if .Data.Snapshots}}<div class="card-actions text-secondary small">{{len .Data.Snapshots}}, newest first</div>{{end}}</div>
   {{if .Data.Snapshots}}
   <div class="table-responsive">
     <table class="table table-vcenter card-table">
@@ -19,7 +20,7 @@
       </tbody>
     </table>
   </div>
-  {{else}}<div class="card-body text-secondary">No snapshots yet.</div>{{end}}
+  {{else}}{{template "empty" (empty "archive" "No snapshots yet" "The first command that changes ~/.ssh takes one.")}}{{end}}
 </div>
 {{if and (not .ReadOnly) .Data.Snapshots}}
 <div class="card mt-3">

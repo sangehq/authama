@@ -1,5 +1,5 @@
 {{define "content"}}{{with .Data}}
-{{template "page_header" "VMs"}}
+{{template "page_header" (header "SSH" "VMs" "")}}
 <p class="text-secondary">VM hosts as their hypervisors see them now, and what <code>authama ssh vm sync</code> would do. Nothing here connects to a guest; a sync does, for running VMs only. Stopped and suspended VMs are reported and never touched.</p>
 <div class="card mb-3">
   <div class="card-header"><h2 class="card-title">VM hosts</h2></div>

@@ -1,5 +1,5 @@
 {{define "content"}}{{with .Data}}
-{{template "page_header" "Auth tokens"}}
+{{template "page_header" (header "Auth" "Auth tokens" "Package-manager and git credentials: what is installed and how it audits. A secret is never shown.")}}
 <div class="card mb-3">
   <div class="card-header"><h2 class="card-title">Installed</h2></div>
   {{if .Items}}

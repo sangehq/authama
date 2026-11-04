@@ -7,6 +7,7 @@
 <meta name="csrf-token" content="{{.CSRF}}">
 <title>{{.Title}} · {{brandName}}</title>
 <script src="{{asset "vendor/tabler/tabler-theme.min.js"}}"></script>
+<link rel="icon" type="image/svg+xml" href="{{asset "favicon.svg"}}">
 <link rel="stylesheet" href="{{asset "vendor/tabler/tabler.min.css"}}">
 <link rel="stylesheet" href="{{asset "app.css"}}">
 </head>
@@ -14,38 +15,61 @@
 {{sprite}}
 <a class="visually-hidden-focusable skip-link" href="#main">Skip to content</a>
 <div class="page">
-  <header class="navbar navbar-expand-md d-print-none">
-    <div class="container-xl">
-      <a class="navbar-brand navbar-brand-autodark me-3" href="/">{{icon "terminal-2"}}<span class="ms-2">{{brandName}}</span></a>
-      {{if .Authed}}
-      <nav class="me-auto" aria-label="Main">
-        <ul class="navbar-nav flex-row flex-wrap">
-          {{template "navlink" (navItem . "overview" "/" "layout-dashboard" "Overview")}}
-          {{template "navlink" (navItem . "profiles" "/profiles" "users" "Profiles")}}
-          {{template "navlink" (navItem . "hosts" "/hosts" "server" "Hosts")}}
-          {{template "navlink" (navItem . "keys" "/keys" "key" "Keys")}}
-          {{template "navlink" (navItem . "vms" "/vms" "device-desktop" "VMs")}}
-          {{template "navlink" (navItem . "snapshots" "/snapshots" "archive" "Snapshots")}}
-          {{template "navlink" (navItem . "history" "/history" "history" "History")}}
-          {{template "navlink" (navItem . "doctor" "/doctor" "stethoscope" "Doctor")}}
-          {{template "navlink" (navItem . "audit" "/audit" "shield-check" "Audit")}}
-          {{template "navlink" (navItem . "tokens" "/tokens" "lock" "Tokens")}}
-        </ul>
-      </nav>
-      {{end}}
-      <div class="navbar-nav flex-row order-md-last ms-auto" role="group" aria-label="Colour theme">
-        <a href="?theme=light" class="nav-link px-2" title="Light theme">{{icon "sun"}}<span class="visually-hidden">Light theme</span></a>
-        <a href="?theme=dark" class="nav-link px-2" title="Dark theme">{{icon "moon"}}<span class="visually-hidden">Dark theme</span></a>
-        <a href="?theme=auto" class="nav-link px-2" title="Follow the system theme">{{icon "device-desktop"}}<span class="visually-hidden">Follow the system theme</span></a>
+  {{if .Authed}}
+  <aside class="navbar navbar-vertical navbar-expand-lg d-print-none" aria-label="Sidebar">
+    <div class="container-fluid">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Show the menu"><span class="navbar-toggler-icon"></span></button>
+      <a class="navbar-brand navbar-brand-autodark" href="/">{{icon "terminal-2"}}<span class="ms-2">{{brandCommand}}</span></a>
+      <div class="collapse navbar-collapse" id="sidebar-menu">
+        <nav class="w-100" aria-label="Main">
+          <ul class="navbar-nav pt-lg-3">
+            {{template "navlink" (navItem . "overview" "/" "layout-dashboard" "Overview")}}
+          </ul>
+          <div class="nav-section" id="nav-ssh">SSH</div>
+          <ul class="navbar-nav" aria-labelledby="nav-ssh">
+            {{template "navlink" (navItem . "profiles" "/profiles" "users" "Profiles")}}
+            {{template "navlink" (navItem . "hosts" "/hosts" "server" "Hosts")}}
+            {{template "navlink" (navItem . "keys" "/keys" "key" "Keys")}}
+            {{template "navlink" (navItem . "vms" "/vms" "device-desktop" "VMs")}}
+            {{template "navlink" (navItem . "snapshots" "/snapshots" "archive" "Snapshots")}}
+          </ul>
+          <div class="nav-section" id="nav-auth">Auth</div>
+          <ul class="navbar-nav" aria-labelledby="nav-auth">
+            {{template "navlink" (navItem . "tokens" "/tokens" "cloud-lock" "Auth tokens")}}
+          </ul>
+          <div class="nav-section" id="nav-system">System</div>
+          <ul class="navbar-nav" aria-labelledby="nav-system">
+            {{template "navlink" (navItem . "history" "/history" "history" "History")}}
+            {{template "navlink" (navItem . "doctor" "/doctor" "stethoscope" "Doctor")}}
+            {{template "navlink" (navItem . "audit" "/audit" "shield-check" "Audit")}}
+            {{template "navlink" (navItem . "settings" "/settings" "settings" "Settings")}}
+          </ul>
+        </nav>
       </div>
     </div>
-  </header>
-  {{if and .Authed .DevRoot}}
-  <div class="dev-banner" role="status">
-    <div class="container-xl">{{icon "alert-triangle"}}<span class="ms-1"><strong>Dev mode.</strong> Reading a sandbox under <code>{{.DevRoot}}</code>, not your real <code>~/.ssh</code>.</span></div>
-  </div>
+  </aside>
   {{end}}
   <div class="page-wrapper">
+    <header class="navbar navbar-expand-md d-print-none topbar">
+      <div class="container-xl">
+        {{if not .Authed}}<a class="navbar-brand navbar-brand-autodark me-3" href="/">{{icon "terminal-2"}}<span class="ms-2">{{brandName}}</span></a>{{end}}
+        <div class="d-flex flex-wrap align-items-center gap-2 me-auto">
+          {{if .Authed}}<span class="text-secondary small d-none d-md-inline">{{brandName}}</span>{{end}}
+          {{if and .Authed .DevRoot}}<span class="badge badge-warn">{{icon "alert-triangle"}}<span class="ms-1">dev mode</span></span>{{end}}
+          {{if .ReadOnly}}<span class="badge badge-muted">{{icon "lock"}}<span class="ms-1">read-only</span></span>{{end}}
+        </div>
+        <div class="btn-group" role="group" aria-label="Colour theme">
+          <a href="?theme=light" class="btn btn-ghost-secondary btn-icon btn-sm" title="Light theme">{{icon "sun"}}<span class="visually-hidden">Light theme</span></a>
+          <a href="?theme=dark" class="btn btn-ghost-secondary btn-icon btn-sm" title="Dark theme">{{icon "moon"}}<span class="visually-hidden">Dark theme</span></a>
+          <a href="?theme=auto" class="btn btn-ghost-secondary btn-icon btn-sm" title="Follow the system theme">{{icon "device-desktop"}}<span class="visually-hidden">Follow the system theme</span></a>
+        </div>
+      </div>
+    </header>
+    {{if and .Authed .DevRoot}}
+    <div class="dev-banner" role="status">
+      <div class="container-xl">{{icon "alert-triangle"}}<span class="ms-1"><strong>Dev mode.</strong> Reading a sandbox under <code>{{.DevRoot}}</code>, not your real <code>~/.ssh</code>.</span></div>
+    </div>
+    {{end}}
     <main id="main" class="page-body" tabindex="-1">
       <div class="container-xl">
         {{template "content" .}}
