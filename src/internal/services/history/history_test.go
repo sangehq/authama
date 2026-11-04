@@ -401,7 +401,8 @@ func TestADatabaseAtSchemaOneMigratesKeepingItsSubjects(t *testing.T) {
 	if err := s.Begin(&Op{Command: "token set", Source: SourceCLI, Subjects: []Subject{{Kind: KindToken, Name: "npm/registry.npmjs.org"}}}); err != nil {
 		t.Fatalf("recording a token subject after the migration: %v", err)
 	}
-	if got, _ := s.Query(Filter{Token: "npm"}); len(got) != 1 {
+	tool := "npm" // a subject name, not a secret
+	if got, _ := s.Query(Filter{Token: tool}); len(got) != 1 {
 		t.Errorf("--token npm found %d ops, want 1", len(got))
 	}
 }

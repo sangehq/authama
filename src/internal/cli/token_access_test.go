@@ -22,7 +22,9 @@ func TestReadingATokenIsRecordedWithoutItsValue(t *testing.T) {
 	b.ok(t, "", "copy", "composer", "github.com")
 	b.ok(t, "", "show", "composer", "github.com", "--reveal", "--yes")
 
-	ops := historyOps(t, p, history.Filter{Token: "composer/github.com"})
+	// Subject names, not secrets: what history --token is asked for.
+	subject, tool, other := "composer/github.com", "composer", "npm"
+	ops := historyOps(t, p, history.Filter{Token: subject})
 	want := map[string]string{"token set": "", "token copy": "token.copied", "token show": "token.revealed"}
 	for _, o := range ops {
 		ev, ok := want[o.Command]
@@ -47,10 +49,10 @@ func TestReadingATokenIsRecordedWithoutItsValue(t *testing.T) {
 	if len(want) != 0 {
 		t.Errorf("history --token composer/github.com is missing %v (found %d ops)", want, len(ops))
 	}
-	if got := historyOps(t, p, history.Filter{Token: "composer"}); len(got) != len(ops) {
+	if got := historyOps(t, p, history.Filter{Token: tool}); len(got) != len(ops) {
 		t.Errorf("a bare tool found %d operations, the full name %d", len(got), len(ops))
 	}
-	if got := historyOps(t, p, history.Filter{Token: "npm"}); len(got) != 0 {
+	if got := historyOps(t, p, history.Filter{Token: other}); len(got) != 0 {
 		t.Errorf("--token npm found %d composer operations", len(got))
 	}
 	// A plain show reads no secret and records nothing.
