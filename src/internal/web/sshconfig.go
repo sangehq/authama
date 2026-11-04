@@ -40,6 +40,6 @@ func sshConfigView(p paths.Paths) SSHConfigView {
 	return v
 }
 
-func (h pages) handleSSHConfig(w http.ResponseWriter, r *http.Request) {
+func (h systemPages) handleSSHConfig(w http.ResponseWriter, r *http.Request) {
 	h.s.render(w, http.StatusOK, "sshconfig", h.s.newView(r, "sshconfig", "SSH config", sshConfigView(h.s.opts.Engine.Home())))
 }

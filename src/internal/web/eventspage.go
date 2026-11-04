@@ -91,7 +91,7 @@ func (s *Server) recentEvents(f events.Filter) []EventRow {
 	return rows
 }
 
-func (h pages) handleEvents(w http.ResponseWriter, r *http.Request) {
+func (h systemPages) handleEvents(w http.ResponseWriter, r *http.Request) {
 	h.s.scanEvents()
 	q := r.URL.Query()
 	v := EventsView{Area: strings.TrimSpace(q.Get("area")), Kind: strings.TrimSpace(q.Get("kind")),

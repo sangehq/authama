@@ -35,10 +35,11 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /vms", h.handleVMs)
 	mux.HandleFunc("GET /audit", h.handleAudit)
 	mux.HandleFunc("GET /tokens", h.handleTokens)
-	mux.HandleFunc("GET /settings", h.handleSettings)
-	mux.HandleFunc("GET /ssh-config", h.handleSSHConfig)
-	mux.HandleFunc("GET /events", h.handleEvents)
-	mux.HandleFunc("GET /about", h.handleAbout)
+	sp := systemPages{s: s}
+	mux.HandleFunc("GET /settings", sp.handleSettings)
+	mux.HandleFunc("GET /ssh-config", sp.handleSSHConfig)
+	mux.HandleFunc("GET /events", sp.handleEvents)
+	mux.HandleFunc("GET /about", sp.handleAbout)
 	mux.HandleFunc("GET /exports/{name}", h.handleExport)
 	mux.HandleFunc("GET /about/licenses", h.handleLicences)
 	if !s.opts.ReadOnly {
@@ -301,7 +302,13 @@ func (h pages) handleTokens(w http.ResponseWriter, r *http.Request) {
 	h.s.render(w, http.StatusOK, "tokens", h.s.newView(r, "tokens", "Auth tokens", v))
 }
 
-func (h pages) handleSettings(w http.ResponseWriter, r *http.Request) {
+// systemPages are the pages about the tool and its files rather than the
+// home's SSH and token contents: settings, the rendered SSH config, the file
+// events and the about page. A type of their own keeps pages under the
+// layering guard's method ceiling.
+type systemPages struct{ s *Server }
+
+func (h systemPages) handleSettings(w http.ResponseWriter, r *http.Request) {
 	p := h.s.opts.Engine.Home()
 	var v SettingsView
 	if h.s.opts.Settings != nil {

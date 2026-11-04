@@ -166,7 +166,7 @@ func List(p paths.Paths, f Filter) ([]Event, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer fh.Close()
+	defer func() { _ = fh.Close() }()
 	var out []Event
 	sc := bufio.NewScanner(fh)
 	sc.Buffer(make([]byte, 64<<10), 1<<20)
@@ -250,7 +250,7 @@ func sum(path string) string {
 	if err != nil {
 		return ""
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
 		return ""

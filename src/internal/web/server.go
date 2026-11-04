@@ -116,9 +116,16 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 	}
 	errc := make(chan error, 1)
 	go func() { errc <- srv.Serve(ln) }()
+	// The event watcher stops with the server and is waited for, so no scan
+	// is still writing the home after Serve returns.
+	watchCtx, stopWatch := context.WithCancel(ctx)
+	watched := make(chan struct{})
 	if s.opts.EventRoots != nil {
-		go s.watchEvents(ctx)
+		go func() { defer close(watched); s.watchEvents(watchCtx) }()
+	} else {
+		close(watched)
 	}
+	defer func() { stopWatch(); <-watched }()
 	select {
 	case err := <-errc:
 		return err
