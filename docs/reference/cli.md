@@ -56,9 +56,11 @@ Every command also takes the global flag:
   - [`authama ssh key`](#authama-ssh-key) - Manage a profile's keys (add/list/delete)
     - [`authama ssh key add`](#authama-ssh-key-add) - Declare a key on a profile and mint it
     - [`authama ssh key delete`](#authama-ssh-key-delete) - Delete a key (refuses while a host uses it)
+    - [`authama ssh key lifetime`](#authama-ssh-key-lifetime) - Set how long a key lives before rotation is due, and count its expiry again
     - [`authama ssh key list`](#authama-ssh-key-list) - Every key with its fingerprint, expiry, hosts and state
     - [`authama ssh key regen-pub`](#authama-ssh-key-regen-pub) - Rebuild public keys from their private key or 1Password item
     - [`authama ssh key reserve`](#authama-ssh-key-reserve) - Keep a loose ~/.ssh key on purpose (doctor stops calling it loose)
+    - [`authama ssh key revoke`](#authama-ssh-key-revoke) - Remove a key from every target it is deployed to, and never deploy it again
     - [`authama ssh key unreserve`](#authama-ssh-key-unreserve) - Drop a key's reservation (doctor lists it as loose again)
   - [`authama ssh keygen`](#authama-ssh-keygen) - Generate a profile's or host's keys
   - [`authama ssh knownhosts`](#authama-ssh-knownhosts) - Pin host keys into the single ~/.ssh/known_hosts trust store
@@ -963,9 +965,11 @@ Subcommands:
 
 - [`add`](#authama-ssh-key-add) - Declare a key on a profile and mint it
 - [`delete`](#authama-ssh-key-delete) - Delete a key (refuses while a host uses it)
+- [`lifetime`](#authama-ssh-key-lifetime) - Set how long a key lives before rotation is due, and count its expiry again
 - [`list`](#authama-ssh-key-list) - Every key with its fingerprint, expiry, hosts and state
 - [`regen-pub`](#authama-ssh-key-regen-pub) - Rebuild public keys from their private key or 1Password item
 - [`reserve`](#authama-ssh-key-reserve) - Keep a loose ~/.ssh key on purpose (doctor stops calling it loose)
+- [`revoke`](#authama-ssh-key-revoke) - Remove a key from every target it is deployed to, and never deploy it again
 - [`unreserve`](#authama-ssh-key-unreserve) - Drop a key's reservation (doctor lists it as loose again)
 
 ## authama ssh key add
@@ -1024,6 +1028,37 @@ Flags:
       --purge           also delete the key files from disk
       --revoke          revoke the deployed public key from its targets first
   -y, --yes             skip the confirmation prompt
+```
+
+## authama ssh key lifetime
+
+Sets a key's rotate_after_days and counts its expiry date again from when the
+key was created. A preset names a common policy: annual (365 days, the usual
+floor for SSH user keys), semiannual (180), quarterly (90) or monthly (30).
+Anything from 1 to 1825 days is accepted.
+
+--default sets the lifetime every key without its own inherits, and takes the
+lifetime alone. --clear drops a key's own value, so it inherits the default.
+
+```
+authama ssh key lifetime <profile/key> <days|annual|semiannual|quarterly|monthly> [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh key lifetime work/work_gh-ed25519 quarterly
+  authama ssh key lifetime work/work_gh-ed25519 120
+  authama ssh key lifetime --default annual
+  authama ssh key lifetime work/work_gh-ed25519 --clear
+```
+
+Flags:
+
+```
+      --clear     drop the key's own lifetime, so it inherits the default
+      --default   set the lifetime every key without its own inherits
+  -y, --yes       skip the confirmation prompt
 ```
 
 ## authama ssh key list
@@ -1109,6 +1144,35 @@ Flags:
       --for string    what the key is kept for, e.g. devbox (shown by doctor)
       --note string   a note to keep with it
   -y, --yes           do not ask for confirmation
+```
+
+## authama ssh key revoke
+
+Asks each target the key is deployed to, through its host's provider, to remove
+it: GitHub and GitLab through their CLIs, a cloud API, a server's
+authorized_keys. The deployments it was removed from are dropped from its
+record, and its fingerprint is recorded in revoked.json, so deploy and
+rollback refuse it from then on. A target that cannot be reached, or whose
+provider cannot remove keys, is named so you can remove it by hand.
+
+The key's declaration, hosts and files stay. Mint its successor next:
+`ssh keygen <profile/key> --force` now, or `ssh rotate <profile/key>` staged.
+
+```
+authama ssh key revoke <profile/key> [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh key revoke work/work_gh-ed25519 --reason "laptop lost"
+```
+
+Flags:
+
+```
+      --reason string   why, recorded with the revocation (e.g. "laptop lost")
+  -y, --yes             skip the confirmation prompt
 ```
 
 ## authama ssh key unreserve
@@ -1536,6 +1600,8 @@ there is nothing to deploy it to.
 ```
 authama ssh rotate [<[profile/]key>|profile|alias ...] [--category <name>] [--all] [flags]
 ```
+
+Aliases: `recycle`
 
 Examples:
 

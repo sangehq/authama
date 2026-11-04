@@ -17,8 +17,11 @@ func newRotateCmd() *cobra.Command {
 	var allowUnverified, passphrase, yes, noKeyBackup, all, dryRun bool
 	var category string
 	cmd := &cobra.Command{
-		Use:   "rotate [<[profile/]key>|profile|alias ...] [--category <name>] [--all]",
-		Short: "Zero-downtime staged key rotation",
+		Use: "rotate [<[profile/]key>|profile|alias ...] [--category <name>] [--all]",
+		// recycle is what a policy calls a staged rotation: the old key is
+		// retired and its successor deployed and verified before it goes.
+		Aliases: []string{"recycle"},
+		Short:   "Zero-downtime staged key rotation",
 		Long: "Zero-downtime staged key rotation.\n\n" +
 			"The key being replaced is archived to the profile's old/ dir, but only one\n" +
 			"predecessor is kept - so rotating again discards the one before it for good.\n" +

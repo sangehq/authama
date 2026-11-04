@@ -10,6 +10,7 @@ package editor
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -42,6 +43,16 @@ type DeleteResult struct {
 // Editor edits the manifest at the resolved home.
 type Editor struct {
 	p paths.Paths
+	// unattended, when set, is where a provider call that reaches a target
+	// writes, with no prompt it could answer: a job from the web UI.
+	unattended io.Writer
+}
+
+// Unattended makes target calls run with nobody to answer a prompt, their
+// output to w, as a deploy started from the web UI does.
+func (e *Editor) Unattended(w io.Writer) *Editor {
+	e.unattended = w
+	return e
 }
 
 // New builds a manifest editor.
@@ -661,7 +672,7 @@ func (e *Editor) removeFromTarget(host manifest.Host, path string) bool {
 	t := providers.Target{
 		Alias: host.Alias, Hostname: host.Hostname, User: host.User, Port: host.Port,
 		PubkeyPath: path, PubkeyText: strings.TrimSpace(string(text)), TokenEnv: deref(host.TokenEnv),
-		KnownHosts: filepath.Join(e.p.SSHDir, "known_hosts"),
+		KnownHosts: filepath.Join(e.p.SSHDir, "known_hosts"), Unattended: e.unattended,
 	}
 	return providers.Resolve(deref(host.Provider), e.p.Providers()).Remove(t)
 }

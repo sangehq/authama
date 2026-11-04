@@ -416,6 +416,14 @@ func (r *Rotator) Rollback(selector string) (RotateReport, error) {
 	if fp, err := r.ks.Fingerprint(oldPub); err == nil {
 		report.NewFingerprint = fp
 	}
+	// Rolling back redeploys the predecessor, and a revoked key is never
+	// deployed again.
+	if revs, err := inventory.LoadRevocations(inventory.RevokedPath(r.p.Inventory())); err != nil {
+		return RotateReport{}, err
+	} else if rv, revoked := revs[report.NewFingerprint]; revoked && report.NewFingerprint != "" {
+		return RotateReport{}, fmt.Errorf("the previous key (%s) was revoked on %s, so it is not rolled back to",
+			report.NewFingerprint, rv.RevokedOn)
+	}
 
 	// Preflight, before any file moves: a server that cannot be reached would
 	// keep trusting only the rotated-in key, so rolling back locally would cut
