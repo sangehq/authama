@@ -1,43 +1,18 @@
-// authama web UI: the whole of its own JavaScript. Every page works without it;
-// this only adds conveniences on top, and never builds HTML from strings.
-(function () {
-  "use strict";
+// @ts-check
+// authama web UI: the entry module. Every page works without it; these
+// components only add conveniences on top, and never build HTML from strings.
+// Each is a class in js/components, marked on the page by a data attribute and
+// configured by more of them (see each class).
+import { App } from "./js/core/app.js";
+import { DataTable } from "./js/components/data-table.js";
+import { AutoSubmit, ConfirmAction, JobStream } from "./js/components/behaviours.js";
+import { CommandPalette, PanelFromHash } from "./js/components/palette.js";
 
-  // The history filter's source list applies as soon as it changes.
-  var source = document.getElementById("f-source");
-  if (source && source.form) {
-    source.addEventListener("change", function () { source.form.submit(); });
-  }
-})();
-
-// A job's page streams its output. Lines are added as text nodes, never as
-// HTML; when the job changes state the page reloads to show the question,
-// the result and the right buttons.
-(function () {
-  "use strict";
-  var log = document.getElementById("job-log");
-  var box = document.getElementById("job-state");
-  if (!log || !box || !window.EventSource) {
-    return;
-  }
-  var state = box.getAttribute("data-state");
-  if (state !== "running" && state !== "waiting") {
-    return;
-  }
-  var seen = log.textContent.split("\n").length - 1;
-  var count = 0;
-  var events = new EventSource(log.getAttribute("data-events"));
-  events.addEventListener("line", function (e) {
-    count += 1;
-    if (count <= seen) {
-      return; // already on the page
-    }
-    log.appendChild(document.createTextNode(e.data + "\n"));
-  });
-  events.addEventListener("state", function (e) {
-    if (e.data !== state) {
-      events.close();
-      window.location.reload();
-    }
-  });
-})();
+App.create()
+  .use(DataTable)
+  .use(ConfirmAction)
+  .use(AutoSubmit)
+  .use(JobStream)
+  .use(PanelFromHash)
+  .use(CommandPalette)
+  .start();

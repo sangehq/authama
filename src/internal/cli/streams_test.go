@@ -215,7 +215,7 @@ func TestABareInvocationFallsBackToHelpWithoutATerminal(t *testing.T) {
 		t.Fatalf("a bare invocation should not fail: %v", err)
 	}
 
-	if !strings.Contains(out.String(), "Available Commands:") {
+	if !strings.Contains(out.String(), "COMMANDS") {
 		t.Errorf("expected help without a terminal:\n%s", out.String())
 	}
 	if strings.Contains(out.String(), ":\n  1)") {

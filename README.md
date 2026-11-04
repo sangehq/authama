@@ -85,9 +85,13 @@ Both:
 authama doctor                    # SSH health and token-file modes; --fix repairs modes and syncs VM hosts
 authama ssh vm sync --dry-run     # keep VM hosts matching their VMs (--install-schedule: daily)
 authama ssh key reserve docker-tunnel --for devbox   # keep a loose key for later; doctor stops warning
-authama tui                       # an interactive menu over both
+authama                           # on a terminal: the web UI on this machine, as authama serve
 authama serve                     # a web UI on this machine, with previewed changes
+authama tui                       # an interactive menu over both
+authama ssh help deploy           # help at any level: authama help, authama auth help set
 authama history                   # every change made, SSH or token
+authama events --since 24h        # every change to a tracked file, by anyone
+authama man ~/.local/share/man/man1   # manual pages: man authama-ssh-deploy
 ```
 
 The full walkthrough is in [Getting started](docs/getting-started.md); everything
@@ -123,6 +127,8 @@ else is in the [documentation index](#documentation).
 - [`validate`](docs/tools/validate.md) — keypair integrity checks.
 - [`bundle`](docs/tools/bundle.md) — encrypted backup and restore.
 - [`history`](docs/tools/history.md) — every change authama has made, filtered by host, profile or key.
+- [`events`](docs/tools/events.md) — every change seen to a file under `~/.ssh`, the config home or a token file, by anyone.
+- [`man`](docs/tools/man.md) — a manual page for every command, and the layout every `--help` shares.
 - [`serve`](docs/tools/serve.md) — the web UI: overview, hosts, keys, snapshots, auth tokens and history in a browser, with previewed changes.
 - [`recover`](docs/tools/recover.md) — break-glass when you are locked out.
 - [`tui`](docs/tools/tui.md) — the interactive menu.

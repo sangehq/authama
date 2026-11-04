@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"net/http"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/core/expiry"
 	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/services/events"
 	"github.com/simtabi/authama/src/internal/services/history"
 )
 
@@ -46,6 +48,26 @@ func loadAssets() (*assetSet, error) {
 	if err != nil {
 		return nil, err
 	}
+	// The JavaScript is ES modules that import each other by relative path,
+	// so app.js and everything under js/ share one fingerprint, taken over
+	// all of them: a relative import lands under the same /assets/<hash>/ and
+	// still finds its file, and any change to any module moves them all.
+	group := sha256.New()
+	var mods []string
+	for name := range a.files {
+		if isModule(name) {
+			mods = append(mods, name)
+		}
+	}
+	sort.Strings(mods)
+	for _, name := range mods {
+		group.Write([]byte(name))
+		group.Write(a.files[name])
+	}
+	modHash := hex.EncodeToString(group.Sum(nil))[:12]
+	for _, name := range mods {
+		a.hashes[name] = modHash
+	}
 	sprite, ok := a.files["vendor/tabler-icons.svg"]
 	if !ok {
 		return nil, fmt.Errorf("web: the icon sprite is not embedded")
@@ -55,6 +77,9 @@ func loadAssets() (*assetSet, error) {
 	a.sprite = template.HTML(sprite) //nolint:gosec // trusted vendored file, see above
 	return a, nil
 }
+
+// isModule reports whether an asset is one of the UI's ES modules.
+func isModule(name string) bool { return name == "app.js" || strings.HasPrefix(name, "js/") }
 
 // url returns the fingerprinted URL of an asset. Asking for one that does not
 // exist fails the template, which the page tests turn into a failure rather
@@ -179,6 +204,71 @@ func funcs(a *assetSet) template.FuncMap {
 			}
 			return strings.Join(parts, ", ")
 		},
+		"base": filepath.Base,
+		// pct is part of whole as a percentage, rounded to the 5% steps
+		// app.css has width classes for (no inline style passes the CSP).
+		"pct": func(part, whole int) int {
+			if whole <= 0 || part <= 0 {
+				return 0
+			}
+			p := (part*100 + whole/2) / whole
+			return min(100, (p+2)/5*5)
+		},
+		"sub": func(a, b int) int { return a - b },
+		"eventDot": func(kind string) string {
+			switch kind {
+			case events.KindAdded:
+				return "status-dot-animated status-green"
+			case events.KindRemoved:
+				return "status-red"
+			case events.KindMode:
+				return "status-yellow"
+			case events.KindChanged:
+				return "status-azure"
+			}
+			return "status-secondary"
+		},
+		"eventBadge": func(kind string) string {
+			switch kind {
+			case events.KindAdded:
+				return "badge-ok"
+			case events.KindRemoved:
+				return "badge-bad"
+			case events.KindMode:
+				return "badge-warn"
+			case events.KindChanged:
+				return "badge-info"
+			}
+			return "badge-muted"
+		},
+		"confirm": func(id, form, title, text, label string) confirmModal {
+			return confirmModal{ID: id, Form: form, Title: title, Text: text, Label: label}
+		},
+		"withPurge":    func(m confirmModal) confirmModal { m.Purge = true; return m },
+		"paletteItems": paletteItems,
+		"stat": func(label string, count int, href, icon, colour string) stat {
+			return stat{Label: label, Count: count, Href: href, Icon: icon, Colour: colour}
+		},
+		"empty": func(icon, title, text string) emptyState {
+			return emptyState{Icon: icon, Title: title, Text: text}
+		},
+		"header": func(pretitle, title, subtitle string, actions ...headerAction) pageHeader {
+			return pageHeader{Pretitle: pretitle, Title: title, Subtitle: subtitle, Actions: actions}
+		},
+		"action": func(label, href, icon string) headerAction {
+			return headerAction{Label: label, Href: href, Icon: icon}
+		},
+		// panel is an action that slides in the offcanvas panel with that id.
+		"panel": func(label, id, icon string) headerAction {
+			return headerAction{Label: label, Href: "#" + id, Icon: icon, Panel: id}
+		},
+		"navGroup": func(_ view, key, icon, label string, items ...navItem) navGroup {
+			g := navGroup{Key: key, Icon: icon, Label: label, Items: items}
+			for _, it := range items {
+				g.Active = g.Active || it.Active
+			}
+			return g
+		},
 		"navItem": func(v view, key, href, icon, label string) navItem {
 			return navItem{Active: v.Nav == key, Href: href, Icon: icon, Label: label}
 		},
@@ -246,6 +336,40 @@ func parsePages(a *assetSet) (*pageSet, error) {
 	return ps, nil
 }
 
+// pageHeader is a page's header: the section, the title, and a one-line
+// summary under it.
+type pageHeader struct {
+	Pretitle, Title, Subtitle string
+	Actions                   []headerAction
+}
+
+// headerAction is a link at the right of a page header, to a form further
+// down the page; the first is the primary one.
+type headerAction struct{ Label, Href, Icon, Panel string }
+
+// emptyState is a list with nothing in it yet.
+type emptyState struct{ Icon, Title, Text string }
+
+// confirmModal asks before a destructive action is previewed.
+type confirmModal struct {
+	ID, Form, Title, Text, Label string
+	Purge                        bool // offer "and its key files", for a profile delete
+}
+
+// stat is one count on the overview.
+type stat struct {
+	Label              string
+	Count              int
+	Href, Icon, Colour string
+}
+
+// navGroup is a menu in the top bar: its pages, in a dropdown.
+type navGroup struct {
+	Key, Icon, Label string
+	Active           bool
+	Items            []navItem
+}
+
 type navItem struct {
 	Active            bool
 	Href, Icon, Label string
@@ -263,15 +387,25 @@ type view struct {
 	SSHDir   string
 	DevRoot  string
 	Data     any
+	// Bell is the newest file events, for the header's notifications menu.
+	Bell []events.Event
+	// User and Host are the account and machine the server runs as, and
+	// Initials the avatar's letters; Year is for the footer.
+	User, Host, Initials string
+	Year                 int
 }
 
 func (s *Server) newView(r *http.Request, nav, title string, data any) view {
 	p := s.opts.Engine.Home()
 	v := view{Title: title, Nav: nav, Version: s.opts.Version, ReadOnly: s.opts.ReadOnly, Data: data,
-		Home: p.ConfigDir, SSHDir: p.SSHDir, DevRoot: p.DevRoot}
+		Home: p.ConfigDir, SSHDir: p.SSHDir, DevRoot: p.DevRoot,
+		User: s.who.user, Host: s.who.host, Initials: s.who.initials(), Year: s.now().Year()}
 	if sess := sessionFrom(r.Context()); sess != nil {
 		v.Authed = true
 		v.CSRF = sess.csrf
+		if s.opts.EventRoots != nil {
+			v.Bell, _ = events.List(p, events.Filter{Limit: 6})
+		}
 	}
 	return v
 }
@@ -332,4 +466,44 @@ func (s *Server) serveAsset(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	_, _ = w.Write(body)
+}
+
+// paletteItem is one entry of the command palette.
+type paletteItem struct{ ID, Label, Href, Icon, Group, Keywords string }
+
+// paletteItems is what the command palette lists: every page, the forms that
+// open in a panel (not in read-only mode), and the downloads.
+func paletteItems(readOnly bool) []paletteItem {
+	items := []paletteItem{
+		{"overview", "Overview", "/", "layout-dashboard", "Page", "home dashboard state"},
+		{"profiles", "Profiles", "/profiles", "users", "SSH", "profile category key scope"},
+		{"hosts", "Hosts", "/hosts", "server", "SSH", "host alias hostname"},
+		{"sshconfig", "SSH config", "/ssh-config", "file-code", "SSH", "config render drift check"},
+		{"keys", "Keys", "/keys", "key", "SSH", "key fingerprint expiry reserve"},
+		{"vms", "VMs", "/vms", "device-desktop", "SSH", "vm hypervisor devbox sync"},
+		{"snapshots", "Snapshots", "/snapshots", "archive", "SSH", "snapshot bundle backup restore"},
+		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Auth", "token npm composer docker git netrc"},
+		{"history", "History", "/history", "history", "System", "history operations changes log"},
+		{"events", "Events", "/events", "activity", "System", "events file changes tracking"},
+		{"doctor", "Doctor", "/doctor", "stethoscope", "System", "doctor checks fix"},
+		{"audit", "Audit", "/audit", "shield-check", "System", "audit key age"},
+		{"settings", "Settings", "/settings", "settings", "System", "settings theme appearance env"},
+		{"about", "About", "/about", "info-circle", "System", "about version licences"},
+	}
+	if !readOnly {
+		items = append(items,
+			paletteItem{"add-profile", "Add a profile", "/profiles#add-profile", "plus", "Action", "new create profile"},
+			paletteItem{"add-host", "Add a host", "/hosts#add-host", "plus", "Action", "new create host"},
+			paletteItem{"add-token", "Add or replace a token", "/tokens#add-token", "plus", "Action", "new set rotate token secret"},
+		)
+	}
+	return append(items,
+		paletteItem{"export-config", "Download ssh_config, every host inline", "/exports/ssh_config", "download", "Export", "export flat ssh_config"},
+		paletteItem{"export-termius", "Download the Termius CSV", "/exports/termius-hosts.csv", "download", "Export", "export termius csv"},
+		paletteItem{"export-hosts", "Download the hosts as CSV", "/exports/hosts.csv", "download", "Export", "export csv hosts spreadsheet"},
+		paletteItem{"export-keys", "Download the keys as CSV", "/exports/keys.csv", "download", "Export", "export csv keys spreadsheet"},
+		paletteItem{"export-tokens", "Download the installed tokens as CSV", "/exports/tokens.csv", "download", "Export", "export csv tokens spreadsheet"},
+		paletteItem{"export-history", "Download the history as CSV", "/exports/history.csv", "download", "Export", "export csv history operations"},
+		paletteItem{"export-events", "Download the file events as CSV", "/exports/events.csv", "download", "Export", "export csv events audit"},
+	)
 }

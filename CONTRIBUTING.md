@@ -188,6 +188,10 @@ removing one that the baseline lists means the test fails, which is the point.
   starts no `pull_request` run while the PR conflicts with `main`. Resolve the
   conflict rather than dispatching CI by hand, which tests the branch and not
   the merge.
-- A `test (macos-latest)` leg that fails after about 15 minutes with no step
-  run never got a runner. `requeue.yml` re-runs it once on its own; re-run it
-  by hand only if that second attempt strands too.
+- Pull requests test on Linux and Windows, and run `darwin cross-check`, which
+  builds and vets every package for macOS (arm64 and amd64) on Linux. The full
+  macOS test runs on the weekly schedule and on `workflow_dispatch`
+  (`gh workflow run ci.yml --repo simtabi/authama --ref <branch>`), because
+  GitHub's macOS runners went unscheduled for days and a required macOS leg
+  blocked every merge. A `test (macos-latest)` leg that fails after about 15
+  minutes with no step run never got a runner; `requeue.yml` re-runs it once.

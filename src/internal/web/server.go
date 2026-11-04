@@ -18,7 +18,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/simtabi/authama/src/internal/services/events"
 	"github.com/simtabi/authama/src/internal/services/jobs"
+	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
 // Options configures a Server.
@@ -43,6 +45,18 @@ type Options struct {
 	Version  string
 	BindAddr string
 
+	// Settings reads the settings page for a home. The values in effect were
+	// settled at start-up, which the command that started the server owns,
+	// so it passes this in. Nil shows the files only, with no values.
+	Settings func(paths.Paths) SettingsView
+
+	// EventRoots names the files whose changes the events page records:
+	// ~/.ssh, the config home, the tools' credential files. Nil tracks
+	// nothing. The server scans them every EventInterval while it runs, and
+	// when the events page or the overview opens.
+	EventRoots    func(paths.Paths) []events.Tracked
+	EventInterval time.Duration
+
 	// Retain is how many snapshots a snapshot restore keeps when it snapshots
 	// first, as AUTHAMA_SNAPSHOT_RETAIN sets for the CLI. 0 means 10.
 	Retain int
@@ -57,6 +71,8 @@ type Server struct {
 	pages    *pageSet
 	assets   *assetSet
 	sessions sessions
+	secrets  secretStash
+	who      whoami
 	jobs     *jobs.Registry
 	handler  http.Handler
 }
@@ -81,7 +97,7 @@ func New(opts Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{opts: opts, pages: pages, assets: assets, jobs: jobs.NewRegistry()}
+	s := &Server{opts: opts, pages: pages, assets: assets, jobs: jobs.NewRegistry(), who: currentUser()}
 	s.handler = securityHeaders(s.hostCheck(s.auth(s.sameOrigin(s.routes()))))
 	return s, nil
 }
@@ -97,10 +113,24 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 	srv := &http.Server{
 		Handler:           s.handler,
 		ReadHeaderTimeout: 10 * time.Second,
-		IdleTimeout:       2 * time.Minute,
+		// A body (a form) is read in 30 seconds or not at all. There is no
+		// WriteTimeout: a job's event stream stays open while the job runs.
+		ReadTimeout:    30 * time.Second,
+		IdleTimeout:    2 * time.Minute,
+		MaxHeaderBytes: 64 << 10,
 	}
 	errc := make(chan error, 1)
 	go func() { errc <- srv.Serve(ln) }()
+	// The event watcher stops with the server and is waited for, so no scan
+	// is still writing the home after Serve returns.
+	watchCtx, stopWatch := context.WithCancel(ctx)
+	watched := make(chan struct{})
+	if s.opts.EventRoots != nil {
+		go func() { defer close(watched); s.watchEvents(watchCtx) }()
+	} else {
+		close(watched)
+	}
+	defer func() { stopWatch(); <-watched }()
 	select {
 	case err := <-errc:
 		return err

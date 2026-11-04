@@ -262,8 +262,8 @@ func newTuiCmd() *cobra.Command {
 	}
 }
 
-// runTUI is the entry point for both `authama tui` and a bare `authama` on a
-// terminal, so the two cannot drift into behaving differently.
+// runTUI is the entry point for `authama tui`. A bare `authama` on a terminal
+// opened it until the web UI took that place (see runBare).
 func runTUI(c *cobra.Command) error {
 	out := c.OutOrStdout()
 	p, err := resolvePaths(c)

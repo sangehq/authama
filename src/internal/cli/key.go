@@ -12,11 +12,13 @@ import (
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/platform"
 	"github.com/simtabi/authama/src/internal/services/editor"
+	"github.com/simtabi/authama/src/internal/services/exports"
 	"github.com/simtabi/authama/src/internal/services/keyaudit"
 	"github.com/simtabi/authama/src/internal/services/keysvc"
 	"github.com/simtabi/authama/src/internal/services/lifecycle"
 	"github.com/simtabi/authama/src/internal/services/pubkeys"
 	"github.com/simtabi/authama/src/internal/services/reconciler"
+	"github.com/simtabi/authama/src/internal/util/csvout"
 )
 
 // newKeyCmd is the key lifecycle verb. A key used to exist only as a property of
@@ -178,7 +180,8 @@ func newKeyAddCmd() *cobra.Command {
 }
 
 func newKeyListCmd() *cobra.Command {
-	return &cobra.Command{
+	var asCSV bool
+	cmd := &cobra.Command{
 		Use:   "list [profile|alias|key]",
 		Short: "Every key with its fingerprint, expiry, hosts and state",
 		Args:  cobra.MaximumNArgs(1),
@@ -203,6 +206,9 @@ func newKeyListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if asCSV {
+				return csvout.Write(c.OutOrStdout(), exports.Keys(rows))
+			}
 			writeKeyTable(c.OutOrStdout(), rows)
 			if selector == "" {
 				writeReserved(c.OutOrStdout(), m, inv, p.SSHDir, vmConfig(p).PlannedKeys())
@@ -210,6 +216,8 @@ func newKeyListCmd() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&asCSV, "csv", false, "print the keys as CSV, one row each, header first")
+	return cmd
 }
 
 // writeKeyTable renders the key table (shared with the TUI once it reaches CLI

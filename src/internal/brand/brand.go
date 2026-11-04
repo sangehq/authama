@@ -43,7 +43,27 @@ const (
 // TopLevel lists the commands that sit directly under Command. Every other
 // verb lives in the ssh group; a test in the cli package keeps this list equal
 // to the command tree.
-var TopLevel = []string{"version", "doctor", "init", "migrate", "settings", "tui", "history", "serve", "ssh", "token"}
+var TopLevel = []string{"version", "doctor", "init", "migrate", "settings", "tui", "history", "events", "man", "serve", "ssh", "token"}
+
+// TopLevelAliases are the other names of top-level commands: `auth` is the
+// token group. The same test keeps it equal to the tree's aliases.
+var TopLevelAliases = []string{"auth"}
+
+// IsTopLevel reports whether word names a command directly under Command,
+// by its name or an alias.
+func IsTopLevel(word string) bool {
+	for _, t := range TopLevel {
+		if word == t {
+			return true
+		}
+	}
+	for _, t := range TopLevelAliases {
+		if word == t {
+			return true
+		}
+	}
+	return false
+}
 
 // Line spells a command the way a user types it now: a top-level verb as
 // `authama <verb>`, an SSH verb (as the history and the web record it) as
@@ -53,11 +73,8 @@ func Line(cmd string) string {
 	if cmd == "" {
 		return Command
 	}
-	first := strings.Fields(cmd)[0]
-	for _, t := range TopLevel {
-		if first == t {
-			return Command + " " + cmd
-		}
+	if IsTopLevel(strings.Fields(cmd)[0]) {
+		return Command + " " + cmd
 	}
 	return Command + " ssh " + cmd
 }

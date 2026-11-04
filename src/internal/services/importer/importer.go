@@ -47,6 +47,10 @@ type ImportResult struct {
 	// Skipped names each host left out because the manifest would refuse it
 	// (e.g. a hostname ssh itself refuses), with the reason.
 	Skipped []string
+	// Sources are the config files read, in order, and Root the folder
+	// relative Includes and ~/.ssh/ identity paths resolved against.
+	Sources []string
+	Root    string
 }
 
 // Format renders the human-readable import summary (mirrors ImportResult.format).
@@ -56,6 +60,9 @@ func (r ImportResult) Format() string {
 		head = "import (dry-run):"
 	}
 	lines := []string{head}
+	if len(r.Sources) > 1 {
+		lines = append(lines, "  read "+strconv.Itoa(len(r.Sources))+" config files under "+r.Root)
+	}
 	names := make([]string, 0, len(r.Profiles))
 	for p := range r.Profiles {
 		names = append(names, p)
@@ -417,6 +424,111 @@ type Importer struct {
 	p               paths.Paths
 	emitUseKeychain bool
 	ks              *keystore.KeyStore
+	// root is the folder being imported when it is not this machine's
+	// ~/.ssh: an IdentityFile under ~/.ssh/ is looked for in it instead.
+	root string
+}
+
+// Source is what an import reads: the config files, in order, and the folder
+// they belong to.
+type Source struct {
+	Root  string
+	Files []string
+}
+
+// maxConfigDepth is how deep Locate looks for config files in a folder with
+// no top-level config: profiles/<category>/<profile>/config is four levels.
+const maxConfigDepth = 4
+
+// Locate finds the ssh config to import at path:
+//
+//   - a file: that file;
+//   - a folder with a config file: that file, whose Includes pull in the rest
+//     (~/.ssh, or another machine's copy of it);
+//   - a folder with ssh/config: that file, for a config home such as ~/.config;
+//   - any other folder: every file named config, or ending .conf, up to four
+//     levels down, in path order (a flat folder of *.conf files, a
+//     config.d/, profiles/<name>/config), read as if one Included the next.
+func Locate(path string) (Source, error) {
+	path = expanduser(path)
+	fi, err := os.Stat(path)
+	if err != nil {
+		return Source{}, &importError{"no ssh config to import at " + path}
+	}
+	if fi.Mode().IsRegular() {
+		return Source{Root: filepath.Dir(path), Files: []string{path}}, nil
+	}
+	if !fi.IsDir() {
+		return Source{}, &importError{path + " is neither a file nor a folder"}
+	}
+	for _, rel := range []string{"config", filepath.Join("ssh", "config")} {
+		if c := filepath.Join(path, rel); isFile(c) {
+			return Source{Root: filepath.Dir(c), Files: []string{c}}, nil
+		}
+	}
+	var files []string
+	base := strings.Count(filepath.Clean(path), string(filepath.Separator))
+	_ = filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			if strings.Count(filepath.Clean(p), string(filepath.Separator))-base >= maxConfigDepth {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		name := d.Name()
+		if d.Type().IsRegular() && (name == "config" || strings.HasSuffix(name, ".conf")) {
+			files = append(files, p)
+		}
+		return nil
+	})
+	sort.Strings(files)
+	if len(files) == 0 {
+		return Source{}, &importError{"no ssh config to import under " + path +
+			" (looked for config, ssh/config, and config or *.conf files up to " + strconv.Itoa(maxConfigDepth) + " levels down)"}
+	}
+	return Source{Root: path, Files: files}, nil
+}
+
+// parseSources parses every file of src as one config: each file's blocks
+// in order, then every host resolved against all of them, as ssh resolves a
+// config whose Includes pulled the rest in.
+func parseSources(src Source) []*ParsedHost {
+	seen := map[string]bool{}
+	var blocks []*block
+	var aliases []string
+	for _, f := range src.Files {
+		abs, err := filepath.Abs(f)
+		if err != nil {
+			continue
+		}
+		if resolved, e := filepath.EvalSymlinks(abs); e == nil {
+			abs = resolved
+		}
+		if seen[abs] {
+			continue // already Included by a file read before it
+		}
+		seen[abs] = true
+		text, err := os.ReadFile(abs)
+		if err != nil {
+			continue
+		}
+		bs, as := collectBlocks(string(text), src.Root, seen, true)
+		blocks = append(blocks, bs...)
+		aliases = append(aliases, as...)
+	}
+	hosts := make([]*ParsedHost, 0, len(aliases))
+	done := map[string]bool{}
+	for _, alias := range aliases {
+		if done[alias] {
+			continue
+		}
+		done[alias] = true
+		hosts = append(hosts, resolveHost(alias, blocks))
+	}
+	return hosts
 }
 
 // New builds an importer.
@@ -426,16 +538,26 @@ func New(p paths.Paths, emitUseKeychain bool) *Importer {
 
 // Run parses configPath into a fresh manifest + inventory (replacing any existing).
 // With dryRun it parses and reports without writing or adopting keys.
+//
+// configPath may be a config file or any folder holding ssh config files; see
+// Locate for how a folder is read.
 func (im *Importer) Run(configPath string, dryRun bool) (ImportResult, error) {
-	configPath = expanduser(configPath)
-	if !isFile(configPath) {
-		return ImportResult{}, &importError{"no ssh config file to import: " + configPath}
-	}
-	text, err := os.ReadFile(configPath)
+	src, err := Locate(configPath)
 	if err != nil {
-		return ImportResult{}, &importError{"cannot read " + configPath + ": " + err.Error()}
+		return ImportResult{}, err
 	}
-	parsed := parseSSHConfig(string(text), filepath.Dir(configPath), map[string]bool{})
+	for _, f := range src.Files {
+		if _, err := os.ReadFile(f); err != nil {
+			return ImportResult{}, &importError{"cannot read " + f + ": " + err.Error()}
+		}
+	}
+	im.root = ""
+	if real, err := filepath.Abs(im.p.SSHDir); err == nil {
+		if r, err := filepath.Abs(src.Root); err == nil && filepath.Clean(r) != filepath.Clean(real) && filepath.Base(r) != "ssh" {
+			im.root = r
+		}
+	}
+	parsed := parseSources(src)
 
 	m := manifest.Starter(im.emitUseKeychain) // defaults with the right global options
 	order := []string{}
@@ -522,7 +644,8 @@ func (im *Importer) Run(configPath string, dryRun bool) (ImportResult, error) {
 	// config rather than editing it in place is normal, so a repeated alias is
 	// normal - and counting parsed hosts reported an import larger than the one
 	// written, with nothing in the summary to say which number was real.
-	result := ImportResult{DryRun: dryRun, KeysFound: len(inv.Keys), Adopted: adopted, Profiles: map[string]int{}, Skipped: skipped}
+	result := ImportResult{DryRun: dryRun, KeysFound: len(inv.Keys), Adopted: adopted, Profiles: map[string]int{}, Skipped: skipped,
+		Sources: src.Files, Root: src.Root}
 	for name, hosts := range byProfile {
 		result.Profiles[name] = len(hosts)
 	}
@@ -542,7 +665,7 @@ func (im *Importer) resolveKey(h *ParsedHost) resolution {
 		kn, _ := key.DeriveKeyName(h.Profile, h.Alias, "ed25519")
 		return resolution{keyName: kn}
 	}
-	real := expanduser(h.IdentityFile)
+	real := im.identityPath(h.IdentityFile)
 	pub := real + ".pub"
 	probe := ""
 	switch {
@@ -560,6 +683,21 @@ func (im *Importer) resolveKey(h *ParsedHost) resolution {
 		adopt = real
 	}
 	return resolution{keyName: kn, adoptFrom: adopt, probe: probe}
+}
+
+// identityPath is where an IdentityFile's key is on this machine. Importing
+// another machine's ~/.ssh, a path under ~/.ssh/ names a file in that copy,
+// which is looked for there first.
+func (im *Importer) identityPath(identity string) string {
+	if im.root != "" {
+		norm := strings.ReplaceAll(identity, `\`, "/")
+		if rest, ok := strings.CutPrefix(norm, "~/.ssh/"); ok {
+			if c := filepath.Join(im.root, filepath.FromSlash(rest)); exists(c) {
+				return c
+			}
+		}
+	}
+	return expanduser(identity)
 }
 
 func underProfile(real, profile string) bool {

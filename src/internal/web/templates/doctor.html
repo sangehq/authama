@@ -1,5 +1,5 @@
 {{define "content"}}{{with .Data}}
-{{template "page_header" "Doctor"}}
+{{template "page_header" (header "System" "Doctor" "The checks authama doctor runs, without --fix.")}}
 {{if .OK}}<div class="alert alert-success" role="status">{{icon "circle-check"}}<span class="ms-1">Every check passed.</span></div>
 {{else}}<div class="alert alert-warning" role="status">{{icon "alert-triangle"}}<span class="ms-1">Some checks need attention. <code>authama doctor --fix</code> repairs file modes, syncs VM hosts (see <a href="/vms">VMs</a>) and removes stale authama pins; the report says what to run for the rest.</span></div>{{end}}
 <div class="card"><div class="card-body"><pre class="code-block" tabindex="0">{{.Report}}</pre></div></div>
@@ -8,8 +8,9 @@
 <div class="d-flex flex-wrap gap-2">
   {{template "change_open" $}}<input type="hidden" name="action" value="doctor-fix"><button type="submit" class="btn btn-primary">Preview doctor --fix</button></form>
   {{template "change_open" $}}<input type="hidden" name="action" value="providers-export"><button type="submit" class="btn btn-outline-secondary">Write an editable providers.json</button></form>
-  {{template "change_open" $}}<input type="hidden" name="action" value="clean"><button type="submit" class="btn btn-outline-secondary">Preview clean</button>
+  <form method="post" action="/changes/preview" id="f-clean"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="clean"><button type="submit" class="btn btn-outline-danger" data-confirm="m-clean">Preview clean</button>
     <label class="form-check form-check-inline ms-2 mb-0"><input class="form-check-input" type="checkbox" name="adopt" value="1"><span class="form-check-label">adopt untagged pins that match a host first</span></label></form>
+  {{template "confirm" (confirm "m-clean" "f-clean" "Remove stale pins and records?" "Pins and inventory records no host uses any more are removed. You see what goes before it is made." "Preview clean")}}
 </div>
 {{end}}
 {{end}}{{end}}

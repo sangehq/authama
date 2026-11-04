@@ -1,10 +1,11 @@
 {{define "content"}}
-{{template "page_header" "Snapshots"}}
+{{template "page_header" (header "SSH" "Snapshots" "")}}
 <p class="text-secondary">Every command that changes <code>~/.ssh</code> archives its config, <code>known_hosts</code> and public keys first. Private keys are never in a snapshot.</p>
 <div class="card">
+  <div class="card-header"><h2 class="card-title">Snapshots</h2>{{if .Data.Snapshots}}<div class="card-actions text-secondary small">{{len .Data.Snapshots}}, newest first</div>{{end}}</div>
   {{if .Data.Snapshots}}
   <div class="table-responsive">
-    <table class="table table-vcenter card-table">
+    <table class="table table-vcenter card-table table-hover" data-table="snapshots">
       <caption class="visually-hidden">Snapshots, newest first</caption>
       <thead><tr><th scope="col">Snapshot</th><th scope="col">Taken</th><th scope="col">Size</th><th scope="col">Compare</th></tr></thead>
       <tbody>
@@ -19,17 +20,18 @@
       </tbody>
     </table>
   </div>
-  {{else}}<div class="card-body text-secondary">No snapshots yet.</div>{{end}}
+  {{else}}{{template "empty" (empty "archive" "No snapshots yet" "The first command that changes ~/.ssh takes one.")}}{{end}}
 </div>
 {{if and (not .ReadOnly) .Data.Snapshots}}
 <div class="card mt-3">
   <div class="card-body">
-    {{template "change_open" .}}<input type="hidden" name="action" value="snapshots-prune">
+    <form method="post" action="/changes/preview" id="f-prune"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="action" value="snapshots-prune">
       <div class="row g-2 align-items-end">
         <div class="col-sm-3"><label class="form-label" for="s-keep">Keep the newest</label><input class="form-control" id="s-keep" name="keep" inputmode="numeric" value="10"></div>
-        <div class="col-sm-3"><button type="submit" class="btn btn-outline-danger w-100">Preview pruning</button></div>
+        <div class="col-sm-3"><button type="submit" class="btn btn-outline-danger w-100" data-confirm="m-prune">{{icon "trash"}}<span class="ms-1">Preview pruning</span></button></div>
       </div>
     </form>
+    {{template "confirm" (confirm "m-prune" "f-prune" "Prune old snapshots?" "Every snapshot older than the newest you keep is deleted, and no snapshot is taken first. You see the list before anything is removed." "Preview pruning")}}
   </div>
 </div>
 {{end}}

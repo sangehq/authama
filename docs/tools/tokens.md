@@ -1,6 +1,6 @@
 # `token` - package-manager and git auth tokens
 
-`authama token` writes the credential files Composer, npm, Docker, git and curl
+`authama token` (also `authama auth`, the same group) writes the credential files Composer, npm, Docker, git and curl
 read, lists what is installed, and copies or removes one entry. It is the
 auth-token-manager tool, ported into authama (see the
 [migration guide](../migration.md)).
@@ -10,7 +10,9 @@ commit. Every write merges into the existing file, atomically, owner-only
 (`0600`, or a user-only ACL on Windows).
 
 Every command has a full entry, with all its flags and examples, in the
-[command reference](../reference/cli.md#authama-token).
+[command reference](../reference/cli.md#authama-token). The web UI's **Auth tokens** page
+([`serve`](serve.md)) adds or replaces a token, applies the config, writes a starter or imports one,
+and forgets a token, each previewed first; revealing and copying stay in the terminal.
 
 | Command | What it does |
 |---|---|

@@ -1,6 +1,7 @@
 // The write flows, in order: a change previewed and then made, and a job run
 // with its event stream watched to the end. They share one home, so they run
 // one after another.
+import { randomBytes } from 'node:crypto';
 import { test, expect, bundle } from '../support/fixtures';
 
 test.describe.configure({ mode: 'serial' });
@@ -9,7 +10,10 @@ const added = 'e2e-added';
 
 test('a profile is previewed, then added', async ({ page }) => {
   await page.goto('/profiles');
+  // The form slides in from the page header's button.
+  await page.getByRole('button', { name: 'Add a profile' }).click();
   const form = page.locator('form', { has: page.locator('input[name="action"][value="profile-add"]') });
+  await expect(form).toBeVisible();
   await form.getByLabel('Name', { exact: true }).fill(added);
   await form.getByRole('button', { name: 'Preview' }).click();
 
@@ -41,6 +45,7 @@ test('a profile is previewed, then added', async ({ page }) => {
 
 test('a preview whose home moved underneath is refused, and nothing is written', async ({ page }) => {
   await page.goto('/profiles');
+  await page.getByRole('button', { name: 'Add a profile' }).click();
   const form = page.locator('form', { has: page.locator('input[name="action"][value="profile-add"]') });
   await form.getByLabel('Name', { exact: true }).fill('e2e-stale');
   await form.getByRole('button', { name: 'Preview' }).click();
@@ -49,6 +54,7 @@ test('a preview whose home moved underneath is refused, and nothing is written',
   // Another change lands between the preview and the confirm.
   const other = await page.context().newPage();
   await other.goto('/profiles');
+  await other.getByRole('button', { name: 'Add a profile' }).click();
   const otherForm = other.locator('form', { has: other.locator('input[name="action"][value="profile-add"]') });
   await otherForm.getByLabel('Name', { exact: true }).fill('e2e-moved');
   await otherForm.getByRole('button', { name: 'Preview' }).click();
@@ -97,4 +103,31 @@ test('a bundle restore runs as a job and its stream is watched to the end', asyn
   await snapshots.getByRole('link', { name: 'with now' }).first().click();
   await expect(page).toHaveURL(/\/snapshots\/ssh-\d{8}-\d{6}/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^ssh-\d{8}-\d{6}/);
+});
+
+test('a token is added from the page, and its secret never reaches a page', async ({ page }) => {
+  // Generated per run: a test secret is never written down.
+  const secret = randomBytes(24).toString('base64url');
+  const server = 'npm.e2e.example';
+  await page.goto('/tokens');
+  await page.getByRole('button', { name: 'Add a token' }).click();
+  const form = page.locator('form', { has: page.locator('input[name="action"][value="token-set"]') });
+  await expect(form).toBeVisible();
+  await form.getByLabel('Tool (when no service)').selectOption('npm');
+  await form.getByLabel('Server').fill(server);
+  await form.getByLabel('Token or password').fill(secret);
+  await form.getByRole('button', { name: 'Preview' }).click();
+
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Review the change');
+  await expect(page.locator('pre.code-block').first()).toContainText(`token set --target npm --server ${server}`);
+  expect(await page.content()).not.toContain(secret);
+
+  await page.getByRole('button', { name: 'Make this change' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Done');
+  expect(await page.content()).not.toContain(secret);
+
+  await page.goto('/tokens');
+  const row = page.getByRole('row').filter({ hasText: server });
+  await expect(row).toContainText('set');
+  expect(await page.content()).not.toContain(secret);
 });

@@ -64,6 +64,23 @@ type Engine interface {
 	Apply(ch change.Change, hash string) (change.Plan, change.Result, error)
 }
 
+// SettingsView is the settings page: where the settings files are, every
+// setting's value in effect and where it came from, and what `authama
+// settings validate` reports. None of the settings is a secret: tokens live in
+// .env and the credential files, and this view never reads their values.
+type SettingsView struct {
+	ConfigHome, ConfigSource string
+	StateHome                string
+	Dotenv, DotenvState      string
+	Settings, SettingsState  string
+	HasSettings              bool
+	Effective                []SettingRow
+	Problems                 []string
+}
+
+// SettingRow is one setting, as `authama settings show --effective` prints it.
+type SettingRow struct{ Key, Variable, Value, Source string }
+
 // Overview is the first page: the banner's rows, and the counts behind them.
 type Overview struct {
 	Rows     []overview.Row
@@ -80,6 +97,9 @@ type Overview struct {
 type ProfileView struct {
 	Name, Category, KeyScope, KeyStore string
 	Hosts, Keys                        int
+	// KeyComment is the profile's own key_comment template; empty inherits
+	// defaults.key_comment.
+	KeyComment string
 }
 
 // HostView is one host: the manifest entry and what it resolves to.
@@ -233,7 +253,7 @@ func (e AppEngine) Profiles() ([]ProfileView, error) {
 			store = "disk"
 		}
 		out = append(out, ProfileView{Name: n, Category: p.Category, KeyScope: p.KeyScope, KeyStore: store,
-			Hosts: len(p.Hosts), Keys: keys[n]})
+			Hosts: len(p.Hosts), Keys: keys[n], KeyComment: p.KeyComment})
 	}
 	return out, nil
 }
@@ -604,6 +624,22 @@ type TokensView struct {
 	Failed   bool
 	Config   string // the token config `token apply` would read, or "" for the built-in default
 	Legacy   bool
+	// Status is `authama token status`: per tool its file, mode, and how many
+	// entries are installed, configured and resolvable now.
+	Status tokensvc.Status
+	// HasConfig says the config home already holds a tokens.json, which
+	// `token init` and `token import` never overwrite.
+	HasConfig bool
+	// Targets are the tools a token can be set for; Services the Composer
+	// services the token form offers (those taking one secret).
+	Targets  []string
+	Services []TokenService
+}
+
+// TokenService is a Composer service and the kind of secret it takes.
+type TokenService struct {
+	Name, Mechanism string
+	Basic           bool // http-basic: a user name and a password
 }
 
 // Tokens is `authama token list` and `authama token audit` as data.
@@ -619,5 +655,21 @@ func (e AppEngine) Tokens() (TokensView, error) {
 	if src, err := env.FindConfig(""); err == nil {
 		v.Config, v.Legacy = src.Path, src.Legacy
 	}
+	if st, err := tokensvc.StatusOf(env, "", ""); err == nil {
+		v.Status = st
+	}
+	_, err := os.Stat(e.P.Tokens())
+	v.HasConfig = err == nil
+	for _, t := range tokens.Targets() {
+		if t != tokens.Composer {
+			v.Targets = append(v.Targets, t)
+		}
+	}
+	for name, mech := range tokens.LoadCatalogServices() {
+		if tokens.IsTokenMechanism(mech) || mech == "http-basic" {
+			v.Services = append(v.Services, TokenService{Name: name, Mechanism: mech, Basic: mech == "http-basic"})
+		}
+	}
+	sort.Slice(v.Services, func(i, j int) bool { return v.Services[i].Name < v.Services[j].Name })
 	return v, nil
 }

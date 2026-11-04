@@ -10,7 +10,27 @@ authama ssh reconcile
 ```
 
 `import` parses your config — including `Include` directives — and derives a
-profile per `IdentityFile` path, falling back to `imported`. A key that already
+profile per `IdentityFile` path, falling back to `imported`.
+
+It reads any layout, flat or nested. Give it a file or a folder:
+
+```sh
+authama ssh import ~/.ssh                    # its config, and whatever that Includes
+authama ssh import ~/.config --dry-run       # a config home with ssh/config
+authama ssh import ~/old-laptop/.ssh --yes   # another machine's copy
+authama ssh import ~/ssh-snippets            # no top-level config: every config and *.conf, nested
+```
+
+| Given | It reads |
+|---|---|
+| a file | that file |
+| a folder with `config` | that file; its `Include`s pull in `config.d/`, `profiles/<name>/config` and the rest |
+| a folder with `ssh/config` | that file, for a config home such as `~/.config` |
+| any other folder | every file named `config` or ending `.conf`, up to four levels down, in path order |
+
+Relative `Include`s resolve against the folder, as ssh resolves them against `~/.ssh`. From another
+machine's copy, an `IdentityFile ~/.ssh/<key>` is looked for in that copy, so its keys are adopted
+here. A key that already
 lives under `profiles/<name>/` is referenced where it is; one outside the managed
 tree is **copied** in, never moved, and the copy is made owner-only whatever mode
 the original had.

@@ -1,27 +1,29 @@
 {{define "content"}}
-{{template "page_header" "Keys"}}
+{{template "page_header" (header "SSH" "Keys" "Every key with its fingerprint and expiry, and the loose keys kept on purpose.")}}
 <div class="card">
+  <div class="card-header"><h2 class="card-title">Keys</h2>{{if .Data.Rows}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data.Rows}} in the manifest</span><a class="btn btn-sm btn-outline-secondary" href="/exports/keys.csv" download>{{icon "download"}}<span class="ms-1">CSV</span></a></div>{{end}}</div>
   {{if .Data.Rows}}
   <div class="table-responsive">
-    <table class="table table-vcenter card-table">
+    <table class="table table-vcenter card-table table-hover" id="keys-table" data-table="keys">
       <caption class="visually-hidden">Every key the manifest declares or a host uses</caption>
-      <thead><tr><th scope="col">Key</th><th scope="col">Type</th><th scope="col">Fingerprint</th><th scope="col">Expires</th><th scope="col">Hosts</th><th scope="col">On disk</th>{{if not $.ReadOnly}}<th scope="col"><span class="visually-hidden">Actions</span></th>{{end}}</tr></thead>
+      <thead><tr><th scope="col">Key</th><th scope="col">Type</th><th scope="col">Fingerprint</th><th scope="col">Expires</th><th scope="col">Hosts</th><th scope="col">On disk</th>{{if not $.ReadOnly}}<th scope="col" class="w-1" data-nosort><span class="visually-hidden">Actions</span></th>{{end}}</tr></thead>
       <tbody>
         {{range .Data.Rows}}
         <tr>
           <th scope="row"><a href="/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}"><code>{{.Ref}}</code></a></th>
           <td>{{.Type}}</td>
           <td class="text-break"><code>{{orDash .Fingerprint}}</code></td>
-          <td>{{orDash .ExpiresOn}}</td>
+          <td class="text-nowrap">{{orDash .ExpiresOn}}</td>
           <td>{{orDash (join .Hosts ", ")}}</td>
           <td>{{if .Vault}}1Password <span class="text-secondary">({{.Vault}})</span>{{else if .PrivateOnDisk}}<span class="badge badge-ok">yes</span>{{else}}<span class="badge badge-warn">not minted</span>{{end}}</td>
-          {{if not $.ReadOnly}}<td class="text-end">{{if and .Declared (not .Hosts)}}{{template "change_open" $}}<input type="hidden" name="action" value="key-delete"><input type="hidden" name="profile" value="{{.Ref.Profile}}"><input type="hidden" name="key" value="{{.Ref.KeyName}}"><button class="btn btn-sm btn-outline-danger" type="submit">Delete key {{.Ref.KeyName}}</button></form>{{end}}</td>{{end}}
+          {{if not $.ReadOnly}}<td class="text-end">{{if and .Declared (not .Hosts)}}<form method="post" action="/changes/preview" id="f-key-{{.Ref.Profile}}-{{.Ref.KeyName}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="key-delete"><input type="hidden" name="profile" value="{{.Ref.Profile}}"><input type="hidden" name="key" value="{{.Ref.KeyName}}"><button class="btn btn-sm btn-outline-danger" type="submit" data-confirm="m-key-{{.Ref.Profile}}-{{.Ref.KeyName}}">{{icon "trash"}}<span class="ms-1">Delete key {{.Ref.KeyName}}</span></button></form>{{end}}</td>{{end}}
         </tr>
         {{end}}
       </tbody>
     </table>
   </div>
-  {{else}}<div class="card-body text-secondary">No keys in the manifest yet.</div>{{end}}
+  {{if not $.ReadOnly}}{{range .Data.Rows}}{{if and .Declared (not .Hosts)}}{{template "confirm" (confirm (printf "m-key-%s-%s" .Ref.Profile .Ref.KeyName) (printf "f-key-%s-%s" .Ref.Profile .Ref.KeyName) (printf "Delete key %s?" .Ref.KeyName) "Its declaration and inventory record go; the key files stay on disk. You see the change before it is made." "Preview the delete")}}{{end}}{{end}}{{end}}
+  {{else}}{{template "empty" (empty "key" "No keys in the manifest yet" "Add one below, or add a host and reconcile.")}}{{end}}
 </div>
 <p class="text-secondary mt-2">A declared key no host uses can be deleted here: the declaration and its record go, the files stay. Rotation, overwriting a key, passphrases and keys kept in 1Password stay in the terminal: <code>authama ssh rotate</code>, <code>authama ssh keygen --force</code>, <code>--passphrase</code>.</p>
 <div class="card mt-3">

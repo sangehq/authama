@@ -6,7 +6,91 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Running `authama` on its own, on a terminal, opens the web UI**, as `authama serve` does with its
+  defaults; `--dev-root` and `--no-dotenv` still apply. The menu it used to open is `authama tui`. With
+  no terminal a bare run still prints help, since `serve` would hang a script.
+- **The web UI is redesigned on Tabler's own layout**, as its preview dashboard has it: a header with
+  the name, the mode badges and the theme switch, then a menu with SSH, Auth and System dropdowns that
+  folds behind a button on a narrow screen. Every page header names its section, has a one-line summary
+  and links to its forms; the overview's counts are linked cards; empty lists use Tabler's empty state.
+  The custom stylesheet is down to the contrast fixes the accessibility pass needs. Every page, form,
+  change and job works as before.
+
+### Added
+
+- **CSV export everywhere a list is shown.** `--csv` on `ssh list`, `ssh key list`, `token list`,
+  `history` and `events`, and a download on each matching web page, with the same columns. A token
+  list never puts a secret in one (`--csv --reveal` is refused), and a cell a spreadsheet would run as a
+  formula is neutralised.
+- **The events log is tamper-evident**: each line is chained by SHA-256 to the one before, and
+  `authama events --verify` (and the Events page) catches a line edited, removed or inserted, or a log
+  cut short.
+- **A command palette** in the web UI (Ctrl+K, ⌘K on a Mac): every page, the add forms and the
+  downloads, as you type. A link to a form in a panel (`/hosts#add-host`) now opens the panel, which
+  the dashboard's buttons needed and did not do.
+- **`authama events` and the web UI's Events page track every change to the files authama is
+  responsible for**: everything under `~/.ssh`, the config home, and each tool's credential file,
+  whoever made it. A scan records size, mode, modification time and a SHA-256 per file, never its
+  contents, and logs what was added, changed, removed or had its mode changed. The server scans every
+  30 seconds, links each event to the operation that made it, and shows the newest in the header bell.
+- **`authama ssh import` reads any layout, flat or nested.** PATH may be a config file or a folder: its
+  `config` and what that Includes, a config home's `ssh/config`, or every `config` and `*.conf` up to
+  four levels down. From another machine's copy of `~/.ssh`, an `IdentityFile ~/.ssh/<key>` is found
+  in that copy. The help's own example, a folder, used to fail as "no ssh config file".
+- **Manual pages and manual-style help.** `authama man [DIR]` writes a troff page for every command
+  (`make man` writes them to `build/man`), and every `--help` prints the same sections: NAME, SYNOPSIS,
+  DESCRIPTION, ALIASES, COMMANDS, OPTIONS, GLOBAL OPTIONS, EXAMPLES, SEE ALSO. Every `list` also
+  answers `ls`, and every `delete` `rm`.
+- An **About** page, with the third-party licences in it, and Tabler's header: a theme toggle, a bell
+  with the newest file events, and an account menu named for the system user the server runs as, with
+  a strip in the menu bar saying which user and machine. A Tabler footer with the copyright, version and
+  links; choosing to follow the system theme is on the Settings page.
+- **The UI's script is typed ES modules configured by data attributes**: a `Component` base with typed
+  options from `data-*`, a fluent `El` builder, and an `App` that chains `.use(...).start()`; the
+  table's API chains too. `tsc --strict` checks them in `make e2e-web`, with no build step between the
+  source and the binary.
+- **The dashboard** gains key health, auth tokens and snapshot cards, quick actions, hosts by profile
+  and the newest file events. **Tables** sort by any column, with search, page size and pages for a
+  long list; hosts are one table with a profile column. **Destructive actions** ask in a dialog before
+  their preview, and adding a profile, host or token opens in a slide-in panel.
+- **Auth tokens are managed from the web UI.** The Auth tokens page adds or replaces a token (a
+  Composer service or npm, Docker, git or netrc, with the user name, npm scope and Docker
+  credential-store mode `token set` takes), writes a starter `tokens.json` (`token init`), imports an
+  auth-token-manager config (`token import`), and shows `token status` beside the list and the audit.
+  The secret is the one value a page sends: the server holds it in memory under a single-use reference
+  bound to the browser session, so no page, preview or confirmation carries it, and a secret on any
+  other form is refused.
+- **Profiles are managed in full from the web UI:** a new profile can be filed in a category and given
+  a key comment, and a profile's key comment can be changed (`profile add --category --key-comment`,
+  `profile edit --key-comment`).
+- An **SSH config** page: every file the manifest renders and whether `~/.ssh` matches it, as
+  `ssh config show` and `ssh config check` print, with the re-render and the flat export beside them.
+- `authama auth`, the same group as `authama token`; every `token` command answers under either name.
+- `help` in every command group: `authama ssh help deploy`, `authama auth help set` and
+  `authama settings help init` print that command's help, as `authama help ssh deploy` does. A group used
+  to read `help` as an unknown command.
+- A **Settings** page in the web UI: where the settings files are, every setting's value in effect and
+  where it came from, and what `settings validate` reports. When there is no `authama.json`, it offers a
+  previewed *Create a starter authama.json*, the same change as `authama settings init`.
+
+### Fixed
+
+- The Auth tokens page and the dashboard said a credential file was readable by others whenever the
+  token audit failed, including when what failed was the `.gitignore` check where the server runs.
+- A web preview now shows `authama.json` and `tokens.json` with the other config files. It was left out of the preview's
+  copy, so a change writing it would have previewed as writing nothing.
+
+### Changed (CI)
+
+- Pull requests test on Linux and Windows and run a darwin cross-check (build and vet for macOS arm64
+  and amd64); the full macOS test runs weekly and on dispatch. The required checks follow.
+
 ### Security
+
+- The web server refuses a request body over 1 MiB (413) before parsing it, holds headers to 64 KiB
+  and a body to 30 seconds, and sends a `Permissions-Policy` that turns off every device API.
 
 - The web UI's sign-in redirect is now guarded inline, on the exact value passed to `http.Redirect`, by a
   pattern equal to `isLocalURL` (`/` alone, or `/` not followed by `/` or a backslash). Behaviour is unchanged:

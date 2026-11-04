@@ -15,8 +15,10 @@ import (
 	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/core/tokens"
 	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/simtabi/authama/src/internal/services/exports"
 	"github.com/simtabi/authama/src/internal/services/mutation"
 	"github.com/simtabi/authama/src/internal/services/tokensvc"
+	"github.com/simtabi/authama/src/internal/util/csvout"
 	"github.com/simtabi/authama/src/internal/util/envnames"
 )
 
@@ -35,8 +37,9 @@ var (
 
 func newTokenCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   tokenGroup,
-		Short: "Package-manager and git auth tokens: Composer, npm, Docker, git, netrc",
+		Use:     tokenGroup,
+		Aliases: []string{"auth"},
+		Short:   "Package-manager and git auth tokens: Composer, npm, Docker, git, netrc",
 		Long: "Builds the credential files Composer, npm, Docker, git and curl read, from a\n" +
 			"config that names environment variables (never secrets), and lists, copies or\n" +
 			"removes what is installed. Files are written atomically and owner-only.\n\n" +
@@ -123,7 +126,7 @@ func say(c *cobra.Command, format string, a ...any) {
 // --- list --------------------------------------------------------------
 
 func newTokenListCmd() *cobra.Command {
-	var asJSON, reveal, yes bool
+	var asJSON, asCSV, reveal, yes bool
 	var targets []string
 	var project string
 	cmd := &cobra.Command{
@@ -149,6 +152,12 @@ func newTokenListCmd() *cobra.Command {
 					items = append(items, it)
 				}
 			}
+			if asCSV {
+				if reveal {
+					return errors.New("--csv never holds a secret: drop --reveal")
+				}
+				return csvout.Write(c.OutOrStdout(), exports.Tokens(items))
+			}
 			if asJSON {
 				if items == nil {
 					items = []tokens.Installed{}
@@ -168,6 +177,7 @@ func newTokenListCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&asJSON, "json", false, "print the list as JSON")
+	cmd.Flags().BoolVar(&asCSV, "csv", false, "print the list as CSV, header first; never the secrets")
 	cmd.Flags().BoolVar(&reveal, "reveal", false, "show the secret values (asks first; --yes when not at a terminal)")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "reveal without asking")
 	targetsFlag(cmd, &targets, "only these tools")
@@ -234,58 +244,26 @@ func newTokenSetCmd() *cobra.Command {
 			"is never a flag, so it stays out of shell history and the process list.",
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			mech := ""
-			if service != "" {
-				m, ok := tokens.LoadCatalogServices()[service]
-				if !ok {
-					return fmt.Errorf("unknown service %q (see `%s token providers`)", service, brand.Command)
-				}
-				target, mech = tokens.Composer, m
-			} else {
-				if target == "" {
-					return errors.New("give --service (Composer) or --target")
-				}
-				if err := checkTarget(target); err != nil {
-					return err
-				}
-				if target == tokens.Composer {
-					return errors.New("a Composer token needs --service (see `" + brand.Command + " token providers`)")
-				}
-			}
-			if strings.TrimSpace(server) == "" {
-				return errors.New("--server is required")
+			plan, err := tokensvc.SetSpec{Target: target, Service: service, Server: server, Username: username, Scope: scope}.Check()
+			if err != nil {
+				return err
 			}
 			if !tokensvc.ValidDockerMode(mode) {
 				return fmt.Errorf("--creds-store-mode must be one of %s", strings.Join(tokensvc.DockerModes(), ", "))
 			}
-			var cr tokens.Credential
-			switch {
-			case target == tokens.NPM || target == tokens.Composer && tokens.IsTokenMechanism(mech):
-				s, err := readTokenSecret(c, "Token")
-				if err != nil {
-					return err
-				}
-				cr = tokens.Credential{Token: s, Scope: scope}
-			case target == tokens.Composer && mech != "http-basic":
-				return fmt.Errorf("%s (%s) takes more than one secret; add it to the token config instead", service, mech)
-			default:
-				if username == "" {
-					return errors.New("--username is required for " + target)
-				}
-				s, err := readTokenSecret(c, "Password / token")
-				if err != nil {
-					return err
-				}
-				cr = tokens.Credential{Username: username, Password: s}
+			secret, err := readTokenSecret(c, plan.SecretLabel())
+			if err != nil {
+				return err
 			}
 			env, err := tokenEnv(c)
 			if err != nil {
 				return err
 			}
-			set := tokens.NewSet()
-			if !set.Apply(target, mech, strings.TrimSpace(server), cr) {
-				return errors.New("nothing to save: the credential is incomplete")
+			set, err := plan.Credential(secret)
+			if err != nil {
+				return err
 			}
+			target = plan.Target
 			mutation.LockForMutation(env.Paths)
 			return writeTokenTargets(cliTokenIO(c), env, set, []string{target}, project, mode, nil)
 		},

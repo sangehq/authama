@@ -27,6 +27,12 @@ import (
 
 // ProfileAdd is `authama ssh profile add <name> [--key-scope] [--key-name] [--key-comment]`.
 func ProfileAdd(name, keyScope, keyName, keyComment string) Change {
+	return ProfileAddIn(name, keyScope, keyName, keyComment, "")
+}
+
+// ProfileAddIn is ProfileAdd with --category: the profile is filed under
+// profiles/<category>/ from the start. An empty category is ProfileAdd.
+func ProfileAddIn(name, keyScope, keyName, keyComment, category string) Change {
 	if keyScope == "" {
 		keyScope = "per_service"
 	}
@@ -39,6 +45,9 @@ func ProfileAdd(name, keyScope, keyName, keyComment string) Change {
 	if keyComment != "" {
 		args = append(args, "--key-comment=<set>")
 	}
+	if category != "" {
+		args = append(args, "--category="+category)
+	}
 	return Change{
 		Command: "profile add", Args: args,
 		Subjects: []history.Subject{{Kind: history.KindProfile, Name: name}},
@@ -46,6 +55,11 @@ func ProfileAdd(name, keyScope, keyName, keyComment string) Change {
 			ed := editor.New(p)
 			if err := ed.AddProfile(name, keyScope, kn); err != nil {
 				return err
+			}
+			if category != "" {
+				if _, err := ed.SetCategory(name, category); err != nil {
+					return err
+				}
 			}
 			if keyComment != "" {
 				if err := ed.SetKeyComment(name, keyComment); err != nil {
@@ -85,6 +99,24 @@ func ProfileEdit(name string, keyScope, keyName *string) Change {
 				WarnDangling(out, p, m)
 			}
 			return nil
+		},
+	}
+}
+
+// ProfileKeyComment is `authama ssh profile edit <name> --key-comment <template>`:
+// the comment template for keys the profile mints from now on. An empty
+// template inherits defaults.key_comment.
+func ProfileKeyComment(name, comment string) Change {
+	return Change{
+		Command: "profile edit", Args: []string{name, "--key-comment=<set>"},
+		Subjects: []history.Subject{{Kind: history.KindProfile, Name: name}},
+		Run: func(p paths.Paths, out io.Writer) error {
+			if err := editor.New(p).SetKeyComment(name, comment); err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintf(out, "edited profile %s (run `authama ssh reconcile` to mint any key "+
+				"this now points at)\n", name)
+			return ApplyManifestEdit(out, p)
 		},
 	}
 }

@@ -45,6 +45,8 @@ var prefixPairs = map[string]string{
 // here, with the meaning, or renamed.
 var sharedVerbs = map[string]string{
 	"list":      "print the items of a kind, one line each (ssh list / key list / vm list / token list)",
+	"ls":        "the Unix alias of every list, meaning exactly what list does",
+	"rm":        "the Unix alias of every delete, meaning exactly what delete does",
 	"show":      "everything about one named item (ssh show / config show / token show)",
 	"delete":    "remove one named item (host, profile, key, token), asking first at a terminal",
 	"apply":     "add or update items from a declarative source (host specs / the token config)",
@@ -241,10 +243,11 @@ func TestEveryHiddenTopLevelCommandIsAnSSHVerb(t *testing.T) {
 // brand.Line decides whether a recorded verb prints as `authama <verb>` or
 // `authama ssh <verb>`; its list has to be the tree's top level.
 func TestBrandTopLevelIsTheVisibleRoot(t *testing.T) {
-	var got []string
+	var got, aliases []string
 	for _, c := range newRootCmd().Commands() {
 		if !c.Hidden && c.Name() != "help" && c.Name() != "completion" {
 			got = append(got, c.Name())
+			aliases = append(aliases, c.Aliases...)
 		}
 	}
 	sort.Strings(got)
@@ -253,11 +256,18 @@ func TestBrandTopLevelIsTheVisibleRoot(t *testing.T) {
 	if strings.Join(got, " ") != strings.Join(want, " ") {
 		t.Errorf("visible top level %v, brand.TopLevel %v", got, want)
 	}
+	sort.Strings(aliases)
+	wantAliases := append([]string(nil), brand.TopLevelAliases...)
+	sort.Strings(wantAliases)
+	if strings.Join(aliases, " ") != strings.Join(wantAliases, " ") {
+		t.Errorf("visible top-level aliases %v, brand.TopLevelAliases %v", aliases, wantAliases)
+	}
 	for in, out := range map[string]string{
 		"reconcile": "authama ssh reconcile",
 		"host add":  "authama ssh host add",
 		"init":      "authama init",
 		"token set": "authama token set",
+		"auth set":  "authama auth set",
 		"":          "authama",
 	} {
 		if g := brand.Line(in); g != out {

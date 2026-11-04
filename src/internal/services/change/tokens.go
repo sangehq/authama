@@ -7,8 +7,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/core/tokens"
 	"github.com/simtabi/authama/src/internal/services/tokensvc"
+	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
@@ -122,5 +124,136 @@ func TokenApply() Change {
 			return env.WriteAll(set, set.Targets(), "", tokensvc.FixedDockerMode(m), out, out)
 		},
 		Run: func(paths.Paths, io.Writer) error { return nil },
+	}
+}
+
+// TokenSet is `authama token set`: add one credential to its tool's file, or
+// replace the one already there for that host. The secret is not part of the
+// change - Effects and the command line never hold it - and comes from
+// secret only when the change is made. mode settles a registry Docker keeps in
+// a credential store as --creds-store-mode does; empty reads
+// $AUTHAMA_DOCKER_CREDS_STORE, and refuses when that is unset too, since a page
+// cannot ask.
+func TokenSet(spec tokensvc.SetSpec, mode string, secret func() (string, error)) Change {
+	var args []string
+	if spec.Service != "" {
+		args = append(args, "--service", spec.Service)
+	} else {
+		args = append(args, "--target", spec.Target)
+	}
+	args = append(args, "--server", spec.Server)
+	if spec.Username != "" {
+		args = append(args, "--username", spec.Username)
+	}
+	if spec.Scope != "" {
+		args = append(args, "--scope", spec.Scope)
+	}
+	if mode != "" {
+		args = append(args, "--creds-store-mode", mode)
+	}
+	dockerMode := func() (string, error) {
+		m := mode
+		if m == "" {
+			m = strings.TrimSpace(envnames.Get(nil, envnames.DockerCredsStore))
+		}
+		if !tokensvc.ValidDockerMode(m) {
+			return "", fmt.Errorf("the Docker credential-store mode must be one of %s, not %q",
+				strings.Join(tokensvc.DockerModes(), ", "), m)
+		}
+		if m == "" {
+			m = tokensvc.DockerRefuse
+		}
+		return m, nil
+	}
+	return Change{
+		Command: "token set", Args: args, NoSnapshot: true,
+		Effects: func(p paths.Paths) ([]string, error) {
+			plan, err := spec.Check()
+			if err != nil {
+				return nil, err
+			}
+			if _, err := dockerMode(); err != nil {
+				return nil, err
+			}
+			env := tokenEnv(p)
+			host := tokens.CanonicalHost(plan.Target, strings.TrimSpace(spec.Server))
+			verb := "adds"
+			if _, ok := env.Find(plan.Target, host, ""); ok {
+				verb = "replaces"
+			}
+			what := "token"
+			if !plan.Token {
+				what = "password for " + spec.Username
+			}
+			return []string{fmt.Sprintf("%s the %s %s for %s in %s (the secret is not shown)",
+				verb, plan.Target, what, host, env.TargetPath(plan.Target, ""))}, nil
+		},
+		OnApply: func(p paths.Paths, out io.Writer) error {
+			plan, err := spec.Check()
+			if err != nil {
+				return err
+			}
+			m, err := dockerMode()
+			if err != nil {
+				return err
+			}
+			s, err := secret()
+			if err != nil {
+				return err
+			}
+			set, err := plan.Credential(s)
+			if err != nil {
+				return err
+			}
+			return tokenEnv(p).WriteAll(set, []string{plan.Target}, "", tokensvc.FixedDockerMode(m), out, out)
+		},
+		Run: func(paths.Paths, io.Writer) error { return nil },
+	}
+}
+
+// TokenInit is `authama token init [--target …]` with no FILE: a starter token
+// config at the config home's tokens.json, never over one that is there. It
+// names environment variables, never secrets.
+func TokenInit(targets []string) Change {
+	var args []string
+	for _, t := range targets {
+		args = append(args, "--target", t)
+	}
+	return Change{
+		Command: "token init", Args: args, NoSnapshot: true,
+		Run: func(p paths.Paths, out io.Writer) error {
+			for _, t := range targets {
+				if !tokens.IsTarget(t) {
+					return fmt.Errorf("unknown target %q (choose from %s)", t, strings.Join(tokens.Targets(), ", "))
+				}
+			}
+			msg, err := tokenEnv(p).Scaffold("", targets)
+			if err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintf(out, "%s\nEdit it, then run `%s token apply`.\n", msg, brand.Command)
+			return nil
+		},
+	}
+}
+
+// TokenImport is `authama token import` with no FILE: copy auth-token-manager's
+// config, found where that tool looked, to the config home's tokens.json. The
+// old file is left in place.
+func TokenImport() Change {
+	return Change{
+		Command: "token import", NoSnapshot: true,
+		Run: func(p paths.Paths, out io.Writer) error {
+			src, to, err := tokenEnv(p).Import("", false)
+			if errors.Is(err, tokensvc.ErrNoLegacyConfig) {
+				_, _ = fmt.Fprintln(out, "No auth-token-manager config found; nothing to import.")
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintf(out, "✓ copied %s → %s\nThe old file is left in place; delete it once you are happy with the new one.\n", src, to)
+			return nil
+		},
 	}
 }

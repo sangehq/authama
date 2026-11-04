@@ -4,10 +4,16 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/services/events"
+	"github.com/simtabi/authama/src/internal/services/exports"
 	"github.com/simtabi/authama/src/internal/services/history"
+	"github.com/simtabi/authama/src/internal/util/csvout"
 )
 
 // routes registers every page. Each takes names from the path, the query or
@@ -32,6 +38,11 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /vms", h.handleVMs)
 	mux.HandleFunc("GET /audit", h.handleAudit)
 	mux.HandleFunc("GET /tokens", h.handleTokens)
+	sp := systemPages{s: s}
+	mux.HandleFunc("GET /settings", sp.handleSettings)
+	mux.HandleFunc("GET /ssh-config", sp.handleSSHConfig)
+	mux.HandleFunc("GET /events", sp.handleEvents)
+	mux.HandleFunc("GET /about", sp.handleAbout)
 	mux.HandleFunc("GET /exports/{name}", h.handleExport)
 	mux.HandleFunc("GET /about/licenses", h.handleLicences)
 	if !s.opts.ReadOnly {
@@ -75,13 +86,60 @@ func (h pages) fail(w http.ResponseWriter, r *http.Request, err error) {
 	h.s.renderError(w, r, http.StatusInternalServerError, "Could not read the authama home", err.Error())
 }
 
+// dashboard is the overview page: the menu's rows and counts, and a card each
+// for keys, tokens, snapshots, profiles and the newest file events.
+type dashboard struct {
+	Overview
+	KeysOnDisk, Reserved, Loose int
+	Tokens, TokenFiles          int
+	TokensFailed                bool
+	Snapshots                   int
+	LastSnapshot                time.Time
+	ProfileRows                 []ProfileView
+	MaxHosts                    int
+	Events                      []EventRow
+}
+
 func (h pages) handleOverview(w http.ResponseWriter, r *http.Request) {
 	ov, err := h.s.opts.Engine.Overview(h.s.now())
 	if err != nil {
 		h.fail(w, r, err)
 		return
 	}
-	h.s.render(w, http.StatusOK, "overview", h.s.newView(r, "overview", "Overview", ov))
+	h.s.scanEvents()
+	d := dashboard{Overview: ov}
+	if kv, err := h.s.opts.Engine.Keys(); err == nil {
+		for _, k := range kv.Rows {
+			if k.PrivateOnDisk {
+				d.KeysOnDisk++
+			}
+		}
+		d.Reserved, d.Loose = len(kv.Reserved), len(kv.Loose)
+	}
+	if tv, err := h.s.opts.Engine.Tokens(); err == nil {
+		d.Tokens, d.TokensFailed = len(tv.Items), tv.Failed
+		for _, t := range tv.Status.Targets {
+			if t.Exists {
+				d.TokenFiles++
+			}
+		}
+	}
+	if snaps, err := h.s.opts.Engine.Snapshots(); err == nil {
+		d.Snapshots = len(snaps)
+		for _, s := range snaps {
+			if s.Taken.After(d.LastSnapshot) {
+				d.LastSnapshot = s.Taken
+			}
+		}
+	}
+	if ps, err := h.s.opts.Engine.Profiles(); err == nil {
+		d.ProfileRows = ps
+		for _, p := range ps {
+			d.MaxHosts = max(d.MaxHosts, p.Hosts)
+		}
+	}
+	d.Events = h.s.recentEvents(events.Filter{Limit: 6})
+	h.s.render(w, http.StatusOK, "overview", h.s.newView(r, "overview", "Overview", d))
 }
 
 func (h pages) handleProfiles(w http.ResponseWriter, r *http.Request) {
@@ -247,6 +305,25 @@ func (h pages) handleTokens(w http.ResponseWriter, r *http.Request) {
 	h.s.render(w, http.StatusOK, "tokens", h.s.newView(r, "tokens", "Auth tokens", v))
 }
 
+// systemPages are the pages about the tool and its files rather than the
+// home's SSH and token contents: settings, the rendered SSH config, the file
+// events and the about page. A type of their own keeps pages under the
+// layering guard's method ceiling.
+type systemPages struct{ s *Server }
+
+func (h systemPages) handleSettings(w http.ResponseWriter, r *http.Request) {
+	p := h.s.opts.Engine.Home()
+	var v SettingsView
+	if h.s.opts.Settings != nil {
+		v = h.s.opts.Settings(p)
+	} else {
+		_, err := os.Stat(p.SettingsFile())
+		v = SettingsView{ConfigHome: p.ConfigDir, StateHome: p.State(), Dotenv: p.EnvFile(),
+			Settings: p.SettingsFile(), HasSettings: err == nil}
+	}
+	h.s.render(w, http.StatusOK, "settings", h.s.newView(r, "settings", "Settings", v))
+}
+
 func (h pages) handleAudit(w http.ResponseWriter, r *http.Request) {
 	a, err := h.s.opts.Engine.Audit(h.s.now())
 	if err != nil {
@@ -260,6 +337,17 @@ func (h pages) handleAudit(w http.ResponseWriter, r *http.Request) {
 // it: it is a page in another format.
 func (h pages) handleExport(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
+	if t, ok, err := h.listCSV(name); ok {
+		if err != nil {
+			h.fail(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+		w.Header().Set("Content-Disposition", `attachment; filename="`+brand.Command+"-"+name+`"`)
+		w.Header().Set("Cache-Control", "no-store")
+		_ = csvout.Write(w, t)
+		return
+	}
 	if name != ExportFlat && name != ExportTermius {
 		h.fail(w, r, ErrNotFound)
 		return
@@ -284,11 +372,44 @@ type licence struct {
 }
 
 func (h pages) handleLicences(w http.ResponseWriter, r *http.Request) {
+	h.s.render(w, http.StatusOK, "licenses", h.s.newView(r, "about", "Third-party licences", h.s.licences()))
+}
+
+// licences are the bundled front-end assets' licence texts, as embedded.
+func (s *Server) licences() []licence {
 	var ls []licence
 	for _, name := range []string{"tabler", "tabler-icons", "bootstrap", "popper"} {
-		if body, ok := h.s.assets.files["vendor/LICENSES/"+name+".txt"]; ok {
+		if body, ok := s.assets.files["vendor/LICENSES/"+name+".txt"]; ok {
 			ls = append(ls, licence{Name: name, Text: string(body)})
 		}
 	}
-	h.s.render(w, http.StatusOK, "licenses", h.s.newView(r, "", "Third-party licences", ls))
+	return ls
+}
+
+// csvLists are the lists the pages show that download as CSV, by file name:
+// the same columns as the CLI's --csv on each.
+var csvLists = []string{"hosts.csv", "keys.csv", "tokens.csv", "history.csv", "events.csv"}
+
+// listCSV builds one of csvLists; ok is false for any other name. It is a
+// pages helper, not a handler, so it adds no route of its own.
+func (h pages) listCSV(name string) (t csvout.Table, ok bool, err error) {
+	e := h.s.opts.Engine
+	switch name {
+	case "hosts.csv":
+		groups, err := e.Hosts()
+		return exports.Hosts(groups), true, err
+	case "keys.csv":
+		kv, err := e.Keys()
+		return exports.Keys(kv.Rows), true, err
+	case "tokens.csv":
+		tv, err := e.Tokens()
+		return exports.Tokens(tv.Items), true, err
+	case "history.csv":
+		ops, err := e.History(history.Filter{Limit: 0})
+		return exports.History(ops), true, err
+	case "events.csv":
+		evs, err := events.List(e.Home(), events.Filter{})
+		return exports.Events(evs), true, err
+	}
+	return csvout.Table{}, false, nil
 }

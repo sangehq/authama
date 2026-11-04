@@ -6,10 +6,16 @@ and makes the everyday manifest and auth-token changes, each previewed before it
 ## Starting it
 
 ```sh
+authama                       # on a terminal: the same as `authama serve`
 authama serve                 # 127.0.0.1:7822, opens a browser
 authama serve --no-open       # print the address only
 authama --dev-root ./scratch serve
 ```
+
+A bare `authama` on a terminal runs `serve` with every flag at its default; the
+global `--dev-root` and `--no-dotenv` still apply. With no terminal (a pipe, a
+script, CI) a bare run prints help instead, since `serve` runs until Ctrl-C. The
+menu is `authama tui`.
 
 It prints an address like this:
 
@@ -27,17 +33,41 @@ when that port is taken.
 
 ## Pages
 
+The layout is Tabler's. The header holds the name, a theme toggle (light or dark), a bell listing the
+newest [file events](events.md), and an account menu named for the system user the server runs as and
+the machine (or dev mode, or read-only), holding Settings, Events, Doctor and About. Following the
+system's light or dark theme is chosen on the Settings page, and the third-party licences are on the
+About page. The footer carries the copyright, the version, and links to About, the documentation, the
+source and the licences. Under it, a menu
+holds the Overview and three dropdowns: **SSH** (Profiles, Hosts, SSH config, Keys, VMs, Snapshots),
+**Auth** (Auth tokens) and **System** (History, Events, Doctor, Audit, Settings, About). On a narrow
+screen it folds behind a button.
+
+- **Page headers** name the section, summarise the page, and hold its main actions.
+- **Adding** a profile, a host or a token opens its form in a panel that slides in from the right.
+- **Every destructive action** (deleting a profile, host, key or token, pruning snapshots, restoring
+  one, cleaning stale pins) asks in a dialog first, then previews, then asks again on the preview.
+- **Tables** sort by any column, and a list longer than ten rows gains a search box, a page size and
+  pages. Hosts, keys, auth tokens, history and events each download as CSV, with the same columns as
+  `--csv` on their command.
+- **The command palette**, Ctrl+K (⌘K on a Mac) or *Search* in the header, jumps to any page, opens
+  the add-a-profile, host or token panel, or starts a download, as you type.
+
 | Page | Shows |
 |---|---|
-| Overview | the rows the `authama tui` menu prints at the top, each problem with the command that fixes it; counts; keys due for rotation; recent changes |
+| Overview | the rows the `authama tui` menu prints at the top, each problem with the command that fixes it; counts; key health, auth tokens and snapshots; quick actions; hosts by profile; the newest file events; keys due for rotation; recent changes |
 | Profiles | each profile's category, key scope, key store, and host and key counts |
 | Hosts | every host by profile. A host's page shows its manifest entry, its deployments, the block rendered into `~/.ssh/config`, and the host keys pinned for it |
 | Keys | every key with its fingerprint and expiry, and the reserved keys (loose keys kept on purpose). A key's page shows where the key is deployed and every operation that touched it |
 | Snapshots | every snapshot. A snapshot's page diffs it against `~/.ssh` now or against another snapshot |
 | History | the [`history`](history.md), filtered the same way. An operation's page shows its events and the manifest before and after |
 | VMs | the VM hosts and their VMs' state, the pending `ssh vm sync` plan, the enabled hypervisors and their VMs, the declared devboxes (planned ones without a VM yet), the reserved keys, the loose keys that could be adopted, and whether the daily sync is scheduled |
-| Tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret) and the token audit, as `authama token list` and `authama token audit` print, and which token config is in use |
+| Auth tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret), each tool's file with its mode and how many entries are installed, configured and resolvable, what `token apply` would skip, and the token audit, as `authama token list`, `token status` and `token audit` print |
+| SSH config | every file the manifest renders into `~/.ssh` and whether the files on disk match it, as `authama ssh config show` and `ssh config check` print |
 | Doctor, Audit | the reports `authama doctor` and `authama ssh audit` print |
+| Events | every change seen to a tracked file, with the authama operation that made it, as [`authama events`](events.md) lists them; filtered by area |
+| About | this build (version, commit, Go, platform), the user and machine it runs as, where it keeps things, links to the documentation and the source, and the third-party licences of the bundled front-end assets |
+| Settings | the colour theme (light, dark, or following the system); where the config home, state home, `.env` and `authama.json` are, every setting's value in effect and where it came from, and what `authama settings validate` reports, as `settings path`, `settings show --effective` and `settings validate` print them. The values are those the server started with |
 | Third-party licences | the licences of the web UI's bundled front-end assets (Tabler, Tabler Icons, Bootstrap, Popper), at `/about/licenses` |
 
 ## Changes
@@ -46,7 +76,8 @@ These changes can be made from the pages:
 
 | Change | Where | The same as |
 |---|---|---|
-| Add a profile | Profiles | `authama ssh profile add` |
+| Add a profile, optionally in a category and with a key comment | Profiles | `authama ssh profile add [--category] [--key-comment]` |
+| Change a profile's key comment | Profiles | `authama ssh profile edit --key-comment` |
 | Change a profile's key scope | Profiles | `authama ssh profile edit --key-scope --key-name` |
 | Delete a profile | Profiles | `authama ssh profile delete --yes` |
 | Delete a profile and its key files | Profiles, ticking *and its key files* | `authama ssh profile delete --purge --yes` |
@@ -62,7 +93,7 @@ These changes can be made from the pages:
 | Delete a declared key that no host uses | Keys | `authama ssh key delete --yes` |
 | Reserve a loose key (keep it on purpose) | Keys | `authama ssh key reserve <key> --for … --note … --yes` |
 | Drop a key's reservation | Keys | `authama ssh key unreserve <key> --yes` |
-| Re-render `~/.ssh/config` | Overview | `authama ssh config render --yes` |
+| Re-render `~/.ssh/config` | Overview, SSH config | `authama ssh config render --yes` |
 | Reconcile: mint missing keys, record keys on disk, render | Overview | `authama ssh reconcile --yes --no-pin` |
 | Mint a profile's or host's missing keys | Keys | `authama ssh keygen <target> --no-pin --yes` |
 | Add a key, optionally wired to a host | Keys | `authama ssh key add` |
@@ -70,22 +101,33 @@ These changes can be made from the pages:
 | Restore a snapshot | the snapshot's page | `authama ssh snapshots restore <id> --yes` |
 | Fix file modes | Doctor | `authama doctor --fix` |
 | Write an editable `providers.json` | Doctor | `authama ssh providers --export` |
+| Create a starter `authama.json` | Settings, when there is none | `authama settings init` |
 | Remove stale pins and records, optionally adopting pins first | Doctor | `authama ssh clean --yes [--adopt]` |
 | Write an encrypted bundle | Snapshots | `authama ssh bundle [--keep]` |
 | Send the desktop alert, if one is due | Audit | `authama ssh audit --notify` |
 | Send a test notification | Audit | `authama ssh notify test` |
 | Remove an installed token | Tokens | `authama token delete <target> <host>` |
-| Write the token config's credential files | Tokens | `authama token apply` (a Docker registry in a credential store follows `_settings.docker_creds_store`, and is refused when it is unset, since a page cannot prompt) |
+| Write the token config's credential files | Auth tokens | `authama token apply` (a Docker registry in a credential store follows `_settings.docker_creds_store`, and is refused when it is unset, since a page cannot prompt) |
+| Add or replace one token | Auth tokens | `authama token set --service\|--target --server [--username] [--scope] [--creds-store-mode]` |
+| Write a starter `tokens.json` | Auth tokens, when there is none | `authama token init [--target …]` |
+| Import an auth-token-manager config | Auth tokens, when the config in use is at its location | `authama token import` |
 
 The token apply resolves secrets from the environment `authama serve` was started
-in, so a variable set in another terminal is not seen. Storing, revealing and
-copying a token stay in the terminal (`token set`, `token list --reveal`,
-`token copy`): a page never receives or shows a secret.
+in, so a variable set in another terminal is not seen.
+
+**Adding a token is the one form that takes a secret.** The secret goes to the server with the
+preview, and straight into memory: the preview page and its confirmation carry a random reference
+in its place, never the secret. The reference works once, for the browser session that made it, for
+15 minutes, and is forgotten when the change is made; nothing writes it to disk but the tool's own
+credential file. The preview names the file and host it writes, and says the secret is not shown. A
+secret posted with any other form is refused. Revealing a stored token and copying one stay in the
+terminal (`token list --reveal`, `token copy`): a page never shows a secret.
 
 Each change takes two steps:
 
 1. **Preview.** The change runs for real against a private, throwaway copy of the home. The copy
-   holds the config files, plus the files from `~/.ssh` that a snapshot may hold: config,
+   holds the config files (`manifest.json`, `inventory.json`, `providers.json` and `authama.json`; never
+   `.env` or the age identity), plus the files from `~/.ssh` that a snapshot may hold: config,
    `known_hosts` and public keys. No private key is copied. The page shows the command line it
    stands for, what authama would say, and a diff of every file the change would write.
 2. **Confirm.** authama takes the lock, then previews the change again. If the new preview differs
@@ -192,6 +234,11 @@ Some changes are terminal-only:
 
 ## Security
 
+- **Bounded requests.** A request body over 1 MiB is refused with 413 before it is parsed; headers
+  are held to 64 KiB, a body must arrive within 30 seconds, and `Permissions-Policy` turns off every
+  device API (camera, microphone, location, USB and the rest).
+- **CSV downloads** never hold a secret, and a cell that a spreadsheet would read as a formula (one
+  starting `=`, `+`, `-` or `@`) is written with a leading apostrophe.
 - **Loopback by default.** A non-loopback `--addr` is refused unless you pass `--allow-remote`, and
   even then it serves plain HTTP. An SSH tunnel is better:
   `ssh -L 7822:127.0.0.1:7822 <host>`.

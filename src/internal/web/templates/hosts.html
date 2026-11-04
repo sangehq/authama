@@ -1,36 +1,35 @@
 {{define "content"}}
-{{template "page_header" "Hosts"}}
-{{range .Data}}
+{{if .ReadOnly}}
+{{template "page_header" (header "SSH" "Hosts" "Every host, by profile, as it is rendered into ~/.ssh/config.")}}
+{{else}}
+{{template "page_header" (header "SSH" "Hosts" "Every host, by profile, as it is rendered into ~/.ssh/config." (panel "Add a host" "add-host" "plus") (action "SSH config" "/ssh-config" "file-code"))}}
+{{end}}
 <div class="card mb-3">
-  <div class="card-header"><h2 class="card-title">Profile <code>{{.Name}}</code></h2></div>
-  {{if .Rows}}
+  <div class="card-header"><h2 class="card-title">Hosts</h2><div class="card-actions"><a class="btn btn-sm btn-outline-secondary" href="/exports/hosts.csv" download>{{icon "download"}}<span class="ms-1">CSV</span></a></div></div>
+  {{if .Data}}
   <div class="table-responsive">
-    <table class="table table-vcenter card-table">
-      <caption class="visually-hidden">Hosts in profile {{.Name}}</caption>
-      <thead><tr><th scope="col">Alias</th><th scope="col">Hostname</th><th scope="col">Provider</th><th scope="col">Key</th><th scope="col">Status</th><th scope="col">Tags</th></tr></thead>
+    <table class="table table-vcenter card-table table-hover" id="hosts-table" data-table="hosts">
+      <caption class="visually-hidden">Every host in the manifest, with its profile</caption>
+      <thead><tr><th scope="col">Alias</th><th scope="col">Profile</th><th scope="col">Hostname</th><th scope="col">Provider</th><th scope="col">Key</th><th scope="col">Status</th><th scope="col">Tags</th></tr></thead>
       <tbody>
-        {{range .Rows}}
+        {{range $g := .Data}}{{range .Rows}}
         <tr>
           <th scope="row"><a href="/hosts/{{.Alias}}"><code>{{.Alias}}</code></a></th>
-          <td>{{.Hostname}}</td>
+          <td><code>{{$g.Name}}</code></td>
+          <td class="text-break">{{.Hostname}}</td>
           <td>{{.ProviderLabel}}</td>
-          <td><code>{{.KeyName}}</code></td>
+          <td class="text-break"><code>{{.KeyName}}</code></td>
           <td><span class="badge {{statusClass .Status}}">{{.Status}}</span></td>
           <td class="text-secondary">{{orDash (join .Tags ", ")}}</td>
         </tr>
-        {{end}}
+        {{end}}{{end}}
       </tbody>
     </table>
   </div>
-  {{else}}<div class="card-body text-secondary">No hosts in this profile.</div>{{end}}
+  {{else}}{{template "empty" (empty "server" "No profiles yet" "Add a profile first, then its hosts.")}}{{end}}
 </div>
-{{else}}<p class="text-secondary">No profiles yet.</p>{{end}}
 {{if and (not .ReadOnly) .Data}}
-<div class="row row-cards mt-1">
-  <div class="col-lg-6">
-    <div class="card">
-      <div class="card-header"><h2 class="card-title">Add a host</h2></div>
-      <div class="card-body">
+{{template "panel_open" (header "add-host" "Add a host" "")}}
         {{template "change_open" .}}<input type="hidden" name="action" value="host-add">
           <div class="row g-2">
             <div class="col-sm-6"><label class="form-label" for="h-profile">Profile</label><select class="form-select" id="h-profile" name="profile">{{range .Data}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div>
@@ -43,9 +42,8 @@
           <p class="text-secondary small mt-2 mb-2">Its key is minted by <code>authama ssh reconcile</code> in a terminal.</p>
           <button type="submit" class="btn btn-primary">Preview</button>
         </form>
-      </div>
-    </div>
-  </div>
+{{template "panel_close"}}
+<div class="row row-cards mt-1">
   <div class="col-lg-6">
     <div class="card">
       <div class="card-header"><h2 class="card-title">Add a VM host</h2></div>

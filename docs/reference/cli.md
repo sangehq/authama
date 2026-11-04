@@ -20,9 +20,11 @@ Every command also takes the global flag:
 ## Contents
 
 - [`authama doctor`](#authama-doctor) - Diagnose deps, perms, agent, known_hosts, drift, dangling keys, and token-file perms
+- [`authama events`](#authama-events) - Every change seen to a file under ~/.ssh, the config home or a token file, newest first
 - [`authama history`](#authama-history) - List the changes authama has made, newest first
   - [`authama history show`](#authama-history-show) - Show one operation: its events and what it changed in the manifest
 - [`authama init`](#authama-init) - Create/converge the per-user home
+- [`authama man`](#authama-man) - Write a manual page (troff, section 1) for every command into DIR
 - [`authama migrate`](#authama-migrate) - Copy a pre-0.1.1 home (ssh-manager, sshmgr) into the authama home; the old one is kept and marked
 - [`authama serve`](#authama-serve) - Open the web UI on this machine
 - [`authama settings`](#authama-settings) - Your settings files (.env and authama.json): where they are, what is in effect, validate, create
@@ -30,7 +32,7 @@ Every command also takes the global flag:
   - [`authama settings path`](#authama-settings-path) - Print where the config home, state home, .env and authama.json are
   - [`authama settings show`](#authama-settings-show) - Print authama.json, or with --effective every setting's value and where it came from
   - [`authama settings validate`](#authama-settings-validate) - Check authama.json (or FILE) against the schema, and .env's syntax and permissions
-- [`authama ssh`](#authama-ssh) - SSH keys, profiles, hosts, config and trust (every former top-level verb; the bare top-level spelling still works, hidden)
+- [`authama ssh`](#authama-ssh) - SSH keys, profiles, hosts, config and trust
   - [`authama ssh audit`](#authama-ssh-audit) - Deployment, expiry, and hygiene report
   - [`authama ssh bundle`](#authama-ssh-bundle) - Write an encrypted backup of keys + state (read back with restore)
   - [`authama ssh clean`](#authama-ssh-clean) - Remove stale known_hosts pins, stale records and write residue
@@ -50,7 +52,7 @@ Every command also takes the global flag:
     - [`authama ssh host apply`](#authama-ssh-host-apply) - Add or update hosts from compact specs (one, many, or a file)
     - [`authama ssh host delete`](#authama-ssh-host-delete) - Delete a host, its config block and its pins
     - [`authama ssh host edit`](#authama-ssh-host-edit) - Edit a host
-  - [`authama ssh import`](#authama-ssh-import) - Onboard an existing ~/.ssh into the manifest
+  - [`authama ssh import`](#authama-ssh-import) - Onboard an existing ssh setup - a config file or any folder of them - into the manifest
   - [`authama ssh key`](#authama-ssh-key) - Manage a profile's keys (add/list/delete)
     - [`authama ssh key add`](#authama-ssh-key-add) - Declare a key on a profile and mint it
     - [`authama ssh key delete`](#authama-ssh-key-delete) - Delete a key (refuses while a host uses it)
@@ -137,6 +139,42 @@ Flags:
   -y, --yes       with --fix: do the upkeep without confirming (implied when there is no terminal)
 ```
 
+## authama events
+
+authama tracks the files it is responsible for - everything under ~/.ssh, the config
+home, and each tool's credential file - and records every change to them, whoever
+made it: authama, an editor, a package manager. Each run scans first, then lists.
+An event names the file and what changed (added, changed, removed, mode), never
+its contents. Each line is chained to the one before it by a SHA-256 hash, so
+--verify catches a line edited, removed or inserted after the fact, or a log
+cut short. The web UI scans every 30 seconds while it runs.
+
+```
+authama events [flags]
+```
+
+Examples:
+
+```sh
+  authama events
+  authama events --since 24h --area auth
+  authama events --kind mode --json
+  authama events --verify
+```
+
+Flags:
+
+```
+      --area string      only this area: ssh, config or auth
+      --csv              one CSV row per event, header first
+      --json             machine-readable output (scripting)
+      --kind string      only this kind: added, changed, removed, mode or started
+      --limit int        at most this many (newest first); 0 is all
+      --no-scan          list what is recorded without scanning first
+      --since duration   only events newer than this, e.g. 24h
+      --verify           check the log's hash chain for edited, removed or inserted lines; exit non-zero if broken
+```
+
 ## authama history
 
 List the operations that changed something - every command that took the lock -
@@ -168,6 +206,7 @@ Flags:
 
 ```
       --command string   only this command ("host add"), or a group of them ("host")
+      --csv              one CSV row per operation, header first
       --host string      only operations about this host alias
       --json             one JSON object per operation, its events nested
       --key string       only operations about this key
@@ -212,6 +251,24 @@ Flags:
 ```
       --backup   with --force, copy the old files into the state home's .state/ before overwriting
   -f, --force    overwrite manifest/inventory/.env with fresh defaults
+```
+
+## authama man
+
+Writes one manual page per command, authama.1, authama-ssh.1, authama-ssh-deploy.1
+and so on, with the sections the help prints: NAME, SYNOPSIS, DESCRIPTION,
+COMMANDS, OPTIONS, EXAMPLES and SEE ALSO. DIR defaults to ./man; put it on
+MANPATH, or copy the pages into a man1 directory, to read them with man(1).
+
+```
+authama man [DIR]
+```
+
+Examples:
+
+```sh
+  authama man
+  authama man ~/.local/share/man/man1
 ```
 
 ## authama migrate
@@ -382,7 +439,10 @@ Examples:
 
 ## authama ssh
 
-SSH keys, profiles, hosts, config and trust (every former top-level verb; the bare top-level spelling still works, hidden).
+SSH keys, profiles, hosts, config and trust: everything authama does in ~/.ssh.
+
+Every verb here also answers at the top level, unlisted, as it did before the
+groups existed (authama deploy is authama ssh deploy), so older scripts keep working.
 
 ```
 authama ssh
@@ -399,7 +459,7 @@ Subcommands:
 - [`expiry`](#authama-ssh-expiry) - Per-key rotation-age table
 - [`git`](#authama-ssh-git) - Show or switch checkouts' GitHub remotes between profile SSH, plain SSH and HTTPS
 - [`host`](#authama-ssh-host) - Manage a host within a profile (add/edit/delete/apply)
-- [`import`](#authama-ssh-import) - Onboard an existing ~/.ssh into the manifest
+- [`import`](#authama-ssh-import) - Onboard an existing ssh setup - a config file or any folder of them - into the manifest
 - [`key`](#authama-ssh-key) - Manage a profile's keys (add/list/delete)
 - [`keygen`](#authama-ssh-keygen) - Generate a profile's or host's keys
 - [`knownhosts`](#authama-ssh-knownhosts) - Pin host keys into the single ~/.ssh/known_hosts trust store
@@ -805,6 +865,8 @@ and nothing tracks it any more.
 authama ssh host delete <profile> <alias> [flags]
 ```
 
+Aliases: `rm`
+
 Examples:
 
 ```sh
@@ -852,10 +914,23 @@ Flags:
 
 ## authama ssh import
 
-Onboard an existing ~/.ssh into the manifest.
+Reads an ssh setup into the manifest and inventory, replacing them (a non-empty
+manifest needs --force, and both are backed up first). PATH defaults to
+~/.ssh/config and may be a config file or a folder:
+
+  a folder with a config file    that file, whose Includes pull in the rest
+                                 (config.d/, profiles/<name>/config, …)
+  a folder with ssh/config       that file, for a config home such as ~/.config
+  any other folder               every file named config or ending .conf, up to
+                                 four levels down, read in path order
+
+Relative Includes resolve against the folder, as ssh resolves them against
+~/.ssh. Importing another machine's copy of ~/.ssh, an IdentityFile under
+~/.ssh/ is looked for in that copy, and its keys are adopted into the
+profiles/ layout here.
 
 ```
-authama ssh import [path] [flags]
+authama ssh import [PATH] [flags]
 ```
 
 Examples:
@@ -863,6 +938,7 @@ Examples:
 ```sh
   authama ssh import --dry-run
   authama ssh import ~/old-laptop/.ssh --yes
+  authama ssh import ~/.config --dry-run
 ```
 
 Flags:
@@ -930,6 +1006,8 @@ and the key files stay on disk, so an accidental delete costs nothing.
 authama ssh key delete <profile/key> [flags]
 ```
 
+Aliases: `rm`
+
 Examples:
 
 ```sh
@@ -951,14 +1029,22 @@ Flags:
 Every key with its fingerprint, expiry, hosts and state.
 
 ```
-authama ssh key list [profile|alias|key]
+authama ssh key list [profile|alias|key] [flags]
 ```
+
+Aliases: `ls`
 
 Examples:
 
 ```sh
   authama ssh key list
   authama ssh key list work
+```
+
+Flags:
+
+```
+      --csv   print the keys as CSV, one row each, header first
 ```
 
 ## authama ssh key regen-pub
@@ -1139,6 +1225,8 @@ Filterable tree across profiles.
 authama ssh list [flags]
 ```
 
+Aliases: `ls`
+
 Examples:
 
 ```sh
@@ -1150,6 +1238,7 @@ Examples:
 Flags:
 
 ```
+      --csv               print the hosts as CSV, one row each, header first
       --profile string    filter to one profile
       --provider string   filter by provider
       --tag string        filter by host tag
@@ -1283,6 +1372,8 @@ encrypted backup.
 ```
 authama ssh profile delete <name> [flags]
 ```
+
+Aliases: `rm`
 
 Examples:
 
@@ -1501,6 +1592,8 @@ List local ~/.ssh snapshots (oldest -> newest).
 ```
 authama ssh snapshots list
 ```
+
+Aliases: `ls`
 
 Examples:
 
@@ -1757,6 +1850,8 @@ List every hypervisor's VMs, and which manifest host uses each.
 authama ssh vm list
 ```
 
+Aliases: `ls`
+
 Examples:
 
 ```sh
@@ -1811,6 +1906,8 @@ Config: --config, $AUTHAMA_TOKENS_CONFIG, ./authama-tokens.json, or tokens.json 
 ```
 authama token
 ```
+
+Aliases: `auth`
 
 Subcommands:
 
@@ -1920,6 +2017,8 @@ one it goes ahead, as every other delete does.
 authama token delete TARGET HOST [flags]
 ```
 
+Aliases: `rm`
+
 Examples:
 
 ```sh
@@ -2015,6 +2114,8 @@ List the tokens installed in the credential files (secrets masked).
 authama token list [flags]
 ```
 
+Aliases: `ls`
+
 Examples:
 
 ```sh
@@ -2026,6 +2127,7 @@ Examples:
 Flags:
 
 ```
+      --csv              print the list as CSV, header first; never the secrets
       --json             print the list as JSON
       --project string   read the project's auth.json and .npmrc instead of the user ones
       --reveal           show the secret values (asks first; --yes when not at a terminal)

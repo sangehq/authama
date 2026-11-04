@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/core/tokens"
 	"github.com/simtabi/authama/src/internal/services/change"
 	"github.com/simtabi/authama/src/internal/services/editor"
 	"github.com/simtabi/authama/src/internal/services/history"
@@ -171,7 +172,7 @@ func TestReadOnlyServesNoChangeAndShowsNoForm(t *testing.T) {
 			t.Errorf("read-only %s: %d, want 405", path, rec.Code)
 		}
 	}
-	for _, page := range []string{"/", "/profiles", "/hosts", "/hosts/gh", "/keys", "/snapshots", "/doctor", "/vms", "/audit"} {
+	for _, page := range []string{"/", "/profiles", "/hosts", "/hosts/gh", "/keys", "/snapshots", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config"} {
 		if strings.Contains(c.get(page).Body.String(), "/changes/preview") {
 			t.Errorf("read-only %s shows a change form", page)
 		}
@@ -268,6 +269,13 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("NPM_CONFIG_USERCONFIG", npmrc)
+	// A token config at an auth-token-manager location, for the token page to
+	// offer importing; the config home has no tokens.json, so it offers init.
+	legacy := filepath.Join(t.TempDir(), "auth-token-manager.json")
+	if err := os.WriteFile(legacy, []byte(tokens.AllTargetsTemplate()), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("AUTH_TOKEN_MANAGER_CONFIG", legacy)
 	var openable string
 	for _, s := range snapshots.List(p.SnapshotsDir()) {
 		if !snapshots.HoldsKeyMaterial(s) {
@@ -278,7 +286,7 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 		t.Fatal("the changes above took no snapshot to offer a restore of")
 	}
 	for _, page := range []string{"/", "/profiles", "/hosts", "/hosts/gh", "/hosts/devbox", "/keys", "/snapshots",
-		"/snapshots/" + openable, "/keys/" + fixtureKey(t, c), "/doctor", "/vms", "/audit", "/tokens"} {
+		"/snapshots/" + openable, "/keys/" + fixtureKey(t, c), "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config"} {
 		for _, m := range action.FindAllStringSubmatch(c.get(page).Body.String(), -1) {
 			seen[m[1]] = true
 			_, change := actionFields[m[1]]

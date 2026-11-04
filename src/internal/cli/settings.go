@@ -12,9 +12,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/services/change"
 	"github.com/simtabi/authama/src/internal/services/settings"
 	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/web"
 )
 
 // settingsGroup is the user-settings command group. It is not `config`: that
@@ -55,6 +57,12 @@ func locate(c *cobra.Command) (settingsLocation, paths.Paths, error) {
 	if err != nil {
 		return settingsLocation{}, p, err
 	}
+	return locateAt(p), p, nil
+}
+
+// locateAt is locate for a home already resolved: what `settings path`
+// prints, and what the web UI's settings page shows.
+func locateAt(p paths.Paths) settingsLocation {
 	loc := settingsLocation{ConfigHome: p.ConfigDir, StateHome: p.State(), Dotenv: p.EnvFile(), Settings: p.SettingsFile()}
 	switch _, from := envnames.Source(nil, envnames.ConfigDir); {
 	case p.IsDev():
@@ -84,7 +92,7 @@ func locate(c *cobra.Command) (settingsLocation, paths.Paths, error) {
 	} else {
 		loc.SettingsOK = "absent (authama settings init creates one)"
 	}
-	return loc, p, nil
+	return loc
 }
 
 func exists(path string) bool { _, err := os.Stat(path); return err == nil }
@@ -214,30 +222,14 @@ func newSettingsValidateCmd() *cobra.Command {
 		RunE: func(c *cobra.Command, args []string) error {
 			out := c.OutOrStdout()
 			var problems []string
-			target := ""
 			if len(args) == 1 {
-				target = args[0]
+				problems = fileProblems(args[0], true)
 			} else {
 				p, err := resolvePaths(c)
 				if err != nil {
 					return err
 				}
-				target = p.SettingsFile()
-				problems = append(problems, dotenvProblems(p.EnvFile())...)
-			}
-			if b, err := os.ReadFile(target); err == nil {
-				if _, err := settings.Parse(target, b); err != nil {
-					var ve *settings.ValidationError
-					if errors.As(err, &ve) {
-						for _, pr := range ve.Problems {
-							problems = append(problems, filepath.Base(target)+": "+pr)
-						}
-					} else {
-						problems = append(problems, err.Error())
-					}
-				}
-			} else if len(args) == 1 || !errors.Is(err, os.ErrNotExist) {
-				problems = append(problems, err.Error())
+				problems = settingsProblems(p)
 			}
 			if len(problems) == 0 {
 				_, _ = fmt.Fprintln(out, "settings: ok")
@@ -250,6 +242,35 @@ func newSettingsValidateCmd() *cobra.Command {
 		},
 	}
 	return cmd
+}
+
+// settingsProblems is `settings validate` with no FILE: .env's syntax and
+// permissions, then authama.json against the schema. An absent authama.json
+// is not a problem.
+func settingsProblems(p paths.Paths) []string {
+	return append(dotenvProblems(p.EnvFile()), fileProblems(p.SettingsFile(), false)...)
+}
+
+// fileProblems checks one settings file against the schema. named is true
+// when the file was given on the command line, where a missing file is an
+// error rather than "every setting at its default".
+func fileProblems(target string, named bool) []string {
+	var problems []string
+	if b, err := os.ReadFile(target); err == nil {
+		if _, err := settings.Parse(target, b); err != nil {
+			var ve *settings.ValidationError
+			if errors.As(err, &ve) {
+				for _, pr := range ve.Problems {
+					problems = append(problems, filepath.Base(target)+": "+pr)
+				}
+			} else {
+				problems = append(problems, err.Error())
+			}
+		}
+	} else if named || !errors.Is(err, os.ErrNotExist) {
+		problems = append(problems, err.Error())
+	}
+	return problems
 }
 
 // dotenvProblems checks a .env without loading it.
@@ -277,19 +298,7 @@ func newSettingsInitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			path := p.SettingsFile()
-			if exists(path) && !force {
-				return fmt.Errorf("%s already exists; --force replaces it", path)
-			}
-			if err := os.MkdirAll(p.ConfigDir, 0o700); err != nil {
-				return err
-			}
-			if err := os.WriteFile(path, settings.Starter(), 0o600); err != nil {
-				return err
-			}
-			_, _ = fmt.Fprintf(c.OutOrStdout(), "wrote %s - add settings to it; `%s settings show --effective` lists them\n",
-				path, brand.Command)
-			return nil
+			return change.SettingsInit(force).Run(p, c.OutOrStdout())
 		},
 	}
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "replace an existing authama.json")
@@ -337,4 +346,19 @@ func settingsSummary(p paths.Paths) (lines []string, failed bool) {
 		lines = append(lines, "deprecated variable names in use: "+strings.Join(st.Deprecated, ", "))
 	}
 	return lines, failed
+}
+
+// settingsView is the web UI's settings page: `settings path`, `show
+// --effective` and `validate`, from the same functions those commands use.
+func settingsView(p paths.Paths) web.SettingsView {
+	loc := locateAt(p)
+	v := web.SettingsView{
+		ConfigHome: loc.ConfigHome, ConfigSource: loc.ConfigSource, StateHome: loc.StateHome,
+		Dotenv: loc.Dotenv, DotenvState: loc.DotenvState, Settings: loc.Settings, SettingsState: loc.SettingsOK,
+		HasSettings: exists(p.SettingsFile()), Problems: settingsProblems(p),
+	}
+	for _, r := range effective() {
+		v.Effective = append(v.Effective, web.SettingRow{Key: r.Key, Variable: r.Variable, Value: r.Value, Source: r.Source})
+	}
+	return v
 }
