@@ -1,6 +1,7 @@
 package tokens
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -137,7 +138,7 @@ func TestEveryPathVariableAFormatReadsIsHiddenInDevMode(t *testing.T) {
 		}
 		return ""
 	}}
-	if got := h.TargetPath(Cargo, ""); got != "/real/place/credentials.toml" {
+	if got := h.TargetPath(Cargo, ""); got != filepath.Join("/real/place", "credentials.toml") {
 		t.Errorf("cargo does not read CARGO_HOME: %s", got)
 	}
 }
