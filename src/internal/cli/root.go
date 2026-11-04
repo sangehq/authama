@@ -2,11 +2,14 @@
 // (brand.Command); sshmgr (brand.LegacyCommand), the name it shipped under
 // before, is still installed beside it as a deprecated alias.
 //
-// The tree has two feature groups and a few commands that serve both:
+// Run on its own, on a terminal, it opens the web UI (as `authama serve`). The
+// tree has two feature groups and a few commands that serve both:
 //
-//	authama ssh <verb>     SSH keys, profiles, hosts and config
-//	authama token <verb>   package-manager and git auth tokens
-//	authama doctor|init|migrate|tui|history|serve|version
+//	authama ssh <verb>          SSH keys, profiles, hosts and config
+//	authama token|auth <verb>   package-manager and git auth tokens
+//	authama doctor|init|migrate|tui|history|serve|settings|version
+//
+// Every group answers `help [verb]`, as the root does.
 //
 // Every SSH verb is also kept, hidden, at the top level, so `sshmgr deploy`
 // and every script and rendered ProxyCommand written before the groups
@@ -43,19 +46,19 @@ func newRootCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Args:          rootArgs,
-		// Bare `authama` on a terminal opens the menu; `authama <verb>` is the CLI.
-		// Someone who runs the binary by double-clicking it, or by typing its name
-		// to see what it does, gets something they can use rather than a wall of
-		// help - and a script still gets the CLI, because a script has no terminal.
+		// Bare `authama` on a terminal opens the web UI, exactly as `authama serve`
+		// with its defaults; `authama <command>` is the CLI and `authama tui` the
+		// menu. Someone who runs the binary by double-clicking it, or by typing its
+		// name to see what it does, gets something they can use rather than a wall
+		// of help.
 		//
-		// Piped or redirected input falls back to help: a TUI reading from a pipe
-		// would consume whatever is there as menu answers, which is how a
-		// non-interactive run ends up picking a menu item nobody chose.
+		// With no terminal it prints help instead: serve runs until Ctrl-C, so a
+		// script that ran bare `authama` would hang rather than fail.
 		RunE: func(c *cobra.Command, _ []string) error {
-			if !platform.StdinIsTerminal() {
+			if !bareIsInteractive() {
 				return c.Help()
 			}
-			return runTUI(c)
+			return runBare(c)
 		},
 	}
 	root.SetVersionTemplate(brand.Command + " {{.Version}}\n")
@@ -108,6 +111,7 @@ func newRootCmd() *cobra.Command {
 		root.AddCommand(c)
 	}
 	applyExamples(root, "")
+	addGroupHelp(root)
 	recordCommands(root)
 	return root
 }
@@ -124,6 +128,60 @@ func sshCommands() []*cobra.Command {
 		newViewCmd(), newShowCmd(), newCleanCmd(), newExpiryCmd(), newAuditCmd(),
 		newNotifyCmd(), newGitCmd(), newVMCmd(), newTermiusCmd(),
 	}
+}
+
+// bareIsInteractive is the terminal check behind a bare run; a test seam,
+// since a test's stdin is never a terminal.
+var bareIsInteractive = platform.StdinIsTerminal
+
+// runBare runs `serve` as if it had been typed, with every serve flag at its
+// default. The global flags (--dev-root, --no-dotenv) are the root's, so they
+// apply to the bare run as they do to `authama serve`.
+func runBare(root *cobra.Command) error {
+	serve, _, err := root.Find([]string{"serve"})
+	if err != nil || serve == root {
+		return errors.New("this build has no serve command")
+	}
+	serve.SetContext(root.Context())
+	return serve.RunE(serve, nil)
+}
+
+// addGroupHelp gives every command that has subcommands a `help [verb]` of
+// its own, so `authama ssh help deploy` answers as `authama help ssh deploy`
+// does. Cobra adds a help command to the root only; without this a group read
+// "help" as an unknown verb. Leaf commands keep --help: some take a name as
+// their argument, and a name may be "help".
+func addGroupHelp(c *cobra.Command) {
+	for _, sub := range c.Commands() {
+		addGroupHelp(sub)
+	}
+	if !c.HasParent() || !c.HasSubCommands() {
+		return
+	}
+	for _, sub := range c.Commands() {
+		if sub.Name() == "help" {
+			return
+		}
+	}
+	group := c
+	c.AddCommand(&cobra.Command{
+		Use:   "help [command]",
+		Short: "Help about any command in " + group.CommandPath(),
+		Args:  cobra.ArbitraryArgs,
+		RunE: func(_ *cobra.Command, args []string) error {
+			target, rest, err := group.Find(args)
+			if err != nil || len(rest) > 0 {
+				word := ""
+				if len(rest) > 0 {
+					word = rest[0]
+				} else if len(args) > 0 {
+					word = args[len(args)-1]
+				}
+				return unknownCommand(group, word)
+			}
+			return target.Help()
+		},
+	})
 }
 
 // groupHelp is a group's own action: help, or an unknown-verb error with a

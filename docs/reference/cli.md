@@ -1812,6 +1812,8 @@ Config: --config, $AUTHAMA_TOKENS_CONFIG, ./authama-tokens.json, or tokens.json 
 authama token
 ```
 
+Aliases: `auth`
+
 Subcommands:
 
 - [`apply`](#authama-token-apply) - Resolve the token config from the environment and write each tool's credential file

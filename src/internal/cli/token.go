@@ -35,8 +35,9 @@ var (
 
 func newTokenCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   tokenGroup,
-		Short: "Package-manager and git auth tokens: Composer, npm, Docker, git, netrc",
+		Use:     tokenGroup,
+		Aliases: []string{"auth"},
+		Short:   "Package-manager and git auth tokens: Composer, npm, Docker, git, netrc",
 		Long: "Builds the credential files Composer, npm, Docker, git and curl read, from a\n" +
 			"config that names environment variables (never secrets), and lists, copies or\n" +
 			"removes what is installed. Files are written atomically and owner-only.\n\n" +
