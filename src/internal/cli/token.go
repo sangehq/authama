@@ -235,58 +235,26 @@ func newTokenSetCmd() *cobra.Command {
 			"is never a flag, so it stays out of shell history and the process list.",
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			mech := ""
-			if service != "" {
-				m, ok := tokens.LoadCatalogServices()[service]
-				if !ok {
-					return fmt.Errorf("unknown service %q (see `%s token providers`)", service, brand.Command)
-				}
-				target, mech = tokens.Composer, m
-			} else {
-				if target == "" {
-					return errors.New("give --service (Composer) or --target")
-				}
-				if err := checkTarget(target); err != nil {
-					return err
-				}
-				if target == tokens.Composer {
-					return errors.New("a Composer token needs --service (see `" + brand.Command + " token providers`)")
-				}
-			}
-			if strings.TrimSpace(server) == "" {
-				return errors.New("--server is required")
+			plan, err := tokensvc.SetSpec{Target: target, Service: service, Server: server, Username: username, Scope: scope}.Check()
+			if err != nil {
+				return err
 			}
 			if !tokensvc.ValidDockerMode(mode) {
 				return fmt.Errorf("--creds-store-mode must be one of %s", strings.Join(tokensvc.DockerModes(), ", "))
 			}
-			var cr tokens.Credential
-			switch {
-			case target == tokens.NPM || target == tokens.Composer && tokens.IsTokenMechanism(mech):
-				s, err := readTokenSecret(c, "Token")
-				if err != nil {
-					return err
-				}
-				cr = tokens.Credential{Token: s, Scope: scope}
-			case target == tokens.Composer && mech != "http-basic":
-				return fmt.Errorf("%s (%s) takes more than one secret; add it to the token config instead", service, mech)
-			default:
-				if username == "" {
-					return errors.New("--username is required for " + target)
-				}
-				s, err := readTokenSecret(c, "Password / token")
-				if err != nil {
-					return err
-				}
-				cr = tokens.Credential{Username: username, Password: s}
+			secret, err := readTokenSecret(c, plan.SecretLabel())
+			if err != nil {
+				return err
 			}
 			env, err := tokenEnv(c)
 			if err != nil {
 				return err
 			}
-			set := tokens.NewSet()
-			if !set.Apply(target, mech, strings.TrimSpace(server), cr) {
-				return errors.New("nothing to save: the credential is incomplete")
+			set, err := plan.Credential(secret)
+			if err != nil {
+				return err
 			}
+			target = plan.Target
 			mutation.LockForMutation(env.Paths)
 			return writeTokenTargets(cliTokenIO(c), env, set, []string{target}, project, mode, nil)
 		},

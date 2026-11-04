@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"sort"
 	"text/tabwriter"
 
@@ -85,27 +84,12 @@ func newTokenShowCmd() *cobra.Command {
 
 // tokenStatus is `token status --json`; its field names are part of the
 // machine-readable surface and do not change.
-type tokenStatus struct {
-	Config   tokenStatusConfig   `json:"config"`
-	Targets  []tokenStatusTarget `json:"targets"`
-	Warnings []string            `json:"warnings"`
-}
-
-type tokenStatusConfig struct {
-	Path    string `json:"path"`
-	Builtin bool   `json:"builtin"`
-	Legacy  bool   `json:"legacy"`
-}
-
-type tokenStatusTarget struct {
-	Target     string `json:"target"`
-	File       string `json:"file"`
-	Exists     bool   `json:"exists"`
-	Mode       string `json:"mode"`
-	Installed  int    `json:"installed"`
-	Configured int    `json:"configured"`
-	Resolved   int    `json:"resolved"`
-}
+// The status types moved to tokensvc, where the web UI reads them too.
+type (
+	tokenStatus       = tokensvc.Status
+	tokenStatusConfig = tokensvc.StatusConfig
+	tokenStatusTarget = tokensvc.StatusTarget
+)
 
 func newTokenStatusCmd() *cobra.Command {
 	var config, project string
@@ -147,36 +131,7 @@ func newTokenStatusCmd() *cobra.Command {
 // buildTokenStatus gathers `token status`: the config that would be used,
 // and per tool its file, mode, installed count and config entries.
 func buildTokenStatus(env tokensvc.Env, config, project string) (tokenStatus, error) {
-	cfg, src, err := env.ResolveConfig(config)
-	if err != nil {
-		return tokenStatus{}, err
-	}
-	st := tokenStatus{
-		Config:   tokenStatusConfig{Path: src.Path, Builtin: src.Path == "", Legacy: src.Legacy},
-		Warnings: []string{},
-	}
-	set := cfg.Resolve(env.Lookup)
-	st.Warnings = append(st.Warnings, set.Warnings...)
-	configured := map[string]int{}
-	for _, sp := range cfg.Specs() {
-		configured[sp.Target]++
-	}
-	installed := map[string]int{}
-	for _, it := range env.Inventory(project, false) {
-		installed[it.Target]++
-	}
-	for _, t := range tokens.Targets() {
-		row := tokenStatusTarget{Target: t, File: env.TargetPath(t, project), Mode: "-",
-			Installed: installed[t], Configured: configured[t], Resolved: set.Len(t)}
-		if fi, err := os.Stat(row.File); err == nil {
-			row.Exists = true
-			if !env.Windows {
-				row.Mode = fmt.Sprintf("%04o", fi.Mode().Perm())
-			}
-		}
-		st.Targets = append(st.Targets, row)
-	}
-	return st, nil
+	return tokensvc.StatusOf(env, config, project)
 }
 
 // printTokenStatus is `token status` for a person; the TUI shows the same.
