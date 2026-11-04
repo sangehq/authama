@@ -85,3 +85,108 @@ export class JobStream extends Component {
     return this;
   }
 }
+
+/**
+ * CopyText puts a public value on the clipboard: a fingerprint, a public key,
+ * a path, an ssh command. Markup: `<button data-copy="the value">`; options:
+ *
+ *   data-copy-done="Copied"   what the control says for a moment after
+ *
+ * The page announces the result to a screen reader through a polite live
+ * region, and a tooltip on the control, if it has one, says it too. It never
+ * reads a value from anywhere but its own attribute, so nothing secret can
+ * reach it that the page did not already show.
+ *
+ * @extends {Component<{done: string}>}
+ */
+export class CopyText extends Component {
+  static attribute = "copy";
+  static defaults = { done: "Copied" };
+
+  /** @type {HTMLElement | null} */
+  static #live = null;
+
+  init() {
+    this.el.addEventListener("click", (e) => {
+      e.preventDefault();
+      const value = this.el.dataset.copy ?? "";
+      CopyText.write(value).then(
+        () => this.say(this.options.done),
+        () => this.say("Could not copy: select the text and copy it"),
+      );
+    });
+    return this;
+  }
+
+  /**
+   * Writes text to the clipboard: the async clipboard API where the page may
+   * use it (127.0.0.1 counts as secure), else a selected textarea.
+   * @param {string} text
+   * @returns {Promise<void>}
+   */
+  static write(text) {
+    if (navigator.clipboard?.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise((resolve, reject) => {
+      const area = document.createElement("textarea");
+      area.value = text;
+      area.setAttribute("readonly", "");
+      area.className = "visually-hidden";
+      document.body.appendChild(area);
+      area.select();
+      const ok = document.execCommand("copy");
+      area.remove();
+      ok ? resolve() : reject(new Error("copy refused"));
+    });
+  }
+
+  /** Tells a screen reader, and the control's tooltip, what happened. @param {string} message */
+  say(message) {
+    if (!CopyText.#live) {
+      const live = document.createElement("div");
+      live.className = "visually-hidden";
+      live.setAttribute("role", "status");
+      live.setAttribute("aria-live", "polite");
+      document.body.appendChild(live);
+      CopyText.#live = live;
+    }
+    CopyText.#live.textContent = message;
+    const Tooltip = /** @type {any} */ (window).tabler?.Tooltip;
+    const tip = Tooltip?.getInstance(this.el);
+    if (tip) {
+      const was = this.el.getAttribute("data-bs-original-title") ?? this.el.title;
+      tip.setContent({ ".tooltip-inner": message });
+      tip.show();
+      setTimeout(() => tip.setContent({ ".tooltip-inner": was }), 1500);
+    } else {
+      CopyText.toast(message);
+    }
+    return this;
+  }
+
+  /** A short Tabler toast in the corner, for a control with no tooltip. @param {string} message */
+  static toast(message) {
+    const Toast = /** @type {any} */ (window).tabler?.Toast;
+    if (!Toast) {
+      return;
+    }
+    let stack = document.getElementById("toast-stack");
+    if (!stack) {
+      stack = document.createElement("div");
+      stack.id = "toast-stack";
+      stack.className = "toast-container position-fixed bottom-0 end-0 p-3";
+      document.body.appendChild(stack);
+    }
+    const toast = document.createElement("div");
+    toast.className = "toast align-items-center";
+    toast.setAttribute("role", "status");
+    const body = document.createElement("div");
+    body.className = "toast-body";
+    body.textContent = message;
+    toast.appendChild(body);
+    stack.appendChild(toast);
+    toast.addEventListener("hidden.bs.toast", () => toast.remove());
+    new Toast(toast, { delay: 1800 }).show();
+  }
+}

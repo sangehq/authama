@@ -21,7 +21,7 @@
       <a class="navbar-brand navbar-brand-autodark pe-0 pe-md-3" href="/">{{icon "terminal-2"}}<span class="ms-2">{{brandCommand}}</span></a>
       <div class="navbar-nav flex-row order-md-last">
         {{if .Authed}}<div class="nav-item d-none d-md-flex me-3">
-          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#command-palette">{{icon "search"}}<span class="ms-1">Search</span><kbd class="ms-2" data-palette-hint>Ctrl K</kbd></button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#command-palette" data-tour="1" data-tour-title="Search" data-tour-text="Ctrl+K (or ⌘K) jumps to any page, form or download as you type.">{{icon "search"}}<span class="ms-1">Search</span><kbd class="ms-2" data-palette-hint>Ctrl K</kbd></button>
         </div>{{end}}
         <div class="nav-item d-none d-md-flex me-2">
           <a href="?theme=dark" class="nav-link px-0 hide-theme-dark" title="Dark theme" data-bs-toggle="tooltip" data-bs-placement="bottom">{{icon "moon"}}<span class="visually-hidden">Dark theme</span></a>
@@ -29,7 +29,7 @@
         </div>
         {{if .Authed}}
         <div class="nav-item dropdown d-none d-md-flex me-3">
-          <a href="#" class="nav-link px-0" data-bs-toggle="dropdown" tabindex="0" aria-label="Recent file events{{if .BellNew}}: {{.BellNew}} in the last day{{end}}" aria-expanded="false">{{icon "bell"}}{{if .BellNew}}<span class="badge bg-red"></span>{{end}}</a>
+          <a href="#" class="nav-link px-0" data-bs-toggle="dropdown" tabindex="0" data-tour="5" data-tour-title="File events" data-tour-text="Every change to ~/.ssh, the config home or a token file, by anyone. A dot means one in the last day." aria-label="Recent file events{{if .BellNew}}: {{.BellNew}} in the last day{{end}}" aria-expanded="false">{{icon "bell"}}{{if .BellNew}}<span class="badge bg-red"></span>{{end}}</a>
           <div class="dropdown-menu dropdown-menu-arrow dropdown-menu-end dropdown-menu-card">
             <div class="card">
               <div class="card-header"><h3 class="card-title">Recent file events</h3></div>
@@ -51,7 +51,7 @@
           </div>
         </div>
         <div class="nav-item dropdown">
-          <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-expanded="false">
+          <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-expanded="false" data-tour="6" data-tour-title="Your account" data-tour-text="Settings, events, the doctor's checks, About, and this tour again.">
             <span class="avatar avatar-sm avatar-initials" aria-hidden="true">{{.Initials}}</span>
             <span class="d-none d-xl-inline ps-2 align-self-center">{{if .User}}{{.User}}{{else}}{{brandCommand}}{{end}}</span>
             <span class="visually-hidden">: account menu</span>
@@ -61,6 +61,7 @@
             <a href="/events" class="dropdown-item">{{icon "activity"}}<span class="ms-2">Events</span></a>
             <a href="/doctor" class="dropdown-item">{{icon "stethoscope"}}<span class="ms-2">Doctor</span></a>
             <div class="dropdown-divider"></div>
+            <button type="button" class="dropdown-item" data-tour-start{{if eq .Nav "overview"}} data-tour-start-auto="true"{{end}}>{{icon "route"}}<span class="ms-2">Take the tour</span></button>
             <a href="/about" class="dropdown-item">{{icon "info-circle"}}<span class="ms-2">About {{brandCommand}}</span></a>
           </div>
         </div>
@@ -80,7 +81,7 @@
               {{template "navgroup" (navGroup . "auth" "cloud-lock" "Auth" (navItem . "tokens" "/tokens" "cloud-lock" "Auth tokens"))}}
               {{template "navgroup" (navGroup . "system" "settings" "System" (navItem . "history" "/history" "history" "History") (navItem . "events" "/events" "activity" "Events") (navItem . "doctor" "/doctor" "stethoscope" "Doctor") (navItem . "audit" "/audit" "shield-check" "Audit") (navItem . "settings" "/settings" "settings" "Settings") (navItem . "about" "/about" "info-circle" "About"))}}
             </ul>
-            <div class="session-strip ms-md-auto d-flex align-items-center gap-2 small text-secondary py-2 py-md-0">
+            <div data-tour="4" data-tour-title="Who and where" data-tour-text="The account and machine this server runs as: every change it makes is theirs." class="session-strip ms-md-auto d-flex align-items-center gap-2 small text-secondary py-2 py-md-0">
               {{icon "device-desktop"}}<span>Running as <strong class="text-body">{{if .User}}{{.User}}{{else}}this machine's user{{end}}</strong>{{if .Host}} on <strong class="text-body">{{.Host}}</strong>{{end}}</span>
               {{if .DevRoot}}<span class="badge badge-warn">dev mode</span>{{end}}
               {{if .ReadOnly}}<span class="badge badge-muted">read-only</span>{{end}}

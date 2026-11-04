@@ -11,6 +11,7 @@ import (
 	"github.com/simtabi/authama/src/internal/core/tokens"
 	"github.com/simtabi/authama/src/internal/services/tokensvc"
 	"github.com/simtabi/authama/src/internal/util/envnames"
+	"github.com/simtabi/authama/src/internal/util/fs"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
@@ -253,6 +254,28 @@ func TokenImport() Change {
 				return err
 			}
 			_, _ = fmt.Fprintf(out, "✓ copied %s → %s\nThe old file is left in place; delete it once you are happy with the new one.\n", src, to)
+			return nil
+		},
+	}
+}
+
+// TokenConfigEdit replaces the config home's tokens.json with text, the web
+// UI's editor: the text must parse and hold variable names only
+// (tokens.CheckNamesOnly), so the editor can never be the way a secret lands
+// in a file that is meant to be committed. The preview shows the file's diff.
+// The CLI's equivalent is editing the file and running `token status`.
+func TokenConfigEdit(text string) Change {
+	return Change{
+		Command: "token config edit",
+		Run: func(p paths.Paths, out io.Writer) error {
+			if err := tokens.CheckNamesOnly(text); err != nil {
+				return err
+			}
+			body := strings.TrimRight(strings.ReplaceAll(text, "\r\n", "\n"), "\n") + "\n"
+			if err := fs.WriteTextAtomic(p.Tokens(), body, tokensvc.ConfigMode); err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintf(out, "✓ wrote %s\nRun `%s token apply` to merge it into each tool's file.\n", p.Tokens(), brand.Command)
 			return nil
 		},
 	}

@@ -245,6 +245,8 @@ func funcs(a *assetSet) template.FuncMap {
 			return confirmModal{ID: id, Form: form, Title: title, Text: text, Label: label}
 		},
 		"withPurge":    func(m confirmModal) confirmModal { m.Purge = true; return m },
+		"help":         func(title, text string) helpTip { return helpTip{Title: title, Text: text} },
+		"copy":         func(value, what string) copyTip { return copyTip{Value: value, What: what} },
 		"paletteItems": paletteItems,
 		"stat": func(label string, count int, href, icon, colour string) stat {
 			return stat{Label: label, Count: count, Href: href, Icon: icon, Colour: colour}
@@ -518,3 +520,9 @@ func paletteItems(readOnly bool) []paletteItem {
 		paletteItem{"export-deployments", "Download the key deployments as CSV", "/exports/deployments.csv", "download", "Export", "export csv deployments audit keys"},
 	)
 }
+
+// helpTip is a "what is this" popover: a title and a sentence, both text.
+type helpTip struct{ Title, Text string }
+
+// copyTip is a copy button for a public value, and what to call it.
+type copyTip struct{ Value, What string }

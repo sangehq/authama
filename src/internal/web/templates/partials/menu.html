@@ -1,0 +1,29 @@
+{{/* A row's actions as one Tabler dropdown, so a table keeps one narrow
+     column however many things a row can do. The page writes the items
+     between the pair:
+
+       {{template "menu_open" "Actions for web1"}}
+         <a class="dropdown-item" href="/hosts/web1">{{icon "external-link"}}Open</a>
+         <button type="button" class="dropdown-item" data-copy="ssh web1">{{icon "copy"}}Copy the ssh command</button>
+         <div class="dropdown-divider"></div>
+         <button type="submit" form="f-…" class="dropdown-item text-danger" data-confirm="m-…">{{icon "trash"}}Delete</button>
+       {{template "menu_close"}}
+
+     A destructive item submits a form kept outside the menu, through its
+     confirm modal; without the script it submits straight to the preview,
+     which asks again. The label names the row, for a screen reader. */}}
+{{define "menu_open"}}<div class="dropdown">
+  <button type="button" class="btn btn-sm btn-icon btn-ghost-secondary" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{.}}" title="{{.}}">{{icon "dots-vertical"}}</button>
+  <div class="dropdown-menu dropdown-menu-end">{{end}}
+{{define "menu_close"}}  </div>
+</div>{{end}}
+
+{{/* A "what is this" button beside a heading or label: a Tabler popover,
+     opened by click or focus and closed by the next click elsewhere. Built
+     with `help "Title" "What it means"`; both are text, never markup. */}}
+{{define "help"}}<button type="button" class="btn btn-icon btn-sm btn-ghost-secondary help-button" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-placement="auto" title="{{.Title}}" data-bs-content="{{.Text}}" aria-label="About {{.Title}}">{{icon "help-circle"}}</button>{{end}}
+
+{{/* A copy button for a short public value shown beside it: a fingerprint,
+     a public key, a path, a command. Built with `copy "value" "what it is"`.
+     Never used for a secret. */}}
+{{define "copy"}}<button type="button" class="btn btn-icon btn-sm btn-ghost-secondary" data-copy="{{.Value}}" data-bs-toggle="tooltip" title="Copy {{.What}}" aria-label="Copy {{.What}}">{{icon "copy"}}</button>{{end}}

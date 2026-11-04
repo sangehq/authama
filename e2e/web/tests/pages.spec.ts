@@ -121,3 +121,54 @@ test('a link to a form in a panel opens the panel', async ({ page }) => {
   await page.goto('/hosts#add-host');
   await expect(page.locator('form', { has: page.locator('input[name="action"][value="host-add"]') })).toBeVisible();
 });
+
+test('the tour walks the header step by step, and Escape ends it', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('a[data-tour="6"]').click(); // the account menu
+  await page.locator('[data-tour-start]').click();
+  const pop = page.locator('.popover.tour-popover');
+  await expect(pop).toBeVisible();
+  await expect(pop.locator('.popover-header')).toHaveText(/^Search \(1 of \d+\)$/);
+  await pop.getByRole('button', { name: 'Next' }).click();
+  await expect(pop.locator('.popover-header')).toHaveText(/\(2 of \d+\)$/);
+  await pop.getByRole('button', { name: 'Back' }).click();
+  await expect(pop.locator('.popover-header')).toHaveText(/\(1 of \d+\)$/);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.popover.tour-popover')).toHaveCount(0);
+});
+
+// The pages refuse clipboard reads (Permissions-Policy clipboard-read=()), so
+// a test records what a page writes rather than reading the clipboard back.
+async function recordCopies(page: import('@playwright/test').Page): Promise<void> {
+  await page.addInitScript(() => {
+    const w = window as unknown as { copied: string[] };
+    w.copied = [];
+    const write = navigator.clipboard.writeText.bind(navigator.clipboard);
+    navigator.clipboard.writeText = (text: string) => {
+      w.copied.push(text);
+      return write(text);
+    };
+  });
+}
+const copied = (page: import('@playwright/test').Page) => page.evaluate(() => (window as unknown as { copied: string[] }).copied);
+
+test("a row's actions are one menu, and Copy puts the value on the clipboard", async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-write']);
+  await recordCopies(page);
+  await page.goto('/hosts');
+  const menu = page.getByRole('button', { name: 'Actions for host hpc' });
+  await menu.click();
+  await page.locator('.dropdown-menu.show [data-copy="ssh hpc"]').click();
+  await expect(page.locator('#toast-stack .toast')).toContainText('Copied');
+  expect(await copied(page)).toEqual(['ssh hpc']);
+});
+
+test("a key's page shows its public key with a copy button", async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-write']);
+  await recordCopies(page);
+  await page.goto('/keys/work/work_hpc-ed25519');
+  const pub = page.locator('pre.code-block').first();
+  await expect(pub).toContainText(/^ssh-ed25519 AAAA/);
+  await page.getByRole('button', { name: 'Copy the public key' }).click();
+  expect(await copied(page)).toEqual([(await pub.textContent())?.trim()]);
+});

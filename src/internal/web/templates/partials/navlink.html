@@ -5,7 +5,7 @@
 {{/* A menu with its pages in a Tabler dropdown. It is marked active when one
      of its pages is the current one. */}}
 {{define "navgroup"}}<li class="nav-item dropdown{{if .Active}} active{{end}}">
-  <a class="nav-link dropdown-toggle" href="#navbar-{{.Key}}" id="navbar-{{.Key}}" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false"><span class="nav-link-icon d-md-none d-lg-inline-block">{{icon .Icon}}</span><span class="nav-link-title">{{.Label}}</span></a>
+  <a class="nav-link dropdown-toggle" href="#navbar-{{.Key}}" id="navbar-{{.Key}}"{{if eq .Key "ssh"}} data-tour="2" data-tour-title="SSH" data-tour-text="Profiles, hosts, keys, the rendered config and VMs: everything ~/.ssh holds."{{else if eq .Key "auth"}} data-tour="3" data-tour-title="Auth tokens" data-tour-text="The tokens npm, Composer, Docker, git and netrc read: add, rotate, audit, and edit tokens.json."{{end}} data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false"><span class="nav-link-icon d-md-none d-lg-inline-block">{{icon .Icon}}</span><span class="nav-link-title">{{.Label}}</span></a>
   <div class="dropdown-menu" aria-labelledby="navbar-{{.Key}}">
     {{range .Items}}<a class="dropdown-item{{if .Active}} active{{end}}" href="{{.Href}}"{{if .Active}} aria-current="page"{{end}}>{{icon .Icon}}<span class="ms-2">{{.Label}}</span></a>
     {{end}}

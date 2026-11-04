@@ -10,7 +10,7 @@
   <div class="table-responsive">
     <table class="table table-vcenter card-table table-hover" id="hosts-table" data-table="hosts">
       <caption class="visually-hidden">Every host in the manifest, with its profile</caption>
-      <thead><tr><th scope="col">Alias</th><th scope="col">Profile</th><th scope="col">Hostname</th><th scope="col">Provider</th><th scope="col">Key</th><th scope="col">Status</th><th scope="col">Tags</th></tr></thead>
+      <thead><tr><th scope="col">Alias</th><th scope="col">Profile</th><th scope="col">Hostname</th><th scope="col">Provider</th><th scope="col">Key</th><th scope="col">Status</th><th scope="col">Tags</th><th scope="col" class="w-1" data-nosort><span class="visually-hidden">Actions</span></th></tr></thead>
       <tbody>
         {{range $g := .Data}}{{range .Rows}}
         <tr>
@@ -21,11 +21,23 @@
           <td class="text-break"><code>{{.KeyName}}</code></td>
           <td><span class="badge {{statusClass .Status}}">{{.Status}}</span></td>
           <td class="text-secondary">{{orDash (join .Tags ", ")}}</td>
+          <td class="text-end">
+            {{if not $.ReadOnly}}<form method="post" action="/changes/preview" id="f-host-{{.Alias}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="host-delete"><input type="hidden" name="profile" value="{{$g.Name}}"><input type="hidden" name="alias" value="{{.Alias}}"></form>{{end}}
+            {{template "menu_open" (printf "Actions for host %s" .Alias)}}
+              <a class="dropdown-item" href="/hosts/{{.Alias}}">{{icon "external-link"}}<span class="ms-2">Open</span></a>
+              <button type="button" class="dropdown-item" data-copy="ssh {{.Alias}}">{{icon "terminal-2"}}<span class="ms-2">Copy <code>ssh {{.Alias}}</code></span></button>
+              {{if .Hostname}}<button type="button" class="dropdown-item" data-copy="{{.Hostname}}">{{icon "copy"}}<span class="ms-2">Copy the hostname</span></button>{{end}}
+              <a class="dropdown-item" href="/history?host={{.Alias}}">{{icon "history"}}<span class="ms-2">History</span></a>
+              {{if not $.ReadOnly}}<div class="dropdown-divider"></div>
+              <button type="submit" class="dropdown-item text-danger" form="f-host-{{.Alias}}" data-confirm="m-host-{{.Alias}}">{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
+            {{template "menu_close"}}
+          </td>
         </tr>
         {{end}}{{end}}
       </tbody>
     </table>
   </div>
+  {{if not $.ReadOnly}}{{range $g := .Data}}{{range .Rows}}{{template "confirm" (confirm (printf "m-host-%s" .Alias) (printf "f-host-%s" .Alias) (printf "Delete host %s?" .Alias) "Its manifest entry, its block in ~/.ssh/config and its pinned host keys go; its key files stay. You see the change before it is made." "Preview the delete")}}{{end}}{{end}}{{end}}
   {{else}}{{template "empty" (empty "server" "No profiles yet" "Add a profile first, then its hosts.")}}{{end}}
 </div>
 {{if and (not .ReadOnly) .Data}}

@@ -5,9 +5,10 @@
 // configured by more of them (see each class).
 import { App } from "./js/core/app.js";
 import { DataTable } from "./js/components/data-table.js";
-import { AutoSubmit, ConfirmAction, JobStream } from "./js/components/behaviours.js";
+import { AutoSubmit, ConfirmAction, CopyText, JobStream } from "./js/components/behaviours.js";
 import { CommandPalette, PanelFromHash } from "./js/components/palette.js";
-import { ShowWhen } from "./js/components/forms.js";
+import { PanelOpen, ShowWhen } from "./js/components/forms.js";
+import { Tour } from "./js/components/guide.js";
 
 App.create()
   .use(DataTable)
@@ -15,6 +16,9 @@ App.create()
   .use(AutoSubmit)
   .use(JobStream)
   .use(ShowWhen)
+  .use(CopyText)
+  .use(PanelOpen)
   .use(PanelFromHash)
   .use(CommandPalette)
+  .use(Tour)
   .start();

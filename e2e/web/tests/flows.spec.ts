@@ -75,7 +75,9 @@ test('a bundle restore runs as a job and its stream is watched to the end', asyn
   await page.goto('/snapshots');
   const bundles = page.getByRole('table', { name: 'Encrypted bundles, newest first' });
   await expect(bundles.getByRole('rowheader', { name, exact: true })).toBeVisible();
-  await bundles.getByRole('button', { name: `Restore ${name}` }).click();
+  await bundles.getByRole('button', { name: `Actions for bundle ${name}` }).click();
+  await page.locator('.dropdown-menu.show').getByRole('button', { name: 'Restore' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Review the restore' }).click();
 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Review the job');
   await expect(page.locator('.list-group-item', { hasText: `decrypts ${name}` })).toBeVisible();
@@ -100,7 +102,10 @@ test('a bundle restore runs as a job and its stream is watched to the end', asyn
   await page.goto('/snapshots');
   const snapshots = page.getByRole('table', { name: 'Snapshots, newest first' });
   await expect(snapshots.locator('tbody tr').first()).toBeVisible();
-  await snapshots.getByRole('link', { name: 'with now' }).first().click();
+  // A snapshot that holds no private keys can be compared; its row's menu says so.
+  const row = snapshots.locator('tbody tr', { has: page.locator('a.dropdown-item', { hasText: 'Compare with now' }) }).first();
+  await row.getByRole('button', { name: /^Actions for snapshot / }).click();
+  await row.locator('.dropdown-menu.show').getByRole('link', { name: 'Compare with now' }).click();
   await expect(page).toHaveURL(/\/snapshots\/ssh-\d{8}-\d{6}/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^ssh-\d{8}-\d{6}/);
 });
