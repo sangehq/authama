@@ -30,9 +30,23 @@ and forgets a token, each previewed first; revealing and copying stay in the ter
 | [`token import [FILE]`](../reference/cli.md#authama-token-import) | Copy an auth-token-manager (or any) token config to `tokens.json`, so the old location stops being read. `--dry-run` checks it. |
 | [`token shell-aliases`](../reference/cli.md#authama-token-shell-aliases) | Show, install or remove the `atm` shell aliases. |
 
-The targets are `composer`, `npm`, `docker`, `git` and `netrc`; each has a page:
-[Composer](tokens/composer.md) · [npm](tokens/npm.md) · [Docker](tokens/docker.md) ·
-[git](tokens/git.md) · [netrc](tokens/netrc.md).
+The targets are `composer`, `npm`, `docker`, `git`, `netrc`, `pypi`, `cargo`, `gem` and `gradle`;
+each has a page: [Composer](tokens/composer.md) · [npm](tokens/npm.md) · [Docker](tokens/docker.md) ·
+[git](tokens/git.md) · [netrc](tokens/netrc.md) · [PyPI](tokens/pypi.md) · [Cargo](tokens/cargo.md) ·
+[RubyGems](tokens/gem.md) · [Gradle](tokens/gradle.md).
+
+Several more tools read a file one of these writes, so they need no target of their own:
+
+| Tool | Reads | Use |
+|---|---|---|
+| pip, uv | `~/.netrc` for a private index | `netrc`, with the index's host |
+| Go (`go get` from a private module host) | `~/.netrc`, through `GOAUTH=netrc`, the default | `netrc`, or `git` for a host Go reaches over git |
+| pnpm | `~/.npmrc` | `npm` |
+| Bun | `~/.npmrc` | `npm` |
+
+Maven's `settings.xml`, Yarn Berry's `.yarnrc.yml`, Helm's `repositories.yaml` and the GitHub CLI's
+`hosts.yml` are not written yet: each is XML or nested YAML, and a merge that keeps everything else
+in the file needs a parser authama does not have yet.
 
 ## How it works
 
@@ -152,12 +166,16 @@ variables:
 | docker | `$DOCKER_CONFIG/config.json` → `~/.docker/config.json` |
 | git | `~/.git-credentials` → `$XDG_CONFIG_HOME/git/credentials`, whichever already exists |
 | netrc | `$NETRC` → `~/.netrc` (`~/_netrc` on Windows) |
+| pypi | `~/.pypirc` |
+| cargo | `$CARGO_HOME/credentials.toml` → `~/.cargo/credentials.toml` |
+| gem | `~/.gem/credentials` |
+| gradle | `$GRADLE_USER_HOME/gradle.properties` → `~/.gradle/gradle.properties` |
 
 ## Try it without touching your real files
 
 `--dev-root DIR` (or `$AUTHAMA_DEV_ROOT`) puts every target file under
 `DIR/home`, hides `COMPOSER_HOME`, `NPM_CONFIG_USERCONFIG`, `DOCKER_CONFIG`,
-`NETRC`, `XDG_CONFIG_HOME` and `APPDATA` so nothing can redirect a write, and
+`NETRC`, `XDG_CONFIG_HOME`, `APPDATA`, `CARGO_HOME` and `GRADLE_USER_HOME` so nothing can redirect a write, and
 refuses any write outside the sandbox. `docker login` is refused there too,
 because it would reach the real Docker credential store.
 

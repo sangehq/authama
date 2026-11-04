@@ -106,12 +106,12 @@
         <div class="mb-3">
           <label class="form-label required" for="ts-server">Server</label>
           <input class="form-control" id="ts-server" name="server" required autocomplete="off" spellcheck="false" placeholder="github.com">
-          <small class="form-hint">The registry or git server, e.g. <code>github.com</code> or <code>registry.npmjs.org</code>.</small>
+          <small class="form-hint">The registry or git server: <code>github.com</code>, <code>registry.npmjs.org</code>, <code>upload.pypi.org</code>, <code>crates.io</code> or a Cargo registry name, <code>rubygems.org</code>, or a Gradle repository name.</small>
         </div>
-        <div class="mb-3" data-show-when="#ts-target" data-show-when-in="- composer docker git netrc">
+        <div class="mb-3" data-show-when="#ts-target" data-show-when-in="- composer docker git netrc pypi gradle">
           <label class="form-label" for="ts-username">User name</label>
           <input class="form-control" id="ts-username" name="username" autocomplete="off" spellcheck="false">
-          <small class="form-hint">Required for docker, git and netrc, and for a Composer http-basic service.</small>
+          <small class="form-hint">Required for docker, git, netrc and Gradle, and for a Composer http-basic service. For a PyPI API token it is <code>__token__</code>.</small>
         </div>
         <div class="mb-3" data-show-when="#ts-target" data-show-when-in="- npm">
           <label class="form-label" for="ts-scope">npm scope</label>
@@ -187,7 +187,7 @@
       <div class="card-body">
         <p class="text-secondary">Write a starter <code>tokens.json</code> into the config home, as <code>authama token init</code> does. It names environment variables, never secrets. Tick tools to start from their templates; none starts from all of them.</p>
         <div class="d-flex flex-wrap gap-3">
-          {{range (list "composer" "npm" "docker" "git" "netrc")}}<label class="form-check mb-0"><input class="form-check-input" type="checkbox" name="t_{{.}}" value="1"><span class="form-check-label">{{.}}</span></label>{{end}}
+          {{range (list "composer" "npm" "docker" "git" "netrc" "pypi" "cargo" "gem" "gradle")}}<label class="form-check mb-0"><input class="form-check-input" type="checkbox" name="t_{{.}}" value="1"><span class="form-check-label">{{.}}</span></label>{{end}}
         </div>
       </div>
       <div class="card-footer"><button type="submit" class="btn btn-outline-primary">Preview a starter tokens.json</button></div>
