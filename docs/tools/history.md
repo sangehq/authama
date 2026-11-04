@@ -9,6 +9,11 @@ One operation per command that changes something: every command that takes the a
 don't need to do anything to turn it on. Read-only commands (`list`, `show`, `doctor` without
 `--fix`, `history` itself) record nothing.
 
+**A secret that leaves its file is recorded too**, though it changes nothing: `token copy`, and
+`token show` or `token list` with `--reveal`. Each records one operation with a `token.copied` or
+`token.revealed` event per secret, naming the token (`npm/registry.npmjs.org`) and its file. The value
+is never recorded. A masked `show` or `list` records nothing.
+
 Each operation holds:
 
 | Field | What it is |
@@ -54,10 +59,12 @@ authama history --json | jq .            # one object per operation, events nest
 | Flag | Filters on |
 |---|---|
 | `--host`, `--profile`, `--key` | what the operation was about: from its arguments and its events |
+| `--token` | a token, as `TOOL/HOST` (`npm/registry.npmjs.org`), or every token of one tool (`npm`): `token set`, `delete`, `copy`, and every reveal |
 | `--since`, `--until` | the start time: a date (`2026-10-27`), a time (`2026-10-27T14:00:00Z`) or an age (`36h`, `7d`) |
 | `--command` | one command (`"host add"`), or every command in a group (`host`) |
 | `--source` | `cli`, `tui`, `web` or `backfill` |
 | `--limit` | at most this many; `0` for all |
+| `--csv` | one row per operation, header first, with what it was about (`subjects`) and the events it raised |
 
 ## One operation
 

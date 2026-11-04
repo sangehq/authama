@@ -158,6 +158,9 @@ func newTokenListCmd() *cobra.Command {
 				}
 				return csvout.Write(c.OutOrStdout(), exports.Tokens(items))
 			}
+			if reveal {
+				recordTokenAccess(env, eventTokenRevealed, items...)
+			}
 			if asJSON {
 				if items == nil {
 					items = []tokens.Installed{}
@@ -418,8 +421,9 @@ func newTokenCopyCmd() *cobra.Command {
 		Example: "  " + brand.Command + " token copy npm registry.npmjs.org",
 		Short:   "Copy one installed token to the clipboard without printing it",
 		Long: "Puts HOST's secret from TARGET's credential file on the clipboard, through\n" +
-			"pbcopy, wl-copy, xclip, xsel or clip, and prints only what it copied. Nothing\n" +
-			"is written to the terminal, the history or a file.",
+			"pbcopy, wl-copy, xclip, xsel or clip, and prints only what it copied. The\n" +
+			"secret is written nowhere else; the history records that it was copied, and\n" +
+			"from which file, never the value.",
 		Args: cobra.ExactArgs(2),
 		RunE: func(c *cobra.Command, args []string) error {
 			target := args[0]
@@ -438,6 +442,7 @@ func newTokenCopyCmd() *cobra.Command {
 			if err := clipboardWrite(it.Secret); err != nil {
 				return fmt.Errorf("couldn't reach a clipboard tool (pbcopy/wl-copy/xclip/xsel/clip): %w", err)
 			}
+			recordTokenAccess(env, eventTokenCopied, it)
 			say(c, "✓ copied %s: %s token to the clipboard", target, host)
 			return nil
 		},

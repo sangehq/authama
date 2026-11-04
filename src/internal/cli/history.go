@@ -78,6 +78,7 @@ func newHistoryCmd() *cobra.Command {
 	fl.StringVar(&f.Host, "host", "", "only operations about this host alias")
 	fl.StringVar(&f.Profile, "profile", "", "only operations about this profile")
 	fl.StringVar(&f.Key, "key", "", "only operations about this key")
+	fl.StringVar(&f.Token, "token", "", "only operations about this token: TOOL or TOOL/HOST, e.g. npm/registry.npmjs.org")
 	fl.StringVar(&since, "since", "", "only operations started at or after this")
 	fl.StringVar(&until, "until", "", "only operations started at or before this")
 	fl.StringVar(&f.Command, "command", "", `only this command ("host add"), or a group of them ("host")`)

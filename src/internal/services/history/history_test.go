@@ -26,8 +26,8 @@ func open(t *testing.T) *Store {
 func TestOpenCreatesAnOwnerOnlyDatabaseAtTheCurrentSchema(t *testing.T) {
 	s := open(t)
 	var v int
-	if err := s.db.QueryRow("pragma user_version").Scan(&v); err != nil || v != 1 {
-		t.Fatalf("user_version = %d, %v; want 1", v, err)
+	if err := s.db.QueryRow("pragma user_version").Scan(&v); err != nil || v != 2 {
+		t.Fatalf("user_version = %d, %v; want 2", v, err)
 	}
 	var mode string
 	_ = s.db.QueryRow("pragma journal_mode").Scan(&mode)
@@ -363,5 +363,45 @@ func TestAHostFilterStillFindsRawSpecEntries(t *testing.T) {
 		if len(ops) != want {
 			t.Errorf("--host %s matched %d operations, want %d", alias, len(ops), want)
 		}
+	}
+}
+
+// A database from before token subjects is rebuilt in place: every subject it
+// held survives, and a token can be recorded and found afterwards.
+func TestADatabaseAtSchemaOneMigratesKeepingItsSubjects(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "log", "history.db")
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	db, err := sql.Open("sqlite", dsn(path))
+	if err != nil {
+		t.Fatal(err)
+	}
+	v1, err := migrations.ReadFile("migrations/0001_init.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, q := range []string{string(v1), "pragma user_version = 1",
+		`insert into ops(op_id, started_at, command, args, source) values('old', '2026-01-01T00:00:00Z', 'host add', '[]', 'cli')`,
+		`insert into subjects(op_id, kind, name) values('old', 'host', 'web1')`} {
+		if _, err := db.Exec(q); err != nil {
+			t.Fatalf("%.40s: %v", q, err)
+		}
+	}
+	_ = db.Close()
+
+	s, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+	if got, _ := s.Query(Filter{Host: "web1"}); len(got) != 1 {
+		t.Fatalf("the schema-1 subject was lost: found %d ops for host web1", len(got))
+	}
+	if err := s.Begin(&Op{Command: "token set", Source: SourceCLI, Subjects: []Subject{{Kind: KindToken, Name: "npm/registry.npmjs.org"}}}); err != nil {
+		t.Fatalf("recording a token subject after the migration: %v", err)
+	}
+	if got, _ := s.Query(Filter{Token: "npm"}); len(got) != 1 {
+		t.Errorf("--token npm found %d ops, want 1", len(got))
 	}
 }
