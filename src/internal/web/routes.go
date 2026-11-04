@@ -34,6 +34,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /audit", h.handleAudit)
 	mux.HandleFunc("GET /tokens", h.handleTokens)
 	mux.HandleFunc("GET /settings", h.handleSettings)
+	mux.HandleFunc("GET /ssh-config", h.handleSSHConfig)
 	mux.HandleFunc("GET /exports/{name}", h.handleExport)
 	mux.HandleFunc("GET /about/licenses", h.handleLicences)
 	if !s.opts.ReadOnly {

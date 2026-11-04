@@ -1,0 +1,27 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "SSH" "SSH config" "Every file the manifest renders into ~/.ssh, and whether the files on disk match it.")}}
+{{if .Problem}}<div class="alert alert-danger" role="alert">{{icon "alert-triangle"}}<span class="ms-1">{{.Problem}}</span></div>{{end}}
+<div class="row row-cards">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Check</h2>
+        <div class="card-actions">{{if .InSync}}<span class="badge badge-ok">in sync</span>{{else}}<span class="badge badge-warn">drift</span>{{end}}</div>
+      </div>
+      <div class="card-body"><pre class="code-block" tabindex="0">{{.Check}}</pre></div>
+      <div class="card-footer d-flex flex-wrap gap-2 align-items-center">
+        <span class="text-secondary me-auto">The same as <code>authama ssh config check</code>.</span>
+        {{if not $.ReadOnly}}{{template "change_open" $}}<input type="hidden" name="action" value="config-render"><button type="submit" class="btn btn-primary">{{icon "refresh"}}<span class="ms-1">Re-render ~/.ssh/config</span></button></form>{{end}}
+        <a class="btn btn-outline-secondary" href="/exports/ssh_config" download>{{icon "download"}}<span class="ms-1">ssh_config, every host inline</span></a>
+      </div>
+    </div>
+  </div>
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Rendered</h2></div>
+      <div class="card-body"><pre class="code-block" tabindex="0">{{.Rendered}}</pre></div>
+      <div class="card-footer text-secondary">The same as <code>authama ssh config show</code>: what <code>config render</code> writes. Nothing outside the managed blocks is shown.</div>
+    </div>
+  </div>
+</div>
+{{end}}{{end}}

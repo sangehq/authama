@@ -1,6 +1,7 @@
 // The write flows, in order: a change previewed and then made, and a job run
 // with its event stream watched to the end. They share one home, so they run
 // one after another.
+import { randomBytes } from 'node:crypto';
 import { test, expect, bundle } from '../support/fixtures';
 
 test.describe.configure({ mode: 'serial' });
@@ -97,4 +98,29 @@ test('a bundle restore runs as a job and its stream is watched to the end', asyn
   await snapshots.getByRole('link', { name: 'with now' }).first().click();
   await expect(page).toHaveURL(/\/snapshots\/ssh-\d{8}-\d{6}/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^ssh-\d{8}-\d{6}/);
+});
+
+test('a token is added from the page, and its secret never reaches a page', async ({ page }) => {
+  // Generated per run: a test secret is never written down.
+  const secret = randomBytes(24).toString('base64url');
+  const server = 'npm.e2e.example';
+  await page.goto('/tokens');
+  const form = page.locator('form', { has: page.locator('input[name="action"][value="token-set"]') });
+  await form.getByLabel('Tool (when no service)').selectOption('npm');
+  await form.getByLabel('Server').fill(server);
+  await form.getByLabel('Token or password').fill(secret);
+  await form.getByRole('button', { name: 'Preview' }).click();
+
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Review the change');
+  await expect(page.locator('pre.code-block').first()).toContainText(`token set --target npm --server ${server}`);
+  expect(await page.content()).not.toContain(secret);
+
+  await page.getByRole('button', { name: 'Make this change' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Done');
+  expect(await page.content()).not.toContain(secret);
+
+  await page.goto('/tokens');
+  const row = page.getByRole('row').filter({ hasText: server });
+  await expect(row).toContainText('set');
+  expect(await page.content()).not.toContain(secret);
 });

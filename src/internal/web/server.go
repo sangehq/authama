@@ -63,6 +63,7 @@ type Server struct {
 	pages    *pageSet
 	assets   *assetSet
 	sessions sessions
+	secrets  secretStash
 	jobs     *jobs.Registry
 	handler  http.Handler
 }

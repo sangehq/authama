@@ -14,6 +14,7 @@ import (
 	"github.com/simtabi/authama/src/internal/core/tokens"
 	"github.com/simtabi/authama/src/internal/services/change"
 	"github.com/simtabi/authama/src/internal/services/editor"
+	"github.com/simtabi/authama/src/internal/services/tokensvc"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
@@ -30,7 +31,8 @@ import (
 // actionFields are the form fields each action reads, in the order the
 // confirmation carries them.
 var actionFields = map[string][]string{
-	"profile-add":       {"name", "key_scope", "key_name", "key_comment"},
+	"profile-add":       {"name", "key_scope", "key_name", "key_comment", "category"},
+	"profile-comment":   {"name", "key_comment"},
 	"profile-edit":      {"name", "key_scope", "key_name"},
 	"profile-delete":    {"name", "purge"},
 	"profile-category":  {"name", "category"},
@@ -61,6 +63,9 @@ var actionFields = map[string][]string{
 	"vm-adopt-key":      {"key", "profile", "alias", "hypervisor", "vm", "user"},
 	"vm-schedule":       {"install"},
 	"settings-init":     {},
+	"token-set":         {"target", "service", "server", "username", "scope", "docker_mode", "secret_ref"},
+	"token-init":        {"t_composer", "t_npm", "t_docker", "t_git", "t_netrc"},
+	"token-import":      {},
 }
 
 // nameRe is what a profile, alias or key name may be on the web: the
@@ -189,6 +194,8 @@ func portOf(f url.Values) (*int, error) {
 type home struct {
 	p      paths.Paths
 	retain int
+	// secret resolves a token form's secret reference; nil outside a request.
+	secret func(ref string) (string, bool)
 }
 
 // buildChange turns a form into the change it asks for.
@@ -244,7 +251,11 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		if strings.TrimSpace(f.Get("key_name")) != "" {
 			keyName = n("key_name")
 		}
-		ch = change.ProfileAdd(n("name"), scope, keyName, pl("key_comment"))
+		category, err := optionalName(f, "category")
+		errs = append(errs, err)
+		ch = change.ProfileAddIn(n("name"), scope, keyName, pl("key_comment"), category)
+	case "profile-comment":
+		ch = change.ProfileKeyComment(n("name"), pl("key_comment"))
 	case "profile-edit":
 		scope := opt("key_scope")
 		if scope != nil && *scope != "per_service" && *scope != "shared" {
@@ -377,6 +388,43 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch = change.TokenDelete(target, host)
 	case "token-apply":
 		ch = change.TokenApply()
+	case "token-set":
+		spec := tokensvc.SetSpec{Target: strings.TrimSpace(f.Get("target")), Service: strings.TrimSpace(f.Get("service")),
+			Server: pl("server"), Username: pl("username"), Scope: pl("scope")}
+		if spec.Service != "" {
+			spec.Target = ""
+		}
+		if _, err := spec.Check(); err != nil {
+			errs = append(errs, badForm("%s", strings.NewReplacer("--service", "a service", "--target", "a tool",
+				"--server", "the server", "--username", "a user name").Replace(err.Error())))
+		}
+		mode := strings.TrimSpace(f.Get("docker_mode"))
+		if !tokensvc.ValidDockerMode(mode) {
+			errs = append(errs, badForm("docker mode must be one of %s", strings.Join(tokensvc.DockerModes(), ", ")))
+		}
+		ref := f.Get("secret_ref")
+		if ref == "" {
+			errs = append(errs, badForm("the token form sent no secret"))
+		}
+		resolve := h.secret
+		ch = change.TokenSet(spec, mode, func() (string, error) {
+			if resolve != nil {
+				if v, ok := resolve(ref); ok {
+					return v, nil
+				}
+			}
+			return "", errSecretGone
+		})
+	case "token-init":
+		var targets []string
+		for _, t := range tokens.Targets() {
+			if checked(f, "t_"+t) {
+				targets = append(targets, t)
+			}
+		}
+		ch = change.TokenInit(targets)
+	case "token-import":
+		ch = change.TokenImport()
 	}
 	return ch, errors.Join(errs...)
 }
@@ -413,12 +461,30 @@ func commandLine(p change.Plan) string {
 	return strings.TrimSpace(brand.Line(p.Command) + " " + strings.Join(p.Args, " "))
 }
 
-func (h pages) parseChange(w http.ResponseWriter, r *http.Request) (change.Change, bool) {
+func (h pages) parseChange(w http.ResponseWriter, r *http.Request, preview bool) (change.Change, bool) {
 	if err := r.ParseForm(); err != nil {
 		h.s.renderError(w, r, http.StatusBadRequest, "Unreadable form", err.Error())
 		return change.Change{}, false
 	}
-	ch, err := buildChange(r.PostForm, home{p: h.s.opts.Engine.Home(), retain: h.s.opts.Retain})
+	sess := sessionFrom(r.Context())
+	// A typed secret goes into the stash at once and out of the form, so no
+	// page, confirmation or error message can carry it.
+	if r.PostForm.Has("secret") {
+		v := r.PostForm.Get("secret")
+		r.PostForm.Del("secret")
+		if !preview || r.PostForm.Get("action") != "token-set" {
+			h.s.renderError(w, r, http.StatusBadRequest, "That change cannot be made", "a secret is taken only by the token form's preview")
+			return change.Change{}, false
+		}
+		v, err := secretField(v)
+		if err != nil {
+			h.s.renderError(w, r, http.StatusBadRequest, "That change cannot be made", err.Error())
+			return change.Change{}, false
+		}
+		r.PostForm.Set("secret_ref", h.s.secrets.put(sess, v, h.s.now()))
+	}
+	ch, err := buildChange(r.PostForm, home{p: h.s.opts.Engine.Home(), retain: h.s.opts.Retain,
+		secret: func(ref string) (string, bool) { return h.s.secrets.get(sess, ref, h.s.now()) }})
 	if err != nil {
 		h.s.renderError(w, r, http.StatusBadRequest, "That change cannot be made", err.Error())
 		return change.Change{}, false
@@ -427,7 +493,7 @@ func (h pages) parseChange(w http.ResponseWriter, r *http.Request) (change.Chang
 }
 
 func (h pages) handlePreview(w http.ResponseWriter, r *http.Request) {
-	ch, ok := h.parseChange(w, r)
+	ch, ok := h.parseChange(w, r, true)
 	if !ok {
 		return
 	}
@@ -440,7 +506,7 @@ func (h pages) handlePreview(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h pages) handleApply(w http.ResponseWriter, r *http.Request) {
-	ch, ok := h.parseChange(w, r)
+	ch, ok := h.parseChange(w, r, false)
 	if !ok {
 		return
 	}
@@ -451,6 +517,9 @@ func (h pages) handleApply(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		h.s.renderError(w, r, http.StatusUnprocessableEntity, "The change was not made", err.Error())
 	default:
+		if ref := r.PostForm.Get("secret_ref"); ref != "" {
+			h.s.secrets.drop(ref)
+		}
 		h.s.render(w, http.StatusOK, "done", h.s.newView(r, "", "Done",
 			donePage{Command: strings.TrimSpace(brand.Line(ch.Command) + " " + strings.Join(ch.Args, " ")), Result: res}))
 	}

@@ -12,6 +12,7 @@ export const pages: { path: string; heading: string }[] = [
   { path: '/profiles', heading: 'Profiles' },
   { path: '/hosts', heading: 'Hosts' },
   { path: '/hosts/hpc', heading: 'hpc' },
+  { path: '/ssh-config', heading: 'SSH config' },
   { path: '/keys', heading: 'Keys' },
   { path: '/keys/work/work_hpc-ed25519', heading: 'work_hpc-ed25519' },
   { path: '/snapshots', heading: 'Snapshots' },
@@ -19,6 +20,7 @@ export const pages: { path: string; heading: string }[] = [
   { path: '/doctor', heading: 'Doctor' },
   { path: '/audit', heading: 'Audit' },
   { path: '/tokens', heading: 'Auth tokens' },
+  { path: '/settings', heading: 'Settings' },
   { path: '/about/licenses', heading: 'Third-party licences' },
 ];
 

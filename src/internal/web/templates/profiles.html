@@ -1,11 +1,16 @@
 {{define "content"}}
+{{if .ReadOnly}}
 {{template "page_header" (header "SSH" "Profiles" "Each profile: its category, key scope and key store, and its hosts and keys.")}}
+{{else}}
+{{template "page_header" (header "SSH" "Profiles" "Each profile: its category, key scope and key store, and its hosts and keys." (action "Add a profile" "#add-profile" "plus"))}}
+{{end}}
 <div class="card">
+  <div class="card-header"><h2 class="card-title">Profiles</h2>{{if .Data}}<div class="card-actions text-secondary small">{{len .Data}} in the manifest</div>{{end}}</div>
   {{if .Data}}
   <div class="table-responsive">
     <table class="table table-vcenter card-table">
       <caption class="visually-hidden">Every profile in the manifest</caption>
-      <thead><tr><th scope="col">Profile</th><th scope="col">Category</th><th scope="col">Key scope</th><th scope="col">Key store</th><th scope="col">Hosts</th><th scope="col">Keys</th><th scope="col">History</th>{{if not $.ReadOnly}}<th scope="col"><span class="visually-hidden">Actions</span></th>{{end}}</tr></thead>
+      <thead><tr><th scope="col">Profile</th><th scope="col">Category</th><th scope="col">Key scope</th><th scope="col">Key store</th><th scope="col">Key comment</th><th scope="col">Hosts</th><th scope="col">Keys</th><th scope="col">History</th>{{if not $.ReadOnly}}<th scope="col"><span class="visually-hidden">Actions</span></th>{{end}}</tr></thead>
       <tbody>
         {{range .Data}}
         <tr>
@@ -13,33 +18,36 @@
           <td>{{orDash .Category}}</td>
           <td>{{.KeyScope}}</td>
           <td>{{.KeyStore}}</td>
+          <td>{{if .KeyComment}}<code>{{.KeyComment}}</code>{{else}}<span class="text-secondary">default</span>{{end}}</td>
           <td>{{.Hosts}}</td>
           <td>{{.Keys}}</td>
           <td><a href="/history?profile={{.Name}}">Changes</a></td>
           {{if not $.ReadOnly}}<td class="text-end">
             {{template "change_open" $}}<input type="hidden" name="action" value="profile-delete"><input type="hidden" name="name" value="{{.Name}}">
               <label class="form-check form-check-inline small mb-0"><input class="form-check-input" type="checkbox" name="purge" value="1"><span class="form-check-label">and its key files</span></label>
-              <button class="btn btn-sm btn-outline-danger" type="submit">Delete profile {{.Name}}</button></form>
+              <button class="btn btn-sm btn-outline-danger" type="submit">{{icon "trash"}}<span class="ms-1">Delete profile {{.Name}}</span></button></form>
           </td>{{end}}
         </tr>
         {{end}}
       </tbody>
     </table>
   </div>
-  {{else}}<div class="card-body text-secondary">No profiles yet. Add one below, or with <code>authama ssh profile add &lt;name&gt;</code>.</div>{{end}}
+  {{else}}{{template "empty" (empty "users" "No profiles yet" "Add one below, or with authama ssh profile add <name>.")}}{{end}}
 </div>
 <p class="text-secondary mt-2">Deleting a profile removes its hosts, their config blocks and their pins. Its key files stay on disk unless you tick <strong>and its key files</strong>: then they are deleted too, after authama writes an encrypted backup of <code>~/.ssh</code>, which needs <code>AUTHAMA_AGE_RECIPIENT</code>.</p>
 
 {{if not .ReadOnly}}
 <div class="row row-cards mt-1">
   <div class="col-lg-6">
-    <div class="card">
+    <div class="card" id="add-profile">
       <div class="card-header"><h2 class="card-title">Add a profile</h2></div>
       <div class="card-body">
         {{template "change_open" .}}<input type="hidden" name="action" value="profile-add">
           <div class="mb-2"><label class="form-label" for="p-name">Name</label><input class="form-control" id="p-name" name="name" required pattern="[A-Za-z0-9][A-Za-z0-9._\-]*" autocomplete="off" spellcheck="false"></div>
           <div class="mb-2"><label class="form-label" for="p-scope">Key scope</label><select class="form-select" id="p-scope" name="key_scope"><option value="per_service">per service: one key for each host</option><option value="shared">shared: one key for every host</option></select></div>
-          <div class="mb-3"><label class="form-label" for="p-keyname">Shared key name <span class="text-secondary">(shared scope only)</span></label><input class="form-control" id="p-keyname" name="key_name" autocomplete="off" spellcheck="false"></div>
+          <div class="mb-2"><label class="form-label" for="p-keyname">Shared key name <span class="text-secondary">(shared scope only)</span></label><input class="form-control" id="p-keyname" name="key_name" autocomplete="off" spellcheck="false"></div>
+          <div class="mb-2"><label class="form-label" for="p-category">Category <span class="text-secondary">(optional: files it under ~/.ssh/profiles/&lt;category&gt;/)</span></label><input class="form-control" id="p-category" name="category" autocomplete="off" spellcheck="false"></div>
+          <div class="mb-3"><label class="form-label" for="p-comment">Key comment <span class="text-secondary">(optional: {profile} {alias} {key} {date} {device})</span></label><input class="form-control" id="p-comment" name="key_comment" autocomplete="off" spellcheck="false" placeholder="{profile}/{alias} {date}"></div>
           <button type="submit" class="btn btn-primary">Preview</button>
         </form>
       </div>
@@ -54,6 +62,19 @@
           <div class="mb-2"><label class="form-label" for="e-name">Profile</label><select class="form-select" id="e-name" name="name">{{range .Data}}<option value="{{.Name}}">{{.Name}} ({{.KeyScope}})</option>{{end}}</select></div>
           <div class="mb-2"><label class="form-label" for="e-scope">Key scope</label><select class="form-select" id="e-scope" name="key_scope"><option value="per_service">per service</option><option value="shared">shared</option></select></div>
           <div class="mb-3"><label class="form-label" for="e-keyname">Shared key name <span class="text-secondary">(shared scope only)</span></label><input class="form-control" id="e-keyname" name="key_name" autocomplete="off" spellcheck="false"></div>
+          <button type="submit" class="btn btn-primary">Preview</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Change a profile's key comment</h2></div>
+      <div class="card-body">
+        {{template "change_open" .}}<input type="hidden" name="action" value="profile-comment">
+          <div class="mb-2"><label class="form-label" for="k-name">Profile</label><select class="form-select" id="k-name" name="name">{{range .Data}}<option value="{{.Name}}">{{.Name}}{{with .KeyComment}} ({{.}}){{end}}</option>{{end}}</select></div>
+          <div class="mb-2"><label class="form-label" for="k-comment">Key comment <span class="text-secondary">(empty inherits the default)</span></label><input class="form-control" id="k-comment" name="key_comment" autocomplete="off" spellcheck="false" placeholder="{profile}/{alias} {date}"></div>
+          <p class="text-secondary small mb-3">The <code>ssh-keygen -C</code> comment for keys the profile mints from now on: <code>{profile}</code>, <code>{alias}</code>, <code>{key}</code>, <code>{date}</code> and <code>{device}</code> are filled in. Keys that exist keep theirs.</p>
           <button type="submit" class="btn btn-primary">Preview</button>
         </form>
       </div>
