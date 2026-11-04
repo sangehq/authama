@@ -375,3 +375,21 @@ func TestEveryIconUsedIsInTheSprite(t *testing.T) {
 		t.Fatalf("found %d icon uses, want at least 10", used)
 	}
 }
+
+// localPath guards the sign-in redirect inline, and isLocalURL states the same
+// rule in words. They must not drift apart.
+func TestLocalPathMatchesIsLocalURL(t *testing.T) {
+	cases := []string{
+		"/", "/hosts", "/hosts?theme=dark", "/a/b", "/%2F", "/%5C",
+		"", "hosts", "//", "//evil.example", "/\\evil.example", "/\\",
+		"https://evil.example/", "\\\\evil.example", " /hosts",
+	}
+	for _, c := range cases {
+		if got, want := localPath.MatchString(c), isLocalURL(c); got != want {
+			t.Errorf("%q: localPath %v, isLocalURL %v", c, got, want)
+		}
+	}
+	if len(cases) < 15 {
+		t.Fatalf("only %d cases checked", len(cases))
+	}
+}

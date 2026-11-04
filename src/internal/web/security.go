@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -151,10 +152,16 @@ func (s *Server) auth(next http.Handler) http.Handler {
 			if clean.RawQuery != "" {
 				target += "?" + clean.RawQuery
 			}
-			if !isLocalURL(target) || !isLocalURL(clean.Path) {
+			if !isLocalURL(clean.Path) {
 				target = "/"
 			}
-			http.Redirect(w, r, target, http.StatusSeeOther)
+			// The same rule as isLocalURL, checked inline on the value that is
+			// redirected to, so the check guards the http.Redirect call itself.
+			if localPath.MatchString(target) {
+				http.Redirect(w, r, target, http.StatusSeeOther)
+			} else {
+				http.Redirect(w, r, "/", http.StatusSeeOther)
+			}
 			return
 		}
 		c, err := r.Cookie(SessionCookie)
@@ -222,6 +229,10 @@ func (s *Server) originAllowed(r *http.Request) bool {
 // only place the sign-in redirect may go. A path starting "//" or "/\\" is
 // read by a browser as another host, so /?token= on such a path would send
 // the freshly signed-in browser away.
+// localPath is isLocalURL as a pattern: "/" alone, or "/" followed by anything
+// but a second "/" or a backslash.
+var localPath = regexp.MustCompile(`^/(?:$|[^/\\])`)
+
 func isLocalURL(target string) bool {
 	return strings.HasPrefix(target, "/") && !strings.HasPrefix(target, "//") && !strings.HasPrefix(target, "/\\")
 }

@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security
+
+- The web UI's sign-in redirect is now guarded inline, on the exact value passed to `http.Redirect`, by a
+  pattern equal to `isLocalURL` (`/` alone, or `/` not followed by `/` or a backslash). Behaviour is unchanged:
+  a token link on a path a browser reads as another host still lands on `/`. A test holds the pattern and
+  `isLocalURL` to the same answer. Resolves CodeQL `go/unvalidated-url-redirection` alert 12.
+
 ## [0.1.4] - 2026-11-02
 
 A key you keep on purpose is no longer a warning: reserve a loose `~/.ssh` key for a devbox you have
