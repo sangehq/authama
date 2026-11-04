@@ -45,9 +45,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # A macOS leg that GitHub never gives a runner fails after about 15
-        # minutes with no step run; requeue.yml re-runs it once.
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # Pull requests test on Linux and Windows; the macOS leg runs on the
+        # weekly schedule and on dispatch. GitHub's macOS arm64 runners went
+        # unscheduled for every PR from 2026-11-04 ("not acquired by Runner of
+        # type hosted"), so a required macOS leg blocked every merge. The darwin
+        # job below cross-compiles and vets for macOS on every PR instead.
+        os: ${{ github.event_name == 'pull_request' && fromJSON('["ubuntu-latest","windows-latest"]') || fromJSON('["ubuntu-latest","macos-latest","windows-latest"]') }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -136,6 +139,32 @@ jobs:
         shell: bash
         run: make e2e
 
+
+  darwin:
+    # macOS on every pull request without a macOS runner: build and vet every
+    # package, tests included, for darwin on both architectures. vet type-checks
+    # the build-tagged *_darwin.go files, which a Linux build never compiles.
+    # The tests themselves run on macOS in the scheduled leg above.
+    name: darwin cross-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: src/go.mod
+          cache-dependency-path: src/go.sum
+      - name: Build and vet for darwin
+        working-directory: src
+        run: |
+          set -euo pipefail
+          for arch in arm64 amd64; do
+            GOOS=darwin GOARCH=$arch CGO_ENABLED=0 go build ./...
+            GOOS=darwin GOARCH=$arch CGO_ENABLED=0 go vet ./...
+            echo "darwin/$arch: build and vet clean"
+          done
 
   web-e2e:
     # The web UI in a browser: Playwright drives every page of `authama serve` and
