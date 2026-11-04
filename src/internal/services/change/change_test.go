@@ -359,3 +359,29 @@ func TestEffectsAreShownAndBound(t *testing.T) {
 		t.Errorf("doctor --fix effects %v do not name the manifest", fix.Effects)
 	}
 }
+
+// A preview shows every config file a change writes. authama.json was left
+// out of the copy once, so creating it previewed as "nothing would change"
+// and the confirmation was bound to none of what it wrote.
+func TestPreviewShowsTheSettingsFileItWouldWrite(t *testing.T) {
+	p := home(t)
+	plan, err := Preview(p, SettingsInit(false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Err != "" {
+		t.Fatalf("plan = %+v", plan)
+	}
+	var shown bool
+	for _, f := range plan.Files {
+		if f.Path == "config/authama.json" && f.State == "added" {
+			shown = true
+		}
+	}
+	if !shown {
+		t.Fatalf("the preview does not show authama.json being added: %+v", plan.Files)
+	}
+	if _, err := os.Stat(p.SettingsFile()); !os.IsNotExist(err) {
+		t.Errorf("the preview wrote the real authama.json: %v", err)
+	}
+}

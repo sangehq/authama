@@ -341,6 +341,7 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 		{"key add", []string{"key", "add", "work", "extra", "--type", "ed25519", "--host", "new01"},
 			change.KeyAdd("work", "extra", "ed25519", "new01"), nil, nil, nil},
 		{"providers export", []string{"providers", "--export"}, change.ProvidersExport(), nil, nil, nil},
+		{"settings init", []string{"settings", "init"}, change.SettingsInit(false), nil, nil, nil},
 		{"snapshots prune", []string{"snapshots", "prune", "--keep", "2"}, change.SnapshotsPrune(2), nil, nil, nil},
 		{"doctor fix", []string{"doctor", "--fix"}, change.DoctorFix(), func(p paths.Paths) {
 			_ = os.Chmod(p.Manifest(), 0o644)
@@ -399,7 +400,7 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 			_ = editor.New(p).ReserveKey("loose-vm", manifest.ReservedKey{For: "devbox"})
 		}, nil, nil},
 	}
-	if len(cases) != 32 {
+	if len(cases) != 33 {
 		t.Fatalf("%d cases; every change the web offers needs one", len(cases))
 	}
 	for _, tc := range cases {

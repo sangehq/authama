@@ -32,6 +32,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /vms", h.handleVMs)
 	mux.HandleFunc("GET /audit", h.handleAudit)
 	mux.HandleFunc("GET /tokens", h.handleTokens)
+	mux.HandleFunc("GET /settings", h.handleSettings)
 	mux.HandleFunc("GET /exports/{name}", h.handleExport)
 	mux.HandleFunc("GET /about/licenses", h.handleLicences)
 	if !s.opts.ReadOnly {
@@ -245,6 +246,15 @@ func (h pages) handleTokens(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.s.render(w, http.StatusOK, "tokens", h.s.newView(r, "tokens", "Auth tokens", v))
+}
+
+func (h pages) handleSettings(w http.ResponseWriter, r *http.Request) {
+	v, err := h.s.opts.Engine.Settings()
+	if err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	h.s.render(w, http.StatusOK, "settings", h.s.newView(r, "settings", "Settings", v))
 }
 
 func (h pages) handleAudit(w http.ResponseWriter, r *http.Request) {

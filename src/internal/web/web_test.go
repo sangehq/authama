@@ -38,8 +38,9 @@ func TestEveryPageRenders(t *testing.T) {
 		"/audit":                                "Deployments",
 		"/about/licenses":                       "Permission is hereby granted",
 		"/tokens":                               "authama token list",
+		"/settings":                             "authama.json",
 	}
-	if len(pages) < 15 {
+	if len(pages) < 16 {
 		t.Fatal("the page list shrank")
 	}
 	for path, want := range pages {
@@ -111,14 +112,14 @@ func TestNoPageShowsKeyMaterial(t *testing.T) {
 	for _, path := range []string{"/", "/profiles", "/hosts", "/hosts/gh", "/keys", "/snapshots",
 		"/snapshots/ssh-20260901-100000.tar.gz", "/snapshots/ssh-20261001-100000.tar.gz",
 		"/snapshots/ssh-20261001-100000.tar.gz?against=ssh-20260901-100000.tar.gz",
-		"/history", "/history/" + opID, "/doctor", "/vms", "/audit"} {
+		"/history", "/history/" + opID, "/doctor", "/vms", "/audit", "/settings"} {
 		body := c.get(path).Body.String()
 		n++
 		if strings.Contains(body, "OPENSSH PRIVATE KEY") || strings.Contains(body, "secret\n") {
 			t.Errorf("%s shows key material", path)
 		}
 	}
-	if n < 14 {
+	if n < 15 {
 		t.Fatalf("scanned %d pages", n)
 	}
 }

@@ -103,10 +103,11 @@ type Result struct {
 	Snapshot string
 }
 
-// configFiles are the config-home files a change may read or write. .env and
+// configFiles are the config-home files a change may read or write; a preview
+// shows a diff of each. authama.json holds settings and no secret. .env and
 // the age identity are left out: no change here needs them, and a copy of a
 // secret is a second place it can leak from.
-var configFiles = []string{"manifest.json", "inventory.json", "providers.json"}
+var configFiles = []string{"manifest.json", "inventory.json", "providers.json", "authama.json"}
 
 // Preview runs ch against a private copy of p and reports what it would do.
 // It writes nothing outside the copy and records nothing in the history.

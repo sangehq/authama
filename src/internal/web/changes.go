@@ -60,6 +60,7 @@ var actionFields = map[string][]string{
 	"vm-sync":           {"repin"},
 	"vm-adopt-key":      {"key", "profile", "alias", "hypervisor", "vm", "user"},
 	"vm-schedule":       {"install"},
+	"settings-init":     {},
 }
 
 // nameRe is what a profile, alias or key name may be on the web: the
@@ -311,6 +312,8 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch = change.KeyUnreserve(n("key"))
 	case "providers-export":
 		ch = change.ProvidersExport()
+	case "settings-init":
+		ch = change.SettingsInit(false)
 	case "snapshots-prune":
 		keep, err := strconv.Atoi(strings.TrimSpace(f.Get("keep")))
 		if err != nil || keep < 0 || keep > 1000 {
