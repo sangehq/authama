@@ -429,6 +429,29 @@ runs at all, and the first time it did it found four defects nothing else could
 see - a test home that was never isolated there, an advisory lock that leaked its
 descriptor, and two mode assertions with no ACL guard.
 
+## Why is the web UI's JavaScript ES modules with no build step?
+
+The web UI's script is a few small ES2022 modules under `src/internal/web/assets/`: `app.js`, the
+entry point, and `js/core/` and `js/components/`. They are plain JavaScript with JSDoc types, and
+`e2e/web/tsconfig.ui.json` checks them under TypeScript's strict mode in CI (`make e2e-web`), so they
+are typed without a compiler step between the source and the binary: what is reviewed is what is
+embedded.
+
+- **`El`** builds and changes elements fluently and only through DOM calls, so nothing is parsed as
+  HTML and the CSP's ban on inline script and style holds.
+- **`Options`** reads a component's settings from data attributes, typed by its defaults:
+  `data-table-page-size="25"` is `pageSize: 25`.
+- **`Component`** is the base class: a subclass names its data attribute and defaults, and `mount`
+  builds one instance per marked element, once.
+- **`App`** registers and starts them: `App.create().use(DataTable).use(ConfirmAction).start()`.
+- **Components** - `DataTable` (sort, search, page size, pages; chainable: `sortBy(2,
+  "desc").search("github").render()`), `ConfirmAction`, `AutoSubmit`, `JobStream` - each take their
+  markup and options from data attributes, so a page opts in by markup alone.
+
+The server serves `app.js` and everything under `js/` under one fingerprint taken over all of them,
+so a relative `import` resolves under the same `/assets/<hash>/` path, and any change to any module
+moves them all. Every page works without the script; it only adds conveniences.
+
 ---
 
 [← Docs index](../README.md#documentation)

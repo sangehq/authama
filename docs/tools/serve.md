@@ -34,8 +34,11 @@ when that port is taken.
 ## Pages
 
 The layout is Tabler's. The header holds the name, a theme toggle (light or dark), a bell listing the
-newest [file events](events.md), and a menu with Settings, Events, Doctor, *Follow the system theme*,
-About and the licences; it also says when the server is in dev mode or read-only. Under it, a menu
+newest [file events](events.md), and an account menu named for the system user the server runs as and
+the machine (or dev mode, or read-only), holding Settings, Events, Doctor and About. Following the
+system's light or dark theme is chosen on the Settings page, and the third-party licences are on the
+About page. The footer carries the copyright, the version, and links to About, the documentation, the
+source and the licences. Under it, a menu
 holds the Overview and three dropdowns: **SSH** (Profiles, Hosts, SSH config, Keys, VMs, Snapshots),
 **Auth** (Auth tokens) and **System** (History, Events, Doctor, Audit, Settings, About). On a narrow
 screen it folds behind a button.
@@ -60,8 +63,8 @@ screen it folds behind a button.
 | SSH config | every file the manifest renders into `~/.ssh` and whether the files on disk match it, as `authama ssh config show` and `ssh config check` print |
 | Doctor, Audit | the reports `authama doctor` and `authama ssh audit` print |
 | Events | every change seen to a tracked file, with the authama operation that made it, as [`authama events`](events.md) lists them; filtered by area |
-| About | this build (version, commit, Go, platform), where it keeps things, and links to the documentation, the source and the licences |
-| Settings | where the config home, state home, `.env` and `authama.json` are, every setting's value in effect and where it came from, and what `authama settings validate` reports, as `settings path`, `settings show --effective` and `settings validate` print them. The values are those the server started with |
+| About | this build (version, commit, Go, platform), the user and machine it runs as, where it keeps things, links to the documentation and the source, and the third-party licences of the bundled front-end assets |
+| Settings | the colour theme (light, dark, or following the system); where the config home, state home, `.env` and `authama.json` are, every setting's value in effect and where it came from, and what `authama settings validate` reports, as `settings path`, `settings show --effective` and `settings validate` print them. The values are those the server started with |
 | Third-party licences | the licences of the web UI's bundled front-end assets (Tabler, Tabler Icons, Bootstrap, Popper), at `/about/licenses` |
 
 ## Changes
