@@ -5,7 +5,7 @@
 {{template "page_header" (header "Auth" "Auth tokens" "Package-manager and git credentials: what is installed and how it audits. A secret is never shown." (panel "Add a token" "add-token" "plus") (action "Apply the config" "#apply-config" "refresh"))}}
 {{end}}
 <div class="card mb-3">
-  <div class="card-header"><h2 class="card-title">Installed</h2>{{if .Items}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Items}} installed</span><a class="btn btn-sm btn-outline-secondary" href="/exports/tokens.csv" download>{{icon "download"}}<span class="ms-1">CSV</span></a></div>{{end}}</div>
+  <div class="card-header"><h2 class="card-title">Installed</h2>{{if .Items}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Items}} installed</span>{{template "csv" "/exports/tokens.csv"}}</div>{{end}}</div>
   {{if .Items}}
   <div class="table-responsive">
     <table class="table table-vcenter card-table table-hover" id="tokens-table" data-table="tokens">
@@ -75,55 +75,58 @@
 </div>
 
 {{if not $.ReadOnly}}
-{{template "panel_open" (header "add-token" "Add or replace a token" "")}}
+{{template "panel_open" (header "add-token" "Add or replace a token" "One credential, written into its tool's file over the one already there for that server: how a token is added, rotated or edited.")}}
       {{template "change_open" $}}<input type="hidden" name="action" value="token-set">
-      <div>
-        <p class="text-secondary">One credential, written into its tool's file, replacing the one already there for that host: how a token is added, rotated or edited. The secret goes to this server once, is held in memory until you confirm, and is never shown or put into a page.</p>
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label" for="ts-service">Composer service</label>
-            <select class="form-select" id="ts-service" name="service">
-              <option value="">none: use a tool below</option>
-              {{range .Services}}<option value="{{.Name}}">{{.Name}} ({{.Mechanism}})</option>{{end}}
-            </select>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label" for="ts-target">Tool <span class="text-secondary">(when no service)</span></label>
-            <select class="form-select" id="ts-target" name="target">
-              <option value="">choose</option>
-              {{range .Targets}}<option value="{{.}}">{{.}}</option>{{end}}
-            </select>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label" for="ts-server">Server</label>
-            <input class="form-control" id="ts-server" name="server" placeholder="github.com, registry.npmjs.org" required autocomplete="off">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label" for="ts-username">User name <span class="text-secondary">(http-basic, docker, git, netrc)</span></label>
-            <input class="form-control" id="ts-username" name="username" autocomplete="off">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label" for="ts-scope">npm scope <span class="text-secondary">(npm only, e.g. @acme)</span></label>
-            <input class="form-control" id="ts-scope" name="scope" autocomplete="off">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label" for="ts-docker">Docker credential store</label>
-            <select class="form-select" id="ts-docker" name="docker_mode">
-              <option value="">as AUTHAMA_DOCKER_CREDS_STORE says, else refuse</option>
-              <option value="login">login: docker login --password-stdin</option>
-              <option value="refuse">refuse</option>
-            </select>
-          </div>
-          <div class="col-12">
-            <label class="form-label" for="ts-secret">Token or password</label>
-            <input class="form-control" type="password" id="ts-secret" name="secret" required autocomplete="new-password" spellcheck="false">
-          </div>
+        <div class="mb-3">
+          <label class="form-label required" for="ts-target">Tool</label>
+          <select class="form-select" id="ts-target" name="target" required>
+            <option value="">Choose a tool</option>
+            {{if .Services}}<option value="composer">composer</option>{{end}}
+            {{range .Targets}}<option value="{{.}}">{{.}}</option>{{end}}
+          </select>
         </div>
-      </div>
-      <div class="d-flex flex-wrap gap-2 align-items-center mt-3">
-        <span class="text-secondary me-auto small">The same as <code>authama token set</code>.</span>
-        <button type="submit" class="btn btn-primary">Preview</button>
-      </div>
+        <div class="mb-3" data-show-when="#ts-target" data-show-when-in="composer">
+          <label class="form-label required" for="ts-service">Composer service</label>
+          <select class="form-select" id="ts-service" name="service">
+            <option value="">Choose a service</option>
+            {{range .Services}}<option value="{{.Name}}">{{.Name}} ({{.Mechanism}})</option>{{end}}
+          </select>
+          <small class="form-hint">Composer only. Picking a service sets the tool to composer.</small>
+        </div>
+        <div class="mb-3">
+          <label class="form-label required" for="ts-server">Server</label>
+          <input class="form-control" id="ts-server" name="server" required autocomplete="off" spellcheck="false" placeholder="github.com">
+          <small class="form-hint">The registry or git server, e.g. <code>github.com</code> or <code>registry.npmjs.org</code>.</small>
+        </div>
+        <div class="mb-3" data-show-when="#ts-target" data-show-when-in="- composer docker git netrc">
+          <label class="form-label" for="ts-username">User name</label>
+          <input class="form-control" id="ts-username" name="username" autocomplete="off" spellcheck="false">
+          <small class="form-hint">Required for docker, git and netrc, and for a Composer http-basic service.</small>
+        </div>
+        <div class="mb-3" data-show-when="#ts-target" data-show-when-in="- npm">
+          <label class="form-label" for="ts-scope">npm scope</label>
+          <input class="form-control" id="ts-scope" name="scope" autocomplete="off" spellcheck="false" placeholder="@acme">
+          <small class="form-hint">npm only: binds an <code>@org</code> scope to this registry.</small>
+        </div>
+        <div class="mb-3" data-show-when="#ts-target" data-show-when-in="- docker">
+          <label class="form-label" for="ts-docker">Docker credential store</label>
+          <select class="form-select" id="ts-docker" name="docker_mode">
+            <option value="">Default</option>
+            <option value="login">login</option>
+            <option value="refuse">refuse</option>
+          </select>
+          <small class="form-hint">When Docker keeps credentials in a helper: <strong>Default</strong> follows <code>AUTHAMA_DOCKER_CREDS_STORE</code> and refuses without it; <strong>login</strong> runs <code>docker login --password-stdin</code>.</small>
+        </div>
+        <div class="mb-3">
+          <label class="form-label required" for="ts-secret">Token or password</label>
+          <input class="form-control" type="password" id="ts-secret" name="secret" required autocomplete="new-password" spellcheck="false">
+          <small class="form-hint">Sent to this server once and held in memory until you confirm. It is never shown or put into a page.</small>
+        </div>
+        <div class="d-flex align-items-center gap-2 pt-3 border-top">
+          <span class="text-secondary small me-auto">The same as <code>authama token set</code>.</span>
+          <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
+          <button type="submit" class="btn btn-primary">Preview</button>
+        </div>
       </form>
 {{template "panel_close"}}
 <div class="row row-cards mb-3">

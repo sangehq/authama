@@ -3,9 +3,9 @@
   Authentication Access Manager installer for Windows.
 
 .DESCRIPTION
-  Installs authama.exe, and beside it sshmgr.exe: the same program under its
-  old name, deprecated (it prints a notice), kept so scripts and aliases keep
-  working. A release from before authama existed installs sshmgr.exe alone.
+  Installs authama.exe. The sshmgr.exe alias that older releases installed
+  beside it is no longer installed; one already there is left alone, and
+  named, so it can be removed by hand.
 
 .EXAMPLE
   irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex
@@ -34,7 +34,8 @@ $repo    = 'authama'
 $dirName    = 'authama'
 $oldDirName = 'ssh-manager'
 $binBase = 'authama'
-$compat  = 'sshmgr'
+# The name releases before 0.1.0 shipped as; only ever reported, never installed.
+$legacy  = 'sshmgr'
 
 # AUTHAMA_*, else the deprecated SSHMGR_*, matching the POSIX installer.
 foreach ($prefix in 'AUTHAMA', 'SSHMGR') {
@@ -93,20 +94,12 @@ try {
   try { Invoke-WebRequest "$base/checksums.txt" -OutFile $sums } catch { $haveSums = $false; Write-Warning 'checksums.txt not found; skipping verification.' }
 
   New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-  foreach ($name in $binBase, $compat) {
+  foreach ($name in @($binBase)) {
     $asset = "${name}_windows_${arch}.exe"
     $exe = Join-Path $tmp $asset
     Write-Host "Downloading $asset ($Version) ..."
     try { Invoke-WebRequest "$base/$asset" -OutFile $exe }
-    catch {
-      if ($name -eq $binBase) {
-        Write-Host "note: $Version predates $binBase; installing $compat only."
-        continue
-      }
-      # The deprecated name is optional while authama is there; alone, it is required.
-      if ($installed.Count -gt 0) { continue }
-      throw "$Version has no ${binBase}_windows_${arch}.exe"
-    }
+    catch { throw "$Version has no ${binBase}_windows_${arch}.exe (releases before 0.1.0 shipped as $legacy)" }
     if ($haveSums) {
       # Anchored on the whole filename field, not a substring. checksums.txt lists
       # the binary, its archive and the archive's SBOM, so a bare name like
@@ -147,6 +140,10 @@ $env:Path += ";$InstallDir"
 
 & (Join-Path $InstallDir "$($installed[0]).exe") version
 foreach ($name in $installed) { Write-Host "Installed $name to $InstallDir\$name.exe" }
-if ($installed.Count -gt 1) { Write-Host "$compat is a deprecated alias of $binBase; use $binBase." }
+$old = Join-Path $InstallDir "$legacy.exe"
+if (Test-Path $old) {
+  Write-Host "An older $legacy.exe is still at $old; $binBase replaces it."
+  Write-Host "Remove it with: Remove-Item '$old'  (then: $binBase ssh config render)"
+}
 Write-Host "Settings live in $env:USERPROFILE\.config\authama (.env and authama.json, loaded at startup);"
 Write-Host "a 0.1.0 home in $env:APPDATA\ssh-manager is copied there on the first run and kept."

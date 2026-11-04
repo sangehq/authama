@@ -16,10 +16,9 @@ before:
   hooks:
     - go -C src mod tidy
 
-# Two pure-Go binaries cross-compiled to the full OS/arch matrix: authama
-# (Authentication Access Manager) and sshmgr, the same program under its old
-# name, deprecated (it prints a notice on stderr), kept so existing scripts,
-# aliases and ProxyCommand lines written by older releases keep working. CGO is disabled
+# One pure-Go binary cross-compiled to the full OS/arch matrix: authama
+# (Authentication Access Manager). The sshmgr alias older releases shipped
+# beside it is gone; their bare sshmgr_* assets stay on those releases. CGO is disabled
 # so every target is a static, portable binary; -trimpath makes builds
 # reproducible and -s -w strips debug info for smaller artifacts.
 builds:
@@ -58,49 +57,11 @@ builds:
       - -X github.com/simtabi/authama/src/internal/version.Commit={{ .Commit }}
       - -X github.com/simtabi/authama/src/internal/version.Date={{ .CommitDate }}
 
-  # The deprecated compatibility name.
-  - id: sshmgr
-    dir: src
-    main: ./cmd/sshmgr
-    binary: sshmgr
-    env:
-      - CGO_ENABLED=0
-    flags:
-      - -trimpath
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64 # 64-bit x86
-      - arm64 # 64-bit ARM (Apple silicon, Graviton, RPi 64-bit)
-      - arm # 32-bit ARM (RPi, etc.)
-      - "386" # 32-bit x86
-    goarm:
-      - "6"
-      - "7"
-    ignore:
-      # macOS ships only amd64 + arm64.
-      - { goos: darwin, goarch: arm }
-      - { goos: darwin, goarch: "386" }
-      # 32-bit ARM is uncommon / unsupported on Windows.
-      - { goos: windows, goarch: arm }
-    mod_timestamp: "{{ .CommitTimestamp }}"
-    ldflags:
-      - -s -w
-      - -X github.com/simtabi/authama/src/internal/version.Version={{ .Version }}
-      - -X github.com/simtabi/authama/src/internal/version.Commit={{ .Commit }}
-      - -X github.com/simtabi/authama/src/internal/version.Date={{ .CommitDate }}
-
 # A single macOS universal binary (amd64 + arm64) alongside the per-arch ones.
 universal_binaries:
   - id: authama
     ids: [authama]
     name_template: authama
-    replace: false
-  - id: sshmgr
-    ids: [sshmgr]
-    name_template: sshmgr
     replace: false
 
 # All artifacts use one flat, versionless, Go-style naming scheme:
@@ -108,9 +69,7 @@ universal_binaries:
 #   authama_macos_arm64, authama_linux_amd64, authama_windows_386.exe,
 #   authama_macos_universal, authama_linux_armv7.
 # The tar.gz/zip archives and the Linux packages carry the same name (they were
-# sshmgr_ up to 0.1.1) and hold both binaries. The bare sshmgr_<os>_<arch>
-# binaries are still published, so installers and pinned URLs from earlier
-# releases keep working. The release tag carries the version; the install
+# sshmgr_ up to 0.1.1). The release tag carries the version; the install
 # scripts reconstruct these names.
 archives:
   - id: binary
@@ -120,16 +79,8 @@ archives:
       authama_{{- if eq .Os "darwin" }}macos{{ else }}{{ .Os }}{{ end }}_
       {{- if eq .Arch "all" }}universal{{ else if eq .Arch "arm" }}armv{{ .Arm }}{{ else }}{{ .Arch }}{{ end }}
 
-  # The deprecated compatibility name, as bare binaries only.
-  - id: binary-sshmgr
-    ids: [sshmgr]
-    formats: [binary]
-    name_template: >-
-      sshmgr_{{- if eq .Os "darwin" }}macos{{ else }}{{ .Os }}{{ end }}_
-      {{- if eq .Arch "all" }}universal{{ else if eq .Arch "arm" }}armv{{ .Arm }}{{ else }}{{ .Arch }}{{ end }}
-
   - id: archive
-    ids: [authama, sshmgr]
+    ids: [authama]
     name_template: *name
     format_overrides:
       - goos: windows
@@ -145,14 +96,13 @@ archives:
 # Native Linux packages (nfpm operates on the Linux builds only).
 nfpms:
   - id: authama
-    ids: [authama, sshmgr]
+    ids: [authama]
     package_name: authama
     # The package was named sshmgr up to 0.1.1. Installing authama replaces it
-    # (deb Replaces/Conflicts, rpm Obsoletes), so the two never fight over
-    # /usr/bin/sshmgr.
+    # (deb Replaces/Conflicts, rpm Obsoletes), so an old sshmgr package is
+    # removed rather than left beside it. authama no longer provides sshmgr.
     replaces: [sshmgr]
     conflicts: [sshmgr]
-    provides: [sshmgr]
     vendor: Simtabi LLC
     homepage: "https://github.com/simtabi/authama"
     maintainer: "Imani Manyara <imani@simtabi.com>"
@@ -202,7 +152,7 @@ homebrew_casks:
         url: git@github.com:simtabi/homebrew-tap.git
         private_key: '{{ envOrDefault "HOMEBREW_TAP_DEPLOY_KEY" "" }}'
     directory: Casks
-    binaries: [authama, sshmgr]
+    binaries: [authama]
     homepage: "https://github.com/simtabi/authama"
     description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
     hooks:
@@ -210,7 +160,7 @@ homebrew_casks:
         install: |
           if OS.mac?
             system_command "/usr/bin/xattr",
-              args: ["-dr", "com.apple.quarantine", "#{staged_path}/authama", "#{staged_path}/sshmgr"],
+              args: ["-dr", "com.apple.quarantine", "#{staged_path}/authama"],
               sudo: false
           end
 
@@ -230,7 +180,7 @@ scoops:
       # `git.url` set it pushes and returns before reading `pull_request` (checked against
       # internal/pipe/scoop at v2.18) - and the only credential for the bucket is this deploy
       # key, which cannot call the API. The bucket's workflow opens and merges the pull
-      # request for any authama-* or sshmgr-* branch.
+      # request for any authama-* branch.
       branch: 'authama-{{ .Version }}'
       git:
         url: git@github.com:simtabi/scoop-bucket.git
@@ -242,26 +192,6 @@ scoops:
     # Scoop publishes on its own switch: SKIP_SCOOP, else SKIP_WINDOWS_PKGS, else skipped. `or` takes the
     # first non-empty value, so a variable CI sets to empty falls through instead of publishing
     # (envOrDefault returns an empty value as set; measured with GoReleaser 2.18.3).
-    skip_upload: '{{ or (envOrDefault "SKIP_SCOOP" "") (envOrDefault "SKIP_WINDOWS_PKGS" "") "true" }}'
-
-  # The manifest was sshmgr.json up to 0.1.1, and Scoop has no rename. It stays,
-  # deprecated, on the same release, and tells whoever installs or updates it to
-  # move to authama, so an existing `scoop update` keeps working meanwhile.
-  - name: sshmgr
-    ids: [archive]
-    repository:
-      owner: simtabi
-      name: scoop-bucket
-      branch: 'sshmgr-{{ .Version }}'
-      git:
-        url: git@github.com:simtabi/scoop-bucket.git
-        private_key: '{{ envOrDefault "SCOOP_BUCKET_DEPLOY_KEY" "" }}'
-    directory: bucket
-    homepage: "https://github.com/simtabi/authama"
-    description: "Deprecated: renamed to authama (scoop install simtabi/authama). Authentication Access Manager."
-    license: MIT
-    post_install:
-      - "Write-Host 'sshmgr is now authama. Switch with: scoop uninstall sshmgr; scoop install simtabi/authama'"
     skip_upload: '{{ or (envOrDefault "SKIP_SCOOP" "") (envOrDefault "SKIP_WINDOWS_PKGS" "") "true" }}'
 
 # Winget (Microsoft's default Windows package manager). Publishes a manifest to

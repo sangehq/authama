@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	"github.com/simtabi/authama/src/internal/core/tokens"
 	"github.com/simtabi/authama/src/internal/services/history"
 	"github.com/simtabi/authama/src/internal/services/mutation"
 )
@@ -34,6 +35,12 @@ var recordedFlags = map[string]string{
 	"hypervisor": "",
 	"skip":       "",
 	"token-env":  "", // the variable's name, never its value
+	// token set and apply: which tool, Composer service, server and npm scope.
+	// None is a secret; the secret itself never arrives as a flag.
+	"target":  "",
+	"service": "",
+	"server":  "",
+	"scope":   "",
 }
 
 // positional names what each mutating command's arguments are, for the
@@ -151,7 +158,34 @@ func scopeFor(c *cobra.Command, args []string) mutation.Scope {
 		}
 		s.Subjects = append(s.Subjects, history.Subject{Kind: kind, Name: f.Value.String()})
 	})
+	s.Subjects = append(s.Subjects, tokenSubjects(c, name, args)...)
 	return s
+}
+
+// tokenSubjects names the credential a token command is about, as
+// "<tool>/<host>", so `history --token npm` finds every change to and every
+// read of an npm token. `token set` names it by flags, the rest by arguments.
+func tokenSubjects(c *cobra.Command, command string, args []string) []history.Subject {
+	var target, host string
+	switch command {
+	case tokenGroup + " delete", tokenGroup + " copy", tokenGroup + " show":
+		if len(args) < 2 {
+			return nil
+		}
+		target, host = args[0], args[1]
+	case tokenGroup + " set":
+		target, _ = c.Flags().GetString("target")
+		if svc, _ := c.Flags().GetString("service"); svc != "" {
+			target = tokens.Composer
+		}
+		host, _ = c.Flags().GetString("server")
+	default:
+		return nil
+	}
+	if target == "" || strings.TrimSpace(host) == "" {
+		return nil
+	}
+	return []history.Subject{{Kind: history.KindToken, Name: target + "/" + tokens.CanonicalHost(target, strings.TrimSpace(host))}}
 }
 
 func recordedValue(f *pflag.Flag) string {

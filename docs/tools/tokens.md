@@ -21,7 +21,7 @@ and forgets a token, each previewed first; revealing and copying stay in the ter
 | [`token list`](../reference/cli.md#authama-token-list) | List installed tokens, secrets masked. `--reveal` shows them after asking (`-y`/`--yes` without a terminal); `--json` for scripts. |
 | [`token show TARGET HOST`](../reference/cli.md#authama-token-show) | Everything about one entry: tool, host, kind, user, file. Masked unless `--reveal`. |
 | [`token status`](../reference/cli.md#authama-token-status) | Which config is in use and why, each tool's file and mode, and which variables `apply` would find unset. Never fails. |
-| [`token copy TARGET HOST`](../reference/cli.md#authama-token-copy) | Copy one token to the clipboard without printing it. |
+| [`token copy TARGET HOST`](../reference/cli.md#authama-token-copy) | Copy one token to the clipboard without printing it. The history records the copy, never the value; so does every `--reveal`. |
 | [`token delete TARGET HOST`](../reference/cli.md#authama-token-delete) | Delete one entry from its tool's file. Asks first at a terminal (`-y` skips). |
 | [`token audit`](../reference/cli.md#authama-token-audit) | Check the files are owner-only and a project's `.gitignore` covers them. Writes nothing; exits non-zero when something needs fixing. |
 | [`token examples`](../reference/cli.md#authama-token-examples) | Show what each tool's file looks like, with placeholder values (`--json` for the masked JSON). |

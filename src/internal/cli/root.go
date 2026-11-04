@@ -1,6 +1,6 @@
 // Package cli is the cobra command surface. The binary is authama
-// (brand.Command); sshmgr (brand.LegacyCommand), the name it shipped under
-// before, is still installed beside it as a deprecated alias.
+// (brand.Command). sshmgr (brand.LegacyCommand), the name it shipped under
+// before, is no longer built.
 //
 // Run on its own, on a terminal, it opens the web UI (as `authama serve`). The
 // tree has two feature groups and a few commands that serve both:
@@ -11,7 +11,7 @@
 //
 // Every group answers `help [verb]`, as the root does.
 //
-// Every SSH verb is also kept, hidden, at the top level, so `sshmgr deploy`
+// Every SSH verb is also kept, hidden, at the top level, so `authama deploy`
 // and every script and rendered ProxyCommand written before the groups
 // existed still run. TestTheCommandNamesAreDistinct keeps the tree free of
 // names a reader (or cobra) could confuse.
@@ -117,7 +117,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newTokenCmd())
 
 	// The pre-group spellings, hidden: a second, identical build of each SSH
-	// verb, so `sshmgr deploy` keeps working without listing every verb twice.
+	// verb, so `authama deploy` keeps working without listing every verb twice.
 	for _, c := range sshCommands() {
 		c.Hidden = true
 		root.AddCommand(c)

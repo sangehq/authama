@@ -40,6 +40,11 @@ func (p SetPlan) SecretLabel() string {
 func (s SetSpec) Check() (SetPlan, error) {
 	pl := SetPlan{Spec: s, Target: s.Target}
 	if s.Service != "" {
+		// A service is a Composer one: a second tool beside it is a
+		// contradiction, and taking either silently writes the wrong file.
+		if s.Target != "" && s.Target != tokens.Composer {
+			return pl, fmt.Errorf("--service is for Composer, not %s: drop --service, or --target", s.Target)
+		}
 		m, ok := tokens.LoadCatalogServices()[s.Service]
 		if !ok {
 			return pl, fmt.Errorf("unknown service %q (see `%s token providers`)", s.Service, brand.Command)

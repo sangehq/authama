@@ -11,12 +11,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/util/testcred"
 )
 
-// TestTokenEndToEnd drives the token group through both shipped binaries,
-// authama and the sshmgr compatibility name, in a sandbox.
+// TestTokenEndToEnd drives the token group through the authama binary, in a
+// sandbox.
 //
 // Every run passes --dev-root, HOME is a fresh temp dir, and the environment
 // is built from scratch: only PATH comes from the caller, so a developer's
@@ -25,11 +24,11 @@ import (
 // nothing was written outside the sandbox.
 func TestTokenEndToEnd(t *testing.T) {
 	if testing.Short() {
-		t.Skip("builds two binaries")
+		t.Skip("builds a binary")
 	}
 	dir := t.TempDir()
 	bins := map[string]string{}
-	for name, pkg := range map[string]string{"authama": ".", "sshmgr": "../sshmgr"} {
+	for name, pkg := range map[string]string{"authama": "."} {
 		bins[name] = filepath.Join(dir, name)
 		if out, err := exec.Command("go", "build", "-o", bins[name], pkg).CombinedOutput(); err != nil {
 			t.Fatalf("building %s: %v\n%s", name, err, out)
@@ -133,15 +132,6 @@ func TestTokenEndToEnd(t *testing.T) {
 			if !strings.Contains(out, want) {
 				t.Errorf("status lacks %q:\n%s", want, out)
 			}
-		}
-	})
-
-	t.Run("the sshmgr compatibility binary reaches the same token group", func(t *testing.T) {
-		a := ok("authama", "", "token", "list", "--json")
-		// The deprecated name says so first, on stderr (folded in here).
-		s := strings.TrimPrefix(ok("sshmgr", "", "token", "list", "--json"), brand.DeprecationNotice+"\n")
-		if a != s {
-			t.Errorf("authama and sshmgr disagree:\n%s\n---\n%s", a, s)
 		}
 	})
 

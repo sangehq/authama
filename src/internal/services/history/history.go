@@ -61,6 +61,9 @@ const (
 	KindHost    = "host"
 	KindKey     = "key"
 	KindTarget  = "target"
+	// KindToken names an installed credential as "<tool>/<host>", e.g.
+	// "npm/registry.npmjs.org": what `history --token` matches.
+	KindToken = "token"
 )
 
 // TimeFormat is how every timestamp in the store is written: UTC, to the
@@ -353,6 +356,7 @@ func (s *Store) SetMeta(key, value string) error {
 // Filter narrows a query. Zero values match everything.
 type Filter struct {
 	Host, Profile, Key string
+	Token              string // "<tool>/<host>", or "<tool>" for every host of it
 	Since, Until       string // inclusive, in TimeFormat or a prefix of it ("2026-10-27")
 	Command            string // exact, or a prefix ending in a space-free word ("host" matches "host add")
 	Source             string
@@ -380,6 +384,12 @@ func (s *Store) Query(f Filter) ([]Op, error) {
 		}
 		where = append(where, `exists (select 1 from subjects s where s.op_id = ops.op_id and s.kind = ? and s.name = ?)`)
 		args = append(args, kind, name)
+	}
+	if f.Token != "" {
+		// A bare tool matches every host of it.
+		where = append(where, `exists (select 1 from subjects s where s.op_id = ops.op_id and s.kind = ? and `+
+			`(s.name = ? or s.name like ? escape '\'))`)
+		args = append(args, KindToken, f.Token, likeEscape(f.Token)+"/%")
 	}
 	if f.Since != "" {
 		where = append(where, `started_at >= ?`)
@@ -522,6 +532,8 @@ func SubjectsOf(fields []log.Field) []Subject {
 			kind = KindKey
 		case "target":
 			kind = KindTarget
+		case "token":
+			kind = KindToken
 		default:
 			continue
 		}

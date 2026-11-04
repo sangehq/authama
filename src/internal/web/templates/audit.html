@@ -1,7 +1,7 @@
 {{define "content"}}{{with .Data}}
 {{template "page_header" (header "System" "Audit" "Key age, expiry and hygiene, as authama ssh audit reports them.")}}
 <div class="card mb-3">
-  <div class="card-header"><h2 class="card-title">Deployments</h2></div>
+  <div class="card-header"><h2 class="card-title">Deployments</h2>{{if .Keys}}<div class="card-actions">{{template "csv" "/exports/deployments.csv"}}</div>{{end}}</div>
   {{if .Keys}}
   <div class="table-responsive">
     <table class="table table-vcenter card-table table-hover" data-table="keys">

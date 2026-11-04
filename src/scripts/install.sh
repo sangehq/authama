@@ -2,23 +2,23 @@
 #
 # Authentication Access Manager installer for macOS and Linux.
 #
-# Installs authama, and beside it sshmgr: the same program under its old name,
-# deprecated (it prints a notice), kept so scripts, aliases and ProxyCommand
-# lines written by older releases keep working. A release from before authama
-# existed installs sshmgr alone.
+# Installs authama. The sshmgr alias that older releases installed beside it is
+# no longer installed; one already there is left alone, and named, so it can be
+# removed by hand.
 #
 #   curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash
 #   curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash -s v0.1.0
 #
 # Windows users: use src/scripts/install.ps1 (irm ... | iex) or download the bare
-# authama_windows_<arch>.exe / sshmgr_windows_<arch>.exe from the releases page.
+# authama_windows_<arch>.exe from the releases page.
 #
 set -euo pipefail
 
 OWNER="simtabi"
 REPO="authama"
 BINARY="authama"
-COMPAT="sshmgr"
+# The name releases before 0.1.0 shipped as; only ever reported, never installed.
+LEGACY="sshmgr"
 
 # AUTHAMA_INSTALL_DIR, else the deprecated SSHMGR_INSTALL_DIR, else /usr/local/bin.
 INSTALL_DIR="${AUTHAMA_INSTALL_DIR:-${SSHMGR_INSTALL_DIR:-/usr/local/bin}}"
@@ -115,15 +115,8 @@ fetch() {
   fi
 }
 
-if fetch "$BINARY"; then
-  installed="$BINARY"
-  # The deprecated compatibility name, while releases still carry it.
-  fetch "$COMPAT" && installed="$BINARY $COMPAT"
-else
-  fetch "$COMPAT" || err "${VERSION} has no ${BINARY}_${os}_${arch}."
-  installed="$COMPAT"
-  info "note: ${VERSION} predates ${BINARY}; installing ${COMPAT} only."
-fi
+fetch "$BINARY" || err "${VERSION} has no ${BINARY}_${os}_${arch} (releases before 0.1.0 shipped as ${LEGACY})."
+installed="$BINARY"
 
 sudo=""
 if [ ! -d "$INSTALL_DIR" ]; then
@@ -155,9 +148,10 @@ info ""
 for b in $installed; do
   info "Installed ${b} to ${INSTALL_DIR}/${b}"
 done
-case " $installed " in
-  *" $BINARY "*" $COMPAT "*) info "${COMPAT} is a deprecated alias of ${BINARY}; use ${BINARY}." ;;
-esac
+if [ -e "${INSTALL_DIR}/${LEGACY}" ]; then
+  info "An older ${LEGACY} is still at ${INSTALL_DIR}/${LEGACY}; ${BINARY} replaces it."
+  info "Remove it with: ${sudo:+sudo }rm ${INSTALL_DIR}/${LEGACY}  (then: ${BINARY} ssh config render)"
+fi
 info ""
 info "Settings live in ${XDG_CONFIG_HOME:-$HOME/.config}/authama (.env and authama.json, loaded at startup)."
 info "A 0.1.0 home in ~/.config/ssh-manager is copied there on the first run and kept."

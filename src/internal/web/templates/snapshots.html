@@ -2,7 +2,7 @@
 {{template "page_header" (header "SSH" "Snapshots" "")}}
 <p class="text-secondary">Every command that changes <code>~/.ssh</code> archives its config, <code>known_hosts</code> and public keys first. Private keys are never in a snapshot.</p>
 <div class="card">
-  <div class="card-header"><h2 class="card-title">Snapshots</h2>{{if .Data.Snapshots}}<div class="card-actions text-secondary small">{{len .Data.Snapshots}}, newest first</div>{{end}}</div>
+  <div class="card-header"><h2 class="card-title">Snapshots</h2>{{if .Data.Snapshots}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data.Snapshots}}, newest first</span>{{template "csv" "/exports/snapshots.csv"}}</div>{{end}}</div>
   {{if .Data.Snapshots}}
   <div class="table-responsive">
     <table class="table table-vcenter card-table table-hover" data-table="snapshots">

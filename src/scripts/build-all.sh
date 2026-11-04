@@ -4,11 +4,10 @@
 # Regenerates build/targets.txt from an embedded matrix and produces, under
 # build/dist/:
 #
-#   authama_{os}_{arch}[.exe]       flat, versionless, ready-to-run binaries,
-#   sshmgr_{os}_{arch}[.exe]        and the deprecated compatibility name
-#   {authama,sshmgr}_macos_universal  Intel + Apple Silicon fat binaries (on macOS)
+#   authama_{os}_{arch}[.exe]       flat, versionless, ready-to-run binaries
+#   authama_macos_universal         Intel + Apple Silicon fat binary (on macOS)
 #   checksums.txt                   SHA-256 over the bare binaries (bare names)
-#   archives/authama_{os}_{arch}.{tar.gz,zip}  both binaries + LICENSE/README/CHANGELOG
+#   archives/authama_{os}_{arch}.{tar.gz,zip}  the binary + LICENSE/README/CHANGELOG
 #   archives/checksums.txt          SHA-256 over the archives
 #
 # Naming: darwin -> macos, arm -> armvN, .exe on windows. Static
@@ -35,9 +34,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 REPO_ROOT=".."
 
-# Archives are named after authama (sshmgr_ before 0.1.2); both binaries go in it.
+# Archives are named after authama (sshmgr_ before 0.1.2). BINARIES is every
+# program an archive holds: authama alone since the sshmgr alias was removed.
 BINARY="authama"
-BINARIES="authama sshmgr"
+BINARIES="authama"
 PKG="github.com/simtabi/authama/src/internal/version"
 BUILD_DIR="${REPO_ROOT}/build"
 OUT="${BUILD_DIR}/dist"
@@ -122,7 +122,7 @@ else
   echo "==> regenerated ${TARGETS_FILE}"
 fi
 
-# make_archive <authama-bare-binary-filename> <goos>: both binaries, under their
+# make_archive <authama-bare-binary-filename> <goos>: the binaries, under their
 # plain names, plus the docs.
 make_archive() {
   [ "$WITH_ARCHIVES" = "1" ] || return 0
@@ -194,7 +194,7 @@ if [ "$have_macos_amd64" = 1 ] && [ "$have_macos_arm64" = 1 ]; then
 fi
 
 # --- checksums (bare names so install scripts / self-update can look up) ------
-( cd "$OUT" && sha256 authama_* sshmgr_* > checksums.txt )
+( cd "$OUT" && sha256 ${BINARY}_* > checksums.txt )
 echo "==> wrote ${OUT}/checksums.txt"
 if [ "$WITH_ARCHIVES" = "1" ] && ls "${ARCHIVE_DIR}/${BINARY}_"* >/dev/null 2>&1; then
   ( cd "$ARCHIVE_DIR" && sha256 ${BINARY}_* > checksums.txt )

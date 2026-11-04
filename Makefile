@@ -12,9 +12,6 @@
 MODULE  := src
 BIN     := build/authama
 PKG     := ./cmd/authama
-# The deprecated compatibility build: the same program under its old name; it prints a deprecation notice.
-COMPAT_BIN := build/sshmgr
-COMPAT_PKG := ./cmd/sshmgr
 
 # Our own modules come from git, never proxy.golang.org or sum.golang.org, so a
 # local build cannot feed a version into the public cache. Overridable.
@@ -61,8 +58,7 @@ help:  ## list targets
 build: clean ## compile the binary into a freshly emptied build/ (FORCE=1 to rebuild deps too)
 	@mkdir -p build
 	$(GO) build $(if $(FORCE),-a,) -trimpath -ldflags '$(LDFLAGS)' -o ../$(BIN) $(PKG)
-	$(GO) build $(if $(FORCE),-a,) -trimpath -ldflags '$(LDFLAGS)' -o ../$(COMPAT_BIN) $(COMPAT_PKG)
-	@echo "built $(BIN) and $(COMPAT_BIN)  ->  $$(./$(BIN) version)"
+	@echo "built $(BIN)  ->  $$(./$(BIN) version)"
 
 build-all: ## compile every package (what CI gated on before `ci` existed)
 	$(GO) build ./...

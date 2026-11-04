@@ -2,7 +2,7 @@
 
 ```mermaid
 flowchart TD
-    MAIN[cmd/authama · cmd/sshmgr deprecated alias · thin entrypoints] --> CLI[internal/cli · the cobra tree]
+    MAIN[cmd/authama · thin entrypoint] --> CLI[internal/cli · the cobra tree]
     CLI --> SVC[internal/services<br/>reconciler · deployer · rotator · bundler ·<br/>notifier · editor · doctor · lifecycle · tokensvc · …]
     CLI --> WEB[internal/web · the serve UI]
     WEB --> SVC
@@ -32,8 +32,6 @@ src/                # THE GO MODULE. go.mod is here, so every `go` command runs
                     #   here - the Makefile uses `go -C src` for exactly this.
   cmd/authama/      # thin entrypoint; calls internal/cli and nothing else. Also
                     #   holds the repo-wide invariant tests (layering, hygiene, e2e)
-  cmd/sshmgr/       # the deprecated alias: the same program under its former name,
-                    #   printing a one-line deprecation notice on stderr
   internal/
     cli/            # the cobra tree, one file per verb. The ONLY package that
                     #   imports cobra, and the only place services are composed.
@@ -66,7 +64,7 @@ src/                # THE GO MODULE. go.mod is here, so every `go` command runs
   .golangci.yml
 build/              # everything build-related, and the only place anything is
                     #   generated. targets.txt (the release matrix) is the one
-                    #   tracked file; build/authama and build/sshmgr (the alias) are `make build` output and
+                    #   tracked file; build/authama is `make build` output and
                     #   build/dist/ is GoReleaser's. `make clean` empties it.
 docs/  README.md  CHANGELOG.md  LICENSE  Makefile  .github/
 ```
@@ -108,7 +106,7 @@ The token feature follows the same layering as the SSH side:
 - `docs/reference/cli.md` is generated from the command tree, and a test fails
   when it is stale or when a command has no example that parses.
 
-Names (`Authentication Access Manager`, `authama`, the deprecated `sshmgr`) come from
+Names (`Authentication Access Manager`, `authama`, and the former `sshmgr`, still recognized in what older releases wrote) come from
 `internal/brand`, so a rename is one edit. Environment variable names come from
 `internal/util/envnames`: each `AUTHAMA_*` name lists its pre-0.1.1 spellings
 (`SSH_MANAGER_*`, `SSHMGR_*`), which are still read with a one-line deprecation

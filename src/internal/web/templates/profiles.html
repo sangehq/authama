@@ -5,7 +5,7 @@
 {{template "page_header" (header "SSH" "Profiles" "Each profile: its category, key scope and key store, and its hosts and keys." (panel "Add a profile" "add-profile" "plus"))}}
 {{end}}
 <div class="card">
-  <div class="card-header"><h2 class="card-title">Profiles</h2>{{if .Data}}<div class="card-actions text-secondary small">{{len .Data}} in the manifest</div>{{end}}</div>
+  <div class="card-header"><h2 class="card-title">Profiles</h2>{{if .Data}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data}} in the manifest</span>{{template "csv" "/exports/profiles.csv"}}</div>{{end}}</div>
   {{if .Data}}
   <div class="table-responsive">
     <table class="table table-vcenter card-table table-hover" id="profiles-table" data-table="profiles">
@@ -41,12 +41,16 @@
 {{if not .ReadOnly}}
 {{template "panel_open" (header "add-profile" "Add a profile" "A profile groups hosts that share a key policy and a directory under ~/.ssh/profiles/.")}}
         {{template "change_open" .}}<input type="hidden" name="action" value="profile-add">
-          <div class="mb-2"><label class="form-label" for="p-name">Name</label><input class="form-control" id="p-name" name="name" required pattern="[A-Za-z0-9][A-Za-z0-9._\-]*" autocomplete="off" spellcheck="false"></div>
-          <div class="mb-2"><label class="form-label" for="p-scope">Key scope</label><select class="form-select" id="p-scope" name="key_scope"><option value="per_service">per service: one key for each host</option><option value="shared">shared: one key for every host</option></select></div>
-          <div class="mb-2"><label class="form-label" for="p-keyname">Shared key name <span class="text-secondary">(shared scope only)</span></label><input class="form-control" id="p-keyname" name="key_name" autocomplete="off" spellcheck="false"></div>
-          <div class="mb-2"><label class="form-label" for="p-category">Category <span class="text-secondary">(optional: files it under ~/.ssh/profiles/&lt;category&gt;/)</span></label><input class="form-control" id="p-category" name="category" autocomplete="off" spellcheck="false"></div>
-          <div class="mb-3"><label class="form-label" for="p-comment">Key comment <span class="text-secondary">(optional: {profile} {alias} {key} {date} {device})</span></label><input class="form-control" id="p-comment" name="key_comment" autocomplete="off" spellcheck="false" placeholder="{profile}/{alias} {date}"></div>
-          <button type="submit" class="btn btn-primary">Preview</button>
+          <div class="mb-3"><label class="form-label required" for="p-name">Name</label><input class="form-control" id="p-name" name="name" required pattern="[A-Za-z0-9][A-Za-z0-9._\-]*" autocomplete="off" spellcheck="false"><small class="form-hint">Letters, digits, dots, dashes and underscores.</small></div>
+          <div class="mb-3"><label class="form-label" for="p-scope">Key scope</label><select class="form-select" id="p-scope" name="key_scope"><option value="per_service">per service: one key for each host</option><option value="shared">shared: one key for every host</option></select></div>
+          <div class="mb-3" data-show-when="#p-scope" data-show-when-in="shared"><label class="form-label" for="p-keyname">Shared key name</label><input class="form-control" id="p-keyname" name="key_name" autocomplete="off" spellcheck="false"><small class="form-hint">The one key every host in the profile uses.</small></div>
+          <div class="mb-3"><label class="form-label" for="p-category">Category</label><input class="form-control" id="p-category" name="category" autocomplete="off" spellcheck="false"><small class="form-hint">Optional: files the profile under <code>~/.ssh/profiles/&lt;category&gt;/</code>.</small></div>
+          <div class="mb-3"><label class="form-label" for="p-comment">Key comment</label><input class="form-control" id="p-comment" name="key_comment" autocomplete="off" spellcheck="false" placeholder="{profile}/{alias} {date}"><small class="form-hint">Optional. Placeholders: <code>{profile}</code> <code>{alias}</code> <code>{key}</code> <code>{date}</code> <code>{device}</code>.</small></div>
+          <div class="d-flex align-items-center gap-2 pt-3 border-top">
+            <span class="text-secondary small me-auto">The same as <code>authama ssh profile add</code>.</span>
+            <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
+            <button type="submit" class="btn btn-primary">Preview</button>
+          </div>
         </form>
 {{template "panel_close"}}
 <div class="row row-cards mt-1">
@@ -58,7 +62,7 @@
         {{template "change_open" .}}<input type="hidden" name="action" value="profile-edit">
           <div class="mb-2"><label class="form-label" for="e-name">Profile</label><select class="form-select" id="e-name" name="name">{{range .Data}}<option value="{{.Name}}">{{.Name}} ({{.KeyScope}})</option>{{end}}</select></div>
           <div class="mb-2"><label class="form-label" for="e-scope">Key scope</label><select class="form-select" id="e-scope" name="key_scope"><option value="per_service">per service</option><option value="shared">shared</option></select></div>
-          <div class="mb-3"><label class="form-label" for="e-keyname">Shared key name <span class="text-secondary">(shared scope only)</span></label><input class="form-control" id="e-keyname" name="key_name" autocomplete="off" spellcheck="false"></div>
+          <div class="mb-3" data-show-when="#e-scope" data-show-when-in="shared"><label class="form-label" for="e-keyname">Shared key name</label><input class="form-control" id="e-keyname" name="key_name" autocomplete="off" spellcheck="false"></div>
           <button type="submit" class="btn btn-primary">Preview</button>
         </form>
       </div>

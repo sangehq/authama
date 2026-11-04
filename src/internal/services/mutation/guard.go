@@ -14,6 +14,7 @@ import (
 	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/services/snapshots"
 	"github.com/simtabi/authama/src/internal/util/lock"
+	"github.com/simtabi/authama/src/internal/util/log"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
@@ -95,4 +96,14 @@ func Scoped(p paths.Paths, s Scope, fn func() error) error {
 	End(Outcome{Err: err, Aborted: errors.Is(err, ErrDeclined)})
 	Release()
 	return err
+}
+
+// RecordAccess puts a read of a secret on the record. A read changes nothing,
+// so no guard would open an operation for it; this opens one for the current
+// scope, under the lock as a mutation's is, and files one audit event naming
+// what was read. The event carries names only, never the value. Outside any
+// scope (a library caller) the event still reaches audit.log.
+func RecordAccess(p paths.Paths, event string, fields ...log.Field) {
+	LockForMutation(p)
+	log.Audit(p.AuditLog(), event, fields...)
 }

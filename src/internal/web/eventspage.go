@@ -3,7 +3,6 @@ package web
 import (
 	"context"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/simtabi/authama/src/internal/services/events"
@@ -95,18 +94,8 @@ func (s *Server) recentEvents(f events.Filter) []EventRow {
 func (h systemPages) handleEvents(w http.ResponseWriter, r *http.Request) {
 	h.s.scanEvents()
 	q := r.URL.Query()
-	v := EventsView{Area: strings.TrimSpace(q.Get("area")), Kind: strings.TrimSpace(q.Get("kind")),
-		Tracking: h.s.opts.EventRoots != nil, Counts: map[string]int{}}
-	switch v.Area {
-	case "", events.AreaSSH, events.AreaConfig, events.AreaAuth:
-	default:
-		v.Area = ""
-	}
-	switch v.Kind {
-	case "", events.KindAdded, events.KindChanged, events.KindRemoved, events.KindMode, events.KindStarted:
-	default:
-		v.Kind = ""
-	}
+	f := eventsFilter(q)
+	v := EventsView{Area: f.Area, Kind: f.Kind, Tracking: h.s.opts.EventRoots != nil, Counts: map[string]int{}}
 	v.Rows = h.s.recentEvents(events.Filter{Area: v.Area, Kind: v.Kind, Limit: 1000})
 	v.Integrity, _ = events.Verify(h.s.opts.Engine.Home())
 	for _, e := range v.Rows {

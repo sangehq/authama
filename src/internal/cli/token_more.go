@@ -51,6 +51,9 @@ func newTokenShowCmd() *cobra.Command {
 			if !reveal {
 				it.Secret = ""
 			}
+			if reveal {
+				recordTokenAccess(env, eventTokenRevealed, it)
+			}
 			if asJSON {
 				b, _ := json.MarshalIndent(it, "", "  ")
 				say(c, "%s", b)
