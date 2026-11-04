@@ -163,6 +163,7 @@ e2e-web: build ## browser e2e + axe for `authama serve` (needs node, age)
 	cd e2e/web && npm install --no-audit --no-fund --no-package-lock
 	cd e2e/web && npx playwright install chromium
 	cd e2e/web && npx tsc --noEmit
+	cd e2e/web && npx tsc -p tsconfig.ui.json
 	cd e2e/web && npx playwright test $(E2E_WEB_ARGS)
 
 # The per-command assertions live in internal/cli/commands_test.go now, so they

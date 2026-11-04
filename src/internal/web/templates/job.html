@@ -26,7 +26,7 @@
 {{if .Err}}<div class="alert {{if eq .State "cancelled"}}alert-warning{{else}}alert-danger{{end}}" role="alert">{{.Err}}</div>{{end}}
 <div class="card mb-3">
   <div class="card-header"><h2 class="card-title">Output</h2></div>
-  <div class="card-body"><pre class="code-block" id="job-log" tabindex="0" aria-live="polite" data-events="/jobs/{{.ID}}/events">{{range .Lines}}{{.}}
+  <div class="card-body"><pre class="code-block" id="job-log" tabindex="0" aria-live="polite" data-job-stream data-job-stream-events="/jobs/{{.ID}}/events" data-job-stream-state="#job-state">{{range .Lines}}{{.}}
 {{end}}</pre></div>
 </div>
 {{if or (eq .State "running") (eq .State "waiting")}}
