@@ -42,6 +42,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`make install` and `make uninstall`.** `install` builds, then copies `build/authama` to
+  `~/.local/bin` (`BINDIR=` for elsewhere; `%LOCALAPPDATA%\Programs\authama` on Windows), and says
+  whether that directory is on `PATH` and whether another `authama` shadows it. `uninstall` removes
+  that one file after checking it answers `version` as authama, and prints where the config and
+  state homes are; it never touches them, `~/.ssh` or a token file.
+- **Row actions are one menu.** Every table row's actions - open, copy, history, replace, delete -
+  are in one Tabler dropdown at the row's end, with the destructive one last and confirmed in a
+  dialog. Restoring a bundle now confirms first too.
+- **Copy from the web UI**: a key's public key, its fingerprint and identity file path, a host's
+  hostname and `ssh <alias>`, a token's host and file. Public values only: a private key or a
+  token's secret is copied only from the terminal. A `.pub` that is not a single public key line is
+  never shown.
+- **Edit `tokens.json` in the web UI**, in a dialog, previewed as a diff like any change. Only a file
+  holding variable names opens, and an edit that adds a value is refused: names must be upper case,
+  at most 48 characters, and not start like a known token (`ghp_`, `glpat-`, `npm_`, …); a credential
+  header must take its value from `${VAR}`.
+- **Help where it is needed**: a hint under each form field, a popover beside terms that need one, a
+  tooltip on each icon button, and a guided tour of the header and overview (account menu → *Take
+  the tour*), which offers itself once on a browser's first visit. A list's address takes `?q=` to
+  open it already searched.
+
 - **CSV export everywhere a list is shown.** `--csv` on `ssh list`, `ssh key list`, `ssh audit`
   (one row per key and deployment), `ssh snapshots list`, `token list`, `history` and `events`, and a
   download on each matching web page, plus the profiles list, with the same columns. History and

@@ -5,7 +5,7 @@
 {{template "page_header" (header "Home" "Overview" "What this home holds, and what needs attention." (action "Add a host" "/hosts#add-host" "plus") (action "Add a token" "/tokens#add-token" "cloud-lock"))}}
 {{end}}
 
-<div class="row row-cards mb-3">
+<div class="row row-cards mb-3" data-tour="7" data-tour-title="At a glance" data-tour-text="Each count opens its list; Needs attention lists what to fix and the command that fixes it.">
   {{template "stat" (stat "Profiles" .Profiles "/profiles" "users" "primary")}}
   {{template "stat" (stat "Hosts" .Hosts "/hosts" "server" "azure")}}
   {{template "stat" (stat "Keys" .Keys "/keys" "key" "indigo")}}
@@ -105,7 +105,7 @@
   </div>
   <div class="col-lg-5">
     <div class="card h-100">
-      <div class="card-header"><h2 class="card-title">Quick actions</h2></div>
+      <div class="card-header" data-tour="8" data-tour-title="Quick actions" data-tour-text="Every change is previewed first: you see the diff, then make it or walk away."><h2 class="card-title">Quick actions</h2></div>
       <div class="list-group list-group-flush">
         {{if not $.ReadOnly}}
         <div class="list-group-item">

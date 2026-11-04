@@ -45,6 +45,23 @@ screen it folds behind a button.
 
 - **Page headers** name the section, summarise the page, and hold its main actions.
 - **Adding** a profile, a host or a token opens its form in a panel that slides in from the right.
+  The token form starts with the tool and shows only the fields it uses.
+- **Each row's actions are one menu** (the ⋮ button at the row's end): open it, copy what it names,
+  see its history, and the row's destructive action last, set apart. A token's menu also opens the
+  add-a-token panel filled in for it, which is how a token is replaced or rotated.
+- **Copying** puts public values on the clipboard: a public key, a fingerprint, a path, a hostname,
+  `ssh <alias>`. A toast says it worked. Nothing secret can be copied from a page: a private key
+  is copied only from the terminal (`authama ssh termius keys`), and a token's secret only with
+  `authama token copy`.
+- **`tokens.json` is editable** in a dialog on the Auth tokens page, previewed as a diff like any
+  change. The editor opens only a file that holds variable names, and refuses an edit that adds a
+  value: every `env`, `user_env`, `pass_env`, `key_env` and `secret_env` must be an upper-case
+  variable name of at most 48 characters that does not start like a known token (`ghp_`, `glpat-`,
+  `npm_`, …), and a header that carries a credential must take it from `${VAR}`.
+- **Help** sits where it is needed: a hint under each form field, a ? beside a term that needs
+  explaining (it opens a popover), and a tooltip on every icon button. **Take the tour**, in the
+  account menu, walks the header and the overview one step at a time; it offers itself once, on a
+  browser's first visit to the overview, and Escape ends it.
 - **Every destructive action** (deleting a profile, host, key or token, pruning snapshots, restoring
   one, cleaning stale pins) asks in a dialog first, then previews, then asks again on the preview.
 - **Tables** sort by any column, and a list longer than ten rows gains a search box, a page size and
@@ -59,7 +76,7 @@ screen it folds behind a button.
 | Overview | the rows the `authama tui` menu prints at the top, each problem with the command that fixes it; counts; key health, auth tokens and snapshots; quick actions; hosts by profile; the newest file events; keys due for rotation; recent changes |
 | Profiles | each profile's category, key scope, key store, and host and key counts |
 | Hosts | every host by profile. A host's page shows its manifest entry, its deployments, the block rendered into `~/.ssh/config`, and the host keys pinned for it |
-| Keys | every key with its fingerprint and expiry, and the reserved keys (loose keys kept on purpose). A key's page shows where the key is deployed and every operation that touched it |
+| Keys | every key with its fingerprint and expiry, and the reserved keys (loose keys kept on purpose). A key's page shows its public key and fingerprint, each with a copy button, where the key is deployed and every operation that touched it. A `.pub` that is not a single public key line is not shown |
 | Snapshots | every snapshot. A snapshot's page diffs it against `~/.ssh` now or against another snapshot |
 | History | the [`history`](history.md), filtered the same way. An operation's page shows its events and the manifest before and after |
 | VMs | the VM hosts and their VMs' state, the pending `ssh vm sync` plan, the enabled hypervisors and their VMs, the declared devboxes (planned ones without a VM yet), the reserved keys, the loose keys that could be adopted, and whether the daily sync is scheduled |

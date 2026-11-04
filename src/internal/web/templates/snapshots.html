@@ -7,14 +7,20 @@
   <div class="table-responsive">
     <table class="table table-vcenter card-table table-hover" data-table="snapshots">
       <caption class="visually-hidden">Snapshots, newest first</caption>
-      <thead><tr><th scope="col">Snapshot</th><th scope="col">Taken</th><th scope="col">Size</th><th scope="col">Compare</th></tr></thead>
+      <thead><tr><th scope="col">Snapshot</th><th scope="col">Taken</th><th scope="col">Size</th><th scope="col" class="w-1" data-nosort><span class="visually-hidden">Actions</span></th></tr></thead>
       <tbody>
         {{range .Data.Snapshots}}
         <tr>
           <th scope="row"><code>{{.ID}}</code>{{if .KeyBearing}} <span class="badge badge-bad">holds private keys</span>{{end}}</th>
           <td class="text-nowrap">{{when .Taken}}</td>
           <td>{{size .Size}}</td>
-          <td>{{if .KeyBearing}}<span class="text-secondary">not opened</span>{{else}}<a href="/snapshots/{{.ID}}">{{icon "git-compare"}}<span class="ms-1">with now</span></a>{{end}}</td>
+          <td class="text-end">
+            {{template "menu_open" (printf "Actions for snapshot %s" .ID)}}
+              {{if .KeyBearing}}<span class="dropdown-item disabled" aria-disabled="true">{{icon "lock"}}<span class="ms-2">Not opened: it holds private keys</span></span>
+              {{else}}<a class="dropdown-item" href="/snapshots/{{.ID}}">{{icon "git-compare"}}<span class="ms-2">Compare with now</span></a>{{end}}
+              <button type="button" class="dropdown-item" data-copy="{{.ID}}">{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
+            {{template "menu_close"}}
+          </td>
         </tr>
         {{end}}
       </tbody>
@@ -41,19 +47,27 @@
   <div class="table-responsive">
     <table class="table table-vcenter card-table">
       <caption class="visually-hidden">Encrypted bundles, newest first</caption>
-      <thead><tr><th scope="col">Bundle</th><th scope="col">Written</th><th scope="col">Size</th>{{if not $.ReadOnly}}<th scope="col"><span class="visually-hidden">Actions</span></th>{{end}}</tr></thead>
+      <thead><tr><th scope="col">Bundle</th><th scope="col">Written</th><th scope="col">Size</th><th scope="col" class="w-1"><span class="visually-hidden">Actions</span></th></tr></thead>
       <tbody>
         {{range .Data.Bundles}}
         <tr>
           <th scope="row"><code>{{.Name}}</code></th>
           <td class="text-nowrap">{{when .Written}}</td>
           <td>{{size .Size}}</td>
-          {{if not $.ReadOnly}}<td class="text-end">{{template "job_open" $}}<input type="hidden" name="action" value="bundle-restore"><input type="hidden" name="bundle" value="{{.Name}}"><button type="submit" class="btn btn-sm btn-outline-danger">Restore {{.Name}}</button></form></td>{{end}}
+          <td class="text-end">
+            {{if not $.ReadOnly}}<form method="post" action="/jobs/review" id="f-bundle-{{.Name}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="bundle-restore"><input type="hidden" name="bundle" value="{{.Name}}"></form>{{end}}
+            {{template "menu_open" (printf "Actions for bundle %s" .Name)}}
+              <button type="button" class="dropdown-item" data-copy="{{.Name}}">{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
+              {{if not $.ReadOnly}}<div class="dropdown-divider"></div>
+              <button type="submit" class="dropdown-item text-danger" form="f-bundle-{{.Name}}" data-confirm="m-bundle-{{.Name}}">{{icon "archive"}}<span class="ms-2">Restore</span></button>{{end}}
+            {{template "menu_close"}}
+          </td>
         </tr>
         {{end}}
       </tbody>
     </table>
   </div>
+  {{if not $.ReadOnly}}{{range .Data.Bundles}}{{template "confirm" (confirm (printf "m-bundle-%s" .Name) (printf "f-bundle-%s" .Name) (printf "Restore %s?" .Name) "Its keys and files are laid back over ~/.ssh. You review the job before it runs." "Review the restore")}}{{end}}{{end}}
   <div class="card-body text-secondary">Restoring decrypts with <code>AUTHAMA_AGE_IDENTITY_FILE</code>, as set where <code>authama serve</code> runs, and lays the keys back.</div>
 </div>
 {{end}}

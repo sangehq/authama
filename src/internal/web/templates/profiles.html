@@ -21,12 +21,15 @@
           <td>{{if .KeyComment}}<code>{{.KeyComment}}</code>{{else}}<span class="text-secondary">default</span>{{end}}</td>
           <td>{{.Hosts}}</td>
           <td>{{.Keys}}</td>
-          <td class="text-end text-nowrap">
-            <div class="btn-list flex-nowrap justify-content-end">
-              <a class="btn btn-sm btn-outline-secondary" href="/history?profile={{.Name}}">{{icon "history"}}<span class="ms-1">History</span></a>
-              {{if not $.ReadOnly}}<form method="post" action="/changes/preview" id="f-profile-{{.Name}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="profile-delete"><input type="hidden" name="name" value="{{.Name}}">
-              <button class="btn btn-sm btn-outline-danger" type="submit" data-confirm="m-profile-{{.Name}}">{{icon "trash"}}<span class="ms-1">Delete profile {{.Name}}</span></button></form>{{end}}
-            </div>
+          <td class="text-end">
+            {{if not $.ReadOnly}}<form method="post" action="/changes/preview" id="f-profile-{{.Name}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="profile-delete"><input type="hidden" name="name" value="{{.Name}}"></form>{{end}}
+            {{template "menu_open" (printf "Actions for profile %s" .Name)}}
+              <a class="dropdown-item" href="/hosts?q={{.Name}}">{{icon "server"}}<span class="ms-2">Its hosts</span></a>
+              <a class="dropdown-item" href="/history?profile={{.Name}}">{{icon "history"}}<span class="ms-2">History</span></a>
+              <button type="button" class="dropdown-item" data-copy="{{.Name}}">{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
+              {{if not $.ReadOnly}}<div class="dropdown-divider"></div>
+              <button type="submit" class="dropdown-item text-danger" form="f-profile-{{.Name}}" data-confirm="m-profile-{{.Name}}">{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
+            {{template "menu_close"}}
           </td>
         </tr>
         {{end}}

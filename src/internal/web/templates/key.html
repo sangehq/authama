@@ -10,17 +10,21 @@
       <div class="card-body">
         <dl class="row mb-0">
           <dt class="col-5">Type</dt><dd class="col-7">{{.Detail.Type}}</dd>
-          <dt class="col-5">Fingerprint</dt><dd class="col-7 text-break"><code>{{orDash .Detail.Fingerprint}}</code></dd>
+          <dt class="col-5">Fingerprint {{template "help" (help "Fingerprint" "The SHA-256 hash of the public key. Compare it with what a server or GitHub shows to know it is the same key.")}}</dt><dd class="col-7 text-break"><code>{{orDash .Detail.Fingerprint}}</code>{{with .Detail.Fingerprint}} {{template "copy" (copy . "the fingerprint")}}{{end}}</dd>
           {{if and .Detail.DiskFingerprint (ne .Detail.DiskFingerprint .Detail.Fingerprint)}}<dt class="col-5">On disk</dt><dd class="col-7 text-break"><span class="badge badge-bad">different key</span> <code>{{.Detail.DiskFingerprint}}</code></dd>{{end}}
           {{if .Detail.FingerprintErr}}<dt class="col-5">Public key</dt><dd class="col-7">{{.Detail.FingerprintErr}}</dd>{{end}}
           <dt class="col-5">Created</dt><dd class="col-7">{{orDash .Detail.Created}}</dd>
           <dt class="col-5">Rotate after</dt><dd class="col-7">{{.Detail.RotateAfterDays}} days</dd>
           <dt class="col-5">Expires</dt><dd class="col-7">{{orDash .Detail.ExpiresOn}}{{with .Expiry}} <span class="badge {{statusClass .State}}">{{.State}}</span> <span class="text-secondary">{{expiryDays .}}</span>{{end}}</dd>
           <dt class="col-5">Store</dt><dd class="col-7">{{if .Detail.Vault}}1Password vault <code>{{.Detail.Vault}}</code>{{else}}disk{{end}}</dd>
-          <dt class="col-5">Identity file</dt><dd class="col-7 text-break"><code>{{.Detail.IdentityFile}}</code></dd>
+          <dt class="col-5">Identity file</dt><dd class="col-7 text-break"><code>{{.Detail.IdentityFile}}</code> {{template "copy" (copy .Detail.IdentityFile "the identity file's path")}}</dd>
           <dt class="col-5">Used by</dt><dd class="col-7">{{range $i, $h := .Detail.Hosts}}{{if $i}}, {{end}}<a href="/hosts/{{$h}}"><code>{{$h}}</code></a>{{else}}–{{end}}</dd>
         </dl>
       </div>
+      {{if .PublicKey}}<div class="card-footer">
+        <div class="d-flex align-items-center mb-1"><span class="form-label mb-0">Public key</span>{{template "help" (help "Public key" "Safe to share: this is what goes into a server's authorized_keys or GitHub's SSH keys page. The private key never leaves this machine.")}}<span class="ms-auto">{{template "copy" (copy .PublicKey "the public key")}}</span></div>
+        <pre class="code-block mb-0 text-break text-wrap small">{{.PublicKey}}</pre>
+      </div>{{end}}
     </div>
   </div>
   <div class="col-lg-6">

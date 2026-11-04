@@ -14,6 +14,8 @@ import { El } from "../core/el.js";
  *   data-table-page-size="25"   rows per page (0: all); default 10
  *   data-table-min-rows="10"    a list this long or shorter gets no search or pages
  *   data-table-searchable       "false" leaves out the search box
+ *   data-table-query-param="q"  the address's ?q= starts the search, so a link
+ *                               can open the list already narrowed
  *
  * A header cell with data-nosort is not sortable; a cell's data-sort value is
  * sorted on instead of its text (a timestamp behind a formatted date).
@@ -22,11 +24,11 @@ import { El } from "../core/el.js";
  *
  *   table.sortBy(2, "desc").search("github").pageSize(25).page(1).render();
  *
- * @extends {Component<{pageSize: number, minRows: number, searchable: boolean}>}
+ * @extends {Component<{pageSize: number, minRows: number, searchable: boolean, queryParam: string}>}
  */
 export class DataTable extends Component {
   static attribute = "table";
-  static defaults = { pageSize: 10, minRows: 10, searchable: true };
+  static defaults = { pageSize: 10, minRows: 10, searchable: true, queryParam: "q" };
 
   /** @type {HTMLTableRowElement[]} */
   #rows = [];
@@ -39,6 +41,9 @@ export class DataTable extends Component {
   #body = null;
   /** @type {El<HTMLDivElement> | null} */
   #bar = null;
+
+  /** @type {HTMLInputElement | null} */
+  #searchBox = null;
   /** @type {El<HTMLDivElement> | null} */
   #foot = null;
   /** @type {El<HTMLParagraphElement> | null} */
@@ -67,7 +72,11 @@ export class DataTable extends Component {
     this.#rows = Array.from(this.#body.rows);
     this.#pageSize = this.options.pageSize;
     this.#buildToolbar().#buildFooter().#buildSortHeaders();
-    if (this.#rows.length <= this.options.minRows) {
+    const q = this.options.queryParam ? (new URLSearchParams(window.location.search).get(this.options.queryParam) ?? "") : "";
+    if (q && this.#searchBox) {
+      this.#searchBox.value = q;
+      this.search(q);
+    } else if (this.#rows.length <= this.options.minRows) {
       this.#bar?.hide();
     }
     return this.render();
@@ -165,6 +174,7 @@ export class DataTable extends Component {
         input.attr("aria-controls", this.el.id);
       }
       input.on("input", () => this.search(input.node.value).render());
+      this.#searchBox = /** @type {HTMLInputElement} */ (input.node);
       row.append(
         El.create("div")
           .cls("ms-auto text-secondary d-flex align-items-center gap-2")

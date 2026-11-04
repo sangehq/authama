@@ -40,3 +40,48 @@ export class ShowWhen extends Component {
     return this;
   }
 }
+
+/**
+ * PanelOpen opens a slide-in panel from anywhere - a row's menu, a card - with
+ * its form already filled in, so "replace this token" needs no retyping.
+ * Markup: `<button data-panel-open="<panel id>" data-panel-fill-<field>="value">`;
+ * each data-panel-fill-* sets the panel's control named <field> and tells it
+ * it changed, so fields that depend on it (ShowWhen) follow. Without the
+ * script the control does nothing, and the page's own button still opens the
+ * panel empty.
+ *
+ * @extends {Component<{}>}
+ */
+export class PanelOpen extends Component {
+  static attribute = "panel-open";
+
+  init() {
+    this.el.addEventListener("click", (e) => {
+      e.preventDefault();
+      const panel = document.getElementById(this.el.dataset.panelOpen ?? "");
+      const Offcanvas = /** @type {any} */ (window).tabler?.Offcanvas;
+      if (!panel || !Offcanvas) {
+        return;
+      }
+      this.fill(panel);
+      Offcanvas.getOrCreateInstance(panel).show();
+    });
+    return this;
+  }
+
+  /** Sets each named control in panel from this element's data-panel-fill-*. @param {HTMLElement} panel */
+  fill(panel) {
+    for (const [key, value] of Object.entries(this.el.dataset)) {
+      if (!key.startsWith("panelFill") || value === undefined) {
+        continue;
+      }
+      const name = key.slice("panelFill".length).replace(/^./, (c) => c.toLowerCase());
+      const control = panel.querySelector(`[name="${CSS.escape(name)}"]`);
+      if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement) {
+        control.value = value;
+        control.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
+    return this;
+  }
+}

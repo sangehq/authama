@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/core/manifest"
@@ -66,6 +67,7 @@ var actionFields = map[string][]string{
 	"token-set":         {"target", "service", "server", "username", "scope", "docker_mode", "secret_ref"},
 	"token-init":        {"t_composer", "t_npm", "t_docker", "t_git", "t_netrc"},
 	"token-import":      {},
+	"token-config-edit": {"body"},
 }
 
 // nameRe is what a profile, alias or key name may be on the web: the
@@ -425,6 +427,19 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 			}
 		}
 		ch = change.TokenInit(targets)
+	case "token-config-edit":
+		body := f.Get("body")
+		switch {
+		case !utf8.ValidString(body):
+			errs = append(errs, badForm("the token config is not UTF-8 text"))
+		case strings.ContainsFunc(body, func(r rune) bool { return (r < 0x20 && r != '\n' && r != '\r' && r != '\t') || r == 0x7f }):
+			errs = append(errs, badForm("the token config holds a control character"))
+		default:
+			if err := tokens.CheckNamesOnly(body); err != nil {
+				errs = append(errs, badForm("%s", err.Error()))
+			}
+		}
+		ch = change.TokenConfigEdit(body)
 	case "token-import":
 		ch = change.TokenImport()
 	}

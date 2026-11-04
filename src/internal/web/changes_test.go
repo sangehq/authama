@@ -296,6 +296,13 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 			}
 		}
 	}
+	// The editor is offered for a tokens.json that exists, which init is not.
+	if err := os.WriteFile(p.Tokens(), []byte(tokens.AllTargetsTemplate()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range action.FindAllStringSubmatch(c.get("/tokens").Body.String(), -1) {
+		seen[m[1]] = true
+	}
 	for want := range jobFields {
 		if !seen[want] {
 			t.Errorf("no page offers the %s job", want)

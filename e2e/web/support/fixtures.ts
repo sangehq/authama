@@ -57,6 +57,15 @@ export const test = base.extend<{ problems: string[] }>({
       }
     });
     page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+    // The tour starts by itself on a browser's first overview; every spec but
+    // the tour's own starts as a returning user, so it never covers a control.
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.setItem('authama.tour', 'seen');
+      } catch {
+        // no storage: the tour never starts by itself anyway
+      }
+    });
     page.on('requestfailed', (r) => {
       // A reload during a live job aborts its event stream; that is the page working.
       if (!r.url().endsWith('/events')) problems.push(`requestfailed: ${r.url()} ${r.failure()?.errorText}`);

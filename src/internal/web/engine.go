@@ -1,6 +1,8 @@
 package web
 
 import (
+	"encoding/base64"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"os"
@@ -114,8 +116,10 @@ type HostView struct {
 // KeyView is one key: its row, its detail, and its expiry.
 type KeyView struct {
 	Detail keysvc.Detail
-	Expiry *expiry.Status
-	Ops    []history.Op
+	// PublicKey is the key's public key line, "" when there is none to show.
+	PublicKey string
+	Expiry    *expiry.Status
+	Ops       []history.Op
 }
 
 // SnapshotView is one snapshot in the list.
@@ -311,6 +315,10 @@ type KeysView struct {
 	Rows     []keysvc.Row
 	Reserved []keyaudit.Reserved
 	Loose    []keyaudit.LooseKey
+	// Public is each key's public key line, by its ref, for the copy action:
+	// only a line that is a public key, so a mislabelled file never reaches
+	// the page.
+	Public map[string]string
 }
 
 // Keys lists every key, as `authama ssh key list` does.
@@ -323,7 +331,12 @@ func (e AppEngine) Keys() (KeysView, error) {
 	if err != nil {
 		return KeysView{}, err
 	}
-	v := KeysView{Rows: rows}
+	v := KeysView{Rows: rows, Public: map[string]string{}}
+	for _, r := range rows {
+		if pub := publicKeyLine(r.PublicPath); pub != "" {
+			v.Public[r.Ref.String()] = pub
+		}
+	}
 	v.Reserved, v.Loose = e.reservedAndLoose(m)
 	return v, nil
 }
@@ -364,7 +377,7 @@ func (e AppEngine) Key(ref string) (KeyView, error) {
 		if err != nil {
 			return KeyView{}, err
 		}
-		v := KeyView{Detail: d}
+		v := KeyView{Detail: d, PublicKey: publicKeyLine(d.PublicPath)}
 		if states, err := notifier.New(e.P, m).States(time.Now()); err == nil {
 			for i := range states {
 				if states[i].Profile == r.Profile && states[i].KeyName == r.KeyName {
@@ -634,6 +647,10 @@ type TokensView struct {
 	// services the token form offers (those taking one secret).
 	Targets  []string
 	Services []TokenService
+	// ConfigText is the config home's tokens.json, for the editor, when it
+	// holds variable names only; ConfigRefused says why it is not shown
+	// otherwise. A file that holds a value never reaches a page.
+	ConfigText, ConfigRefused string
 }
 
 // TokenService is a Composer service and the kind of secret it takes.
@@ -660,6 +677,9 @@ func (e AppEngine) Tokens() (TokensView, error) {
 	}
 	_, err := os.Stat(e.P.Tokens())
 	v.HasConfig = err == nil
+	if v.HasConfig {
+		v.ConfigText, v.ConfigRefused = editableTokenConfig(e.P.Tokens())
+	}
 	for _, t := range tokens.Targets() {
 		if t != tokens.Composer {
 			v.Targets = append(v.Targets, t)
@@ -672,4 +692,73 @@ func (e AppEngine) Tokens() (TokensView, error) {
 	}
 	sort.Slice(v.Services, func(i, j int) bool { return v.Services[i].Name < v.Services[j].Name })
 	return v, nil
+}
+
+// editableTokenConfig reads a tokens.json for the editor: its text when it
+// holds names only, or why it is not shown.
+func editableTokenConfig(path string) (text, refused string) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return "", err.Error()
+	}
+	if fi.Size() > tokens.MaxConfigBytes {
+		return "", "it is larger than the editor accepts"
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return "", err.Error()
+	}
+	if err := tokens.CheckNamesOnly(string(b)); err != nil {
+		return "", err.Error()
+	}
+	return string(b), ""
+}
+
+// publicKeyLine reads an OpenSSH public key file for the page: its one line,
+// when that line is a public key - a known type, base64, an optional comment -
+// and "" otherwise. A .pub that holds a private key, or anything else, is
+// never shown.
+func publicKeyLine(path string) string {
+	if path == "" {
+		return ""
+	}
+	fi, err := os.Stat(path)
+	if err != nil || !fi.Mode().IsRegular() || fi.Size() > 16<<10 {
+		return ""
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	line := strings.TrimSpace(string(b))
+	if strings.ContainsAny(line, "\n\r") || strings.Contains(line, "PRIVATE KEY") {
+		return ""
+	}
+	if !isPublicKeyLine(line) {
+		return ""
+	}
+	return line
+}
+
+// publicKeyTypes are the OpenSSH public key algorithms a .pub can name.
+var publicKeyTypes = map[string]bool{
+	"ssh-ed25519": true, "ssh-rsa": true, "ssh-dss": true,
+	"ecdsa-sha2-nistp256": true, "ecdsa-sha2-nistp384": true, "ecdsa-sha2-nistp521": true,
+	"sk-ssh-ed25519@openssh.com": true, "sk-ecdsa-sha2-nistp256@openssh.com": true,
+}
+
+// isPublicKeyLine reports whether line is "<type> <base64> [comment]" with a
+// known type whose blob, decoded, names that same type: the wire format's
+// first field is the algorithm, as a length-prefixed string.
+func isPublicKeyLine(line string) bool {
+	f := strings.Fields(line)
+	if len(f) < 2 || !publicKeyTypes[f[0]] {
+		return false
+	}
+	blob, err := base64.StdEncoding.DecodeString(f[1])
+	if err != nil || len(blob) < 4 {
+		return false
+	}
+	n := int(binary.BigEndian.Uint32(blob))
+	return n == len(f[0]) && len(blob) >= 4+n && string(blob[4:4+n]) == f[0]
 }
