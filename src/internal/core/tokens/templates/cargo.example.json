@@ -1,0 +1,7 @@
+{
+  "_help": "Cargo's credentials.toml ($CARGO_HOME, default ~/.cargo). Each host is a registry: crates.io ([registry]) or the name a .cargo/config.toml gives an alternate registry ([registries.NAME]). Each uses 'env'. This file stores ENV VAR NAMES, not secrets. Writes MERGE into an existing credentials.toml, keeping every other table.",
+  "cargo": {
+    "crates.io": { "env": "CARGO_REGISTRY_TOKEN" },
+    "acme": { "env": "ACME_CARGO_TOKEN" }
+  }
+}

@@ -118,9 +118,13 @@ func UseCatalog(text string) error {
 		return fmt.Errorf("token catalog: no targets")
 	}
 	known := map[string]bool{Composer: true, NPM: true, Docker: true, Git: true, Netrc: true}
+	names := []string{Composer, NPM, Docker, Git, Netrc}
+	for _, t := range []string{PyPI, Cargo, Gem, Gradle} {
+		known[t], names = true, append(names, t)
+	}
 	for _, t := range c.Targets {
 		if !known[t] {
-			return fmt.Errorf("token catalog: unknown target %q (choose from composer, npm, docker, git, netrc)", t)
+			return fmt.Errorf("token catalog: unknown target %q (choose from %s)", t, strings.Join(names, ", "))
 		}
 	}
 	override.Store(c)

@@ -41,7 +41,7 @@ func (h Host) expandUser(p string) string {
 // PathOverrideVars are the variables the native tools read to relocate their
 // files. In dev mode the services layer hides them, so a sandboxed run can
 // never be redirected onto a real file.
-var PathOverrideVars = []string{"COMPOSER_HOME", "NPM_CONFIG_USERCONFIG", "DOCKER_CONFIG", "NETRC", "XDG_CONFIG_HOME", "APPDATA"}
+var PathOverrideVars = []string{"COMPOSER_HOME", "NPM_CONFIG_USERCONFIG", "DOCKER_CONFIG", "NETRC", "XDG_CONFIG_HOME", "APPDATA", "CARGO_HOME", "GRADLE_USER_HOME"}
 
 // TargetPath is where a target's file lives, found the way the native tool
 // finds it, honouring its own env overrides. project scopes composer and npm
@@ -87,6 +87,9 @@ func (h Host) TargetPath(target, project string) string {
 			return filepath.Join(h.Home, "_netrc")
 		}
 		return filepath.Join(h.Home, ".netrc")
+	}
+	if f, ok := formats[target]; ok {
+		return f.path(h)
 	}
 	return ""
 }

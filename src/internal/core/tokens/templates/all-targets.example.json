@@ -179,5 +179,37 @@
       "user_env": "API_USER",
       "pass_env": "API_TOKEN"
     }
+  },
+  "pypi": {
+    "upload.pypi.org": {
+      "user_env": "PYPI_USER",
+      "pass_env": "PYPI_TOKEN"
+    },
+    "test.pypi.org": {
+      "user_env": "TESTPYPI_USER",
+      "pass_env": "TESTPYPI_TOKEN"
+    }
+  },
+  "cargo": {
+    "crates.io": {
+      "env": "CARGO_REGISTRY_TOKEN"
+    },
+    "acme": {
+      "env": "ACME_CARGO_TOKEN"
+    }
+  },
+  "gem": {
+    "rubygems.org": {
+      "env": "RUBYGEMS_API_KEY"
+    },
+    "rubygems.pkg.github.com/acme": {
+      "env": "GH_PACKAGES_TOKEN"
+    }
+  },
+  "gradle": {
+    "acme": {
+      "user_env": "ACME_MAVEN_USER",
+      "pass_env": "ACME_MAVEN_TOKEN"
+    }
   }
 }

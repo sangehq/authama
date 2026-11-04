@@ -1,14 +1,18 @@
 {
   "_help": "Internal catalog for token management (ported from auth-token-manager) — the single source of truth for targets, the Composer service catalog, enterprise/cloud hosts, interactive providers, and config field requirements. Add a service or provider HERE (no code change needed). This is NOT your credentials config (that is tokens.json in the config home); this file ships with the package.",
 
-  "targets": ["composer", "npm", "docker", "git", "netrc"],
+  "targets": ["composer", "npm", "docker", "git", "netrc", "pypi", "cargo", "gem", "gradle"],
 
   "menu": [
     { "key": "composer", "label": "Composer — PHP packages (auth.json / COMPOSER_AUTH)" },
     { "key": "git",      "label": "Git — clone/push over HTTPS (git-credentials)" },
     { "key": "docker",   "label": "Docker — registry login (config.json)" },
     { "key": "npm",      "label": "npm — registry token (.npmrc)" },
-    { "key": "netrc",    "label": "netrc — generic machine login (.netrc)" }
+    { "key": "netrc",    "label": "netrc — generic machine login (.netrc; also pip, uv and Go)" },
+    { "key": "pypi",     "label": "PyPI — package uploads (.pypirc)" },
+    { "key": "cargo",    "label": "Cargo — Rust registries (credentials.toml)" },
+    { "key": "gem",      "label": "RubyGems — gem push (~/.gem/credentials)" },
+    { "key": "gradle",   "label": "Gradle — repository credentials (gradle.properties)" }
   ],
 
   "target_fields": {
@@ -21,7 +25,11 @@
     "npm":    { "token": ["env"] },
     "docker": { "basic": ["user_env", "pass_env"] },
     "git":    { "basic": ["user_env", "pass_env"] },
-    "netrc":  { "basic": ["user_env", "pass_env"] }
+    "netrc":  { "basic": ["user_env", "pass_env"] },
+    "pypi":     { "basic": ["user_env", "pass_env"] },
+    "cargo":    { "token": ["env"] },
+    "gem":      { "token": ["env"] },
+    "gradle":   { "basic": ["user_env", "pass_env"] }
   },
 
   "default_config": {

@@ -1,0 +1,7 @@
+{
+  "_help": "~/.pypirc, read by twine and other PyPI uploaders. Each host is an index's upload host: upload.pypi.org ([pypi]), test.pypi.org ([testpypi]) or a private index (its own section, with a repository URL). For a PyPI API token the user is __token__ and the token is the password. Installing (pip, uv) reads ~/.netrc instead: use the netrc target for a private index. This file stores ENV VAR NAMES, not secrets. Writes MERGE into an existing .pypirc, keeping every other section.",
+  "pypi": {
+    "upload.pypi.org": { "user_env": "PYPI_USER", "pass_env": "PYPI_TOKEN" },
+    "test.pypi.org": { "user_env": "TESTPYPI_USER", "pass_env": "TESTPYPI_TOKEN" }
+  }
+}

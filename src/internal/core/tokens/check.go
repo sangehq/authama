@@ -52,6 +52,10 @@ func Check(c Credential) error {
 		if strings.ContainsAny(c.Host, "@") {
 			return errors.New("git host cannot contain '@' (put the username in the username field)")
 		}
+	default:
+		if f, ok := formats[c.Target]; ok {
+			return f.check(c)
+		}
 	}
 	return nil
 }
