@@ -73,7 +73,7 @@ func TestABareRunHonoursDevRoot(t *testing.T) {
 func TestABareRunWithoutATerminalPrintsHelp(t *testing.T) {
 	editHome(t)
 	out := runBareRoot(t, false)
-	if printedURL.FindString(out) != "" || !strings.Contains(out, "Available Commands:") {
+	if printedURL.FindString(out) != "" || !strings.Contains(out, "COMMANDS") {
 		t.Fatalf("a bare run with no terminal should print help and serve nothing:\n%s", out)
 	}
 }
@@ -119,7 +119,7 @@ func TestEveryGroupAnswersHelp(t *testing.T) {
 		}
 		groups++
 		out := run(t, append(append([]string{}, path...), "help")...)
-		if !strings.Contains(out, "Usage:") || !strings.Contains(out, c.CommandPath()) {
+		if !strings.Contains(out, "SYNOPSIS") || !strings.Contains(out, c.CommandPath()) {
 			t.Errorf("`%s help` printed no help for the group:\n%s", c.CommandPath(), out)
 		}
 		for _, sub := range c.Commands() {

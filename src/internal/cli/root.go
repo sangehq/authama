@@ -40,8 +40,15 @@ const sshGroup = "ssh"
 
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:           brand.Command,
-		Short:         brand.Name + " - " + brand.Summary,
+		Use:   brand.Command,
+		Short: brand.Name + " - " + brand.Summary,
+		Long: brand.Name + " manages SSH keys, profiles, hosts and config, and the auth tokens package\n" +
+			"managers and git read, from one manifest in the config home.\n\n" +
+			"Run on its own, on a terminal, it opens the web UI on this machine, as\n" +
+			brand.Command + " serve does. Give it a command for the command line: " + brand.Command + " ssh for\n" +
+			"keys, profiles, hosts and config; " + brand.Command + " token (or auth) for auth tokens; " + brand.Command + " tui\n" +
+			"for the menu; and the commands below that serve both. Every group answers\n" +
+			"help <command>, and " + brand.Command + " man writes a manual page for every command.",
 		Version:       version.Version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -86,6 +93,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newTuiCmd())
 	root.AddCommand(newHistoryCmd())
 	root.AddCommand(newEventsCmd())
+	root.AddCommand(newManCmd())
 	root.AddCommand(newServeCmd())
 	root.AddCommand(newSettingsCmd())
 	// `ui` was serve's alias, one edit from `tui`: still accepted, never shown.
@@ -97,9 +105,12 @@ func newRootCmd() *cobra.Command {
 	// The two feature groups.
 	ssh := &cobra.Command{
 		Use:   sshGroup,
-		Short: "SSH keys, profiles, hosts, config and trust (every former top-level verb; the bare top-level spelling still works, hidden)",
-		Args:  cobra.ArbitraryArgs,
-		RunE:  groupHelp,
+		Short: "SSH keys, profiles, hosts, config and trust",
+		Long: "SSH keys, profiles, hosts, config and trust: everything authama does in ~/.ssh.\n\n" +
+			"Every verb here also answers at the top level, unlisted, as it did before the\n" +
+			"groups existed (" + brand.Command + " deploy is " + brand.Command + " ssh deploy), so older scripts keep working.",
+		Args: cobra.ArbitraryArgs,
+		RunE: groupHelp,
 	}
 	ssh.AddCommand(sshCommands()...)
 	root.AddCommand(ssh)
@@ -113,6 +124,7 @@ func newRootCmd() *cobra.Command {
 	}
 	applyExamples(root, "")
 	addGroupHelp(root)
+	applyManStyle(root)
 	recordCommands(root)
 	return root
 }

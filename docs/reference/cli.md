@@ -24,6 +24,7 @@ Every command also takes the global flag:
 - [`authama history`](#authama-history) - List the changes authama has made, newest first
   - [`authama history show`](#authama-history-show) - Show one operation: its events and what it changed in the manifest
 - [`authama init`](#authama-init) - Create/converge the per-user home
+- [`authama man`](#authama-man) - Write a manual page (troff, section 1) for every command into DIR
 - [`authama migrate`](#authama-migrate) - Copy a pre-0.1.1 home (ssh-manager, sshmgr) into the authama home; the old one is kept and marked
 - [`authama serve`](#authama-serve) - Open the web UI on this machine
 - [`authama settings`](#authama-settings) - Your settings files (.env and authama.json): where they are, what is in effect, validate, create
@@ -31,7 +32,7 @@ Every command also takes the global flag:
   - [`authama settings path`](#authama-settings-path) - Print where the config home, state home, .env and authama.json are
   - [`authama settings show`](#authama-settings-show) - Print authama.json, or with --effective every setting's value and where it came from
   - [`authama settings validate`](#authama-settings-validate) - Check authama.json (or FILE) against the schema, and .env's syntax and permissions
-- [`authama ssh`](#authama-ssh) - SSH keys, profiles, hosts, config and trust (every former top-level verb; the bare top-level spelling still works, hidden)
+- [`authama ssh`](#authama-ssh) - SSH keys, profiles, hosts, config and trust
   - [`authama ssh audit`](#authama-ssh-audit) - Deployment, expiry, and hygiene report
   - [`authama ssh bundle`](#authama-ssh-bundle) - Write an encrypted backup of keys + state (read back with restore)
   - [`authama ssh clean`](#authama-ssh-clean) - Remove stale known_hosts pins, stale records and write residue
@@ -51,7 +52,7 @@ Every command also takes the global flag:
     - [`authama ssh host apply`](#authama-ssh-host-apply) - Add or update hosts from compact specs (one, many, or a file)
     - [`authama ssh host delete`](#authama-ssh-host-delete) - Delete a host, its config block and its pins
     - [`authama ssh host edit`](#authama-ssh-host-edit) - Edit a host
-  - [`authama ssh import`](#authama-ssh-import) - Onboard an existing ~/.ssh into the manifest
+  - [`authama ssh import`](#authama-ssh-import) - Onboard an existing ssh setup - a config file or any folder of them - into the manifest
   - [`authama ssh key`](#authama-ssh-key) - Manage a profile's keys (add/list/delete)
     - [`authama ssh key add`](#authama-ssh-key-add) - Declare a key on a profile and mint it
     - [`authama ssh key delete`](#authama-ssh-key-delete) - Delete a key (refuses while a host uses it)
@@ -246,6 +247,24 @@ Flags:
   -f, --force    overwrite manifest/inventory/.env with fresh defaults
 ```
 
+## authama man
+
+Writes one manual page per command, authama.1, authama-ssh.1, authama-ssh-deploy.1
+and so on, with the sections the help prints: NAME, SYNOPSIS, DESCRIPTION,
+COMMANDS, OPTIONS, EXAMPLES and SEE ALSO. DIR defaults to ./man; put it on
+MANPATH, or copy the pages into a man1 directory, to read them with man(1).
+
+```
+authama man [DIR]
+```
+
+Examples:
+
+```sh
+  authama man
+  authama man ~/.local/share/man/man1
+```
+
 ## authama migrate
 
 Copy a pre-0.1.1 home (ssh-manager, sshmgr) into the authama home; the old one is kept and marked.
@@ -414,7 +433,10 @@ Examples:
 
 ## authama ssh
 
-SSH keys, profiles, hosts, config and trust (every former top-level verb; the bare top-level spelling still works, hidden).
+SSH keys, profiles, hosts, config and trust: everything authama does in ~/.ssh.
+
+Every verb here also answers at the top level, unlisted, as it did before the
+groups existed (authama deploy is authama ssh deploy), so older scripts keep working.
 
 ```
 authama ssh
@@ -431,7 +453,7 @@ Subcommands:
 - [`expiry`](#authama-ssh-expiry) - Per-key rotation-age table
 - [`git`](#authama-ssh-git) - Show or switch checkouts' GitHub remotes between profile SSH, plain SSH and HTTPS
 - [`host`](#authama-ssh-host) - Manage a host within a profile (add/edit/delete/apply)
-- [`import`](#authama-ssh-import) - Onboard an existing ~/.ssh into the manifest
+- [`import`](#authama-ssh-import) - Onboard an existing ssh setup - a config file or any folder of them - into the manifest
 - [`key`](#authama-ssh-key) - Manage a profile's keys (add/list/delete)
 - [`keygen`](#authama-ssh-keygen) - Generate a profile's or host's keys
 - [`knownhosts`](#authama-ssh-knownhosts) - Pin host keys into the single ~/.ssh/known_hosts trust store
@@ -837,6 +859,8 @@ and nothing tracks it any more.
 authama ssh host delete <profile> <alias> [flags]
 ```
 
+Aliases: `rm`
+
 Examples:
 
 ```sh
@@ -884,10 +908,23 @@ Flags:
 
 ## authama ssh import
 
-Onboard an existing ~/.ssh into the manifest.
+Reads an ssh setup into the manifest and inventory, replacing them (a non-empty
+manifest needs --force, and both are backed up first). PATH defaults to
+~/.ssh/config and may be a config file or a folder:
+
+  a folder with a config file    that file, whose Includes pull in the rest
+                                 (config.d/, profiles/<name>/config, …)
+  a folder with ssh/config       that file, for a config home such as ~/.config
+  any other folder               every file named config or ending .conf, up to
+                                 four levels down, read in path order
+
+Relative Includes resolve against the folder, as ssh resolves them against
+~/.ssh. Importing another machine's copy of ~/.ssh, an IdentityFile under
+~/.ssh/ is looked for in that copy, and its keys are adopted into the
+profiles/ layout here.
 
 ```
-authama ssh import [path] [flags]
+authama ssh import [PATH] [flags]
 ```
 
 Examples:
@@ -895,6 +932,7 @@ Examples:
 ```sh
   authama ssh import --dry-run
   authama ssh import ~/old-laptop/.ssh --yes
+  authama ssh import ~/.config --dry-run
 ```
 
 Flags:
@@ -962,6 +1000,8 @@ and the key files stay on disk, so an accidental delete costs nothing.
 authama ssh key delete <profile/key> [flags]
 ```
 
+Aliases: `rm`
+
 Examples:
 
 ```sh
@@ -985,6 +1025,8 @@ Every key with its fingerprint, expiry, hosts and state.
 ```
 authama ssh key list [profile|alias|key]
 ```
+
+Aliases: `ls`
 
 Examples:
 
@@ -1171,6 +1213,8 @@ Filterable tree across profiles.
 authama ssh list [flags]
 ```
 
+Aliases: `ls`
+
 Examples:
 
 ```sh
@@ -1315,6 +1359,8 @@ encrypted backup.
 ```
 authama ssh profile delete <name> [flags]
 ```
+
+Aliases: `rm`
 
 Examples:
 
@@ -1533,6 +1579,8 @@ List local ~/.ssh snapshots (oldest -> newest).
 ```
 authama ssh snapshots list
 ```
+
+Aliases: `ls`
 
 Examples:
 
@@ -1789,6 +1837,8 @@ List every hypervisor's VMs, and which manifest host uses each.
 authama ssh vm list
 ```
 
+Aliases: `ls`
+
 Examples:
 
 ```sh
@@ -1954,6 +2004,8 @@ one it goes ahead, as every other delete does.
 authama token delete TARGET HOST [flags]
 ```
 
+Aliases: `rm`
+
 Examples:
 
 ```sh
@@ -2048,6 +2100,8 @@ List the tokens installed in the credential files (secrets masked).
 ```
 authama token list [flags]
 ```
+
+Aliases: `ls`
 
 Examples:
 

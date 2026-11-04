@@ -41,7 +41,7 @@ LDFLAGS := -s -w -X github.com/simtabi/authama/src/internal/version.Version=$(VE
 GO      := go -C $(MODULE)
 
 .PHONY: help build build-all test vet fmt fmt-check lint lint-all ci check ci-linux e2e e2e-web feature-check docker-shell docker-run docker-down \
-        cross dist clean doctor reconcile render rotate bundle settings generate tabler-check tabler-update tabler-vendor
+        cross dist clean doctor reconcile render rotate bundle settings generate tabler-check tabler-update tabler-vendor man
 
 help:  ## list targets
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | sed -E 's/:.*## /\t/' | sort
@@ -204,6 +204,9 @@ tabler-check: ## say whether a newer Tabler or Tabler Icons release is out (writ
 
 tabler-update: ## move the web UI to the newest Tabler + Tabler Icons; re-vendor, notices, hashes
 	go -C $(MODULE) run ./internal/tools/tablervendor -latest -root ..
+
+man: build ## write a manual page for every command into build/man (read them with man -M build/man authama)
+	./$(BIN) man build/man
 
 tabler-vendor: ## re-vendor exactly what src/internal/web/assets/vendor/TABLER_VERSION pins
 	go -C $(MODULE) run ./internal/tools/tablervendor -root ..

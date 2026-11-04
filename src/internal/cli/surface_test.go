@@ -91,6 +91,8 @@ var v1Dropped = map[string]string{
 // deviation that authorises it. An entry here is a decision someone made; an
 // addition without one is a test failure.
 var goOnly = map[string]string{
+	"events":     "D1 - every change seen to a tracked file under ~/.ssh, the config home or a token file",
+	"man":        "D1 - the help of every command as section-1 manual pages",
 	"key":        "D1 - key add/list/delete, the dangling-key lifecycle v1 had no verb for",
 	"key add":    "D1",
 	"key list":   "D1",

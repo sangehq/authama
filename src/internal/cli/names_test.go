@@ -45,6 +45,8 @@ var prefixPairs = map[string]string{
 // here, with the meaning, or renamed.
 var sharedVerbs = map[string]string{
 	"list":      "print the items of a kind, one line each (ssh list / key list / vm list / token list)",
+	"ls":        "the Unix alias of every list, meaning exactly what list does",
+	"rm":        "the Unix alias of every delete, meaning exactly what delete does",
 	"show":      "everything about one named item (ssh show / config show / token show)",
 	"delete":    "remove one named item (host, profile, key, token), asking first at a terminal",
 	"apply":     "add or update items from a declarative source (host specs / the token config)",
