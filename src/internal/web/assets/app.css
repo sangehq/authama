@@ -126,3 +126,8 @@ main:focus { outline: none; }
    runs as, kept on one line so it never pushes the menu around. */
 .session-strip { white-space: nowrap; }
 .session-strip .icon { width: 1rem; height: 1rem; }
+
+/* The palette's keyboard hint inside the header button: Tabler's kbd grey is
+   4.08:1 there in the light theme. */
+.btn kbd { color: #333; background: #e6e6e6; }
+:root[data-bs-theme=dark] .btn kbd { color: #e6e6e6; background: #333; }

@@ -244,7 +244,8 @@ func funcs(a *assetSet) template.FuncMap {
 		"confirm": func(id, form, title, text, label string) confirmModal {
 			return confirmModal{ID: id, Form: form, Title: title, Text: text, Label: label}
 		},
-		"withPurge": func(m confirmModal) confirmModal { m.Purge = true; return m },
+		"withPurge":    func(m confirmModal) confirmModal { m.Purge = true; return m },
+		"paletteItems": paletteItems,
 		"stat": func(label string, count int, href, icon, colour string) stat {
 			return stat{Label: label, Count: count, Href: href, Icon: icon, Colour: colour}
 		},
@@ -465,4 +466,44 @@ func (s *Server) serveAsset(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	_, _ = w.Write(body)
+}
+
+// paletteItem is one entry of the command palette.
+type paletteItem struct{ ID, Label, Href, Icon, Group, Keywords string }
+
+// paletteItems is what the command palette lists: every page, the forms that
+// open in a panel (not in read-only mode), and the downloads.
+func paletteItems(readOnly bool) []paletteItem {
+	items := []paletteItem{
+		{"overview", "Overview", "/", "layout-dashboard", "Page", "home dashboard state"},
+		{"profiles", "Profiles", "/profiles", "users", "SSH", "profile category key scope"},
+		{"hosts", "Hosts", "/hosts", "server", "SSH", "host alias hostname"},
+		{"sshconfig", "SSH config", "/ssh-config", "file-code", "SSH", "config render drift check"},
+		{"keys", "Keys", "/keys", "key", "SSH", "key fingerprint expiry reserve"},
+		{"vms", "VMs", "/vms", "device-desktop", "SSH", "vm hypervisor devbox sync"},
+		{"snapshots", "Snapshots", "/snapshots", "archive", "SSH", "snapshot bundle backup restore"},
+		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Auth", "token npm composer docker git netrc"},
+		{"history", "History", "/history", "history", "System", "history operations changes log"},
+		{"events", "Events", "/events", "activity", "System", "events file changes tracking"},
+		{"doctor", "Doctor", "/doctor", "stethoscope", "System", "doctor checks fix"},
+		{"audit", "Audit", "/audit", "shield-check", "System", "audit key age"},
+		{"settings", "Settings", "/settings", "settings", "System", "settings theme appearance env"},
+		{"about", "About", "/about", "info-circle", "System", "about version licences"},
+	}
+	if !readOnly {
+		items = append(items,
+			paletteItem{"add-profile", "Add a profile", "/profiles#add-profile", "plus", "Action", "new create profile"},
+			paletteItem{"add-host", "Add a host", "/hosts#add-host", "plus", "Action", "new create host"},
+			paletteItem{"add-token", "Add or replace a token", "/tokens#add-token", "plus", "Action", "new set rotate token secret"},
+		)
+	}
+	return append(items,
+		paletteItem{"export-config", "Download ssh_config, every host inline", "/exports/ssh_config", "download", "Export", "export flat ssh_config"},
+		paletteItem{"export-termius", "Download the Termius CSV", "/exports/termius-hosts.csv", "download", "Export", "export termius csv"},
+		paletteItem{"export-hosts", "Download the hosts as CSV", "/exports/hosts.csv", "download", "Export", "export csv hosts spreadsheet"},
+		paletteItem{"export-keys", "Download the keys as CSV", "/exports/keys.csv", "download", "Export", "export csv keys spreadsheet"},
+		paletteItem{"export-tokens", "Download the installed tokens as CSV", "/exports/tokens.csv", "download", "Export", "export csv tokens spreadsheet"},
+		paletteItem{"export-history", "Download the history as CSV", "/exports/history.csv", "download", "Export", "export csv history operations"},
+		paletteItem{"export-events", "Download the file events as CSV", "/exports/events.csv", "download", "Export", "export csv events audit"},
+	)
 }

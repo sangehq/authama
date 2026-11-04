@@ -6,5 +6,13 @@
 import { App } from "./js/core/app.js";
 import { DataTable } from "./js/components/data-table.js";
 import { AutoSubmit, ConfirmAction, JobStream } from "./js/components/behaviours.js";
+import { CommandPalette, PanelFromHash } from "./js/components/palette.js";
 
-App.create().use(DataTable).use(ConfirmAction).use(AutoSubmit).use(JobStream).start();
+App.create()
+  .use(DataTable)
+  .use(ConfirmAction)
+  .use(AutoSubmit)
+  .use(JobStream)
+  .use(PanelFromHash)
+  .use(CommandPalette)
+  .start();

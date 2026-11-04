@@ -21,7 +21,7 @@
 {{/* A Tabler slide-in panel from the right, holding one form. The page writes
      `{{template "panel_open" (header "" "Title" "")}}`-style markup itself;
      this pair just frames it. */}}
-{{define "panel_open"}}<div class="offcanvas offcanvas-end" tabindex="-1" id="{{.Pretitle}}" aria-labelledby="{{.Pretitle}}-title">
+{{define "panel_open"}}<div class="offcanvas offcanvas-end" tabindex="-1" id="{{.Pretitle}}" aria-labelledby="{{.Pretitle}}-title" data-panel-from-hash>
   <div class="offcanvas-header">
     <h2 class="offcanvas-title" id="{{.Pretitle}}-title">{{.Title}}</h2>
     <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>

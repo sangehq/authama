@@ -6,6 +6,7 @@ activity
 alert-circle
 alert-triangle
 archive
+arrow-back-up
 arrow-left
 bell
 brand-github
@@ -28,6 +29,7 @@ moon
 pencil
 plus
 refresh
+search
 server
 settings
 shield-check
@@ -37,4 +39,3 @@ terminal-2
 trash
 users
 x
-arrow-back-up

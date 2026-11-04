@@ -105,3 +105,19 @@ test('an unknown page is a 404 with the error page', async ({ page }) => {
   expect(res?.status()).toBe(404);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Not found');
 });
+
+test('the command palette opens with Ctrl+K and goes where you type', async ({ page }) => {
+  await page.goto('/');
+  await page.keyboard.press('Control+k');
+  const input = page.getByRole('combobox', { name: 'Go to a page or an action' });
+  await expect(input).toBeFocused();
+  await input.fill('auth tokens');
+  await input.press('Enter');
+  await expect(page).toHaveURL(/\/tokens$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Auth tokens');
+});
+
+test('a link to a form in a panel opens the panel', async ({ page }) => {
+  await page.goto('/hosts#add-host');
+  await expect(page.locator('form', { has: page.locator('input[name="action"][value="host-add"]') })).toBeVisible();
+});
