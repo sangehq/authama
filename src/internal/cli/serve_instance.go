@@ -27,6 +27,8 @@ type serveRecord struct {
 	ReadOnly bool      `json:"read_only"`
 	Version  string    `json:"version"`
 	Started  time.Time `json:"started"`
+	// BasePath is the path it serves under (web.base_path), "" at the root.
+	BasePath string `json:"base_path,omitempty"`
 }
 
 func serveRecordPath(p paths.Paths) string { return filepath.Join(p.StateDir(), "serve.json") }
@@ -72,7 +74,7 @@ var healthClient = &http.Client{Timeout: time.Second}
 // The instance id, not the pid or the port, is what proves it: a pid can be
 // reused and a port can be taken by something else once the server is gone.
 func (r *serveRecord) checkAlive() bool {
-	resp, err := healthClient.Get("http://" + r.Addr + "/healthz")
+	resp, err := healthClient.Get("http://" + r.Addr + r.BasePath + "/healthz")
 	if err != nil {
 		return false
 	}

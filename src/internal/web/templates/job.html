@@ -9,7 +9,7 @@
   {{else if eq .State "done"}}<span class="badge badge-ok">done</span>
   {{else if eq .State "cancelled"}}<span class="badge badge-warn">cancelled</span>
   {{else}}<span class="badge badge-bad">failed</span>{{end}}
-  {{if .OpID}}<a class="ms-2" href="/history/{{.OpID}}" data-inline>{{icon "history"}}<span class="ms-1">In the history</span></a>{{end}}
+  {{if .OpID}}<a class="ms-2" href="{{basePath}}/history/{{.OpID}}" data-inline>{{icon "history"}}<span class="ms-1">In the history</span></a>{{end}}
 </div>
 {{with .Question}}
 <div class="card mb-3 border-warning">
@@ -17,8 +17,8 @@
     <p>{{.Prompt}}</p>
     {{if .Text}}<pre class="code-block" tabindex="0">{{.Text}}</pre>{{end}}
     <div class="d-flex gap-2">
-      <form method="post" action="/jobs/{{$.Data.ID}}/answer"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="answer" value="yes"><button type="submit" class="btn btn-primary">Done, carry on</button></form>
-      <form method="post" action="/jobs/{{$.Data.ID}}/answer"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="answer" value="no"><button type="submit" class="btn btn-outline-secondary">Not done, stop here</button></form>
+      <form method="post" action="{{basePath}}/jobs/{{$.Data.ID}}/answer"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="answer" value="yes"><button type="submit" class="btn btn-primary">Done, carry on</button></form>
+      <form method="post" action="{{basePath}}/jobs/{{$.Data.ID}}/answer"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="answer" value="no"><button type="submit" class="btn btn-outline-secondary">Not done, stop here</button></form>
     </div>
   </div>
 </div>
@@ -26,11 +26,11 @@
 {{if .Err}}<div class="alert {{if eq .State "cancelled"}}alert-warning{{else}}alert-danger{{end}}" role="alert">{{.Err}}</div>{{end}}
 <div class="card mb-3">
   <div class="card-header"><h2 class="card-title">Output</h2></div>
-  <div class="card-body"><pre class="code-block" id="job-log" tabindex="0" aria-live="polite" data-job-stream data-job-stream-events="/jobs/{{.ID}}/events" data-job-stream-state="#job-state">{{range .Lines}}{{.}}
+  <div class="card-body"><pre class="code-block" id="job-log" tabindex="0" aria-live="polite" data-job-stream data-job-stream-events="{{basePath}}/jobs/{{.ID}}/events" data-job-stream-state="#job-state">{{range .Lines}}{{.}}
 {{end}}</pre></div>
 </div>
 {{if or (eq .State "running") (eq .State "waiting")}}
-<form method="post" action="/jobs/{{.ID}}/cancel"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="btn btn-outline-danger">Cancel at the next step</button></form>
+<form method="post" action="{{basePath}}/jobs/{{.ID}}/cancel"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="btn btn-outline-danger">Cancel at the next step</button></form>
 <p class="text-secondary small mt-2">The page updates as the job runs. Without JavaScript, reload it.</p>
 {{end}}
 {{end}}{{end}}

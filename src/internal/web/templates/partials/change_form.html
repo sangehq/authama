@@ -1,2 +1,2 @@
-{{define "change_open"}}<form method="post" action="/changes/preview" data-inline><input type="hidden" name="csrf" value="{{.CSRF}}">{{end}}
-{{define "job_open"}}<form method="post" action="/jobs/review" data-inline><input type="hidden" name="csrf" value="{{.CSRF}}">{{end}}
+{{define "change_open"}}<form method="post" action="{{basePath}}/changes/preview" data-inline><input type="hidden" name="csrf" value="{{.CSRF}}">{{end}}
+{{define "job_open"}}<form method="post" action="{{basePath}}/jobs/review" data-inline><input type="hidden" name="csrf" value="{{.CSRF}}">{{end}}

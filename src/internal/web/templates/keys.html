@@ -10,23 +10,23 @@
       <tbody>
         {{range .Data.Rows}}
         <tr>
-          <th scope="row"><a href="/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}"><code>{{.Ref}}</code></a></th>
+          <th scope="row"><a href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}"><code>{{.Ref}}</code></a></th>
           <td>{{.Type}}</td>
           <td class="text-break"><code>{{orDash .Fingerprint}}</code></td>
           <td class="text-nowrap">{{orDash .ExpiresOn}}</td>
           <td>{{orDash (join .Hosts ", ")}}</td>
           <td>{{if .Vault}}1Password <span class="text-secondary">({{.Vault}})</span>{{else if .PrivateOnDisk}}<span class="badge badge-ok">yes</span>{{else}}<span class="badge badge-warn">not minted</span>{{end}}</td>
           <td class="text-end">
-            {{if and (not $.ReadOnly) .Declared (not .Hosts)}}<form method="post" action="/changes/preview" data-inline id="f-key-{{.Ref.Profile}}-{{.Ref.KeyName}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="key-delete"><input type="hidden" name="profile" value="{{.Ref.Profile}}"><input type="hidden" name="key" value="{{.Ref.KeyName}}"></form>{{end}}
+            {{if and (not $.ReadOnly) .Declared (not .Hosts)}}<form method="post" action="{{basePath}}/changes/preview" data-inline id="f-key-{{.Ref.Profile}}-{{.Ref.KeyName}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="key-delete"><input type="hidden" name="profile" value="{{.Ref.Profile}}"><input type="hidden" name="key" value="{{.Ref.KeyName}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for key %s" .Ref)}}
-              <a class="dropdown-item" href="/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}" data-inline>{{icon "external-link"}}<span class="ms-2">Open</span></a>
+              <a class="dropdown-item" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}" data-inline>{{icon "external-link"}}<span class="ms-2">Open</span></a>
               {{with index $.Data.Public .Ref.String}}<button type="button" class="dropdown-item" data-copy="{{.}}">{{icon "copy"}}<span class="ms-2">Copy the public key</span></button>{{end}}
               {{if .Fingerprint}}<button type="button" class="dropdown-item" data-copy="{{.Fingerprint}}">{{icon "fingerprint"}}<span class="ms-2">Copy the fingerprint</span></button>{{end}}
               <button type="button" class="dropdown-item" data-copy="{{.IdentityFile}}">{{icon "copy"}}<span class="ms-2">Copy the identity file's path</span></button>
-              <a class="dropdown-item" href="/history?key={{.Ref.KeyName}}&amp;profile={{.Ref.Profile}}" data-inline>{{icon "history"}}<span class="ms-2">History</span></a>
-              {{if not $.ReadOnly}}<a class="dropdown-item" href="/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}#lifetime"{{tip "key-lifetime"}}>{{icon "hourglass"}}<span class="ms-2">Set lifetime</span></a>
-              {{if not $.DevRoot}}<a class="dropdown-item" href="/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}" data-inline>{{icon "recycle"}}<span class="ms-2">Rotate or roll back</span></a>
-              <a class="dropdown-item text-danger" href="/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}#revoke"{{tip "key-revoke"}}>{{icon "ban"}}<span class="ms-2">Revoke</span></a>{{end}}{{end}}
+              <a class="dropdown-item" href="{{basePath}}/history?key={{.Ref.KeyName}}&amp;profile={{.Ref.Profile}}" data-inline>{{icon "history"}}<span class="ms-2">History</span></a>
+              {{if not $.ReadOnly}}<a class="dropdown-item" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}#lifetime"{{tip "key-lifetime"}}>{{icon "hourglass"}}<span class="ms-2">Set lifetime</span></a>
+              {{if not $.DevRoot}}<a class="dropdown-item" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}" data-inline>{{icon "recycle"}}<span class="ms-2">Rotate or roll back</span></a>
+              <a class="dropdown-item text-danger" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}#revoke"{{tip "key-revoke"}}>{{icon "ban"}}<span class="ms-2">Revoke</span></a>{{end}}{{end}}
               {{if and (not $.ReadOnly) .Declared (not .Hosts)}}<div class="dropdown-divider"></div>
               <button type="submit" class="dropdown-item text-danger" form="f-key-{{.Ref.Profile}}-{{.Ref.KeyName}}" data-confirm="m-key-{{.Ref.Profile}}-{{.Ref.KeyName}}"{{tip "delete"}}>{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
             {{template "menu_close"}}

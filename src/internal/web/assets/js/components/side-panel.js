@@ -8,6 +8,9 @@ const PANEL_HEADER = "X-Authama-Panel";
 /** Paths whose POST makes a real change: the page behind is reloaded when the panel closes. */
 const CHANGING = ["/changes/apply", "/jobs"];
 
+/** Whether pathname is one of CHANGING under the base path. @param {string} pathname */
+const changes = (pathname) => CHANGING.some((p) => pathname === Ui.path(p));
+
 /**
  * @typedef {{ url: string, title: string, node: Element }} PanelPage
  */
@@ -69,7 +72,7 @@ export class SidePanel extends Component {
 
   /** Whether a link stays on this server and is not a download. @param {HTMLAnchorElement} a */
   static local(a) {
-    return a.origin === window.location.origin && !a.hasAttribute("download") && !a.target && !a.pathname.startsWith("/assets/");
+    return a.origin === window.location.origin && !a.hasAttribute("download") && !a.target && !a.pathname.startsWith(Ui.path("/assets/"));
   }
 
   /** Opens url as a new page in the panel. @param {string} url */
@@ -93,7 +96,7 @@ export class SidePanel extends Component {
       action.search = new URLSearchParams(/** @type {any} */ (data)).toString();
       return this.open(action.href);
     }
-    if (CHANGING.includes(action.pathname)) {
+    if (changes(action.pathname)) {
       this.#changed = true;
     }
     this.#busy(form, true);

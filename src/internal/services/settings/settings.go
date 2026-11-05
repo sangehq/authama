@@ -99,6 +99,12 @@ var Specs = []Spec{
 		Doc: "Let `ssh vm sync` remove the host entry (never its key files) and Docker context of a VM its hypervisor no longer has. Off: sync only reports it."},
 	{Section: "vm", Name: "repin_changed", Env: envnames.VMRepin, Kind: KindBool, Default: "false",
 		Doc: "Let `ssh vm sync` replace a VM host's known_hosts pin when the guest's host key changed (a rebuilt VM), as `--repin` does. Off: sync reports it."},
+	{Section: "web", Name: "addr", Env: envnames.WebAddr, Kind: KindString, Default: "127.0.0.1",
+		Doc: "The address `serve` listens on. A non-loopback address still needs --allow-remote."},
+	{Section: "web", Name: "port", Env: envnames.WebPort, Kind: KindInt, Min: 1, Default: "7822",
+		Doc: "The port `serve` listens on first. When it is taken the next free one is used, as with the default; only --port makes a taken port an error."},
+	{Section: "web", Name: "base_path", Env: envnames.WebBasePath, Kind: KindString, Default: "/",
+		Doc: "A path the web UI is served under, such as /authama, so it can sit behind a reverse proxy beside other sites. Every link, form and redirect carries it."},
 }
 
 // Find returns the spec for a dotted key.

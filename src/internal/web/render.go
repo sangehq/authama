@@ -115,9 +115,18 @@ func pageNames() ([]string, error) {
 	return out, nil
 }
 
-func funcs(a *assetSet) template.FuncMap {
+func funcs(a *assetSet, basePath string) template.FuncMap {
 	return template.FuncMap{
-		"asset":  a.url,
+		"asset": func(name string) (string, error) {
+			u, err := a.url(name)
+			return basePath + u, err
+		},
+		// basePath is the path the UI is served under ("" at the root): every
+		// literal path in a template starts {{basePath}}/, which a test checks.
+		"basePath": func() string { return basePath },
+		// u puts the base path in front of a path built in Go ("/hosts/new")
+		// where a template writes it out.
+		"u":      func(p string) string { return prefixed(basePath, p) },
 		"sprite": func() template.HTML { return a.sprite },
 		"icon":   iconHTML,
 		// The product name and the command line for a recorded verb, from
@@ -372,8 +381,8 @@ func validIcon(name string) bool {
 	return true
 }
 
-func parsePages(a *assetSet) (*pageSet, error) {
-	base, err := template.New("layout.html").Funcs(funcs(a)).ParseFS(templateFS, "templates/layout.html", "templates/partials/*.html")
+func parsePages(a *assetSet, basePath string) (*pageSet, error) {
+	base, err := template.New("layout.html").Funcs(funcs(a, basePath)).ParseFS(templateFS, "templates/layout.html", "templates/partials/*.html")
 	if err != nil {
 		return nil, err
 	}

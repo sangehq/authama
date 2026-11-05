@@ -14,6 +14,21 @@ export class Ui {
     return /** @type {any} */ (window).tabler ?? /** @type {any} */ (window).bootstrap ?? null;
   }
 
+  /**
+   * The path the UI is served under (web.base_path), "" at the root, as the
+   * layout writes it on <html data-base>. Paths the script names itself go
+   * through Ui.path; a link's or form's own URL already carries it.
+   * @returns {string}
+   */
+  static base() {
+    return document.documentElement.dataset.base ?? "";
+  }
+
+  /** A path on this server under the base path: "/jobs" is "/authama/jobs". @param {string} p */
+  static path(p) {
+    return Ui.base() + p;
+  }
+
   /** The Offcanvas instance for el, or null without Tabler. @param {Element} el */
   static offcanvas(el) {
     return Ui.#lib?.Offcanvas?.getOrCreateInstance(el) ?? null;
