@@ -69,6 +69,7 @@ func FactoryReset(confirmed bool) Change {
 		OnApply: func(p paths.Paths, out io.Writer) error {
 			// The lock's file is inside the state home being moved; Windows
 			// will not rename a folder holding an open file.
+			mutation.FinishEarly()
 			mutation.Release()
 			plan, err := repair.FactoryReset(p, time.Now())
 			for _, mv := range plan.Moves {

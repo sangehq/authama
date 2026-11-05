@@ -16,6 +16,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/simtabi/authama/src/internal/core/inventory"
@@ -211,7 +212,9 @@ func (h Home) ssh() []Finding {
 
 func (h Home) tokens() []Finding {
 	var out []Finding
-	for _, t := range tokens.Targets() {
+	// Windows keeps these files private with ACLs, not mode bits: a mode read
+	// there says nothing about who can read the file.
+	for _, t := range tokenTargetsWithModes() {
 		path := h.Tokens.TargetPath(t, "")
 		fi, err := os.Stat(path)
 		if err != nil || fi.IsDir() {
@@ -250,4 +253,13 @@ func moveAside(path, to string) error {
 		}
 	}
 	return nil
+}
+
+// tokenTargetsWithModes is every token target whose file mode means
+// something on this platform: all of them, except on Windows.
+func tokenTargetsWithModes() []string {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	return tokens.Targets()
 }

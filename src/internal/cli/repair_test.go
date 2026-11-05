@@ -3,6 +3,7 @@ package cli
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -10,6 +11,9 @@ import (
 // repair --check lists a token file others can read and changes nothing;
 // repair --yes makes it owner-only, and a second check is clean.
 func TestRepairFindsThenFixes(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows protects token files with ACLs; repair checks no mode bits there")
+	}
 	p := editHome(t)
 	home := filepath.Dir(p.SSHDir)
 	npmrc := filepath.Join(home, ".npmrc")

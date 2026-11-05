@@ -285,3 +285,25 @@ func warn(err error) {
 	warned = true
 	_, _ = fmt.Fprintf(os.Stderr, brand.Command+": WARNING: the operation history was not recorded (%v); audit.log still was\n", err)
 }
+
+// FinishEarly records the current scope's operation as done now and closes the
+// history database, so nothing in the state home stays open. A factory reset
+// needs it: Windows will not rename a folder holding an open file, and the
+// database is inside the folder being moved. End then has nothing to record.
+func FinishEarly() {
+	recMu.Lock()
+	defer recMu.Unlock()
+	f := top()
+	if f == nil || f.op == nil || f.store == nil {
+		return
+	}
+	f.op.Result = history.ResultOK
+	f.op.ManifestAfter = putManifest(f.store, f.p.Manifest())
+	f.op.InventoryAfter = hashFile(f.p.Inventory())
+	if err := f.store.Finish(f.op); err != nil {
+		warn(err)
+	}
+	_ = f.store.Close()
+	f.op, f.store = nil, nil
+	f.seal = sealState{} // the home is going; nothing to reseal
+}

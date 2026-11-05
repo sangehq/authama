@@ -140,6 +140,7 @@ func newResetCmd() *cobra.Command {
 			// The lock is taken to be sure no other authama is mid-change, and
 			// let go before the move: its file is inside the state home.
 			mutation.LockForMutation(p)
+			mutation.FinishEarly()
 			mutation.Release()
 			if _, err := repair.FactoryReset(p, time.Now()); err != nil {
 				return err
