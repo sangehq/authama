@@ -18,7 +18,7 @@ type securityPage struct {
 	Files     []string
 }
 
-func (h pages) handleSecurity(w http.ResponseWriter, r *http.Request) {
+func (h ownerPages) handleSecurity(w http.ResponseWriter, r *http.Request) {
 	p := h.s.opts.Engine.Home()
 	bio, why := owner.BiometricAvailable()
 	var files []string
@@ -29,3 +29,7 @@ func (h pages) handleSecurity(w http.ResponseWriter, r *http.Request) {
 	h.s.render(w, http.StatusOK, "security", h.s.newView(r, "security", "Owner & PIN",
 		securityPage{State: owner.Verify(p), Biometric: bio, Why: why, Files: files}))
 }
+
+// ownerPages holds the pages about the home itself - its owner binding and
+// its repair - kept off pages so neither type grows into a facade.
+type ownerPages struct{ s *Server }

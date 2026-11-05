@@ -22,7 +22,7 @@ type repairPage struct {
 	Reset    repair.ResetPlan
 }
 
-func (h pages) handleRepair(w http.ResponseWriter, r *http.Request) {
+func (h ownerPages) handleRepair(w http.ResponseWriter, r *http.Request) {
 	p := h.s.opts.Engine.Home()
 	d := repairPage{Findings: repairHome(p).Check(), Reset: repair.PlanFactoryReset(p, h.s.now())}
 	for _, f := range d.Findings {
