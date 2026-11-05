@@ -33,6 +33,7 @@ import (
 	"github.com/simtabi/authama/src/internal/services/history"
 	"github.com/simtabi/authama/src/internal/services/mutation"
 	"github.com/simtabi/authama/src/internal/services/snapshots"
+	"github.com/simtabi/authama/src/internal/util/highlight"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
@@ -78,6 +79,10 @@ type FileDiff struct {
 	Path  string
 	State string // added | removed | changed
 	Lines []history.DiffLine
+	// Checked is set when the file's new content was validated (JSON, see
+	// util/highlight.Check), and Problem holds what failed, if anything.
+	Checked bool
+	Problem string
 }
 
 // Plan is a preview: what the change would write, what it would say, and a
@@ -361,9 +366,9 @@ func diffTrees(before, after map[string]string) []FileDiff {
 		case inA && !inB:
 			out = append(out, FileDiff{Path: n, State: "removed", Lines: history.Diff(a, "", 3)})
 		case !inA && inB:
-			out = append(out, FileDiff{Path: n, State: "added", Lines: history.Diff("", b, 3)})
+			out = append(out, withCheck(FileDiff{Path: n, State: "added", Lines: history.Diff("", b, 3)}, b))
 		case a != b:
-			out = append(out, FileDiff{Path: n, State: "changed", Lines: history.Diff(a, b, 3)})
+			out = append(out, withCheck(FileDiff{Path: n, State: "changed", Lines: history.Diff(a, b, 3)}, b))
 		}
 	}
 	return out
@@ -442,3 +447,9 @@ var (
 	volatileKeys         = regexp.MustCompile(`(ssh-ed25519|ssh-rsa|ecdsa-sha2-[a-z0-9]+|sk-[a-z0-9@.-]+) [A-Za-z0-9+/=]{16,}`)
 	volatileFingerprints = regexp.MustCompile(`SHA256:[A-Za-z0-9+/=]{20,}`)
 )
+
+// withCheck validates the file's new content, where its kind can be checked.
+func withCheck(d FileDiff, after string) FileDiff {
+	d.Checked, d.Problem = highlight.Check(highlight.For(d.Path), after)
+	return d
+}

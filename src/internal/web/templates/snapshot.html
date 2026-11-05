@@ -18,10 +18,7 @@
 </form>
 <p class="text-secondary">Lines marked <code>-</code> are in <code>{{.ID}}</code>; lines marked <code>+</code> are in {{if .Against}}<code>{{.Against}}</code>{{else}}<code>~/.ssh</code> now{{end}}.</p>
 {{range .Files}}
-<div class="card mb-3">
-  <div class="card-header"><h2 class="card-title"><code>{{.Path}}</code></h2><span class="ms-2 badge {{if eq .State "changed"}}badge-info{{else if eq .State "added"}}badge-ok{{else}}badge-bad{{end}}">{{.State}}</span></div>
-  <div class="card-body p-0">{{template "diff" .Lines}}</div>
-</div>
+{{template "file_diff" (fileDiff .Path .State .Lines .Checked .Problem)}}
 {{else}}<p>{{icon "circle-check"}}<span class="ms-1">No difference.</span></p>{{end}}
 {{if not $.ReadOnly}}
 <div class="card mt-3">

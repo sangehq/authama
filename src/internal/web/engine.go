@@ -30,6 +30,7 @@ import (
 	"github.com/simtabi/authama/src/internal/services/settings"
 	"github.com/simtabi/authama/src/internal/services/snapshots"
 	"github.com/simtabi/authama/src/internal/services/tokensvc"
+	"github.com/simtabi/authama/src/internal/util/highlight"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
@@ -146,6 +147,10 @@ type FileDiff struct {
 	Path  string
 	State string // added | removed | changed
 	Lines []history.DiffLine
+	// Checked is set when the file's new content was validated (JSON, see
+	// util/highlight.Check), and Problem holds what failed, if anything.
+	Checked bool
+	Problem string
 }
 
 // OpView is one operation and its manifest diff.
@@ -504,9 +509,9 @@ func diffTrees(old, cur map[string]string) []FileDiff {
 		case inOld && !inCur:
 			out = append(out, FileDiff{Path: n, State: "removed", Lines: history.Diff(a, "", 3)})
 		case !inOld && inCur:
-			out = append(out, FileDiff{Path: n, State: "added", Lines: history.Diff("", b, 3)})
+			out = append(out, withCheck(FileDiff{Path: n, State: "added", Lines: history.Diff("", b, 3)}, b))
 		case a != b:
-			out = append(out, FileDiff{Path: n, State: "changed", Lines: history.Diff(a, b, 3)})
+			out = append(out, withCheck(FileDiff{Path: n, State: "changed", Lines: history.Diff(a, b, 3)}, b))
 		}
 	}
 	return out
@@ -768,4 +773,10 @@ func isPublicKeyLine(line string) bool {
 	}
 	n := int(binary.BigEndian.Uint32(blob))
 	return n == len(f[0]) && len(blob) >= 4+n && string(blob[4:4+n]) == f[0]
+}
+
+// withCheck validates the file's new content, where its kind can be checked.
+func withCheck(d FileDiff, after string) FileDiff {
+	d.Checked, d.Problem = highlight.Check(highlight.For(d.Path), after)
+	return d
 }

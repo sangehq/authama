@@ -17,10 +17,7 @@
 {{if .Plan.Mints}}<div class="alert alert-info" role="note">{{icon "key"}}<span class="ms-1">The keys below were minted for this preview and thrown away. Confirming mints new ones, so their fingerprints will differ; everything else will be as shown.</span></div>{{end}}
 <h2 class="h3">What it would write</h2>
 {{range .Plan.Files}}
-<div class="card mb-3">
-  <div class="card-header"><h3 class="card-title"><code>{{.Path}}</code></h3><span class="ms-2 badge {{if eq .State "changed"}}badge-info{{else if eq .State "added"}}badge-ok{{else}}badge-bad{{end}}">{{.State}}</span></div>
-  <div class="card-body p-0">{{template "diff" .Lines}}</div>
-</div>
+{{template "file_diff" (fileDiff .Path .State .Lines .Checked .Problem)}}
 {{else}}<p>{{icon "circle-check"}}<span class="ms-1">Nothing: every file would stay as it is.</span></p>{{end}}
 <p class="text-secondary">{{if not .Plan.NoSnapshot}}authama snapshots <code>~/.ssh</code> before it writes, and records{{else}}authama records{{end}} the change in the history.</p>
 <form method="post" action="/changes/apply" class="d-flex gap-2">

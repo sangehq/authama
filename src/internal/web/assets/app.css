@@ -72,15 +72,41 @@ main:focus { outline: none; }
 :root[data-bs-theme=dark] .dev-banner { background: #3a2f16; color: #f2c46e; }
 .row-attention th, .row-attention td { background: color-mix(in srgb, var(--tblr-warning) 8%, transparent); }
 .code-block { white-space: pre; overflow: auto; max-height: 32rem; font-size: .8125rem; margin: 0; }
-.code-block:focus-visible, .diff:focus-visible { outline: 2px solid var(--tblr-primary); outline-offset: 2px; }
-.diff { margin: 0; padding: .5rem 0; font-size: .8125rem; overflow: auto; max-height: 40rem; }
-.diff-line { display: block; padding: 0 1rem; white-space: pre; }
+.code-block:focus-visible, .diff-wrap:focus-visible { outline: 2px solid var(--tblr-primary); outline-offset: 2px; }
+/* A diff is a table: old and new line numbers, then the line in its file's
+   syntax. Added and removed lines are tinted; the numbers never wrap or get
+   copied with the code. */
+.diff-wrap { overflow: auto; max-height: 40rem; }
+.diff { width: 100%; border-collapse: collapse; font-family: var(--tblr-font-monospace); font-size: .8125rem; line-height: 1.6; }
+.diff td { padding: 0 .75rem; vertical-align: top; border: 0; }
+.diff-num { width: 1%; min-width: 3rem; text-align: right; color: var(--tblr-secondary); user-select: none; white-space: nowrap; border-right: 1px solid var(--tblr-border-color) !important; }
+.diff-code { white-space: pre; width: 100%; }
 .diff-mark { display: inline-block; width: 1.25em; user-select: none; color: var(--tblr-secondary); }
-.diff-add { color: #1a6b2b; background: #e3f3e6; }
-.diff-del { color: #a3191b; background: #fbe4e4; }
-.diff-hunk { color: var(--tblr-secondary); }
-:root[data-bs-theme=dark] .diff-add { color: #8fd8a0; background: #1d3324; }
-:root[data-bs-theme=dark] .diff-del { color: #ffa3a3; background: #3d2020; }
+.diff-add { background: #e6f4ea; }
+.diff-add .diff-num { background: #d2ecd9; }
+.diff-del { background: #fdecec; }
+.diff-del .diff-num { background: #f8d7d7; }
+.diff-hunk td { color: var(--tblr-secondary); background: var(--tblr-bg-surface-secondary); padding: .25rem .75rem; font-family: var(--tblr-font-sans-serif); }
+.diff-counts { font-family: var(--tblr-font-monospace); font-size: .8125rem; }
+:root[data-bs-theme=dark] .diff-add { background: #16301f; }
+:root[data-bs-theme=dark] .diff-add .diff-num { background: #1d3d27; }
+:root[data-bs-theme=dark] .diff-del { background: #3a1d1d; }
+:root[data-bs-theme=dark] .diff-del .diff-num { background: #4a2323; }
+/* Syntax tokens, from util/highlight. Colours hold 4.5:1 on the tints above. */
+.tok-key { color: #0b5394; }
+.tok-str { color: #1b6e2e; }
+.tok-num { color: #9a4b00; }
+.tok-lit { color: #7b2fa8; }
+.tok-com { color: #5f6b7a; font-style: italic; }
+.tok-pun { color: #5f6b7a; }
+.tok-sec { color: #8a1c4a; font-weight: 600; }
+:root[data-bs-theme=dark] .tok-key { color: #8cc4ff; }
+:root[data-bs-theme=dark] .tok-str { color: #9fe0a8; }
+:root[data-bs-theme=dark] .tok-num { color: #ffc27a; }
+:root[data-bs-theme=dark] .tok-lit { color: #e0a8ff; }
+:root[data-bs-theme=dark] .tok-com { color: #a3adba; }
+:root[data-bs-theme=dark] .tok-pun { color: #a3adba; }
+:root[data-bs-theme=dark] .tok-sec { color: #ff9ec4; }
 
 /* Success text: Tabler's green is 2.7:1 on white (axe, the settings page's
    "settings: ok"). The same hue as .badge-ok, at >= 5.7:1 in both themes. */

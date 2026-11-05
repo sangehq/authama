@@ -19,6 +19,7 @@ import (
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/services/events"
 	"github.com/simtabi/authama/src/internal/services/history"
+	"github.com/simtabi/authama/src/internal/util/highlight"
 	"github.com/simtabi/authama/src/internal/services/owner"
 )
 
@@ -192,6 +193,13 @@ func funcs(a *assetSet) template.FuncMap {
 			}
 			return "diff-ctx"
 		},
+		"fileDiff": newDiffView,
+		"diffOf": func(path string, lines []history.DiffLine) diffView {
+			return newDiffView(path, "", lines, false, "")
+		},
+		"hl": func(lang, line string) template.HTML { return highlightHTML(highlight.Lang(lang), line) },
+		"hlFor": func(path, line string) template.HTML { return highlightHTML(highlight.For(path), line) },
+		"lines": func(s string) []string { return strings.Split(strings.TrimSuffix(s, "\n"), "\n") },
 		"diffMark": func(op byte) string {
 			if op == '@' {
 				return "⋯"
