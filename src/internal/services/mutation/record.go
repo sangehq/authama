@@ -44,6 +44,7 @@ type frame struct {
 	op    *history.Op
 	store *history.Store
 	p     paths.Paths
+	seal  sealState
 }
 
 var (
@@ -78,6 +79,7 @@ func End(o Outcome) {
 	}
 	f := stack[len(stack)-1]
 	stack = stack[:len(stack)-1]
+	resealAfter(f)
 	if f.op == nil || f.store == nil {
 		return
 	}
