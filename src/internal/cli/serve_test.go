@@ -214,3 +214,40 @@ func TestSplitAddr(t *testing.T) {
 }
 
 func lockHeld() bool { return mutation.Held() }
+
+// web.port and web.base_path (here through their variables, which authama.json
+// supplies) move the default: a configured port that is taken falls back like
+// the default does, the printed address carries the base path, and --port
+// still wins over the setting.
+func TestServeFollowsTheWebSettings(t *testing.T) {
+	editHome(t)
+	t.Setenv("AUTHAMA_WEB_PORT", "9100")
+	t.Setenv("AUTHAMA_WEB_BASE_PATH", "/authama/")
+	tried, stop := fakeServe(t, 9100)
+	out, err := runServe(t, stop)
+	if err != nil {
+		t.Fatalf("%v\n%s", err, out)
+	}
+	if !regexp.MustCompile(`http://127\.0\.0\.1:9101/authama/\?token=[A-Za-z0-9_-]{43}`).MatchString(out) {
+		t.Fatalf("the printed address is not on the configured port and path:\n%s", out)
+	}
+	if strings.Join(*tried, " ") != "127.0.0.1:9100 127.0.0.1:9101" {
+		t.Errorf("tried %v", *tried)
+	}
+
+	_, stop = fakeServe(t)
+	out, err = runServe(t, stop, "--port", "9200", "--new")
+	if err != nil || !strings.Contains(out, "127.0.0.1:9200/authama/?token=") {
+		t.Fatalf("--port did not win over web.port: %v\n%s", err, out)
+	}
+
+	for env, val := range map[string]string{"AUTHAMA_WEB_PORT": "70000", "AUTHAMA_WEB_BASE_PATH": "authama"} {
+		t.Run(env, func(t *testing.T) {
+			t.Setenv(env, val)
+			_, stop := fakeServe(t)
+			if out, err := runServe(t, stop, "--new"); err == nil {
+				t.Fatalf("%s=%s was accepted:\n%s", env, val, out)
+			}
+		})
+	}
+}

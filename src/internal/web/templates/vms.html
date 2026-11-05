@@ -85,7 +85,7 @@
       <div class="card-body border-top small">
         <div class="fw-bold mb-1">Reserved keys</div>
         {{range .Reserved}}<div><code>~/.ssh/{{.Name}}</code> - reserved{{if .For}} for {{.For}}{{end}}{{if .Note}}: {{.Note}}{{end}}{{if .Problem}} <span class="badge badge-warn">{{.State}}</span>{{end}}</div>{{end}}
-        <div class="text-secondary mt-1">Kept on purpose; adopting one onto a VM below releases its reservation. Manage them on the <a href="/keys">Keys</a> page.</div>
+        <div class="text-secondary mt-1">Kept on purpose; adopting one onto a VM below releases its reservation. Manage them on the <a href="{{basePath}}/keys">Keys</a> page.</div>
       </div>
       {{end}}
     </div>

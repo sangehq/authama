@@ -5,7 +5,7 @@
       <h1 class="h2 text-center mb-2">{{icon "lock"}}<span class="ms-1">Unlock authama</span></h1>
       <p class="text-secondary text-center">This home is bound to its owner. Enter your PIN to go on.</p>
       {{if .Problem}}<div class="alert alert-danger" role="alert">{{.Problem}}</div>{{end}}
-      <form method="post" action="/unlock" autocomplete="off">
+      <form method="post" action="{{basePath}}/unlock" autocomplete="off">
         <input type="hidden" name="csrf" value="{{$.CSRF}}">
         <input type="hidden" name="next" value="{{.Next}}">
         <div class="mb-3">

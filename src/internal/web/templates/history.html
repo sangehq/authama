@@ -1,6 +1,6 @@
 {{define "content"}}{{with .Data}}
 {{template "page_header" (header "Activity" "History" "Every change authama has made to this home, newest first.")}}
-<form method="get" action="/history" class="card card-body mb-3">
+<form method="get" action="{{basePath}}/history" class="card card-body mb-3">
   <div class="row g-2 align-items-end">
     <div class="col-6 col-md-4 col-xl-2"><label class="form-label" for="f-host">Host</label><input class="form-control" id="f-host" name="host" value="{{.Filter.Host}}" autocomplete="off" spellcheck="false"></div>
     <div class="col-6 col-md-4 col-xl-2"><label class="form-label" for="f-profile">Profile</label><input class="form-control" id="f-profile" name="profile" value="{{.Filter.Profile}}" autocomplete="off" spellcheck="false"></div>
@@ -16,7 +16,7 @@
     <div class="col-6 col-md-4 col-xl-2"><label class="form-label" for="f-since">Since</label><input class="form-control" type="date" id="f-since" name="since" value="{{.Filter.Since}}"></div>
     <div class="col-6 col-md-4 col-xl-2"><label class="form-label" for="f-until">Until</label><input class="form-control" type="date" id="f-until" name="until" value="{{.Filter.Until}}"></div>
     <div class="col-12 col-md-4 col-xl-auto ms-xl-auto d-flex gap-2">
-      <a class="btn btn-outline-secondary flex-fill" href="/history">Clear</a>
+      <a class="btn btn-outline-secondary flex-fill" href="{{basePath}}/history">Clear</a>
       <button type="submit" class="btn btn-primary flex-fill">Filter</button>
     </div>
   </div>
@@ -24,7 +24,7 @@
 <div class="card">
   <div class="card-header"><h2 class="card-title">Operations</h2><div class="card-actions">{{template "csv" (print "/exports/history.csv?" .Query.Encode)}}</div></div>
   {{template "op_table" .Ops}}
-  {{if .More}}<div class="card-footer"><a href="{{.More}}">Show more</a></div>{{end}}
+  {{if .More}}<div class="card-footer"><a href="{{u .More}}">Show more</a></div>{{end}}
 </div>
 <p class="text-secondary mt-3">The same list as <code>authama history</code>. Operations from before the history existed were imported from <code>audit.log</code>, the inventory and the snapshots, and show as source <code>backfill</code>.</p>
 {{end}}{{end}}

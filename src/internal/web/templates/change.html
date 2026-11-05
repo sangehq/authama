@@ -15,13 +15,13 @@
 {{template "file_diff" (fileDiff .Path .State .Lines .Checked .Problem)}}
 {{else}}<p>{{icon "circle-check"}}<span class="ms-1">Nothing: every file would stay as it is.</span></p>{{end}}
 <p class="text-secondary">{{if not .Plan.NoSnapshot}}authama snapshots <code>~/.ssh</code> before it writes, and records{{else}}authama records{{end}} the change in the history.</p>
-<form method="post" action="/changes/apply" class="d-flex flex-wrap align-items-center gap-2" id="apply-form">
+<form method="post" action="{{basePath}}/changes/apply" class="d-flex flex-wrap align-items-center gap-2" id="apply-form">
   <input type="hidden" name="csrf" value="{{$.CSRF}}">
   <input type="hidden" name="hash" value="{{.Plan.Hash}}">
   {{range .Fields}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}
   {{template "pin_field" $}}
   <button type="submit" class="btn {{if .Destroy}}btn-danger{{else}}btn-primary{{end}}">{{if .Destroy}}Yes, {{.Command}}{{else}}Make this change{{end}}</button>
-  <a href="/" class="btn btn-link">Cancel</a>
+  <a href="{{basePath}}/" class="btn btn-link">Cancel</a>
 </form>
 {{end}}
 {{end}}{{end}}

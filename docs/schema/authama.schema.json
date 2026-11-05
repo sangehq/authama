@@ -273,6 +273,28 @@
         }
       },
       "type": "object"
+    },
+    "web": {
+      "additionalProperties": false,
+      "properties": {
+        "addr": {
+          "description": "The address `serve` listens on. A non-loopback address still needs --allow-remote. Sets $AUTHAMA_WEB_ADDR. Default: 127.0.0.1.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "base_path": {
+          "description": "A path the web UI is served under, such as /authama, so it can sit behind a reverse proxy beside other sites. Every link, form and redirect carries it. Sets $AUTHAMA_WEB_BASE_PATH. Default: /.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "port": {
+          "default": 7822,
+          "description": "The port `serve` listens on first. When it is taken the next free one is used, as with the default; only --port makes a taken port an error. Sets $AUTHAMA_WEB_PORT. Default: 7822.",
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "type": "object"
     }
   },
   "title": "authama settings (authama.json)",

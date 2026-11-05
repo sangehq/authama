@@ -25,7 +25,7 @@
     <div class="card">
       <div class="card-header"><h2 class="card-title">Expiry</h2></div>
       {{if .Expiry}}
-      <ul class="list-group list-group-flush">{{range .Expiry}}<li class="list-group-item d-flex justify-content-between gap-2"><a href="/keys/{{.Profile}}/{{.KeyName}}"><code>{{.Ref}}</code></a><span><span class="badge {{statusClass .State}}">{{.State}}</span> <span class="text-secondary">{{orDash (deref .ExpiresOn)}}, {{expiryDays .}}</span></span></li>{{end}}</ul>
+      <ul class="list-group list-group-flush">{{range .Expiry}}<li class="list-group-item d-flex justify-content-between gap-2"><a href="{{basePath}}/keys/{{.Profile}}/{{.KeyName}}"><code>{{.Ref}}</code></a><span><span class="badge {{statusClass .State}}">{{.State}}</span> <span class="text-secondary">{{orDash (deref .ExpiresOn)}}, {{expiryDays .}}</span></span></li>{{end}}</ul>
       {{else}}<div class="card-body text-secondary">Nothing tracked.</div>{{end}}
       {{if not $.ReadOnly}}<div class="card-footer d-flex flex-wrap align-items-center gap-2">
         <span class="text-secondary small me-auto">Desktop alerts, as the scheduled reminder sends them.</span>
@@ -36,7 +36,7 @@
   </div>
   <div class="col-lg-6">
     <div class="card">
-      <div class="card-header"><h2 class="card-title">Recent activity</h2><div class="card-actions"><a href="/history">All history</a></div></div>
+      <div class="card-header"><h2 class="card-title">Recent activity</h2><div class="card-actions"><a href="{{basePath}}/history">All history</a></div></div>
       {{template "op_table" .Recent}}
     </div>
   </div>

@@ -18,7 +18,7 @@
       <div class="card-body d-flex flex-column">
         <div class="d-flex align-items-center mb-2">
           <div class="subheader">Key health</div>
-          <a class="ms-auto small" href="/keys">Keys</a>
+          <a class="ms-auto small" href="{{basePath}}/keys">Keys</a>
         </div>
         <div class="d-flex align-items-baseline mb-2">
           <div class="h1 mb-0 me-2">{{.KeysOnDisk}}/{{.Keys}}</div>
@@ -30,7 +30,7 @@
         <ul class="list-unstyled mb-0 small mt-auto">
           <li class="d-flex align-items-center"><span>Due for rotation</span><span class="ms-auto">{{if .Expiry}}<span class="badge badge-warn">{{len .Expiry}}</span>{{else}}<span class="badge badge-ok">0</span>{{end}}</span></li>
           <li class="d-flex align-items-center mt-2"><span>Reserved on purpose</span><span class="ms-auto"><span class="badge badge-muted">{{.Reserved}}</span></span></li>
-          <li class="d-flex align-items-center mt-2"><span>Loose in ~/.ssh</span><span class="ms-auto">{{if .Loose}}<a class="badge badge-warn" href="/keys#loose" title="Files under ~/.ssh no profile owns">{{.Loose}}</a>{{else}}<span class="badge badge-ok">0</span>{{end}}</span></li>
+          <li class="d-flex align-items-center mt-2"><span>Loose in ~/.ssh</span><span class="ms-auto">{{if .Loose}}<a class="badge badge-warn" href="{{basePath}}/keys#loose" title="Files under ~/.ssh no profile owns">{{.Loose}}</a>{{else}}<span class="badge badge-ok">0</span>{{end}}</span></li>
         </ul>
       </div>
     </div>
@@ -40,7 +40,7 @@
       <div class="card-body d-flex flex-column">
         <div class="d-flex align-items-center mb-2">
           <div class="subheader">Auth tokens</div>
-          <a class="ms-auto small" href="/tokens">Tokens</a>
+          <a class="ms-auto small" href="{{basePath}}/tokens">Tokens</a>
         </div>
         <div class="d-flex align-items-baseline mb-2">
           <div class="h1 mb-0 me-2">{{.Tokens}}</div>
@@ -51,8 +51,8 @@
         </div>
         <ul class="list-unstyled mb-0 small mt-auto">
           <li class="d-flex align-items-center"><span>Tools with a credential file</span><span class="ms-auto"><span class="badge badge-muted">{{.TokenFiles}} of {{.TokenTools}}</span></span></li>
-          <li class="d-flex align-items-center mt-2"><span>Token config</span><span class="ms-auto">{{if .TokenConfig}}<span class="badge badge-ok">tokens.json</span>{{else}}<a class="badge badge-muted" href="/tokens#apply-config">none</a>{{end}}</span></li>
-          <li class="d-flex align-items-center mt-2"><span>Token audit</span><span class="ms-auto">{{if .TokensFailed}}<a class="badge badge-bad" href="/tokens#audit">failed</a>{{else}}<span class="badge badge-ok">ok</span>{{end}}</span></li>
+          <li class="d-flex align-items-center mt-2"><span>Token config</span><span class="ms-auto">{{if .TokenConfig}}<span class="badge badge-ok">tokens.json</span>{{else}}<a class="badge badge-muted" href="{{basePath}}/tokens#apply-config">none</a>{{end}}</span></li>
+          <li class="d-flex align-items-center mt-2"><span>Token audit</span><span class="ms-auto">{{if .TokensFailed}}<a class="badge badge-bad" href="{{basePath}}/tokens#audit">failed</a>{{else}}<span class="badge badge-ok">ok</span>{{end}}</span></li>
         </ul>
       </div>
     </div>
@@ -62,7 +62,7 @@
       <div class="card-body d-flex flex-column">
         <div class="d-flex align-items-center mb-2">
           <div class="subheader">Snapshots</div>
-          <a class="ms-auto small" href="/snapshots">Snapshots</a>
+          <a class="ms-auto small" href="{{basePath}}/snapshots">Snapshots</a>
         </div>
         <div class="d-flex align-items-baseline mb-2">
           <div class="h1 mb-0 me-2">{{.Snapshots}}{{if .SnapshotRetain}}/{{.SnapshotRetain}}{{end}}</div>
@@ -73,7 +73,7 @@
         </div>
         <ul class="list-unstyled mb-0 small mt-auto">
           <li class="d-flex align-items-center"><span>Newest</span><span class="ms-auto text-secondary">{{if .Snapshots}}{{when .LastSnapshot}}{{else}}none yet{{end}}</span></li>
-          <li class="d-flex align-items-center mt-2"><span>Hold private keys</span><span class="ms-auto">{{if .SnapshotsWithKeys}}<a class="badge badge-warn" href="/snapshots" title="Taken before key exclusion; prune them when no longer needed">{{.SnapshotsWithKeys}}</a>{{else}}<span class="badge badge-ok">0</span>{{end}}</span></li>
+          <li class="d-flex align-items-center mt-2"><span>Hold private keys</span><span class="ms-auto">{{if .SnapshotsWithKeys}}<a class="badge badge-warn" href="{{basePath}}/snapshots" title="Taken before key exclusion; prune them when no longer needed">{{.SnapshotsWithKeys}}</a>{{else}}<span class="badge badge-ok">0</span>{{end}}</span></li>
           <li class="d-flex align-items-center mt-2"><span>Oldest</span><span class="ms-auto text-secondary">{{if .Snapshots}}{{when .FirstSnapshot}}{{else}}none yet{{end}}</span></li>
         </ul>
       </div>
@@ -118,9 +118,9 @@
           {{template "change_open" $}}<input type="hidden" name="action" value="token-apply"{{tip "token-apply"}}><button type="submit" class="btn btn-outline-primary w-100">{{icon "cloud-lock"}}<span class="ms-1">Apply the token config</span></button></form>
         </div>
         {{end}}
-        <a class="list-group-item list-group-item-action" href="/ssh-config">{{icon "file-code"}}<span class="ms-2">See the rendered SSH config and its drift check</span></a>
-        <a class="list-group-item list-group-item-action" href="/doctor">{{icon "stethoscope"}}<span class="ms-2">Run the doctor's checks</span></a>
-        <a class="list-group-item list-group-item-action" href="/events">{{icon "activity"}}<span class="ms-2">See every file event</span></a>
+        <a class="list-group-item list-group-item-action" href="{{basePath}}/ssh-config">{{icon "file-code"}}<span class="ms-2">See the rendered SSH config and its drift check</span></a>
+        <a class="list-group-item list-group-item-action" href="{{basePath}}/doctor">{{icon "stethoscope"}}<span class="ms-2">Run the doctor's checks</span></a>
+        <a class="list-group-item list-group-item-action" href="{{basePath}}/events">{{icon "activity"}}<span class="ms-2">See every file event</span></a>
       </div>
     </div>
   </div>
@@ -129,7 +129,7 @@
 <div class="row row-cards mb-3">
   <div class="col-lg-6">
     <div class="card h-100">
-      <div class="card-header"><h2 class="card-title">Hosts by profile</h2><div class="card-actions"><a href="/profiles">Profiles</a></div></div>
+      <div class="card-header"><h2 class="card-title">Hosts by profile</h2><div class="card-actions"><a href="{{basePath}}/profiles">Profiles</a></div></div>
       {{if .ProfileRows}}
       <div class="table-responsive" tabindex="0">
         <table class="table table-vcenter card-table">
@@ -138,7 +138,7 @@
           <tbody>
             {{range .ProfileRows}}
             <tr>
-              <th scope="row"><a href="/history?profile={{.Name}}"><code>{{.Name}}</code></a>{{with .Category}} <span class="text-secondary small">{{.}}</span>{{end}}</th>
+              <th scope="row"><a href="{{basePath}}/history?profile={{.Name}}"><code>{{.Name}}</code></a>{{with .Category}} <span class="text-secondary small">{{.}}</span>{{end}}</th>
               <td>{{.Hosts}}</td>
               <td>{{.Keys}}</td>
               <td class="w-50"><div class="progress progress-xs" role="progressbar" aria-label="{{.Name}}'s share of the most hosts in a profile" aria-valuenow="{{pct .Hosts $.Data.MaxHosts}}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar bg-primary pct-{{pct .Hosts $.Data.MaxHosts}}"></div></div></td>
@@ -152,7 +152,7 @@
   </div>
   <div class="col-lg-6">
     <div class="card h-100">
-      <div class="card-header"><h2 class="card-title">Recent file events</h2><div class="card-actions"><a href="/events">All events</a></div></div>
+      <div class="card-header"><h2 class="card-title">Recent file events</h2><div class="card-actions"><a href="{{basePath}}/events">All events</a></div></div>
       {{if .Events}}
       <div class="list-group list-group-flush">
         {{range .Events}}
@@ -178,14 +178,14 @@
       <div class="card-header"><h2 class="card-title">Rotation due</h2></div>
       {{if .Expiry}}
       <ul class="list-group list-group-flush">
-        {{range .Expiry}}<li class="list-group-item d-flex justify-content-between gap-2"><a href="/keys/{{.Profile}}/{{.KeyName}}"><code>{{.Ref}}</code></a><span><span class="badge {{statusClass .State}}">{{.State}}</span> <span class="text-secondary">{{expiryDays .}}</span></span></li>{{end}}
+        {{range .Expiry}}<li class="list-group-item d-flex justify-content-between gap-2"><a href="{{basePath}}/keys/{{.Profile}}/{{.KeyName}}"><code>{{.Ref}}</code></a><span><span class="badge {{statusClass .State}}">{{.State}}</span> <span class="text-secondary">{{expiryDays .}}</span></span></li>{{end}}
       </ul>
       {{else}}{{template "empty" (empty "circle-check" "No key is due for rotation" "")}}{{end}}
     </div>
   </div>
   <div class="col-lg-7">
     <div class="card h-100">
-      <div class="card-header"><h2 class="card-title">Recent changes</h2><div class="card-actions"><a href="/history">All history</a></div></div>
+      <div class="card-header"><h2 class="card-title">Recent changes</h2><div class="card-actions"><a href="{{basePath}}/history">All history</a></div></div>
       {{template "op_table" .Recent}}
     </div>
   </div>

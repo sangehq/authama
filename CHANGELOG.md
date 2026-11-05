@@ -58,6 +58,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The web UI's address is configurable.** `web.addr`, `web.port` and `web.base_path` in
+  `authama.json` (or `AUTHAMA_WEB_ADDR`, `AUTHAMA_WEB_PORT`, `AUTHAMA_WEB_BASE_PATH`) change the
+  default `http://127.0.0.1:7822/`; a configured port that is taken falls back like the default, and
+  `--addr`/`--port` still win. With a base path such as `/authama` the UI is served at
+  `http://127.0.0.1:7822/authama/`, every link, form, asset, redirect and the session cookie carry
+  it, and a test crawls every page to check none escapes it.
 - **Actions explain themselves.** Page actions, Preview and Review buttons, quick actions,
   destructive menu items, Run and CSV show a tip on hover and keyboard focus saying what they do,
   which screen readers announce too. The wording lives in one catalogue, and a test fails on a tip

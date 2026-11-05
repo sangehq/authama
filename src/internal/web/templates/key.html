@@ -2,7 +2,7 @@
 <div class="page-header d-print-none mb-3">
   <div class="row g-2 align-items-center">
     <div class="col">
-      <div class="text-secondary"><a href="/keys">Keys</a> / profile <code>{{.Detail.Ref.Profile}}</code></div>
+      <div class="text-secondary"><a href="{{basePath}}/keys">Keys</a> / profile <code>{{.Detail.Ref.Profile}}</code></div>
       <h1 class="page-title"><code>{{.Detail.Ref.KeyName}}</code></h1>
     </div>
     {{if not $.ReadOnly}}<div class="col-auto ms-auto btn-list">
@@ -26,7 +26,7 @@
           <dt class="col-5">Expires</dt><dd class="col-7">{{orDash .Detail.ExpiresOn}}{{with .Expiry}} <span class="badge {{statusClass .State}}">{{.State}}</span> <span class="text-secondary">{{expiryDays .}}</span>{{end}}</dd>
           <dt class="col-5">Store</dt><dd class="col-7">{{if .Detail.Vault}}1Password vault <code>{{.Detail.Vault}}</code>{{else}}disk{{end}}</dd>
           <dt class="col-5">Identity file</dt><dd class="col-7 text-break"><code>{{.Detail.IdentityFile}}</code> {{template "copy" (copy .Detail.IdentityFile "the identity file's path")}}</dd>
-          <dt class="col-5">Used by</dt><dd class="col-7">{{range $i, $h := .Detail.Hosts}}{{if $i}}, {{end}}<a href="/hosts/{{$h}}"><code>{{$h}}</code></a>{{else}}–{{end}}</dd>
+          <dt class="col-5">Used by</dt><dd class="col-7">{{range $i, $h := .Detail.Hosts}}{{if $i}}, {{end}}<a href="{{basePath}}/hosts/{{$h}}"><code>{{$h}}</code></a>{{else}}–{{end}}</dd>
         </dl>
       </div>
       {{if .PublicKey}}<div class="card-footer">
@@ -90,7 +90,7 @@
 {{template "panel_close"}}
 {{if not $.DevRoot}}
 {{template "panel_open" (header "revoke" "Revoke this key" "Removes it from every target it is deployed to, through each host's provider, and records it as revoked: deploy and rollback refuse it from then on.")}}
-  <form method="post" action="/jobs/review" data-inline><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="revoke"><input type="hidden" name="key" value="{{.Detail.Ref}}">
+  <form method="post" action="{{basePath}}/jobs/review" data-inline><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="revoke"><input type="hidden" name="key" value="{{.Detail.Ref}}">
     <div class="alert alert-warning" role="status">{{icon "alert-triangle"}}<span class="ms-1">Anything that logs in with this key stops working where it is removed. Mint its successor next: <strong>Rotate</strong>, or <code>keygen --force</code>.</span></div>
     <div class="mb-3">
       <label class="form-label" for="kr-reason">Reason</label>

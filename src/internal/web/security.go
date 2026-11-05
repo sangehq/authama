@@ -199,7 +199,7 @@ func (s *Server) auth(next http.Handler) http.Handler {
 			}
 			id, _ := s.sessions.create(s.now())
 			http.SetCookie(w, &http.Cookie{
-				Name: SessionCookie, Value: id, Path: "/",
+				Name: SessionCookie, Value: id, Path: s.opts.BasePath + "/",
 				HttpOnly: true, SameSite: http.SameSiteStrictMode, Secure: s.secure(r),
 			})
 			// Strip the token from the address bar and the history.

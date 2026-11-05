@@ -1,12 +1,12 @@
 {{define "content"}}{{with .Data}}
 <div class="page-header d-print-none mb-3">
-  <div class="text-secondary"><a href="/snapshots">Snapshots</a></div>
+  <div class="text-secondary"><a href="{{basePath}}/snapshots">Snapshots</a></div>
   <h1 class="page-title"><code>{{.ID}}</code></h1>
 </div>
 {{if .Refused}}
 <div class="alert alert-danger" role="alert">{{icon "lock"}}<span class="ms-1">{{.Refused}}</span></div>
 {{else}}
-<form method="get" action="/snapshots/{{.ID}}" class="row g-2 align-items-end mb-3">
+<form method="get" action="{{basePath}}/snapshots/{{.ID}}" class="row g-2 align-items-end mb-3">
   <div class="col-sm-6">
     <label class="form-label" for="against">Compare with</label>
     <select class="form-select" id="against" name="against">
@@ -24,7 +24,7 @@
 <div class="card mt-3">
   <div class="card-body">
     <p class="text-secondary">Restoring puts back the config, <code>known_hosts</code> and public keys this snapshot holds, and leaves private keys as they are. <code>~/.ssh</code> is snapshotted first, so the restore can be undone.</p>
-    <form method="post" action="/changes/preview" data-inline id="f-restore"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="snapshots-restore"><input type="hidden" name="id" value="{{.ID}}">
+    <form method="post" action="{{basePath}}/changes/preview" data-inline id="f-restore"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="snapshots-restore"><input type="hidden" name="id" value="{{.ID}}">
       <button type="submit" class="btn btn-outline-danger" data-confirm="m-restore">{{icon "arrow-back-up"}}<span class="ms-1">Preview restoring {{.ID}}</span></button>
     </form>
     {{template "confirm" (confirm "m-restore" "f-restore" (printf "Restore %s?" .ID) "Its config, known_hosts and public keys replace the ones in ~/.ssh now; ~/.ssh is snapshotted first. You see the diff before it is made." "Preview the restore")}}

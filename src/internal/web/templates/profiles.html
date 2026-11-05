@@ -22,10 +22,10 @@
           <td>{{.Hosts}}</td>
           <td>{{.Keys}}</td>
           <td class="text-end">
-            {{if not $.ReadOnly}}<form method="post" action="/changes/preview" data-inline id="f-profile-{{.Name}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="profile-delete"><input type="hidden" name="name" value="{{.Name}}"></form>{{end}}
+            {{if not $.ReadOnly}}<form method="post" action="{{basePath}}/changes/preview" data-inline id="f-profile-{{.Name}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="profile-delete"><input type="hidden" name="name" value="{{.Name}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for profile %s" .Name)}}
-              <a class="dropdown-item" href="/hosts?q={{.Name}}">{{icon "server"}}<span class="ms-2">Its hosts</span></a>
-              <a class="dropdown-item" href="/history?profile={{.Name}}">{{icon "history"}}<span class="ms-2">History</span></a>
+              <a class="dropdown-item" href="{{basePath}}/hosts?q={{.Name}}">{{icon "server"}}<span class="ms-2">Its hosts</span></a>
+              <a class="dropdown-item" href="{{basePath}}/history?profile={{.Name}}">{{icon "history"}}<span class="ms-2">History</span></a>
               <button type="button" class="dropdown-item" data-copy="{{.Name}}">{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
               {{if not $.ReadOnly}}<div class="dropdown-divider"></div>
               <a class="dropdown-item" href="#profile-scope" data-panel-open="profile-scope" data-panel-fill-name="{{.Name}}">{{icon "key"}}<span class="ms-2">Change key scope</span></a>

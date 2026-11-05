@@ -45,6 +45,11 @@ type Options struct {
 	Version  string
 	BindAddr string
 
+	// BasePath is the path the UI is served under (web.base_path), as
+	// CleanBasePath gives it: "" for the root, else "/authama". Every link,
+	// form, asset, redirect and the session cookie carry it.
+	BasePath string
+
 	// Settings reads the settings page for a home. The values in effect were
 	// settled at start-up, which the command that started the server owns,
 	// so it passes this in. Nil shows the files only, with no values.
@@ -94,16 +99,21 @@ func New(opts Options) (*Server, error) {
 	if opts.Now == nil {
 		opts.Now = time.Now
 	}
+	base, err := CleanBasePath(opts.BasePath)
+	if err != nil {
+		return nil, err
+	}
+	opts.BasePath = base
 	assets, err := loadAssets()
 	if err != nil {
 		return nil, err
 	}
-	pages, err := parsePages(assets)
+	pages, err := parsePages(assets, base)
 	if err != nil {
 		return nil, err
 	}
 	s := &Server{opts: opts, pages: pages, assets: assets, jobs: jobs.NewRegistry(), who: currentUser()}
-	s.handler = securityHeaders(s.hostCheck(s.auth(s.sameOrigin(ownerGate{s}.requireUnlock(s.routes())))))
+	s.handler = securityHeaders(withBasePath(base, s.hostCheck(s.auth(s.sameOrigin(ownerGate{s}.requireUnlock(s.routes()))))))
 	return s, nil
 }
 

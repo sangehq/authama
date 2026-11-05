@@ -44,6 +44,9 @@ const (
 	VMHypervisors    = "AUTHAMA_VM_HYPERVISORS"
 	VMPruneGone      = "AUTHAMA_VM_PRUNE_GONE"
 	VMRepin          = "AUTHAMA_VM_REPIN"
+	WebAddr          = "AUTHAMA_WEB_ADDR"
+	WebPort          = "AUTHAMA_WEB_PORT"
+	WebBasePath      = "AUTHAMA_WEB_BASE_PATH"
 	// OwnerStore set to "file" keeps the owner's sealing key in an owner-only
 	// file instead of the OS credential store (see services/owner).
 	OwnerStore = "AUTHAMA_OWNER_STORE"
@@ -80,7 +83,7 @@ func Names() []string {
 		AgeIdentityFile, AgeRecipient, AskpassMode, AskpassSecret, AutoPin, ConfigDir,
 		DevRoot, DockerCredsStore, GitMode, History, NoDotenv, Notifications,
 		OldKeyMaxAgeDays, OwnerStore, SnapshotRetain, StateDir, TokensCatalog, TokensConfig,
-		VMHypervisors, VMPruneGone, VMRepin,
+		VMHypervisors, VMPruneGone, VMRepin, WebAddr, WebBasePath, WebPort,
 	}
 	sort.Strings(out)
 	return out

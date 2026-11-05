@@ -18,6 +18,7 @@ import (
 
 	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/version"
 	"github.com/simtabi/authama/src/internal/web"
 )
@@ -64,11 +65,33 @@ func newServeCmd() *cobra.Command {
 			"the app - never piles servers up. --new starts another anyway; --status says\n" +
 			"whether one is running and where; --stop stops it. When every port from the\n" +
 			"default up is taken, any free port is used.\n\n" +
+			"web.addr, web.port and web.base_path in authama.json (or AUTHAMA_WEB_ADDR,\n" +
+			"AUTHAMA_WEB_PORT, AUTHAMA_WEB_BASE_PATH) change the defaults: a configured port\n" +
+			"falls back to the next free one like the default, and web.base_path serves the\n" +
+			"UI under a path such as /authama, for a reverse proxy. --addr and --port win.\n\n" +
 			"A non-loopback --addr is refused unless --allow-remote is passed. Prefer an SSH\n" +
 			"tunnel: ssh -L " + strconv.Itoa(web.DefaultPort) + ":127.0.0.1:" + strconv.Itoa(web.DefaultPort) + " <host>.",
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			p, err := resolvePaths(c)
+			if err != nil {
+				return err
+			}
+			if !c.Flags().Changed("addr") {
+				if v := envnames.Get(nil, envnames.WebAddr); v != "" {
+					addr = v
+				}
+			}
+			if !c.Flags().Changed("port") {
+				if v := envnames.Get(nil, envnames.WebPort); v != "" {
+					n, err := strconv.Atoi(v)
+					if err != nil || n < 1 || n > 65535 {
+						return fmt.Errorf("web.port %q: want a port from 1 to 65535", v)
+					}
+					port = n
+				}
+			}
+			basePath, err := web.CleanBasePath(envnames.Get(nil, envnames.WebBasePath))
 			if err != nil {
 				return err
 			}
@@ -113,7 +136,8 @@ func newServeCmd() *cobra.Command {
 			// Reuse the running server, unless asked for a new one or for
 			// something it is not: another port, read-only when it is not, or
 			// a remote bind.
-			if running != nil && !fresh && !pinned && !allowRemote && web.IsLoopback(host) && running.ReadOnly == readOnly {
+			if running != nil && !fresh && !pinned && !allowRemote && web.IsLoopback(host) && running.ReadOnly == readOnly &&
+				running.BasePath == basePath {
 				_, _ = fmt.Fprintf(out, "%s web UI is already running for this home (pid %d): %s\n", brand.Name, running.PID, running.URL)
 				_, _ = fmt.Fprintf(out, "stop it with `%s serve --stop`, or start another with `%s serve --new`\n", brand.Command, brand.Command)
 				if tokenFile != "" {
@@ -149,19 +173,21 @@ func newServeCmd() *cobra.Command {
 				ReadOnly:     readOnly,
 				Version:      version.Version,
 				BindAddr:     ln.Addr().String(),
+				BasePath:     basePath,
 			})
 			if err != nil {
 				_ = ln.Close()
 				return err
 			}
 
-			url := fmt.Sprintf("http://%s/?token=%s", net.JoinHostPort(displayHost(host), strconv.Itoa(bound)), token)
+			url := fmt.Sprintf("http://%s%s/?token=%s", net.JoinHostPort(displayHost(host), strconv.Itoa(bound)), basePath, token)
 			// Recorded only for the default kind of server, the one a later
 			// `authama serve` would reuse: a pinned or remote one is a choice
 			// the next launch should not inherit.
 			if !pinned && !allowRemote && web.IsLoopback(host) {
 				if err := writeServeRecord(p, serveRecord{PID: os.Getpid(), Addr: net.JoinHostPort(displayHost(host), strconv.Itoa(bound)),
-					URL: url, Instance: instance, ReadOnly: readOnly, Version: version.Version, Started: time.Now()}); err != nil {
+					URL: url, Instance: instance, ReadOnly: readOnly, Version: version.Version, Started: time.Now(),
+					BasePath: basePath}); err != nil {
 					_, _ = fmt.Fprintf(c.ErrOrStderr(), "could not record this server (%v); the next launch will start another\n", err)
 				}
 				defer removeServeRecord(p, instance)
