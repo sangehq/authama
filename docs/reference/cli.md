@@ -65,6 +65,7 @@ Every command also takes the global flag:
     - [`authama ssh host apply`](#authama-ssh-host-apply) - Add or update hosts from compact specs (one, many, or a file)
     - [`authama ssh host delete`](#authama-ssh-host-delete) - Delete a host, its config block and its pins
     - [`authama ssh host edit`](#authama-ssh-host-edit) - Edit a host
+    - [`authama ssh host export`](#authama-ssh-host-export) - Write your hosts as another SSH client imports them
   - [`authama ssh import`](#authama-ssh-import) - Onboard an existing ssh setup - a config file or any folder of them - into the manifest
   - [`authama ssh key`](#authama-ssh-key) - Manage a profile's keys (add/list/delete)
     - [`authama ssh key add`](#authama-ssh-key-add) - Declare a key on a profile and mint it
@@ -1068,6 +1069,7 @@ Subcommands:
 - [`apply`](#authama-ssh-host-apply) - Add or update hosts from compact specs (one, many, or a file)
 - [`delete`](#authama-ssh-host-delete) - Delete a host, its config block and its pins
 - [`edit`](#authama-ssh-host-edit) - Edit a host
+- [`export`](#authama-ssh-host-export) - Write your hosts as another SSH client imports them
 
 ## authama ssh host add
 
@@ -1205,6 +1207,45 @@ Flags:
       --token-env string    env var holding the provider API token (e.g. GH_TOKEN_WORK)
       --untag stringArray   remove this tag (repeatable; applied after --tag; a tag the host lacks is ignored)
   -u, --user string         ssh user
+```
+
+## authama ssh host export
+
+Write every host as another SSH client imports it, into
+<config home>/exports/<client>/ (or --out DIR, or - for stdout when the export is
+one file). ~/.ssh is never written. The clients:
+
+  csv               any client that imports a CSV (Royal TS, Xshell, SecureCRT's import script, a spreadsheet)
+  iterm2            iTerm2 (Dynamic Profiles)
+  putty             PuTTY and KiTTY (a .reg file)
+  remmina           Remmina (one .remmina file per host)
+  windows-terminal  Windows Terminal (a JSON fragment)
+
+windows-terminal and iterm2 run `ssh <alias>`, so your ~/.ssh/config supplies the
+key and any ProxyCommand. The others are handed a host, port, user and key path,
+so a host reached through a ProxyCommand (a VM, Cloudflare Access) is left out.
+Git hosts are left out unless --include-git. Termius has its own command,
+`ssh termius export`; Tabby, WinSCP and Termius also import the file
+`ssh config export --flat` writes.
+
+```
+authama ssh host export <client> [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh host export windows-terminal
+  authama ssh host export putty --skip bastion
+  authama ssh host export csv --out ./client-imports
+```
+
+Flags:
+
+```
+      --include-git        also export git hosts (user git, or a github or gitlab provider), which are not shells
+  -o, --out string         the directory to write into (default <config home>/exports/<client>/; - for stdout)
+      --skip stringArray   leave out this alias (repeatable)
 ```
 
 ## authama ssh import

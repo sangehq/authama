@@ -61,6 +61,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Host exports for more SSH clients.** `authama ssh host export <client>` writes a Windows Terminal
+  JSON fragment, iTerm2 Dynamic Profiles, a PuTTY `.reg` (with the `puttygen` command for each key),
+  Remmina profiles, or a generic CSV with the key path (Royal TS, Xshell, SecureCRT, a spreadsheet).
+  The Windows Terminal and iTerm2 profiles run `ssh <alias>`, so ProxyCommand and VM hosts work there
+  too; the others leave such hosts out and say so.
 - **Touch ID and Windows Hello stand in for the owner PIN at the terminal.** On a Mac,
   `authama-touchid` (a small Swift helper, built beside `authama` by `make build` and carried in
   `Authama.app`) asks LocalAuthentication; on Windows, authama asks Windows Hello through Windows

@@ -1,9 +1,10 @@
 # `export` — copies of the config for other tools
 
-Two commands write a copy of the managed config for a tool that cannot read the split layout: `config export --flat`
-for anything that reads one `ssh_config`, and `termius export` for the Termius app.
+Three commands write a copy of your hosts for another tool: `config export --flat` for anything that reads one
+`ssh_config`, `termius export` for the Termius app, and `host export <client>` for Windows Terminal, iTerm2, PuTTY,
+Remmina and any client that imports a CSV.
 
-Both are opt-in and read-only towards `~/.ssh`. They write under `~/.config/authama/exports/` (mode 0600, since
+All are opt-in and read-only towards `~/.ssh`. They write under `~/.config/authama/exports/` (mode 0600, since
 the files list every host and key path), and they refuse any target inside `~/.ssh`, however the path is spelled: containment is
 checked by inode, so another case on APFS or a symlinked directory is caught too. The split config, `~/.ssh/config` and `profiles/<category>/config`, stays exactly as it was.
 
@@ -90,6 +91,35 @@ add from 1Password instead. Full walk-through: [Import your hosts into Termius](
 The column layout is the one third-party exporters reproduce from Termius's import template (Termius 9.x). Termius
 publishes the template only inside the app (Hosts → New Host → Import → CSV → download template); if its header ever
 differs, `TermiusColumns` in `src/internal/core/renderer/export.go` is the one place to change.
+
+## `authama ssh host export <client>`
+
+```bash
+authama ssh host export windows-terminal        # ~/.config/authama/exports/windows-terminal/authama.json
+authama ssh host export iterm2
+authama ssh host export putty --skip bastion    # leave a host out (repeatable)
+authama ssh host export remmina --include-git   # also git hosts
+authama ssh host export csv --out - > hosts.csv # one-file exports can go to stdout
+```
+
+| Client | Writes | Then | Key |
+|---|---|---|---|
+| `windows-terminal` | `authama.json`, a JSON fragment: one profile per host, named `profile / alias`, running `ssh.exe <alias>` | copy it to `%LOCALAPPDATA%\Microsoft\Windows Terminal\Fragments\authama\` and restart Windows Terminal | from `~/.ssh/config`, through ssh |
+| `iterm2` | `authama-hosts.json`, Dynamic Profiles running `ssh <alias>`, tagged with the profile and the host's tags | copy it to `~/Library/Application Support/iTerm2/DynamicProfiles/`; iTerm2 loads it at once | from `~/.ssh/config`, through ssh |
+| `putty` | `authama-putty.reg`, one session per host (UTF-16 with CRLF, as regedit writes) | double-click it, or `reg import authama-putty.reg` | `PublicKeyFile` names `<key>.ppk`; the report prints the `puttygen` command that makes each |
+| `remmina` | one `authama-<alias>.remmina` per host | copy them to `~/.local/share/remmina/`, or import them from Remmina's menu | `ssh_privatekey`, with `ssh_auth=1`; Remmina also wants the `.pub` beside it |
+| `csv` | `hosts.csv`: `alias, group, hostname, port, user, key_path, tags` (tags `;`-separated) | import it, mapping the columns | `key_path` |
+
+`windows-terminal` and `iterm2` launch `ssh`, which reads your `~/.ssh/config`, so a host reached through a
+ProxyCommand (a VM, Cloudflare Access) works there as at the terminal, and re-exporting updates the same profiles:
+Windows Terminal derives each profile's id from its name, and iTerm2's `Guid` is `authama-<alias>`. The other clients
+are handed a host, port, user and key path and do not run a ProxyCommand, so such hosts are left out and listed under
+`skipped:`. Git hosts are left out of every export unless `--include-git`.
+
+Royal TS reads the CSV with its column-mapping dialog; map `hostname` to its `URI` column. Royal TS's and Xshell's CSV
+imports have no key column, so attach each key in the client. Tabby, WinSCP and Termius import an OpenSSH config, so
+give them the file `config export --flat` writes. MobaXterm, SecureCRT and Xshell's own session files are not written:
+their formats are undocumented or keep keys in a store of their own.
 
 ---
 
