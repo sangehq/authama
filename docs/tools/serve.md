@@ -252,6 +252,9 @@ Some changes are terminal-only:
 
 ## Security
 
+- **PIN.** When the home has an owner PIN (see [owner binding](owner.md)), the sign-in link opens an
+  unlock page first, and no other page opens until the PIN is given. Every change and job confirmation
+  asks for it again once five minutes have passed. Wrong PINs share the command line's lockout.
 - **Bounded requests.** A request body over 1 MiB is refused with 413 before it is parsed; headers
   are held to 64 KiB, a body must arrive within 30 seconds, and `Permissions-Policy` turns off every
   device API (camera, microphone, location, USB and the rest).
