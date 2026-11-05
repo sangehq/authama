@@ -98,7 +98,7 @@ func New(opts Options) (*Server, error) {
 		return nil, err
 	}
 	s := &Server{opts: opts, pages: pages, assets: assets, jobs: jobs.NewRegistry(), who: currentUser()}
-	s.handler = securityHeaders(s.hostCheck(s.auth(s.sameOrigin(s.routes()))))
+	s.handler = securityHeaders(s.hostCheck(s.auth(s.sameOrigin(ownerGate{s}.requireUnlock(s.routes())))))
 	return s, nil
 }
 

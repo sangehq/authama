@@ -459,7 +459,7 @@ func (h jobPages) handleJobReview(w http.ResponseWriter, r *http.Request) {
 
 func (h jobPages) handleJobStart(w http.ResponseWriter, r *http.Request) {
 	spec, ok := h.parseJob(w, r)
-	if !ok {
+	if !ok || !ownerGate(h).stepUp(w, r) {
 		return
 	}
 	j, err := h.s.jobs.Start(h.s.opts.Engine.Home(), spec.scope, spec.run)

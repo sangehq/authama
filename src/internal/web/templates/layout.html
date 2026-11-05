@@ -93,6 +93,11 @@
   </header>
   {{end}}
   <div class="page-wrapper">
+    {{if and .Authed .SealProblem}}
+    <div class="alert alert-danger rounded-0 mb-0" role="alert">
+      <div class="container-xl">{{icon "alert-triangle"}}<span class="ms-1"><strong>Changed outside authama:</strong> {{.SealProblem}}. Run <code>authama owner verify</code> to see what changed, and <code>authama owner reseal</code> to accept it.</span></div>
+    </div>
+    {{end}}
     {{if and .Authed .DevRoot}}
     <div class="dev-banner" role="status">
       <div class="container-xl">{{icon "alert-triangle"}}<span class="ms-1"><strong>Dev mode.</strong> Reading a sandbox under <code>{{.DevRoot}}</code>, not your real <code>~/.ssh</code>.</span></div>

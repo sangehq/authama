@@ -143,6 +143,7 @@ bounded SSH-level reachability probe first, so a down or VPN-gated host (includi
 
 | Command | What it does | Tests |
 |---|---|---|
+| `owner init\|status\|verify\|reseal\|forget`, `owner pin set\|reset\|remove`, `owner fingerprint on\|off` | Bind the home to this account and machine: a sealing key in the OS credential store, a seal over the state files that names any changed outside authama, and a PIN the web UI and destructive or secret-reading commands ask for. See [owner binding](tools/owner.md). | U |
 | `profile add <name> [--key-scope\|--shared] [--key-name] [--key-comment] [--category]` | Add a profile, optionally filed under `profiles/<category>/`. `--shared` is shorthand for `--key-scope shared`. A profile keeps its keys on disk, or in 1Password with `key_store: 1password` (see [Key stores](configuration.md#key-stores)). | U·F |
 | `profile edit <name> [--key-scope\|--shared] [--key-name] [--key-comment] [--category]` | Change a profile in place. `--key-comment` sets the comment template for keys minted from now on (see [Key comments](configuration.md#key-comments)). `--category` moves its key directory under `profiles/<category>/` (or back, with `""`) and re-points its inventory records. | U |
 | `profile delete <name> [--yes] [--revoke] [--purge] [--no-key-backup]` | Remove a profile and its hosts; `--revoke` pulls its keys off their targets. | U·F |

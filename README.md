@@ -115,6 +115,7 @@ else is in the [documentation index](#documentation).
 - [`providers`](docs/tools/providers.md) — the adapter catalog and how to extend it.
 - [VPS keys](docs/tools/vps.md) — cloud account keys and server keys.
 - [Key lifecycle](docs/tools/key-lifecycle.md) — a key's lifetime, rotation, regeneration and revocation, in one place.
+- [Owner binding](docs/tools/owner.md) — a PIN for secrets and destructive changes, and a seal that notices outside edits and a home copied elsewhere.
 - [`rotate`](docs/tools/rotate.md) — zero-downtime staged rotation and rollback.
 - [`expiry`](docs/tools/expiry.md) — rotation age and scheduled reminders.
 - [`knownhosts`](docs/tools/knownhosts.md) — pinning host keys into the trust store.

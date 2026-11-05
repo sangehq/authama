@@ -119,6 +119,9 @@ func newTermiusKeysCmd() *cobra.Command {
 			if key.Agent != "" {
 				return fmt.Errorf("%s uses a key in 1Password; add it to Termius from 1Password, there is no file to copy", args[0])
 			}
+			if err := requireOwner(c, p, "copying a private key"); err != nil {
+				return err
+			}
 			path := privateKeyPath(*key)
 			b, err := os.ReadFile(path)
 			if err != nil {

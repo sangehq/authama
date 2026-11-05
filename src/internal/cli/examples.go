@@ -13,6 +13,15 @@ import (
 // own Example wins. TestEveryCommandHasExamplesThatParse keeps every visible
 // command covered and every line here a valid invocation.
 var commandExamples = map[string][]string{
+	"owner status":      {"owner status"},
+	"owner init":        {"owner init", "owner init --yes"},
+	"owner verify":      {"owner verify   # exits non-zero when a file changed outside authama"},
+	"owner reseal":      {"owner reseal   # after editing tokens.json by hand"},
+	"owner forget":      {"owner forget"},
+	"owner pin set":     {"owner pin set"},
+	"owner pin reset":   {"owner pin reset   # forgot it: proves the OS account instead"},
+	"owner pin remove":  {"owner pin remove"},
+	"owner fingerprint": {"owner fingerprint on", "owner fingerprint off"},
 	"doctor":            {"doctor", "doctor --fix", "doctor --strict --json   # CI: fail on anything worth fixing"},
 	"history":           {"history", "history --since 7d --command \"host add\"", "history --host web1 --json"},
 	"history show":      {"history show 224f5bf1   # an OP id from history"},

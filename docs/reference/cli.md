@@ -26,6 +26,17 @@ Every command also takes the global flag:
 - [`authama init`](#authama-init) - Create/converge the per-user home
 - [`authama man`](#authama-man) - Write a manual page (troff, section 1) for every command into DIR
 - [`authama migrate`](#authama-migrate) - Copy a pre-0.1.1 home (ssh-manager, sshmgr) into the authama home; the old one is kept and marked
+- [`authama owner`](#authama-owner) - Bind this home to you and this machine: a PIN, and a seal that notices outside changes
+  - [`authama owner fingerprint`](#authama-owner-fingerprint) - Let a fingerprint stand in for the PIN at the terminal (Linux, fprintd)
+  - [`authama owner forget`](#authama-owner-forget) - Unbind the home: remove the key, the seal and the PIN, keep everything else
+  - [`authama owner init`](#authama-owner-init) - Bind this home to you and this machine, and seal its state files
+  - [`authama owner pin`](#authama-owner-pin) - Set, change, reset or remove the PIN
+    - [`authama owner pin remove`](#authama-owner-pin-remove) - Turn the PIN off (asks for it first)
+    - [`authama owner pin reset`](#authama-owner-pin-reset) - Replace a forgotten PIN; proves the OS account instead of asking for the old one
+    - [`authama owner pin set`](#authama-owner-pin-set) - Set a PIN, or change the one set (asks for it first)
+  - [`authama owner reseal`](#authama-owner-reseal) - Accept the state files as they are now, and seal them
+  - [`authama owner status`](#authama-owner-status) - Show whether the home is bound, where its key is kept, and whether a PIN is set
+  - [`authama owner verify`](#authama-owner-verify) - Check the state files against the seal, and name any changed outside authama
 - [`authama serve`](#authama-serve) - Open the web UI on this machine
 - [`authama settings`](#authama-settings) - Your settings files (.env and authama.json): where they are, what is in effect, validate, create
   - [`authama settings init`](#authama-settings-init) - Create a starter authama.json (schema reference and version; every setting at its default)
@@ -294,6 +305,205 @@ Flags:
 ```
   -f, --force   if both the legacy and standard home exist, back up the current home and replace it
   -y, --yes     migrate without confirming (implied when there is no terminal)
+```
+
+## authama owner
+
+Binds the authama home to the OS account and machine it runs on.
+
+`owner init` keeps a sealing key in the OS's credential store (the macOS
+Keychain, the Secret Service on Linux, DPAPI on Windows, else an owner-only
+file) and seals the state files with it. authama reseals after each of its own
+operations, so a file changed by anything else, or a home copied to another
+account or machine, is named the next time authama runs.
+
+`owner pin set` adds a PIN or passphrase. The web UI asks for it at sign-in and
+before every change; the command line asks before revealing or copying a secret
+and before a destructive command. A forgotten PIN is reset with `owner pin
+reset`, which needs no old PIN, only this account on this machine.
+
+```
+authama owner
+```
+
+Subcommands:
+
+- [`fingerprint`](#authama-owner-fingerprint) - Let a fingerprint stand in for the PIN at the terminal (Linux, fprintd)
+- [`forget`](#authama-owner-forget) - Unbind the home: remove the key, the seal and the PIN, keep everything else
+- [`init`](#authama-owner-init) - Bind this home to you and this machine, and seal its state files
+- [`pin`](#authama-owner-pin) - Set, change, reset or remove the PIN
+- [`reseal`](#authama-owner-reseal) - Accept the state files as they are now, and seal them
+- [`status`](#authama-owner-status) - Show whether the home is bound, where its key is kept, and whether a PIN is set
+- [`verify`](#authama-owner-verify) - Check the state files against the seal, and name any changed outside authama
+
+## authama owner fingerprint
+
+On Linux with fprintd and an enrolled finger, the command line asks for a
+fingerprint first and falls back to the PIN. Touch ID and Windows Hello need a
+signed helper authama does not ship yet, so on macOS and Windows the PIN is used.
+
+```
+authama owner fingerprint <on|off>
+```
+
+Examples:
+
+```sh
+  authama owner fingerprint on
+  authama owner fingerprint off
+```
+
+## authama owner forget
+
+Unbind the home: remove the key, the seal and the PIN, keep everything else.
+
+```
+authama owner forget [flags]
+```
+
+Examples:
+
+```sh
+  authama owner forget
+```
+
+Flags:
+
+```
+  -y, --yes   skip the confirmation prompt
+```
+
+## authama owner init
+
+Bind this home to you and this machine, and seal its state files.
+
+```
+authama owner init [flags]
+```
+
+Examples:
+
+```sh
+  authama owner init
+  authama owner init --yes
+```
+
+Flags:
+
+```
+  -y, --yes   skip the confirmation prompt
+```
+
+## authama owner pin
+
+Set, change, reset or remove the PIN.
+
+```
+authama owner pin
+```
+
+Subcommands:
+
+- [`remove`](#authama-owner-pin-remove) - Turn the PIN off (asks for it first)
+- [`reset`](#authama-owner-pin-reset) - Replace a forgotten PIN; proves the OS account instead of asking for the old one
+- [`set`](#authama-owner-pin-set) - Set a PIN, or change the one set (asks for it first)
+
+## authama owner pin remove
+
+Turn the PIN off (asks for it first).
+
+```
+authama owner pin remove
+```
+
+Examples:
+
+```sh
+  authama owner pin remove
+```
+
+## authama owner pin reset
+
+Needs no old PIN. It must read the sealing key from this account's own
+credential store (on macOS the Keychain may ask for the login password), on the
+machine the home was bound on, and it must run in a terminal. The reset is on
+the record, and wrong-PIN lockouts are cleared.
+
+```
+authama owner pin reset
+```
+
+Examples:
+
+```sh
+  authama owner pin reset   # forgot it: proves the OS account instead
+```
+
+## authama owner pin set
+
+A PIN is at least 6 characters: digits, or a passphrase of up to 128. A run such
+as 123456 or one repeated character is refused. It is stored only as a salted
+PBKDF2-SHA256 hash.
+
+```
+authama owner pin set
+```
+
+Examples:
+
+```sh
+  authama owner pin set
+```
+
+## authama owner reseal
+
+Use it after a change you made yourself outside authama - an edit to
+tokens.json, a restored backup - once `owner verify` has shown what changed.
+
+```
+authama owner reseal [flags]
+```
+
+Examples:
+
+```sh
+  authama owner reseal   # after editing tokens.json by hand
+```
+
+Flags:
+
+```
+  -y, --yes   skip the confirmation prompt
+```
+
+## authama owner status
+
+Show whether the home is bound, where its key is kept, and whether a PIN is set.
+
+```
+authama owner status
+```
+
+Examples:
+
+```sh
+  authama owner status
+```
+
+## authama owner verify
+
+Exits 0 when the seal matches (or the home is not bound), and non-zero when a
+file was changed, removed or added since authama last sealed it, when the seal
+was made on another account or machine, or when it cannot be checked.
+
+```
+authama owner verify
+```
+
+Examples:
+
+```sh
+  authama owner verify   # exits non-zero when a file changed outside authama
 ```
 
 ## authama serve

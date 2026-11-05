@@ -275,6 +275,11 @@ func TestTheToolRunsOnlyTheBinariesItDeclares(t *testing.T) {
 		"cloudflared",
 		// Hypervisor CLIs (`authama ssh vm`), each optional: a missing one is listed as not installed.
 		"prlctl", "vmpal", "vmrun", "utmctl", "limactl", "orb", "podman",
+		// Owner binding (`authama owner`): the macOS Keychain and hardware UUID,
+		// the Linux Secret Service, and fprintd for fingerprint unlock. Each is
+		// optional; without one the key is kept in an owner-only file, and the
+		// PIN is asked for instead of a fingerprint.
+		"/usr/bin/security", "/usr/sbin/ioreg", "secret-tool", "fprintd-verify", "fprintd-list",
 		// Itself: the scheduled notifier runs `authama audit --notify`, and it
 		// prefers an installed authama on PATH over the running binary's own
 		// path so the job survives the binary moving.

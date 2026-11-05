@@ -47,6 +47,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Owner binding** (`authama owner`). `owner init` keeps a sealing key in the OS credential store
+  (macOS Keychain, the Linux Secret Service, DPAPI on Windows, else an owner-only file) and seals the
+  state files with it, bound to the OS user and machine. authama reseals after its own operations,
+  so a file changed outside authama, or a home copied to another account or machine, is named by
+  the next mutating command (which then does not reseal over it), by `doctor` (which fails, with a
+  new `owner_seal` JSON key) and by the web UI's overview. `owner pin set` adds a PIN, stored as a
+  PBKDF2-SHA256 hash: the web UI asks for it after the sign-in link and on every change confirmed
+  more than five minutes after it was last given, and the command line asks before revealing or
+  copying a secret and before a destructive command. Five wrong PINs start a growing wait.
+  `owner pin reset` replaces a forgotten PIN by proving the OS account. On Linux, fprintd can stand
+  in for the PIN at the terminal. See [docs/tools/owner.md](docs/tools/owner.md).
+
 - **Four more token tools**: `pypi` (`~/.pypirc`, for `twine`, keeping `index-servers` in step),
   `cargo` (`credentials.toml`, for crates.io and named registries), `gem` (`~/.gem/credentials`) and
   `gradle` (`gradle.properties`, as `<repo>Username`/`<repo>Password`). Each merges into an existing

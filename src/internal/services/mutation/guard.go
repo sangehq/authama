@@ -66,7 +66,22 @@ func LockForMutation(p paths.Paths) {
 			heldLock = rel
 		}
 	}
+	checkSeal(p)
 	opening(p)
+}
+
+// checkSeal notes the owner seal for the current scope, once. A suspended
+// scope is a preview against a throwaway copy of the home, which has no seal
+// of its own to check.
+func checkSeal(p paths.Paths) {
+	recMu.Lock()
+	defer recMu.Unlock()
+	if suspended > 0 {
+		return
+	}
+	if f := top(); f != nil {
+		noteSeal(f, p)
+	}
 }
 
 // Held reports whether this process holds the advisory lock.

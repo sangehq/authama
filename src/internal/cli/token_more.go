@@ -48,6 +48,11 @@ func newTokenShowCmd() *cobra.Command {
 				return fmt.Errorf("no token found for %s: %s (see `%s token list`)", target, host, brand.Command)
 			}
 			reveal = mayReveal(c, reveal, yes)
+			if reveal {
+				if err := requireOwner(c, env.Paths, "revealing a token"); err != nil {
+					return err
+				}
+			}
 			if !reveal {
 				it.Secret = ""
 			}
