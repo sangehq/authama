@@ -46,6 +46,33 @@ func NewToken() string {
 type session struct {
 	csrf    string
 	created time.Time
+
+	// pinMu guards the PIN times: requests in one session run concurrently.
+	pinMu sync.Mutex
+	// unlocked is when the session gave the PIN after signing in, and
+	// stepped when it last gave it (at sign-in or on a confirmation).
+	unlocked, stepped time.Time
+}
+
+func (s *session) unlock(now time.Time) {
+	s.pinMu.Lock()
+	defer s.pinMu.Unlock()
+	if s.unlocked.IsZero() {
+		s.unlocked = now
+	}
+	s.stepped = now
+}
+
+func (s *session) unlockedAt() time.Time {
+	s.pinMu.Lock()
+	defer s.pinMu.Unlock()
+	return s.unlocked
+}
+
+func (s *session) steppedUpAt() time.Time {
+	s.pinMu.Lock()
+	defer s.pinMu.Unlock()
+	return s.stepped
 }
 
 type sessions struct {

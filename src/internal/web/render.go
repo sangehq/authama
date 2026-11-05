@@ -19,6 +19,7 @@ import (
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/services/events"
 	"github.com/simtabi/authama/src/internal/services/history"
+	"github.com/simtabi/authama/src/internal/services/owner"
 )
 
 // assetSet is the embedded assets with a content hash each, for
@@ -398,6 +399,12 @@ type view struct {
 	// Initials the avatar's letters; Year is for the footer.
 	User, Host, Initials string
 	Year                 int
+	// PINNeeded is a session that must give the PIN to confirm a change: the
+	// confirmations show a PIN field when it is set.
+	PINNeeded bool
+	// SealProblem is the owner seal's finding, shown on the overview when the
+	// state was changed outside authama.
+	SealProblem string
 }
 
 func (s *Server) newView(r *http.Request, nav, title string, data any) view {
@@ -408,6 +415,12 @@ func (s *Server) newView(r *http.Request, nav, title string, data any) view {
 	if sess := sessionFrom(r.Context()); sess != nil {
 		v.Authed = true
 		v.CSRF = sess.csrf
+		v.PINNeeded = ownerGate{s}.needsStepUp(sess)
+		if nav == "overview" || nav == "doctor" {
+			if st := owner.Verify(p); !st.Clean() {
+				v.SealProblem = st.Describe()
+			}
+		}
 		if s.opts.EventRoots != nil {
 			v.Bell, _ = events.List(p, events.Filter{Limit: 6})
 			for _, e := range v.Bell {

@@ -535,7 +535,7 @@ func (h pages) handlePreview(w http.ResponseWriter, r *http.Request) {
 
 func (h pages) handleApply(w http.ResponseWriter, r *http.Request) {
 	ch, ok := h.parseChange(w, r, false)
-	if !ok {
+	if !ok || !ownerGate(h).stepUp(w, r) {
 		return
 	}
 	fresh, res, err := h.s.opts.Engine.Apply(ch, r.PostForm.Get("hash"))

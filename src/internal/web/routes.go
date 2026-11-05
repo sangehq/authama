@@ -26,6 +26,8 @@ func (s *Server) routes() http.Handler {
 	h, jh := pages{s}, jobPages{s}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /assets/{hash}/{path...}", s.serveAsset)
+	mux.HandleFunc("GET /unlock", ownerGate{s}.handleUnlock)
+	mux.HandleFunc("POST /unlock", ownerGate{s}.handleUnlock)
 	mux.HandleFunc("GET /{$}", h.handleOverview)
 	mux.HandleFunc("GET /profiles", h.handleProfiles)
 	mux.HandleFunc("GET /hosts", h.handleHosts)
