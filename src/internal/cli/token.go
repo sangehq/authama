@@ -146,6 +146,11 @@ func newTokenListCmd() *cobra.Command {
 				return err
 			}
 			reveal = mayReveal(c, reveal, yes)
+			if reveal {
+				if err := requireOwner(c, env.Paths, "revealing tokens"); err != nil {
+					return err
+				}
+			}
 			var items []tokens.Installed
 			for _, it := range env.Inventory(project, reveal) {
 				if len(sel) == 0 || sel[it.Target] {
@@ -438,6 +443,9 @@ func newTokenCopyCmd() *cobra.Command {
 			it, ok := env.Find(target, host, project)
 			if !ok || it.Secret == "" {
 				return fmt.Errorf("no token found for %s: %s", target, host)
+			}
+			if err := requireOwner(c, env.Paths, "copying a token"); err != nil {
+				return err
 			}
 			if err := clipboardWrite(it.Secret); err != nil {
 				return fmt.Errorf("couldn't reach a clipboard tool (pbcopy/wl-copy/xclip/xsel/clip): %w", err)

@@ -109,6 +109,17 @@ var goOnly = map[string]string{
 	// The key lifecycle: a lifetime per key or by default, and revocation that
 	// keeps the key declared. v1 had neither.
 	"key lifetime":           "key lifecycle - set a key's rotate_after_days and count its expiry again",
+	"owner":                  "owner binding - a PIN, and a seal over the state files bound to this account and machine",
+	"owner status":           "owner binding - whether the home is bound, where the key is, whether a PIN is set",
+	"owner init":             "owner binding - keep a sealing key in the OS store and seal the state files",
+	"owner verify":           "owner binding - name the state files changed outside authama",
+	"owner reseal":           "owner binding - accept outside changes and seal them",
+	"owner forget":           "owner binding - remove the key, seal and PIN",
+	"owner pin":              "owner binding - the PIN's lifecycle",
+	"owner pin set":          "owner binding - set or change the PIN",
+	"owner pin reset":        "owner binding - replace a forgotten PIN by proving the OS account",
+	"owner pin remove":       "owner binding - turn the PIN off",
+	"owner fingerprint":      "owner binding - fingerprint unlock through fprintd",
 	"key lifetime --default": "key lifecycle - the lifetime every key without its own inherits",
 	"key lifetime --clear":   "key lifecycle - drop a key's own lifetime",
 	"key lifetime --yes":     "key lifecycle",

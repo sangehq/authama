@@ -24,6 +24,9 @@ var doctorKeys013 = []string{"unpinned_vm_hosts", "stale_pins", "vm"}
 // doctorKeys014 are the keys 0.1.4 added, after 0.1.3's.
 var doctorKeys014 = []string{"reserved_keys"}
 
+// doctorKeys015 are the keys the release after 0.1.4 adds.
+var doctorKeys015 = []string{"owner_seal"}
+
 func orderedKeys(t *testing.T, js string) []string {
 	t.Helper()
 	dec := json.NewDecoder(strings.NewReader(js))
@@ -59,7 +62,7 @@ func TestMachineReadableOutputKeepsTheV3Shape(t *testing.T) {
 	run("init")
 	js := run("doctor", "--json")
 	got := orderedKeys(t, js)
-	want := append(append(append(append([]string{}, doctorKeys3x...), doctorKeys013...), doctorKeys014...), "tokens")
+	want := append(append(append(append(append([]string{}, doctorKeys3x...), doctorKeys013...), doctorKeys014...), doctorKeys015...), "tokens")
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("doctor --json keys changed:\n got %v\nwant %v", got, want)
 	}

@@ -26,6 +26,7 @@ import (
 	"github.com/simtabi/authama/src/internal/services/keystore"
 	"github.com/simtabi/authama/src/internal/services/knownhosts"
 	"github.com/simtabi/authama/src/internal/services/opstore"
+	"github.com/simtabi/authama/src/internal/services/owner"
 	"github.com/simtabi/authama/src/internal/services/preflight"
 	"github.com/simtabi/authama/src/internal/services/settings"
 	"github.com/simtabi/authama/src/internal/util/clipboard"
@@ -82,6 +83,11 @@ type Report struct {
 	// Clipboard is set when no clipboard tool is found. Advice only: `termius
 	// keys` then needs --print.
 	Clipboard string
+	// OwnerSeal is why the owner seal does not match: a state file changed
+	// outside authama, or the home copied from another account or machine.
+	// Empty when the home has no owner or the seal matches. It fails the
+	// verdict: authama would otherwise act on a state it did not write.
+	OwnerSeal string
 	// Strict is set by Run(strict=true), the CI mode: every warning then counts
 	// against the verdict, so `doctor --strict` never says clean over one.
 	Strict bool
@@ -136,7 +142,7 @@ func (r Report) OK() bool {
 		return false
 	}
 	if !r.Preflight.OK() || len(r.PermIssues) > 0 || !r.ConfigInSync || len(r.OnePassword) > 0 || len(r.StaleProxy) > 0 ||
-		len(r.ShadowedHosts) > 0 || len(r.NeededTools) > 0 {
+		len(r.ShadowedHosts) > 0 || len(r.NeededTools) > 0 || r.OwnerSeal != "" {
 		return false
 	}
 	if !r.Dangling.OK() {
@@ -177,6 +183,10 @@ func (r Report) Format() string {
 			"(the standard home already existed). Compare the two, then run "+
 			"`authama migrate --force` (backs up the current home and replaces it with "+
 			"the legacy one).", r.StrandedLegacyHome))
+	}
+	if r.OwnerSeal != "" {
+		lines = append(lines, "OWNER SEAL: "+r.OwnerSeal+" - `authama owner verify` shows what changed, "+
+			"`authama owner reseal` accepts it")
 	}
 	lines = append(lines, "agent: "+r.AgentStatus)
 	for _, issue := range r.OnePassword {
@@ -317,6 +327,8 @@ func (r Report) JSON() ([]byte, error) {
 		VM              *VMStatus `json:"vm"`
 		// Added in 0.1.4.
 		ReservedKeys []keyaudit.Reserved `json:"reserved_keys"`
+		// Added after 0.1.4.
+		OwnerSeal *string `json:"owner_seal"`
 	}
 	nz := func(s []string) []string {
 		if s == nil {
@@ -341,6 +353,7 @@ func (r Report) JSON() ([]byte, error) {
 		ShadowedHosts: nz(r.ShadowedHosts), RawOptionOverlaps: nz(r.RawOptionOverlaps),
 		NeededTools: nz(r.NeededTools), Clipboard: strOrNil(r.Clipboard),
 		StrandedLegacyHome: strOrNil(r.StrandedLegacyHome),
+		OwnerSeal:          strOrNil(r.OwnerSeal),
 	})
 }
 
@@ -395,6 +408,9 @@ func (s *Service) Run(strict bool) Report {
 	ssh := s.p.SSHDir
 	rep.PermIssues = permIssues(ssh, s.p)
 	rep.AgentStatus = agentStatus()
+	if st := owner.Verify(s.p); !st.Clean() {
+		rep.OwnerSeal = st.Describe()
+	}
 	rep.KnownHosts = knownHostsPresent(ssh)
 	rep.OldKeys, rep.StaleOldKeys = archivedKeys(ssh, OldKeyMaxAge(nil), time.Now())
 	if _, _, err := clipboard.Command(); err != nil {

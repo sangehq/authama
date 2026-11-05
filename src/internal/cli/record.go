@@ -101,6 +101,9 @@ func recordCommands(root *cobra.Command) {
 		// scope around the whole server would claim every event it ever sees.
 		if run := c.RunE; run != nil && c.Name() != "serve" {
 			c.RunE = func(c *cobra.Command, args []string) error {
+				if err := gateDestructive(c); err != nil {
+					return err
+				}
 				mutation.Begin(scopeFor(c, args))
 				err := run(c, args)
 				mutation.End(mutation.Outcome{Err: err, Aborted: errors.Is(err, errAborted) || errors.Is(err, errChanged)})
