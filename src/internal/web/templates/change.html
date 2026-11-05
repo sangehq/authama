@@ -1,12 +1,7 @@
 {{define "content"}}{{with .Data}}
 {{template "page_header" (header "Change" "Review the change" "What this change would write, run against a private copy of the home. Nothing has changed yet.")}}
 {{if .Stale}}<div class="alert alert-warning" role="alert">{{icon "alert-triangle"}}<span class="ms-1"><strong>Something changed since you looked</strong>, so nothing was written. This is what the change would do now. Confirm again if it is still what you want.</span></div>{{end}}
-<div class="card mb-3">
-  <div class="card-body">
-    <p class="mb-1 text-secondary">The same as running</p>
-    <pre class="code-block mb-0" tabindex="0">{{.Command}}</pre>
-  </div>
-</div>
+{{template "command_card" (commandCard .Command (and (not .Plan.Err) (not $.ReadOnly)) "apply-form" .Destroy)}}
 {{if .Plan.Err}}
 <div class="alert alert-danger" role="alert">{{icon "circle-x"}}<span class="ms-1">This change would fail, so it cannot be made: {{.Plan.Err}}</span></div>
 {{else}}
@@ -20,7 +15,7 @@
 {{template "file_diff" (fileDiff .Path .State .Lines .Checked .Problem)}}
 {{else}}<p>{{icon "circle-check"}}<span class="ms-1">Nothing: every file would stay as it is.</span></p>{{end}}
 <p class="text-secondary">{{if not .Plan.NoSnapshot}}authama snapshots <code>~/.ssh</code> before it writes, and records{{else}}authama records{{end}} the change in the history.</p>
-<form method="post" action="/changes/apply" class="d-flex gap-2">
+<form method="post" action="/changes/apply" class="d-flex flex-wrap align-items-center gap-2" id="apply-form">
   <input type="hidden" name="csrf" value="{{$.CSRF}}">
   <input type="hidden" name="hash" value="{{.Plan.Hash}}">
   {{range .Fields}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}

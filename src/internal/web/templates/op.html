@@ -14,7 +14,7 @@
           <dt class="col-4">Finished</dt><dd class="col-8">{{orDash (stamp .FinishedAt)}}</dd>
           {{if .Error}}<dt class="col-4">Error</dt><dd class="col-8 text-danger">{{.Error}}</dd>{{end}}
           <dt class="col-4">About</dt><dd class="col-8">{{orDash (subjects .Subjects)}}</dd>
-          <dt class="col-4">Snapshot</dt><dd class="col-8">{{if .Snapshot}}<a href="/snapshots/{{.Snapshot}}"><code>{{.Snapshot}}</code></a>{{else}}–{{end}}</dd>
+          <dt class="col-4">Snapshot</dt><dd class="col-8">{{if .Snapshot}}<a href="/snapshots/{{.Snapshot}}" data-inline><code>{{.Snapshot}}</code></a>{{else}}–{{end}}</dd>
           <dt class="col-4">By</dt><dd class="col-8">{{orDash .OSUser}}{{if .Machine}} on {{.Machine}}{{end}}</dd>
           <dt class="col-4">Version</dt><dd class="col-8">{{orDash .Version}}</dd>
           <dt class="col-4">Operation</dt><dd class="col-8 text-break"><code>{{.OpID}}</code></dd>

@@ -7,7 +7,7 @@
       {{range .}}
       <tr>
         <td class="text-nowrap" data-sort="{{.StartedAt}}"><time datetime="{{.StartedAt}}">{{stamp .StartedAt}}</time></td>
-        <th scope="row"><a href="/history/{{.OpID}}">{{.Command}}</a></th>
+        <th scope="row"><a href="/history/{{.OpID}}" data-inline>{{.Command}}</a></th>
         <td><span class="badge {{resultClass .Result}}">{{if .Result}}{{.Result}}{{else}}unfinished{{end}}</span></td>
         <td>{{.Source}}</td>
         <td class="text-secondary">{{orDash (subjects .Subjects)}}</td>

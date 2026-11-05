@@ -17,7 +17,7 @@
           <td class="text-end">
             {{template "menu_open" (printf "Actions for snapshot %s" .ID)}}
               {{if .KeyBearing}}<span class="dropdown-item disabled" aria-disabled="true">{{icon "lock"}}<span class="ms-2">Not opened: it holds private keys</span></span>
-              {{else}}<a class="dropdown-item" href="/snapshots/{{.ID}}">{{icon "git-compare"}}<span class="ms-2">Compare with now</span></a>{{end}}
+              {{else}}<a class="dropdown-item" href="/snapshots/{{.ID}}" data-inline>{{icon "git-compare"}}<span class="ms-2">Compare with now</span></a>{{end}}
               <button type="button" class="dropdown-item" data-copy="{{.ID}}">{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
             {{template "menu_close"}}
           </td>
@@ -31,7 +31,7 @@
 {{if and (not .ReadOnly) .Data.Snapshots}}
 <div class="card mt-3">
   <div class="card-body">
-    <form method="post" action="/changes/preview" id="f-prune"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="action" value="snapshots-prune">
+    <form method="post" action="/changes/preview" data-inline id="f-prune"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="action" value="snapshots-prune">
       <div class="row g-2 align-items-end">
         <div class="col-sm-3"><label class="form-label" for="s-keep">Keep the newest</label><input class="form-control" id="s-keep" name="keep" inputmode="numeric" value="10"></div>
         <div class="col-sm-3"><button type="submit" class="btn btn-outline-danger w-100" data-confirm="m-prune">{{icon "trash"}}<span class="ms-1">Preview pruning</span></button></div>
@@ -55,7 +55,7 @@
           <td class="text-nowrap">{{when .Written}}</td>
           <td>{{size .Size}}</td>
           <td class="text-end">
-            {{if not $.ReadOnly}}<form method="post" action="/jobs/review" id="f-bundle-{{.Name}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="bundle-restore"><input type="hidden" name="bundle" value="{{.Name}}"></form>{{end}}
+            {{if not $.ReadOnly}}<form method="post" action="/jobs/review" data-inline id="f-bundle-{{.Name}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="bundle-restore"><input type="hidden" name="bundle" value="{{.Name}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for bundle %s" .Name)}}
               <button type="button" class="dropdown-item" data-copy="{{.Name}}">{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
               {{if not $.ReadOnly}}<div class="dropdown-divider"></div>

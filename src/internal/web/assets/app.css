@@ -157,3 +157,19 @@ main:focus { outline: none; }
    4.08:1 there in the light theme. */
 .btn kbd { color: #333; background: #e6e6e6; }
 :root[data-bs-theme=dark] .btn kbd { color: #e6e6e6; background: #333; }
+/* Code blocks keep Tabler's dark pre in both themes, so their tokens use the
+   dark palette always. */
+.code-block .tok-key { color: #8cc4ff; }
+.code-block .tok-str { color: #9fe0a8; }
+.code-block .tok-num { color: #ffc27a; }
+.code-block .tok-lit { color: #e0a8ff; }
+.code-block .tok-com, .code-block .tok-pun, .code-prompt { color: #a3adba; }
+.code-block .tok-sec { color: #ff9ec4; }
+/* The side panel: wide enough for a diff, the whole width on a phone. */
+.side-panel { --tblr-offcanvas-width: min(64rem, 100vw); }
+.side-panel .offcanvas-body { padding-top: .5rem; }
+.side-panel[aria-busy=true] .offcanvas-body { opacity: .5; transition: opacity .15s; }
+.side-panel .page-header { margin-top: 0; }
+.csv-columns { max-height: 22rem; overflow: auto; }
+.csv-preview { max-height: 22rem; border: 1px solid var(--tblr-border-color); border-radius: var(--tblr-border-radius); }
+.csv-preview td { white-space: nowrap; }

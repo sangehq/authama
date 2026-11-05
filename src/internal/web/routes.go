@@ -352,10 +352,7 @@ func (h pages) handleExport(w http.ResponseWriter, r *http.Request) {
 			h.fail(w, r, err)
 			return
 		}
-		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-		w.Header().Set("Content-Disposition", `attachment; filename="`+brand.Command+"-"+name+`"`)
-		w.Header().Set("Cache-Control", "no-store")
-		_ = csvout.Write(w, t)
+		h.writeCSV(w, r, brand.Command+"-"+name, t)
 		return
 	}
 	if name != ExportFlat && name != ExportTermius {
@@ -365,6 +362,17 @@ func (h pages) handleExport(w http.ResponseWriter, r *http.Request) {
 	body, err := h.s.opts.Engine.Export(name, r.URL.Query().Get("include_git") == "1")
 	if err != nil {
 		h.fail(w, r, err)
+		return
+	}
+	// The Termius file is a CSV too: shaped like the lists' when asked to be,
+	// and written exactly as rendered when not.
+	if name == ExportTermius && shapeOf(r.URL.Query()).any() {
+		t, err := csvout.Parse(body)
+		if err != nil {
+			h.fail(w, r, err)
+			return
+		}
+		h.writeCSV(w, r, name, t)
 		return
 	}
 	ctype := "text/plain; charset=utf-8"

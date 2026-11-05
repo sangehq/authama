@@ -130,6 +130,7 @@
       </div>
     </footer>
   </div>
+  {{if .Authed}}{{template "side_panel" .}}{{template "csv_dialog" .}}{{end}}
 </div>
 {{if .Authed}}{{template "palette" .}}{{end}}
 <script src="{{asset "vendor/tabler/tabler.min.js"}}" defer></script>

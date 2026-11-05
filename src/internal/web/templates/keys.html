@@ -17,7 +17,7 @@
           <td>{{orDash (join .Hosts ", ")}}</td>
           <td>{{if .Vault}}1Password <span class="text-secondary">({{.Vault}})</span>{{else if .PrivateOnDisk}}<span class="badge badge-ok">yes</span>{{else}}<span class="badge badge-warn">not minted</span>{{end}}</td>
           <td class="text-end">
-            {{if and (not $.ReadOnly) .Declared (not .Hosts)}}<form method="post" action="/changes/preview" id="f-key-{{.Ref.Profile}}-{{.Ref.KeyName}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="key-delete"><input type="hidden" name="profile" value="{{.Ref.Profile}}"><input type="hidden" name="key" value="{{.Ref.KeyName}}"></form>{{end}}
+            {{if and (not $.ReadOnly) .Declared (not .Hosts)}}<form method="post" action="/changes/preview" data-inline id="f-key-{{.Ref.Profile}}-{{.Ref.KeyName}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="key-delete"><input type="hidden" name="profile" value="{{.Ref.Profile}}"><input type="hidden" name="key" value="{{.Ref.KeyName}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for key %s" .Ref)}}
               <a class="dropdown-item" href="/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}">{{icon "external-link"}}<span class="ms-2">Open</span></a>
               {{with index $.Data.Public .Ref.String}}<button type="button" class="dropdown-item" data-copy="{{.}}">{{icon "copy"}}<span class="ms-2">Copy the public key</span></button>{{end}}

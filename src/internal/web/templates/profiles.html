@@ -22,7 +22,7 @@
           <td>{{.Hosts}}</td>
           <td>{{.Keys}}</td>
           <td class="text-end">
-            {{if not $.ReadOnly}}<form method="post" action="/changes/preview" id="f-profile-{{.Name}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="profile-delete"><input type="hidden" name="name" value="{{.Name}}"></form>{{end}}
+            {{if not $.ReadOnly}}<form method="post" action="/changes/preview" data-inline id="f-profile-{{.Name}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="profile-delete"><input type="hidden" name="name" value="{{.Name}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for profile %s" .Name)}}
               <a class="dropdown-item" href="/hosts?q={{.Name}}">{{icon "server"}}<span class="ms-2">Its hosts</span></a>
               <a class="dropdown-item" href="/history?profile={{.Name}}">{{icon "history"}}<span class="ms-2">History</span></a>

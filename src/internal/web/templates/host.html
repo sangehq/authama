@@ -63,7 +63,7 @@
         </form>
       </div>
       <div class="card-footer">
-        <form method="post" action="/changes/preview" id="f-host-delete"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="host-delete"><input type="hidden" name="profile" value="{{.Profile}}"><input type="hidden" name="alias" value="{{.Alias}}">
+        <form method="post" action="/changes/preview" data-inline id="f-host-delete"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="host-delete"><input type="hidden" name="profile" value="{{.Profile}}"><input type="hidden" name="alias" value="{{.Alias}}">
           <button type="submit" class="btn btn-outline-danger" data-confirm="m-host-delete">{{icon "trash"}}<span class="ms-1">Delete host {{.Alias}} and its pins</span></button>
           <span class="text-secondary small ms-2">Its key files stay on disk.</span>
         </form>

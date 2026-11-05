@@ -194,6 +194,9 @@ func funcs(a *assetSet) template.FuncMap {
 			return "diff-ctx"
 		},
 		"fileDiff": newDiffView,
+		"commandCard": func(command string, runnable bool, form string, destroy bool) commandCard {
+			return commandCard{Command: command, Runnable: runnable, Form: form, Destroy: destroy}
+		},
 		"diffOf": func(path string, lines []history.DiffLine) diffView {
 			return newDiffView(path, "", lines, false, "")
 		},
@@ -407,6 +410,9 @@ type view struct {
 	// Initials the avatar's letters; Year is for the footer.
 	User, Host, Initials string
 	Year                 int
+	// Panel is a request from the side panel: the page's content is rendered
+	// alone, with no layout around it.
+	Panel bool
 	// PINNeeded is a session that must give the PIN to confirm a change: the
 	// confirmations show a PIN field when it is set.
 	PINNeeded bool
@@ -419,7 +425,8 @@ func (s *Server) newView(r *http.Request, nav, title string, data any) view {
 	p := s.opts.Engine.Home()
 	v := view{Title: title, Nav: nav, Version: s.opts.Version, ReadOnly: s.opts.ReadOnly, Data: data,
 		Home: p.ConfigDir, SSHDir: p.SSHDir, DevRoot: p.DevRoot,
-		User: s.who.user, Host: s.who.host, Initials: s.who.initials(), Year: s.now().Year()}
+		User: s.who.user, Host: s.who.host, Initials: s.who.initials(), Year: s.now().Year(),
+		Panel: r.Header.Get(panelHeader) == "1"}
 	if sess := sessionFrom(r.Context()); sess != nil {
 		v.Authed = true
 		v.CSRF = sess.csrf
@@ -450,15 +457,33 @@ func (s *Server) render(w http.ResponseWriter, status int, page string, v view) 
 		return
 	}
 	var buf bytes.Buffer
-	if err := t.ExecuteTemplate(&buf, "layout", v); err != nil {
+	frame := "layout"
+	if v.Panel {
+		frame = "panel"
+	}
+	if err := t.ExecuteTemplate(&buf, frame, v); err != nil {
 		http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
+	// The same URL answers with a page or a panel's content by this header.
+	w.Header().Add("Vary", panelHeader)
 	w.WriteHeader(status)
 	_, _ = w.Write(buf.Bytes())
 }
+
+// commandCard is the "The same as running" card: the command, a copy
+// button, and a Run button that submits the page's own confirmation form.
+type commandCard struct {
+	Command  string
+	Runnable bool
+	Form     string
+	Destroy  bool
+}
+
+// panelHeader marks a request from the side panel (see js/components/side-panel.js).
+const panelHeader = "X-Authama-Panel"
 
 type errorData struct {
 	Status         int

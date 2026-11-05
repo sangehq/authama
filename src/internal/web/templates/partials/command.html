@@ -1,0 +1,14 @@
+{{/* "command_card" shows the command a change or job is the same as, with
+     a copy button and, when it can run, a Run button that submits the
+     confirmation form named by .Form - in the side panel when the page is
+     in one. The PIN field, when asked for, is on that form. */}}
+{{define "command_card"}}<div class="card mb-3 command-card">
+  <div class="card-body">
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <p class="mb-0 text-secondary me-auto">The same as running</p>
+      {{template "copy" (copy .Command "the command")}}
+      {{if .Runnable}}<button type="submit" form="{{.Form}}" class="btn btn-sm {{if .Destroy}}btn-danger{{else}}btn-primary{{end}}">{{icon "player-play"}}<span class="ms-1">Run</span></button>{{end}}
+    </div>
+    <pre class="code-block mb-0" tabindex="0"><span class="code-prompt" aria-hidden="true">$ </span>{{hl "sh" .Command}}</pre>
+  </div>
+</div>{{end}}

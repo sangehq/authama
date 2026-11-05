@@ -42,6 +42,16 @@ export class App {
         this.#instances.set(c.name, c.mount(this.#root));
       }
     };
+    // Content loaded into the page later (the side panel) brings elements of
+    // its own; mount the same components on it.
+    document.addEventListener("authama:mount", (e) => {
+      const root = /** @type {CustomEvent<{ root: ParentNode }>} */ (e).detail?.root;
+      if (root) {
+        for (const c of this.#components) {
+          c.mount(root);
+        }
+      }
+    });
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", run, { once: true });
     } else {

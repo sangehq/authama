@@ -27,7 +27,7 @@
           <td>{{orDash .Area}}</td>
           <td class="text-break">{{if .Path}}<code>{{.Path}}</code>{{else}}<span class="text-secondary">–</span>{{end}}</td>
           <td class="text-secondary">{{orDash .Detail}}{{if .Mode}}{{if ne .Kind "mode"}} <span class="text-nowrap">· {{.Mode}}</span>{{end}}{{end}}</td>
-          <td>{{if .OpID}}<a href="/history/{{.OpID}}">{{.Command}}</a>{{else}}<span class="text-secondary">outside authama</span>{{end}}</td>
+          <td>{{if .OpID}}<a href="/history/{{.OpID}}" data-inline>{{.Command}}</a>{{else}}<span class="text-secondary">outside authama</span>{{end}}</td>
         </tr>
         {{end}}
       </tbody>

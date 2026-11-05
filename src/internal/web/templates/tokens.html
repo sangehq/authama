@@ -21,7 +21,7 @@
           <td>{{if .SecretPresent}}<span class="badge badge-ok">set</span>{{else}}<span class="badge badge-warn">empty</span>{{end}}</td>
           <td class="text-break"><code>{{.File}}</code></td>
           <td class="text-end">
-            {{if not $.ReadOnly}}<form method="post" action="/changes/preview" id="f-token-{{.Target}}-{{.Host}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="token-delete"><input type="hidden" name="target" value="{{.Target}}"><input type="hidden" name="host" value="{{.Host}}"></form>{{end}}
+            {{if not $.ReadOnly}}<form method="post" action="/changes/preview" data-inline id="f-token-{{.Target}}-{{.Host}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="token-delete"><input type="hidden" name="target" value="{{.Target}}"><input type="hidden" name="host" value="{{.Host}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for the %s token for %s" .Target .Host)}}
               <a class="dropdown-item" href="/history?token={{.Target}}/{{.Host}}">{{icon "history"}}<span class="ms-2">History</span></a>
               <button type="button" class="dropdown-item" data-copy="{{.Host}}">{{icon "copy"}}<span class="ms-2">Copy the host</span></button>
@@ -151,7 +151,7 @@
       <div class="modal-body">
         <p class="text-secondary">It names environment variables, never secrets: <code>env</code>, <code>user_env</code>, <code>pass_env</code>, <code>key_env</code> and <code>secret_env</code> must each be a variable name, and a credential header takes its value from <code>${VAR}</code>. A file that holds a value is refused.</p>
         <label class="form-label" for="tc-body">tokens.json</label>
-        <textarea class="form-control font-monospace" id="tc-body" name="body" rows="18" spellcheck="false" autocomplete="off" required>{{.ConfigText}}</textarea>
+        <textarea class="form-control font-monospace" id="tc-body" name="body" rows="18" spellcheck="false" autocomplete="off" required data-json>{{.ConfigText}}</textarea>
         <small class="form-hint">You see the diff before anything is written. <code>authama token examples</code> lists every field.</small>
       </div>
       <div class="modal-footer">
