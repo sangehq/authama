@@ -104,11 +104,30 @@ its algorithm and cost, so this can change again without invalidating anyone's P
 
 ## Fingerprint unlock
 
-On Linux with `fprintd` and an enrolled finger, `authama owner fingerprint on` makes the command
-line ask for a fingerprint first, falling back to the PIN. Touch ID and Windows Hello are offered by
-their platforms only to signed applications through their own APIs, which a cgo-free command-line
-binary cannot call; until authama ships a signed helper for them, macOS and Windows use the PIN.
-The web UI always uses the PIN.
+`authama owner fingerprint on` makes the command line ask for a fingerprint first, falling back to
+the PIN on any failure or cancel. It is a convenience in front of the PIN, never a replacement:
+
+| Platform | How | Needs |
+|---|---|---|
+| macOS | Touch ID, through `authama-touchid` | the helper beside `authama` (or in `Authama.app`), and an enrolled finger |
+| Windows | Windows Hello, through Windows PowerShell 5.1 | Hello set up in Settings > Accounts > Sign-in options |
+| Linux | `fprintd-verify` | `fprintd` and an enrolled finger |
+
+authama is built without cgo, so it cannot call LocalAuthentication or WinRT itself.
+
+- **macOS:** `authama-touchid` is a small Swift program (`src/helpers/touchid/main.swift`) that
+  asks for Touch ID with the biometrics-only policy and answers with its exit status. `make build`
+  builds it beside `authama` on a Mac with Xcode's command line tools, and `Authama.app` carries it.
+  It is ad-hoc signed, not notarized: a copy downloaded through a browser is quarantined, so allow it
+  once in System Settings > Privacy & Security, or remove the flag with
+  `xattr -d com.apple.quarantine authama-touchid`. A build from source is not quarantined.
+  Notarizing it needs a Developer ID.
+- **Windows:** authama runs `powershell.exe` with an encoded script that calls WinRT's
+  `UserConsentVerifier`. No helper is installed. The prompt can open behind the terminal, in which
+  case it shows in the taskbar.
+
+Over SSH (`SSH_CONNECTION` set) and in Remote Desktop, macOS and Windows report it unavailable and
+ask for the PIN. The web UI always uses the PIN.
 
 ## History and events
 

@@ -2,7 +2,10 @@
 #
 # Wraps an authama macOS binary in Authama.app and zips it:
 #
-#   scripts/macos-app.sh <authama binary> <out.zip>
+#   scripts/macos-app.sh <authama binary> <out.zip> [authama-touchid]
+#
+# The optional third argument is the Touch ID helper (touchid-helper.sh); it
+# goes beside the binary, Contents/MacOS/authama-touchid, where authama looks.
 #
 # Double-clicking the app opens Terminal running `authama serve`, which prints
 # the sign-in address and opens the web UI in the browser. The server runs in
@@ -30,6 +33,10 @@ app="${stage}/Authama.app"
 mkdir -p "${app}/Contents/MacOS" "${app}/Contents/Resources"
 cp "$bin" "${app}/Contents/MacOS/authama"
 chmod 0755 "${app}/Contents/MacOS/authama"
+if [ -n "${3:-}" ]; then
+  cp "$3" "${app}/Contents/MacOS/authama-touchid"
+  chmod 0755 "${app}/Contents/MacOS/authama-touchid"
+fi
 
 # The launcher: Terminal runs a .command file, so the server is visible.
 cat > "${app}/Contents/Resources/authama-serve.command" <<'CMD'

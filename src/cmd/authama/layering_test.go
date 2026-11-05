@@ -288,6 +288,10 @@ func TestTheToolRunsOnlyTheBinariesItDeclares(t *testing.T) {
 		// optional; without one the key is kept in an owner-only file, and the
 		// PIN is asked for instead of a fingerprint.
 		"/usr/bin/security", "/usr/sbin/ioreg", "secret-tool", "fprintd-verify", "fprintd-list",
+		// Fingerprint unlock on Windows: Windows PowerShell 5.1 asks Windows
+		// Hello through WinRT (PowerShell 7 cannot). On macOS the Touch ID
+		// helper, authama-touchid, is run by the path it was found at.
+		"powershell.exe", "authama-touchid",
 		// Itself: the scheduled notifier runs `authama audit --notify`, and it
 		// prefers an installed authama on PATH over the running binary's own
 		// path so the job survives the binary moving.

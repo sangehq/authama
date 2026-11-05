@@ -61,6 +61,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Touch ID and Windows Hello stand in for the owner PIN at the terminal.** On a Mac,
+  `authama-touchid` (a small Swift helper, built beside `authama` by `make build` and carried in
+  `Authama.app`) asks LocalAuthentication; on Windows, authama asks Windows Hello through Windows
+  PowerShell's WinRT `UserConsentVerifier`, with no helper to install. `authama owner fingerprint on`
+  turns it on, as it already did with fprintd on Linux. Over SSH or Remote Desktop it reports itself
+  unavailable, and any failure falls back to the PIN. The helper is ad-hoc signed, not notarized.
 - **Five more token targets: Maven, Yarn Berry, Helm and the GitHub CLI.** `maven` writes a
   `<server>` into `~/.m2/settings.xml`, spliced so every other byte stays put and a brace is escaped
   as Maven needs; `yarn` writes `npmRegistries` in `~/.yarnrc.yml`; `helm` sets the login on a

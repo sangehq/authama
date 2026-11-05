@@ -299,6 +299,7 @@ func TestTheEnvironmentVariableNamesAreTheDocumentedOnes(t *testing.T) {
 		"AUTHAMA_OWNER_STORE":          "file keeps the owner's sealing key in a file, not the OS credential store",
 		"AUTHAMA_ASKPASS_MODE":         "internal: marks the askpass re-execution",
 		"AUTHAMA_ASKPASS_SECRET":       "internal: the passphrase handed to it",
+		"AUTHAMA_HELLO_CHECK":          "internal: asks the Windows Hello script for availability only",
 		// Earlier names, still read.
 		"SSH_MANAGER_HOME":                 "legacy AUTHAMA_CONFIG_DIR",
 		"SSH_MANAGER_CONFIG_DIR":           "legacy alias of SSH_MANAGER_HOME",

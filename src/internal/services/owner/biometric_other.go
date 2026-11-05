@@ -1,4 +1,4 @@
-//go:build !linux
+//go:build !linux && !darwin && !windows
 
 package owner
 
@@ -7,12 +7,10 @@ import (
 	"errors"
 )
 
-// BiometricAvailable: on macOS and Windows a fingerprint (Touch ID, Windows
-// Hello) is only offered to a signed application through the platform's own
-// API, which a cgo-free command-line binary cannot call. Until authama ships
-// a signed helper for it, the PIN is the only unlock there.
+// BiometricAvailable: the BSDs and other platforms have no fingerprint
+// service authama talks to; the PIN is the unlock there.
 func BiometricAvailable() (bool, string) {
-	return false, "Touch ID and Windows Hello need a signed helper authama does not ship yet; the PIN is used"
+	return false, "this platform has no fingerprint unlock authama can use; the PIN is used"
 }
 
 // VerifyBiometric is never offered where BiometricAvailable is false.

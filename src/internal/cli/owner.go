@@ -321,10 +321,11 @@ func newOwnerPINCmd() *cobra.Command {
 func newOwnerBiometricCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "fingerprint <on|off>",
-		Short: "Let a fingerprint stand in for the PIN at the terminal (Linux, fprintd)",
-		Long: "On Linux with fprintd and an enrolled finger, the command line asks for a\n" +
-			"fingerprint first and falls back to the PIN. Touch ID and Windows Hello need a\n" +
-			"signed helper authama does not ship yet, so on macOS and Windows the PIN is used.",
+		Short: "Let a fingerprint stand in for the PIN at the terminal (Touch ID, Windows Hello, fprintd)",
+		Long: "The command line asks for a fingerprint first and falls back to the PIN: Touch ID\n" +
+			"on a Mac (through the authama-touchid helper, built beside authama), Windows Hello\n" +
+			"on Windows (through Windows PowerShell), fprintd on Linux. Not over SSH, where the\n" +
+			"prompt would appear on a screen nobody at this terminal sees.",
 		Args:      cobra.ExactArgs(1),
 		ValidArgs: []string{"on", "off"},
 		RunE: func(c *cobra.Command, args []string) error {

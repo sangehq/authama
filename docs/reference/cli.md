@@ -27,7 +27,7 @@ Every command also takes the global flag:
 - [`authama man`](#authama-man) - Write a manual page (troff, section 1) for every command into DIR
 - [`authama migrate`](#authama-migrate) - Copy a pre-0.1.1 home (ssh-manager, sshmgr) into the authama home; the old one is kept and marked
 - [`authama owner`](#authama-owner) - Bind this home to you and this machine: a PIN, and a seal that notices outside changes
-  - [`authama owner fingerprint`](#authama-owner-fingerprint) - Let a fingerprint stand in for the PIN at the terminal (Linux, fprintd)
+  - [`authama owner fingerprint`](#authama-owner-fingerprint) - Let a fingerprint stand in for the PIN at the terminal (Touch ID, Windows Hello, fprintd)
   - [`authama owner forget`](#authama-owner-forget) - Unbind the home: remove the key, the seal and the PIN, keep everything else
   - [`authama owner init`](#authama-owner-init) - Bind this home to you and this machine, and seal its state files
   - [`authama owner pin`](#authama-owner-pin) - Set, change, reset or remove the PIN
@@ -332,7 +332,7 @@ authama owner
 
 Subcommands:
 
-- [`fingerprint`](#authama-owner-fingerprint) - Let a fingerprint stand in for the PIN at the terminal (Linux, fprintd)
+- [`fingerprint`](#authama-owner-fingerprint) - Let a fingerprint stand in for the PIN at the terminal (Touch ID, Windows Hello, fprintd)
 - [`forget`](#authama-owner-forget) - Unbind the home: remove the key, the seal and the PIN, keep everything else
 - [`init`](#authama-owner-init) - Bind this home to you and this machine, and seal its state files
 - [`pin`](#authama-owner-pin) - Set, change, reset or remove the PIN
@@ -342,9 +342,10 @@ Subcommands:
 
 ## authama owner fingerprint
 
-On Linux with fprintd and an enrolled finger, the command line asks for a
-fingerprint first and falls back to the PIN. Touch ID and Windows Hello need a
-signed helper authama does not ship yet, so on macOS and Windows the PIN is used.
+The command line asks for a fingerprint first and falls back to the PIN: Touch ID
+on a Mac (through the authama-touchid helper, built beside authama), Windows Hello
+on Windows (through Windows PowerShell), fprintd on Linux. Not over SSH, where the
+prompt would appear on a screen nobody at this terminal sees.
 
 ```
 authama owner fingerprint <on|off>

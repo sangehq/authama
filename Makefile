@@ -66,6 +66,9 @@ build: clean ## compile the binary into build/{host-os}/ (FORCE=1 to rebuild dep
 	@mkdir -p build/$(HOST_OS)
 	$(GO) build $(if $(FORCE),-a,) -trimpath -ldflags '$(LDFLAGS)' -o ../$(BIN)$(EXE) $(PKG)
 	@echo "built $(BIN)$(EXE)  ->  $$(./$(BIN)$(EXE) version)"
+ifeq ($(HOST_OS),macos)
+	@$(MODULE)/scripts/touchid-helper.sh build/macos/authama-touchid
+endif
 
 build-all: ## compile every package (what CI gated on before `ci` existed)
 	$(GO) build ./...
@@ -262,6 +265,9 @@ install: build ## copy build/<host-os>/authama to BINDIR (default ~/.local/bin) 
 	@mkdir -p "$(BINDIR)"
 	@cp "$(BIN)$(EXE)" "$(INSTALLED).tmp" && chmod 0755 "$(INSTALLED).tmp" && mv -f "$(INSTALLED).tmp" "$(INSTALLED)"
 	@echo "installed $(INSTALLED)  ->  $$("$(INSTALLED)" version | head -1)"
+	@if [ "$(HOST_OS)" = macos ] && [ -f build/macos/authama-touchid ]; then \
+		cp build/macos/authama-touchid "$(BINDIR)/authama-touchid.tmp" && chmod 0755 "$(BINDIR)/authama-touchid.tmp" && \
+		mv -f "$(BINDIR)/authama-touchid.tmp" "$(BINDIR)/authama-touchid" && echo "installed $(BINDIR)/authama-touchid (Touch ID)"; fi
 	@case ":$$PATH:" in *":$(BINDIR):"*) ;; *) echo "note: $(BINDIR) is not on PATH; add it to your shell profile";; esac
 	@found="$$(command -v authama 2>/dev/null)"; if [ -n "$$found" ] && [ "$$found" != "$(INSTALLED)" ]; then \
 		echo "note: 'authama' on PATH resolves to $$found, not $(INSTALLED)"; fi

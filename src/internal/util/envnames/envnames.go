@@ -41,12 +41,15 @@ const (
 	Notifications    = "AUTHAMA_NOTIFICATIONS"
 	AskpassMode      = "AUTHAMA_ASKPASS_MODE"
 	AskpassSecret    = "AUTHAMA_ASKPASS_SECRET"
-	VMHypervisors    = "AUTHAMA_VM_HYPERVISORS"
-	VMPruneGone      = "AUTHAMA_VM_PRUNE_GONE"
-	VMRepin          = "AUTHAMA_VM_REPIN"
-	WebAddr          = "AUTHAMA_WEB_ADDR"
-	WebPort          = "AUTHAMA_WEB_PORT"
-	WebBasePath      = "AUTHAMA_WEB_BASE_PATH"
+	// HelloCheck asks the Windows Hello script for availability only; set by
+	// authama for the powershell.exe it runs, never by a user.
+	HelloCheck    = "AUTHAMA_HELLO_CHECK"
+	VMHypervisors = "AUTHAMA_VM_HYPERVISORS"
+	VMPruneGone   = "AUTHAMA_VM_PRUNE_GONE"
+	VMRepin       = "AUTHAMA_VM_REPIN"
+	WebAddr       = "AUTHAMA_WEB_ADDR"
+	WebPort       = "AUTHAMA_WEB_PORT"
+	WebBasePath   = "AUTHAMA_WEB_BASE_PATH"
 	// OwnerStore set to "file" keeps the owner's sealing key in an owner-only
 	// file instead of the OS credential store (see services/owner).
 	OwnerStore = "AUTHAMA_OWNER_STORE"
@@ -72,7 +75,7 @@ var legacy = map[string][]string{
 
 // internal names are set by authama for its own child processes; a legacy
 // spelling of one is never something a user typed, so it earns no notice.
-var internal = map[string]bool{AskpassMode: true, AskpassSecret: true}
+var internal = map[string]bool{AskpassMode: true, AskpassSecret: true, HelloCheck: true}
 
 // Legacy returns the earlier names of a current one (nil when it has none).
 func Legacy(name string) []string { return legacy[name] }
@@ -81,7 +84,7 @@ func Legacy(name string) []string { return legacy[name] }
 func Names() []string {
 	out := []string{
 		AgeIdentityFile, AgeRecipient, AskpassMode, AskpassSecret, AutoPin, ConfigDir,
-		DevRoot, DockerCredsStore, GitMode, History, NoDotenv, Notifications,
+		DevRoot, DockerCredsStore, GitMode, HelloCheck, History, NoDotenv, Notifications,
 		OldKeyMaxAgeDays, OwnerStore, SnapshotRetain, StateDir, TokensCatalog, TokensConfig,
 		VMHypervisors, VMPruneGone, VMRepin, WebAddr, WebBasePath, WebPort,
 	}
