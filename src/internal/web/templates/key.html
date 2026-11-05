@@ -6,8 +6,8 @@
       <h1 class="page-title"><code>{{.Detail.Ref.KeyName}}</code></h1>
     </div>
     {{if not $.ReadOnly}}<div class="col-auto ms-auto btn-list">
-      <a href="#lifetime" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" role="button" aria-controls="lifetime">{{icon "hourglass"}}<span class="ms-1">Set lifetime</span></a>
-      {{if not $.DevRoot}}<a href="#revoke" class="btn btn-outline-danger" data-bs-toggle="offcanvas" role="button" aria-controls="revoke">{{icon "ban"}}<span class="ms-1">Revoke</span></a>{{end}}
+      <a href="#lifetime" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" role="button" aria-controls="lifetime"{{tip "key-lifetime"}}>{{icon "hourglass"}}<span class="ms-1">Set lifetime</span></a>
+      {{if not $.DevRoot}}<a href="#revoke" class="btn btn-outline-danger" data-bs-toggle="offcanvas" role="button" aria-controls="revoke"{{tip "key-revoke"}}>{{icon "ban"}}<span class="ms-1">Revoke</span></a>{{end}}
     </div>{{end}}
   </div>
 </div>

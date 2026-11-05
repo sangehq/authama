@@ -6,7 +6,7 @@
     <h2 class="card-title">{{icon "lock-open"}}<span class="ms-1">Not bound</span></h2>
     <p class="text-secondary">Binding keeps a sealing key in your OS's credential store and seals the state files, so a file changed outside authama, or this home copied to another account or machine, is named the next time authama runs. Then you can set a PIN, which this page asks for at sign-in and before every change.</p>
     {{if not $.ReadOnly}}{{template "change_open" $}}<input type="hidden" name="action" value="owner-init">
-      <button type="submit" class="btn btn-primary">{{icon "lock"}}<span class="ms-1">Preview binding this home</span></button>
+      <button type="submit" class="btn btn-primary"{{tip "preview"}}>{{icon "lock"}}<span class="ms-1">Preview binding this home</span></button>
     </form>{{end}}
     <p class="text-secondary small mt-3 mb-1">Or at a terminal:</p>
     {{template "command_line" "authama owner init"}}
@@ -14,7 +14,7 @@
 </div>
 {{else}}
 {{$c := .State.Config}}
-{{template "page_header" (header "Security" "Owner & PIN" "Whether this home is bound to you and this machine, whether a PIN guards it, and whether its files are as authama left them." (only (not $.ReadOnly) (panel (printf "%s" (or (and $c.HasPIN "Change the PIN") "Set a PIN")) "pin-set" "lock")) (only (and (not $.ReadOnly) $c.HasPIN) (panel "Remove the PIN" "pin-remove" "lock-open")) (only (not $.ReadOnly) (panel "Unbind this home" "forget" "trash")))}}
+{{template "page_header" (header "Security" "Owner & PIN" "Whether this home is bound to you and this machine, whether a PIN guards it, and whether its files are as authama left them." (only (not $.ReadOnly) (panel (printf "%s" (or (and $c.HasPIN "Change the PIN") "Set a PIN")) "pin-set" "lock" | withTip "pin-set")) (only (and (not $.ReadOnly) $c.HasPIN) (panel "Remove the PIN" "pin-remove" "lock-open" | withTip "pin-remove")) (only (not $.ReadOnly) (panel "Unbind this home" "forget" "trash" | withTip "owner-unbind")))}}
 <div class="row row-cards">
   <div class="col-lg-5">
     <div class="card">

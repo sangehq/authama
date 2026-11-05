@@ -58,6 +58,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Actions explain themselves.** Page actions, Preview and Review buttons, quick actions,
+  destructive menu items, Run and CSV show a tip on hover and keyboard focus saying what they do,
+  which screen readers announce too. The wording lives in one catalogue, and a test fails on a tip
+  a template names that the catalogue lacks, or one nothing uses.
+- **A host's or key's row actions stay on the list.** Open, History and Rotate or roll back open
+  in the side panel instead of leaving the page, like the row's other actions already did.
+
 - **Keys where you already keep them.** A declared key's new `path` adopts an existing private key
   under `~/.ssh` (`id_ed25519`, `work/deploy_key`) in place: it renders, deploys, rotates and audits
   there, and authama never moves, renames or deletes it. Rotation archives the old pair in the
@@ -214,12 +221,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The tour could jump back to its first step.** On the overview it starts by itself after the page
+  lays out; a tour started by hand in that moment was restarted by the timer. It is left alone now.
+  The tour also sits above the hover explainers, so a tooltip under the pointer cannot cover Next.
 - **Launching the web UI again started another server every time**, and none ever stopped: after
   twenty launches ports 7822-7841 were all taken and the next one failed. `authama serve` now opens
   the server already running for the home (checked through a new `/healthz` and an owner-only
   record), `--status` and `--stop` report and stop it, `--new` starts another on purpose, and a
   full port range falls back to any free port.
-
 - **`token apply` skipped every PyPI, Cargo, RubyGems and Gradle entry** as an "unknown target":
   resolving a config from the environment knew only the first five tools. They resolve now.
 - **Saving the manifest turned numbers and booleans in `raw_options` into strings**

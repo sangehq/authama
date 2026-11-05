@@ -2,7 +2,7 @@
      with filters passes them on, so the file holds what the page shows. With
      the script, the button opens "csv_dialog" first: pick the columns, leave
      out rows, see the first rows, then download. Without it, it downloads. */}}
-{{define "csv"}}<a class="btn btn-sm btn-outline-secondary" href="{{.}}" download data-csv-export>{{icon "download"}}<span class="ms-1">CSV</span></a>{{end}}
+{{define "csv"}}<a class="btn btn-sm btn-outline-secondary" href="{{.}}" download data-csv-export{{tip "csv"}}>{{icon "download"}}<span class="ms-1">CSV</span></a>{{end}}
 
 {{define "csv_dialog"}}<div class="modal modal-blur fade" id="csv-dialog" tabindex="-1" aria-labelledby="csv-dialog-title" aria-hidden="true" data-csv-dialog>
   <div class="modal-dialog modal-xl modal-dialog-scrollable">

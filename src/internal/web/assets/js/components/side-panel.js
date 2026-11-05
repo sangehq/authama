@@ -260,6 +260,8 @@ export class Inline extends Component {
           return;
         }
         e.preventDefault();
+        // A modal or slide-in it was opened from gives way, as for a form.
+        Ui.closeOverlays();
         panel.open(a.href);
       });
     }

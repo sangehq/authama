@@ -1,8 +1,8 @@
 {{define "content"}}
 {{if .ReadOnly}}
-{{template "page_header" (header "SSH" "Hosts" "Every host, by profile, as it is rendered into ~/.ssh/config." (action "SSH config" "/ssh-config" "file-code") (download "Download ssh_config, every host inline" "/exports/ssh_config") (download "Download the Termius CSV" "/exports/termius-hosts.csv"))}}
+{{template "page_header" (header "SSH" "Hosts" "Every host, by profile, as it is rendered into ~/.ssh/config." (action "SSH config" "/ssh-config" "file-code" | withTip "ssh-config") (download "Download ssh_config, every host inline" "/exports/ssh_config" | withTip "download") (download "Download the Termius CSV" "/exports/termius-hosts.csv" | withTip "csv"))}}
 {{else}}
-{{template "page_header" (header "SSH" "Hosts" "Every host, by profile, as it is rendered into ~/.ssh/config." (panel "Add a host" "add-host" "plus") (panel "Add a VM host" "add-vm-host" "device-desktop") (only (gt (len .Data) 0) (panel "Add hosts in bulk" "bulk-hosts" "server")) (action "SSH config" "/ssh-config" "file-code") (download "Download ssh_config, every host inline" "/exports/ssh_config") (download "Download the Termius CSV" "/exports/termius-hosts.csv") (download "Download the Termius CSV, with git hosts" "/exports/termius-hosts.csv?include_git=1"))}}
+{{template "page_header" (header "SSH" "Hosts" "Every host, by profile, as it is rendered into ~/.ssh/config." (panel "Add a host" "add-host" "plus" | withTip "host-add") (panel "Add a VM host" "add-vm-host" "device-desktop" | withTip "host-vm") (only (gt (len .Data) 0) (panel "Add hosts in bulk" "bulk-hosts" "server" | withTip "host-bulk")) (action "SSH config" "/ssh-config" "file-code" | withTip "ssh-config") (download "Download ssh_config, every host inline" "/exports/ssh_config" | withTip "download") (download "Download the Termius CSV" "/exports/termius-hosts.csv" | withTip "csv") (download "Download the Termius CSV, with git hosts" "/exports/termius-hosts.csv?include_git=1" | withTip "csv"))}}
 {{end}}
 <div class="card mb-3">
   <div class="card-header"><h2 class="card-title">Hosts</h2><div class="card-actions">{{template "csv" "/exports/hosts.csv"}}</div></div>
@@ -24,12 +24,12 @@
           <td class="text-end">
             {{if not $.ReadOnly}}<form method="post" action="/changes/preview" data-inline id="f-host-{{.Alias}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="host-delete"><input type="hidden" name="profile" value="{{$g.Name}}"><input type="hidden" name="alias" value="{{.Alias}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for host %s" .Alias)}}
-              <a class="dropdown-item" href="/hosts/{{.Alias}}">{{icon "external-link"}}<span class="ms-2">Open</span></a>
+              <a class="dropdown-item" href="/hosts/{{.Alias}}" data-inline>{{icon "external-link"}}<span class="ms-2">Open</span></a>
               <button type="button" class="dropdown-item" data-copy="ssh {{.Alias}}">{{icon "terminal-2"}}<span class="ms-2">Copy <code>ssh {{.Alias}}</code></span></button>
               {{if .Hostname}}<button type="button" class="dropdown-item" data-copy="{{.Hostname}}">{{icon "copy"}}<span class="ms-2">Copy the hostname</span></button>{{end}}
-              <a class="dropdown-item" href="/history?host={{.Alias}}">{{icon "history"}}<span class="ms-2">History</span></a>
+              <a class="dropdown-item" href="/history?host={{.Alias}}" data-inline>{{icon "history"}}<span class="ms-2">History</span></a>
               {{if not $.ReadOnly}}<div class="dropdown-divider"></div>
-              <button type="submit" class="dropdown-item text-danger" form="f-host-{{.Alias}}" data-confirm="m-host-{{.Alias}}">{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
+              <button type="submit" class="dropdown-item text-danger" form="f-host-{{.Alias}}" data-confirm="m-host-{{.Alias}}"{{tip "delete"}}>{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
             {{template "menu_close"}}
           </td>
         </tr>

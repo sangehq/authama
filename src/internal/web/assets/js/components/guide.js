@@ -26,6 +26,8 @@ export class Tour extends Component {
   /** @type {HTMLElement[]} */
   #steps = [];
   #at = -1;
+  /** The pending automatic start, if any. */
+  #auto = 0;
   /** @type {any} */
   #popover = null;
   /** @type {HTMLElement | null} */
@@ -43,14 +45,23 @@ export class Tour extends Component {
       this.start();
     });
     if (this.options.auto && !Tour.seen(this.options.key)) {
-      // After the page has laid out, so the first target has a place.
-      window.setTimeout(() => this.start(), 400);
+      // After the page has laid out, so the first target has a place. A tour
+      // the user started meanwhile is left alone: restarting it would throw
+      // them back to the first step.
+      this.#auto = window.setTimeout(() => {
+        this.#auto = 0;
+        if (this.#at < 0) {
+          this.start();
+        }
+      }, 400);
     }
     return this;
   }
 
   /** Starts from the first visible step. */
   start() {
+    window.clearTimeout(this.#auto);
+    this.#auto = 0;
     this.#steps = Array.from(document.querySelectorAll("[data-tour]"))
       .filter((el) => el instanceof HTMLElement && el.getClientRects().length > 0)
       .map((el) => /** @type {HTMLElement} */ (el))

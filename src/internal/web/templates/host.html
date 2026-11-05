@@ -6,9 +6,9 @@
       <h1 class="page-title font-monospace">{{.Alias}}</h1>
     </div>
     <div class="col-auto ms-auto btn-list">
-      {{if not $.ReadOnly}}<a href="#host-edit" class="btn btn-primary" data-bs-toggle="offcanvas" role="button" aria-controls="host-edit">{{icon "pencil"}}<span class="ms-1">Edit</span></a>{{end}}
-      <a href="/history?host={{.Alias}}" class="btn btn-outline-secondary">{{icon "history"}}<span class="ms-1">History</span></a>
-      <button type="button" class="btn btn-outline-secondary" data-copy="ssh {{.Alias}}">{{icon "copy"}}<span class="ms-1">Copy ssh {{.Alias}}</span></button>
+      {{if not $.ReadOnly}}<a href="#host-edit" class="btn btn-primary" data-bs-toggle="offcanvas" role="button" aria-controls="host-edit"{{tip "host-edit"}}>{{icon "pencil"}}<span class="ms-1">Edit</span></a>{{end}}
+      <a href="/history?host={{.Alias}}" class="btn btn-outline-secondary"{{tip "history"}}>{{icon "history"}}<span class="ms-1">History</span></a>
+      <button type="button" class="btn btn-outline-secondary" data-copy="ssh {{.Alias}}"{{tip "copy-ssh"}}>{{icon "copy"}}<span class="ms-1">Copy ssh {{.Alias}}</span></button>
     </div>
   </div>
 </div>
@@ -78,7 +78,7 @@
           <h3 class="h4 text-danger">Delete</h3>
           <p class="text-secondary small">Its manifest entry, its block in <code>~/.ssh/config</code> and its pinned host keys go. Its key files stay on disk.</p>
           <form method="post" action="/changes/preview" data-inline id="f-host-delete"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="host-delete"><input type="hidden" name="profile" value="{{.Profile}}"><input type="hidden" name="alias" value="{{.Alias}}">
-            <button type="submit" class="btn btn-outline-danger">{{icon "trash"}}<span class="ms-1">Preview deleting {{.Alias}}</span></button>
+            <button type="submit" class="btn btn-outline-danger"{{tip "delete"}}>{{icon "trash"}}<span class="ms-1">Preview deleting {{.Alias}}</span></button>
           </form>
         </div>
 {{template "panel_close"}}

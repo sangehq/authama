@@ -2,7 +2,7 @@
 {{if $.ReadOnly}}
 {{template "page_header" (header "Security" "Auth tokens" "Package-manager and git credentials: what is installed and how it audits. A secret is never shown.")}}
 {{else}}
-{{template "page_header" (header "Security" "Auth tokens" "Package-manager and git credentials: what is installed and how it audits. A secret is never shown." (panel "Add a token" "add-token" "plus") (action "Apply the config" "#apply-config" "refresh") (only (ne .ConfigText "") (modal "Edit tokens.json" "edit-token-config" "pencil")))}}
+{{template "page_header" (header "Security" "Auth tokens" "Package-manager and git credentials: what is installed and how it audits. A secret is never shown." (panel "Add a token" "add-token" "plus" | withTip "token-add") (action "Apply the config" "#apply-config" "refresh" | withTip "token-apply") (only (ne .ConfigText "") (modal "Edit tokens.json" "edit-token-config" "pencil" | withTip "token-config")))}}
 {{end}}
 <div class="card mb-3">
   <div class="card-header"><h2 class="card-title">Installed</h2>{{if .Items}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Items}} installed</span>{{template "csv" "/exports/tokens.csv"}}</div>{{end}}</div>
@@ -28,7 +28,7 @@
               <button type="button" class="dropdown-item" data-copy="{{.File}}">{{icon "copy"}}<span class="ms-2">Copy the file's path</span></button>
               {{if not $.ReadOnly}}<button type="button" class="dropdown-item" data-panel-open="add-token" data-panel-fill-target="{{.Target}}" data-panel-fill-server="{{.Host}}">{{icon "refresh"}}<span class="ms-2">Replace or rotate</span></button>
               <div class="dropdown-divider"></div>
-              <button type="submit" class="dropdown-item text-danger" form="f-token-{{.Target}}-{{.Host}}" data-confirm="m-token-{{.Target}}-{{.Host}}">{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
+              <button type="submit" class="dropdown-item text-danger" form="f-token-{{.Target}}-{{.Host}}" data-confirm="m-token-{{.Target}}-{{.Host}}"{{tip "delete"}}>{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
             {{template "menu_close"}}
           </td>
         </tr>

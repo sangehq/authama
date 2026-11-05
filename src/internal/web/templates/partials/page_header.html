@@ -15,7 +15,7 @@
         {{range $i, $a := .Actions}}{{if lt $i 2}}<a href="{{$a.Href}}" class="btn {{if eq $i 0}}btn-primary{{else}}btn-outline-secondary{{end}}"{{template "action_attrs" $a}}>{{icon $a.Icon}}<span class="ms-1">{{$a.Label}}</span></a>
         {{end}}{{end}}
         {{if gt (len .Actions) 2}}<div class="dropdown">
-          <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">{{icon "dots-vertical"}}<span class="ms-1">More</span></button>
+          <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"{{tip "more"}}>{{icon "dots-vertical"}}<span class="ms-1">More</span></button>
           <div class="dropdown-menu dropdown-menu-end">
             {{range $i, $a := .Actions}}{{if ge $i 2}}<a href="{{$a.Href}}" class="dropdown-item"{{template "action_attrs" $a}}>{{icon $a.Icon}}<span class="ms-2">{{$a.Label}}</span></a>
             {{end}}{{end}}
@@ -42,10 +42,10 @@
 
 {{/* The attributes an action's link carries: a slide-in panel opens, a
      download downloads (through the CSV dialog for a CSV). */}}
-{{define "action_attrs"}}{{if .Panel}} data-bs-toggle="offcanvas" role="button" aria-controls="{{.Panel}}"{{end}}{{if .Modal}} data-bs-toggle="modal" data-bs-target="#{{.Modal}}" role="button"{{end}}{{if .Download}} download{{if .CSV}} data-csv-export{{end}}{{end}}{{end}}
+{{define "action_attrs"}}{{if .Tip}} data-tip="{{.Tip}}"{{end}}{{if .Panel}} data-bs-toggle="offcanvas" role="button" aria-controls="{{.Panel}}"{{end}}{{if .Modal}} data-bs-toggle="modal" data-bs-target="#{{.Modal}}" role="button"{{end}}{{if .Download}} download{{if .CSV}} data-csv-export{{end}}{{end}}{{end}}
 
 {{/* A panel form's footer: Cancel, and the submit button with its label. */}}
 {{define "panel_actions"}}<div class="d-flex align-items-center justify-content-end gap-2 pt-3 mt-3 border-top">
   <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
-  <button type="submit" class="btn {{if .}}{{.}}{{else}}btn-primary{{end}}">{{if eq . "btn-outline-danger"}}Review{{else}}Preview{{end}}</button>
+  <button type="submit" class="btn {{if .}}{{.}}{{else}}btn-primary{{end}}"{{if eq . "btn-outline-danger"}}{{tip "review"}}{{else}}{{tip "preview"}}{{end}}>{{if eq . "btn-outline-danger"}}Review{{else}}Preview{{end}}</button>
 </div>{{end}}
