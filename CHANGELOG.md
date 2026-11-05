@@ -149,6 +149,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A token's History link signed the browser out.** The history's token filter used `?token=`,
+  which is also the sign-in link's parameter, so following History from a token's menu answered
+  401 "Sign-in link required" to a browser that was signed in. The filter is `?credential=` now,
+  and a `?token=` that is not the server's sign-in token no longer overrides a live session.
+
 - The Auth tokens page and the dashboard said a credential file was readable by others whenever the
   token audit failed, including when what failed was the `.gitignore` check where the server runs.
 - A web preview now shows `authama.json` and `tokens.json` with the other config files. It was left out of the preview's

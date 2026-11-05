@@ -61,7 +61,7 @@ func TestEveryListDownloadsAsCSV(t *testing.T) {
 func TestCSVKeepsThePagesFilters(t *testing.T) {
 	s, _, _ := newTestServer(t)
 	c := signIn(t, s)
-	f := historyFilter(map[string][]string{"token": {"npm"}, "command": {"token"}, "since": {"2026-01-01"}})
+	f := historyFilter(map[string][]string{tokenFilterParam: {"npm"}, "command": {"token"}, "since": {"2026-01-01"}})
 	if f.Token != "npm" || f.Command != "token" || f.Since != "2026-01-01" {
 		t.Fatalf("historyFilter dropped a filter: %+v", f)
 	}
