@@ -1,23 +1,26 @@
 #!/usr/bin/env bash
 #
 # Hand-rolled cross-compile build (GoReleaser is the canonical release path).
-# Regenerates build/targets.txt from an embedded matrix and produces, under
-# build/dist/:
+# Regenerates build/targets.txt from an embedded matrix and produces the
+# standard layout: one folder per OS under build/, and nothing else.
 #
-#   authama_{os}_{arch}[.exe]       flat, versionless, ready-to-run binaries
-#   authama_macos_universal         Intel + Apple Silicon fat binary (on macOS)
-#   checksums.txt                   SHA-256 over the bare binaries (bare names)
-#   archives/authama_{os}_{arch}.{tar.gz,zip}  the binary + LICENSE/README/CHANGELOG
-#   archives/checksums.txt          SHA-256 over the archives
+#   build/{os}/authama_{os}_{arch}[.exe]   versionless, ready-to-run binaries
+#   build/macos/authama_macos_universal    Intel + Apple Silicon fat binary (on macOS)
+#   build/checksums.txt                    SHA-256 over every binary, as {os}/{file},
+#                                          so `cd build && shasum -a 256 -c checksums.txt`
+#                                          verifies as-is
+#   build/archives/authama_{os}_{arch}.{tar.gz,zip}  the binary + LICENSE/README/CHANGELOG;
+#                                          the Windows zips add "Start authama.cmd"
+#   build/archives/authama_macos_app.zip   Authama.app (see macos-app.sh)
+#   build/archives/checksums.txt           SHA-256 over the archives (bare names)
 #
 # Naming: darwin -> macos, arm -> armvN, .exe on windows. Static
 # (CGO_ENABLED=0), reproducible (-trimpath), stripped (-s -w), with version
 # metadata embedded.
 #
-# build/dist/ is DELETED and REGENERATED on every run, so nothing stale from a
-# removed or renamed target survives. build/ itself is NOT wiped: targets.txt is
-# a tracked file and `make build` leaves a binary there, and deleting either as a
-# side effect of a release build is a surprise nobody asked for. targets.txt is
+# Every OS folder, build/archives/ and build/checksums.txt are DELETED and
+# REGENERATED on every run, so nothing stale from a removed or renamed target
+# survives. The tracked inputs (targets.txt, nfpm.yaml) stay; targets.txt is
 # still rewritten from the effective matrix below.
 #
 #   VERSION=v1.2.3 ./scripts/build-all.sh          # normal
@@ -31,6 +34,7 @@ set -euo pipefail
 # relative to it. The repo root is one level up, and that is where build/ and the
 # LICENSE/README/CHANGELOG bundled into each archive live - so paths below are
 # deliberately explicit about which of the two roots they mean.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$(dirname "$0")/.."
 REPO_ROOT=".."
 
@@ -40,8 +44,10 @@ BINARY="authama"
 BINARIES="authama"
 PKG="github.com/simtabi/authama/src/internal/version"
 BUILD_DIR="${REPO_ROOT}/build"
-OUT="${BUILD_DIR}/dist"
+OUT="${BUILD_DIR}"
 ARCHIVE_DIR="${OUT}/archives"
+# The OS folders this script owns, and wipes before it writes.
+OS_DIRS="macos linux windows freebsd openbsd netbsd"
 TARGETS_FILE="${BUILD_DIR}/targets.txt"
 WITH_ARCHIVES="${ARCHIVES:-1}"
 
@@ -106,9 +112,10 @@ for f in LICENSE README.md CHANGELOG.md; do
 done
 
 # --- fresh output folder -----------------------------------------------------
-echo "==> ${BINARY} ${VERSION} (${COMMIT}) — regenerating ${OUT}/"
-case "$OUT" in ''|/|.|..|"$BUILD_DIR") echo "error: unsafe OUT='$OUT'" >&2; exit 1 ;; esac
-rm -rf "$OUT"
+echo "==> ${BINARY} ${VERSION} (${COMMIT}) — regenerating ${OUT}/{os}/"
+case "$OUT" in ''|/|.|..) echo "error: unsafe OUT='$OUT'" >&2; exit 1 ;; esac
+for d in $OS_DIRS archives; do rm -rf "${OUT:?}/${d}"; done
+rm -f "${OUT}/checksums.txt"
 mkdir -p "$OUT"
 [ "$WITH_ARCHIVES" = "1" ] && mkdir -p "$ARCHIVE_DIR"
 # Regenerate the tracked target list - but never from a TARGETS= override. That
@@ -129,12 +136,18 @@ make_archive() {
   bin="$1"; goos="$2"
   base="${bin%.exe}"                      # authama_macos_arm64
   ext="";  [ "$goos" = "windows" ] && ext=".exe"
-  stage="$(mktemp -d)"
+  stage="$(mktemp -d "${TMPDIR:-/tmp}/authama.XXXXXX")"
+  os_dir="$goos"; [ "$goos" = "darwin" ] && os_dir="macos"
   for b in $BINARIES; do
-    cp "${OUT}/${b}${bin#"${BINARY}"}" "${stage}/${b}${ext}"
+    cp "${OUT}/${os_dir}/${b}${bin#"${BINARY}"}" "${stage}/${b}${ext}"
   done
   # shellcheck disable=SC2086
   [ -n "$EXTRAS" ] && cp $EXTRAS "${stage}/"
+  # Windows: a double-click starts the web UI in a console window; closing the
+  # window stops the server.
+  if [ "$goos" = "windows" ]; then
+    printf '@echo off\r\ntitle authama\r\n"%%~dp0authama.exe" serve\r\npause\r\n' > "${stage}/Start authama.cmd"
+  fi
   if [ "$goos" = "windows" ]; then
     if command -v zip >/dev/null 2>&1; then
       ( cd "$stage" && zip -qr "${base}.zip" . )
@@ -162,10 +175,11 @@ while IFS=$' \t\r' read -r goos goarch goarm || [ -n "${goos:-}" ]; do
   arch_token="$goarch"; [ "$goarch" = "arm" ] && arch_token="armv${goarm}"
   ext="";             [ "$goos" = "windows" ] && ext=".exe"
 
+  mkdir -p "${OUT}/${os_token}"
   for b in $BINARIES; do
-    printf '  -> %-32s' "${b}_${os_token}_${arch_token}${ext}"
+    printf '  -> %-40s' "${os_token}/${b}_${os_token}_${arch_token}${ext}"
     GOOS="$goos" GOARCH="$goarch" GOARM="${goarm:-}" CGO_ENABLED=0 \
-      go build -trimpath -ldflags "$LDFLAGS" -o "${OUT}/${b}_${os_token}_${arch_token}${ext}" "./cmd/${b}"
+      go build -trimpath -ldflags "$LDFLAGS" -o "${OUT}/${os_token}/${b}_${os_token}_${arch_token}${ext}" "./cmd/${b}"
     echo "ok"
   done
   name="${BINARY}_${os_token}_${arch_token}${ext}"
@@ -182,9 +196,9 @@ done <<< "$MATRIX"
 if [ "$have_macos_amd64" = 1 ] && [ "$have_macos_arm64" = 1 ]; then
   if command -v lipo >/dev/null 2>&1; then
     for b in $BINARIES; do
-      printf '  -> %-32s' "${b}_macos_universal"
-      lipo -create -output "${OUT}/${b}_macos_universal" \
-        "${OUT}/${b}_macos_amd64" "${OUT}/${b}_macos_arm64"
+      printf '  -> %-40s' "macos/${b}_macos_universal"
+      lipo -create -output "${OUT}/macos/${b}_macos_universal" \
+        "${OUT}/macos/${b}_macos_amd64" "${OUT}/macos/${b}_macos_arm64"
       echo "ok"
     done
     make_archive "${BINARY}_macos_universal" "darwin"
@@ -193,12 +207,27 @@ if [ "$have_macos_amd64" = 1 ] && [ "$have_macos_arm64" = 1 ]; then
   fi
 fi
 
-# --- checksums (bare names so install scripts / self-update can look up) ------
-( cd "$OUT" && sha256 ${BINARY}_* > checksums.txt )
+# --- macOS app ----------------------------------------------------------------
+# The universal binary when there is one, else whichever macOS build exists.
+if [ "$WITH_ARCHIVES" = "1" ]; then
+  app_bin=""
+  for cand in universal arm64 amd64; do
+    [ -f "${OUT}/macos/${BINARY}_macos_${cand}" ] && { app_bin="${OUT}/macos/${BINARY}_macos_${cand}"; break; }
+  done
+  if [ -n "$app_bin" ]; then
+    printf '  -> %-40s' "archives/${BINARY}_macos_app.zip"
+    VERSION="$VERSION" "${SCRIPT_DIR}/macos-app.sh" "$app_bin" "${ARCHIVE_DIR}/${BINARY}_macos_app.zip" >/dev/null
+    echo "ok"
+  fi
+fi
+
+# --- checksums: {os}/{file} paths, so the file verifies from build/ as-is -------
+# Every OS folder's binaries; archives/ has its own checksums.txt.
+( cd "$OUT" && for d in $OS_DIRS; do [ -d "$d" ] && sha256 "$d"/${BINARY}_*; done > checksums.txt ) || true
 echo "==> wrote ${OUT}/checksums.txt"
 if [ "$WITH_ARCHIVES" = "1" ] && ls "${ARCHIVE_DIR}/${BINARY}_"* >/dev/null 2>&1; then
   ( cd "$ARCHIVE_DIR" && sha256 ${BINARY}_* > checksums.txt )
   echo "==> wrote ${ARCHIVE_DIR}/checksums.txt"
 fi
 
-echo "==> done: ${count} targets (each: ${BINARIES}) in ${OUT}$( [ "$WITH_ARCHIVES" = "1" ] && echo ", archives in ${ARCHIVE_DIR}" )"
+echo "==> done: ${count} targets (each: ${BINARIES}) in ${OUT}/{os}/$( [ "$WITH_ARCHIVES" = "1" ] && echo ", archives in ${ARCHIVE_DIR}" )"

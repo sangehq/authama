@@ -22,7 +22,12 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, '..', '..', '..');
 
 // The binary `make build` writes; AUTHAMA_BIN overrides it.
-const bin = process.env.AUTHAMA_BIN ? resolve(process.env.AUTHAMA_BIN) : join(repo, 'build', 'authama');
+// `make build` writes build/{host-os}/authama: the OS folder is macos, not
+// darwin, and windows' binary ends .exe.
+const hostOS = process.platform === 'darwin' ? 'macos' : process.platform === 'win32' ? 'windows' : process.platform;
+const bin = process.env.AUTHAMA_BIN
+  ? resolve(process.env.AUTHAMA_BIN)
+  : join(repo, 'build', hostOS, process.platform === 'win32' ? 'authama.exe' : 'authama');
 
 function sandboxEnv(home: string): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {};

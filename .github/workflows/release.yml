@@ -136,7 +136,7 @@ jobs:
       # publishing: a failure in a late publisher (the Scoop push, for v3.6.0) used to skip
       # both, leaving a published release with no provenance.
       - name: Set the release body from CHANGELOG.md
-        if: ${{ !cancelled() && hashFiles('build/dist/checksums.txt') != '' }}
+        if: ${{ !cancelled() && hashFiles('.goreleaser-dist/checksums.txt') != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release edit "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --notes-file "${RUNNER_TEMP}/release_notes.md"
@@ -145,7 +145,7 @@ jobs:
       # checksums file lists them all, so `gh attestation verify <file>
       # --repo <owner>/<repo>` works for any downloaded binary or archive.
       - name: Attest build provenance
-        if: ${{ !cancelled() && hashFiles('build/dist/checksums.txt') != '' }}
+        if: ${{ !cancelled() && hashFiles('.goreleaser-dist/checksums.txt') != '' }}
         uses: actions/attest-build-provenance@v4
         with:
-          subject-checksums: build/dist/checksums.txt
+          subject-checksums: .goreleaser-dist/checksums.txt

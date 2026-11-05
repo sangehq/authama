@@ -8,9 +8,11 @@ project_name: authama
 # rejects a `..` prefix outright, so LICENSE/README/CHANGELOG become unreachable
 # from inside src/.
 #
-# Keep all build tooling under a single build/ folder: inputs (targets.txt) at
-# build/ root, generated artifacts under build/dist/ (gitignored).
-dist: build/dist
+# build/ holds one folder per OS and nothing else (see the Makefile), so
+# GoReleaser's working output - per-target folders, artifacts.json,
+# metadata.json - goes to .goreleaser-dist/ at the root (gitignored). The
+# release assets it uploads are flat, as before.
+dist: .goreleaser-dist
 
 before:
   hooks:
