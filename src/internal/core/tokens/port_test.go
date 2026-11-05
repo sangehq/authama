@@ -222,7 +222,7 @@ func TestTheCatalogIsConsistent(t *testing.T) {
 	}
 	// The five auth-token-manager had, in its order, then the tools added
 	// since: pinned so a target is never dropped or reordered by accident.
-	if !slices.Equal(c.Targets, []string{"composer", "npm", "docker", "git", "netrc", "pypi", "cargo", "gem", "gradle"}) {
+	if !slices.Equal(c.Targets, []string{"composer", "npm", "docker", "git", "netrc", "pypi", "cargo", "gem", "gradle", "maven", "yarn", "helm", "helm-oci", "gh"}) {
 		t.Fatal(c.Targets)
 	}
 	for svc, mech := range c.Services {

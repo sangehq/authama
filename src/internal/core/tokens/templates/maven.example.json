@@ -1,0 +1,9 @@
+{
+  "_help": "Maven's ~/.m2/settings.xml. Each host is a <server> id, which Maven matches exactly against a repository's or mirror's <id> in the build. Each uses 'user_env'+'pass_env'. A brace in a value is written \\\\{ so Maven does not read it as an encrypted {...} value. This file stores ENV VAR NAMES, not secrets. Writes MERGE: only that <server> element is replaced; every other line, comment and element is kept byte for byte.",
+  "maven": {
+    "acme-releases": {
+      "user_env": "ACME_MAVEN_USER",
+      "pass_env": "ACME_MAVEN_TOKEN"
+    }
+  }
+}

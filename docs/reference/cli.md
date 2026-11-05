@@ -2385,7 +2385,7 @@ Flags:
       --no-env-hint               do not print the CI hint after writing Composer's file
       --project string            write the project's auth.json and .npmrc instead of the user ones
       --source string             load VAR=value lines from this env file first (set variables win)
-      --target strings            only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle)
+      --target strings            only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle, maven, yarn, helm, helm-oci, gh)
 ```
 
 ## authama token audit
@@ -2412,7 +2412,7 @@ Flags:
 ```
       --config string    check the tools this token config uses
       --project string   check the project's files and .gitignore
-      --target strings   only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle)
+      --target strings   only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle, maven, yarn, helm, helm-oci, gh)
 ```
 
 ## authama token copy
@@ -2488,7 +2488,7 @@ Flags:
 ```
       --json             print the placeholders as JSON, masked, instead of as files
       --project string   write the placeholder auth.json and .npmrc into this directory
-      --target strings   only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle)
+      --target strings   only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle, maven, yarn, helm, helm-oci, gh)
 ```
 
 ## authama token import
@@ -2534,7 +2534,7 @@ Examples:
 Flags:
 
 ```
-      --target strings   start from these tools' templates (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle)
+      --target strings   start from these tools' templates (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle, maven, yarn, helm, helm-oci, gh)
 ```
 
 ## authama token list
@@ -2562,7 +2562,7 @@ Flags:
       --json             print the list as JSON
       --project string   read the project's auth.json and .npmrc instead of the user ones
       --reveal           show the secret values (asks first; --yes when not at a terminal)
-      --target strings   only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle)
+      --target strings   only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle, maven, yarn, helm, helm-oci, gh)
   -y, --yes              reveal without asking
 ```
 
@@ -2612,7 +2612,7 @@ Flags:
       --scope string              npm only: bind an @org scope to this registry
       --server string             the registry or git server, e.g. github.com or registry.npmjs.org
       --service string            a Composer service, e.g. github or gitlab (see token providers)
-      --target string             the tool: npm, docker, git, netrc, pypi, cargo, gem or gradle (Composer uses --service)
+      --target string             the tool: npm, docker, git, netrc, pypi, cargo, gem, gradle, maven, yarn, helm, helm-oci or gh (Composer uses --service)
       --username string           the user name, for http-basic, docker, git and netrc
 ```
 

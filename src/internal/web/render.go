@@ -599,7 +599,7 @@ func paletteItems(readOnly bool) []paletteItem {
 		{"vms", "VMs", "/vms", "device-desktop", "SSH", "vm hypervisor devbox sync"},
 		{"sshconfig", "SSH config", "/ssh-config", "file-code", "Config & backups", "config render drift check"},
 		{"snapshots", "Snapshots", "/snapshots", "archive", "Config & backups", "snapshot bundle backup restore"},
-		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Security", "token npm composer docker git netrc pypi cargo gem gradle"},
+		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Security", "token npm composer docker git netrc pypi cargo gem gradle maven yarn helm gh"},
 		{"audit", "Audit", "/audit", "shield-check", "Security", "audit key age"},
 		{"security", "Owner & PIN", "/security", "lock", "Security", "owner pin seal tamper binding fingerprint"},
 		{"history", "History", "/history", "history", "Activity", "history operations changes log"},

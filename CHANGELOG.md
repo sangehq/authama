@@ -61,6 +61,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Five more token targets: Maven, Yarn Berry, Helm and the GitHub CLI.** `maven` writes a
+  `<server>` into `~/.m2/settings.xml`, spliced so every other byte stays put and a brace is escaped
+  as Maven needs; `yarn` writes `npmRegistries` in `~/.yarnrc.yml`; `helm` sets the login on a
+  classic chart repository in `repositories.yaml`, and `helm-oci` writes an OCI registry login in
+  `registry/config.json`; `gh` writes an account's token into `hosts.yml` where gh reads it outside
+  the keyring. The YAML files are edited through a node tree that keeps key order and comments,
+  with `go.yaml.in/yaml/v3`, a recorded dependency.
 - **The web UI's address is configurable.** `web.addr`, `web.port` and `web.base_path` in
   `authama.json` (or `AUTHAMA_WEB_ADDR`, `AUTHAMA_WEB_PORT`, `AUTHAMA_WEB_BASE_PATH`) change the
   default `http://127.0.0.1:7822/`; a configured port that is taken falls back like the default, and

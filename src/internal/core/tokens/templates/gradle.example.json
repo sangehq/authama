@@ -1,5 +1,5 @@
 {
-  "_help": "gradle.properties in $GRADLE_USER_HOME (default ~/.gradle). Each host is the name a build gives a repository it reads with credentials(PasswordCredentials): repository acme reads acmeUsername and acmePassword. Each uses 'user_env'+'pass_env'. Maven's settings.xml is not written. This file stores ENV VAR NAMES, not secrets. Writes MERGE, keeping every other property.",
+  "_help": "gradle.properties in $GRADLE_USER_HOME (default ~/.gradle). Each host is the name a build gives a repository it reads with credentials(PasswordCredentials): repository acme reads acmeUsername and acmePassword. Each uses 'user_env'+'pass_env'. Maven's settings.xml is the maven target. This file stores ENV VAR NAMES, not secrets. Writes MERGE, keeping every other property.",
   "gradle": {
     "acme": { "user_env": "ACME_MAVEN_USER", "pass_env": "ACME_MAVEN_TOKEN" }
   }

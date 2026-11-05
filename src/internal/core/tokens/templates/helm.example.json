@@ -1,0 +1,9 @@
+{
+  "_help": "Helm's repositories.yaml ($HELM_REPOSITORY_CONFIG, else repositories.yaml in Helm's config home). Each host is a classic chart repository's URL; the entry `helm repo add` made for it gets the user name and password, and one is added when there is none. Each uses 'user_env'+'pass_env'. This file stores ENV VAR NAMES, not secrets. Writes MERGE, keeping every other repository.",
+  "helm": {
+    "https://charts.example.com/stable": {
+      "user_env": "ACME_CHARTS_USER",
+      "pass_env": "ACME_CHARTS_TOKEN"
+    }
+  }
+}

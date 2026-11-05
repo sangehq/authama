@@ -211,5 +211,34 @@
       "user_env": "ACME_MAVEN_USER",
       "pass_env": "ACME_MAVEN_TOKEN"
     }
+  },
+  "maven": {
+    "acme-releases": {
+      "user_env": "ACME_MAVEN_USER",
+      "pass_env": "ACME_MAVEN_TOKEN"
+    }
+  },
+  "yarn": {
+    "npm.pkg.github.com": {
+      "env": "GH_PACKAGES_TOKEN"
+    }
+  },
+  "helm": {
+    "https://charts.example.com/stable": {
+      "user_env": "ACME_CHARTS_USER",
+      "pass_env": "ACME_CHARTS_TOKEN"
+    }
+  },
+  "helm-oci": {
+    "ghcr.io": {
+      "user_env": "GITHUB_USER",
+      "pass_env": "GH_PACKAGES_TOKEN"
+    }
+  },
+  "gh": {
+    "github.com": {
+      "user_env": "GITHUB_USER",
+      "pass_env": "GH_TOKEN"
+    }
   }
 }

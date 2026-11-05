@@ -30,10 +30,12 @@ and forgets a token, each previewed first; revealing and copying stay in the ter
 | [`token import [FILE]`](../reference/cli.md#authama-token-import) | Copy an auth-token-manager (or any) token config to `tokens.json`, so the old location stops being read. `--dry-run` checks it. |
 | [`token shell-aliases`](../reference/cli.md#authama-token-shell-aliases) | Show, install or remove the `atm` shell aliases. |
 
-The targets are `composer`, `npm`, `docker`, `git`, `netrc`, `pypi`, `cargo`, `gem` and `gradle`;
-each has a page: [Composer](tokens/composer.md) · [npm](tokens/npm.md) · [Docker](tokens/docker.md) ·
-[git](tokens/git.md) · [netrc](tokens/netrc.md) · [PyPI](tokens/pypi.md) · [Cargo](tokens/cargo.md) ·
-[RubyGems](tokens/gem.md) · [Gradle](tokens/gradle.md).
+The targets are `composer`, `npm`, `docker`, `git`, `netrc`, `pypi`, `cargo`, `gem`, `gradle`,
+`maven`, `yarn`, `helm`, `helm-oci` and `gh`; each has a page: [Composer](tokens/composer.md) ·
+[npm](tokens/npm.md) · [Docker](tokens/docker.md) · [git](tokens/git.md) · [netrc](tokens/netrc.md) ·
+[PyPI](tokens/pypi.md) · [Cargo](tokens/cargo.md) · [RubyGems](tokens/gem.md) ·
+[Gradle](tokens/gradle.md) · [Maven](tokens/maven.md) · [Yarn Berry](tokens/yarn.md) ·
+[Helm](tokens/helm.md) · [GitHub CLI](tokens/gh.md).
 
 Several more tools read a file one of these writes, so they need no target of their own:
 
@@ -44,9 +46,11 @@ Several more tools read a file one of these writes, so they need no target of th
 | pnpm | `~/.npmrc` | `npm` |
 | Bun | `~/.npmrc` | `npm` |
 
-Maven's `settings.xml`, Yarn Berry's `.yarnrc.yml`, Helm's `repositories.yaml` and the GitHub CLI's
-`hosts.yml` are not written yet: each is XML or nested YAML, and a merge that keeps everything else
-in the file needs a parser authama does not have yet.
+The XML and YAML files (Maven's `settings.xml`, Yarn Berry's `.yarnrc.yml`, Helm's
+`repositories.yaml`, the GitHub CLI's `hosts.yml`) are edited one entry at a time. `settings.xml` is
+spliced around the one `<server>` element, so every other byte stays where it was; the YAML files go
+through a node tree that keeps key order and comments, though the tools themselves rewrite these
+files from scratch whenever they save, and that loses the comments either way.
 
 ## How it works
 
@@ -170,12 +174,18 @@ variables:
 | cargo | `$CARGO_HOME/credentials.toml` → `~/.cargo/credentials.toml` |
 | gem | `~/.gem/credentials` |
 | gradle | `$GRADLE_USER_HOME/gradle.properties` → `~/.gradle/gradle.properties` |
+| maven | `~/.m2/settings.xml` |
+| yarn | `~/.yarnrc.yml` |
+| helm | `$HELM_REPOSITORY_CONFIG` → `$HELM_CONFIG_HOME/repositories.yaml` → Helm's config home (`~/.config/helm`, `~/Library/Preferences/helm`, `%APPDATA%\helm`) |
+| helm-oci | `$HELM_REGISTRY_CONFIG` → `<Helm's config home>/registry/config.json` |
+| gh | `$GH_CONFIG_DIR/hosts.yml` → `$XDG_CONFIG_HOME/gh/hosts.yml` → `%APPDATA%\GitHub CLI\hosts.yml` → `~/.config/gh/hosts.yml` |
 
 ## Try it without touching your real files
 
 `--dev-root DIR` (or `$AUTHAMA_DEV_ROOT`) puts every target file under
 `DIR/home`, hides `COMPOSER_HOME`, `NPM_CONFIG_USERCONFIG`, `DOCKER_CONFIG`,
-`NETRC`, `XDG_CONFIG_HOME`, `APPDATA`, `CARGO_HOME` and `GRADLE_USER_HOME` so nothing can redirect a write, and
+`NETRC`, `XDG_CONFIG_HOME`, `APPDATA`, `CARGO_HOME`, `GRADLE_USER_HOME`, `HELM_CONFIG_HOME`,
+`HELM_REPOSITORY_CONFIG`, `HELM_REGISTRY_CONFIG` and `GH_CONFIG_DIR` so nothing can redirect a write, and
 refuses any write outside the sandbox. `docker login` is refused there too,
 because it would reach the real Docker credential store.
 

@@ -65,7 +65,7 @@ var actionFields = map[string][]string{
 	"vm-schedule":       {"install"},
 	"settings-init":     {},
 	"token-set":         {"target", "service", "server", "username", "scope", "docker_mode", "secret_ref"},
-	"token-init":        {"t_composer", "t_npm", "t_docker", "t_git", "t_netrc", "t_pypi", "t_cargo", "t_gem", "t_gradle"},
+	"token-init":        {"t_composer", "t_npm", "t_docker", "t_git", "t_netrc", "t_pypi", "t_cargo", "t_gem", "t_gradle", "t_maven", "t_yarn", "t_helm", "t_helm-oci", "t_gh"},
 	"token-import":      {},
 	"token-config-edit": {"body"},
 	"key-lifetime":      {"key", "lifetime"},

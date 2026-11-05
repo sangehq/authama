@@ -1,0 +1,8 @@
+{
+  "_help": "Yarn Berry's home ~/.yarnrc.yml. Each host is a registry (npm.example.com), written under npmRegistries as \"//npm.example.com\" with npmAuthToken and npmAlwaysAuth. Each uses 'env'. This file stores ENV VAR NAMES, not secrets. Writes MERGE, keeping every other key and comment.",
+  "yarn": {
+    "npm.pkg.github.com": {
+      "env": "GH_PACKAGES_TOKEN"
+    }
+  }
+}

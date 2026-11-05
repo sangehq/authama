@@ -201,6 +201,10 @@ func TestTheBinaryLinksOnlyItsTwoChosenDependencies(t *testing.T) {
 		// owner's decision of 2026-11-05: memory-hard where the standard
 		// library offers only PBKDF2.
 		"golang.org/x/crypto": true,
+		// The YAML token targets (Yarn Berry, Helm, the GitHub CLI), the
+		// owner's decision of 2026-11-05: the YAML org's maintained fork of
+		// yaml.v3, whose node tree keeps key order and comments.
+		"go.yaml.in/yaml/v3": true,
 	}
 	var linked []string
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
