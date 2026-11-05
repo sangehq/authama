@@ -109,7 +109,7 @@ else is in the [documentation index](#documentation).
 
 - [Command reference](docs/reference/cli.md) — every command and subcommand with its flags, aliases and examples, generated from the binary (a test keeps it current), plus a "which command do I want" table.
 - [Feature catalog](docs/features.md) — every command, what it does, and how it is tested.
-- [`token`](docs/tools/tokens.md) — auth tokens: apply, set, list, show, status, copy, delete, audit, import; per tool: [Composer](docs/tools/tokens/composer.md), [npm](docs/tools/tokens/npm.md), [Docker](docs/tools/tokens/docker.md), [git](docs/tools/tokens/git.md), [netrc](docs/tools/tokens/netrc.md), [PyPI](docs/tools/tokens/pypi.md), [Cargo](docs/tools/tokens/cargo.md), [RubyGems](docs/tools/tokens/gem.md), [Gradle](docs/tools/tokens/gradle.md).
+- [`token`](docs/tools/tokens.md) — auth tokens: apply, set, list, show, status, copy, delete, audit, import; per tool: [Composer](docs/tools/tokens/composer.md), [npm](docs/tools/tokens/npm.md), [Docker](docs/tools/tokens/docker.md), [git](docs/tools/tokens/git.md), [netrc](docs/tools/tokens/netrc.md), [PyPI](docs/tools/tokens/pypi.md), [Cargo](docs/tools/tokens/cargo.md), [RubyGems](docs/tools/tokens/gem.md), [Gradle](docs/tools/tokens/gradle.md), [Maven](docs/tools/tokens/maven.md), [Yarn Berry](docs/tools/tokens/yarn.md), [Helm](docs/tools/tokens/helm.md), [GitHub CLI](docs/tools/tokens/gh.md).
 - [`doctor`](docs/tools/doctor.md) — what it checks (SSH and token files), `--fix`, `--json`, `--strict`.
 - [`deploy`](docs/tools/deploy.md) — installing a public key on its target.
 - [`providers`](docs/tools/providers.md) — the adapter catalog and how to extend it.
@@ -122,7 +122,7 @@ else is in the [documentation index](#documentation).
 - [`knownhosts`](docs/tools/knownhosts.md) — pinning host keys into the trust store.
 - [`git`](docs/tools/git.md) — checkouts' GitHub remotes in profile SSH, plain SSH or HTTPS mode.
 - [`vm`](docs/tools/vm.md) — local VMs as hosts, addressed through their hypervisor; configuring hypervisors, `vm sync`, `vm adopt-key`, keeping a key for later (`key reserve`).
-- [`export`](docs/tools/export.md) — a flat `ssh_config` or a Termius CSV, for tools that cannot read the split config.
+- [`export`](docs/tools/export.md) — a flat `ssh_config`, a Termius CSV, or your hosts for Windows Terminal, iTerm2, PuTTY, Remmina or any CSV importer.
 - [`net`](docs/tools/network.md) — reachability and VPN-gated hosts.
 - [`validate`](docs/tools/validate.md) — keypair integrity checks.
 - [`bundle`](docs/tools/bundle.md) — encrypted backup and restore.

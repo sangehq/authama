@@ -27,7 +27,7 @@ Every command also takes the global flag:
 - [`authama man`](#authama-man) - Write a manual page (troff, section 1) for every command into DIR
 - [`authama migrate`](#authama-migrate) - Copy a pre-0.1.1 home (ssh-manager, sshmgr) into the authama home; the old one is kept and marked
 - [`authama owner`](#authama-owner) - Bind this home to you and this machine: a PIN, and a seal that notices outside changes
-  - [`authama owner fingerprint`](#authama-owner-fingerprint) - Let a fingerprint stand in for the PIN at the terminal (Linux, fprintd)
+  - [`authama owner fingerprint`](#authama-owner-fingerprint) - Let a fingerprint stand in for the PIN at the terminal (Touch ID, Windows Hello, fprintd)
   - [`authama owner forget`](#authama-owner-forget) - Unbind the home: remove the key, the seal and the PIN, keep everything else
   - [`authama owner init`](#authama-owner-init) - Bind this home to you and this machine, and seal its state files
   - [`authama owner pin`](#authama-owner-pin) - Set, change, reset or remove the PIN
@@ -65,6 +65,7 @@ Every command also takes the global flag:
     - [`authama ssh host apply`](#authama-ssh-host-apply) - Add or update hosts from compact specs (one, many, or a file)
     - [`authama ssh host delete`](#authama-ssh-host-delete) - Delete a host, its config block and its pins
     - [`authama ssh host edit`](#authama-ssh-host-edit) - Edit a host
+    - [`authama ssh host export`](#authama-ssh-host-export) - Write your hosts as another SSH client imports them
   - [`authama ssh import`](#authama-ssh-import) - Onboard an existing ssh setup - a config file or any folder of them - into the manifest
   - [`authama ssh key`](#authama-ssh-key) - Manage a profile's keys (add/list/delete)
     - [`authama ssh key add`](#authama-ssh-key-add) - Declare a key on a profile and mint it
@@ -332,7 +333,7 @@ authama owner
 
 Subcommands:
 
-- [`fingerprint`](#authama-owner-fingerprint) - Let a fingerprint stand in for the PIN at the terminal (Linux, fprintd)
+- [`fingerprint`](#authama-owner-fingerprint) - Let a fingerprint stand in for the PIN at the terminal (Touch ID, Windows Hello, fprintd)
 - [`forget`](#authama-owner-forget) - Unbind the home: remove the key, the seal and the PIN, keep everything else
 - [`init`](#authama-owner-init) - Bind this home to you and this machine, and seal its state files
 - [`pin`](#authama-owner-pin) - Set, change, reset or remove the PIN
@@ -342,9 +343,10 @@ Subcommands:
 
 ## authama owner fingerprint
 
-On Linux with fprintd and an enrolled finger, the command line asks for a
-fingerprint first and falls back to the PIN. Touch ID and Windows Hello need a
-signed helper authama does not ship yet, so on macOS and Windows the PIN is used.
+The command line asks for a fingerprint first and falls back to the PIN: Touch ID
+on a Mac (through the authama-touchid helper, built beside authama), Windows Hello
+on Windows (through Windows PowerShell), fprintd on Linux. Not over SSH, where the
+prompt would appear on a screen nobody at this terminal sees.
 
 ```
 authama owner fingerprint <on|off>
@@ -447,7 +449,7 @@ Examples:
 
 A PIN is at least 6 characters: digits, or a passphrase of up to 128. A run such
 as 123456 or one repeated character is refused. It is stored only as a salted
-PBKDF2-SHA256 hash.
+Argon2id hash.
 
 ```
 authama owner pin set
@@ -1067,6 +1069,7 @@ Subcommands:
 - [`apply`](#authama-ssh-host-apply) - Add or update hosts from compact specs (one, many, or a file)
 - [`delete`](#authama-ssh-host-delete) - Delete a host, its config block and its pins
 - [`edit`](#authama-ssh-host-edit) - Edit a host
+- [`export`](#authama-ssh-host-export) - Write your hosts as another SSH client imports them
 
 ## authama ssh host add
 
@@ -1204,6 +1207,45 @@ Flags:
       --token-env string    env var holding the provider API token (e.g. GH_TOKEN_WORK)
       --untag stringArray   remove this tag (repeatable; applied after --tag; a tag the host lacks is ignored)
   -u, --user string         ssh user
+```
+
+## authama ssh host export
+
+Write every host as another SSH client imports it, into
+<config home>/exports/<client>/ (or --out DIR, or - for stdout when the export is
+one file). ~/.ssh is never written. The clients:
+
+  csv               any client that imports a CSV (Royal TS, Xshell, SecureCRT's import script, a spreadsheet)
+  iterm2            iTerm2 (Dynamic Profiles)
+  putty             PuTTY and KiTTY (a .reg file)
+  remmina           Remmina (one .remmina file per host)
+  windows-terminal  Windows Terminal (a JSON fragment)
+
+windows-terminal and iterm2 run `ssh <alias>`, so your ~/.ssh/config supplies the
+key and any ProxyCommand. The others are handed a host, port, user and key path,
+so a host reached through a ProxyCommand (a VM, Cloudflare Access) is left out.
+Git hosts are left out unless --include-git. Termius has its own command,
+`ssh termius export`; Tabby, WinSCP and Termius also import the file
+`ssh config export --flat` writes.
+
+```
+authama ssh host export <client> [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh host export windows-terminal
+  authama ssh host export putty --skip bastion
+  authama ssh host export csv --out ./client-imports
+```
+
+Flags:
+
+```
+      --include-git        also export git hosts (user git, or a github or gitlab provider), which are not shells
+  -o, --out string         the directory to write into (default <config home>/exports/<client>/; - for stdout)
+      --skip stringArray   leave out this alias (repeatable)
 ```
 
 ## authama ssh import
@@ -2385,7 +2427,7 @@ Flags:
       --no-env-hint               do not print the CI hint after writing Composer's file
       --project string            write the project's auth.json and .npmrc instead of the user ones
       --source string             load VAR=value lines from this env file first (set variables win)
-      --target strings            only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle)
+      --target strings            only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle, maven, yarn, helm, helm-oci, gh)
 ```
 
 ## authama token audit
@@ -2412,7 +2454,7 @@ Flags:
 ```
       --config string    check the tools this token config uses
       --project string   check the project's files and .gitignore
-      --target strings   only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle)
+      --target strings   only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle, maven, yarn, helm, helm-oci, gh)
 ```
 
 ## authama token copy
@@ -2488,7 +2530,7 @@ Flags:
 ```
       --json             print the placeholders as JSON, masked, instead of as files
       --project string   write the placeholder auth.json and .npmrc into this directory
-      --target strings   only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle)
+      --target strings   only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle, maven, yarn, helm, helm-oci, gh)
 ```
 
 ## authama token import
@@ -2534,7 +2576,7 @@ Examples:
 Flags:
 
 ```
-      --target strings   start from these tools' templates (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle)
+      --target strings   start from these tools' templates (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle, maven, yarn, helm, helm-oci, gh)
 ```
 
 ## authama token list
@@ -2562,7 +2604,7 @@ Flags:
       --json             print the list as JSON
       --project string   read the project's auth.json and .npmrc instead of the user ones
       --reveal           show the secret values (asks first; --yes when not at a terminal)
-      --target strings   only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle)
+      --target strings   only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle, maven, yarn, helm, helm-oci, gh)
   -y, --yes              reveal without asking
 ```
 
@@ -2612,7 +2654,7 @@ Flags:
       --scope string              npm only: bind an @org scope to this registry
       --server string             the registry or git server, e.g. github.com or registry.npmjs.org
       --service string            a Composer service, e.g. github or gitlab (see token providers)
-      --target string             the tool: npm, docker, git, netrc, pypi, cargo, gem or gradle (Composer uses --service)
+      --target string             the tool: npm, docker, git, netrc, pypi, cargo, gem, gradle, maven, yarn, helm, helm-oci or gh (Composer uses --service)
       --username string           the user name, for http-basic, docker, git and netrc
 ```
 

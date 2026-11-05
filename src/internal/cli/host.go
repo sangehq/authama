@@ -174,6 +174,7 @@ func newHostCmd() *cobra.Command {
 	del.Flags().BoolVar(&noKeyBackup, "no-key-backup", false,
 		"purge without writing an encrypted backup first (the key is then unrecoverable)")
 	cmd.AddCommand(del)
+	cmd.AddCommand(newHostExportCmd())
 
 	cmd.AddCommand(newHostApplyCmd())
 

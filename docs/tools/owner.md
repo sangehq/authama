@@ -70,8 +70,8 @@ of being acted on.
 ## The PIN
 
 A PIN is 6 to 128 characters: digits, or a passphrase. A run such as `123456`, or one repeated
-character, is refused. It is stored only as a salted PBKDF2-HMAC-SHA256 hash at 600,000 iterations,
-in `owner.json`.
+character, is refused. It is stored only as a salted Argon2id hash (t=3, 64 MiB, p=4, RFC 9106's
+second recommended setting), in `owner.json`.
 
 With a PIN set:
 
@@ -94,19 +94,40 @@ from this account's own credential store (on macOS the Keychain may ask for your
 and run on the machine the home was bound on. That is the proof that you are the account the home
 belongs to. The reset is on the record, and any lockout is cleared.
 
-### Why PBKDF2 and not Argon2id
+### Why Argon2id
 
-Argon2id is the stronger choice for a password hash, but the Go standard library does not have it,
-and the binary links no dependency that is not a recorded decision. The stored hash names its
-algorithm and cost, so a later release can add Argon2id and rehash a PIN the next time it is given.
+Argon2id is memory-hard: every guess at a stolen hash costs 64 MiB of memory as well as time, which
+is what makes a GPU or an ASIC slow at it, where an iterated hash such as PBKDF2 costs only time.
+A PIN set by an earlier release is a PBKDF2-HMAC-SHA256 hash at 600,000 iterations; it still
+unlocks, and the next time it is given correctly it is rehashed as Argon2id. The stored hash names
+its algorithm and cost, so this can change again without invalidating anyone's PIN.
 
 ## Fingerprint unlock
 
-On Linux with `fprintd` and an enrolled finger, `authama owner fingerprint on` makes the command
-line ask for a fingerprint first, falling back to the PIN. Touch ID and Windows Hello are offered by
-their platforms only to signed applications through their own APIs, which a cgo-free command-line
-binary cannot call; until authama ships a signed helper for them, macOS and Windows use the PIN.
-The web UI always uses the PIN.
+`authama owner fingerprint on` makes the command line ask for a fingerprint first, falling back to
+the PIN on any failure or cancel. It is a convenience in front of the PIN, never a replacement:
+
+| Platform | How | Needs |
+|---|---|---|
+| macOS | Touch ID, through `authama-touchid` | the helper beside `authama` (or in `Authama.app`), and an enrolled finger |
+| Windows | Windows Hello, through Windows PowerShell 5.1 | Hello set up in Settings > Accounts > Sign-in options |
+| Linux | `fprintd-verify` | `fprintd` and an enrolled finger |
+
+authama is built without cgo, so it cannot call LocalAuthentication or WinRT itself.
+
+- **macOS:** `authama-touchid` is a small Swift program (`src/helpers/touchid/main.swift`) that
+  asks for Touch ID with the biometrics-only policy and answers with its exit status. `make build`
+  builds it beside `authama` on a Mac with Xcode's command line tools, and `Authama.app` carries it.
+  It is ad-hoc signed, not notarized: a copy downloaded through a browser is quarantined, so allow it
+  once in System Settings > Privacy & Security, or remove the flag with
+  `xattr -d com.apple.quarantine authama-touchid`. A build from source is not quarantined.
+  Notarizing it needs a Developer ID.
+- **Windows:** authama runs `powershell.exe` with an encoded script that calls WinRT's
+  `UserConsentVerifier`. No helper is installed. The prompt can open behind the terminal, in which
+  case it shows in the taskbar.
+
+Over SSH (`SSH_CONNECTION` set) and in Remote Desktop, macOS and Windows report it unavailable and
+ask for the PIN. The web UI always uses the PIN.
 
 ## History and events
 

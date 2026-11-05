@@ -197,6 +197,14 @@ func TestTheBinaryLinksOnlyItsTwoChosenDependencies(t *testing.T) {
 		"github.com/mattn/go-isatty":           true,
 		"github.com/ncruces/go-strftime":       true,
 		"golang.org/x/sys":                     true,
+		// The owner PIN's Argon2id hash (golang.org/x/crypto/argon2), the
+		// owner's decision of 2026-11-05: memory-hard where the standard
+		// library offers only PBKDF2.
+		"golang.org/x/crypto": true,
+		// The YAML token targets (Yarn Berry, Helm, the GitHub CLI), the
+		// owner's decision of 2026-11-05: the YAML org's maintained fork of
+		// yaml.v3, whose node tree keeps key order and comments.
+		"go.yaml.in/yaml/v3": true,
 	}
 	var linked []string
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
@@ -280,6 +288,10 @@ func TestTheToolRunsOnlyTheBinariesItDeclares(t *testing.T) {
 		// optional; without one the key is kept in an owner-only file, and the
 		// PIN is asked for instead of a fingerprint.
 		"/usr/bin/security", "/usr/sbin/ioreg", "secret-tool", "fprintd-verify", "fprintd-list",
+		// Fingerprint unlock on Windows: Windows PowerShell 5.1 asks Windows
+		// Hello through WinRT (PowerShell 7 cannot). On macOS the Touch ID
+		// helper, authama-touchid, is run by the path it was found at.
+		"powershell.exe", "authama-touchid",
 		// Itself: the scheduled notifier runs `authama audit --notify`, and it
 		// prefers an installed authama on PATH over the running binary's own
 		// path so the job survives the binary moving.

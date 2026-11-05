@@ -19,6 +19,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The owner PIN is hashed with Argon2id** (t=3, 64 MiB, p=4), memory-hard where PBKDF2 costs only
+  time. A PIN set by an earlier release still unlocks and is rehashed as Argon2id the next time it
+  is given correctly. This links `golang.org/x/crypto`, a fourth recorded dependency.
 - **`build/` holds one folder per OS and nothing else.** `make build` writes
   `build/<your-os>/authama` (`build/macos/authama`, `build/windows/authama.exe` - which also fixes
   `make install` on Windows, which looked for an `.exe` the build never wrote); `make cross` writes
@@ -58,6 +61,24 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Host exports for more SSH clients.** `authama ssh host export <client>` writes a Windows Terminal
+  JSON fragment, iTerm2 Dynamic Profiles, a PuTTY `.reg` (with the `puttygen` command for each key),
+  Remmina profiles, or a generic CSV with the key path (Royal TS, Xshell, SecureCRT, a spreadsheet).
+  The Windows Terminal and iTerm2 profiles run `ssh <alias>`, so ProxyCommand and VM hosts work there
+  too; the others leave such hosts out and say so.
+- **Touch ID and Windows Hello stand in for the owner PIN at the terminal.** On a Mac,
+  `authama-touchid` (a small Swift helper, built beside `authama` by `make build` and carried in
+  `Authama.app`) asks LocalAuthentication; on Windows, authama asks Windows Hello through Windows
+  PowerShell's WinRT `UserConsentVerifier`, with no helper to install. `authama owner fingerprint on`
+  turns it on, as it already did with fprintd on Linux. Over SSH or Remote Desktop it reports itself
+  unavailable, and any failure falls back to the PIN. The helper is ad-hoc signed, not notarized.
+- **Five more token targets: Maven, Yarn Berry, Helm and the GitHub CLI.** `maven` writes a
+  `<server>` into `~/.m2/settings.xml`, spliced so every other byte stays put and a brace is escaped
+  as Maven needs; `yarn` writes `npmRegistries` in `~/.yarnrc.yml`; `helm` sets the login on a
+  classic chart repository in `repositories.yaml`, and `helm-oci` writes an OCI registry login in
+  `registry/config.json`; `gh` writes an account's token into `hosts.yml` where gh reads it outside
+  the keyring. The YAML files are edited through a node tree that keeps key order and comments,
+  with `go.yaml.in/yaml/v3`, a recorded dependency.
 - **The web UI's address is configurable.** `web.addr`, `web.port` and `web.base_path` in
   `authama.json` (or `AUTHAMA_WEB_ADDR`, `AUTHAMA_WEB_PORT`, `AUTHAMA_WEB_BASE_PATH`) change the
   default `http://127.0.0.1:7822/`; a configured port that is taken falls back like the default, and

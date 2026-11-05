@@ -40,6 +40,11 @@ directory works: `make install BINDIR=/usr/local/bin`. `make uninstall` (with th
 `BINDIR`) removes that one file, after checking it answers `version` as authama, and prints
 where your config and state homes are; it never touches them, `~/.ssh` or a token file.
 
+On a Mac with Xcode's command line tools (`xcode-select --install`), `make build` also builds
+`build/macos/authama-touchid`, the helper that lets Touch ID stand in for the owner PIN, and
+`make install` puts it beside `authama`. Without Swift it is skipped with a note and authama works
+the same, asking for the PIN. See [Fingerprint unlock](tools/owner.md#fingerprint-unlock).
+
 On Windows, `make install` from Git Bash puts it in `%LOCALAPPDATA%\Programs\authama`, where
 `install.ps1` does. Or run the same `git clone` and `make build` from Git Bash (or `go -C src build -o
 ..\build\windows\authama.exe ./cmd/authama` from PowerShell), then put `build\windows\authama.exe`

@@ -41,7 +41,8 @@ func (h Host) expandUser(p string) string {
 // PathOverrideVars are the variables the native tools read to relocate their
 // files. In dev mode the services layer hides them, so a sandboxed run can
 // never be redirected onto a real file.
-var PathOverrideVars = []string{"COMPOSER_HOME", "NPM_CONFIG_USERCONFIG", "DOCKER_CONFIG", "NETRC", "XDG_CONFIG_HOME", "APPDATA", "CARGO_HOME", "GRADLE_USER_HOME"}
+var PathOverrideVars = []string{"COMPOSER_HOME", "NPM_CONFIG_USERCONFIG", "DOCKER_CONFIG", "NETRC", "XDG_CONFIG_HOME", "APPDATA", "CARGO_HOME", "GRADLE_USER_HOME",
+	"HELM_CONFIG_HOME", "HELM_REPOSITORY_CONFIG", "HELM_REGISTRY_CONFIG", "GH_CONFIG_DIR"}
 
 // TargetPath is where a target's file lives, found the way the native tool
 // finds it, honouring its own env overrides. project scopes composer and npm

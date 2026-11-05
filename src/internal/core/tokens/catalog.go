@@ -119,7 +119,7 @@ func UseCatalog(text string) error {
 	}
 	known := map[string]bool{Composer: true, NPM: true, Docker: true, Git: true, Netrc: true}
 	names := []string{Composer, NPM, Docker, Git, Netrc}
-	for _, t := range []string{PyPI, Cargo, Gem, Gradle} {
+	for _, t := range []string{PyPI, Cargo, Gem, Gradle, Maven, Yarn, Helm, HelmOCI, GH} {
 		known[t], names = true, append(names, t)
 	}
 	for _, t := range c.Targets {

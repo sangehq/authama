@@ -215,8 +215,13 @@ if [ "$WITH_ARCHIVES" = "1" ]; then
     [ -f "${OUT}/macos/${BINARY}_macos_${cand}" ] && { app_bin="${OUT}/macos/${BINARY}_macos_${cand}"; break; }
   done
   if [ -n "$app_bin" ]; then
+    # The Touch ID helper needs Swift, so only a Mac builds it; elsewhere the
+    # app ships without it and the PIN is the unlock.
+    helper="${OUT}/macos/authama-touchid_macos_universal"
+    "${SCRIPT_DIR}/touchid-helper.sh" "$helper" universal >/dev/null || true
+    [ -f "$helper" ] || helper=""
     printf '  -> %-40s' "archives/${BINARY}_macos_app.zip"
-    VERSION="$VERSION" "${SCRIPT_DIR}/macos-app.sh" "$app_bin" "${ARCHIVE_DIR}/${BINARY}_macos_app.zip" >/dev/null
+    VERSION="$VERSION" "${SCRIPT_DIR}/macos-app.sh" "$app_bin" "${ARCHIVE_DIR}/${BINARY}_macos_app.zip" ${helper:+"$helper"} >/dev/null
     echo "ok"
   fi
 fi

@@ -1,7 +1,7 @@
 {
   "_help": "Internal catalog for token management (ported from auth-token-manager) — the single source of truth for targets, the Composer service catalog, enterprise/cloud hosts, interactive providers, and config field requirements. Add a service or provider HERE (no code change needed). This is NOT your credentials config (that is tokens.json in the config home); this file ships with the package.",
 
-  "targets": ["composer", "npm", "docker", "git", "netrc", "pypi", "cargo", "gem", "gradle"],
+  "targets": ["composer", "npm", "docker", "git", "netrc", "pypi", "cargo", "gem", "gradle", "maven", "yarn", "helm", "helm-oci", "gh"],
 
   "menu": [
     { "key": "composer", "label": "Composer — PHP packages (auth.json / COMPOSER_AUTH)" },
@@ -12,7 +12,12 @@
     { "key": "pypi",     "label": "PyPI — package uploads (.pypirc)" },
     { "key": "cargo",    "label": "Cargo — Rust registries (credentials.toml)" },
     { "key": "gem",      "label": "RubyGems — gem push (~/.gem/credentials)" },
-    { "key": "gradle",   "label": "Gradle — repository credentials (gradle.properties)" }
+    { "key": "gradle",   "label": "Gradle — repository credentials (gradle.properties)" },
+    { "key": "maven",    "label": "Maven — repository credentials (settings.xml)" },
+    { "key": "yarn",     "label": "Yarn Berry — registry token (.yarnrc.yml)" },
+    { "key": "helm",     "label": "Helm — chart repository login (repositories.yaml)" },
+    { "key": "helm-oci", "label": "Helm — OCI registry login (registry/config.json)" },
+    { "key": "gh",       "label": "GitHub CLI — account token (hosts.yml)" }
   ],
 
   "target_fields": {
@@ -29,7 +34,12 @@
     "pypi":     { "basic": ["user_env", "pass_env"] },
     "cargo":    { "token": ["env"] },
     "gem":      { "token": ["env"] },
-    "gradle":   { "basic": ["user_env", "pass_env"] }
+    "gradle":   { "basic": ["user_env", "pass_env"] },
+    "maven":    { "basic": ["user_env", "pass_env"] },
+    "yarn":     { "token": ["env"] },
+    "helm":     { "basic": ["user_env", "pass_env"] },
+    "helm-oci": { "basic": ["user_env", "pass_env"] },
+    "gh":       { "basic": ["user_env", "pass_env"] }
   },
 
   "default_config": {
