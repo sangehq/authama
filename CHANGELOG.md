@@ -47,6 +47,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Keys where you already keep them.** A declared key's new `path` adopts an existing private key
+  under `~/.ssh` (`id_ed25519`, `work/deploy_key`) in place: it renders, deploys, rotates and audits
+  there, and authama never moves, renames or deletes it. Rotation archives the old pair in the
+  profile's `old/` and writes the successor to the same path. `authama ssh key adopt` declares and
+  records one. See [docs/configuration.md](docs/configuration.md#adopted-keys).
+
 - **`authama repair`** finds what is wrong with the home, `~/.ssh` and the token files and fixes
   what is safe: missing directories, a corrupt history database (renamed aside, kept), files a
   crashed command left, wrong modes, missing `.pub` files, a drifted `~/.ssh/config`, and token
