@@ -86,7 +86,9 @@ export class SidePanel extends Component {
   submit(form, submitter = null) {
     const method = (form.getAttribute("method") ?? "get").toUpperCase();
     const data = new FormData(form, submitter ?? undefined);
-    const action = new URL(form.action, window.location.href);
+    // The attribute, not form.action: these forms carry an input named
+    // "action", which shadows the property.
+    const action = new URL(form.getAttribute("action") ?? window.location.href, window.location.href);
     if (method === "GET") {
       action.search = new URLSearchParams(/** @type {any} */ (data)).toString();
       return this.open(action.href);
@@ -95,7 +97,16 @@ export class SidePanel extends Component {
       this.#changed = true;
     }
     this.#busy(form, true);
-    return this.#load(action.href, { method, body: data }).finally(() => this.#busy(form, false));
+    // URL-encoded, as the browser sends a form: the server parses that body,
+    // and no form here uploads a file.
+    const body = new URLSearchParams(/** @type {any} */ (data));
+    return this.#load(action.href, { method, body }).finally(() => this.#busy(form, false));
+  }
+
+  /** Loads the current page again, in place: a job that has moved on. */
+  reload() {
+    const top = this.#stack.pop();
+    return top ? this.open(top.url) : Promise.resolve(this);
   }
 
   /** Goes back one page, or closes the panel at the first. */

@@ -21,6 +21,7 @@ export const pages: { path: string; heading: string }[] = [
   { path: '/doctor', heading: 'Doctor' },
   { path: '/audit', heading: 'Audit' },
   { path: '/tokens', heading: 'Auth tokens' },
+  { path: '/security', heading: 'Owner & PIN' },
   { path: '/settings', heading: 'Settings' },
   { path: '/about', heading: 'About' },
   { path: '/about/licenses', heading: 'Third-party licences' },
@@ -52,7 +53,9 @@ export const test = base.extend<{ problems: string[] }>({
     });
     page.on('response', (r) => {
       // A page may answer 4xx on purpose (401, 404, 409); an asset never may.
-      if (r.status() >= 400 && !r.request().isNavigationRequest()) {
+      // A page the side panel loads is a page too: it carries X-Authama-Panel.
+      const page = r.request().isNavigationRequest() || r.request().headers()['x-authama-panel'] === '1';
+      if (r.status() >= 400 && !page) {
         problems.push(`response: ${r.status()} ${r.url()}`);
       }
     });

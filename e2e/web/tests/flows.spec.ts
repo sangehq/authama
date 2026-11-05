@@ -17,11 +17,15 @@ test('a profile is previewed, then added', async ({ page }) => {
   await form.getByLabel('Name', { exact: true }).fill(added);
   await form.getByRole('button', { name: 'Preview' }).click();
 
-  await expect(page).toHaveURL(/\/changes\/preview$/);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Review the change');
-  await expect(page.locator('pre.code-block').first()).toContainText(`profile add ${added}`);
-  // The diff of the manifest the change would write names the new profile.
-  await expect(page.locator('.diff-line', { hasText: added }).first()).toBeVisible();
+  // The preview opens in the side panel; the page underneath stays put.
+  const panel = page.locator('#side-panel');
+  await expect(page).toHaveURL(/\/profiles$/);
+  await expect(panel.getByRole('heading', { level: 1 })).toHaveText('Review the change');
+  await expect(panel.locator('pre.code-block').first()).toContainText(`profile add ${added}`);
+  // The diff of the manifest the change would write names the new profile,
+  // on a numbered, highlighted line, and says the JSON is valid.
+  await expect(panel.locator('tr.diff-add', { hasText: added }).first()).toBeVisible();
+  await expect(panel.locator('.file-diff .badge', { hasText: 'valid JSON' }).first()).toBeVisible();
   // A preview writes nothing.
   const look = await page.context().newPage();
   await look.goto('/profiles');
@@ -29,14 +33,19 @@ test('a profile is previewed, then added', async ({ page }) => {
   await expect(look.getByRole('rowheader', { name: added, exact: true })).toHaveCount(0);
   await look.close();
 
-  await page.getByRole('button', { name: 'Make this change' }).click();
-  await expect(page).toHaveURL(/\/changes\/apply$/);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Done');
-  await expect(page.getByRole('status')).toContainText(`profile add ${added}`);
+  await panel.getByRole('button', { name: 'Make this change' }).click();
+  await expect(panel.getByRole('heading', { level: 1 })).toHaveText('Done');
+  await expect(panel.getByRole('status')).toContainText(`profile add ${added}`);
 
-  await page.getByRole('link', { name: 'See it in the history' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('profile add');
+  // The history opens in the panel too, and Back returns to the result.
+  await panel.getByRole('link', { name: 'See it in the history' }).click();
+  await expect(panel.getByRole('heading', { level: 1 })).toContainText('profile add');
+  await panel.getByRole('button', { name: 'Back' }).click();
+  await expect(panel.getByRole('heading', { level: 1 })).toHaveText('Done');
 
+  // Closing the panel after a change reloads the page under it.
+  await panel.getByRole('button', { name: 'Close' }).click();
+  await expect(page.getByRole('rowheader', { name: added, exact: true })).toBeVisible();
   await page.goto('/profiles');
   await expect(page.getByRole('rowheader', { name: added, exact: true })).toBeVisible();
   await page.goto('/history?source=web');
@@ -49,7 +58,8 @@ test('a preview whose home moved underneath is refused, and nothing is written',
   const form = page.locator('form', { has: page.locator('input[name="action"][value="profile-add"]') });
   await form.getByLabel('Name', { exact: true }).fill('e2e-stale');
   await form.getByRole('button', { name: 'Preview' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Review the change');
+  const panel = page.locator('#side-panel');
+  await expect(panel.getByRole('heading', { level: 1 })).toHaveText('Review the change');
 
   // Another change lands between the preview and the confirm.
   const other = await page.context().newPage();
@@ -58,12 +68,13 @@ test('a preview whose home moved underneath is refused, and nothing is written',
   const otherForm = other.locator('form', { has: other.locator('input[name="action"][value="profile-add"]') });
   await otherForm.getByLabel('Name', { exact: true }).fill('e2e-moved');
   await otherForm.getByRole('button', { name: 'Preview' }).click();
-  await other.getByRole('button', { name: 'Make this change' }).click();
-  await expect(other.getByRole('heading', { level: 1 })).toHaveText('Done');
+  // The other tab confirms with Run, beside the command: the same as Make this change.
+  await other.locator('#side-panel').getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(other.locator('#side-panel').getByRole('heading', { level: 1 })).toHaveText('Done');
   await other.close();
 
-  await page.getByRole('button', { name: 'Make this change' }).click();
-  await expect(page.getByRole('alert').filter({ hasText: 'Something changed since you looked' })).toBeVisible();
+  await panel.getByRole('button', { name: 'Make this change' }).click();
+  await expect(panel.getByRole('alert').filter({ hasText: 'Something changed since you looked' })).toBeVisible();
   await page.goto('/profiles');
   await expect(page.getByRole('rowheader', { name: 'e2e-stale', exact: true })).toHaveCount(0);
 });
@@ -79,24 +90,31 @@ test('a bundle restore runs as a job and its stream is watched to the end', asyn
   await page.locator('.dropdown-menu.show').getByRole('button', { name: 'Restore' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Review the restore' }).click();
 
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Review the job');
-  await expect(page.locator('.list-group-item', { hasText: `decrypts ${name}` })).toBeVisible();
-  await page.getByRole('button', { name: /^Run authama ssh restore / }).click();
-  await expect(page).toHaveURL(/\/jobs\/[^/]+$/);
+  const panel = page.locator('#side-panel');
+  await expect(panel.getByRole('heading', { level: 1 })).toHaveText('Review the job');
+  await expect(panel.locator('.list-group-item', { hasText: `decrypts ${name}` })).toBeVisible();
+  await panel.getByRole('button', { name: /^Run authama ssh restore / }).click();
+  // The job's page opens in the panel; its own address is the panel's "Open as a page".
+  await expect(panel.locator('[data-side-panel-full]')).toHaveAttribute('href', /\/jobs\/(?!review$)[^/]+$/);
+  const jobURL = (await panel.locator('[data-side-panel-full]').getAttribute('href')) ?? '';
 
   // The event stream replays every line and ends once the job does; reading
   // it to the end is watching the job finish.
-  const events = await page.request.get(`${new URL(page.url()).pathname}/events`, { timeout: 60_000 });
+  const events = await page.request.get(`${new URL(jobURL).pathname}/events`, { timeout: 60_000 });
   expect(events.headers()['content-type']).toContain('text/event-stream');
   const stream = await events.text();
   expect(stream).toMatch(/event: line\ndata: restore: laid down \d+ file\(s\)/);
   expect(stream).toContain('event: line\ndata:   work_hpc-ed25519  SHA256:');
   expect(stream.trimEnd()).toMatch(/event: state\ndata: done$/);
 
-  // The page follows the same stream, and reloads into its finished state.
-  await expect(page.locator('#job-state')).toHaveAttribute('data-state', 'done', { timeout: 30_000 });
-  await expect(page.locator('#job-log')).toContainText('restore: laid down');
-  await expect(page.locator('#job-state .badge')).toHaveText('done');
+  // The panel follows the same stream, and refreshes into the finished job -
+  // in the panel, without leaving the page under it.
+  await expect(panel.locator('#job-state')).toHaveAttribute('data-state', 'done', { timeout: 30_000 });
+  await expect(panel.locator('#job-log')).toContainText('restore: laid down');
+  await expect(panel.locator('#job-state .badge')).toHaveText('done');
+  await expect(page).toHaveURL(/\/snapshots$/);
+  // A change was made in the panel, so closing it reloads the page under it.
+  await panel.getByRole('button', { name: 'Close' }).click();
 
   // The job snapshotted ~/.ssh before laying the bundle back.
   await page.goto('/snapshots');
@@ -106,8 +124,7 @@ test('a bundle restore runs as a job and its stream is watched to the end', asyn
   const row = snapshots.locator('tbody tr', { has: page.locator('a.dropdown-item', { hasText: 'Compare with now' }) }).first();
   await row.getByRole('button', { name: /^Actions for snapshot / }).click();
   await row.locator('.dropdown-menu.show').getByRole('link', { name: 'Compare with now' }).click();
-  await expect(page).toHaveURL(/\/snapshots\/ssh-\d{8}-\d{6}/);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^ssh-\d{8}-\d{6}/);
+  await expect(page.locator('#side-panel').getByRole('heading', { level: 1 })).toHaveText(/^ssh-\d{8}-\d{6}/);
 });
 
 test('a token is added from the page, and its secret never reaches a page', async ({ page }) => {
@@ -134,12 +151,13 @@ test('a token is added from the page, and its secret never reaches a page', asyn
   await form.getByLabel('Token or password').fill(secret);
   await form.getByRole('button', { name: 'Preview' }).click();
 
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Review the change');
-  await expect(page.locator('pre.code-block').first()).toContainText(`token set --target npm --server ${server}`);
+  const panel = page.locator('#side-panel');
+  await expect(panel.getByRole('heading', { level: 1 })).toHaveText('Review the change');
+  await expect(panel.locator('pre.code-block').first()).toContainText(`token set --target npm --server ${server}`);
   expect(await page.content()).not.toContain(secret);
 
-  await page.getByRole('button', { name: 'Make this change' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Done');
+  await panel.getByRole('button', { name: 'Make this change' }).click();
+  await expect(panel.getByRole('heading', { level: 1 })).toHaveText('Done');
   expect(await page.content()).not.toContain(secret);
 
   await page.goto('/tokens');

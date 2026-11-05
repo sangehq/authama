@@ -19,8 +19,8 @@ import (
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/services/events"
 	"github.com/simtabi/authama/src/internal/services/history"
-	"github.com/simtabi/authama/src/internal/util/highlight"
 	"github.com/simtabi/authama/src/internal/services/owner"
+	"github.com/simtabi/authama/src/internal/util/highlight"
 )
 
 // assetSet is the embedded assets with a content hash each, for
@@ -200,7 +200,7 @@ func funcs(a *assetSet) template.FuncMap {
 		"diffOf": func(path string, lines []history.DiffLine) diffView {
 			return newDiffView(path, "", lines, false, "")
 		},
-		"hl": func(lang, line string) template.HTML { return highlightHTML(highlight.Lang(lang), line) },
+		"hl":    func(lang, line string) template.HTML { return highlightHTML(highlight.Lang(lang), line) },
 		"hlFor": func(path, line string) template.HTML { return highlightHTML(highlight.For(path), line) },
 		"lines": func(s string) []string { return strings.Split(strings.TrimSuffix(s, "\n"), "\n") },
 		"diffMark": func(op byte) string {
@@ -534,15 +534,16 @@ func paletteItems(readOnly bool) []paletteItem {
 		{"overview", "Overview", "/", "layout-dashboard", "Page", "home dashboard state"},
 		{"profiles", "Profiles", "/profiles", "users", "SSH", "profile category key scope"},
 		{"hosts", "Hosts", "/hosts", "server", "SSH", "host alias hostname"},
-		{"sshconfig", "SSH config", "/ssh-config", "file-code", "SSH", "config render drift check"},
 		{"keys", "Keys", "/keys", "key", "SSH", "key fingerprint expiry reserve"},
 		{"vms", "VMs", "/vms", "device-desktop", "SSH", "vm hypervisor devbox sync"},
-		{"snapshots", "Snapshots", "/snapshots", "archive", "SSH", "snapshot bundle backup restore"},
-		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Auth", "token npm composer docker git netrc"},
-		{"history", "History", "/history", "history", "System", "history operations changes log"},
-		{"events", "Events", "/events", "activity", "System", "events file changes tracking"},
+		{"sshconfig", "SSH config", "/ssh-config", "file-code", "Config & backups", "config render drift check"},
+		{"snapshots", "Snapshots", "/snapshots", "archive", "Config & backups", "snapshot bundle backup restore"},
+		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Security", "token npm composer docker git netrc pypi cargo gem gradle"},
+		{"audit", "Audit", "/audit", "shield-check", "Security", "audit key age"},
+		{"security", "Owner & PIN", "/security", "lock", "Security", "owner pin seal tamper binding fingerprint"},
+		{"history", "History", "/history", "history", "Activity", "history operations changes log"},
+		{"events", "Events", "/events", "activity", "Activity", "events file changes tracking"},
 		{"doctor", "Doctor", "/doctor", "stethoscope", "System", "doctor checks fix"},
-		{"audit", "Audit", "/audit", "shield-check", "System", "audit key age"},
 		{"settings", "Settings", "/settings", "settings", "System", "settings theme appearance env"},
 		{"about", "About", "/about", "info-circle", "System", "about version licences"},
 	}

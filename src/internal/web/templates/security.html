@@ -1,0 +1,57 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "Security" "Owner & PIN" "Whether this home is bound to you and this machine, whether a PIN guards it, and whether its files are as authama left them.")}}
+{{if not .State.SetUp}}
+<div class="card">
+  <div class="card-body">
+    <h2 class="card-title">{{icon "lock-open"}}<span class="ms-1">Not bound</span></h2>
+    <p class="text-secondary">This home has no owner. Binding it keeps a sealing key in your OS's credential store, seals the state files, and lets you set a PIN that this page asks for at sign-in and before every change.</p>
+    <p class="mb-1">Run these in a terminal on this machine: they prove your OS account, which a browser cannot.</p>
+    {{template "command_card" (commandCard "authama owner init" false "" false)}}
+    {{template "command_card" (commandCard "authama owner pin set" false "" false)}}
+  </div>
+</div>
+{{else}}
+<div class="row row-cards">
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Binding</h2></div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          {{with .State.Config}}
+          <dt class="col-5">Bound since</dt><dd class="col-7">{{.Created.Local.Format "2006-01-02 15:04"}}</dd>
+          <dt class="col-5">Key kept in {{template "help" (help "Key store" "Where the sealing key lives: the macOS Keychain, the Secret Service on Linux, DPAPI on Windows, or an owner-only file. It never leaves that store but into authama's memory.")}}</dt><dd class="col-7"><code>{{.Store}}</code></dd>
+          <dt class="col-5">PIN</dt><dd class="col-7">{{if .HasPIN}}<span class="badge badge-ok">set</span> <span class="text-secondary small">since {{.PINSet.Local.Format "2006-01-02"}}</span>{{else}}<span class="badge badge-warn">not set</span>{{end}}</dd>
+          <dt class="col-5">Fingerprint</dt><dd class="col-7">{{if .Biometric}}<span class="badge badge-ok">on</span>{{else}}<span class="badge badge-muted">off</span>{{end}}{{if not $.Data.Biometric}} <span class="text-secondary small d-block">{{$.Data.Why}}</span>{{end}}</dd>
+          {{end}}
+        </dl>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Seal</h2>{{if .State.Clean}}<span class="ms-2 badge badge-ok">{{icon "circle-check"}}<span class="ms-1">matches</span></span>{{else}}<span class="ms-2 badge badge-bad">{{icon "alert-triangle"}}<span class="ms-1">changed</span></span>{{end}}</div>
+      <div class="card-body">
+        <p>{{if .State.Clean}}Every sealed file is as authama last left it.{{else}}{{.State.Describe}}.{{end}}</p>
+        {{if .State.Report.Findings}}<table class="table table-sm mb-3"><thead><tr><th scope="col">File</th><th scope="col">State</th></tr></thead><tbody>{{range .State.Report.Findings}}<tr><td><code>{{.Name}}</code></td><td><span class="badge {{if eq (print .Status) "changed"}}badge-warn{{else}}badge-bad{{end}}">{{.Status}}</span></td></tr>{{end}}</tbody></table>{{end}}
+        <p class="text-secondary small mb-2">Sealed: {{range $i, $f := .Files}}{{if $i}}, {{end}}<code>{{$f}}</code>{{end}}.</p>
+        {{if not .State.Clean}}<p class="mb-1">If you made the change yourself, accept it at a terminal:</p>{{template "command_card" (commandCard "authama owner reseal" false "" false)}}{{end}}
+      </div>
+    </div>
+  </div>
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">At a terminal</h2></div>
+      <div class="card-body">
+        <p class="text-secondary">Changing the binding proves your OS account, so it is done at a terminal on this machine, never from a browser.</p>
+        <div class="row g-3">
+          <div class="col-md-6">{{template "command_card" (commandCard "authama owner pin set" false "" false)}}</div>
+          <div class="col-md-6">{{template "command_card" (commandCard "authama owner pin reset" false "" false)}}</div>
+          <div class="col-md-6">{{template "command_card" (commandCard "authama owner verify" false "" false)}}</div>
+          <div class="col-md-6">{{template "command_card" (commandCard "authama owner status" false "" false)}}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
+{{end}}{{end}}

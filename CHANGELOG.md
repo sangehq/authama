@@ -47,6 +47,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The web UI works in place.** Previewing and confirming a change, a job's review and live
+  output, an operation in the history and a snapshot's diff open in one side panel over the page,
+  with Back and *Open as a page*; the page underneath reloads when a change was made. Every such
+  page still works on its own without JavaScript. A change's review leads with its command,
+  highlighted, with copy and Run.
+- **Diffs are numbered and highlighted**, as a table of old and new line numbers in the file's own
+  syntax (JSON, INI, TOML, YAML, properties, ssh_config, netrc, shell), with added and removed counts
+  and, for JSON, whether the new content is valid and where it is not. They replace the old diff,
+  whose lines rendered with a dark empty line between each.
+- **CSV downloads are previewed and shaped**: choose the columns, leave out rows containing some
+  text, see the first rows, then download; the choice is remembered per list. The server takes
+  `?drop=`, `?exclude=` and `?preview=1` on every CSV, the Termius export included.
+- **The tokens.json editor checks the JSON as you type**, names the line and column of a mistake,
+  will not send it while invalid, and formats it.
+- **The menu is regrouped**: SSH, Config & backups, Security (with a new Owner & PIN page), Activity
+  and System.
+
 - **Owner binding** (`authama owner`). `owner init` keeps a sealing key in the OS credential store
   (macOS Keychain, the Linux Secret Service, DPAPI on Windows, else an owner-only file) and seals the
   state files with it, bound to the OS user and machine. authama reseals after its own operations,

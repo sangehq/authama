@@ -232,7 +232,8 @@ func isNumber(s string) bool {
 		return false
 	}
 	for i, r := range s {
-		if !unicode.IsDigit(r) && !(r == '.' && i > 0) && !(r == '-' && i == 0) {
+		ok := unicode.IsDigit(r) || (r == '.' && i > 0) || (r == '-' && i == 0)
+		if !ok {
 			return false
 		}
 	}

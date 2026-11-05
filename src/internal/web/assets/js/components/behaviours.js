@@ -1,5 +1,6 @@
 // @ts-check
 import { Component } from "../core/component.js";
+import { SidePanel } from "./side-panel.js";
 
 /**
  * ConfirmAction opens a confirmation modal instead of submitting: a submit
@@ -79,7 +80,13 @@ export class JobStream extends Component {
     events.addEventListener("state", (e) => {
       if (/** @type {MessageEvent} */ (e).data !== state) {
         events.close();
-        window.location.reload();
+        // In the side panel, the panel's page is the one to refresh, not the
+        // page under it.
+        if (this.el.closest("[data-side-panel]") && SidePanel.current) {
+          SidePanel.current.reload();
+        } else {
+          window.location.reload();
+        }
       }
     });
     return this;

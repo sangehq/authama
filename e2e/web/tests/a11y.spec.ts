@@ -38,7 +38,8 @@ for (const theme of ['light', 'dark'] as const) {
     test('a change preview has no serious or critical violations', async ({ page }, info) => {
       await page.goto(`/?theme=${theme}`);
       await page.getByRole('button', { name: 'Re-render ~/.ssh/config' }).click();
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText('Review the change');
+      // The preview opens in the side panel, over the page.
+      await expect(page.locator('#side-panel').getByRole('heading', { level: 1 })).toHaveText('Review the change');
       await expect(page.locator('html')).toHaveAttribute('data-bs-theme', theme);
       await audit(page, info, `change preview (${theme})`);
     });

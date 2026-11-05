@@ -101,6 +101,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
 
     copyFileSync(join(repo, 'src', 'config', 'manifest.json'), join(cfg, 'manifest.json'));
     run(env, bin, ['ssh', 'reconcile']);
+    // A tokens.json, so the editor (and its JSON check) is on the tokens page.
+    run(env, bin, ['token', 'init', '--target', 'npm']);
     run(env, 'age-keygen', ['-o', join(cfg, 'age-identity.txt')]);
     const recipient = run(env, 'age-keygen', ['-y', join(cfg, 'age-identity.txt')]).trim();
     run(env, bin, ['ssh', 'bundle', '--recipient', recipient]);
