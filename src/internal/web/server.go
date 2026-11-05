@@ -63,6 +63,11 @@ type Options struct {
 
 	// Now is the clock. Nil means time.Now.
 	Now func() time.Time
+
+	// Instance is a random id /healthz answers with, so `authama serve` can
+	// tell a running server it started from another process holding the port
+	// (see cli's serve record). Empty answers with none.
+	Instance string
 }
 
 // Server is the web UI.

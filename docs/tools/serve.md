@@ -28,8 +28,34 @@ press Ctrl-C to stop
 The token in the address signs the browser in, once. The browser swaps it for a session cookie and
 drops it from the address bar. Without the token, every page answers 401.
 
-If port 7822 is taken, `serve` uses the next free port and says which. `--port` pins a port and fails
-when that port is taken.
+If port 7822 is taken, `serve` uses the next free port and says which. If all twenty from 7822 up are
+taken, it uses any free port the system offers. `--port` pins a port and fails when that port is
+taken.
+
+### One server per home
+
+Launching `authama serve` again - or the app, or a bare `authama` - while a server is already
+running for the same home opens that server in the browser instead of starting another, so servers
+never pile up and fill the ports:
+
+```sh
+authama serve --status   # is one running for this home? where, since when, which pid
+authama serve --stop     # stop it
+authama serve --new      # start another beside it anyway
+```
+
+The running server leaves an owner-only `serve.json` in the state home's `.state/`, with its pid,
+address and sign-in address. A launch trusts it only when the server at that address answers
+`/healthz` with the same random instance id, so a stale record (a server that crashed) or a pid or
+port reused by something else is ignored. `/healthz` is the one page that answers without signing
+in, and it says nothing but `{"app":"authama","instance":"…"}`. A pinned `--port`, `--read-only`
+when the running server is not, or `--allow-remote` starts a new server rather than reusing one.
+
+**Why not a named address like `http://127.0.0.1/authama`?** A path does not free a port: two
+programs still cannot listen on the same one, so a path only helps behind a reverse proxy that
+owns the port, which a single-user tool should not need. A name like `http://authama.localhost/`
+resolves in Chrome and Firefox but not through the macOS system resolver (Safari, `curl`, scripts),
+so it is not used as the default.
 
 ## Pages
 

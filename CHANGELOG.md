@@ -214,6 +214,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Launching the web UI again started another server every time**, and none ever stopped: after
+  twenty launches ports 7822-7841 were all taken and the next one failed. `authama serve` now opens
+  the server already running for the home (checked through a new `/healthz` and an owner-only
+  record), `--status` and `--stop` report and stop it, `--new` starts another on purpose, and a
+  full port range falls back to any free port.
+
 - **`token apply` skipped every PyPI, Cargo, RubyGems and Gradle entry** as an "unknown target":
   resolving a config from the environment knew only the first five tools. They resolve now.
 - **Saving the manifest turned numbers and booleans in `raw_options` into strings**

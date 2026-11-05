@@ -587,6 +587,12 @@ next free one and prints the address it bound; --port pins a port and fails if i
 is taken. The printed address carries a one-time token that signs the browser in;
 without it every page answers 401.
 
+One server per home: when one is already running for this home, serve opens
+it again instead of starting another, so launching twice - or double-clicking
+the app - never piles servers up. --new starts another anyway; --status says
+whether one is running and where; --stop stops it. When every port from the
+default up is taken, any free port is used.
+
 A non-loopback --addr is refused unless --allow-remote is passed. Prefer an SSH
 tunnel: ssh -L 7822:127.0.0.1:7822 <host>.
 
@@ -608,9 +614,12 @@ Flags:
       --addr string              address to listen on, host or host:port (a port here pins it, like --port) (default "127.0.0.1")
       --allow-host stringArray   extra Host header to accept with --allow-remote, e.g. a proxy's name (repeatable)
       --allow-remote             allow a non-loopback --addr (plain HTTP; prefer an SSH tunnel)
+      --new                      start another server even when one is already running for this home
       --no-open                  do not open a browser
       --port int                 port to listen on; when not given and the default is taken, the next free port is used (default 7822)
       --read-only                serve no route that changes anything, and show no form
+      --status                   say whether a server is running for this home, and its address
+      --stop                     stop the server running for this home
       --token-file string        also write the sign-in address to this file, mode 0600, for scripts
 ```
 

@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -40,6 +41,9 @@ func newServeCmd() *cobra.Command {
 		readOnly    bool
 		noOpen      bool
 		tokenFile   string
+		fresh       bool
+		status      bool
+		stopRunning bool
 	)
 	cmd := &cobra.Command{
 		Use:   "serve",
@@ -55,6 +59,11 @@ func newServeCmd() *cobra.Command {
 			"next free one and prints the address it bound; --port pins a port and fails if it\n" +
 			"is taken. The printed address carries a one-time token that signs the browser in;\n" +
 			"without it every page answers 401.\n\n" +
+			"One server per home: when one is already running for this home, serve opens\n" +
+			"it again instead of starting another, so launching twice - or double-clicking\n" +
+			"the app - never piles servers up. --new starts another anyway; --status says\n" +
+			"whether one is running and where; --stop stops it. When every port from the\n" +
+			"default up is taken, any free port is used.\n\n" +
 			"A non-loopback --addr is refused unless --allow-remote is passed. Prefer an SSH\n" +
 			"tunnel: ssh -L " + strconv.Itoa(web.DefaultPort) + ":127.0.0.1:" + strconv.Itoa(web.DefaultPort) + " <host>.",
 		Args: cobra.NoArgs,
@@ -79,6 +88,47 @@ func newServeCmd() *cobra.Command {
 					"or tunnel instead: ssh -L %d:127.0.0.1:%d <host>", host, web.DefaultPort, web.DefaultPort)
 			}
 
+			out := c.OutOrStdout()
+			running := readServeRecord(p)
+			if running != nil && !serveAlive(running) {
+				running = nil // a record left by a server that is gone
+			}
+			if status || stopRunning {
+				if running == nil {
+					_, _ = fmt.Fprintf(out, "no %s web UI is running for %s\n", brand.Command, p.ConfigDir)
+					return nil
+				}
+				if stopRunning {
+					if err := running.stop(); err != nil {
+						return fmt.Errorf("stopping the server (pid %d): %w", running.PID, err)
+					}
+					removeServeRecord(p, running.Instance)
+					_, _ = fmt.Fprintf(out, "stopped the web UI at %s (pid %d)\n", running.Addr, running.PID)
+					return nil
+				}
+				_, _ = fmt.Fprintf(out, "running since %s, pid %d: %s\n",
+					running.Started.Local().Format("2006-01-02 15:04"), running.PID, running.URL)
+				return nil
+			}
+			// Reuse the running server, unless asked for a new one or for
+			// something it is not: another port, read-only when it is not, or
+			// a remote bind.
+			if running != nil && !fresh && !pinned && !allowRemote && web.IsLoopback(host) && running.ReadOnly == readOnly {
+				_, _ = fmt.Fprintf(out, "%s web UI is already running for this home (pid %d): %s\n", brand.Name, running.PID, running.URL)
+				_, _ = fmt.Fprintf(out, "stop it with `%s serve --stop`, or start another with `%s serve --new`\n", brand.Command, brand.Command)
+				if tokenFile != "" {
+					if err := writeTokenFile(tokenFile, running.URL); err != nil {
+						return err
+					}
+				}
+				if !noOpen && platform.StdinIsTerminal() {
+					if err := serveBrowser(running.URL); err != nil {
+						_, _ = fmt.Fprintf(c.ErrOrStderr(), "could not open a browser (%s); open the address above yourself\n", err)
+					}
+				}
+				return nil
+			}
+
 			ln, err := web.Listen(serveListen, host, pinnedPort, pinned, web.DefaultPortAttempts)
 			if err != nil {
 				return err
@@ -86,7 +136,9 @@ func newServeCmd() *cobra.Command {
 			bound := ln.Addr().(*net.TCPAddr).Port
 
 			token := web.NewToken()
+			instance := web.NewToken()[:16]
 			srv, err := web.New(web.Options{
+				Instance:     instance,
 				Engine:       web.AppEngine{P: p, Retain: snapshotRetain()},
 				Settings:     settingsView,
 				EventRoots:   eventRoots,
@@ -104,7 +156,16 @@ func newServeCmd() *cobra.Command {
 			}
 
 			url := fmt.Sprintf("http://%s/?token=%s", net.JoinHostPort(displayHost(host), strconv.Itoa(bound)), token)
-			out := c.OutOrStdout()
+			// Recorded only for the default kind of server, the one a later
+			// `authama serve` would reuse: a pinned or remote one is a choice
+			// the next launch should not inherit.
+			if !pinned && !allowRemote && web.IsLoopback(host) {
+				if err := writeServeRecord(p, serveRecord{PID: os.Getpid(), Addr: net.JoinHostPort(displayHost(host), strconv.Itoa(bound)),
+					URL: url, Instance: instance, ReadOnly: readOnly, Version: version.Version, Started: time.Now()}); err != nil {
+					_, _ = fmt.Fprintf(c.ErrOrStderr(), "could not record this server (%v); the next launch will start another\n", err)
+				}
+				defer removeServeRecord(p, instance)
+			}
 			if bound != pinnedPort && pinnedPort != 0 {
 				_, _ = fmt.Fprintf(out, "port %d is in use; listening on %d instead\n", pinnedPort, bound)
 			}
@@ -144,6 +205,10 @@ func newServeCmd() *cobra.Command {
 	f.BoolVar(&readOnly, "read-only", false, "serve no route that changes anything, and show no form")
 	f.BoolVar(&noOpen, "no-open", false, "do not open a browser")
 	f.StringVar(&tokenFile, "token-file", "", "also write the sign-in address to this file, mode 0600, for scripts")
+	f.BoolVar(&fresh, "new", false, "start another server even when one is already running for this home")
+	f.BoolVar(&status, "status", false, "say whether a server is running for this home, and its address")
+	f.BoolVar(&stopRunning, "stop", false, "stop the server running for this home")
+	cmd.MarkFlagsMutuallyExclusive("new", "status", "stop")
 	return cmd
 }
 
