@@ -171,7 +171,7 @@ func Clean(adopt bool) Change {
 		Command: "clean", Args: args,
 		Effects: func(p paths.Paths) ([]string, error) {
 			var out []string
-			for _, r := range snapshots.FindTempArtifacts(p.SSHDir) {
+			for _, r := range snapshots.FindTempArtifactsIn(p.SSHDir, manifest.KeyRootAt(p.Manifest())) {
 				out = append(out, "removes write residue "+r)
 			}
 			return out, nil
@@ -208,7 +208,7 @@ func Bundle(keep int) Change {
 		},
 		OnApply: func(p paths.Paths, out io.Writer) error {
 			stamp := time.Now().Format("20060102-150405")
-			res, err := bundler.New(p.SSHDir, p.ConfigDir, bundler.AgeCipher{}).
+			res, err := bundler.New(p.SSHDir, p.ConfigDir, bundler.AgeCipher{}).WithKeyRoot(manifest.KeyRootAt(p.Manifest())).
 				Bundle(envnames.Get(nil, envnames.AgeRecipient), p.DistDir(), stamp)
 			if err != nil {
 				return err

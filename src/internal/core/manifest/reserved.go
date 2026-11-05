@@ -89,7 +89,7 @@ func ValidReservedKeyName(name string) error {
 	case strings.HasSuffix(name, ".pub"):
 		return fmt.Errorf("reserved key %q: name the private key, without .pub", name)
 	case name == "config" || name == "authorized_keys" || name == "environment" || name == "rc" ||
-		name == "profiles" || strings.HasPrefix(name, "known_hosts"):
+		name == DefaultKeyRoot || strings.HasPrefix(name, "known_hosts"):
 		return fmt.Errorf("reserved key %q: that is one of ssh's own files, not a key", name)
 	}
 	return nil

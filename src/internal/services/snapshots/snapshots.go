@@ -80,12 +80,21 @@ func HoldsKeyMaterial(tarball string) bool {
 	}
 }
 
-// FindTempArtifacts lists crash residue without removing it: leftover
-// .<name>.*.tmp files anywhere under sshDir, plus any stray
-// profiles/<p>/.staging or profiles/<p>/.mint-* dir. Paths are absolute and in
-// removal order; CleanTempArtifacts is this plus the deletion, so a preview
-// (`clean --dry-run`) reports exactly what the sweep would take.
+// FindTempArtifacts is FindTempArtifactsIn under the default key root.
+//
+// Deprecated: after v0.1.3 the key root is configurable (defaults.key_root);
+// use FindTempArtifactsIn with manifest.KeyRoot. This stays, delegating.
+// Earliest removal: v1.0.0.
 func FindTempArtifacts(sshDir string) []string {
+	return FindTempArtifactsIn(sshDir, manifest.DefaultKeyRoot)
+}
+
+// FindTempArtifactsIn lists crash residue without removing it: leftover
+// .<name>.*.tmp files anywhere under sshDir, plus any stray
+// <root>/<p>/.staging or <root>/<p>/.mint-* dir. Paths are absolute and in
+// removal order; CleanTempArtifactsIn is this plus the deletion, so a preview
+// (`clean --dry-run`) reports exactly what the sweep would take.
+func FindTempArtifactsIn(sshDir, root string) []string {
 	if _, err := os.Stat(sshDir); err != nil {
 		return nil
 	}
@@ -99,10 +108,10 @@ func FindTempArtifacts(sshDir string) []string {
 		}
 		return nil
 	})
-	profiles := filepath.Join(sshDir, "profiles")
+	profiles := filepath.Join(sshDir, root)
 	if fi, err := os.Lstat(profiles); err == nil && fi.IsDir() && fi.Mode()&os.ModeSymlink == 0 {
-		stagings := manifest.GlobProfileTree(sshDir, ".staging")
-		minting := manifest.GlobProfileTree(sshDir, ".mint-*")
+		stagings := manifest.GlobKeyTree(sshDir, root, ".staging")
+		minting := manifest.GlobKeyTree(sshDir, root, ".mint-*")
 		stagings = append(stagings, minting...)
 		sort.Strings(stagings)
 		for _, s := range stagings {
@@ -115,12 +124,22 @@ func FindTempArtifacts(sshDir string) []string {
 	return found
 }
 
-// CleanTempArtifacts sweeps the crash residue FindTempArtifacts reports. Both
-// .staging and .mint-* can hold a private key a crash left behind, so this is a
-// leak sweep and not only tidiness. Returns the relative paths removed.
+// CleanTempArtifacts is CleanTempArtifactsIn under the default key root.
+//
+// Deprecated: after v0.1.3 the key root is configurable (defaults.key_root);
+// use CleanTempArtifactsIn with manifest.KeyRoot. This stays, delegating.
+// Earliest removal: v1.0.0.
 func CleanTempArtifacts(sshDir string) []string {
+	return CleanTempArtifactsIn(sshDir, manifest.DefaultKeyRoot)
+}
+
+// CleanTempArtifactsIn sweeps the crash residue FindTempArtifactsIn reports.
+// Both .staging and .mint-* can hold a private key a crash left behind, so
+// this is a leak sweep and not only tidiness. Returns the relative paths
+// removed.
+func CleanTempArtifactsIn(sshDir, root string) []string {
 	var removed []string
-	for _, p := range FindTempArtifacts(sshDir) {
+	for _, p := range FindTempArtifactsIn(sshDir, root) {
 		if os.RemoveAll(p) != nil {
 			continue
 		}

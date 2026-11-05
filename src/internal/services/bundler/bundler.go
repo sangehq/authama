@@ -16,6 +16,7 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -26,6 +27,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/core/renderer"
 )
 
@@ -126,11 +128,22 @@ func (r RestoreResult) Format() string {
 type Bundler struct {
 	sshDir, configDir string
 	cipher            Cipher
+	keyRoot           string
 }
 
-// New builds a Bundler.
+// New builds a Bundler over the default key root, ~/.ssh/profiles.
 func New(sshDir, configDir string, cipher Cipher) *Bundler {
-	return &Bundler{sshDir: sshDir, configDir: configDir, cipher: cipher}
+	return &Bundler{sshDir: sshDir, configDir: configDir, cipher: cipher, keyRoot: manifest.DefaultKeyRoot}
+}
+
+// WithKeyRoot points the bundler at another key root (defaults.key_root):
+// Bundle reads the keys from ~/.ssh/<root>, and Restore lays them down there
+// when the bundle carries no manifest of its own. "" keeps the default.
+func (b *Bundler) WithKeyRoot(root string) *Bundler {
+	if root != "" {
+		b.keyRoot = root
+	}
+	return b
 }
 
 // Bundle tars the keys + config models, encrypts to dest/authama-<stamp>.age,
@@ -225,7 +238,10 @@ func (b *Bundler) writeTarGz(w io.Writer) ([]string, error) {
 	tw := tar.NewWriter(gz)
 	var members []string
 
-	profiles := filepath.Join(b.sshDir, "profiles")
+	// Members are named under the canonical ssh/profiles/ whatever the key
+	// root, so a bundle made under one root restores under another and the
+	// restore-side allow-list (checkMember) has one shape to know.
+	profiles := filepath.Join(b.sshDir, b.keyRoot)
 	if fi, err := os.Stat(profiles); err == nil && fi.IsDir() {
 		var paths []string
 		_ = filepath.WalkDir(profiles, func(p string, d os.DirEntry, err error) error {
@@ -236,8 +252,8 @@ func (b *Bundler) writeTarGz(w io.Writer) ([]string, error) {
 		})
 		sort.Strings(paths)
 		for _, p := range paths {
-			rel, _ := filepath.Rel(b.sshDir, p)
-			rel = filepath.ToSlash(rel)
+			under, _ := filepath.Rel(profiles, p)
+			rel := manifest.DefaultKeyRoot + "/" + filepath.ToSlash(under)
 			if hasStaging(rel) || isRenderedFile(rel, p) {
 				continue
 			}
@@ -273,7 +289,7 @@ func (b *Bundler) writeTarGz(w io.Writer) ([]string, error) {
 // can carry either name too, which is why callers look at the content.
 func renderedSlot(rel string) bool {
 	parts := strings.Split(rel, "/")
-	return len(parts) == 3 && parts[0] == "profiles" && (parts[2] == "config" || parts[2] == "known_hosts")
+	return len(parts) == 3 && parts[0] == manifest.DefaultKeyRoot && (parts[2] == "config" || parts[2] == "known_hosts")
 }
 
 // isRenderedFile reports whether the file at path, in a rendered slot, is one
@@ -381,8 +397,9 @@ func (b *Bundler) decrypt(bundlePath, identityFile string) ([]member, error) {
 	return members, nil
 }
 
-// profilesPrefix is the only subtree of ~/.ssh that writeTarGz walks.
-const profilesPrefix = sshPrefix + "profiles/"
+// profilesPrefix is the canonical name of the only subtree of ~/.ssh that
+// writeTarGz walks: the key root, whatever its name on disk.
+const profilesPrefix = sshPrefix + manifest.DefaultKeyRoot + "/"
 
 // checkMember reports whether name is something writeTarGz could have written,
 // and is the restore-side mirror of it: change one and the other must follow.
@@ -426,6 +443,10 @@ func (b *Bundler) layDown(members []member, fingerprintOf func(string) (string, 
 			return res, err
 		}
 	}
+	keyRoot, err := restoreKeyRoot(sorted, b.keyRoot)
+	if err != nil {
+		return res, err
+	}
 	// One root per destination, opened once. Every write below goes through one
 	// of them, so a member can only ever land inside the directory it is routed
 	// to - enforced by the kernel on the resolved path, not by us on the
@@ -463,6 +484,9 @@ func (b *Bundler) layDown(members []member, fingerprintOf func(string) (string, 
 		switch {
 		case strings.HasPrefix(m.name, sshPrefix):
 			root, rel = sshRoot, strings.TrimPrefix(m.name, sshPrefix)
+			// checkMember has pinned it under profilesPrefix; the keys go to
+			// the key root the restored manifest names.
+			rel = keyRoot + strings.TrimPrefix(rel, manifest.DefaultKeyRoot)
 			label = rel
 		case strings.HasPrefix(m.name, configPrefix):
 			// checkMember has pinned this to a flat, known name already.
@@ -484,6 +508,36 @@ func (b *Bundler) layDown(members []member, fingerprintOf func(string) (string, 
 		}
 	}
 	return res, nil
+}
+
+// restoreKeyRoot is where a restore lays the keys down: the key root the
+// bundle's own manifest names, since that manifest is restored with them and
+// every path it renders will point there; fallback when the bundle carries no
+// manifest. A name the manifest could not hold refuses the whole restore,
+// before anything is written: age does not authenticate the sender, so the
+// manifest member is checked like any other.
+func restoreKeyRoot(members []member, fallback string) (string, error) {
+	for _, m := range members {
+		if m.name != configPrefix+"manifest.json" {
+			continue
+		}
+		var doc struct {
+			Defaults struct {
+				KeyRoot string `json:"key_root"`
+			} `json:"defaults"`
+		}
+		if err := json.Unmarshal(m.data, &doc); err != nil {
+			return "", fmt.Errorf("the bundle's manifest.json does not parse: %w", err)
+		}
+		if err := manifest.CheckKeyRoot(doc.Defaults.KeyRoot); err != nil {
+			return "", fmt.Errorf("refusing bundle: %w", err)
+		}
+		if doc.Defaults.KeyRoot == "" {
+			return manifest.DefaultKeyRoot, nil
+		}
+		return doc.Defaults.KeyRoot, nil
+	}
+	return fallback, nil
 }
 
 func verifyChecksum(bundlePath string) error {

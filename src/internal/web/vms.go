@@ -71,7 +71,7 @@ func (e AppEngine) VMs() (VMsView, error) {
 	}
 	m, merr := manifest.Load(e.P.Manifest())
 	res, _ := keyaudit.Reservations(m, cfg.PlannedKeys())
-	for _, k := range keyaudit.MarkReserved(keyaudit.LooseKeys(e.P.SSHDir), res) {
+	for _, k := range keyaudit.MarkReserved(keyaudit.LooseKeysIn(e.P.SSHDir, manifest.KeyRootAt(e.P.Manifest())), res) {
 		if k.CopyOf == "" {
 			v.Loose = append(v.Loose, k)
 		}

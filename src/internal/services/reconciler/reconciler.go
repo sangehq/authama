@@ -446,7 +446,7 @@ func (r *Reconciler) misplaced(ref manifest.KeyRef, priv string) string {
 	if r.m.Profiles[ref.Profile].InOnePassword() {
 		name, want = name+".pub", priv+".pub" // only the public half is ever on disk
 	}
-	for _, p := range manifest.GlobProfileTree(r.p.SSHDir, name) {
+	for _, p := range manifest.GlobKeyTree(r.p.SSHDir, manifest.KeyRoot(r.m), name) {
 		if p != want && filepath.Base(filepath.Dir(p)) == ref.Profile {
 			return p
 		}
@@ -515,7 +515,7 @@ func (r *Reconciler) ensureTree() error {
 	if err := fs.EnsureDir(ssh, perms.DirMode); err != nil {
 		return err
 	}
-	if err := fs.EnsureDir(filepath.Join(ssh, "profiles"), perms.DirMode); err != nil {
+	if err := fs.EnsureDir(filepath.Join(ssh, manifest.KeyRoot(r.m)), perms.DirMode); err != nil {
 		return err
 	}
 	wanted := map[string]bool{}
@@ -668,7 +668,7 @@ func (r *Reconciler) fixPerms() int {
 			count++
 		}
 	}
-	for _, mp := range perms.IterManagedPaths(r.p.SSHDir) {
+	for _, mp := range perms.IterManagedPathsIn(r.p.SSHDir, manifest.KeyRoot(r.m)) {
 		fix(mp.Path, mp.Mode)
 	}
 	for _, sp := range homeperms.SecretPerms(r.p) {

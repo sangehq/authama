@@ -155,7 +155,7 @@ func (e *Editor) RevokeKey(ref manifest.KeyRef, reason string) (RevokeResult, er
 	ident := m.IdentityFile(ref.Profile, ref.KeyName)
 	fp, rec, ok := "", inventory.KeyRecord{}, false
 	for f, r := range inv.Keys {
-		if r.Path == ident && !inventory.IsArchivedPath(r.Path) {
+		if r.Path == ident && !inventory.IsArchivedPathIn(r.Path, manifest.KeyRoot(m)) {
 			fp, rec, ok = f, r, true
 		}
 	}

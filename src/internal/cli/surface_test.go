@@ -121,6 +121,8 @@ var goOnly = map[string]string{
 	"owner pin remove":       "owner binding - turn the PIN off",
 	"owner fingerprint":      "owner binding - fingerprint unlock through fprintd",
 	"key adopt":              "key layout - manage a key where it already is in ~/.ssh",
+	"key root":               "key layout - show or move the directory under ~/.ssh holding the profile directories",
+	"key root --yes":         "key layout",
 	"repair":                 "repair - find and fix what is wrong with the home, ~/.ssh and the token files",
 	"reset":                  "factory reset - move the home aside, kept, and start again",
 	"key lifetime --default": "key lifecycle - the lifetime every key without its own inherits",

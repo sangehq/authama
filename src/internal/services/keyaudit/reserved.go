@@ -95,7 +95,7 @@ func (s *Service) reserved() []Reserved {
 		return nil
 	}
 	loose := map[string]LooseKey{}
-	for _, k := range LooseKeys(s.sshDir) {
+	for _, k := range LooseKeysIn(s.sshDir, manifest.KeyRoot(s.m)) {
 		loose[k.Name] = k
 	}
 	out := make([]Reserved, 0, len(res))

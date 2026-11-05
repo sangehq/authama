@@ -46,7 +46,7 @@ func ResolveReserve(p paths.Paths, arg string) (name, fingerprint string, err er
 	if ferr != nil {
 		return "", "", fmt.Errorf("~/.ssh/%s.pub is missing or not a public key; recreate it with: ssh-keygen -y -f ~/.ssh/%s > ~/.ssh/%s.pub", name, name, name)
 	}
-	for _, k := range keyaudit.LooseKeys(p.SSHDir) {
+	for _, k := range keyaudit.LooseKeysIn(p.SSHDir, manifest.KeyRootAt(p.Manifest())) {
 		if k.Name == name && k.CopyOf != "" {
 			return "", "", fmt.Errorf("~/.ssh/%s is a copy of ~/.ssh/%s, which authama already manages; nothing to reserve", name, k.CopyOf)
 		}
