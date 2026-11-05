@@ -250,6 +250,35 @@ Set it with `authama ssh profile add <name> --category <c>` or
 `authama ssh profile edit <name> --category <c>`. The edit moves the key directory and
 updates the inventory. See [Group profiles into categories](recipes/group-profiles-into-categories.md).
 
+## <a name="adopted-keys"></a>Keys where you already keep them
+
+A key does not have to live under `profiles/`. A declared key with a `path` is used where it is:
+
+```json
+"personal": {
+  "keys": [{ "name": "github", "path": "id_ed25519" }],
+  "hosts": [{ "alias": "gh", "hostname": "github.com", "user": "git", "key_name": "github" }]
+}
+```
+
+`path` is relative to `~/.ssh` (`id_ed25519`, `work/deploy_key`). The host renders
+`IdentityFile ~/.ssh/id_ed25519`, and deploy, rotation, the audit and the web UI treat the key like
+any other, but authama never moves, renames or deletes that file:
+
+- Rotation and `keygen --force` archive the outgoing pair in the profile's own `old/` (under the
+  key's name, `profiles/personal/old/github`) and write the successor to the same path, so other
+  tools that read `~/.ssh/id_ed25519` keep working.
+- `key delete --purge` and `profile delete --purge` leave an adopted file alone; only the archives
+  authama made are removed.
+- The key audit counts it as tracked, not as a loose key.
+
+The path must be inside `~/.ssh` (no `..`, no symlink that leads out), not a `.pub`, not a file ssh
+owns (`config`, `known_hosts`, `authorized_keys`), not in a hidden directory, and adopted by one key
+only. A profile that keeps its keys in 1Password cannot adopt a file.
+
+`authama ssh key adopt <profile/key> <path> [--host <alias>]` writes the declaration and records
+the key, after checking the file is a private key.
+
 ## Key stores
 
 A profile's private keys live in one of two places, set by `key_store`:

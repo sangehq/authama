@@ -34,6 +34,7 @@ func newKeyCmd() *cobra.Command {
 	cmd.AddCommand(newKeyUnreserveCmd())
 	cmd.AddCommand(newKeyLifetimeCmd())
 	cmd.AddCommand(newKeyRevokeCmd())
+	cmd.AddCommand(newKeyAdoptCmd())
 	return cmd
 }
 

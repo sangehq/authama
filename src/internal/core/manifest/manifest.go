@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -261,6 +262,12 @@ type KeySpec struct {
 	// change to defaults.key_type / defaults.rotate_after_days.
 	Type            *string `json:"type,omitempty"`
 	RotateAfterDays *int    `json:"rotate_after_days,omitempty"`
+	// Path adopts a key where it already is: the private key's path relative
+	// to ~/.ssh, in forward-slash form ("id_ed25519", "work/deploy_key").
+	// authama references it there and never moves, renames or deletes it;
+	// empty keeps the key in its profile directory. Rotation archives the old
+	// pair in the profile's old/ and mints the successor at the same path.
+	Path string `json:"path,omitempty"`
 }
 
 func (k *KeySpec) UnmarshalJSON(b []byte) error {
@@ -909,6 +916,63 @@ func checkDeclaredKeys(profileName string, p Profile) error {
 		if k.RotateAfterDays != nil && *k.RotateAfterDays < 0 {
 			return fmt.Errorf("key %q in profile %q has a negative rotate_after_days", k.Name, profileName)
 		}
+		if k.Path != "" {
+			if p.KeyStore == KeyStoreOnePassword {
+				return fmt.Errorf("key %q in profile %q sets a path, but the profile keeps its keys in 1Password", k.Name, profileName)
+			}
+			if err := CheckAdoptedPath(k.Path); err != nil {
+				return fmt.Errorf("key %q in profile %q: %w", k.Name, profileName, err)
+			}
+		}
+	}
+	return nil
+}
+
+// sshOwned are names directly in ~/.ssh that are never a key to adopt.
+var sshOwned = map[string]bool{
+	"config": true, "known_hosts": true, "known_hosts.old": true, "authorized_keys": true,
+	"authorized_keys2": true, "environment": true, "rc": true,
+}
+
+// CheckAdoptedPath reports why p cannot name an adopted key: it must be a
+// relative, forward-slash path inside ~/.ssh, with no "..", not a .pub, and
+// not a file ssh itself owns.
+func CheckAdoptedPath(p string) error {
+	clean := path.Clean(p)
+	switch {
+	case p == "" || clean == "." || strings.HasPrefix(clean, "/") || strings.Contains(p, `\`) || filepath.IsAbs(p):
+		return fmt.Errorf("path %q must be relative to ~/.ssh, in forward-slash form", p)
+	case clean != p:
+		return fmt.Errorf("path %q is not in its plain form (%q)", p, clean)
+	case clean == ".." || strings.HasPrefix(clean, "../"):
+		return fmt.Errorf("path %q leaves ~/.ssh", p)
+	case strings.HasSuffix(clean, ".pub"):
+		return fmt.Errorf("path %q is a public key; name the private half", p)
+	case sshOwned[clean]:
+		return fmt.Errorf("path %q is a file ssh owns, not a key", p)
+	}
+	for _, seg := range strings.Split(clean, "/") {
+		if strings.HasPrefix(seg, ".") {
+			return fmt.Errorf("path %q goes through a hidden directory or file", p)
+		}
+	}
+	return nil
+}
+
+// checkAdoptedUnique refuses two keys adopting one file.
+func checkAdoptedUnique(m *Manifest) error {
+	seen := map[string]string{}
+	for _, pname := range m.ProfileNames() {
+		for _, k := range m.Profiles[pname].Keys {
+			if k.Path == "" {
+				continue
+			}
+			who := pname + "/" + k.Name
+			if other, dup := seen[k.Path]; dup {
+				return fmt.Errorf("keys %s and %s both adopt %s", other, who, k.Path)
+			}
+			seen[k.Path] = who
+		}
 	}
 	return nil
 }
@@ -927,6 +991,9 @@ func (m *Manifest) validate() error {
 		return err
 	}
 	if err := checkCategories(m); err != nil {
+		return err
+	}
+	if err := checkAdoptedUnique(m); err != nil {
 		return err
 	}
 	if err := checkKeyStores(m); err != nil {
@@ -1068,9 +1135,29 @@ func (m *Manifest) ProfileDir(sshDir, profileName string) string {
 	return filepath.Join(sshDir, filepath.FromSlash(m.ProfileRel(profileName)))
 }
 
-// KeyPath is the absolute path to a key's private half under sshDir.
+// KeyPath is the absolute path to a key's private half under sshDir: its
+// adopted path when it has one, else its file in the profile directory.
 func (m *Manifest) KeyPath(sshDir string, ref KeyRef) string {
+	if rel := AdoptedPath(m, ref); rel != "" {
+		return filepath.Join(sshDir, filepath.FromSlash(rel))
+	}
 	return filepath.Join(m.ProfileDir(sshDir, ref.Profile), ref.KeyName)
+}
+
+// AdoptedPath is the key's adopted path relative to ~/.ssh, or "" when the
+// key lives in its profile directory.
+func AdoptedPath(m *Manifest, ref KeyRef) string {
+	if spec, ok := m.KeySpecFor(ref); ok {
+		return spec.Path
+	}
+	return ""
+}
+
+// ArchiveDir is where a key's rotated-out predecessors go: the profile's
+// old/, for an adopted key too, so adopting never adds a directory beside the
+// user's own files.
+func ArchiveDir(m *Manifest, sshDir string, ref KeyRef) string {
+	return filepath.Join(m.ProfileDir(sshDir, ref.Profile), "old")
 }
 
 // GlobProfileTree matches the pattern tail inside every profile directory on
@@ -1135,6 +1222,9 @@ func (m *Manifest) Categories() []string {
 // disk, so the renderer points ssh at its .pub instead; inventory records and
 // every other caller keep this one, so a key has the same identity in both stores.
 func (m *Manifest) IdentityFile(profileName, keyName string) string {
+	if rel := AdoptedPath(m, KeyRef{Profile: profileName, KeyName: keyName}); rel != "" {
+		return sshToken + "/" + rel
+	}
 	return sshToken + "/" + m.ProfileRel(profileName) + "/" + keyName
 }
 

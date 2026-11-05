@@ -33,10 +33,25 @@ type GenResult struct {
 }
 
 // KeyStore mints and inspects keys.
-type KeyStore struct{}
+type KeyStore struct {
+	// archiveDir is where an overwrite parks the pair it replaces; empty
+	// means old/ beside the key, which is the profile's old/ for every key in
+	// a profile directory. An adopted key lives outside one, so its caller
+	// names the profile's old/ with WithArchiveDir.
+	archiveDir string
+	// archiveName is the name the replaced pair takes there: the key's name,
+	// which an adopted key's file name need not be. Empty means the file's.
+	archiveName string
+}
 
 // New returns a KeyStore.
 func New() *KeyStore { return &KeyStore{} }
+
+// WithArchive returns a KeyStore that archives a replaced pair into dir, as
+// name: where rotation parks a key's predecessor, so both find it.
+func (k *KeyStore) WithArchive(dir, name string) *KeyStore {
+	return &KeyStore{archiveDir: dir, archiveName: name}
+}
 
 // pubPath is the public-key path ssh-keygen writes: the private path with ".pub"
 // appended (ssh-keygen appends literally, so this matches what is on disk).
@@ -89,7 +104,7 @@ func (k *KeyStore) Generate(privPath, keyType, comment, passphrase string, overw
 	// The old pair is only displaced once a replacement exists, so a failed mint
 	// cannot leave the profile without a key.
 	if overwrite {
-		if err := archivePredecessor(privPath); err != nil {
+		if err := archivePredecessor(privPath, k.archiveDir, k.archiveName); err != nil {
 			return GenResult{}, err
 		}
 	}
@@ -229,18 +244,22 @@ func (k *KeyStore) PublicFromPrivate(privPath string) (pub string, encrypted boo
 // Overwriting used to just unlink the pair and lean on the pre-mutation snapshot
 // to make that reversible. Snapshots no longer carry private keys, so without
 // this an overwrite would be unrecoverable.
-func archivePredecessor(privPath string) error {
+func archivePredecessor(privPath, oldDir, name string) error {
 	if !exists(privPath) {
 		return nil
 	}
-	oldDir := filepath.Join(filepath.Dir(privPath), "old")
+	if oldDir == "" {
+		oldDir = filepath.Join(filepath.Dir(privPath), "old")
+	}
 	if err := os.MkdirAll(oldDir, perms.DirMode); err != nil {
 		return err
 	}
 	if err := perms.SetPerms(oldDir, perms.DirMode); err != nil {
 		return err
 	}
-	name := filepath.Base(privPath)
+	if name == "" {
+		name = filepath.Base(privPath)
+	}
 	for _, m := range []struct{ from, to string }{
 		{privPath, filepath.Join(oldDir, name)},
 		{pubPath(privPath), pubPath(filepath.Join(oldDir, name))},
