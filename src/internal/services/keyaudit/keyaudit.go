@@ -280,8 +280,8 @@ func (s *Service) manifestKeyFinding(row keysvc.Row, state string) Finding {
 // It also returns the declared keys it found in another directory than the
 // manifest resolves, keyed by ref, with the path they were found at.
 func (s *Service) untracked(owned map[manifest.KeyRef]bool) ([]Finding, map[manifest.KeyRef]string) {
-	// Both layouts: profiles/<profile>/* and profiles/<category>/<profile>/*.
-	entries := manifest.GlobProfileTree(s.sshDir, "*")
+	// Both layouts: <root>/<profile>/* and <root>/<category>/<profile>/*.
+	entries := manifest.GlobKeyTree(s.sshDir, manifest.KeyRoot(s.m), "*")
 	seen := map[string]bool{}
 	misplacedAt := map[manifest.KeyRef]string{}
 	var out []Finding
@@ -347,7 +347,7 @@ func (s *Service) staleInventory() []Finding {
 	var out []Finding
 	for fp, rec := range s.inv.Keys {
 		// Rotation predecessors are archived on purpose, not stale.
-		if live[rec.Path] || inventory.IsArchivedPath(rec.Path) {
+		if live[rec.Path] || inventory.IsArchivedPathIn(rec.Path, manifest.KeyRoot(s.m)) {
 			continue
 		}
 		out = append(out, Finding{
@@ -363,14 +363,14 @@ func (s *Service) staleInventory() []Finding {
 // managedInSSHDir are the files that belong directly in ~/.ssh and are not keys.
 var managedInSSHDir = map[string]bool{
 	"config": true, "known_hosts": true, "known_hosts.old": true,
-	"authorized_keys": true, "environment": true, "rc": true, "profiles": true,
+	"authorized_keys": true, "environment": true, "rc": true, manifest.DefaultKeyRoot: true,
 }
 
 // loose reports the key-shaped files sitting directly in ~/.ssh (LooseKeys),
 // with the fix that suits each: a leftover copy of a key authama manages, a
 // key that looks like a devbox's, or any other.
 func (s *Service) loose() []Finding {
-	keys := LooseKeys(s.sshDir)
+	keys := LooseKeysIn(s.sshDir, manifest.KeyRoot(s.m))
 	res, _ := Reservations(s.m, s.planned)
 	adopted := map[string]bool{}
 	if s.m != nil {
@@ -454,11 +454,21 @@ func LooksLikeDevbox(name, comment string) string {
 	return check("comment", comment)
 }
 
-// LooseKeys finds key-shaped files sitting directly in ~/.ssh: the pre-authama
-// keys a user already had. Detection is by pairing (a file with a .pub sibling)
-// or by a .pub that parses as a public key - never by reading private key
-// material.
+// LooseKeys is LooseKeysIn under the default key root, profiles.
+//
+// Deprecated: after v0.1.3 the key root is configurable (defaults.key_root);
+// use LooseKeysIn with manifest.KeyRoot. This stays, delegating.
+// Earliest removal: v1.0.0.
 func LooseKeys(sshDir string) []LooseKey {
+	return LooseKeysIn(sshDir, manifest.DefaultKeyRoot)
+}
+
+// LooseKeysIn finds key-shaped files sitting directly in ~/.ssh: the
+// pre-authama keys a user already had. Detection is by pairing (a file with a
+// .pub sibling) or by a .pub that parses as a public key - never by reading
+// private key material. root is the key root, whose keys mark a loose file as
+// a leftover copy of one authama manages.
+func LooseKeysIn(sshDir, root string) []LooseKey {
 	entries, err := os.ReadDir(sshDir)
 	if err != nil {
 		return nil
@@ -482,7 +492,7 @@ func LooseKeys(sshDir string) []LooseKey {
 			}
 		}
 	}
-	managed := managedBlobs(sshDir)
+	managed := managedBlobs(sshDir, root)
 	out := make([]LooseKey, 0, len(stems))
 	for stem := range stems {
 		k := LooseKey{Name: stem}
@@ -505,11 +515,11 @@ func LooseKeys(sshDir string) []LooseKey {
 	return out
 }
 
-// managedBlobs maps each public key blob under ~/.ssh/profiles to its path
+// managedBlobs maps each public key blob under ~/.ssh/<keyRoot> to its path
 // relative to ~/.ssh.
-func managedBlobs(sshDir string) map[string]string {
+func managedBlobs(sshDir, keyRoot string) map[string]string {
 	out := map[string]string{}
-	root := filepath.Join(sshDir, "profiles")
+	root := filepath.Join(sshDir, keyRoot)
 	_ = filepath.WalkDir(root, func(path string, e os.DirEntry, err error) error {
 		if err != nil || e.IsDir() || !strings.HasSuffix(path, ".pub") {
 			return nil

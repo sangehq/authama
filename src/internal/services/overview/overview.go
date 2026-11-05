@@ -99,6 +99,10 @@ func Rows(p paths.Paths, m *manifest.Manifest, now time.Time) []Row {
 		rows = append(rows, Row{
 			Label: "legacy", Value: "an old config home is still on disk", Fix: "authama migrate"})
 	}
+	if rep.StrandedKeyRoot != "" {
+		rows = append(rows, Row{
+			Label: "keys", Value: "keys are left in ~/.ssh/profiles/, outside the key root", Fix: "authama doctor"})
+	}
 
 	// Expiry last: it is a schedule rather than a fault, and it is the one row
 	// that is normally absent.

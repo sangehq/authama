@@ -48,13 +48,23 @@ func ModeFor(path string, isDir bool) os.FileMode {
 	}
 }
 
-// IterManagedPaths returns (path, canonical mode) for every tool-managed path
-// under sshDir: ~/.ssh itself, the root config, the trust store, and the whole
-// profiles/ subtree. It deliberately excludes unrelated user files (id_rsa, agent
-// sockets), skips symlinks, and skips dot-prefixed cruft it did not create
-// (.DS_Store and friends). This is the single enumeration both reconcile (the
-// fixer) and doctor (the checker) walk, so they can't disagree.
+// IterManagedPaths is IterManagedPathsIn under the default key root, profiles.
+//
+// Deprecated: after v0.1.3 the key root is configurable (defaults.key_root);
+// use IterManagedPathsIn with manifest.KeyRoot. This stays, delegating.
+// Earliest removal: v1.0.0.
 func IterManagedPaths(sshDir string) []ManagedPath {
+	return IterManagedPathsIn(sshDir, "profiles")
+}
+
+// IterManagedPathsIn returns (path, canonical mode) for every tool-managed
+// path under sshDir: ~/.ssh itself, the root config, the trust store, and the
+// whole key-root subtree (~/.ssh/<root>). It deliberately excludes unrelated
+// user files (id_rsa, agent sockets), skips symlinks, and skips dot-prefixed
+// cruft it did not create (.DS_Store and friends). This is the single
+// enumeration both reconcile (the fixer) and doctor (the checker) walk, so
+// they can't disagree.
+func IterManagedPathsIn(sshDir, root string) []ManagedPath {
 	fi, err := os.Lstat(sshDir)
 	if err != nil || fi.Mode()&os.ModeSymlink != 0 {
 		return nil
@@ -70,7 +80,7 @@ func IterManagedPaths(sshDir string) []ManagedPath {
 			out = append(out, f)
 		}
 	}
-	profiles := filepath.Join(sshDir, "profiles")
+	profiles := filepath.Join(sshDir, root)
 	pfi, err := os.Lstat(profiles)
 	if err != nil || pfi.Mode()&os.ModeSymlink != 0 || !pfi.IsDir() {
 		return out

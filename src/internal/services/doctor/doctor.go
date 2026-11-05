@@ -63,6 +63,10 @@ type Report struct {
 	AliasCollisions    []string
 	ProvidersSource    string // "user file" | "shipped default"
 	StrandedLegacyHome string
+	// StrandedKeyRoot says that ~/.ssh/profiles/ still holds files while
+	// defaults.key_root names another directory: the manifest was edited by
+	// hand instead of through `ssh key root`, and nothing sees those keys.
+	StrandedKeyRoot string
 	// OnePassword lists what stops a 1Password profile from working: no op
 	// CLI, or no agent socket. Empty when no profile uses 1Password.
 	OnePassword []string
@@ -127,6 +131,9 @@ func (r Report) Warnings() []string {
 	}
 	if r.StrandedLegacyHome != "" {
 		w = append(w, "legacy home not migrated: "+r.StrandedLegacyHome)
+	}
+	if r.StrandedKeyRoot != "" {
+		w = append(w, "keys left outside the key root: "+r.StrandedKeyRoot)
 	}
 	return w
 }
@@ -328,7 +335,8 @@ func (r Report) JSON() ([]byte, error) {
 		// Added in 0.1.4.
 		ReservedKeys []keyaudit.Reserved `json:"reserved_keys"`
 		// Added after 0.1.4.
-		OwnerSeal *string `json:"owner_seal"`
+		OwnerSeal       *string `json:"owner_seal"`
+		StrandedKeyRoot *string `json:"stranded_key_root"`
 	}
 	nz := func(s []string) []string {
 		if s == nil {
@@ -354,6 +362,7 @@ func (r Report) JSON() ([]byte, error) {
 		NeededTools: nz(r.NeededTools), Clipboard: strOrNil(r.Clipboard),
 		StrandedLegacyHome: strOrNil(r.StrandedLegacyHome),
 		OwnerSeal:          strOrNil(r.OwnerSeal),
+		StrandedKeyRoot:    strOrNil(r.StrandedKeyRoot),
 	})
 }
 
@@ -362,7 +371,7 @@ func (r Report) JSON() ([]byte, error) {
 // (the advisory lock is the CLI's mutation guard, upstream of this).
 func (s *Service) FixPerms() []string {
 	var changed []string
-	for _, mp := range perms.IterManagedPaths(s.p.SSHDir) {
+	for _, mp := range perms.IterManagedPathsIn(s.p.SSHDir, manifest.KeyRoot(s.m)) {
 		if !perms.PermsOK(mp.Path, mp.Mode) {
 			_ = perms.SetPerms(mp.Path, mp.Mode)
 			changed = append(changed, fmt.Sprintf("%s -> %o", mp.Path, uint32(mp.Mode.Perm())))
@@ -412,7 +421,8 @@ func (s *Service) Run(strict bool) Report {
 		rep.OwnerSeal = st.Describe()
 	}
 	rep.KnownHosts = knownHostsPresent(ssh)
-	rep.OldKeys, rep.StaleOldKeys = archivedKeys(ssh, OldKeyMaxAge(nil), time.Now())
+	rep.OldKeys, rep.StaleOldKeys = archivedKeys(ssh, manifest.KeyRoot(s.m), OldKeyMaxAge(nil), time.Now())
+	rep.StrandedKeyRoot = strandedKeyRoot(ssh, manifest.KeyRoot(s.m))
 	if _, _, err := clipboard.Command(); err != nil {
 		rep.Clipboard = "none found"
 	}
@@ -433,7 +443,7 @@ func (s *Service) Run(strict bool) Report {
 		for _, f := range rep.Dangling.ByState(keyaudit.Untracked) {
 			rep.OrphanKeys = append(rep.OrphanKeys, f.Subject)
 		}
-		rep.DuplicateKeys = duplicateKeys(ssh)
+		rep.DuplicateKeys = duplicateKeys(ssh, manifest.KeyRoot(s.m))
 		rep.UnpinnedHosts, rep.UnpinnedVMHosts = s.unpinnedHosts(ssh)
 		rep.StalePins = s.stalePins()
 		rep.VM = s.vmStatus()
@@ -508,7 +518,7 @@ func permIssues(ssh string, p paths.Paths) []string {
 		issues = append(issues, fmt.Sprintf("%s: %o (want %o)",
 			mp.Path, uint32(fi.Mode().Perm()), uint32(mp.Mode.Perm())))
 	}
-	for _, mp := range perms.IterManagedPaths(ssh) {
+	for _, mp := range perms.IterManagedPathsIn(ssh, manifest.KeyRootAt(p.Manifest())) {
 		report(mp)
 	}
 	for _, mp := range homeperms.SecretPerms(p) {
@@ -583,10 +593,10 @@ func OldKeyMaxAge(get func(string) string) time.Duration {
 // count and the entries older than maxAge. They share a walk so the count and the
 // staleness verdict can never describe different sets of files. maxAge 0 skips
 // the staleness pass. Paths are relative to ssh, for display.
-func archivedKeys(ssh string, maxAge time.Duration, now time.Time) (map[string]int, []string) {
+func archivedKeys(ssh, root string, maxAge time.Duration, now time.Time) (map[string]int, []string) {
 	counts := map[string]int{}
 	var stale []string
-	olds := manifest.GlobProfileTree(ssh, "old")
+	olds := manifest.GlobKeyTree(ssh, root, "old")
 	sort.Strings(olds)
 	for _, old := range olds {
 		fi, err := os.Stat(old)
@@ -664,8 +674,32 @@ func danglingRows(rep keyaudit.Report) []danglingJSON {
 	return out
 }
 
-func duplicateKeys(ssh string) []string {
-	profDir := filepath.Join(ssh, "profiles")
+// strandedKeyRoot describes the files still under the default key root when
+// defaults.key_root names another directory, and how to bring them over; ""
+// when there are none. Only `ssh key root` moves the tree, so files left
+// there mean the manifest was edited by hand, and no scan looks there.
+func strandedKeyRoot(ssh, root string) string {
+	if root == manifest.DefaultKeyRoot {
+		return ""
+	}
+	old := filepath.Join(ssh, manifest.DefaultKeyRoot)
+	files := 0
+	_ = filepath.WalkDir(old, func(_ string, d os.DirEntry, err error) error {
+		if err == nil && !d.IsDir() {
+			files++
+		}
+		return nil
+	})
+	if files == 0 {
+		return ""
+	}
+	return fmt.Sprintf("~/.ssh/%s/ holds %d file(s) while defaults.key_root names ~/.ssh/%s/; "+
+		"run `authama ssh key root %s`, then `authama ssh key root %s` to move them",
+		manifest.DefaultKeyRoot, files, root, manifest.DefaultKeyRoot, root)
+}
+
+func duplicateKeys(ssh, root string) []string {
+	profDir := filepath.Join(ssh, root)
 	if !isDir(profDir) {
 		return nil
 	}
@@ -675,7 +709,7 @@ func duplicateKeys(ssh string) []string {
 	ks := keystore.New()
 	byFP := map[string][]string{}
 	var order []string // first-encounter fp order (pubs sorted), matching v1
-	pubs := manifest.GlobProfileTree(ssh, "*.pub")
+	pubs := manifest.GlobKeyTree(ssh, root, "*.pub")
 	sort.Strings(pubs)
 	for _, pub := range pubs {
 		fp, err := ks.Fingerprint(pub)
@@ -791,7 +825,7 @@ func jsonIndent(v any) ([]byte, error) { return json.MarshalIndent(v, "", "  ") 
 func staleProxies(ssh string, m *manifest.Manifest) []string {
 	files := []string{filepath.Join(ssh, "config")}
 	for _, c := range m.Categories() {
-		files = append(files, filepath.Join(ssh, filepath.FromSlash(manifest.CategoryConfigRel(c))))
+		files = append(files, filepath.Join(ssh, filepath.FromSlash(manifest.CategoryConfigRelIn(manifest.KeyRoot(m), c))))
 	}
 	var out []string
 	for _, f := range files {

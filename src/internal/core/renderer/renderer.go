@@ -213,7 +213,7 @@ func RenderRootConfig(m *manifest.Manifest, emitUseKeychain bool) (string, error
 	if cats := m.Categories(); len(cats) > 0 {
 		b.WriteString("Match all\n")
 		for _, c := range cats {
-			b.WriteString("Include " + manifest.CategoryConfigFile(c) + "\n")
+			b.WriteString("Include " + manifest.CategoryConfigFileIn(manifest.KeyRoot(m), c) + "\n")
 		}
 		b.WriteString("\n")
 	}
@@ -443,7 +443,7 @@ func RenderAll(m *manifest.Manifest, emitUseKeychain bool) (map[string]string, e
 		if err != nil {
 			return nil, err
 		}
-		out[manifest.CategoryConfigRel(c)] = content
+		out[manifest.CategoryConfigRelIn(manifest.KeyRoot(m), c)] = content
 	}
 	return out, nil
 }

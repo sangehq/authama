@@ -159,12 +159,12 @@ func (h Home) tool() []Finding {
 func (h Home) ssh() []Finding {
 	var out []Finding
 	p := h.P
-	for _, t := range snapshots.FindTempArtifacts(p.SSHDir) {
+	for _, t := range snapshots.FindTempArtifactsIn(p.SSHDir, manifest.KeyRootAt(p.Manifest())) {
 		tmp := t
 		out = append(out, Finding{Area: SSH, Problem: "a crashed command left " + tmp, Fix: "remove it", Fixable: true,
 			apply: func() error { return os.RemoveAll(tmp) }})
 	}
-	for _, mp := range append(perms.IterManagedPaths(p.SSHDir), homeperms.SecretPerms(p)...) {
+	for _, mp := range append(perms.IterManagedPathsIn(p.SSHDir, manifest.KeyRootAt(p.Manifest())), homeperms.SecretPerms(p)...) {
 		if fileExists(mp.Path) && !perms.PermsOK(mp.Path, mp.Mode) {
 			m := mp
 			out = append(out, Finding{Area: SSH, Problem: m.Path + " has a mode ssh or authama does not accept",

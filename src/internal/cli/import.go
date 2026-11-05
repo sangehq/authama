@@ -36,7 +36,8 @@ func newImportCmd() *cobra.Command {
 			"Relative Includes resolve against the folder, as ssh resolves them against\n" +
 			"~/.ssh. Importing another machine's copy of ~/.ssh, an IdentityFile under\n" +
 			"~/.ssh/ is looked for in that copy, and its keys are adopted into the\n" +
-			"profiles/ layout here.",
+			"profile directories here (~/.ssh/profiles/, or the directory\n" +
+			"defaults.key_root names).",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			configPath := "~/.ssh/config"

@@ -360,7 +360,7 @@ func (e AppEngine) reservedAndLoose(m *manifest.Manifest) ([]keyaudit.Reserved, 
 	}
 	res, _ := keyaudit.Reservations(m, cfg.PlannedKeys())
 	var loose []keyaudit.LooseKey
-	for _, k := range keyaudit.MarkReserved(keyaudit.LooseKeys(e.P.SSHDir), res) {
+	for _, k := range keyaudit.MarkReserved(keyaudit.LooseKeysIn(e.P.SSHDir, manifest.KeyRootAt(e.P.Manifest())), res) {
 		if k.CopyOf == "" && !k.Reserved {
 			loose = append(loose, k)
 		}

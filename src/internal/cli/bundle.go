@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/services/bundler"
 	"github.com/simtabi/authama/src/internal/services/keystore"
 	"github.com/simtabi/authama/src/internal/util/envnames"
@@ -41,7 +42,7 @@ func newBundleCmd() *cobra.Command {
 				dest = p.DistDir()
 			}
 			stamp := time.Now().Format("20060102-150405")
-			res, err := bundler.New(p.SSHDir, p.ConfigDir, bundler.AgeCipher{}).Bundle(recip, dest, stamp)
+			res, err := bundler.New(p.SSHDir, p.ConfigDir, bundler.AgeCipher{}).WithKeyRoot(manifest.KeyRootAt(p.Manifest())).Bundle(recip, dest, stamp)
 			if err != nil {
 				return err
 			}
@@ -94,7 +95,7 @@ func newRestoreCmd() *cobra.Command {
 			}
 			snapshotBeforeMutation(p)
 			ks := keystore.New()
-			res, err := bundler.New(p.SSHDir, p.ConfigDir, bundler.AgeCipher{}).Restore(args[0], ident, ks.Fingerprint)
+			res, err := bundler.New(p.SSHDir, p.ConfigDir, bundler.AgeCipher{}).WithKeyRoot(manifest.KeyRootAt(p.Manifest())).Restore(args[0], ident, ks.Fingerprint)
 			if err != nil {
 				return err
 			}

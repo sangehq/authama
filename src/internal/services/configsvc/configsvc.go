@@ -240,7 +240,7 @@ func (s *Service) configFilesOnDisk() []string {
 	if _, ok := readFile(filepath.Join(s.sshDir, renderer.RootConfig)); ok {
 		found = append(found, renderer.RootConfig)
 	}
-	matches, _ := filepath.Glob(filepath.Join(s.sshDir, "profiles", "*", "config"))
+	matches, _ := filepath.Glob(filepath.Join(s.sshDir, manifest.KeyRoot(s.manifest), "*", "config"))
 	sort.Strings(matches)
 	for _, m := range matches {
 		if !ownsConfigFile(m) {
@@ -308,7 +308,7 @@ func (s *Service) renderedOrder(rendered map[string]string) []string {
 		order = append(order, renderer.RootConfig)
 	}
 	for _, c := range s.manifest.Categories() {
-		rel := manifest.CategoryConfigRel(c)
+		rel := manifest.CategoryConfigRelIn(manifest.KeyRoot(s.manifest), c)
 		if _, ok := rendered[rel]; ok {
 			order = append(order, rel)
 		}

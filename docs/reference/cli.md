@@ -75,6 +75,7 @@ Every command also takes the global flag:
     - [`authama ssh key regen-pub`](#authama-ssh-key-regen-pub) - Rebuild public keys from their private key or 1Password item
     - [`authama ssh key reserve`](#authama-ssh-key-reserve) - Keep a loose ~/.ssh key on purpose (doctor stops calling it loose)
     - [`authama ssh key revoke`](#authama-ssh-key-revoke) - Remove a key from every target it is deployed to, and never deploy it again
+    - [`authama ssh key root`](#authama-ssh-key-root) - Show or move the directory under ~/.ssh that holds the profile directories
     - [`authama ssh key unreserve`](#authama-ssh-key-unreserve) - Drop a key's reservation (doctor lists it as loose again)
   - [`authama ssh keygen`](#authama-ssh-keygen) - Generate a profile's or host's keys
   - [`authama ssh knownhosts`](#authama-ssh-knownhosts) - Pin host keys into the single ~/.ssh/known_hosts trust store
@@ -1220,7 +1221,8 @@ manifest needs --force, and both are backed up first). PATH defaults to
 Relative Includes resolve against the folder, as ssh resolves them against
 ~/.ssh. Importing another machine's copy of ~/.ssh, an IdentityFile under
 ~/.ssh/ is looked for in that copy, and its keys are adopted into the
-profiles/ layout here.
+profile directories here (~/.ssh/profiles/, or the directory
+defaults.key_root names).
 
 ```
 authama ssh import [PATH] [flags]
@@ -1260,6 +1262,7 @@ Subcommands:
 - [`regen-pub`](#authama-ssh-key-regen-pub) - Rebuild public keys from their private key or 1Password item
 - [`reserve`](#authama-ssh-key-reserve) - Keep a loose ~/.ssh key on purpose (doctor stops calling it loose)
 - [`revoke`](#authama-ssh-key-revoke) - Remove a key from every target it is deployed to, and never deploy it again
+- [`root`](#authama-ssh-key-root) - Show or move the directory under ~/.ssh that holds the profile directories
 - [`unreserve`](#authama-ssh-key-unreserve) - Drop a key's reservation (doctor lists it as loose again)
 
 ## authama ssh key add
@@ -1492,6 +1495,40 @@ Flags:
 ```
       --reason string   why, recorded with the revocation (e.g. "laptop lost")
   -y, --yes             skip the confirmation prompt
+```
+
+## authama ssh key root
+
+With no argument, prints the key root: the directory under ~/.ssh that holds
+the profile directories, ~/.ssh/profiles/ unless defaults.key_root names
+another.
+
+With <dir>, makes ~/.ssh/<dir>/ the key root and moves the whole tree there in
+one rename: private keys, .pub files, old/ archives and category config files.
+The inventory follows and ~/.ssh/config is rendered again, so ssh finds every
+key at its new path. Keys adopted where they are stay put. ~/.ssh is
+snapshotted first.
+
+<dir> is one directory name, not hidden and not one of ssh's own files.
+"profiles" returns to the default. It refuses when ~/.ssh/<dir> already
+exists beside the current root: merge the two by hand first.
+
+```
+authama ssh key root [<dir>] [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh key root
+  authama ssh key root keys
+  authama ssh key root profiles --yes
+```
+
+Flags:
+
+```
+  -y, --yes   skip the confirmation prompt
 ```
 
 ## authama ssh key unreserve

@@ -25,7 +25,7 @@ var doctorKeys013 = []string{"unpinned_vm_hosts", "stale_pins", "vm"}
 var doctorKeys014 = []string{"reserved_keys"}
 
 // doctorKeys015 are the keys the release after 0.1.4 adds.
-var doctorKeys015 = []string{"owner_seal"}
+var doctorKeys015 = []string{"owner_seal", "stranded_key_root"}
 
 func orderedKeys(t *testing.T, js string) []string {
 	t.Helper()

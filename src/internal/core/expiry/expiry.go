@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/simtabi/authama/src/internal/core/inventory"
+	"github.com/simtabi/authama/src/internal/core/manifest"
 )
 
 // State values.
@@ -55,9 +56,20 @@ func keyName(path string) string {
 	return path
 }
 
-// ComputeStates returns per-key expiry status, most-urgent first. today should be
-// a date (UTC midnight); warnBeforeDays is the manifest's warn thresholds.
+// ComputeStates is ComputeStatesIn under the default key root, profiles.
+//
+// Deprecated: after v0.1.3 the key root is configurable (defaults.key_root);
+// use ComputeStatesIn with manifest.KeyRoot. This stays, delegating.
+// Earliest removal: v1.0.0.
 func ComputeStates(inv *inventory.Inventory, warnBeforeDays []int, today time.Time) []Status {
+	return ComputeStatesIn(inv, warnBeforeDays, today, manifest.DefaultKeyRoot)
+}
+
+// ComputeStatesIn returns per-key expiry status, most-urgent first. today
+// should be a date (UTC midnight); warnBeforeDays is the manifest's warn
+// thresholds; root is the key root, so a rotated-out predecessor in a
+// profile's old/ is never counted as live.
+func ComputeStatesIn(inv *inventory.Inventory, warnBeforeDays []int, today time.Time, root string) []Status {
 	warnWindow := 30
 	if len(warnBeforeDays) > 0 {
 		warnWindow = warnBeforeDays[0]
@@ -69,7 +81,7 @@ func ComputeStates(inv *inventory.Inventory, warnBeforeDays []int, today time.Ti
 	}
 	var out []Status
 	for fp, rec := range inv.Keys {
-		if inventory.IsArchivedPath(rec.Path) {
+		if inventory.IsArchivedPathIn(rec.Path, root) {
 			continue // archived predecessor, not active
 		}
 		exp := rec.ExpiresOn
