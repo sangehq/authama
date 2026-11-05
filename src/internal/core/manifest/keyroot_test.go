@@ -34,18 +34,18 @@ func TestEveryKeyPathFollowsTheKeyRoot(t *testing.T) {
 	if err := m.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	cases := map[string]string{
-		m.ProfileRel("work"):                              "keys/work",
-		m.ProfileRel("acme"):                              "keys/clients/acme",
-		filepath.ToSlash(m.ProfileDir("/h/.ssh", "work")): "/h/.ssh/keys/work",
-		CategoryConfigRelIn(KeyRoot(m), "clients"):        "keys/clients/config",
-		CategoryConfigFileIn(KeyRoot(m), "clients"):       "~/.ssh/keys/clients/config",
-		m.IdentityFile("work", "work_gh-ed25519"):         "~/.ssh/keys/work/work_gh-ed25519",
-		filepath.ToSlash(ArchiveDir(m, "/h/.ssh", KeyRef{Profile: "acme", KeyName: "k"})): "/h/.ssh/keys/clients/acme/old",
+	cases := [][2]string{
+		{m.ProfileRel("work"), "keys/work"},
+		{m.ProfileRel("acme"), "keys/clients/acme"},
+		{filepath.ToSlash(m.ProfileDir("/h/.ssh", "work")), "/h/.ssh/keys/work"},
+		{CategoryConfigRelIn(KeyRoot(m), "clients"), "keys/clients/config"},
+		{CategoryConfigFileIn(KeyRoot(m), "clients"), "~/.ssh/keys/clients/config"},
+		{m.IdentityFile("work", "work_gh-ed25519"), "~/.ssh/keys/work/work_gh-ed25519"},
+		{filepath.ToSlash(ArchiveDir(m, "/h/.ssh", KeyRef{Profile: "acme", KeyName: "k"})), "/h/.ssh/keys/clients/acme/old"},
 	}
-	for got, want := range cases {
-		if got != want {
-			t.Errorf("got %q, want %q", got, want)
+	for _, c := range cases {
+		if c[0] != c[1] {
+			t.Errorf("got %q, want %q", c[0], c[1])
 		}
 	}
 	m.Defaults.KeyRoot = "a/b"
