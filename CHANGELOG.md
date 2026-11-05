@@ -65,6 +65,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **A host's or key's row actions stay on the list.** Open, History and Rotate or roll back open
   in the side panel instead of leaving the page, like the row's other actions already did.
 
+- **Keys in a directory of your choosing.** `defaults.key_root` names the directory under `~/.ssh`
+  that holds the profile directories (`profiles` by default), and `authama ssh key root <dir>` moves
+  the whole tree there in one rename, re-points the inventory and renders the config again. Every
+  scan, snapshot, audit, permission check and backup follows it; a backup restores under the root
+  its manifest names. `authama doctor` reports keys left behind by a hand edit
+  (`stranded_key_root`).
 - **Keys where you already keep them.** A declared key's new `path` adopts an existing private key
   under `~/.ssh` (`id_ed25519`, `work/deploy_key`) in place: it renders, deploys, rotates and audits
   there, and authama never moves, renames or deletes it. Rotation archives the old pair in the

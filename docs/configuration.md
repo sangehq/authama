@@ -167,6 +167,7 @@ reservations is unchanged. Older authama versions (0.1.3 and earlier) refuse a m
 | `global_options` | `{}` | ssh options emitted under `Host *` (e.g. `AddKeysToAgent`, macOS `UseKeychain`) |
 | `key_comment` | `{profile}/{alias} {date}` | comment template for new keys (see [Key comments](#key-comments)) |
 | `onepassword_agent` | platform default | the 1Password SSH agent socket for `key_store: 1password` profiles (see [Key stores](#key-stores)) |
+| `key_root` | `profiles` | the directory under `~/.ssh` that holds the profile directories; change it with `authama ssh key root <dir>`, which moves the keys (see [Where the keys live](#key-root)) |
 | `git.mode` | `profile` | default GitHub remote mode for `authama ssh git use`: `profile`, `ssh` or `https` |
 | `git.profile` | unset | the default identity: its GitHub key is bound to a rendered `Host github.com` (ssh mode), and it is used for owners `git.orgs` does not list. Unset, no `Host github.com` is rendered. The block is rendered once: in the profile's category file (`profiles/<category>/config`) when it has a category, otherwise in the root block; skipped if a host is already aliased `github.com` |
 | `git.orgs` | `{}` | GitHub owner → profile, for `authama ssh git` (see [tools/git.md](tools/git.md)) |
@@ -250,9 +251,40 @@ Set it with `authama ssh profile add <name> --category <c>` or
 `authama ssh profile edit <name> --category <c>`. The edit moves the key directory and
 updates the inventory. See [Group profiles into categories](recipes/group-profiles-into-categories.md).
 
+## <a name="key-root"></a>Where the keys live
+
+The profile directories sit under one directory in `~/.ssh`, the key root. It is `profiles` unless
+`defaults.key_root` names another, so a profile's keys are at `~/.ssh/<root>/<profile>/` (or
+`~/.ssh/<root>/<category>/<profile>/`), and every rendered `IdentityFile`, category `Include`,
+`old/` archive, snapshot, audit and backup follows it.
+
+```bash
+authama ssh key root          # ~/.ssh/profiles/
+authama ssh key root keys     # moves everything to ~/.ssh/keys/ and renders the config again
+authama ssh key root profiles # and back
+```
+
+Moving is one rename of the whole tree: private keys, `.pub` files, `old/` archives and category
+config files. The inventory follows, `~/.ssh/config` is rendered again so ssh finds every key at its
+new path, and `~/.ssh` is snapshotted first. Adopted keys stay where they are.
+
+| Rule | Why |
+|---|---|
+| One directory name, such as `keys` or `id` | A nested root (`a/b`) is refused; it would complicate every scan for no gain. |
+| Not `.` | Profile directories loose in `~/.ssh` would sit beside your own folders, and a scan could not tell them apart. |
+| Not hidden, and not one of ssh's own names (`config`, `known_hosts*`, `authorized_keys*`, `id_*`, `*.pub`) | Hidden directories are where authama stages files; the rest belong to ssh. |
+| The target may not already exist beside the current root | Merge the two by hand first; nothing is overwritten. |
+| No reserved key may share its name | A reserved key is a file directly in `~/.ssh`. |
+
+Set the root with the command rather than by editing the manifest: an edit alone leaves the keys
+where they were, and `authama doctor` reports them (`stranded_key_root`) with the two commands that
+bring them over. A backup bundle names its members under `ssh/profiles/` whatever the root, and a
+restore lays them down under the root the bundle's manifest names. See
+[Keep your keys in a directory of your choosing](recipes/choose-where-keys-live.md).
+
 ## <a name="adopted-keys"></a>Keys where you already keep them
 
-A key does not have to live under `profiles/`. A declared key with a `path` is used where it is:
+A key does not have to live under the key root. A declared key with a `path` is used where it is:
 
 ```json
 "personal": {
