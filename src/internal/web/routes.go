@@ -18,6 +18,11 @@ import (
 	"github.com/simtabi/authama/src/internal/util/csvout"
 )
 
+// tokenFilterParam is the history filter for one token, as target/host.
+// It is not "token": that is the sign-in link's parameter, and the auth
+// check reads it on every request.
+const tokenFilterParam = "credential"
+
 // routes registers every page. Each takes names from the path, the query or
 // the form, never a filesystem path, and the engine resolves each name against
 // what exists. Only the POST routes change anything - the changes and the jobs
@@ -414,7 +419,7 @@ var csvLists = []string{"hosts.csv", "keys.csv", "tokens.csv", "history.csv", "e
 // and its CSV both use it, so a download is what the page shows.
 func historyFilter(q url.Values) history.Filter {
 	return history.Filter{
-		Host: q.Get("host"), Profile: q.Get("profile"), Key: q.Get("key"), Token: q.Get("token"),
+		Host: q.Get("host"), Profile: q.Get("profile"), Key: q.Get("key"), Token: q.Get(tokenFilterParam),
 		Since: q.Get("since"), Until: q.Get("until"), Command: q.Get("command"), Source: q.Get("source"),
 	}
 }

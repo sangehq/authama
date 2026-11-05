@@ -23,7 +23,7 @@
           <td class="text-end">
             {{if not $.ReadOnly}}<form method="post" action="/changes/preview" data-inline id="f-token-{{.Target}}-{{.Host}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="token-delete"><input type="hidden" name="target" value="{{.Target}}"><input type="hidden" name="host" value="{{.Host}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for the %s token for %s" .Target .Host)}}
-              <a class="dropdown-item" href="/history?token={{.Target}}/{{.Host}}">{{icon "history"}}<span class="ms-2">History</span></a>
+              <a class="dropdown-item" href="/history?credential={{.Target}}/{{.Host}}">{{icon "history"}}<span class="ms-2">History</span></a>
               <button type="button" class="dropdown-item" data-copy="{{.Host}}">{{icon "copy"}}<span class="ms-2">Copy the host</span></button>
               <button type="button" class="dropdown-item" data-copy="{{.File}}">{{icon "copy"}}<span class="ms-2">Copy the file's path</span></button>
               {{if not $.ReadOnly}}<button type="button" class="dropdown-item" data-panel-open="add-token" data-panel-fill-target="{{.Target}}" data-panel-fill-server="{{.Host}}">{{icon "refresh"}}<span class="ms-2">Replace or rotate</span></button>
