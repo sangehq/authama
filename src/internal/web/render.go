@@ -304,6 +304,15 @@ func funcs(a *assetSet) template.FuncMap {
 			return headerAction{Label: label, Href: href, Icon: "download", Download: true,
 				CSV: strings.HasSuffix(strings.SplitN(href, "?", 2)[0], ".csv")}
 		},
+		// tip is ` data-tip="…"` from the catalogue in tips.go, for any element.
+		"tip": tipAttr,
+		// withTip gives a header action its explainer:
+		// (panel "Add a host" "add-host" "plus" | withTip "host-add").
+		"withTip": func(id string, a headerAction) (headerAction, error) {
+			t, err := tipText(id)
+			a.Tip = t
+			return a, err
+		},
 		// modal is an action that opens the dialog with that id.
 		"modal": func(label, id, icon string) headerAction {
 			return headerAction{Label: label, Href: "#" + id, Icon: icon, Modal: id}
@@ -398,6 +407,8 @@ type pageHeader struct {
 type headerAction struct {
 	Label, Href, Icon, Panel, Modal string
 	Download, CSV                   bool
+	// Tip is the explainer the action shows on hover and focus (see tips.go).
+	Tip string
 }
 
 // emptyState is a list with nothing in it yet.

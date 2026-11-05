@@ -2,7 +2,7 @@
 {{if .ReadOnly}}
 {{template "page_header" (header "SSH" "Profiles" "Each profile: its category, key scope and key store, and its hosts and keys.")}}
 {{else}}
-{{template "page_header" (header "SSH" "Profiles" "Each profile: its category, key scope and key store, and its hosts and keys." (panel "Add a profile" "add-profile" "plus") (only (gt (len .Data) 0) (panel "Change a key scope" "profile-scope" "key")) (only (gt (len .Data) 0) (panel "Change a key comment" "profile-comment" "pencil")) (only (gt (len .Data) 0) (panel "Move to a category" "profile-category" "folder")) (only (and (gt (len .Data) 0) (not .DevRoot)) (panel "Rotate keys" "profile-rotate" "recycle")))}}
+{{template "page_header" (header "SSH" "Profiles" "Each profile: its category, key scope and key store, and its hosts and keys." (panel "Add a profile" "add-profile" "plus" | withTip "profile-add") (only (gt (len .Data) 0) (panel "Change a key scope" "profile-scope" "key" | withTip "profile-scope")) (only (gt (len .Data) 0) (panel "Change a key comment" "profile-comment" "pencil" | withTip "profile-comment")) (only (gt (len .Data) 0) (panel "Move to a category" "profile-category" "folder" | withTip "profile-category")) (only (and (gt (len .Data) 0) (not .DevRoot)) (panel "Rotate keys" "profile-rotate" "recycle" | withTip "profile-rotate")))}}
 {{end}}
 <div class="card">
   <div class="card-header"><h2 class="card-title">Profiles</h2>{{if .Data}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data}} in the manifest</span>{{template "csv" "/exports/profiles.csv"}}</div>{{end}}</div>
@@ -33,7 +33,7 @@
               <a class="dropdown-item" href="#profile-category" data-panel-open="profile-category" data-panel-fill-name="{{.Name}}">{{icon "folder"}}<span class="ms-2">Move to a category</span></a>
               {{if not $.DevRoot}}<a class="dropdown-item" href="#profile-rotate" data-panel-open="profile-rotate" data-panel-fill-profile="{{.Name}}">{{icon "recycle"}}<span class="ms-2">Rotate its keys</span></a>{{end}}
               <div class="dropdown-divider"></div>
-              <button type="submit" class="dropdown-item text-danger" form="f-profile-{{.Name}}" data-confirm="m-profile-{{.Name}}">{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
+              <button type="submit" class="dropdown-item text-danger" form="f-profile-{{.Name}}" data-confirm="m-profile-{{.Name}}"{{tip "delete"}}>{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
             {{template "menu_close"}}
           </td>
         </tr>

@@ -58,6 +58,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Actions explain themselves.** Page actions, Preview and Review buttons, quick actions,
+  destructive menu items, Run and CSV show a tip on hover and keyboard focus saying what they do,
+  which screen readers announce too. The wording lives in one catalogue, and a test fails on a tip
+  a template names that the catalogue lacks, or one nothing uses.
+
 - **Keys where you already keep them.** A declared key's new `path` adopts an existing private key
   under `~/.ssh` (`id_ed25519`, `work/deploy_key`) in place: it renders, deploys, rotates and audits
   there, and authama never moves, renames or deletes it. Rotation archives the old pair in the

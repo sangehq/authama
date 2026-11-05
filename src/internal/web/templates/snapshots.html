@@ -1,5 +1,5 @@
 {{define "content"}}
-{{template "page_header" (header "Config & backups" "Snapshots" "" (only (not .ReadOnly) (panel "Make a bundle" "bundle" "archive")) (only (and (not .ReadOnly) (gt (len .Data.Snapshots) 0)) (panel "Prune old snapshots" "prune" "trash")))}}
+{{template "page_header" (header "Config & backups" "Snapshots" "" (only (not .ReadOnly) (panel "Make a bundle" "bundle" "archive" | withTip "bundle")) (only (and (not .ReadOnly) (gt (len .Data.Snapshots) 0)) (panel "Prune old snapshots" "prune" "trash" | withTip "prune")))}}
 <p class="text-secondary">Every command that changes <code>~/.ssh</code> archives its config, <code>known_hosts</code> and public keys first. Private keys are never in a snapshot.</p>
 <div class="card">
   <div class="card-header"><h2 class="card-title">Snapshots</h2>{{if .Data.Snapshots}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data.Snapshots}}, newest first</span>{{template "csv" "/exports/snapshots.csv"}}</div>{{end}}</div>
@@ -58,7 +58,7 @@
             {{template "menu_open" (printf "Actions for bundle %s" .Name)}}
               <button type="button" class="dropdown-item" data-copy="{{.Name}}">{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
               {{if not $.ReadOnly}}<div class="dropdown-divider"></div>
-              <button type="submit" class="dropdown-item text-danger" form="f-bundle-{{.Name}}" data-confirm="m-bundle-{{.Name}}">{{icon "archive"}}<span class="ms-2">Restore</span></button>{{end}}
+              <button type="submit" class="dropdown-item text-danger" form="f-bundle-{{.Name}}" data-confirm="m-bundle-{{.Name}}"{{tip "restore"}}>{{icon "archive"}}<span class="ms-2">Restore</span></button>{{end}}
             {{template "menu_close"}}
           </td>
         </tr>

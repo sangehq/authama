@@ -76,6 +76,9 @@ Events) and **System** (Doctor, Settings, About). On a narrow screen it folds be
   value: every `env`, `user_env`, `pass_env`, `key_env` and `secret_env` must be an upper-case
   variable name of at most 48 characters that does not start like a known token (`ghp_`, `glpat-`,
   `npm_`, …), and a header that carries a credential must take it from `${VAR}`.
+- **Every action says what it does** before you use it: hover or focus a page's actions, a form's
+  Preview, a quick action or a destructive menu item, and a tip explains it, and that nothing is
+  written before the preview is confirmed. Screen readers announce the same text.
 - **Help** sits where it is needed: a hint under each form field, a ? beside a term that needs
   explaining (it opens a popover), and a tooltip on every icon button. **Take the tour**, in the
   account menu, walks the header and the overview one step at a time; it offers itself once, on a

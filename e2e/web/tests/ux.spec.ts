@@ -73,3 +73,14 @@ test('the side panel stacks pages, goes back, and closes with Escape', async ({ 
   // Nothing changed, so the page under it was not reloaded.
   await expect(page).toHaveURL(/\/history$/);
 });
+
+test('an action explains itself on hover and keyboard focus, and to a screen reader', async ({ page }) => {
+  await page.goto('/hosts');
+  const add = page.getByRole('button', { name: 'Add a host' });
+  await expect(add).toHaveAttribute('aria-description', /Its key is minted on the next reconcile/);
+  await add.focus();
+  await expect(page.getByRole('tooltip')).toContainText('Adds a host to a profile');
+  // A row's destructive item explains that it previews first.
+  await page.getByRole('button', { name: /^Actions for host / }).first().click();
+  await expect(page.locator('.dropdown-menu.show .text-danger').first()).toHaveAttribute('data-tip', /Previews the delete first/);
+});

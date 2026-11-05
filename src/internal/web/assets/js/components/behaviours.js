@@ -228,3 +228,41 @@ export class ThemeChoice extends Component {
     return this;
   }
 }
+
+/**
+ * Tip explains what a control does before it is used: a tooltip from the
+ * element's data-tip, shown on hover and on keyboard focus. It works on an
+ * element whose data-bs-toggle already opens a panel, a menu or a dialog,
+ * which Bootstrap's own data-bs-toggle="tooltip" cannot share. The text is
+ * also the element's accessible description, so a screen reader hears it.
+ *
+ *   <a class="btn" data-bs-toggle="offcanvas" href="#add-host" data-tip="Opens a form; nothing is written until you confirm the preview">
+ *
+ * @extends {Component<{ placement: string }>}
+ */
+export class Tip extends Component {
+  static attribute = "tip";
+  static defaults = { placement: "top" };
+
+  init() {
+    const text = this.el.dataset.tip ?? "";
+    if (!text) {
+      return this;
+    }
+    if (!this.el.hasAttribute("aria-describedby") && !this.el.getAttribute("aria-description")) {
+      this.el.setAttribute("aria-description", text);
+    }
+    const lib = /** @type {any} */ (window).tabler ?? /** @type {any} */ (window).bootstrap;
+    // Bootstrap holds one component per element. A dropdown toggle already
+    // holds its Dropdown, so its tooltip goes on the wrapper around it, which
+    // is hovered and focused (focusin bubbles) along with it.
+    const host = this.el.matches('[data-bs-toggle="dropdown"]') && this.el.parentElement ? this.el.parentElement : this.el;
+    lib?.Tooltip?.getOrCreateInstance(host, {
+      title: text,
+      placement: String(this.options.placement),
+      trigger: "hover focus",
+      container: "body",
+    });
+    return this;
+  }
+}

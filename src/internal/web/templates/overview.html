@@ -2,7 +2,7 @@
 {{if $.ReadOnly}}
 {{template "page_header" (header "Home" "Overview" "What this home holds, and what needs attention.")}}
 {{else}}
-{{template "page_header" (header "Home" "Overview" "What this home holds, and what needs attention." (action "Add a host" "/hosts#add-host" "plus") (action "Add a token" "/tokens#add-token" "cloud-lock"))}}
+{{template "page_header" (header "Home" "Overview" "What this home holds, and what needs attention." (action "Add a host" "/hosts#add-host" "plus" | withTip "host-add") (action "Add a token" "/tokens#add-token" "cloud-lock" | withTip "token-add"))}}
 {{end}}
 
 <div class="row row-cards mb-3" data-tour="7" data-tour-title="At a glance" data-tour-text="Each count opens its list; Needs attention lists what to fix and the command that fixes it.">
@@ -109,13 +109,13 @@
       <div class="list-group list-group-flush">
         {{if not $.ReadOnly}}
         <div class="list-group-item">
-          {{template "change_open" $}}<input type="hidden" name="action" value="reconcile"><button type="submit" class="btn btn-primary w-100">{{icon "refresh"}}<span class="ms-1">Reconcile: mint missing keys and render</span></button></form>
+          {{template "change_open" $}}<input type="hidden" name="action" value="reconcile"{{tip "reconcile"}}><button type="submit" class="btn btn-primary w-100">{{icon "refresh"}}<span class="ms-1">Reconcile: mint missing keys and render</span></button></form>
         </div>
         <div class="list-group-item">
-          {{template "change_open" $}}<input type="hidden" name="action" value="config-render"><button type="submit" class="btn btn-outline-primary w-100">{{icon "file-code"}}<span class="ms-1">Re-render ~/.ssh/config</span></button></form>
+          {{template "change_open" $}}<input type="hidden" name="action" value="config-render"{{tip "render"}}><button type="submit" class="btn btn-outline-primary w-100">{{icon "file-code"}}<span class="ms-1">Re-render ~/.ssh/config</span></button></form>
         </div>
         <div class="list-group-item">
-          {{template "change_open" $}}<input type="hidden" name="action" value="token-apply"><button type="submit" class="btn btn-outline-primary w-100">{{icon "cloud-lock"}}<span class="ms-1">Apply the token config</span></button></form>
+          {{template "change_open" $}}<input type="hidden" name="action" value="token-apply"{{tip "token-apply"}}><button type="submit" class="btn btn-outline-primary w-100">{{icon "cloud-lock"}}<span class="ms-1">Apply the token config</span></button></form>
         </div>
         {{end}}
         <a class="list-group-item list-group-item-action" href="/ssh-config">{{icon "file-code"}}<span class="ms-2">See the rendered SSH config and its drift check</span></a>

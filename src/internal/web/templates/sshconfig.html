@@ -11,7 +11,7 @@
       <div class="card-body"><pre class="code-block" tabindex="0">{{.Check}}</pre></div>
       <div class="card-footer d-flex flex-wrap gap-2 align-items-center">
         <span class="text-secondary me-auto">The same as <code>authama ssh config check</code>.</span>
-        {{if not $.ReadOnly}}{{template "change_open" $}}<input type="hidden" name="action" value="config-render"><button type="submit" class="btn btn-primary">{{icon "refresh"}}<span class="ms-1">Re-render ~/.ssh/config</span></button></form>{{end}}
+        {{if not $.ReadOnly}}{{template "change_open" $}}<input type="hidden" name="action" value="config-render"{{tip "render"}}><button type="submit" class="btn btn-primary">{{icon "refresh"}}<span class="ms-1">Re-render ~/.ssh/config</span></button></form>{{end}}
         <a class="btn btn-outline-secondary" href="/exports/ssh_config" download>{{icon "download"}}<span class="ms-1">ssh_config, every host inline</span></a>
       </div>
     </div>

@@ -1,5 +1,5 @@
 {{define "content"}}{{with .Data}}
-{{template "page_header" (header "System" "Repair" "What is wrong with the authama home, ~/.ssh and the token files, and the fixes that are safe to make. Nothing is deleted." (only (not $.ReadOnly) (panel "Factory reset" "factory-reset" "refresh")))}}
+{{template "page_header" (header "System" "Repair" "What is wrong with the authama home, ~/.ssh and the token files, and the fixes that are safe to make. Nothing is deleted." (only (not $.ReadOnly) (panel "Factory reset" "factory-reset" "refresh" | withTip "factory-reset")))}}
 <div class="card mb-3">
   <div class="card-header"><h2 class="card-title">Findings</h2>{{if .Findings}}<span class="ms-2 badge badge-warn">{{len .Findings}}</span>{{else}}<span class="ms-2 badge badge-ok">{{icon "circle-check"}}<span class="ms-1">all clear</span></span>{{end}}</div>
   {{if .Findings}}
@@ -16,7 +16,7 @@
   </div>
   {{if and (not $.ReadOnly) (gt .Fixable 0)}}<div class="card-footer d-flex flex-wrap align-items-center gap-2">
     <span class="text-secondary small me-auto">{{.Fixable}} can be fixed now. ~/.ssh is snapshotted first, and the fixes are previewed before they run.</span>
-    {{template "change_open" $}}<input type="hidden" name="action" value="repair"><button type="submit" class="btn btn-primary">{{icon "refresh"}}<span class="ms-1">Preview the fixes</span></button></form>
+    {{template "change_open" $}}<input type="hidden" name="action" value="repair"><button type="submit" class="btn btn-primary"{{tip "repair"}}>{{icon "refresh"}}<span class="ms-1">Preview the fixes</span></button></form>
   </div>{{end}}
   {{else}}<div class="card-body text-secondary">The home, ~/.ssh and the token files are as authama expects.</div>{{end}}
 </div>
