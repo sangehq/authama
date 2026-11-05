@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/util/fs"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
@@ -23,7 +24,7 @@ var ErrNoKey = errors.New("no sealing key is stored")
 
 // StoreEnv chooses the store: "file" forces the owner-only file, for a
 // machine with no keyring session (a server over ssh, a container).
-const StoreEnv = "AUTHAMA_OWNER_STORE"
+const StoreEnv = envnames.OwnerStore
 
 // Store names.
 const (
@@ -37,7 +38,7 @@ const (
 // process can reach, else the file. A --dev-root sandbox always uses the
 // file inside the sandbox, so a test never writes to the real keychain.
 func StoreFor(p paths.Paths) Store {
-	if p.IsDev() || strings.EqualFold(os.Getenv(StoreEnv), StoreFile) {
+	if p.IsDev() || strings.EqualFold(envnames.Get(nil, StoreEnv), StoreFile) {
 		return fileStore{p}
 	}
 	if s := osStore(p); s != nil {

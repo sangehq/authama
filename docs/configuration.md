@@ -474,8 +474,9 @@ authama has no driver for, and `devboxes` names the VM hosts `ssh vm sync` keeps
 with examples, in [tools/vm.md](tools/vm.md#choosing-your-hypervisors).
 
 Paths may start with `~/`. A secret never goes in `authama.json`; put it in
-`.env`. Only the environment can set `AUTHAMA_CONFIG_DIR`, `AUTHAMA_DEV_ROOT`
-and `AUTHAMA_NO_DOTENV`.
+`.env`. Only the environment can set `AUTHAMA_CONFIG_DIR`, `AUTHAMA_DEV_ROOT`,
+`AUTHAMA_NO_DOTENV` and `AUTHAMA_OWNER_STORE` (`file` keeps the [owner binding](tools/owner.md)'s
+sealing key in an owner-only file rather than the OS credential store).
 
 ### The `settings` commands
 

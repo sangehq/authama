@@ -44,6 +44,9 @@ const (
 	VMHypervisors    = "AUTHAMA_VM_HYPERVISORS"
 	VMPruneGone      = "AUTHAMA_VM_PRUNE_GONE"
 	VMRepin          = "AUTHAMA_VM_REPIN"
+	// OwnerStore set to "file" keeps the owner's sealing key in an owner-only
+	// file instead of the OS credential store (see services/owner).
+	OwnerStore = "AUTHAMA_OWNER_STORE"
 )
 
 // legacy maps a current name to the names earlier releases read, in the order
@@ -76,7 +79,7 @@ func Names() []string {
 	out := []string{
 		AgeIdentityFile, AgeRecipient, AskpassMode, AskpassSecret, AutoPin, ConfigDir,
 		DevRoot, DockerCredsStore, GitMode, History, NoDotenv, Notifications,
-		OldKeyMaxAgeDays, SnapshotRetain, StateDir, TokensCatalog, TokensConfig,
+		OldKeyMaxAgeDays, OwnerStore, SnapshotRetain, StateDir, TokensCatalog, TokensConfig,
 		VMHypervisors, VMPruneGone, VMRepin,
 	}
 	sort.Strings(out)
