@@ -30,7 +30,7 @@ decides otherwise, so this page offers no download, package-manager or
 
 ```sh
 git clone https://github.com/simtabi/authama ~/src/authama
-make -C ~/src/authama install    # builds, then copies build/authama to ~/.local/bin
+make -C ~/src/authama install    # builds build/<your-os>/authama, then copies it to ~/.local/bin
 authama doctor          # verify deps, perms, agent, known_hosts, drift, token-file modes
 ```
 
@@ -42,8 +42,21 @@ where your config and state homes are; it never touches them, `~/.ssh` or a toke
 
 On Windows, `make install` from Git Bash puts it in `%LOCALAPPDATA%\Programs\authama`, where
 `install.ps1` does. Or run the same `git clone` and `make build` from Git Bash (or `go -C src build -o
-..\build\authama.exe ./cmd/authama` from PowerShell), then put `build\authama.exe`
+..\build\windows\authama.exe ./cmd/authama` from PowerShell), then put `build\windows\authama.exe`
 in a directory on your user `PATH`.
+
+### A double-click app
+
+`make dist` also packages the web UI for people who would rather not use a terminal:
+
+- **macOS:** `build/archives/authama_macos_app.zip` holds `Authama.app`. Opening it opens Terminal
+  running `authama serve`, which opens the web UI in your browser; closing that window stops it.
+  The app is not signed, so macOS asks once: right-click it and choose Open, or allow it in System
+  Settings > Privacy & Security. `Authama.app/Contents/MacOS/authama` is the same command-line
+  binary.
+- **Windows:** each `build/archives/authama_windows_*.zip` holds `Start authama.cmd` beside
+  `authama.exe`; double-clicking it starts the web UI in a console window, and closing the window
+  stops it.
 
 A version is a tag: check one out to build exactly that release.
 
@@ -57,8 +70,7 @@ make -C ~/src/authama build
 
 ```sh
 git -C ~/src/authama pull --ff-only
-make -C ~/src/authama build
-install -m 0755 ~/src/authama/build/authama ~/.local/bin/authama
+make -C ~/src/authama install
 ```
 
 `authama version` reports the commit it was built from, so a build from a branch

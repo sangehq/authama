@@ -28,7 +28,7 @@ version `src/go.mod` names), `git` and `make`.
 
 ```sh
 git clone https://github.com/simtabi/authama ~/src/authama
-make -C ~/src/authama install    # builds, then copies build/authama to ~/.local/bin
+make -C ~/src/authama install    # builds build/<your-os>/authama, then copies it to ~/.local/bin
 authama doctor
 ```
 

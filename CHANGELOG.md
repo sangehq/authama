@@ -19,6 +19,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **`build/` holds one folder per OS and nothing else.** `make build` writes
+  `build/<your-os>/authama` (`build/macos/authama`, `build/windows/authama.exe` - which also fixes
+  `make install` on Windows, which looked for an `.exe` the build never wrote); `make cross` writes
+  every target to `build/{os}/authama_{os}_{arch}` with `build/checksums.txt` listing `{os}/{file}`
+  so it verifies as-is; `make dist` adds `build/archives/`. There is no `build/dist/`: GoReleaser
+  works in `.goreleaser-dist/` (`make release-snapshot`), and `make man` packs its pages into
+  `build/archives/authama_man.tar.gz`. A test fails on anything else in `build/`.
+- **A double-click app for the web UI.** `make dist` packages `Authama.app` for macOS
+  (`build/archives/authama_macos_app.zip`, opening Terminal running `authama serve`) and adds
+  `Start authama.cmd` to the Windows zips. See [docs/installation.md](docs/installation.md).
+
 - **`--revoke` revokes.** `key delete`, `host delete` and `profile delete --revoke` called a stub
   that revoked nothing, while their help said it removed the key from its targets. They now ask each
   deployment's host's provider to remove it, as rotation does, and report each target they could
