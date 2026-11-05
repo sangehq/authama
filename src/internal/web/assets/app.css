@@ -183,3 +183,7 @@ main:focus { outline: none; }
   .page-body > .container-xl, .page-wrapper .container-xl { padding-inline: 1rem; }
 }
 .page-pretitle a { text-decoration: underline; }
+/* The tour is what the user is following, so it sits above the hover
+   explainers: Bootstrap draws tooltips (1080) over popovers (1070), and a
+   tooltip under the pointer would otherwise cover the tour's Next button. */
+.popover.tour-popover { --tblr-popover-zindex: 1090; --bs-popover-zindex: 1090; z-index: 1090; }

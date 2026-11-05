@@ -129,6 +129,16 @@ test('the tour walks the header step by step, and Escape ends it', async ({ page
   const pop = page.locator('.popover.tour-popover');
   await expect(pop).toBeVisible();
   await expect(pop.locator('.popover-header')).toHaveText(/^Search \(1 of \d+\)$/);
+  // Closing the account menu can leave the pointer on a header action, whose
+  // explainer then shows beside the tour. The tour stays on top of it, so
+  // its Next is never covered.
+  await page.getByText('Add a token', { exact: true }).hover();
+  await expect(page.locator('.tooltip')).toBeVisible();
+  // Where they overlap depends on fonts and layout, so compare the stacking
+  // order itself: on CI the tooltip's edge once covered Next and swallowed
+  // the click.
+  const z = (sel: string) => page.locator(sel).first().evaluate((el) => Number(getComputedStyle(el).zIndex));
+  expect(await z('.popover.tour-popover')).toBeGreaterThan(await z('.tooltip'));
   await pop.getByRole('button', { name: 'Next' }).click();
   await expect(pop.locator('.popover-header')).toHaveText(/\(2 of \d+\)$/);
   await pop.getByRole('button', { name: 'Back' }).click();
