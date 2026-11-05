@@ -55,6 +55,14 @@ func Listen(listen ListenFunc, host string, port int, pinned bool, attempts int)
 			return nil, fmt.Errorf("port %d is already in use; pick another with --port, or omit --port to take the next free one: %w", p, err)
 		}
 	}
+	// Every port in the range is taken. Rather than fail, ask the OS for any
+	// free port: the caller prints the address actually bound, so nothing is
+	// lost but a memorable number. Only an unpinned search gets here.
+	if attempts > 1 {
+		if ln, err := listen("tcp", net.JoinHostPort(host, "0")); err == nil {
+			return ln, nil
+		}
+	}
 	return nil, fmt.Errorf("ports %d-%d are all in use: %w", port, port+attempts-1, first)
 }
 

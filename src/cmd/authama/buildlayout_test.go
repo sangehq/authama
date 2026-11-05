@@ -15,6 +15,12 @@ var buildEntries = map[string]bool{
 	"macos": true, "linux": true, "windows": true, "freebsd": true, "openbsd": true, "netbsd": true,
 }
 
+// osMetadata are files a desktop writes into any folder it shows - Finder's
+// .DS_Store, Explorer's desktop.ini and Thumbs.db. Opening build/ to
+// double-click a binary makes them; no tool of ours does, so they are not
+// layout drift.
+var osMetadata = map[string]bool{".DS_Store": true, "desktop.ini": true, "Thumbs.db": true}
+
 func repoTop(t *testing.T) string {
 	t.Helper()
 	module, err := filepath.Abs(filepath.Join("..", ".."))
@@ -72,6 +78,9 @@ func TestBuildHoldsOneFolderPerOSAndNothingElse(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, e := range entries {
+		if osMetadata[e.Name()] {
+			continue
+		}
 		if !buildEntries[e.Name()] {
 			t.Errorf("build/%s is not one of the OS folders, archives/, checksums.txt or the tracked inputs", e.Name())
 			continue
@@ -84,7 +93,7 @@ func TestBuildHoldsOneFolderPerOSAndNothingElse(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, f := range inner {
-			if f.IsDir() {
+			if f.IsDir() && !osMetadata[f.Name()] {
 				t.Errorf("build/%s/%s is a folder; an OS folder holds binaries only", e.Name(), f.Name())
 			}
 		}

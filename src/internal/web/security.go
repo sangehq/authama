@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -173,6 +174,15 @@ func (s *Server) auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/assets/") {
 			next.ServeHTTP(w, r)
+			return
+		}
+		// /healthz answers without a session: `authama serve` asks it whether
+		// the server its record names is the one still listening. It says only
+		// that this is authama and which instance - a random id, no state.
+		if r.URL.Path == "/healthz" && (r.Method == http.MethodGet || r.Method == http.MethodHead) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Cache-Control", "no-store")
+			_, _ = fmt.Fprintf(w, `{"app":"authama","instance":%q}`+"\n", s.opts.Instance)
 			return
 		}
 		tok := r.URL.Query().Get("token")
