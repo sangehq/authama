@@ -267,6 +267,10 @@
                     "integer",
                     "null"
                   ]
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Adopt the key where it already is: the private key's path relative to ~/.ssh (forward slashes). authama never moves or deletes it."
                 }
               }
             }

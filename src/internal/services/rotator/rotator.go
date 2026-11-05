@@ -192,7 +192,10 @@ func (r *Rotator) Rotate(selector string, allowUnverified bool, passphrase strin
 		return r.rotateOnePassword(profile, keyName, hosts, allowUnverified)
 	}
 	pdir := r.dir(profile)
-	curPriv := filepath.Join(pdir, keyName)
+	// KeyPath, not the profile directory: an adopted key lives where the user
+	// keeps it, and its successor goes to the same path.
+	keyRef := manifest.KeyRef{Profile: profile, KeyName: keyName}
+	curPriv := r.m.KeyPath(r.p.SSHDir, keyRef)
 	curPub := curPriv + ".pub"
 	if !exists(curPriv) {
 		return RotateReport{}, fmt.Errorf("key not present: %s - run `authama ssh reconcile` first", curPriv)
@@ -288,7 +291,7 @@ func (r *Rotator) Rotate(selector string, allowUnverified bool, passphrase strin
 	// renamed *over* the canonical path - which POSIX defines as atomic. A crash
 	// between any two steps leaves a complete, working key behind, and a failure
 	// puts back whatever had already moved.
-	oldDir := filepath.Join(pdir, "old")
+	oldDir := manifest.ArchiveDir(r.m, r.p.SSHDir, keyRef)
 	if err := fs.EnsureDir(oldDir, perms.DirMode); err != nil {
 		return RotateReport{}, fmt.Errorf("could not prepare the archive directory, so the rotation "+
 			"was not committed (the active key is untouched): %w", err)
@@ -397,13 +400,13 @@ func (r *Rotator) Rollback(selector string) (RotateReport, error) {
 	if r.m.Profiles[profile].InOnePassword() {
 		return r.rollbackOnePassword(profile, keyName, hosts)
 	}
-	pdir := r.dir(profile)
-	oldPriv := filepath.Join(pdir, "old", keyName)
+	keyRef := manifest.KeyRef{Profile: profile, KeyName: keyName}
+	oldPriv := filepath.Join(manifest.ArchiveDir(r.m, r.p.SSHDir, keyRef), keyName)
 	oldPub := oldPriv + ".pub"
 	if !exists(oldPriv) {
 		return RotateReport{}, fmt.Errorf("no /old/ predecessor to roll back to for %q", keyName)
 	}
-	curPriv := filepath.Join(pdir, keyName)
+	curPriv := r.m.KeyPath(r.p.SSHDir, keyRef)
 	curPub := curPriv + ".pub"
 
 	report := RotateReport{KeyName: keyName}

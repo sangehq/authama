@@ -306,7 +306,7 @@ func (s *Service) DeleteKey(ref manifest.KeyRef, opt Options) (Result, error) {
 	// No config re-render and no known_hosts pruning: a deletable key is by
 	// definition wired to no host, so neither the rendered config nor any pin
 	// mentions it.
-	if err := s.purgeOrKeep(&res, s.keyFiles(row), m.ProfileDir(s.p.SSHDir, ref.Profile), opt); err != nil {
+	if err := s.purgeOrKeep(&res, s.keyFiles(m, row), m.ProfileDir(s.p.SSHDir, ref.Profile), opt); err != nil {
 		return res, err
 	}
 	return res, nil
@@ -407,7 +407,7 @@ func (s *Service) profileKeyFiles(m *manifest.Manifest, profile string) ([]strin
 		if row.Ref.Profile != profile {
 			continue
 		}
-		files = append(files, s.keyFiles(row)...)
+		files = append(files, s.keyFiles(m, row)...)
 	}
 	return files, nil
 }
@@ -423,13 +423,19 @@ func (s *Service) filesFor(m *manifest.Manifest, ref manifest.KeyRef) ([]string,
 	if err != nil {
 		return nil, err
 	}
-	return s.keyFiles(row), nil
+	return s.keyFiles(m, row), nil
 }
 
 // keyFiles lists the paths one key can occupy: the pair, and the predecessor
 // pair a rotation parked in old/.
-func (s *Service) keyFiles(row keysvc.Row) []string {
-	old := filepath.Join(filepath.Dir(row.PrivatePath), "old", filepath.Base(row.PrivatePath))
+//
+// An adopted key's own pair is the user's file where they keep it, not
+// authama's: a purge never lists it, only the predecessors authama archived.
+func (s *Service) keyFiles(m *manifest.Manifest, row keysvc.Row) []string {
+	old := filepath.Join(manifest.ArchiveDir(m, s.p.SSHDir, row.Ref), row.Ref.KeyName)
+	if manifest.AdoptedPath(m, row.Ref) != "" {
+		return []string{old, old + ".pub"}
+	}
 	return []string{row.PrivatePath, row.PublicPath, old, old + ".pub"}
 }
 

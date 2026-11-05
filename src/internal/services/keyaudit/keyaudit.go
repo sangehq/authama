@@ -372,10 +372,23 @@ var managedInSSHDir = map[string]bool{
 func (s *Service) loose() []Finding {
 	keys := LooseKeys(s.sshDir)
 	res, _ := Reservations(s.m, s.planned)
+	adopted := map[string]bool{}
+	if s.m != nil {
+		for _, pname := range s.m.ProfileNames() {
+			for _, k := range s.m.Profiles[pname].Keys {
+				if k.Path != "" {
+					adopted[k.Path] = true
+				}
+			}
+		}
+	}
 	out := make([]Finding, 0, len(keys))
 	for _, k := range keys {
 		if _, kept := res[k.Name]; kept {
 			continue // reported as a reservation instead
+		}
+		if adopted[k.Name] {
+			continue // a declared key adopted where it is: tracked, not loose
 		}
 		f := Finding{State: Loose, Subject: k.Name,
 			Detail: "a key in ~/.ssh that no Host block uses",

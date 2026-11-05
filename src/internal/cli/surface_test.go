@@ -120,6 +120,7 @@ var goOnly = map[string]string{
 	"owner pin reset":        "owner binding - replace a forgotten PIN by proving the OS account",
 	"owner pin remove":       "owner binding - turn the PIN off",
 	"owner fingerprint":      "owner binding - fingerprint unlock through fprintd",
+	"key adopt":              "key layout - manage a key where it already is in ~/.ssh",
 	"repair":                 "repair - find and fix what is wrong with the home, ~/.ssh and the token files",
 	"reset":                  "factory reset - move the home aside, kept, and start again",
 	"key lifetime --default": "key lifecycle - the lifetime every key without its own inherits",

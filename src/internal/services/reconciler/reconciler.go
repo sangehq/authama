@@ -567,7 +567,7 @@ func (r *Reconciler) mintOne(pk plannedKey, passphrase string, overwrite bool) (
 		gen, err = r.mintInOnePassword(ref, priv+".pub", overwrite)
 		keyType = "ed25519" // what 1Password generates
 	} else {
-		gen, err = r.ks.Generate(priv, keyType, comment, passphrase, overwrite)
+		gen, err = r.ks.WithArchive(manifest.ArchiveDir(r.m, r.p.SSHDir, ref), ref.KeyName).Generate(priv, keyType, comment, passphrase, overwrite)
 	}
 	if err != nil {
 		return MintedKey{}, err
