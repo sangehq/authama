@@ -68,6 +68,7 @@ Every command also takes the global flag:
   - [`authama ssh import`](#authama-ssh-import) - Onboard an existing ssh setup - a config file or any folder of them - into the manifest
   - [`authama ssh key`](#authama-ssh-key) - Manage a profile's keys (add/list/delete)
     - [`authama ssh key add`](#authama-ssh-key-add) - Declare a key on a profile and mint it
+    - [`authama ssh key adopt`](#authama-ssh-key-adopt) - Manage a key where it already is in ~/.ssh, without moving or renaming it
     - [`authama ssh key delete`](#authama-ssh-key-delete) - Delete a key (refuses while a host uses it)
     - [`authama ssh key lifetime`](#authama-ssh-key-lifetime) - Set how long a key lives before rotation is due, and count its expiry again
     - [`authama ssh key list`](#authama-ssh-key-list) - Every key with its fingerprint, expiry, hosts and state
@@ -1238,6 +1239,7 @@ authama ssh key
 Subcommands:
 
 - [`add`](#authama-ssh-key-add) - Declare a key on a profile and mint it
+- [`adopt`](#authama-ssh-key-adopt) - Manage a key where it already is in ~/.ssh, without moving or renaming it
 - [`delete`](#authama-ssh-key-delete) - Delete a key (refuses while a host uses it)
 - [`lifetime`](#authama-ssh-key-lifetime) - Set how long a key lives before rotation is due, and count its expiry again
 - [`list`](#authama-ssh-key-list) - Every key with its fingerprint, expiry, hosts and state
@@ -1272,6 +1274,35 @@ Flags:
       --passphrase              protect the new key (prompts without echo)
       --rotate-after-days int   rotation interval for this key (default: the manifest's defaults.rotate_after_days)
       --type string             key algorithm (default: the manifest's defaults.key_type)
+```
+
+## authama ssh key adopt
+
+Declares an existing private key - ~/.ssh/id_ed25519, ~/.ssh/work/deploy_key -
+as a profile's key, and records it. authama then renders, deploys, rotates and
+audits it like any other, at its own path: it never moves, renames or deletes
+the file. Rotation archives the outgoing pair in the profile's old/ and writes
+the successor to the same path, so other tools keep finding it.
+
+<path> is relative to ~/.ssh (a leading ~/.ssh/ is accepted). --host wires it
+to a host in the profile.
+
+```
+authama ssh key adopt <profile/key> <path> [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh key adopt personal/github ~/.ssh/id_ed25519 --host github-personal
+  authama ssh key adopt work/deploy work/deploy_key
+```
+
+Flags:
+
+```
+      --host string   wire the key to this host in the profile
+  -y, --yes           skip the confirmation prompt
 ```
 
 ## authama ssh key delete
