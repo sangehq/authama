@@ -80,13 +80,12 @@ archive globbing will not climb out of its own working directory to reach
 LICENSE and README. And `build-all.sh` runs from the module - `go build` needs
 that - while writing into the repo-root `build/`.
 
-Three third-party dependencies, each a recorded decision: `github.com/spf13/cobra` for the command
+Four third-party dependencies, each a recorded decision: `github.com/spf13/cobra` for the command
 line, `modernc.org/sqlite` for the operation history (pure Go, so `CGO_ENABLED=0` still builds every
-target), and `golang.org/x/sys`, which sqlite already linked and which the owner binding uses
-directly for the Windows registry and DPAPI. That is asserted, not aspirational - cmd/authama's
-layering test fails on any other module, so there is nowhere for a presentation or HTTP library to
-hide. It is also why the owner PIN is hashed with the standard library's PBKDF2 rather than
-Argon2id, which would need `golang.org/x/crypto`.
+target), `golang.org/x/sys`, which sqlite already linked and which the owner binding uses directly
+for the Windows registry and DPAPI, and `golang.org/x/crypto` for the owner PIN's Argon2id hash.
+That is asserted, not aspirational - cmd/authama's layering test fails on any other module, so
+there is nowhere for a presentation or HTTP library to hide.
 
 ## Auth tokens
 

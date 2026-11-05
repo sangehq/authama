@@ -19,6 +19,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The owner PIN is hashed with Argon2id** (t=3, 64 MiB, p=4), memory-hard where PBKDF2 costs only
+  time. A PIN set by an earlier release still unlocks and is rehashed as Argon2id the next time it
+  is given correctly. This links `golang.org/x/crypto`, a fourth recorded dependency.
 - **`build/` holds one folder per OS and nothing else.** `make build` writes
   `build/<your-os>/authama` (`build/macos/authama`, `build/windows/authama.exe` - which also fixes
   `make install` on Windows, which looked for an `.exe` the build never wrote); `make cross` writes

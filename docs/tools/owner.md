@@ -70,8 +70,8 @@ of being acted on.
 ## The PIN
 
 A PIN is 6 to 128 characters: digits, or a passphrase. A run such as `123456`, or one repeated
-character, is refused. It is stored only as a salted PBKDF2-HMAC-SHA256 hash at 600,000 iterations,
-in `owner.json`.
+character, is refused. It is stored only as a salted Argon2id hash (t=3, 64 MiB, p=4, RFC 9106's
+second recommended setting), in `owner.json`.
 
 With a PIN set:
 
@@ -94,11 +94,13 @@ from this account's own credential store (on macOS the Keychain may ask for your
 and run on the machine the home was bound on. That is the proof that you are the account the home
 belongs to. The reset is on the record, and any lockout is cleared.
 
-### Why PBKDF2 and not Argon2id
+### Why Argon2id
 
-Argon2id is the stronger choice for a password hash, but the Go standard library does not have it,
-and the binary links no dependency that is not a recorded decision. The stored hash names its
-algorithm and cost, so a later release can add Argon2id and rehash a PIN the next time it is given.
+Argon2id is memory-hard: every guess at a stolen hash costs 64 MiB of memory as well as time, which
+is what makes a GPU or an ASIC slow at it, where an iterated hash such as PBKDF2 costs only time.
+A PIN set by an earlier release is a PBKDF2-HMAC-SHA256 hash at 600,000 iterations; it still
+unlocks, and the next time it is given correctly it is rehashed as Argon2id. The stored hash names
+its algorithm and cost, so this can change again without invalidating anyone's PIN.
 
 ## Fingerprint unlock
 

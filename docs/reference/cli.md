@@ -447,7 +447,7 @@ Examples:
 
 A PIN is at least 6 characters: digits, or a passphrase of up to 128. A run such
 as 123456 or one repeated character is refused. It is stored only as a salted
-PBKDF2-SHA256 hash.
+Argon2id hash.
 
 ```
 authama owner pin set

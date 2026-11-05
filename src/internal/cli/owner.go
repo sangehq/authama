@@ -227,7 +227,7 @@ func newOwnerPINCmd() *cobra.Command {
 		Short: "Set a PIN, or change the one set (asks for it first)",
 		Long: "A PIN is at least 6 characters: digits, or a passphrase of up to 128. A run such\n" +
 			"as 123456 or one repeated character is refused. It is stored only as a salted\n" +
-			"PBKDF2-SHA256 hash.",
+			"Argon2id hash.",
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			p, err := resolvePaths(c)

@@ -197,6 +197,10 @@ func TestTheBinaryLinksOnlyItsTwoChosenDependencies(t *testing.T) {
 		"github.com/mattn/go-isatty":           true,
 		"github.com/ncruces/go-strftime":       true,
 		"golang.org/x/sys":                     true,
+		// The owner PIN's Argon2id hash (golang.org/x/crypto/argon2), the
+		// owner's decision of 2026-11-05: memory-hard where the standard
+		// library offers only PBKDF2.
+		"golang.org/x/crypto": true,
 	}
 	var linked []string
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
