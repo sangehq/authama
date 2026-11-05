@@ -593,6 +593,11 @@ the app - never piles servers up. --new starts another anyway; --status says
 whether one is running and where; --stop stops it. When every port from the
 default up is taken, any free port is used.
 
+web.addr, web.port and web.base_path in authama.json (or AUTHAMA_WEB_ADDR,
+AUTHAMA_WEB_PORT, AUTHAMA_WEB_BASE_PATH) change the defaults: a configured port
+falls back to the next free one like the default, and web.base_path serves the
+UI under a path such as /authama, for a reverse proxy. --addr and --port win.
+
 A non-loopback --addr is refused unless --allow-remote is passed. Prefer an SSH
 tunnel: ssh -L 7822:127.0.0.1:7822 <host>.
 

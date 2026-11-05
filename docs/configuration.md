@@ -476,7 +476,8 @@ every setting stays at its default until you add it.
   "git":     { "mode": "profile" },
   "tokens":  { "docker_creds_store": "refuse" },
   "notifications": { "desktop": true },
-  "vm":      { "hypervisors": "parallels,vmpal", "prune_gone": true, "repin_changed": false }
+  "vm":      { "hypervisors": "parallels,vmpal", "prune_gone": true, "repin_changed": false },
+  "web":     { "addr": "127.0.0.1", "port": 7822, "base_path": "/" }
 }
 ```
 
@@ -497,6 +498,9 @@ every setting stays at its default until you add it.
 | `vm.hypervisors` | `AUTHAMA_VM_HYPERVISORS` | every built-in driver and every custom one |
 | `vm.prune_gone` | `AUTHAMA_VM_PRUNE_GONE` | `true` (`ssh vm sync` removes the host of a VM that is gone) |
 | `vm.repin_changed` | `AUTHAMA_VM_REPIN` | `false` (`ssh vm sync` reports a changed guest host key) |
+| `web.addr` | `AUTHAMA_WEB_ADDR` | `127.0.0.1` (a non-loopback address still needs `--allow-remote`) |
+| `web.port` | `AUTHAMA_WEB_PORT` | `7822` (the next free port is used when it is taken; only `--port` makes that an error) |
+| `web.base_path` | `AUTHAMA_WEB_BASE_PATH` | `/` (serve the UI under a path such as `/authama`; see [tools/serve.md](tools/serve.md#address)) |
 
 Two sections are not settings but declarations: `hypervisors` adds a command driver for a VM tool
 authama has no driver for, and `devboxes` names the VM hosts `ssh vm sync` keeps (a devbox without `vm` only keeps its key reserved). Both are described,

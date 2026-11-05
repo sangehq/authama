@@ -57,6 +57,25 @@ owns the port, which a single-user tool should not need. A name like `http://aut
 resolves in Chrome and Firefox but not through the macOS system resolver (Safari, `curl`, scripts),
 so it is not used as the default.
 
+### <a name="address"></a>Choosing the address
+
+The default address is `http://127.0.0.1:7822/`. Three settings in `authama.json` change it, each
+also an environment variable; `--addr` and `--port` on the command line win over them:
+
+```json
+{ "web": { "addr": "127.0.0.1", "port": 7900, "base_path": "/authama" } }
+```
+
+| Setting | Variable | What it does |
+|---|---|---|
+| `web.addr` | `AUTHAMA_WEB_ADDR` | The address to listen on. A non-loopback one still needs `--allow-remote`. |
+| `web.port` | `AUTHAMA_WEB_PORT` | The port to try first. When it is taken the next free one is used, as with the default; only `--port` turns a taken port into an error. |
+| `web.base_path` | `AUTHAMA_WEB_BASE_PATH` | A path to serve the UI under, such as `/authama`, so it can sit behind a reverse proxy beside other sites: `http://127.0.0.1:7900/authama/`. |
+
+With a base path every link, form, asset, redirect and the session cookie carry it; `/` sends you to
+it, and any other path outside it is not found. Letters, digits and `. _ ~ -` between slashes are
+accepted. A running server is reused only when its base path is the one asked for.
+
 ## Pages
 
 The layout is Tabler's. The header holds the name, a theme toggle (light or dark), a bell listing the
