@@ -231,3 +231,41 @@ func TestResealRefusesAHomeBoundElsewhere(t *testing.T) {
 }
 
 func containsStr(s, sub string) bool { return strings.Contains(s, sub) }
+
+// A PIN is only worth setting where it can be reset: Recoverable says so
+// while the key is readable, and not once it is gone.
+func TestRecoverableNeedsTheKey(t *testing.T) {
+	p := home(t)
+	if err := Recoverable(p); !errors.Is(err, ErrNotSetUp) {
+		t.Fatalf("unbound: %v", err)
+	}
+	if _, err := Init(p, t0); err != nil {
+		t.Fatal(err)
+	}
+	if err := Recoverable(p); err != nil {
+		t.Fatalf("bound: %v", err)
+	}
+	if err := (fileStore{p}).Remove(); err != nil {
+		t.Fatal(err)
+	}
+	if err := Recoverable(p); err == nil {
+		t.Fatal("no key, and still called recoverable")
+	}
+}
+
+// Forget removes owner.json first, so a home is never left bound without
+// the key that resets its PIN.
+func TestForgetUnbindsBeforeRemovingTheKey(t *testing.T) {
+	p := home(t)
+	if _, err := Init(p, t0); err != nil {
+		t.Fatal(err)
+	}
+	// The key is already gone (removed by hand): forget still unbinds.
+	_ = (fileStore{p}).Remove()
+	if err := Forget(p); err != nil {
+		t.Fatalf("forget with the key missing: %v", err)
+	}
+	if c, _ := Load(p); c != nil {
+		t.Fatal("still bound")
+	}
+}

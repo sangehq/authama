@@ -1,23 +1,27 @@
 {{define "content"}}{{with .Data}}
-{{template "page_header" (header "Security" "Owner & PIN" "Whether this home is bound to you and this machine, whether a PIN guards it, and whether its files are as authama left them.")}}
 {{if not .State.SetUp}}
+{{template "page_header" (header "Security" "Owner & PIN" "Bind this home to you and this machine, guard it with a PIN, and notice files changed outside authama.")}}
 <div class="card">
   <div class="card-body">
     <h2 class="card-title">{{icon "lock-open"}}<span class="ms-1">Not bound</span></h2>
-    <p class="text-secondary">This home has no owner. Binding it keeps a sealing key in your OS's credential store, seals the state files, and lets you set a PIN that this page asks for at sign-in and before every change.</p>
-    <p class="mb-1">Run these in a terminal on this machine: they prove your OS account, which a browser cannot.</p>
+    <p class="text-secondary">Binding keeps a sealing key in your OS's credential store and seals the state files, so a file changed outside authama, or this home copied to another account or machine, is named the next time authama runs. Then you can set a PIN, which this page asks for at sign-in and before every change.</p>
+    {{if not $.ReadOnly}}{{template "change_open" $}}<input type="hidden" name="action" value="owner-init">
+      <button type="submit" class="btn btn-primary">{{icon "lock"}}<span class="ms-1">Preview binding this home</span></button>
+    </form>{{end}}
+    <p class="text-secondary small mt-3 mb-1">Or at a terminal:</p>
     {{template "command_line" "authama owner init"}}
-    {{template "command_line" "authama owner pin set"}}
   </div>
 </div>
 {{else}}
+{{$c := .State.Config}}
+{{template "page_header" (header "Security" "Owner & PIN" "Whether this home is bound to you and this machine, whether a PIN guards it, and whether its files are as authama left them." (only (not $.ReadOnly) (panel (printf "%s" (or (and $c.HasPIN "Change the PIN") "Set a PIN")) "pin-set" "lock")) (only (and (not $.ReadOnly) $c.HasPIN) (panel "Remove the PIN" "pin-remove" "lock-open")) (only (not $.ReadOnly) (panel "Unbind this home" "forget" "trash")))}}
 <div class="row row-cards">
   <div class="col-lg-5">
     <div class="card">
       <div class="card-header"><h2 class="card-title">Binding</h2></div>
       <div class="card-body">
         <dl class="row mb-0">
-          {{with .State.Config}}
+          {{with $c}}
           <dt class="col-5">Bound since</dt><dd class="col-7">{{.Created.Local.Format "2006-01-02 15:04"}}</dd>
           <dt class="col-5">Key kept in {{template "help" (help "Key store" "Where the sealing key lives: the macOS Keychain, the Secret Service on Linux, DPAPI on Windows, or an owner-only file. It never leaves that store but into authama's memory.")}}</dt><dd class="col-7"><code>{{.Store}}</code></dd>
           <dt class="col-5">PIN</dt><dd class="col-7">{{if .HasPIN}}<span class="badge badge-ok">set</span> <span class="text-secondary small">since {{.PINSet.Local.Format "2006-01-02"}}</span>{{else}}<span class="badge badge-warn">not set</span>{{end}}</dd>
@@ -25,6 +29,11 @@
           {{end}}
         </dl>
       </div>
+      {{if and (not $.ReadOnly) $.Data.Biometric $c.HasPIN}}<div class="card-footer">
+        {{template "change_open" $}}<input type="hidden" name="action" value="owner-fingerprint"><input type="hidden" name="on" value="{{if $c.Biometric}}{{else}}1{{end}}">
+          <button type="submit" class="btn btn-sm btn-outline-secondary">{{icon "fingerprint"}}<span class="ms-1">{{if $c.Biometric}}Turn fingerprint unlock off{{else}}Turn fingerprint unlock on{{end}}</span></button>
+        </form>
+      </div>{{end}}
     </div>
   </div>
   <div class="col-lg-7">
@@ -32,26 +41,50 @@
       <div class="card-header"><h2 class="card-title">Seal</h2>{{if .State.Clean}}<span class="ms-2 badge badge-ok">{{icon "circle-check"}}<span class="ms-1">matches</span></span>{{else}}<span class="ms-2 badge badge-bad">{{icon "alert-triangle"}}<span class="ms-1">changed</span></span>{{end}}</div>
       <div class="card-body">
         <p>{{if .State.Clean}}Every sealed file is as authama last left it.{{else}}{{.State.Describe}}.{{end}}</p>
-        {{if .State.Report.Findings}}<table class="table table-sm mb-3"><thead><tr><th scope="col">File</th><th scope="col">State</th></tr></thead><tbody>{{range .State.Report.Findings}}<tr><td><code>{{.Name}}</code></td><td><span class="badge {{if eq (print .Status) "changed"}}badge-warn{{else}}badge-bad{{end}}">{{.Status}}</span></td></tr>{{end}}</tbody></table>{{end}}
-        <p class="text-secondary small mb-2">Sealed: {{range $i, $f := .Files}}{{if $i}}, {{end}}<code>{{$f}}</code>{{end}}.</p>
-        {{if not .State.Clean}}<p class="mb-1">If you made the change yourself, accept it at a terminal:</p>{{template "command_line" "authama owner reseal"}}{{end}}
+        {{if .State.Report.Findings}}<div class="table-responsive" tabindex="0"><table class="table table-sm mb-3"><thead><tr><th scope="col">File</th><th scope="col">State</th></tr></thead><tbody>{{range .State.Report.Findings}}<tr><td><code>{{.Name}}</code></td><td><span class="badge {{if eq (print .Status) "changed"}}badge-warn{{else}}badge-bad{{end}}">{{.Status}}</span></td></tr>{{end}}</tbody></table></div>{{end}}
+        <p class="text-secondary small mb-0">Sealed: {{range $i, $f := .Files}}{{if $i}}, {{end}}<code>{{$f}}</code>{{end}}.</p>
       </div>
+      {{if and (not .State.Clean) (not $.ReadOnly)}}<div class="card-footer d-flex flex-wrap align-items-center gap-2">
+        <span class="text-secondary small me-auto">If you made the change yourself, accept it. If you did not, find out what did first: accepting seals whatever is there now.</span>
+        {{template "change_open" $}}<input type="hidden" name="action" value="owner-reseal"><button type="submit" class="btn btn-sm btn-outline-primary">Preview accepting it</button></form>
+      </div>{{end}}
     </div>
   </div>
   <div class="col-12">
     <div class="card">
-      <div class="card-header"><h2 class="card-title">At a terminal</h2></div>
+      <div class="card-header"><h2 class="card-title">If you forget the PIN</h2></div>
       <div class="card-body">
-        <p class="text-secondary">Changing the binding proves your OS account, so it is done at a terminal on this machine, never from a browser.</p>
-        <div class="row g-3">
-          <div class="col-md-6">{{template "command_line" "authama owner pin set"}}</div>
-          <div class="col-md-6">{{template "command_line" "authama owner pin reset"}}</div>
-          <div class="col-md-6">{{template "command_line" "authama owner verify"}}</div>
-          <div class="col-md-6">{{template "command_line" "authama owner status"}}</div>
-        </div>
+        <p class="text-secondary">A forgotten PIN is replaced at a terminal on this machine: the reset reads the sealing key from your account's own credential store, which is how it knows you are you, and it needs no old PIN. A browser cannot prove that, so this page never resets a PIN. A PIN is only set when this reset would work, so it cannot lock you out.</p>
+        {{template "command_line" "authama owner pin reset"}}
       </div>
     </div>
   </div>
 </div>
+{{if not $.ReadOnly}}
+{{template "panel_open" (header "pin-set" (or (and $c.HasPIN "Change the PIN") "Set a PIN") "At least 6 characters: digits, or a passphrase. A run such as 123456 or one repeated character is refused.")}}
+  {{template "change_open" $}}<input type="hidden" name="action" value="owner-pin-set">
+    {{if $c.HasPIN}}<div class="mb-3"><label class="form-label" for="pin-current">Current PIN</label><input class="form-control" type="password" id="pin-current" name="pin_current" required autocomplete="current-password" maxlength="128"></div>{{end}}
+    <div class="mb-3"><label class="form-label" for="pin-new">New PIN</label><input class="form-control" type="password" id="pin-new" name="pin_new" required minlength="6" maxlength="128" autocomplete="new-password"></div>
+    <div class="mb-3"><label class="form-label" for="pin-confirm">New PIN again</label><input class="form-control" type="password" id="pin-confirm" name="pin_confirm" required minlength="6" maxlength="128" autocomplete="new-password"></div>
+    <label class="form-check mb-3"><input class="form-check-input" type="checkbox" required><span class="form-check-label">I know a forgotten PIN is reset with <code>authama owner pin reset</code> at a terminal on this machine.</span></label>
+    <p class="text-secondary small">The preview checks that the reset would work before anything is set. Only a salted hash of the PIN is stored; this page never shows it.</p>
+    {{template "panel_actions" ""}}
+  </form>
+{{template "panel_close"}}
+{{if $c.HasPIN}}
+{{template "panel_open" (header "pin-remove" "Remove the PIN" "Sign-in and changes stop asking for a PIN, and fingerprint unlock goes with it.")}}
+  {{template "change_open" $}}<input type="hidden" name="action" value="owner-pin-remove">
+    <div class="mb-3"><label class="form-label" for="pin-remove-current">Current PIN</label><input class="form-control" type="password" id="pin-remove-current" name="pin_current" required autocomplete="current-password" maxlength="128"></div>
+    {{template "panel_actions" ""}}
+  </form>
+{{template "panel_close"}}
+{{end}}
+{{template "panel_open" (header "forget" "Unbind this home" "Removes owner.json, the seal and the PIN, then the sealing key. Every other file stays: the manifest, keys, tokens and history.")}}
+  {{template "change_open" $}}<input type="hidden" name="action" value="owner-forget">
+    <div class="mb-3"><label class="form-label" for="forget-confirm">Type <code>forget</code> to confirm</label><input class="form-control" id="forget-confirm" name="confirm" required pattern="forget" autocomplete="off" spellcheck="false"></div>
+    {{template "panel_actions" "btn-outline-danger"}}
+  </form>
+{{template "panel_close"}}
+{{end}}
 {{end}}
 {{end}}{{end}}

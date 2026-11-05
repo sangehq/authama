@@ -154,9 +154,15 @@ func Init(p paths.Paths, now time.Time) (*Config, error) {
 	}
 	c := &Config{Version: ConfigVersion, Binding: b.ID(), Store: st.Name(), Created: now.UTC()}
 	if err := save(p, c); err != nil {
+		// No owner.json means no binding: take the key back out, so a failed
+		// init leaves nothing behind that a later one would trip over.
+		_ = st.Remove()
 		return nil, err
 	}
-	return c, sealWith(p, key, b, now)
+	if err := sealWith(p, key, b, now); err != nil {
+		return c, fmt.Errorf("bound, but the first seal was not written (%w); `authama owner reseal` writes it", err)
+	}
+	return c, nil
 }
 
 // Forget unbinds the home: the key leaves the store, owner.json and the seal
@@ -169,14 +175,20 @@ func Forget(p paths.Paths) error {
 	if c == nil {
 		return ErrNotSetUp
 	}
-	st := storeNamed(p, c.Store)
-	if err := st.Remove(); err != nil && !errors.Is(err, ErrNoKey) {
-		return fmt.Errorf("removing the sealing key from %s: %w", st.Name(), err)
+	// owner.json goes first: without it the home is unbound, so a forget
+	// that stops part-way leaves a home that works without a PIN, never one
+	// that asks for a PIN it can no longer reset because the key is gone.
+	if err := os.Remove(ConfigPath(p)); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
 	}
-	for _, f := range []string{ConfigPath(p), SealPath(p), attemptsPath(p)} {
+	for _, f := range []string{SealPath(p), attemptsPath(p)} {
 		if err := os.Remove(f); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
+	}
+	st := storeNamed(p, c.Store)
+	if err := st.Remove(); err != nil && !errors.Is(err, ErrNoKey) {
+		return fmt.Errorf("unbound, but the sealing key was not removed from %s: %w", st.Name(), err)
 	}
 	return nil
 }
@@ -203,6 +215,18 @@ func unlock(p paths.Paths) (*Config, []byte, seal.Binding, error) {
 		return nil, nil, seal.Binding{}, fmt.Errorf("reading the sealing key from %s: %w", c.Store, err)
 	}
 	return c, key, b, nil
+}
+
+// Recoverable reports why a forgotten PIN could not be reset here, or nil:
+// the reset reads the sealing key from this account's store on the bound
+// machine, so both must hold before a PIN is set, or setting one could lock
+// the owner out for good.
+func Recoverable(p paths.Paths) error {
+	_, _, _, err := unlock(p)
+	if err != nil {
+		return fmt.Errorf("a forgotten PIN could not be reset: %w", err)
+	}
+	return nil
 }
 
 // SetPIN sets the PIN, or changes it: with one set, current must match it.
