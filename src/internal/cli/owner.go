@@ -417,6 +417,7 @@ func requireOwner(c *cobra.Command, p paths.Paths, why string) error {
 var destructiveVerbs = map[string]bool{
 	"delete": true, "revoke": true, "rotate": true, "rollback": true, "restore": true,
 	"prune": true, "clean": true, "recover": true, "deploy": true, "uninstall": true,
+	"reset": true,
 }
 
 // isDestructive reports whether c is one the PIN gates. `keygen --force`

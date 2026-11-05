@@ -111,6 +111,7 @@ Events) and **System** (Doctor, Settings, About). On a narrow screen it folds be
 | Events | every change seen to a tracked file, with the authama operation that made it, as [`authama events`](events.md) lists them; filtered by area |
 | About | this build (version, commit, Go, platform), the user and machine it runs as, where it keeps things, links to the documentation and the source, and the third-party licences of the bundled front-end assets |
 | Owner & PIN | whether the home is [bound to its owner](owner.md), where the sealing key is kept, whether a PIN and fingerprint unlock are on, and whether the sealed files match, naming each one changed outside authama. Changing any of it is done at a terminal, which proves the OS account; the page shows the commands |
+| Repair | what is wrong with the home, `~/.ssh` and the token files, the fixes made as one previewed change, and a factory reset; see [repair](repair.md) |
 | Settings | the colour theme (light, dark, or following the system); where the config home, state home, `.env` and `authama.json` are, every setting's value in effect and where it came from, and what `authama settings validate` reports, as `settings path`, `settings show --effective` and `settings validate` print them. The values are those the server started with |
 | Third-party licences | the licences of the web UI's bundled front-end assets (Tabler, Tabler Icons, Bootstrap, Popper), at `/about/licenses` |
 

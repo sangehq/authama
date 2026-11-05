@@ -14,6 +14,8 @@ import (
 // command covered and every line here a valid invocation.
 var commandExamples = map[string][]string{
 	"owner status":      {"owner status"},
+	"repair":            {"repair", "repair --check   # CI: exit non-zero when anything is wrong", "repair --area ssh --yes"},
+	"reset":             {"reset", "reset --confirm reset   # a script"},
 	"owner init":        {"owner init", "owner init --yes"},
 	"owner verify":      {"owner verify   # exits non-zero when a file changed outside authama"},
 	"owner reseal":      {"owner reseal   # after editing tokens.json by hand"},

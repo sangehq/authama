@@ -47,6 +47,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`authama repair`** finds what is wrong with the home, `~/.ssh` and the token files and fixes
+  what is safe: missing directories, a corrupt history database (renamed aside, kept), files a
+  crashed command left, wrong modes, missing `.pub` files, a drifted `~/.ssh/config`, and token
+  files others can read. What it cannot fix safely - an unreadable manifest, a changed seal - it
+  reports with the command that deals with it. `--check` is for CI. The web UI's new Repair page
+  does the same as a previewed change.
+- **`authama reset`**, a factory reset that deletes nothing: it unbinds the owner, then renames the
+  config and state homes aside; `~/.ssh` is not touched. It asks for the word "reset", and the PIN
+  when one is set. Also on the Repair page.
+- **The owner binding from the web UI**: bind the home, set, change or remove the PIN, toggle
+  fingerprint unlock, accept outside changes and unbind, on the Owner & PIN page. A PIN is only
+  set when `owner pin reset` could replace it, so it cannot lock you out.
+
 - **One layout for every page's actions.** Page headers hold the main actions and a More menu;
   every form opens in a slide-in panel, from the header or from a row's menu, which fills it in for
   that row. Profiles, Hosts, Keys, VMs, Snapshots and a host's page no longer stack form cards below

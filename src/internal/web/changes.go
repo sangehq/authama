@@ -75,6 +75,8 @@ var actionFields = map[string][]string{
 	"owner-reseal":      {},
 	"owner-forget":      {"confirm"},
 	"owner-fingerprint": {"on"},
+	"repair":            {},
+	"factory-reset":     {"confirm"},
 }
 
 // secretFields are the typed secrets each action takes. Each goes into the
@@ -414,6 +416,10 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch = change.SnapshotRestore(h.p.SnapshotsDir(), n("id"), retain)
 	case "notify-test":
 		ch = change.NotifyTest()
+	case "repair":
+		ch = change.Repair(repairHome)
+	case "factory-reset":
+		ch = change.FactoryReset(strings.TrimSpace(f.Get("confirm")) == "reset")
 	case "owner-init":
 		ch = change.OwnerInit()
 	case "owner-pin-set":

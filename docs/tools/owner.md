@@ -20,6 +20,13 @@ It is off until you run `authama owner init`. A home that is never bound behaves
 | `authama owner fingerprint on\|off` | lets a fingerprint stand in for the PIN at the terminal (Linux, fprintd) |
 | `authama owner forget` | unbinds the home: removes the key, the seal and the PIN, and keeps every other file |
 
+Each of these except `pin reset` is also on the web UI's **Owner & PIN** page, previewed and
+confirmed like any change. Two guards keep you from locking yourself out: a PIN is only set when
+`owner pin reset` would work on this account and machine (the sealing key can be read), and
+unbinding removes `owner.json` before the key, so an unbind that stops part-way leaves a home with no
+PIN rather than one asking for a PIN nothing can reset. The reset stays at a terminal: it proves
+the OS account, which a browser cannot.
+
 ## The sealing key
 
 `owner init` makes a random 256-bit key and keeps it where the OS keeps secrets for the user:

@@ -585,6 +585,7 @@ func paletteItems(readOnly bool) []paletteItem {
 		{"history", "History", "/history", "history", "Activity", "history operations changes log"},
 		{"events", "Events", "/events", "activity", "Activity", "events file changes tracking"},
 		{"doctor", "Doctor", "/doctor", "stethoscope", "System", "doctor checks fix"},
+		{"repair", "Repair", "/repair", "refresh", "System", "repair fix corrupt permissions factory reset"},
 		{"settings", "Settings", "/settings", "settings", "System", "settings theme appearance env"},
 		{"about", "About", "/about", "info-circle", "System", "about version licences"},
 	}

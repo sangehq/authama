@@ -315,6 +315,13 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 		}
 	}
 	collect("/security")
+	// Repair offers its fixes once something is fixable: a config file
+	// others can read. The token files it checks live in this test's HOME.
+	t.Setenv("HOME", t.TempDir())
+	if err := os.Chmod(filepath.Join(p.SSHDir, "config"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	collect("/repair")
 	if _, err := owner.MachineID(); err == nil {
 		if _, err := owner.Init(p, time.Now()); err != nil {
 			t.Fatal(err)
