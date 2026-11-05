@@ -452,7 +452,9 @@ func (s *Server) renderError(w http.ResponseWriter, r *http.Request, status int,
 
 func (s *Server) renderUnauthorized(w http.ResponseWriter, r *http.Request) {
 	s.renderError(w, r, http.StatusUnauthorized, "Sign-in link required",
-		"Open the address `authama serve` printed when it started. It carries a one-time token that signs this browser in.")
+		"This browser is not signed in to this server. Open the address `authama serve` printed when it started: "+
+			"it carries the token that signs a browser in. A server that was restarted prints a new one, "+
+			"and the old address and sessions stop working.")
 }
 
 // serveAsset answers /assets/{hash}/{path...}. A stale hash is a 404, not the

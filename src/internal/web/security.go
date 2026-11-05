@@ -148,7 +148,14 @@ func (s *Server) auth(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		if tok := r.URL.Query().Get("token"); tok != "" {
+		tok := r.URL.Query().Get("token")
+		// A browser already signed in is not signed out by a stray ?token= -
+		// a link carrying an old sign-in token, or another page's own
+		// parameter by that name: only a matching token is exchanged.
+		if tok != "" && !equal(tok, s.opts.Token) && s.signedIn(r) {
+			tok = ""
+		}
+		if tok != "" {
 			if !equal(tok, s.opts.Token) || (r.Method != http.MethodGet && r.Method != http.MethodHead) {
 				s.renderUnauthorized(w, r)
 				return
@@ -191,6 +198,12 @@ func (s *Server) auth(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r.WithContext(withSession(r.Context(), sess)))
 	})
+}
+
+// signedIn reports whether r carries a live session cookie.
+func (s *Server) signedIn(r *http.Request) bool {
+	c, err := r.Cookie(SessionCookie)
+	return err == nil && s.sessions.get(c.Value) != nil
 }
 
 func (s *Server) secure(r *http.Request) bool {
