@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/util/fs"
 )
 
@@ -148,18 +149,28 @@ func (inv *Inventory) Record(fingerprint string, rec KeyRecord) {
 	inv.Keys[fingerprint] = rec
 }
 
-// IsArchivedPath reports whether path is a rotation's /old/ predecessor slot,
-// i.e. .../profiles/[<category>/]<profile>/old/<key_name> (by structure, so a profile literally
-// named "old" is not mistaken for an archived key).
+// IsArchivedPath is IsArchivedPathIn under the default key root, profiles.
+//
+// Deprecated: after v0.1.3 the key root is configurable (defaults.key_root);
+// use IsArchivedPathIn with manifest.KeyRoot. This stays, delegating.
+// Earliest removal: v1.0.0.
 func IsArchivedPath(path string) bool {
+	return IsArchivedPathIn(path, manifest.DefaultKeyRoot)
+}
+
+// IsArchivedPathIn reports whether path is a rotation's /old/ predecessor
+// slot under the key root, i.e. .../<root>/[<category>/]<profile>/old/<key_name>
+// (by structure, so a profile literally named "old" is not mistaken for an
+// archived key).
+func IsArchivedPathIn(path, root string) bool {
 	parts := strings.Split(path, "/")
 	n := len(parts)
 	if n < 4 || parts[n-2] != "old" {
 		return false
 	}
-	// Flat: .../profiles/<profile>/old/<key>. Categorized:
-	// .../profiles/<category>/<profile>/old/<key>.
-	return parts[n-4] == "profiles" || (n >= 5 && parts[n-5] == "profiles")
+	// Flat: .../<root>/<profile>/old/<key>. Categorized:
+	// .../<root>/<category>/<profile>/old/<key>.
+	return parts[n-4] == root || (n >= 5 && parts[n-5] == root)
 }
 
 // ComputeExpiry returns created (YYYY-MM-DD) + rotateAfterDays as YYYY-MM-DD.

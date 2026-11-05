@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/simtabi/authama/src/internal/core/manifest"
 )
 
 func archive(t *testing.T, ssh, profile, name string, age time.Duration) {
@@ -33,7 +35,7 @@ func TestStaleArchivedKeysAreReported(t *testing.T) {
 	archive(t, ssh, "work", "work_gh-ed25519", 200*24*time.Hour)
 	archive(t, ssh, "personal", "imani_gh-ed25519", 3*24*time.Hour)
 
-	counts, stale := archivedKeys(ssh, DefaultOldKeyMaxAge, time.Now())
+	counts, stale := archivedKeys(ssh, manifest.DefaultKeyRoot, DefaultOldKeyMaxAge, time.Now())
 	if counts["work/work_gh-ed25519"] != 1 || counts["personal/imani_gh-ed25519"] != 1 {
 		t.Errorf("archive counts are wrong: %v", counts)
 	}
@@ -60,7 +62,7 @@ func TestZeroMaxAgeDisablesTheCheck(t *testing.T) {
 	ssh := t.TempDir()
 	archive(t, ssh, "work", "work_gh-ed25519", 5000*24*time.Hour)
 
-	counts, stale := archivedKeys(ssh, 0, time.Now())
+	counts, stale := archivedKeys(ssh, manifest.DefaultKeyRoot, 0, time.Now())
 	if len(counts) != 1 {
 		t.Errorf("counting should still happen: %v", counts)
 	}

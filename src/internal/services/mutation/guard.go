@@ -12,6 +12,7 @@ import (
 	"os"
 
 	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/services/snapshots"
 	"github.com/simtabi/authama/src/internal/util/lock"
 	"github.com/simtabi/authama/src/internal/util/log"
@@ -39,7 +40,7 @@ var heldLock func()
 // process these run in sequence anyway.
 func SnapshotBeforeMutation(p paths.Paths, retain int) string {
 	LockForMutation(p)
-	snapshots.CleanTempArtifacts(p.SSHDir)
+	snapshots.CleanTempArtifactsIn(p.SSHDir, manifest.KeyRootAt(p.Manifest()))
 	snap, err := snapshots.Snapshot(p.SSHDir, p.SnapshotsDir(), retain, "")
 	recordSnapshot(snap, err)
 	return snap

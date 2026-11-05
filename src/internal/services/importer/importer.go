@@ -10,6 +10,7 @@ package importer
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -361,9 +362,15 @@ func globMatch(pattern, s string) bool {
 // profiles/<profile>/old/<key>, is three segments deep too and is not a
 // category.
 func profileFromIdentity(identityFile string) (profile, category string) {
+	return profileFromIdentityIn(identityFile, manifest.DefaultKeyRoot)
+}
+
+// profileFromIdentityIn is profileFromIdentity for a path under any of the
+// key roots given: <root>/<profile>/<key> or <root>/<category>/<profile>/<key>.
+func profileFromIdentityIn(identityFile string, roots ...string) (profile, category string) {
 	parts := strings.Split(filepath.ToSlash(identityFile), "/")
 	for i, p := range parts {
-		if p != "profiles" || i+1 >= len(parts) {
+		if !slices.Contains(roots, p) || i+1 >= len(parts) {
 			continue
 		}
 		rest := parts[i+1:]
@@ -558,8 +565,25 @@ func (im *Importer) Run(configPath string, dryRun bool) (ImportResult, error) {
 		}
 	}
 	parsed := parseSources(src)
+	// Parsing reads profiles off paths under the default root. A home whose
+	// keys live under another (defaults.key_root) has its paths read again
+	// under that root, and the new manifest keeps it.
+	root := manifest.KeyRootAt(im.p.Manifest())
+	if root != manifest.DefaultKeyRoot {
+		for _, h := range parsed {
+			if h.IdentityFile == "" {
+				continue
+			}
+			if p, c := profileFromIdentityIn(h.IdentityFile, root); p != "imported" {
+				h.Profile, h.Category = p, c
+			}
+		}
+	}
 
 	m := manifest.Starter(im.emitUseKeychain) // defaults with the right global options
+	if root != manifest.DefaultKeyRoot {
+		m.Defaults.KeyRoot = root
+	}
 	order := []string{}
 	byProfile := map[string][]manifest.Host{}
 	category := map[string]string{} // profile -> the first category its keys were found under
@@ -674,7 +698,7 @@ func (im *Importer) resolveKey(h *ParsedHost) resolution {
 	case exists(real):
 		probe = real
 	}
-	if underProfile(real, h.Profile) {
+	if underProfile(real, h.Profile, manifest.KeyRootAt(im.p.Manifest())) {
 		return resolution{keyName: filepath.Base(real), probe: probe}
 	}
 	kn, _ := key.DeriveKeyName(h.Profile, h.Alias, "ed25519")
@@ -700,9 +724,9 @@ func (im *Importer) identityPath(identity string) string {
 	return expanduser(identity)
 }
 
-func underProfile(real, profile string) bool {
-	got, _ := profileFromIdentity(real)
-	return got == profile && strings.Contains(filepath.ToSlash(real), "/profiles/")
+func underProfile(real, profile, root string) bool {
+	got, _ := profileFromIdentityIn(real, root)
+	return got == profile && strings.Contains(filepath.ToSlash(real), "/"+root+"/")
 }
 
 // adoptKey copies an existing keypair into the profile's directory

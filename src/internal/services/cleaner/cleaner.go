@@ -62,7 +62,7 @@ func Run(p paths.Paths, out io.Writer, adopt, dryRun bool, beforeWrite func()) e
 		report(out, "would adopt", adoptable)
 		report(out, "would prune", prunable)
 		reportRecords(out, "would drop", stale)
-		residue := snapshots.FindTempArtifacts(p.SSHDir)
+		residue := snapshots.FindTempArtifactsIn(p.SSHDir, manifest.KeyRootAt(p.Manifest()))
 		for _, r := range residue {
 			_, _ = fmt.Fprintf(out, "would remove residue: %s\n", r)
 		}

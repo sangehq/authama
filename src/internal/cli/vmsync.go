@@ -263,7 +263,7 @@ func newVMAdoptKeyCmd() *cobra.Command {
 				}
 				m, _ := manifest.Load(p.Manifest())
 				res, _ := keyaudit.Reservations(m, vmConfig(p).PlannedKeys())
-				loose := keyaudit.MarkReserved(keyaudit.LooseKeys(p.SSHDir), res)
+				loose := keyaudit.MarkReserved(keyaudit.LooseKeysIn(p.SSHDir, manifest.KeyRootAt(p.Manifest())), res)
 				var opts []string
 				var names []string
 				for _, k := range loose {

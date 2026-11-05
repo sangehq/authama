@@ -52,7 +52,7 @@ func (n *Notifier) States(now time.Time) ([]expiry.Status, error) {
 	if err != nil {
 		return nil, err
 	}
-	return expiry.ComputeStates(inv, n.defaults.WarnBeforeDays, dateOf(now)), nil
+	return expiry.ComputeStatesIn(inv, n.defaults.WarnBeforeDays, dateOf(now), manifest.KeyRoot(n.m)), nil
 }
 
 // Banner returns the cheap, debounced inline reminder (empty when nothing is due

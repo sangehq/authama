@@ -61,6 +61,11 @@
           "type": "string",
           "description": "ssh-keygen -C template for new keys. Placeholders: {profile} {alias} {key} {date} {device}. Empty = {profile}/{alias} {date}."
         },
+        "key_root": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_][A-Za-z0-9._-]*$",
+          "description": "The directory under ~/.ssh holding the profile directories; empty = profiles. One name, not hidden and not one of ssh's own files. Change it with `authama ssh key root <dir>`, which moves the keys."
+        },
         "onepassword_agent": {
           "type": "string",
           "description": "1Password SSH agent socket for key_store 1password profiles; empty = the platform default."

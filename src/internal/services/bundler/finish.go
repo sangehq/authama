@@ -17,7 +17,7 @@ import (
 // without the render ~/.ssh has no category configs; a failure is returned
 // rather than dropped.
 func FinishRestore(p paths.Paths) error {
-	for _, mp := range perms.IterManagedPaths(p.SSHDir) {
+	for _, mp := range perms.IterManagedPathsIn(p.SSHDir, manifest.KeyRootAt(p.Manifest())) {
 		_ = perms.SetPerms(mp.Path, mp.Mode)
 	}
 	for _, sp := range homeperms.SecretPerms(p) {

@@ -392,7 +392,7 @@ func bundleRestoreJob(j *jobs.Job, p paths.Paths, retain int, path string) error
 	if err := j.Step(); err != nil {
 		return err
 	}
-	res, err := bundler.New(p.SSHDir, p.ConfigDir, bundler.AgeCipher{}).Restore(path, ident, keystore.New().Fingerprint)
+	res, err := bundler.New(p.SSHDir, p.ConfigDir, bundler.AgeCipher{}).WithKeyRoot(manifest.KeyRootAt(p.Manifest())).Restore(path, ident, keystore.New().Fingerprint)
 	if err != nil {
 		return err
 	}

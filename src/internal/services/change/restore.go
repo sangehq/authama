@@ -6,6 +6,7 @@ import (
 	"io"
 	"path/filepath"
 
+	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/services/snapshots"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
@@ -46,7 +47,7 @@ func SnapshotRestore(snapshotsDir, id string, retain int) Change {
 			if p.SnapshotsDir() == snapshotsDir {
 				res, err = snapshots.RestoreByIDIn(p, retain, id)
 			} else {
-				res, err = snapshots.RestoreInto(p.SSHDir, snapshotsDir, p.DevRoot, id)
+				res, err = snapshots.RestoreInto(p.SSHDir, snapshotsDir, p.DevRoot, manifest.KeyRootAt(p.Manifest()), id)
 			}
 			if err != nil {
 				return err

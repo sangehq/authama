@@ -375,6 +375,9 @@ type Defaults struct {
 	KeyComment string `json:"key_comment,omitempty"`
 	// Git configures `authama ssh git` and the rendered `Host github.com` block.
 	Git *GitDefaults `json:"git,omitempty"`
+	// KeyRoot is the directory under ~/.ssh holding the profile directories;
+	// empty means DefaultKeyRoot ("profiles"). Read it through KeyRoot.
+	KeyRoot string `json:"key_root,omitempty"`
 }
 
 func newDefaults() Defaults {
@@ -408,6 +411,7 @@ func (d Defaults) MarshalJSON() ([]byte, error) {
 		OnePasswordAgent string         `json:"onepassword_agent,omitempty"`
 		KeyComment       string         `json:"key_comment,omitempty"`
 		Git              *GitDefaults   `json:"git,omitempty"`
+		KeyRoot          string         `json:"key_root,omitempty"`
 	}
 	warn := d.WarnBeforeDays
 	if warn == nil {
@@ -417,6 +421,7 @@ func (d Defaults) MarshalJSON() ([]byte, error) {
 		KeyType: d.KeyType, KeyScope: d.KeyScope, RotateAfterDays: d.RotateAfterDays,
 		WarnBeforeDays: warn, ExpiryCheck: d.ExpiryCheck, GlobalOptions: d.GlobalOptions,
 		OnePasswordAgent: d.OnePasswordAgent, KeyComment: d.KeyComment, Git: d.Git,
+		KeyRoot: d.KeyRoot,
 	})
 }
 
@@ -1005,6 +1010,9 @@ func (m *Manifest) validate() error {
 	if err := checkReserved(m); err != nil {
 		return err
 	}
+	if err := checkKeyRootFor(m); err != nil {
+		return err
+	}
 	for name, p := range m.Profiles {
 		if err := safeSegment("profile name", name); err != nil {
 			return err
@@ -1115,9 +1123,10 @@ func (m *Manifest) ResolvedKeyName(profileName string, host Host) (string, error
 }
 
 // ProfileRel is a profile's key directory relative to ~/.ssh, in forward-slash
-// form: profiles/<category>/<profile> when the profile has a category, else
-// profiles/<profile>. An undeclared profile resolves to the flat form, which is
-// where every key lived before categories existed.
+// form: <root>/<category>/<profile> when the profile has a category, else
+// <root>/<profile>, where <root> is KeyRoot ("profiles" unless
+// defaults.key_root names another). An undeclared profile resolves to the flat
+// form, which is where every key lived before categories existed.
 //
 // This is the one place the layout is decided. Every path to a key, its .pub,
 // or its old/ directory goes through ProfileRel or ProfileDir; a hand-built
@@ -1125,9 +1134,9 @@ func (m *Manifest) ResolvedKeyName(profileName string, host Host) (string, error
 // profile exposes, because it silently points one directory too high.
 func (m *Manifest) ProfileRel(profileName string) string {
 	if c := m.Profiles[profileName].Category; c != "" {
-		return "profiles/" + c + "/" + profileName
+		return KeyRoot(m) + "/" + c + "/" + profileName
 	}
-	return "profiles/" + profileName
+	return KeyRoot(m) + "/" + profileName
 }
 
 // ProfileDir is ProfileRel as an absolute path under sshDir.
@@ -1160,46 +1169,29 @@ func ArchiveDir(m *Manifest, sshDir string, ref KeyRef) string {
 	return filepath.Join(m.ProfileDir(sshDir, ref.Profile), "old")
 }
 
-// GlobProfileTree matches the pattern tail inside every profile directory on
-// disk, in both layouts: profiles/<profile>/<tail> and
-// profiles/<category>/<profile>/<tail>. It needs no manifest, because the
-// scans that use it (doctor, snapshots, keyaudit) also look for what the
-// manifest has forgotten.
+// GlobProfileTree is GlobKeyTree under the default root, ~/.ssh/profiles.
 //
-// A two-level match whose middle segment is "old" or dot-prefixed is dropped:
-// that is a flat profile's rotation archive or staging directory, not a
-// categorized profile, and a flat-only glob never saw inside them either.
-// The result is sorted.
+// Deprecated: after v0.1.3 the root is configurable (defaults.key_root); use
+// GlobKeyTree with KeyRoot or KeyRootAt. This stays, delegating, so a caller
+// not yet moved keeps today's behaviour. Earliest removal: v1.0.0.
 func GlobProfileTree(sshDir string, tail ...string) []string {
-	root := filepath.Join(sshDir, "profiles")
-	flat, _ := filepath.Glob(filepath.Join(append([]string{root, "*"}, tail...)...))
-	nested, _ := filepath.Glob(filepath.Join(append([]string{root, "*", "*"}, tail...)...))
-	out := append([]string{}, flat...)
-	for _, p := range nested {
-		rel, err := filepath.Rel(root, p)
-		if err != nil {
-			continue
-		}
-		mid := strings.Split(filepath.ToSlash(rel), "/")[1]
-		if mid == "old" || strings.HasPrefix(mid, ".") {
-			continue
-		}
-		out = append(out, p)
-	}
-	sort.Strings(out)
-	return out
+	return GlobKeyTree(sshDir, DefaultKeyRoot, tail...)
 }
 
-// CategoryConfigRel is the forward-slash path, relative to ~/.ssh, of the file
-// holding a category's Host blocks.
+// CategoryConfigRel is CategoryConfigRelIn under the default root.
+//
+// Deprecated: after v0.1.3 the root is configurable; use CategoryConfigRelIn
+// with KeyRoot. This stays, delegating. Earliest removal: v1.0.0.
 func CategoryConfigRel(category string) string {
-	return "profiles/" + category + "/config"
+	return CategoryConfigRelIn(DefaultKeyRoot, category)
 }
 
-// CategoryConfigFile is the ~ form path the root config Includes for a
-// category, matching how IdentityFile paths render.
+// CategoryConfigFile is CategoryConfigFileIn under the default root.
+//
+// Deprecated: after v0.1.3 the root is configurable; use CategoryConfigFileIn
+// with KeyRoot. This stays, delegating. Earliest removal: v1.0.0.
 func CategoryConfigFile(category string) string {
-	return sshToken + "/" + CategoryConfigRel(category)
+	return CategoryConfigFileIn(DefaultKeyRoot, category)
 }
 
 // Categories returns the distinct categories in use, in first-seen manifest
