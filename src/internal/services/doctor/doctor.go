@@ -518,7 +518,7 @@ func permIssues(ssh string, p paths.Paths) []string {
 		issues = append(issues, fmt.Sprintf("%s: %o (want %o)",
 			mp.Path, uint32(fi.Mode().Perm()), uint32(mp.Mode.Perm())))
 	}
-	for _, mp := range perms.IterManagedPaths(ssh) {
+	for _, mp := range perms.IterManagedPathsIn(ssh, manifest.KeyRootAt(p.Manifest())) {
 		report(mp)
 	}
 	for _, mp := range homeperms.SecretPerms(p) {

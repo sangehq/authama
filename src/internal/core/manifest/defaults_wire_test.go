@@ -30,7 +30,7 @@ func TestEveryDefaultsFieldSurvivesSaving(t *testing.T) {
 			fv.SetInt(1)
 		case reflect.Slice:
 			fv.Set(reflect.MakeSlice(fv.Type(), 1, 1))
-		case reflect.Ptr:
+		case reflect.Pointer:
 			fv.Set(reflect.New(fv.Type().Elem()))
 		}
 	}

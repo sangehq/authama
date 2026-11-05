@@ -161,7 +161,7 @@ func TestGitHubBlockFollowsItsProfilesCategory(t *testing.T) {
 	if strings.Contains(all[RootConfig], "Host github.com\n") {
 		t.Errorf("root config still carries Host github.com:\n%s", all[RootConfig])
 	}
-	cat := all[manifest.CategoryConfigRel("personal")]
+	cat := all[manifest.CategoryConfigRelIn(manifest.DefaultKeyRoot, "personal")]
 	if n := strings.Count(cat, "Host github.com\n"); n != 1 {
 		t.Errorf("personal config has %d Host github.com blocks, want 1:\n%s", n, cat)
 	}
