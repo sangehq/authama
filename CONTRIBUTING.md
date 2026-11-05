@@ -23,7 +23,7 @@ around it.
 
 ```sh
 git clone https://github.com/simtabi/authama && cd authama
-make build               # -> build/authama (empties build/ first, every time)
+make build               # -> build/<your-os>/authama, e.g. build/macos/authama (empties build/ first)
 make install             # build, then copy it to ~/.local/bin (BINDIR=... for elsewhere)
 make uninstall           # remove that binary again; config, state and keys stay
 make doctor              # verify the environment, using the binary you just built
@@ -136,8 +136,13 @@ not one per module — and nothing goes anywhere else:
 | Path | What | Tracked |
 |---|---|---|
 | `build/targets.txt` | the release target matrix | yes |
-| `build/authama` | `make build` output | no |
-| `build/dist/` | GoReleaser and `src/scripts/build-all.sh` artifacts | no |
+| `build/{os}/` | binaries, one folder per OS (`macos`, `linux`, `windows`, `freebsd`): `make build` writes the host's `build/<os>/authama`, `make cross` every target as `authama_{os}_{arch}[.exe]` | no |
+| `build/checksums.txt` | SHA-256 over every binary, as `{os}/{file}`, so `cd build && shasum -a 256 -c checksums.txt` verifies as-is | no |
+| `build/archives/` | `make dist`: a `.tar.gz` or `.zip` per target (the Windows zips add `Start authama.cmd`), `authama_macos_app.zip` with `Authama.app`, and `make man`'s pages | no |
+
+Nothing else goes in `build/`: no `build/dist/`, no per-target subfolders. GoReleaser, the release
+path, works in `.goreleaser-dist/` at the root instead (`make release-snapshot` runs it locally and
+publishes nothing).
 
 `make clean` empties it, keeping `targets.txt`. There was a `bin/` alongside it
 until this layout was settled — two directories for one idea — and `make clean`

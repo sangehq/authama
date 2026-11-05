@@ -54,15 +54,20 @@ cleaned/
 # src/.goreleaser.yaml. build/ stays at the repo root while the Go module is
 # src/: output belongs to the repository, so there is one build/ and not one
 # per module. Only targets.txt is tracked; the rest is generated:
-#   build/targets.txt  the release matrix (TRACKED)
-#   build/authama      `make build` output
-#   build/dist/        GoReleaser and src/scripts/build-all.sh artifacts
+#   build/targets.txt   the release matrix (TRACKED)
+#   build/{os}/         binaries: `make build` (the host's), `make cross`
+#   build/checksums.txt SHA-256 over every binary, as {os}/{file}
+#   build/archives/     `make dist`: tar.gz/zip, Authama.app zip, man pages
 /build/*
 !/build/targets.txt
 
+# GoReleaser's working output (release.yml, `make release-snapshot`).
+/.goreleaser-dist/
+
 # Belt and braces: the rules above are anchored to the repo root, so a build/
 # that appears anywhere else - src/build/, say, from a tool invoked with the
-# wrong working directory - would not be caught by them. This one is.
+# wrong working directory - would not be caught by them. These are. build/dist/
+# is the layout before the per-OS folders, kept ignored for old checkouts.
 build/dist/
 **/build/dist/
 

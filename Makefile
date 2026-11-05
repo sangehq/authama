@@ -9,9 +9,16 @@
 # `go -C` below is for. Build output is a property of the repository, not of the
 # module, so it lands in build/ at the root: that is where you look for the
 # binary, and it stays one directory rather than one per module.
-MODULE  := src
-BIN     := build/authama
-PKG     := ./cmd/authama
+#
+# Inside build/ there is one folder per OS and nothing else (the standard every
+# Simtabi Go project follows): `make build` writes build/{host-os}/authama,
+# `make cross` and `make dist` write build/{os}/authama_{os}_{arch} and
+# build/archives/. The OS folder is macos, not darwin.
+MODULE    := src
+HOST_GOOS := $(shell go env GOOS 2>/dev/null)
+HOST_OS   := $(if $(filter darwin,$(HOST_GOOS)),macos,$(HOST_GOOS))
+BIN       := build/$(HOST_OS)/authama
+PKG       := ./cmd/authama
 
 # Our own modules come from git, never proxy.golang.org or sum.golang.org, so a
 # local build cannot feed a version into the public cache. Overridable.
@@ -38,7 +45,7 @@ LDFLAGS := -s -w -X github.com/simtabi/authama/src/internal/version.Version=$(VE
 GO      := go -C $(MODULE)
 
 .PHONY: help build build-all test vet fmt fmt-check lint lint-all ci check ci-linux e2e e2e-web feature-check docker-shell docker-run docker-down \
-        cross dist clean install uninstall doctor reconcile render rotate bundle settings generate tabler-check tabler-update tabler-vendor man
+        cross dist release-snapshot clean install uninstall doctor reconcile render rotate bundle settings generate tabler-check tabler-update tabler-vendor man
 
 help:  ## list targets
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | sed -E 's/:.*## /\t/' | sort
@@ -55,10 +62,10 @@ help:  ## list targets
 # toolchain itself.
 #
 # -o is resolved relative to $(MODULE) because of `go -C`, hence the ../.
-build: clean ## compile the binary into a freshly emptied build/ (FORCE=1 to rebuild deps too)
-	@mkdir -p build
-	$(GO) build $(if $(FORCE),-a,) -trimpath -ldflags '$(LDFLAGS)' -o ../$(BIN) $(PKG)
-	@echo "built $(BIN)  ->  $$(./$(BIN) version)"
+build: clean ## compile the binary into build/{host-os}/ (FORCE=1 to rebuild deps too)
+	@mkdir -p build/$(HOST_OS)
+	$(GO) build $(if $(FORCE),-a,) -trimpath -ldflags '$(LDFLAGS)' -o ../$(BIN)$(EXE) $(PKG)
+	@echo "built $(BIN)$(EXE)  ->  $$(./$(BIN)$(EXE) version)"
 
 build-all: ## compile every package (what CI gated on before `ci` existed)
 	$(GO) build ./...
@@ -186,10 +193,15 @@ feature-check: ## exercise every command with assertions
 # the compile step back into the module. CI passes the same --config.
 GORELEASER := goreleaser --config $(MODULE)/.goreleaser.yaml
 
-cross: ## build every release target into build/dist/ (needs goreleaser)
-	$(GORELEASER) build --clean --snapshot
+cross: ## build every release target into build/{os}/, with build/checksums.txt
+	ARCHIVES=0 ./$(MODULE)/scripts/build-all.sh
 
-dist: ## full release artifacts into build/dist/ (needs goreleaser)
+dist: ## cross, plus build/archives/: a tar.gz or zip per target, Authama.app for macOS, checksums
+	./$(MODULE)/scripts/build-all.sh
+
+# GoReleaser is the release path (release.yml, dispatch-only). Its output is an
+# intermediate and goes to .goreleaser-dist/ at the root, never into build/.
+release-snapshot: ## check the GoReleaser config locally, into .goreleaser-dist/ (needs goreleaser; publishes nothing)
 	$(GORELEASER) release --clean --snapshot
 
 # The web UI's vendored Tabler files. Each target downloads the npm tarballs,
@@ -202,8 +214,13 @@ tabler-check: ## say whether a newer Tabler or Tabler Icons release is out (writ
 tabler-update: ## move the web UI to the newest Tabler + Tabler Icons; re-vendor, notices, hashes
 	go -C $(MODULE) run ./internal/tools/tablervendor -latest -root ..
 
-man: build ## write a manual page for every command into build/man (read them with man -M build/man authama)
-	./$(BIN) man build/man
+MAN_DIR ?= $(or $(TMPDIR),/tmp)/authama-man
+
+man: build ## write a manual page per command to MAN_DIR, and pack them into build/archives/authama_man.tar.gz
+	./$(BIN)$(EXE) man "$(MAN_DIR)/man1"
+	@mkdir -p build/archives
+	tar -czf build/archives/authama_man.tar.gz -C "$(MAN_DIR)" man1
+	@echo "read them with: man -M $(MAN_DIR) authama"
 
 tabler-vendor: ## re-vendor exactly what src/internal/web/assets/vendor/TABLER_VERSION pins
 	go -C $(MODULE) run ./internal/tools/tablervendor -root ..
@@ -225,7 +242,7 @@ clean: ## empty build/, keeping only the files git tracks there
 	fi
 
 # --- installing the binary you just built ------------------------------------
-# install copies build/authama to BINDIR, ~/.local/bin unless told otherwise
+# install copies build/<host-os>/authama to BINDIR, ~/.local/bin unless told otherwise
 # (%LOCALAPPDATA%\Programs\authama on Windows, where install.ps1 puts it too).
 # It builds first, so what lands on PATH is this checkout as it is now.
 # uninstall removes that one file, and only after the file answers `version` as
@@ -241,7 +258,7 @@ BINDIR ?= $(HOME)/.local/bin
 endif
 INSTALLED := $(BINDIR)/authama$(EXE)
 
-install: build ## copy build/authama to BINDIR (default ~/.local/bin) and say whether it is on PATH
+install: build ## copy build/<host-os>/authama to BINDIR (default ~/.local/bin) and say whether it is on PATH
 	@mkdir -p "$(BINDIR)"
 	@cp "$(BIN)$(EXE)" "$(INSTALLED).tmp" && chmod 0755 "$(INSTALLED).tmp" && mv -f "$(INSTALLED).tmp" "$(INSTALLED)"
 	@echo "installed $(INSTALLED)  ->  $$("$(INSTALLED)" version | head -1)"
@@ -266,20 +283,20 @@ uninstall: ## remove the authama binary from BINDIR (default ~/.local/bin); conf
 # so what you exercise is what you changed.
 
 settings: build ## where the config and state homes are, and every setting with its source
-	$(BIN) settings path
-	$(BIN) settings show --effective
+	$(BIN)$(EXE) settings path
+	$(BIN)$(EXE) settings show --effective
 
 doctor: build ## verify environment (FIX=1 to auto-fix perms first)
-	$(BIN) doctor $(if $(FIX),--fix,)
+	$(BIN)$(EXE) doctor $(if $(FIX),--fix,)
 
 reconcile: build ## make ~/.ssh match the manifest
-	$(BIN) ssh reconcile
+	$(BIN)$(EXE) ssh reconcile
 
 render: build ## re-render config from the manifest
-	$(BIN) ssh config render
+	$(BIN)$(EXE) ssh config render
 
 rotate: build ## rotate a key:  make rotate KEY=<profile/key>
-	$(BIN) ssh rotate $(KEY)
+	$(BIN)$(EXE) ssh rotate $(KEY)
 
 bundle: build ## encrypted backup
-	$(BIN) ssh bundle
+	$(BIN)$(EXE) ssh bundle

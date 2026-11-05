@@ -64,8 +64,9 @@ src/                # THE GO MODULE. go.mod is here, so every `go` command runs
   .golangci.yml
 build/              # everything build-related, and the only place anything is
                     #   generated. targets.txt (the release matrix) is the one
-                    #   tracked file; build/authama is `make build` output and
-                    #   build/dist/ is GoReleaser's. `make clean` empties it.
+                    #   tracked file; binaries go in one folder per OS
+                    #   (build/macos/, build/windows/, ...), packages in
+                    #   build/archives/. `make clean` empties it.
 docs/  README.md  CHANGELOG.md  LICENSE  Makefile  .github/
 ```
 
