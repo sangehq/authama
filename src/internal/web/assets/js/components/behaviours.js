@@ -197,3 +197,34 @@ export class CopyText extends Component {
     new Toast(toast, { delay: 1800 }).show();
   }
 }
+
+/**
+ * ThemeChoice marks the colour theme in effect among the links that choose
+ * one, so the Settings page shows which is selected. Tabler's own theme script
+ * keeps the choice in localStorage as "tabler-theme" ("auto" when unset).
+ *
+ *   <a href="?theme=dark" class="btn" data-theme-choice="dark">Dark</a>
+ *
+ * @extends {Component<{}>}
+ */
+export class ThemeChoice extends Component {
+  static attribute = "theme-choice";
+
+  init() {
+    let current = "auto";
+    try {
+      current = window.localStorage.getItem("tabler-theme") ?? "auto";
+    } catch {
+      // No storage: the default is in effect.
+    }
+    const on = this.el.dataset.themeChoice === current;
+    // The primary style, not Bootstrap's grey "active" outline, which has too
+    // little contrast for its text.
+    this.el.classList.toggle("btn-primary", on);
+    this.el.classList.toggle("btn-outline-secondary", !on);
+    if (on) {
+      this.el.setAttribute("aria-current", "true");
+    }
+    return this;
+  }
+}

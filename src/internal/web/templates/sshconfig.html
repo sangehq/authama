@@ -1,5 +1,5 @@
 {{define "content"}}{{with .Data}}
-{{template "page_header" (header "SSH" "SSH config" "Every file the manifest renders into ~/.ssh, and whether the files on disk match it.")}}
+{{template "page_header" (header "Config & backups" "SSH config" "Every file the manifest renders into ~/.ssh, and whether the files on disk match it.")}}
 {{if .Problem}}<div class="alert alert-danger" role="alert">{{icon "alert-triangle"}}<span class="ms-1">{{.Problem}}</span></div>{{end}}
 <div class="row row-cards">
   <div class="col-12">
@@ -19,7 +19,8 @@
   <div class="col-12">
     <div class="card">
       <div class="card-header"><h2 class="card-title">Rendered</h2></div>
-      <div class="card-body"><pre class="code-block" tabindex="0">{{.Rendered}}</pre></div>
+      <div class="card-body"><pre class="code-block" tabindex="0">{{range lines .Rendered}}{{hl "ssh" .}}
+{{end}}</pre></div>
       <div class="card-footer text-secondary">The same as <code>authama ssh config show</code>: what <code>config render</code> writes. Nothing outside the managed blocks is shown.</div>
     </div>
   </div>

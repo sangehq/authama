@@ -6,8 +6,8 @@
     <h2 class="card-title">{{icon "lock-open"}}<span class="ms-1">Not bound</span></h2>
     <p class="text-secondary">This home has no owner. Binding it keeps a sealing key in your OS's credential store, seals the state files, and lets you set a PIN that this page asks for at sign-in and before every change.</p>
     <p class="mb-1">Run these in a terminal on this machine: they prove your OS account, which a browser cannot.</p>
-    {{template "command_card" (commandCard "authama owner init" false "" false)}}
-    {{template "command_card" (commandCard "authama owner pin set" false "" false)}}
+    {{template "command_line" "authama owner init"}}
+    {{template "command_line" "authama owner pin set"}}
   </div>
 </div>
 {{else}}
@@ -34,7 +34,7 @@
         <p>{{if .State.Clean}}Every sealed file is as authama last left it.{{else}}{{.State.Describe}}.{{end}}</p>
         {{if .State.Report.Findings}}<table class="table table-sm mb-3"><thead><tr><th scope="col">File</th><th scope="col">State</th></tr></thead><tbody>{{range .State.Report.Findings}}<tr><td><code>{{.Name}}</code></td><td><span class="badge {{if eq (print .Status) "changed"}}badge-warn{{else}}badge-bad{{end}}">{{.Status}}</span></td></tr>{{end}}</tbody></table>{{end}}
         <p class="text-secondary small mb-2">Sealed: {{range $i, $f := .Files}}{{if $i}}, {{end}}<code>{{$f}}</code>{{end}}.</p>
-        {{if not .State.Clean}}<p class="mb-1">If you made the change yourself, accept it at a terminal:</p>{{template "command_card" (commandCard "authama owner reseal" false "" false)}}{{end}}
+        {{if not .State.Clean}}<p class="mb-1">If you made the change yourself, accept it at a terminal:</p>{{template "command_line" "authama owner reseal"}}{{end}}
       </div>
     </div>
   </div>
@@ -44,10 +44,10 @@
       <div class="card-body">
         <p class="text-secondary">Changing the binding proves your OS account, so it is done at a terminal on this machine, never from a browser.</p>
         <div class="row g-3">
-          <div class="col-md-6">{{template "command_card" (commandCard "authama owner pin set" false "" false)}}</div>
-          <div class="col-md-6">{{template "command_card" (commandCard "authama owner pin reset" false "" false)}}</div>
-          <div class="col-md-6">{{template "command_card" (commandCard "authama owner verify" false "" false)}}</div>
-          <div class="col-md-6">{{template "command_card" (commandCard "authama owner status" false "" false)}}</div>
+          <div class="col-md-6">{{template "command_line" "authama owner pin set"}}</div>
+          <div class="col-md-6">{{template "command_line" "authama owner pin reset"}}</div>
+          <div class="col-md-6">{{template "command_line" "authama owner verify"}}</div>
+          <div class="col-md-6">{{template "command_line" "authama owner status"}}</div>
         </div>
       </div>
     </div>

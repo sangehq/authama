@@ -1,7 +1,16 @@
 {{define "content"}}{{with .Data}}{{with .Detail}}
 <div class="page-header d-print-none mb-3">
-  <div class="text-secondary"><a href="/hosts">Hosts</a> / profile <code>{{.Profile}}</code></div>
-  <h1 class="page-title"><code>{{.Alias}}</code></h1>
+  <div class="row g-2 align-items-center">
+    <div class="col">
+      <div class="page-pretitle"><a href="/hosts">Hosts</a> / profile {{.Profile}}</div>
+      <h1 class="page-title font-monospace">{{.Alias}}</h1>
+    </div>
+    <div class="col-auto ms-auto btn-list">
+      {{if not $.ReadOnly}}<a href="#host-edit" class="btn btn-primary" data-bs-toggle="offcanvas" role="button" aria-controls="host-edit">{{icon "pencil"}}<span class="ms-1">Edit</span></a>{{end}}
+      <a href="/history?host={{.Alias}}" class="btn btn-outline-secondary">{{icon "history"}}<span class="ms-1">History</span></a>
+      <button type="button" class="btn btn-outline-secondary" data-copy="ssh {{.Alias}}">{{icon "copy"}}<span class="ms-1">Copy ssh {{.Alias}}</span></button>
+    </div>
+  </div>
 </div>
 <div class="row row-cards">
   <div class="col-lg-5">
@@ -33,12 +42,13 @@
   <div class="col-lg-7">
     <div class="card">
       <div class="card-header"><h2 class="card-title">Rendered block</h2></div>
-      <div class="card-body">{{if .Block}}<pre class="code-block" tabindex="0">{{.Block}}</pre>{{else}}<p class="text-secondary mb-0">This host renders no block of its own.</p>{{end}}</div>
+      <div class="card-body">{{if .Block}}<pre class="code-block" tabindex="0">{{range lines .Block}}{{hl "ssh" .}}
+{{end}}</pre>{{else}}<p class="text-secondary mb-0">This host renders no block of its own.</p>{{end}}</div>
     </div>
     <div class="card mt-3">
       <div class="card-header"><h2 class="card-title">Pinned host keys</h2></div>
       {{if .Pins}}
-      <div class="table-responsive">
+      <div class="table-responsive" tabindex="0">
         <table class="table table-vcenter card-table">
           <caption class="visually-hidden">known_hosts lines for {{.Token}}</caption>
           <thead><tr><th scope="col">Type</th><th scope="col">Fingerprint</th><th scope="col">Form</th><th scope="col">Owner</th></tr></thead>
@@ -47,32 +57,31 @@
       </div>
       {{else}}<div class="card-body text-secondary">Not pinned. Run <code>authama ssh knownhosts pin {{.Detail.Alias}}</code> in a terminal.</div>{{end}}
     </div>
-    <p class="mt-3"><a href="/history?host={{.Detail.Alias}}">{{icon "history"}}<span class="ms-1">Changes to this host</span></a></p>
     {{if not $.ReadOnly}}{{with .Detail}}
-    <div class="card mt-3">
-      <div class="card-header"><h2 class="card-title">Edit</h2></div>
-      <div class="card-body">
+{{template "panel_open" (header "host-edit" (printf "Edit %s" .Alias) "")}}
         {{template "change_open" $}}<input type="hidden" name="action" value="host-edit"><input type="hidden" name="profile" value="{{.Profile}}"><input type="hidden" name="alias" value="{{.Alias}}">
-          <div class="row g-2">
-            <div class="col-sm-6"><label class="form-label" for="e-hostname">Hostname</label><input class="form-control" id="e-hostname" name="hostname" value="{{.Hostname}}" autocomplete="off" spellcheck="false"></div>
-            <div class="col-sm-3"><label class="form-label" for="e-user">User</label><input class="form-control" id="e-user" name="user" value="{{.User}}" autocomplete="off" spellcheck="false"></div>
-            <div class="col-sm-3"><label class="form-label" for="e-port">Port</label><input class="form-control" id="e-port" name="port" value="{{.Port}}" inputmode="numeric"></div>
-            <div class="col-12"><label class="form-label" for="e-tags">Tags <span class="text-secondary">(comma-separated; empty clears them)</span></label><input class="form-control" id="e-tags" name="tags" value="{{join .Tags ", "}}" autocomplete="off" spellcheck="false"></div>
+          <div class="mb-3"><label class="form-label" for="e-hostname">Hostname</label><input class="form-control" id="e-hostname" name="hostname" value="{{.Hostname}}" autocomplete="off" spellcheck="false"></div>
+          <div class="row g-2 mb-3">
+            <div class="col-8"><label class="form-label" for="e-user">User</label><input class="form-control" id="e-user" name="user" value="{{.User}}" autocomplete="off" spellcheck="false"></div>
+            <div class="col-4"><label class="form-label" for="e-port">Port</label><input class="form-control" id="e-port" name="port" value="{{.Port}}" inputmode="numeric" pattern="[0-9]+"></div>
           </div>
-          <button type="submit" class="btn btn-primary mt-3">Preview</button>
+          <div class="mb-3"><label class="form-label" for="e-tags">Tags</label><input class="form-control" id="e-tags" name="tags" value="{{join .Tags ", "}}" autocomplete="off" spellcheck="false"><small class="form-hint">Comma-separated; empty clears them.</small></div>
+          {{template "panel_actions" ""}}
         </form>
-      </div>
-      <div class="card-footer">
-        <form method="post" action="/changes/preview" data-inline id="f-host-delete"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="host-delete"><input type="hidden" name="profile" value="{{.Profile}}"><input type="hidden" name="alias" value="{{.Alias}}">
-          <button type="submit" class="btn btn-outline-danger" data-confirm="m-host-delete">{{icon "trash"}}<span class="ms-1">Delete host {{.Alias}} and its pins</span></button>
-          <span class="text-secondary small ms-2">Its key files stay on disk.</span>
-        </form>
-        {{template "confirm" (confirm "m-host-delete" "f-host-delete" (printf "Delete host %s?" .Alias) "Its manifest entry, its block in ~/.ssh/config and its pinned host keys go; its key files stay. You see the change before it is made." "Preview the delete")}}
-        {{if $.Data.VM}}{{template "change_open" $}}<input type="hidden" name="action" value="vm-docker-context"><input type="hidden" name="alias" value="{{.Alias}}">
-          <button type="submit" class="btn btn-outline-secondary mt-2">Create a Docker context for {{.Alias}}</button>
-        </form>{{end}}
-      </div>
-    </div>
+        {{if $.Data.VM}}<div class="mt-4 pt-3 border-top">
+          <h3 class="h4">Docker</h3>
+          {{template "change_open" $}}<input type="hidden" name="action" value="vm-docker-context"><input type="hidden" name="alias" value="{{.Alias}}">
+            <button type="submit" class="btn btn-outline-secondary">Create a Docker context for {{.Alias}}</button>
+          </form>
+        </div>{{end}}
+        <div class="mt-4 pt-3 border-top">
+          <h3 class="h4 text-danger">Delete</h3>
+          <p class="text-secondary small">Its manifest entry, its block in <code>~/.ssh/config</code> and its pinned host keys go. Its key files stay on disk.</p>
+          <form method="post" action="/changes/preview" data-inline id="f-host-delete"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="host-delete"><input type="hidden" name="profile" value="{{.Profile}}"><input type="hidden" name="alias" value="{{.Alias}}">
+            <button type="submit" class="btn btn-outline-danger">{{icon "trash"}}<span class="ms-1">Preview deleting {{.Alias}}</span></button>
+          </form>
+        </div>
+{{template "panel_close"}}
     {{end}}{{end}}
   </div>
 </div>

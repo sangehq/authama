@@ -47,6 +47,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **One layout for every page's actions.** Page headers hold the main actions and a More menu;
+  every form opens in a slide-in panel, from the header or from a row's menu, which fills it in for
+  that row. Profiles, Hosts, Keys, VMs, Snapshots and a host's page no longer stack form cards below
+  their tables. The rendered SSH config and a host's block are highlighted, the Settings page marks
+  the theme in effect, and the Audit page's alert buttons sit in its Expiry card.
+
 - **The web UI works in place.** Previewing and confirming a change, a job's review and live
   output, an operation in the history and a snapshot's diff open in one side panel over the page,
   with Back and *Open as a page*; the page underneath reloads when a change was made. Every such
@@ -177,6 +183,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   previewed *Create a starter authama.json*, the same change as `authama settings init`.
 
 ### Fixed
+
+- **`token apply` skipped every PyPI, Cargo, RubyGems and Gradle entry** as an "unknown target":
+  resolving a config from the environment knew only the first five tools. They resolve now.
+- **Saving the manifest turned numbers and booleans in `raw_options` into strings**
+  (`ServerAliveInterval 60` became `"60"`) whenever anything else in it changed. A value that was
+  not changed is written back exactly as it was read.
+- **Menu labels showed `&amp;`** ("Config &amp; backups", "Owner &amp; PIN"), and several pages'
+  section names did not match the menu they are in.
 
 - **A token's History link signed the browser out.** The history's token filter used `?token=`,
   which is also the sign-in link's parameter, so following History from a token's menu answered

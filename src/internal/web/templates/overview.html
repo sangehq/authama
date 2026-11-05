@@ -85,7 +85,7 @@
   <div class="col-lg-7">
     <div class="card h-100" id="state">
       <div class="card-header"><h2 class="card-title">State</h2>{{if eq .Problems 0}}<div class="card-actions"><span class="badge badge-ok">{{icon "circle-check"}}<span class="ms-1">nothing needs attention</span></span></div>{{end}}</div>
-      <div class="table-responsive">
+      <div class="table-responsive" tabindex="0">
         <table class="table table-vcenter card-table">
           <caption class="visually-hidden">The state of this authama home; a row with a command needs attention</caption>
           <thead><tr><th scope="col">What</th><th scope="col">State</th><th scope="col">Fix</th></tr></thead>
@@ -131,7 +131,7 @@
     <div class="card h-100">
       <div class="card-header"><h2 class="card-title">Hosts by profile</h2><div class="card-actions"><a href="/profiles">Profiles</a></div></div>
       {{if .ProfileRows}}
-      <div class="table-responsive">
+      <div class="table-responsive" tabindex="0">
         <table class="table table-vcenter card-table">
           <caption class="visually-hidden">How many hosts and keys each profile has</caption>
           <thead><tr><th scope="col">Profile</th><th scope="col">Hosts</th><th scope="col">Keys</th><th scope="col"><span class="visually-hidden">Share of hosts</span></th></tr></thead>

@@ -43,9 +43,13 @@ holds the Overview and five dropdowns: **SSH** (Profiles, Hosts, Keys, VMs), **C
 (SSH config, Snapshots), **Security** (Auth tokens, Audit, Owner & PIN), **Activity** (History,
 Events) and **System** (Doctor, Settings, About). On a narrow screen it folds behind a button.
 
-- **Page headers** name the section, summarise the page, and hold its main actions.
-- **Adding** a profile, a host or a token opens its form in a panel that slides in from the right.
-  The token form starts with the tool and shows only the fields it uses.
+- **Page headers** name the section, summarise the page, and hold its actions: the first two as
+  buttons, any more (other forms, downloads) in one **More** menu.
+- **Every form opens in a panel** that slides in from the right, from the page header or from a
+  row's menu, which fills it in for that row: adding a profile, host, VM host, key or token, editing
+  a profile's key scope, key comment or category, editing a host, adding hosts in bulk, minting
+  keys, adopting a loose key, making a bundle and pruning snapshots. The token form starts with the
+  tool and shows only the fields it uses.
 - **Changes happen in a side panel.** Previewing a change, confirming it, a job's review and its
   live output, an operation in the history and a snapshot's diff all open in one panel that slides
   in over the page, so the page you came from stays where it was. Pages stack in the panel: **Back**
@@ -77,7 +81,8 @@ Events) and **System** (Doctor, Settings, About). On a narrow screen it folds be
   account menu, walks the header and the overview one step at a time; it offers itself once, on a
   browser's first visit to the overview, and Escape ends it.
 - **Every destructive action** (deleting a profile, host, key or token, pruning snapshots, restoring
-  one, cleaning stale pins) asks in a dialog first, then previews, then asks again on the preview.
+  one, cleaning stale pins) is asked for first, in a dialog or in the panel it sits in, then
+  previewed, then confirmed again on the preview.
 - **Tables** sort by any column, and a list longer than ten rows gains a search box, a page size and
   pages. Hosts, keys, profiles, auth tokens, snapshots, key deployments (on the Audit page), history
   and events each download as CSV, with the same columns as `--csv` on their command. The History and

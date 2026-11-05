@@ -173,3 +173,13 @@ main:focus { outline: none; }
 .csv-columns { max-height: 22rem; overflow: auto; }
 .csv-preview { max-height: 22rem; border: 1px solid var(--tblr-border-color); border-radius: var(--tblr-border-radius); }
 .csv-preview td { white-space: nowrap; }
+/* A slide-in panel is narrow: a form's two-column grid becomes one column. */
+.offcanvas-body .row > [class*="col-sm-"], .offcanvas-body .row > [class*="col-md-"] { flex: 0 0 auto; width: 100%; }
+.op-about { max-width: min(16rem, 30vw); vertical-align: bottom; }
+/* A name in a table stays whole; the table scrolls sideways instead of
+   breaking github-personal at its hyphen into a tall row. */
+.table code, .table .font-monospace { white-space: nowrap; }
+@media (max-width: 575.98px) {
+  .page-body > .container-xl, .page-wrapper .container-xl { padding-inline: 1rem; }
+}
+.page-pretitle a { text-decoration: underline; }

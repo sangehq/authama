@@ -1,5 +1,5 @@
 {{define "content"}}{{with .Data}}
-{{template "page_header" (header "System" "Events" "Every change seen to a file under ~/.ssh, the config home or a tool's credential file, whoever made it.")}}
+{{template "page_header" (header "Activity" "Events" "Every change seen to a file under ~/.ssh, the config home or a tool's credential file, whoever made it.")}}
 {{if .Integrity.OK}}<div class="alert alert-success" role="status">{{icon "shield-check"}}<span class="ms-1">The events log is intact: {{.Integrity.Chained}} line(s) chained by hash{{if .Integrity.Unchained}}, {{.Integrity.Unchained}} from before the chain{{end}}. <code>authama events --verify</code> checks it from the terminal.</span></div>
 {{else}}<div class="alert alert-danger" role="alert">{{icon "alert-triangle"}}<span class="ms-1"><strong>The events log has been tampered with</strong>{{if .Integrity.Broken}} at line {{.Integrity.Broken}}{{end}}: {{.Integrity.Reason}}.</span></div>{{end}}
 {{if not .Tracking}}<div class="alert alert-info" role="status">{{icon "info-circle"}}<span class="ms-1">This server was started without file tracking, so it records no new events. <code>authama events</code> scans from the terminal.</span></div>{{end}}
@@ -15,7 +15,7 @@
     </div>
   </div>
   {{if .Rows}}
-  <div class="table-responsive">
+  <div class="table-responsive" tabindex="0">
     <table class="table table-vcenter card-table table-hover" id="events-table" data-table="events" data-table-page-size="25">
       <caption class="visually-hidden">File events, newest first</caption>
       <thead><tr><th scope="col">When</th><th scope="col">What</th><th scope="col">Area</th><th scope="col">File</th><th scope="col">Detail</th><th scope="col">By</th></tr></thead>

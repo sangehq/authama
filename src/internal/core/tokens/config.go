@@ -231,8 +231,17 @@ func (s *Set) resolveOne(sp Spec, get Lookup) {
 	case Docker, Git, Netrc:
 		c.Kind, c.Username, c.Password = KindBasic, envValue(get, sp.UserEnv), envValue(get, sp.PassEnv)
 	default:
-		skip(fmt.Sprintf("unknown target %s", pyRepr(sp.Target)))
-		return
+		// The file formats added after the first five (pypi, cargo, gem,
+		// gradle) say which kind of credential they hold.
+		switch TargetKind(sp.Target) {
+		case KindToken:
+			c.Kind, c.Token = KindToken, envValue(get, sp.Env)
+		case KindBasic:
+			c.Kind, c.Username, c.Password = KindBasic, envValue(get, sp.UserEnv), envValue(get, sp.PassEnv)
+		default:
+			skip(fmt.Sprintf("unknown target %s", pyRepr(sp.Target)))
+			return
+		}
 	}
 	trimmed := c
 	trimmed.Token, trimmed.Username, trimmed.Password = strings.TrimSpace(c.Token), strings.TrimSpace(c.Username), strings.TrimSpace(c.Password)

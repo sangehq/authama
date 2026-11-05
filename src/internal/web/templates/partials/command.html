@@ -12,3 +12,10 @@
     <pre class="code-block mb-0" tabindex="0"><span class="code-prompt" aria-hidden="true">$ </span>{{hl "sh" .Command}}</pre>
   </div>
 </div>{{end}}
+
+{{/* "command_line" is one terminal command to run yourself: highlighted,
+     with a copy button, and no card around it. */}}
+{{define "command_line"}}<div class="command-line d-flex align-items-center gap-2 mb-2">
+  <pre class="code-block flex-grow-1 mb-0 py-2" tabindex="0"><span class="code-prompt" aria-hidden="true">$ </span>{{hl "sh" .}}</pre>
+  {{template "copy" (copy . "the command")}}
+</div>{{end}}

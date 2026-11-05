@@ -216,6 +216,19 @@ func funcs(a *assetSet) template.FuncMap {
 			}
 			return strings.Join(parts, ", ")
 		},
+		// subjectsShort is the first few subjects and how many more there
+		// are, so one operation over many keys does not make a tall row.
+		"subjectsShort": func(subs []history.Subject) string {
+			const shown = 3
+			var parts []string
+			for i, s := range subs {
+				if i == shown {
+					return strings.Join(parts, ", ") + fmt.Sprintf(" and %d more", len(subs)-shown)
+				}
+				parts = append(parts, s.Kind+" "+s.Name)
+			}
+			return strings.Join(parts, ", ")
+		},
 		"base": filepath.Base,
 		// pct is part of whole as a percentage, rounded to the 5% steps
 		// app.css has width classes for (no inline style passes the CSP).
@@ -267,10 +280,33 @@ func funcs(a *assetSet) template.FuncMap {
 			return emptyState{Icon: icon, Title: title, Text: text}
 		},
 		"header": func(pretitle, title, subtitle string, actions ...headerAction) pageHeader {
-			return pageHeader{Pretitle: pretitle, Title: title, Subtitle: subtitle, Actions: actions}
+			h := pageHeader{Pretitle: pretitle, Title: title, Subtitle: subtitle}
+			for _, a := range actions {
+				if a.Label != "" { // an action `when` left out
+					h.Actions = append(h.Actions, a)
+				}
+			}
+			return h
+		},
+		// only keeps an action if cond holds, so a header lists the
+		// actions a read-only or dev-mode server does not offer in one place.
+		"only": func(cond bool, a headerAction) headerAction {
+			if !cond {
+				return headerAction{}
+			}
+			return a
 		},
 		"action": func(label, href, icon string) headerAction {
 			return headerAction{Label: label, Href: href, Icon: icon}
+		},
+		// download is an action that downloads a file; a CSV opens the CSV dialog first.
+		"download": func(label, href string) headerAction {
+			return headerAction{Label: label, Href: href, Icon: "download", Download: true,
+				CSV: strings.HasSuffix(strings.SplitN(href, "?", 2)[0], ".csv")}
+		},
+		// modal is an action that opens the dialog with that id.
+		"modal": func(label, id, icon string) headerAction {
+			return headerAction{Label: label, Href: "#" + id, Icon: icon, Modal: id}
 		},
 		// panel is an action that slides in the offcanvas panel with that id.
 		"panel": func(label, id, icon string) headerAction {
@@ -359,7 +395,10 @@ type pageHeader struct {
 
 // headerAction is a link at the right of a page header, to a form further
 // down the page; the first is the primary one.
-type headerAction struct{ Label, Href, Icon, Panel string }
+type headerAction struct {
+	Label, Href, Icon, Panel, Modal string
+	Download, CSV                   bool
+}
 
 // emptyState is a list with nothing in it yet.
 type emptyState struct{ Icon, Title, Text string }
