@@ -1,10 +1,10 @@
 {{define "content"}}
-{{template "page_header" (header "SSH" "Snapshots" "")}}
+{{template "page_header" (header "Config & backups" "Snapshots" "" (only (not .ReadOnly) (panel "Make a bundle" "bundle" "archive")) (only (and (not .ReadOnly) (gt (len .Data.Snapshots) 0)) (panel "Prune old snapshots" "prune" "trash")))}}
 <p class="text-secondary">Every command that changes <code>~/.ssh</code> archives its config, <code>known_hosts</code> and public keys first. Private keys are never in a snapshot.</p>
 <div class="card">
   <div class="card-header"><h2 class="card-title">Snapshots</h2>{{if .Data.Snapshots}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data.Snapshots}}, newest first</span>{{template "csv" "/exports/snapshots.csv"}}</div>{{end}}</div>
   {{if .Data.Snapshots}}
-  <div class="table-responsive">
+  <div class="table-responsive" tabindex="0">
     <table class="table table-vcenter card-table table-hover" data-table="snapshots">
       <caption class="visually-hidden">Snapshots, newest first</caption>
       <thead><tr><th scope="col">Snapshot</th><th scope="col">Taken</th><th scope="col">Size</th><th scope="col" class="w-1" data-nosort><span class="visually-hidden">Actions</span></th></tr></thead>
@@ -17,7 +17,7 @@
           <td class="text-end">
             {{template "menu_open" (printf "Actions for snapshot %s" .ID)}}
               {{if .KeyBearing}}<span class="dropdown-item disabled" aria-disabled="true">{{icon "lock"}}<span class="ms-2">Not opened: it holds private keys</span></span>
-              {{else}}<a class="dropdown-item" href="/snapshots/{{.ID}}">{{icon "git-compare"}}<span class="ms-2">Compare with now</span></a>{{end}}
+              {{else}}<a class="dropdown-item" href="/snapshots/{{.ID}}" data-inline>{{icon "git-compare"}}<span class="ms-2">Compare with now</span></a>{{end}}
               <button type="button" class="dropdown-item" data-copy="{{.ID}}">{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
             {{template "menu_close"}}
           </td>
@@ -29,22 +29,21 @@
   {{else}}{{template "empty" (empty "archive" "No snapshots yet" "The first command that changes ~/.ssh takes one.")}}{{end}}
 </div>
 {{if and (not .ReadOnly) .Data.Snapshots}}
-<div class="card mt-3">
-  <div class="card-body">
-    <form method="post" action="/changes/preview" id="f-prune"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="action" value="snapshots-prune">
-      <div class="row g-2 align-items-end">
-        <div class="col-sm-3"><label class="form-label" for="s-keep">Keep the newest</label><input class="form-control" id="s-keep" name="keep" inputmode="numeric" value="10"></div>
-        <div class="col-sm-3"><button type="submit" class="btn btn-outline-danger w-100" data-confirm="m-prune">{{icon "trash"}}<span class="ms-1">Preview pruning</span></button></div>
+{{template "panel_open" (header "prune" "Prune old snapshots" "Every snapshot older than the newest you keep is deleted, and no snapshot is taken first. You see the list before anything is removed.")}}
+    <form method="post" action="/changes/preview" data-inline id="f-prune"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="action" value="snapshots-prune">
+      <div class="mb-3"><label class="form-label" for="s-keep">Keep the newest</label><input class="form-control" id="s-keep" name="keep" inputmode="numeric" pattern="[0-9]+" value="10" required></div>
+      <div class="d-flex align-items-center gap-2 pt-3 border-top">
+        <span class="text-secondary small me-auto">The same as <code>authama ssh snapshots prune</code>.</span>
+        <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
+        <button type="submit" class="btn btn-outline-danger">{{icon "trash"}}<span class="ms-1">Preview pruning</span></button>
       </div>
     </form>
-    {{template "confirm" (confirm "m-prune" "f-prune" "Prune old snapshots?" "Every snapshot older than the newest you keep is deleted, and no snapshot is taken first. You see the list before anything is removed." "Preview pruning")}}
-  </div>
-</div>
+{{template "panel_close"}}
 {{end}}
 {{if .Data.Bundles}}
 <div class="card mt-3">
   <div class="card-header"><h2 class="card-title">Bundles in <code>dist/</code></h2></div>
-  <div class="table-responsive">
+  <div class="table-responsive" tabindex="0">
     <table class="table table-vcenter card-table">
       <caption class="visually-hidden">Encrypted bundles, newest first</caption>
       <thead><tr><th scope="col">Bundle</th><th scope="col">Written</th><th scope="col">Size</th><th scope="col" class="w-1"><span class="visually-hidden">Actions</span></th></tr></thead>
@@ -55,7 +54,7 @@
           <td class="text-nowrap">{{when .Written}}</td>
           <td>{{size .Size}}</td>
           <td class="text-end">
-            {{if not $.ReadOnly}}<form method="post" action="/jobs/review" id="f-bundle-{{.Name}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="bundle-restore"><input type="hidden" name="bundle" value="{{.Name}}"></form>{{end}}
+            {{if not $.ReadOnly}}<form method="post" action="/jobs/review" data-inline id="f-bundle-{{.Name}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="bundle-restore"><input type="hidden" name="bundle" value="{{.Name}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for bundle %s" .Name)}}
               <button type="button" class="dropdown-item" data-copy="{{.Name}}">{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
               {{if not $.ReadOnly}}<div class="dropdown-divider"></div>
@@ -72,17 +71,15 @@
 </div>
 {{end}}
 {{if not .ReadOnly}}
-<div class="card mt-3">
-  <div class="card-header"><h2 class="card-title">Encrypted bundle</h2></div>
-  <div class="card-body">
-    <p class="text-secondary">Snapshots leave private keys out. A bundle holds everything, keys included, encrypted with age to <code>AUTHAMA_AGE_RECIPIENT</code>, in the state home's <code>dist/</code>.</p>
+{{template "panel_open" (header "bundle" "Make an encrypted bundle" "Snapshots leave private keys out. A bundle holds everything, keys included, encrypted with age to AUTHAMA_AGE_RECIPIENT, in the state home's dist/.")}}
     {{template "change_open" .}}<input type="hidden" name="action" value="bundle">
-      <div class="row g-2 align-items-end">
-        <div class="col-sm-3"><label class="form-label" for="b-keep">Then keep the newest <span class="text-secondary">(empty keeps all)</span></label><input class="form-control" id="b-keep" name="keep" inputmode="numeric"></div>
-        <div class="col-sm-3"><button type="submit" class="btn btn-outline-secondary w-100">Preview a bundle</button></div>
+      <div class="mb-3"><label class="form-label" for="b-keep">Then keep the newest bundles</label><input class="form-control" id="b-keep" name="keep" inputmode="numeric" pattern="[0-9]*"><small class="form-hint">Empty keeps every bundle.</small></div>
+      <div class="d-flex align-items-center gap-2 pt-3 border-top">
+        <span class="text-secondary small me-auto">The same as <code>authama ssh bundle</code>.</span>
+        <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
+        <button type="submit" class="btn btn-primary">Preview a bundle</button>
       </div>
     </form>
-  </div>
-</div>
+{{template "panel_close"}}
 {{end}}
 {{end}}

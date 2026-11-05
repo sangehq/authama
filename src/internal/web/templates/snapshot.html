@@ -18,16 +18,13 @@
 </form>
 <p class="text-secondary">Lines marked <code>-</code> are in <code>{{.ID}}</code>; lines marked <code>+</code> are in {{if .Against}}<code>{{.Against}}</code>{{else}}<code>~/.ssh</code> now{{end}}.</p>
 {{range .Files}}
-<div class="card mb-3">
-  <div class="card-header"><h2 class="card-title"><code>{{.Path}}</code></h2><span class="ms-2 badge {{if eq .State "changed"}}badge-info{{else if eq .State "added"}}badge-ok{{else}}badge-bad{{end}}">{{.State}}</span></div>
-  <div class="card-body p-0">{{template "diff" .Lines}}</div>
-</div>
+{{template "file_diff" (fileDiff .Path .State .Lines .Checked .Problem)}}
 {{else}}<p>{{icon "circle-check"}}<span class="ms-1">No difference.</span></p>{{end}}
 {{if not $.ReadOnly}}
 <div class="card mt-3">
   <div class="card-body">
     <p class="text-secondary">Restoring puts back the config, <code>known_hosts</code> and public keys this snapshot holds, and leaves private keys as they are. <code>~/.ssh</code> is snapshotted first, so the restore can be undone.</p>
-    <form method="post" action="/changes/preview" id="f-restore"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="snapshots-restore"><input type="hidden" name="id" value="{{.ID}}">
+    <form method="post" action="/changes/preview" data-inline id="f-restore"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="snapshots-restore"><input type="hidden" name="id" value="{{.ID}}">
       <button type="submit" class="btn btn-outline-danger" data-confirm="m-restore">{{icon "arrow-back-up"}}<span class="ms-1">Preview restoring {{.ID}}</span></button>
     </form>
     {{template "confirm" (confirm "m-restore" "f-restore" (printf "Restore %s?" .ID) "Its config, known_hosts and public keys replace the ones in ~/.ssh now; ~/.ssh is snapshotted first. You see the diff before it is made." "Preview the restore")}}

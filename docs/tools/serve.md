@@ -39,13 +39,30 @@ the machine (or dev mode, or read-only), holding Settings, Events, Doctor and Ab
 system's light or dark theme is chosen on the Settings page, and the third-party licences are on the
 About page. The footer carries the copyright, the version, and links to About, the documentation, the
 source and the licences. Under it, a menu
-holds the Overview and three dropdowns: **SSH** (Profiles, Hosts, SSH config, Keys, VMs, Snapshots),
-**Auth** (Auth tokens) and **System** (History, Events, Doctor, Audit, Settings, About). On a narrow
-screen it folds behind a button.
+holds the Overview and five dropdowns: **SSH** (Profiles, Hosts, Keys, VMs), **Config & backups**
+(SSH config, Snapshots), **Security** (Auth tokens, Audit, Owner & PIN), **Activity** (History,
+Events) and **System** (Doctor, Settings, About). On a narrow screen it folds behind a button.
 
-- **Page headers** name the section, summarise the page, and hold its main actions.
-- **Adding** a profile, a host or a token opens its form in a panel that slides in from the right.
-  The token form starts with the tool and shows only the fields it uses.
+- **Page headers** name the section, summarise the page, and hold its actions: the first two as
+  buttons, any more (other forms, downloads) in one **More** menu.
+- **Every form opens in a panel** that slides in from the right, from the page header or from a
+  row's menu, which fills it in for that row: adding a profile, host, VM host, key or token, editing
+  a profile's key scope, key comment or category, editing a host, adding hosts in bulk, minting
+  keys, adopting a loose key, making a bundle and pruning snapshots. The token form starts with the
+  tool and shows only the fields it uses.
+- **Changes happen in a side panel.** Previewing a change, confirming it, a job's review and its
+  live output, an operation in the history and a snapshot's diff all open in one panel that slides
+  in over the page, so the page you came from stays where it was. Pages stack in the panel: **Back**
+  returns to the previous one, and *Open as a page* opens the current one on its own. When a change
+  was made in the panel, the page under it reloads as the panel closes. Without JavaScript each of
+  these is its own page, as before.
+- **A change says what it runs.** The review starts with the command it is the same as,
+  highlighted, with a copy button and **Run**, which confirms the change (the same as *Make this
+  change* at the foot of the review).
+- **Diffs are numbered and highlighted.** Every file a change would write is a table of numbered
+  old and new lines, coloured in the file's own syntax (JSON, INI, TOML, YAML, properties,
+  ssh_config, netrc, shell), with its added and removed counts, a copy button for its path and, for
+  JSON, whether the new content is valid; if it is not, the line and column of the problem.
 - **Each row's actions are one menu** (the ⋮ button at the row's end): open it, copy what it names,
   see its history, and the row's destructive action last, set apart. A token's menu also opens the
   add-a-token panel filled in for it, which is how a token is replaced or rotated.
@@ -54,7 +71,8 @@ screen it folds behind a button.
   is copied only from the terminal (`authama ssh termius keys`), and a token's secret only with
   `authama token copy`.
 - **`tokens.json` is editable** in a dialog on the Auth tokens page, previewed as a diff like any
-  change. The editor opens only a file that holds variable names, and refuses an edit that adds a
+  change. The editor checks the JSON as you type, names the line and column of a mistake, will not
+  send the form while it is invalid, and re-indents valid JSON with *Format JSON*. The editor opens only a file that holds variable names, and refuses an edit that adds a
   value: every `env`, `user_env`, `pass_env`, `key_env` and `secret_env` must be an upper-case
   variable name of at most 48 characters that does not start like a known token (`ghp_`, `glpat-`,
   `npm_`, …), and a header that carries a credential must take it from `${VAR}`.
@@ -63,11 +81,18 @@ screen it folds behind a button.
   account menu, walks the header and the overview one step at a time; it offers itself once, on a
   browser's first visit to the overview, and Escape ends it.
 - **Every destructive action** (deleting a profile, host, key or token, pruning snapshots, restoring
-  one, cleaning stale pins) asks in a dialog first, then previews, then asks again on the preview.
+  one, cleaning stale pins) is asked for first, in a dialog or in the panel it sits in, then
+  previewed, then confirmed again on the preview.
 - **Tables** sort by any column, and a list longer than ten rows gains a search box, a page size and
   pages. Hosts, keys, profiles, auth tokens, snapshots, key deployments (on the Audit page), history
   and events each download as CSV, with the same columns as `--csv` on their command. The History and
   Events downloads keep the page's filters, so the file holds what the page shows.
+- **A CSV is previewed before it downloads.** Its button opens a dialog: tick the columns to keep,
+  leave out the rows that contain some text, and see the first 25 rows as the file will hold them,
+  with how many rows and columns are kept. The choice is remembered for that list in the browser,
+  and *Reset* forgets it. The Termius CSV on the Hosts page works the same way. The server does the
+  shaping, so a script can too: `?drop=user,port` leaves columns out, `?exclude=staging` leaves out
+  rows containing that text, and `?preview=1` answers with the preview as JSON.
 - **The command palette**, Ctrl+K (⌘K on a Mac) or *Search* in the header, jumps to any page, opens
   the add-a-profile, host or token panel, or starts a download, as you type.
 
@@ -85,6 +110,8 @@ screen it folds behind a button.
 | Doctor, Audit | the reports `authama doctor` and `authama ssh audit` print |
 | Events | every change seen to a tracked file, with the authama operation that made it, as [`authama events`](events.md) lists them; filtered by area |
 | About | this build (version, commit, Go, platform), the user and machine it runs as, where it keeps things, links to the documentation and the source, and the third-party licences of the bundled front-end assets |
+| Owner & PIN | whether the home is [bound to its owner](owner.md), where the sealing key is kept, whether a PIN and fingerprint unlock are on, and whether the sealed files match, naming each one changed outside authama. Changing any of it is done at a terminal, which proves the OS account; the page shows the commands |
+| Repair | what is wrong with the home, `~/.ssh` and the token files, the fixes made as one previewed change, and a factory reset; see [repair](repair.md) |
 | Settings | the colour theme (light, dark, or following the system); where the config home, state home, `.env` and `authama.json` are, every setting's value in effect and where it came from, and what `authama settings validate` reports, as `settings path`, `settings show --effective` and `settings validate` print them. The values are those the server started with |
 | Third-party licences | the licences of the web UI's bundled front-end assets (Tabler, Tabler Icons, Bootstrap, Popper), at `/about/licenses` |
 

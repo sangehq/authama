@@ -79,11 +79,16 @@ var DefaultGlobalOptions = map[string]string{
 type OrderedOptions struct {
 	keys []string
 	vals map[string]string
+	// raw is how a value that was not a JSON string was spelled when read
+	// (60, true). Written back while the value is unchanged, so saving the
+	// manifest for another reason does not turn ServerAliveInterval 60 into "60".
+	raw map[string]json.RawMessage
 }
 
 func (o *OrderedOptions) UnmarshalJSON(b []byte) error {
 	o.keys = nil
 	o.vals = map[string]string{}
+	o.raw = map[string]json.RawMessage{}
 	dec := json.NewDecoder(bytes.NewReader(b))
 	t, err := dec.Token()
 	if err != nil {
@@ -109,6 +114,9 @@ func (o *OrderedOptions) UnmarshalJSON(b []byte) error {
 			o.keys = append(o.keys, k)
 		}
 		o.vals[k] = stringifyJSON(raw)
+		if t := bytes.TrimSpace(raw); len(t) > 0 && t[0] != '"' {
+			o.raw[k] = append(json.RawMessage(nil), t...)
+		}
 	}
 	_, err = dec.Token() // consume '}'
 	return err
@@ -127,6 +135,9 @@ func (o OrderedOptions) MarshalJSON() ([]byte, error) {
 		}
 		kb, _ := json.Marshal(k)
 		vb, _ := json.Marshal(o.vals[k])
+		if r, ok := o.raw[k]; ok && stringifyJSON(r) == o.vals[k] {
+			vb = r
+		}
 		buf.Write(kb)
 		buf.WriteByte(':')
 		buf.Write(vb)

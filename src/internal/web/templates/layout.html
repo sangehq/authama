@@ -77,9 +77,11 @@
           <nav class="d-flex flex-wrap align-items-center w-100" aria-label="Main">
             <ul class="navbar-nav">
               {{template "navlink" (navItem . "overview" "/" "layout-dashboard" "Overview")}}
-              {{template "navgroup" (navGroup . "ssh" "key" "SSH" (navItem . "profiles" "/profiles" "users" "Profiles") (navItem . "hosts" "/hosts" "server" "Hosts") (navItem . "sshconfig" "/ssh-config" "file-code" "SSH config") (navItem . "keys" "/keys" "key" "Keys") (navItem . "vms" "/vms" "device-desktop" "VMs") (navItem . "snapshots" "/snapshots" "archive" "Snapshots"))}}
-              {{template "navgroup" (navGroup . "auth" "cloud-lock" "Auth" (navItem . "tokens" "/tokens" "cloud-lock" "Auth tokens"))}}
-              {{template "navgroup" (navGroup . "system" "settings" "System" (navItem . "history" "/history" "history" "History") (navItem . "events" "/events" "activity" "Events") (navItem . "doctor" "/doctor" "stethoscope" "Doctor") (navItem . "audit" "/audit" "shield-check" "Audit") (navItem . "settings" "/settings" "settings" "Settings") (navItem . "about" "/about" "info-circle" "About"))}}
+              {{template "navgroup" (navGroup . "ssh" "key" "SSH" (navItem . "profiles" "/profiles" "users" "Profiles") (navItem . "hosts" "/hosts" "server" "Hosts") (navItem . "keys" "/keys" "key" "Keys") (navItem . "vms" "/vms" "device-desktop" "VMs"))}}
+              {{template "navgroup" (navGroup . "files" "file-code" "Config & backups" (navItem . "sshconfig" "/ssh-config" "file-code" "SSH config") (navItem . "snapshots" "/snapshots" "archive" "Snapshots"))}}
+              {{template "navgroup" (navGroup . "auth" "lock" "Security" (navItem . "tokens" "/tokens" "cloud-lock" "Auth tokens") (navItem . "audit" "/audit" "shield-check" "Audit") (navItem . "security" "/security" "lock" "Owner & PIN"))}}
+              {{template "navgroup" (navGroup . "activity" "activity" "Activity" (navItem . "history" "/history" "history" "History") (navItem . "events" "/events" "activity" "Events"))}}
+              {{template "navgroup" (navGroup . "system" "settings" "System" (navItem . "doctor" "/doctor" "stethoscope" "Doctor") (navItem . "repair" "/repair" "refresh" "Repair") (navItem . "settings" "/settings" "settings" "Settings") (navItem . "about" "/about" "info-circle" "About"))}}
             </ul>
             <div data-tour="4" data-tour-title="Who and where" data-tour-text="The account and machine this server runs as: every change it makes is theirs." class="session-strip ms-md-auto d-flex align-items-center gap-2 small text-secondary py-2 py-md-0">
               {{icon "device-desktop"}}<span>Running as <strong class="text-body">{{if .User}}{{.User}}{{else}}this machine's user{{end}}</strong>{{if .Host}} on <strong class="text-body">{{.Host}}</strong>{{end}}</span>
@@ -130,6 +132,7 @@
       </div>
     </footer>
   </div>
+  {{if .Authed}}{{template "side_panel" .}}{{template "csv_dialog" .}}{{end}}
 </div>
 {{if .Authed}}{{template "palette" .}}{{end}}
 <script src="{{asset "vendor/tabler/tabler.min.js"}}" defer></script>

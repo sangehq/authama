@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"go/build"
+	"html"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -75,12 +76,22 @@ func TestEveryPageRenders(t *testing.T) {
 func TestTheOperationPageShowsTheManifestDiff(t *testing.T) {
 	s, _, opID := newTestServer(t)
 	body := signIn(t, s).get("/history/" + opID).Body.String()
-	for _, want := range []string{`diff-del`, `&#34;a&#34;: 1`, `diff-add`, `&#34;a&#34;: 2`} {
+	// The lines are highlighted, so their text is split across spans: read
+	// it with the markup taken out.
+	text := html.UnescapeString(tagRe.ReplaceAllString(body, ""))
+	for _, want := range []string{`diff-del`, `diff-add`, `tok-key`, `tok-num`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the operation page is missing %s", want)
 		}
 	}
+	for _, want := range []string{`"a": 1`, `"a": 2`} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the operation page does not show %s", want)
+		}
+	}
 }
+
+var tagRe = regexp.MustCompile(`<[^>]*>`)
 
 // Names that resolve to nothing are 404s, and nothing is ever joined onto a
 // path: a traversal attempt is just another unknown name.

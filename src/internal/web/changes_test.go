@@ -3,6 +3,8 @@ package web
 import (
 	"crypto/sha256"
 	"fmt"
+	"github.com/simtabi/authama/src/internal/services/owner"
+	"github.com/simtabi/authama/src/internal/util/testcred"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -11,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/core/tokens"
@@ -302,6 +305,43 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 	}
 	for _, m := range action.FindAllStringSubmatch(c.get("/tokens").Body.String(), -1) {
 		seen[m[1]] = true
+	}
+	// Owner & PIN offers binding while unbound, and the rest once bound with
+	// a PIN and a file changed behind authama's back.
+	t.Setenv(owner.StoreEnv, owner.StoreFile)
+	collect := func(page string) {
+		for _, m := range action.FindAllStringSubmatch(c.get(page).Body.String(), -1) {
+			seen[m[1]] = true
+		}
+	}
+	collect("/security")
+	// Repair offers its fixes once something is fixable: a config file
+	// others can read. The token files it checks live in this test's HOME.
+	t.Setenv("HOME", t.TempDir())
+	if err := os.Chmod(filepath.Join(p.SSHDir, "config"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	collect("/repair")
+	if _, err := owner.MachineID(); err == nil {
+		if _, err := owner.Init(p, time.Now()); err != nil {
+			t.Fatal(err)
+		}
+		if err := owner.SetPIN(p, "", testcred.Secret("owner"), time.Now()); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p.Tokens(), []byte(tokens.AllTargetsTemplate()+" "), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		// The PIN now gates the session; give it, as the browser would.
+		c.change("/unlock", url.Values{"pin": {testcred.Secret("owner")}})
+		collect("/security")
+	} else {
+		for _, a := range []string{"owner-pin-set", "owner-pin-remove", "owner-reseal", "owner-forget"} {
+			seen[a] = true
+		}
+	}
+	if ok, _ := owner.BiometricAvailable(); !ok {
+		seen["owner-fingerprint"] = true // offered only where a reader is set up
 	}
 	for want := range jobFields {
 		if !seen[want] {

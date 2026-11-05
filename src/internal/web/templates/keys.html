@@ -1,9 +1,9 @@
 {{define "content"}}
-{{template "page_header" (header "SSH" "Keys" "Every key with its fingerprint and expiry, and the loose keys kept on purpose.")}}
+{{template "page_header" (header "SSH" "Keys" "Every key with its fingerprint and expiry, and the loose keys kept on purpose." (only (not .ReadOnly) (panel "Add a key" "add-key" "plus")) (only (not .ReadOnly) (panel "Mint missing keys" "mint-keys" "key")))}}
 <div class="card">
   <div class="card-header"><h2 class="card-title">Keys</h2>{{if .Data.Rows}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data.Rows}} in the manifest</span>{{template "csv" "/exports/keys.csv"}}</div>{{end}}</div>
   {{if .Data.Rows}}
-  <div class="table-responsive">
+  <div class="table-responsive" tabindex="0">
     <table class="table table-vcenter card-table table-hover" id="keys-table" data-table="keys">
       <caption class="visually-hidden">Every key the manifest declares or a host uses</caption>
       <thead><tr><th scope="col">Key</th><th scope="col">Type</th><th scope="col">Fingerprint</th><th scope="col">Expires</th><th scope="col">Hosts</th><th scope="col">On disk</th><th scope="col" class="w-1" data-nosort><span class="visually-hidden">Actions</span></th></tr></thead>
@@ -17,7 +17,7 @@
           <td>{{orDash (join .Hosts ", ")}}</td>
           <td>{{if .Vault}}1Password <span class="text-secondary">({{.Vault}})</span>{{else if .PrivateOnDisk}}<span class="badge badge-ok">yes</span>{{else}}<span class="badge badge-warn">not minted</span>{{end}}</td>
           <td class="text-end">
-            {{if and (not $.ReadOnly) .Declared (not .Hosts)}}<form method="post" action="/changes/preview" id="f-key-{{.Ref.Profile}}-{{.Ref.KeyName}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="key-delete"><input type="hidden" name="profile" value="{{.Ref.Profile}}"><input type="hidden" name="key" value="{{.Ref.KeyName}}"></form>{{end}}
+            {{if and (not $.ReadOnly) .Declared (not .Hosts)}}<form method="post" action="/changes/preview" data-inline id="f-key-{{.Ref.Profile}}-{{.Ref.KeyName}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="key-delete"><input type="hidden" name="profile" value="{{.Ref.Profile}}"><input type="hidden" name="key" value="{{.Ref.KeyName}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for key %s" .Ref)}}
               <a class="dropdown-item" href="/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}">{{icon "external-link"}}<span class="ms-2">Open</span></a>
               {{with index $.Data.Public .Ref.String}}<button type="button" class="dropdown-item" data-copy="{{.}}">{{icon "copy"}}<span class="ms-2">Copy the public key</span></button>{{end}}
@@ -39,11 +39,11 @@
   {{if not $.ReadOnly}}{{range .Data.Rows}}{{if and .Declared (not .Hosts)}}{{template "confirm" (confirm (printf "m-key-%s-%s" .Ref.Profile .Ref.KeyName) (printf "f-key-%s-%s" .Ref.Profile .Ref.KeyName) (printf "Delete key %s?" .Ref.KeyName) "Its declaration and inventory record go; the key files stay on disk. You see the change before it is made." "Preview the delete")}}{{end}}{{end}}{{end}}
   {{else}}{{template "empty" (empty "key" "No keys in the manifest yet" "Add one below, or add a host and reconcile.")}}{{end}}
 </div>
-<p class="text-secondary mt-2">A declared key no host uses can be deleted here: the declaration and its record go, the files stay. Rotation, overwriting a key, passphrases and keys kept in 1Password stay in the terminal: <code>authama ssh rotate</code>, <code>authama ssh keygen --force</code>, <code>--passphrase</code>.</p>
+<p class="text-secondary mt-2">A key's menu sets its lifetime, rotates, rolls back or revokes it (on its page), and deletes a declared key no host uses: the declaration and its record go, the files stay. Overwriting a key in place, a passphrase and keys kept in 1Password stay in the terminal: <code>authama ssh keygen --force</code>, <code>--passphrase</code>.</p>
 <div class="card mt-3" id="loose">
   <div class="card-header"><h2 class="card-title">Reserved keys</h2></div>
   {{if .Data.Reserved}}
-  <div class="table-responsive">
+  <div class="table-responsive" tabindex="0">
     <table class="table table-vcenter card-table">
       <caption class="visually-hidden">Loose keys in ~/.ssh kept on purpose</caption>
       <thead><tr><th scope="col">Key</th><th scope="col">For</th><th scope="col">Note</th><th scope="col">Since</th><th scope="col">State</th>{{if not $.ReadOnly}}<th scope="col"><span class="visually-hidden">Actions</span></th>{{end}}</tr></thead>
@@ -77,11 +77,7 @@
   {{end}}
 </div>
 {{if not .ReadOnly}}
-<div class="row row-cards mt-1">
-  <div class="col-lg-7">
-    <div class="card">
-      <div class="card-header"><h2 class="card-title">Add a key</h2></div>
-      <div class="card-body">
+{{template "panel_open" (header "add-key" "Add a key" "Declares the key and mints it, with no passphrase.")}}
         {{template "change_open" .}}<input type="hidden" name="action" value="key-add">
           <div class="row g-2">
             <div class="col-sm-4"><label class="form-label" for="k-profile">Profile</label><input class="form-control" id="k-profile" name="profile" required autocomplete="off" spellcheck="false" list="k-profiles"></div>
@@ -90,24 +86,14 @@
             <div class="col-12"><label class="form-label" for="k-host">Wire it to host <span class="text-secondary">(optional alias in that profile)</span></label><input class="form-control" id="k-host" name="host" autocomplete="off" spellcheck="false"></div>
           </div>
           <datalist id="k-profiles">{{range .Data.Rows}}<option value="{{.Ref.Profile}}">{{end}}</datalist>
-          <p class="text-secondary small mt-2 mb-2">Declares the key and mints it, with no passphrase.</p>
-          <button type="submit" class="btn btn-primary">Preview</button>
+          {{template "panel_actions" ""}}
         </form>
-      </div>
-    </div>
-  </div>
-  <div class="col-lg-5">
-    <div class="card">
-      <div class="card-header"><h2 class="card-title">Mint missing keys</h2></div>
-      <div class="card-body">
+{{template "panel_close"}}
+{{template "panel_open" (header "mint-keys" "Mint missing keys" "Keys that exist are left alone.")}}
         {{template "change_open" .}}<input type="hidden" name="action" value="keygen">
           <div class="mb-2"><label class="form-label" for="g-target">For a profile or host alias</label><input class="form-control" id="g-target" name="target" required autocomplete="off" spellcheck="false" list="k-profiles"></div>
-          <p class="text-secondary small mb-2">Keys that exist are left alone.</p>
-          <button type="submit" class="btn btn-primary">Preview</button>
+          {{template "panel_actions" ""}}
         </form>
-      </div>
-    </div>
-  </div>
-</div>
+{{template "panel_close"}}
 {{end}}
 {{end}}

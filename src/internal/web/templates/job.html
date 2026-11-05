@@ -9,7 +9,7 @@
   {{else if eq .State "done"}}<span class="badge badge-ok">done</span>
   {{else if eq .State "cancelled"}}<span class="badge badge-warn">cancelled</span>
   {{else}}<span class="badge badge-bad">failed</span>{{end}}
-  {{if .OpID}}<a class="ms-2" href="/history/{{.OpID}}">{{icon "history"}}<span class="ms-1">In the history</span></a>{{end}}
+  {{if .OpID}}<a class="ms-2" href="/history/{{.OpID}}" data-inline>{{icon "history"}}<span class="ms-1">In the history</span></a>{{end}}
 </div>
 {{with .Question}}
 <div class="card mb-3 border-warning">

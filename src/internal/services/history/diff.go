@@ -9,6 +9,13 @@ import (
 type DiffLine struct {
 	Op   byte
 	Text string
+	// Old and New are the line's numbers in a and b, from 1; 0 where the
+	// line is not in that side. On a hunk separator ('@'), Skipped is how
+	// many unchanged lines it stands for. None is in JSON output, whose
+	// shape predates them.
+	Old     int `json:"-"`
+	New     int `json:"-"`
+	Skipped int `json:"-"`
 }
 
 // Diff returns the changed lines between a and b with context lines around
@@ -41,21 +48,21 @@ func Diff(a, b string, context int) []DiffLine {
 	for i < len(x) && j < len(y) {
 		switch {
 		case x[i] == y[j]:
-			all = append(all, DiffLine{' ', x[i]})
+			all = append(all, DiffLine{Op: ' ', Text: x[i], Old: i + 1, New: j + 1})
 			i, j = i+1, j+1
 		case lcs[i+1][j] >= lcs[i][j+1]:
-			all = append(all, DiffLine{'-', x[i]})
+			all = append(all, DiffLine{Op: '-', Text: x[i], Old: i + 1})
 			i++
 		default:
-			all = append(all, DiffLine{'+', y[j]})
+			all = append(all, DiffLine{Op: '+', Text: y[j], New: j + 1})
 			j++
 		}
 	}
 	for ; i < len(x); i++ {
-		all = append(all, DiffLine{'-', x[i]})
+		all = append(all, DiffLine{Op: '-', Text: x[i], Old: i + 1})
 	}
 	for ; j < len(y); j++ {
-		all = append(all, DiffLine{'+', y[j]})
+		all = append(all, DiffLine{Op: '+', Text: y[j], New: j + 1})
 	}
 	keep := make([]bool, len(all))
 	for k, l := range all {
@@ -69,13 +76,16 @@ func Diff(a, b string, context int) []DiffLine {
 		}
 	}
 	var out []DiffLine
+	skipped := 0
 	for k, l := range all {
 		if !keep[k] {
+			skipped++
 			continue
 		}
 		if k > 0 && !keep[k-1] && len(out) > 0 {
-			out = append(out, DiffLine{Op: '@'})
+			out = append(out, DiffLine{Op: '@', Skipped: skipped})
 		}
+		skipped = 0
 		out = append(out, l)
 	}
 	return out

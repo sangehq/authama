@@ -1,10 +1,10 @@
 {{define "content"}}{{with .Data}}
-{{template "page_header" (header "SSH" "VMs" "")}}
+{{template "page_header" (header "SSH" "VMs" "" (only (and (not $.ReadOnly) (gt (len .Loose) 0)) (panel "Adopt a loose key" "adopt-key" "key")))}}
 <p class="text-secondary">VM hosts as their hypervisors see them now, and what <code>authama ssh vm sync</code> would do. Nothing here connects to a guest; a sync does, for running VMs only. Stopped and suspended VMs are reported and never touched.</p>
 <div class="card mb-3">
   <div class="card-header"><h2 class="card-title">VM hosts</h2></div>
   {{if .Hosts}}
-  <div class="table-responsive">
+  <div class="table-responsive" tabindex="0">
     <table class="table table-vcenter card-table">
       <caption class="visually-hidden">VM hosts and their state</caption>
       <thead><tr><th scope="col">Alias</th><th scope="col">Profile</th><th scope="col">Hypervisor</th><th scope="col">VM</th><th scope="col">State</th><th scope="col">Note</th></tr></thead>
@@ -43,7 +43,7 @@
   <div class="col-lg-6">
     <div class="card">
       <div class="card-header"><h2 class="card-title">Hypervisors</h2></div>
-      <div class="table-responsive">
+      <div class="table-responsive" tabindex="0">
         <table class="table table-vcenter card-table">
           <caption class="visually-hidden">Hypervisor drivers</caption>
           <thead><tr><th scope="col">Name</th><th scope="col">Driver</th><th scope="col">Status</th><th scope="col">VMs</th></tr></thead>
@@ -69,7 +69,7 @@
     <div class="card">
       <div class="card-header"><h2 class="card-title">Declared devboxes</h2></div>
       {{if .Devboxes}}
-      <div class="table-responsive">
+      <div class="table-responsive" tabindex="0">
         <table class="table table-vcenter card-table">
           <caption class="visually-hidden">Devboxes declared in authama.json</caption>
           <thead><tr><th scope="col">Alias</th><th scope="col">Profile</th><th scope="col">VM</th><th scope="col">User</th><th scope="col">Key</th></tr></thead>
@@ -92,12 +92,8 @@
   </div>
 </div>
 {{if not $.ReadOnly}}
-<div class="row row-cards mt-1">
-  <div class="col-lg-6">
-    <div class="card">
-      <div class="card-header"><h2 class="card-title">Adopt a loose key onto a VM</h2></div>
-      <div class="card-body">
-        {{if .Loose}}
+{{if .Loose}}
+{{template "panel_open" (header "adopt-key" "Adopt a loose key onto a VM" "Copies the keypair into the profile (the loose files stay) and adds the VM host. The manifest is backed up first. Run a sync afterwards to install the key on the guest.")}}
         {{template "change_open" $}}<input type="hidden" name="action" value="vm-adopt-key">
           <div class="row g-2">
             <div class="col-sm-6"><label class="form-label" for="ak-key">Loose key</label><select class="form-select" id="ak-key" name="key">{{range .Loose}}<option value="{{.Name}}">{{.Name}}{{if .Reserved}} (reserved{{if .ReservedFor}} for {{.ReservedFor}}{{end}}){{else if .Devbox}} (looks like a devbox key){{end}}</option>{{end}}</select></div>
@@ -107,16 +103,12 @@
             <div class="col-sm-6"><label class="form-label" for="ak-vm">VM name</label><input class="form-control" id="ak-vm" name="vm" required autocomplete="off" spellcheck="false" list="ak-vms"><datalist id="ak-vms">{{range .Drivers}}{{range .VMs}}<option value="{{.Name}}">{{end}}{{end}}</datalist></div>
             <div class="col-sm-6"><label class="form-label" for="ak-user">Guest user</label><input class="form-control" id="ak-user" name="user" required autocomplete="off" spellcheck="false"></div>
           </div>
-          <p class="text-secondary small mt-2 mb-2">Copies the keypair into the profile (the loose files stay) and adds the VM host. The manifest is backed up first. Run a sync afterwards to install the key on the guest.</p>
-          <button type="submit" class="btn btn-primary">Preview</button>
+          {{template "panel_actions" ""}}
         </form>
-        {{else}}<p class="text-secondary mb-0">No loose keypairs in <code>~/.ssh</code>.</p>{{end}}
-      </div>
-    </div>
-  </div>
-  <div class="col-lg-6">
-    <div class="card">
-      <div class="card-header"><h2 class="card-title">Daily sync</h2></div>
+{{template "panel_close"}}
+{{end}}
+<div class="card mt-3">
+  <div class="card-header"><h2 class="card-title">Daily sync</h2></div>
       <div class="card-body">
         <p class="text-secondary">Runs <code>{{.Schedule}}</code> every day at 09:30 (launchd, a systemd timer or cron, or Task Scheduler).</p>
         <div class="d-flex flex-wrap gap-2">
@@ -124,8 +116,6 @@
           {{template "change_open" $}}<input type="hidden" name="action" value="vm-schedule"><input type="hidden" name="install" value=""><button type="submit" class="btn btn-outline-secondary">Preview removing</button></form>
         </div>
       </div>
-    </div>
-  </div>
 </div>
 {{end}}
 {{end}}{{end}}

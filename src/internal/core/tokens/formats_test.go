@@ -142,3 +142,34 @@ func TestEveryPathVariableAFormatReadsIsHiddenInDevMode(t *testing.T) {
 		t.Errorf("cargo does not read CARGO_HOME: %s", got)
 	}
 }
+
+// A config entry for each added tool resolves from the environment like the
+// first five did; until this was fixed, apply skipped every one as an
+// "unknown target".
+func TestTheAddedToolsResolveFromTheEnvironment(t *testing.T) {
+	cfg, err := ParseConfig(`{
+	  "pypi":   {"upload.pypi.org": {"user_env": "PYPI_USER", "pass_env": "PYPI_TOKEN"}},
+	  "cargo":  {"crates.io": {"env": "CARGO_TOKEN"}},
+	  "gem":    {"rubygems.org": {"env": "GEM_KEY"}},
+	  "gradle": {"acme": {"user_env": "ACME_USER", "pass_env": "ACME_PASS"}}
+	}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	env := map[string]string{
+		"PYPI_USER": "__token__", "PYPI_TOKEN": testcred.Secret("pypi"), "CARGO_TOKEN": testcred.Secret("cargo"),
+		"GEM_KEY": testcred.Secret("gem"), "ACME_USER": "bob", "ACME_PASS": testcred.Secret("gradle"),
+	}
+	set := cfg.Resolve(func(k string) (string, bool) { v, ok := env[k]; return v, ok })
+	for _, w := range set.Warnings {
+		if strings.Contains(w, "unknown target") {
+			t.Errorf("warning: %s", w)
+		}
+	}
+	for _, tgt := range []string{PyPI, Cargo, Gem, Gradle} {
+		out, err := set.Render(tgt, "", false)
+		if err != nil || out == "" {
+			t.Errorf("%s rendered nothing: %v", tgt, err)
+		}
+	}
+}

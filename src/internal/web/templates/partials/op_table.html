@@ -1,5 +1,5 @@
 {{define "op_table"}}{{if .}}
-<div class="table-responsive">
+<div class="table-responsive" tabindex="0">
   <table class="table table-vcenter card-table table-hover" data-table="operations">
     <caption class="visually-hidden">Operations, newest first</caption>
     <thead><tr><th scope="col">Started</th><th scope="col">Command</th><th scope="col">Result</th><th scope="col">Source</th><th scope="col">About</th></tr></thead>
@@ -7,10 +7,10 @@
       {{range .}}
       <tr>
         <td class="text-nowrap" data-sort="{{.StartedAt}}"><time datetime="{{.StartedAt}}">{{stamp .StartedAt}}</time></td>
-        <th scope="row"><a href="/history/{{.OpID}}">{{.Command}}</a></th>
+        <th scope="row"><a href="/history/{{.OpID}}" data-inline>{{.Command}}</a></th>
         <td><span class="badge {{resultClass .Result}}">{{if .Result}}{{.Result}}{{else}}unfinished{{end}}</span></td>
         <td>{{.Source}}</td>
-        <td class="text-secondary">{{orDash (subjects .Subjects)}}</td>
+        <td class="text-secondary"><span class="d-inline-block text-truncate op-about"{{if .Subjects}} title="{{subjects .Subjects}}"{{end}}>{{orDash (subjectsShort .Subjects)}}</span></td>
       </tr>
       {{end}}
     </tbody>

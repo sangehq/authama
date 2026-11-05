@@ -37,6 +37,8 @@ Every command also takes the global flag:
   - [`authama owner reseal`](#authama-owner-reseal) - Accept the state files as they are now, and seal them
   - [`authama owner status`](#authama-owner-status) - Show whether the home is bound, where its key is kept, and whether a PIN is set
   - [`authama owner verify`](#authama-owner-verify) - Check the state files against the seal, and name any changed outside authama
+- [`authama repair`](#authama-repair) - Find and fix what is wrong with the authama home, ~/.ssh and the token files
+- [`authama reset`](#authama-reset) - Factory reset: move the authama home aside (kept) and start again; ~/.ssh is not touched
 - [`authama serve`](#authama-serve) - Open the web UI on this machine
 - [`authama settings`](#authama-settings) - Your settings files (.env and authama.json): where they are, what is in effect, validate, create
   - [`authama settings init`](#authama-settings-init) - Create a starter authama.json (schema reference and version; every setting at its default)
@@ -504,6 +506,68 @@ Examples:
 
 ```sh
   authama owner verify   # exits non-zero when a file changed outside authama
+```
+
+## authama repair
+
+Checks three areas and fixes what can be fixed safely:
+
+  tool    missing config and state directories; a history database that fails
+          its integrity check (renamed aside, never deleted); a manifest or
+          inventory that does not load, and the owner seal (reported only)
+  ssh     files a crashed command left; modes ssh or authama refuse; keys with
+          no .pub; a ~/.ssh/config that no longer matches the manifest
+  tokens  credential files others can read; a tokens.json that does not parse
+          (reported only)
+
+It lists what it found, asks, then fixes. --check lists only, and exits non-zero
+when anything is wrong. Nothing is deleted.
+
+```
+authama repair [flags]
+```
+
+Examples:
+
+```sh
+  authama repair
+  authama repair --check   # CI: exit non-zero when anything is wrong
+  authama repair --area ssh --yes
+```
+
+Flags:
+
+```
+      --area strings   only these areas: tool, ssh, tokens (repeatable)
+      --check          list what is wrong and change nothing; exit non-zero if anything is
+  -y, --yes            skip the confirmation prompt
+```
+
+## authama reset
+
+Renames the config home, and the state home when it is separate, to
+<name>.reset-<time>, so renaming them back undoes it. Nothing is deleted, and
+~/.ssh - keys, config, known_hosts - is not touched. A home bound to its owner
+is unbound first (its key in the OS store is removed), so a restored home is
+never bound to a key that no longer exists. With a PIN set, it asks for it.
+
+It asks you to type "reset"; a script passes --confirm reset.
+
+```
+authama reset [flags]
+```
+
+Examples:
+
+```sh
+  authama reset
+  authama reset --confirm reset   # a script
+```
+
+Flags:
+
+```
+      --confirm string   type "reset" here to skip the question
 ```
 
 ## authama serve

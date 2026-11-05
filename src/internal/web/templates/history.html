@@ -1,5 +1,5 @@
 {{define "content"}}{{with .Data}}
-{{template "page_header" (header "System" "History" "Every change authama has made to this home, newest first.")}}
+{{template "page_header" (header "Activity" "History" "Every change authama has made to this home, newest first.")}}
 <form method="get" action="/history" class="card card-body mb-3">
   <div class="row g-2 align-items-end">
     <div class="col-6 col-md-4 col-xl-2"><label class="form-label" for="f-host">Host</label><input class="form-control" id="f-host" name="host" value="{{.Filter.Host}}" autocomplete="off" spellcheck="false"></div>

@@ -608,3 +608,25 @@ func (s *Store) LiveAuditEvents(since string) int {
 		SourceBackfill, since).Scan(&n)
 	return n
 }
+
+// QuickCheck runs SQLite's quick_check on the database at path without
+// migrating or writing it, and reports what it found wrong, or nil. A file
+// that is not a database at all is reported too.
+func QuickCheck(path string) error {
+	if _, err := os.Stat(path); err != nil {
+		return err
+	}
+	db, err := sql.Open("sqlite", "file:"+filepath.ToSlash(path)+"?mode=ro")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = db.Close() }()
+	var res string
+	if err := db.QueryRow("PRAGMA quick_check").Scan(&res); err != nil {
+		return err
+	}
+	if res != "ok" {
+		return errors.New(res)
+	}
+	return nil
+}

@@ -47,6 +47,42 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`authama repair`** finds what is wrong with the home, `~/.ssh` and the token files and fixes
+  what is safe: missing directories, a corrupt history database (renamed aside, kept), files a
+  crashed command left, wrong modes, missing `.pub` files, a drifted `~/.ssh/config`, and token
+  files others can read. What it cannot fix safely - an unreadable manifest, a changed seal - it
+  reports with the command that deals with it. `--check` is for CI. The web UI's new Repair page
+  does the same as a previewed change.
+- **`authama reset`**, a factory reset that deletes nothing: it unbinds the owner, then renames the
+  config and state homes aside; `~/.ssh` is not touched. It asks for the word "reset", and the PIN
+  when one is set. Also on the Repair page.
+- **The owner binding from the web UI**: bind the home, set, change or remove the PIN, toggle
+  fingerprint unlock, accept outside changes and unbind, on the Owner & PIN page. A PIN is only
+  set when `owner pin reset` could replace it, so it cannot lock you out.
+
+- **One layout for every page's actions.** Page headers hold the main actions and a More menu;
+  every form opens in a slide-in panel, from the header or from a row's menu, which fills it in for
+  that row. Profiles, Hosts, Keys, VMs, Snapshots and a host's page no longer stack form cards below
+  their tables. The rendered SSH config and a host's block are highlighted, the Settings page marks
+  the theme in effect, and the Audit page's alert buttons sit in its Expiry card.
+
+- **The web UI works in place.** Previewing and confirming a change, a job's review and live
+  output, an operation in the history and a snapshot's diff open in one side panel over the page,
+  with Back and *Open as a page*; the page underneath reloads when a change was made. Every such
+  page still works on its own without JavaScript. A change's review leads with its command,
+  highlighted, with copy and Run.
+- **Diffs are numbered and highlighted**, as a table of old and new line numbers in the file's own
+  syntax (JSON, INI, TOML, YAML, properties, ssh_config, netrc, shell), with added and removed counts
+  and, for JSON, whether the new content is valid and where it is not. They replace the old diff,
+  whose lines rendered with a dark empty line between each.
+- **CSV downloads are previewed and shaped**: choose the columns, leave out rows containing some
+  text, see the first rows, then download; the choice is remembered per list. The server takes
+  `?drop=`, `?exclude=` and `?preview=1` on every CSV, the Termius export included.
+- **The tokens.json editor checks the JSON as you type**, names the line and column of a mistake,
+  will not send it while invalid, and formats it.
+- **The menu is regrouped**: SSH, Config & backups, Security (with a new Owner & PIN page), Activity
+  and System.
+
 - **Owner binding** (`authama owner`). `owner init` keeps a sealing key in the OS credential store
   (macOS Keychain, the Linux Secret Service, DPAPI on Windows, else an owner-only file) and seals the
   state files with it, bound to the OS user and machine. authama reseals after its own operations,
@@ -160,6 +196,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   previewed *Create a starter authama.json*, the same change as `authama settings init`.
 
 ### Fixed
+
+- **`token apply` skipped every PyPI, Cargo, RubyGems and Gradle entry** as an "unknown target":
+  resolving a config from the environment knew only the first five tools. They resolve now.
+- **Saving the manifest turned numbers and booleans in `raw_options` into strings**
+  (`ServerAliveInterval 60` became `"60"`) whenever anything else in it changed. A value that was
+  not changed is written back exactly as it was read.
+- **Menu labels showed `&amp;`** ("Config &amp; backups", "Owner &amp; PIN"), and several pages'
+  section names did not match the menu they are in.
 
 - **A token's History link signed the browser out.** The history's token filter used `?token=`,
   which is also the sign-in link's parameter, so following History from a token's menu answered

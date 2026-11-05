@@ -20,6 +20,7 @@ import (
 	"github.com/simtabi/authama/src/internal/services/events"
 	"github.com/simtabi/authama/src/internal/services/history"
 	"github.com/simtabi/authama/src/internal/services/owner"
+	"github.com/simtabi/authama/src/internal/util/highlight"
 )
 
 // assetSet is the embedded assets with a content hash each, for
@@ -192,6 +193,16 @@ func funcs(a *assetSet) template.FuncMap {
 			}
 			return "diff-ctx"
 		},
+		"fileDiff": newDiffView,
+		"commandCard": func(command string, runnable bool, form string, destroy bool) commandCard {
+			return commandCard{Command: command, Runnable: runnable, Form: form, Destroy: destroy}
+		},
+		"diffOf": func(path string, lines []history.DiffLine) diffView {
+			return newDiffView(path, "", lines, false, "")
+		},
+		"hl":    func(lang, line string) template.HTML { return highlightHTML(highlight.Lang(lang), line) },
+		"hlFor": func(path, line string) template.HTML { return highlightHTML(highlight.For(path), line) },
+		"lines": func(s string) []string { return strings.Split(strings.TrimSuffix(s, "\n"), "\n") },
 		"diffMark": func(op byte) string {
 			if op == '@' {
 				return "⋯"
@@ -201,6 +212,19 @@ func funcs(a *assetSet) template.FuncMap {
 		"subjects": func(subs []history.Subject) string {
 			var parts []string
 			for _, s := range subs {
+				parts = append(parts, s.Kind+" "+s.Name)
+			}
+			return strings.Join(parts, ", ")
+		},
+		// subjectsShort is the first few subjects and how many more there
+		// are, so one operation over many keys does not make a tall row.
+		"subjectsShort": func(subs []history.Subject) string {
+			const shown = 3
+			var parts []string
+			for i, s := range subs {
+				if i == shown {
+					return strings.Join(parts, ", ") + fmt.Sprintf(" and %d more", len(subs)-shown)
+				}
 				parts = append(parts, s.Kind+" "+s.Name)
 			}
 			return strings.Join(parts, ", ")
@@ -256,10 +280,33 @@ func funcs(a *assetSet) template.FuncMap {
 			return emptyState{Icon: icon, Title: title, Text: text}
 		},
 		"header": func(pretitle, title, subtitle string, actions ...headerAction) pageHeader {
-			return pageHeader{Pretitle: pretitle, Title: title, Subtitle: subtitle, Actions: actions}
+			h := pageHeader{Pretitle: pretitle, Title: title, Subtitle: subtitle}
+			for _, a := range actions {
+				if a.Label != "" { // an action `when` left out
+					h.Actions = append(h.Actions, a)
+				}
+			}
+			return h
+		},
+		// only keeps an action if cond holds, so a header lists the
+		// actions a read-only or dev-mode server does not offer in one place.
+		"only": func(cond bool, a headerAction) headerAction {
+			if !cond {
+				return headerAction{}
+			}
+			return a
 		},
 		"action": func(label, href, icon string) headerAction {
 			return headerAction{Label: label, Href: href, Icon: icon}
+		},
+		// download is an action that downloads a file; a CSV opens the CSV dialog first.
+		"download": func(label, href string) headerAction {
+			return headerAction{Label: label, Href: href, Icon: "download", Download: true,
+				CSV: strings.HasSuffix(strings.SplitN(href, "?", 2)[0], ".csv")}
+		},
+		// modal is an action that opens the dialog with that id.
+		"modal": func(label, id, icon string) headerAction {
+			return headerAction{Label: label, Href: "#" + id, Icon: icon, Modal: id}
 		},
 		// panel is an action that slides in the offcanvas panel with that id.
 		"panel": func(label, id, icon string) headerAction {
@@ -348,7 +395,10 @@ type pageHeader struct {
 
 // headerAction is a link at the right of a page header, to a form further
 // down the page; the first is the primary one.
-type headerAction struct{ Label, Href, Icon, Panel string }
+type headerAction struct {
+	Label, Href, Icon, Panel, Modal string
+	Download, CSV                   bool
+}
 
 // emptyState is a list with nothing in it yet.
 type emptyState struct{ Icon, Title, Text string }
@@ -399,6 +449,9 @@ type view struct {
 	// Initials the avatar's letters; Year is for the footer.
 	User, Host, Initials string
 	Year                 int
+	// Panel is a request from the side panel: the page's content is rendered
+	// alone, with no layout around it.
+	Panel bool
 	// PINNeeded is a session that must give the PIN to confirm a change: the
 	// confirmations show a PIN field when it is set.
 	PINNeeded bool
@@ -411,7 +464,8 @@ func (s *Server) newView(r *http.Request, nav, title string, data any) view {
 	p := s.opts.Engine.Home()
 	v := view{Title: title, Nav: nav, Version: s.opts.Version, ReadOnly: s.opts.ReadOnly, Data: data,
 		Home: p.ConfigDir, SSHDir: p.SSHDir, DevRoot: p.DevRoot,
-		User: s.who.user, Host: s.who.host, Initials: s.who.initials(), Year: s.now().Year()}
+		User: s.who.user, Host: s.who.host, Initials: s.who.initials(), Year: s.now().Year(),
+		Panel: r.Header.Get(panelHeader) == "1"}
 	if sess := sessionFrom(r.Context()); sess != nil {
 		v.Authed = true
 		v.CSRF = sess.csrf
@@ -442,15 +496,33 @@ func (s *Server) render(w http.ResponseWriter, status int, page string, v view) 
 		return
 	}
 	var buf bytes.Buffer
-	if err := t.ExecuteTemplate(&buf, "layout", v); err != nil {
+	frame := "layout"
+	if v.Panel {
+		frame = "panel"
+	}
+	if err := t.ExecuteTemplate(&buf, frame, v); err != nil {
 		http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
+	// The same URL answers with a page or a panel's content by this header.
+	w.Header().Add("Vary", panelHeader)
 	w.WriteHeader(status)
 	_, _ = w.Write(buf.Bytes())
 }
+
+// commandCard is the "The same as running" card: the command, a copy
+// button, and a Run button that submits the page's own confirmation form.
+type commandCard struct {
+	Command  string
+	Runnable bool
+	Form     string
+	Destroy  bool
+}
+
+// panelHeader marks a request from the side panel (see js/components/side-panel.js).
+const panelHeader = "X-Authama-Panel"
 
 type errorData struct {
 	Status         int
@@ -503,15 +575,17 @@ func paletteItems(readOnly bool) []paletteItem {
 		{"overview", "Overview", "/", "layout-dashboard", "Page", "home dashboard state"},
 		{"profiles", "Profiles", "/profiles", "users", "SSH", "profile category key scope"},
 		{"hosts", "Hosts", "/hosts", "server", "SSH", "host alias hostname"},
-		{"sshconfig", "SSH config", "/ssh-config", "file-code", "SSH", "config render drift check"},
 		{"keys", "Keys", "/keys", "key", "SSH", "key fingerprint expiry reserve"},
 		{"vms", "VMs", "/vms", "device-desktop", "SSH", "vm hypervisor devbox sync"},
-		{"snapshots", "Snapshots", "/snapshots", "archive", "SSH", "snapshot bundle backup restore"},
-		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Auth", "token npm composer docker git netrc"},
-		{"history", "History", "/history", "history", "System", "history operations changes log"},
-		{"events", "Events", "/events", "activity", "System", "events file changes tracking"},
+		{"sshconfig", "SSH config", "/ssh-config", "file-code", "Config & backups", "config render drift check"},
+		{"snapshots", "Snapshots", "/snapshots", "archive", "Config & backups", "snapshot bundle backup restore"},
+		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Security", "token npm composer docker git netrc pypi cargo gem gradle"},
+		{"audit", "Audit", "/audit", "shield-check", "Security", "audit key age"},
+		{"security", "Owner & PIN", "/security", "lock", "Security", "owner pin seal tamper binding fingerprint"},
+		{"history", "History", "/history", "history", "Activity", "history operations changes log"},
+		{"events", "Events", "/events", "activity", "Activity", "events file changes tracking"},
 		{"doctor", "Doctor", "/doctor", "stethoscope", "System", "doctor checks fix"},
-		{"audit", "Audit", "/audit", "shield-check", "System", "audit key age"},
+		{"repair", "Repair", "/repair", "refresh", "System", "repair fix corrupt permissions factory reset"},
 		{"settings", "Settings", "/settings", "settings", "System", "settings theme appearance env"},
 		{"about", "About", "/about", "info-circle", "System", "about version licences"},
 	}

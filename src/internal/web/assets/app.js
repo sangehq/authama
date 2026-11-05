@@ -5,12 +5,20 @@
 // configured by more of them (see each class).
 import { App } from "./js/core/app.js";
 import { DataTable } from "./js/components/data-table.js";
-import { AutoSubmit, ConfirmAction, CopyText, JobStream } from "./js/components/behaviours.js";
+import { AutoSubmit, ConfirmAction, CopyText, JobStream, ThemeChoice } from "./js/components/behaviours.js";
 import { CommandPalette, PanelFromHash } from "./js/components/palette.js";
 import { PanelOpen, ShowWhen } from "./js/components/forms.js";
 import { Tour } from "./js/components/guide.js";
+import { Inline, SidePanel } from "./js/components/side-panel.js";
+import { CsvExport } from "./js/components/csv-export.js";
+import { JsonField } from "./js/components/json-field.js";
 
 App.create()
+  .use(SidePanel)
+  .use(Inline)
+  .use(CsvExport)
+  .use(JsonField)
+  .use(ThemeChoice)
   .use(DataTable)
   .use(ConfirmAction)
   .use(AutoSubmit)

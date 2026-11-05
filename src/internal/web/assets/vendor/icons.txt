@@ -22,7 +22,9 @@ dots-vertical
 download
 external-link
 file-code
+file-export
 fingerprint
+folder
 git-compare
 help-circle
 history

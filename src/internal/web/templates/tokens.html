@@ -1,13 +1,13 @@
 {{define "content"}}{{with .Data}}
 {{if $.ReadOnly}}
-{{template "page_header" (header "Auth" "Auth tokens" "Package-manager and git credentials: what is installed and how it audits. A secret is never shown.")}}
+{{template "page_header" (header "Security" "Auth tokens" "Package-manager and git credentials: what is installed and how it audits. A secret is never shown.")}}
 {{else}}
-{{template "page_header" (header "Auth" "Auth tokens" "Package-manager and git credentials: what is installed and how it audits. A secret is never shown." (panel "Add a token" "add-token" "plus") (action "Apply the config" "#apply-config" "refresh"))}}
+{{template "page_header" (header "Security" "Auth tokens" "Package-manager and git credentials: what is installed and how it audits. A secret is never shown." (panel "Add a token" "add-token" "plus") (action "Apply the config" "#apply-config" "refresh") (only (ne .ConfigText "") (modal "Edit tokens.json" "edit-token-config" "pencil")))}}
 {{end}}
 <div class="card mb-3">
   <div class="card-header"><h2 class="card-title">Installed</h2>{{if .Items}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Items}} installed</span>{{template "csv" "/exports/tokens.csv"}}</div>{{end}}</div>
   {{if .Items}}
-  <div class="table-responsive">
+  <div class="table-responsive" tabindex="0">
     <table class="table table-vcenter card-table table-hover" id="tokens-table" data-table="tokens">
       <caption class="visually-hidden">The tokens in each tool's credential file; secrets are never shown here</caption>
       <thead><tr><th scope="col">Tool</th><th scope="col">Host</th><th scope="col">What</th><th scope="col">User</th><th scope="col">Secret</th><th scope="col">File</th><th scope="col" class="w-1" data-nosort><span class="visually-hidden">Actions</span></th></tr></thead>
@@ -19,9 +19,9 @@
           <td>{{.Description}}</td>
           <td>{{orDash .Username}}</td>
           <td>{{if .SecretPresent}}<span class="badge badge-ok">set</span>{{else}}<span class="badge badge-warn">empty</span>{{end}}</td>
-          <td class="text-break"><code>{{.File}}</code></td>
+          <td><code class="text-nowrap">{{.File}}</code></td>
           <td class="text-end">
-            {{if not $.ReadOnly}}<form method="post" action="/changes/preview" id="f-token-{{.Target}}-{{.Host}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="token-delete"><input type="hidden" name="target" value="{{.Target}}"><input type="hidden" name="host" value="{{.Host}}"></form>{{end}}
+            {{if not $.ReadOnly}}<form method="post" action="/changes/preview" data-inline id="f-token-{{.Target}}-{{.Host}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="token-delete"><input type="hidden" name="target" value="{{.Target}}"><input type="hidden" name="host" value="{{.Host}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for the %s token for %s" .Target .Host)}}
               <a class="dropdown-item" href="/history?credential={{.Target}}/{{.Host}}">{{icon "history"}}<span class="ms-2">History</span></a>
               <button type="button" class="dropdown-item" data-copy="{{.Host}}">{{icon "copy"}}<span class="ms-2">Copy the host</span></button>
@@ -47,7 +47,7 @@
       <div class="card-body pb-0">
         <p class="mb-2">Token config: {{if .Status.Config.Builtin}}none found, so the built-in default (GitHub for Composer from <code>$GH_TOKEN</code>){{else}}<code>{{.Status.Config.Path}}</code>{{if .Status.Config.Legacy}} (an auth-token-manager location){{end}}{{end}}</p>
       </div>
-      <div class="table-responsive">
+      <div class="table-responsive" tabindex="0">
         <table class="table table-vcenter card-table table-sm">
           <caption class="visually-hidden">Each tool's credential file, and how many entries are installed, in the config and resolvable now</caption>
           <thead><tr><th scope="col">Tool</th><th scope="col">File</th><th scope="col">Mode</th><th scope="col">Installed</th><th scope="col">In config</th><th scope="col">Resolved</th></tr></thead>
@@ -55,7 +55,7 @@
             {{range .Status.Targets}}
             <tr>
               <th scope="row">{{.Target}}</th>
-              <td class="text-break"><code>{{.File}}</code></td>
+              <td><code class="text-nowrap">{{.File}}</code></td>
               <td>{{if .Exists}}<code>{{.Mode}}</code>{{else}}<span class="text-secondary">absent</span>{{end}}</td>
               <td>{{.Installed}}</td>
               <td>{{.Configured}}</td>
@@ -151,7 +151,7 @@
       <div class="modal-body">
         <p class="text-secondary">It names environment variables, never secrets: <code>env</code>, <code>user_env</code>, <code>pass_env</code>, <code>key_env</code> and <code>secret_env</code> must each be a variable name, and a credential header takes its value from <code>${VAR}</code>. A file that holds a value is refused.</p>
         <label class="form-label" for="tc-body">tokens.json</label>
-        <textarea class="form-control font-monospace" id="tc-body" name="body" rows="18" spellcheck="false" autocomplete="off" required>{{.ConfigText}}</textarea>
+        <textarea class="form-control font-monospace" id="tc-body" name="body" rows="18" spellcheck="false" autocomplete="off" required data-json>{{.ConfigText}}</textarea>
         <small class="form-hint">You see the diff before anything is written. <code>authama token examples</code> lists every field.</small>
       </div>
       <div class="modal-footer">

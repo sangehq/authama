@@ -69,6 +69,34 @@ var actionFields = map[string][]string{
 	"token-import":      {},
 	"token-config-edit": {"body"},
 	"key-lifetime":      {"key", "lifetime"},
+	"owner-init":        {},
+	"owner-pin-set":     {"pin_current_ref", "pin_new_ref", "pin_confirm_ref"},
+	"owner-pin-remove":  {"pin_current_ref"},
+	"owner-reseal":      {},
+	"owner-forget":      {"confirm"},
+	"owner-fingerprint": {"on"},
+	"repair":            {},
+	"factory-reset":     {"confirm"},
+}
+
+// secretFields are the typed secrets each action takes. Each goes into the
+// session's stash on preview and is carried as <name>_ref, so no page,
+// confirmation or error ever holds it; any other action given one is refused.
+var secretFields = map[string][]string{
+	"token-set":        {"secret"},
+	"owner-pin-set":    {"pin_current", "pin_new", "pin_confirm"},
+	"owner-pin-remove": {"pin_current"},
+}
+
+// allSecretFields is every field name secretFields lists.
+func allSecretFields() map[string]bool {
+	out := map[string]bool{}
+	for _, fs := range secretFields {
+		for _, f := range fs {
+			out[f] = true
+		}
+	}
+	return out
 }
 
 // nameRe is what a profile, alias or key name may be on the web: the
@@ -199,6 +227,17 @@ type home struct {
 	retain int
 	// secret resolves a token form's secret reference; nil outside a request.
 	secret func(ref string) (string, bool)
+}
+
+// stashed is the secret a form's <field>_ref stands for, or "" when the form
+// carries none or it has expired.
+func (h home) stashed(f url.Values, field string) string {
+	ref := f.Get(field + "_ref")
+	if ref == "" || h.secret == nil {
+		return ""
+	}
+	v, _ := h.secret(ref)
+	return v
 }
 
 // buildChange turns a form into the change it asks for.
@@ -377,6 +416,22 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch = change.SnapshotRestore(h.p.SnapshotsDir(), n("id"), retain)
 	case "notify-test":
 		ch = change.NotifyTest()
+	case "repair":
+		ch = change.Repair(repairHome)
+	case "factory-reset":
+		ch = change.FactoryReset(strings.TrimSpace(f.Get("confirm")) == "reset")
+	case "owner-init":
+		ch = change.OwnerInit()
+	case "owner-pin-set":
+		ch = change.OwnerPINSet(h.stashed(f, "pin_current"), h.stashed(f, "pin_new"), h.stashed(f, "pin_confirm"))
+	case "owner-pin-remove":
+		ch = change.OwnerPINRemove(h.stashed(f, "pin_current"))
+	case "owner-reseal":
+		ch = change.OwnerReseal()
+	case "owner-forget":
+		ch = change.OwnerForget(strings.TrimSpace(f.Get("confirm")) == "forget")
+	case "owner-fingerprint":
+		ch = change.OwnerFingerprint(f.Get("on") == "1")
 	case "audit-notify":
 		ch = change.AuditNotify()
 	case "token-delete":
@@ -497,19 +552,29 @@ func (h pages) parseChange(w http.ResponseWriter, r *http.Request, preview bool)
 	sess := sessionFrom(r.Context())
 	// A typed secret goes into the stash at once and out of the form, so no
 	// page, confirmation or error message can carry it.
-	if r.PostForm.Has("secret") {
-		v := r.PostForm.Get("secret")
-		r.PostForm.Del("secret")
-		if !preview || r.PostForm.Get("action") != "token-set" {
-			h.s.renderError(w, r, http.StatusBadRequest, "That change cannot be made", "a secret is taken only by the token form's preview")
+	allowed := map[string]bool{}
+	for _, f := range secretFields[r.PostForm.Get("action")] {
+		allowed[f] = true
+	}
+	for field := range allSecretFields() {
+		if !r.PostForm.Has(field) {
+			continue
+		}
+		v := r.PostForm.Get(field)
+		r.PostForm.Del(field)
+		if !preview || !allowed[field] {
+			h.s.renderError(w, r, http.StatusBadRequest, "That change cannot be made", "a secret is taken only by its own form's preview")
 			return change.Change{}, false
+		}
+		if field != "secret" && v == "" {
+			continue // an empty PIN field (no current PIN yet) is no secret
 		}
 		v, err := secretField(v)
 		if err != nil {
 			h.s.renderError(w, r, http.StatusBadRequest, "That change cannot be made", err.Error())
 			return change.Change{}, false
 		}
-		r.PostForm.Set("secret_ref", h.s.secrets.put(sess, v, h.s.now()))
+		r.PostForm.Set(field+"_ref", h.s.secrets.put(sess, v, h.s.now()))
 	}
 	ch, err := buildChange(r.PostForm, home{p: h.s.opts.Engine.Home(), retain: h.s.opts.Retain,
 		secret: func(ref string) (string, bool) { return h.s.secrets.get(sess, ref, h.s.now()) }})
@@ -545,8 +610,10 @@ func (h pages) handleApply(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		h.s.renderError(w, r, http.StatusUnprocessableEntity, "The change was not made", err.Error())
 	default:
-		if ref := r.PostForm.Get("secret_ref"); ref != "" {
-			h.s.secrets.drop(ref)
+		for field := range allSecretFields() {
+			if ref := r.PostForm.Get(field + "_ref"); ref != "" {
+				h.s.secrets.drop(ref)
+			}
 		}
 		h.s.render(w, http.StatusOK, "done", h.s.newView(r, "", "Done",
 			donePage{Command: strings.TrimSpace(brand.Line(ch.Command) + " " + strings.Join(ch.Args, " ")), Result: res}))
