@@ -23,6 +23,12 @@ func CleanBasePath(p string) (string, error) {
 	if !strings.HasPrefix(p, "/") {
 		return "", fmt.Errorf("web.base_path %q: start it with a slash, such as /authama", p)
 	}
+	// "//host" and "/\host" are scheme-relative to a browser: a redirect to
+	// one would leave this server. The segment check below refuses both too;
+	// this says so where a reader of the redirect looks first.
+	if strings.HasPrefix(p, "//") || strings.HasPrefix(p, "/\\") {
+		return "", fmt.Errorf("web.base_path %q: one leading slash, such as /authama", p)
+	}
 	trimmed := strings.TrimSuffix(p, "/")
 	for _, seg := range strings.Split(strings.TrimPrefix(trimmed, "/"), "/") {
 		if seg == "." || seg == ".." || !basePathSegment.MatchString(seg) {

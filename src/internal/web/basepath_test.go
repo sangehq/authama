@@ -18,7 +18,7 @@ func TestCleanBasePath(t *testing.T) {
 			t.Errorf("CleanBasePath(%q) = %q, %v; want %q", in, got, err, want)
 		}
 	}
-	for _, bad := range []string{"authama", "/../x", "/a/./b", "//x", "/a//b", "/a b", "/a?b", "/a#b", "/a%2F", `/a"b`, "/<x>", "/-x"} {
+	for _, bad := range []string{"authama", "/../x", "/a/./b", "//x", `/\x`, "//evil.example/x", "/a//b", "/a b", "/a?b", "/a#b", "/a%2F", `/a"b`, "/<x>", "/-x"} {
 		if got, err := CleanBasePath(bad); err == nil {
 			t.Errorf("CleanBasePath(%q) = %q, want a refusal", bad, got)
 		}
