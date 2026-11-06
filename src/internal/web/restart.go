@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"runtime"
 	"time"
 )
 
@@ -111,7 +112,9 @@ func (s *Server) watchBinary(stop <-chan struct{}, every time.Duration) {
 			continue
 		}
 		fi, err := os.Stat(s.binary.path)
-		if err != nil || fi.Mode()&0o111 == 0 {
+		// Windows has no executable bit; elsewhere a file without one is
+		// not a finished build.
+		if err != nil || (runtime.GOOS != "windows" && fi.Mode()&0o111 == 0) {
 			last = nil
 			continue
 		}
