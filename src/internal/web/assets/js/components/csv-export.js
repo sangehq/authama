@@ -327,7 +327,7 @@ export class CsvExport extends Component {
     const commit = (next) => set(values.every((v) => next.includes(v)) ? null : next);
     const badge = /** @type {HTMLElement} */ (dialog.querySelector(`[data-csv-count="${list}"]`));
     badge.textContent = ticked === items.length ? String(items.length) : `${ticked}/${items.length}`;
-    badge.className = `badge ms-1 ${ticked === 0 ? "bg-danger-lt" : ticked === items.length ? "bg-secondary-lt" : "bg-primary-lt"}`;
+    badge.className = `badge ms-1 ${ticked === 0 ? "badge-bad" : ticked === items.length ? "badge-muted" : "badge-info"}`;
 
     const counts = count.always || items.some((it) => (it.rows ?? 0) > 1);
     const samples = items.some((it) => it.sample);
@@ -358,7 +358,7 @@ export class CsvExport extends Component {
     items.forEach((it, i) => {
       if (it.group && it.group !== group) {
         group = it.group;
-        rows.push(El.create("tr").cls("csv-group").attr("data-csv-group", "").append(El.create("td").attr("colspan", String(width)).text(group)).node);
+        rows.push(El.create("tr").cls("csv-group").attr("data-csv-group", "").append(El.create("td").cls("subheader").attr("colspan", String(width)).text(group)).node);
       }
       const id = `csv-${list}-${i}`;
       const box = El.create("input")
@@ -451,6 +451,7 @@ export class CsvExport extends Component {
     for (const tab of /** @type {HTMLElement[]} */ ([...dialog.querySelectorAll("[data-csv-tab]")])) {
       const on = tab.getAttribute("data-csv-tab") === list;
       tab.setAttribute("aria-selected", String(on));
+      tab.classList.toggle("active", on);
       tab.tabIndex = on ? 0 : -1;
       if (on && focus) {
         tab.focus();
@@ -501,15 +502,14 @@ export class CsvExport extends Component {
       }
       reasons.push(
         El.create("span")
-          .cls("badge bg-secondary-lt d-inline-flex align-items-center gap-1")
+          .cls("tag")
           .append(
             document.createTextNode(`${n} ${what}`),
             El.create("button")
-              .cls("btn btn-ghost-secondary btn-icon p-0 border-0 csv-clear")
+              .cls("btn-close")
               .prop("type", "button")
               .attr("aria-label", label)
               .attr("title", label)
-              .append(CsvExport.#icon("x"))
               .on("click", () => {
                 if (clear.exclude === "") {
                   /** @type {HTMLInputElement} */ (CsvExport.#part(dialog, "exclude")).value = "";
@@ -624,19 +624,6 @@ export class CsvExport extends Component {
       download.removeAttribute("aria-disabled");
       download.classList.remove("disabled");
     }
-  }
-
-  /** An icon from the page's sprite. @param {string} name */
-  static #icon(name) {
-    const ns = "http://www.w3.org/2000/svg";
-    const svg = document.createElementNS(ns, "svg");
-    svg.setAttribute("class", "icon m-0");
-    svg.setAttribute("aria-hidden", "true");
-    svg.setAttribute("focusable", "false");
-    const use = document.createElementNS(ns, "use");
-    use.setAttribute("href", `#tabler-${name}`);
-    svg.appendChild(use);
-    return svg;
   }
 
   static #dialog() {

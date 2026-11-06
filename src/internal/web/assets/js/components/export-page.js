@@ -375,10 +375,10 @@ export class ExportPage extends Component {
       list.push(El.create("label").cls("list-group-item").attr("title", v.value).append(
         El.create("span").cls("list-group-item-media").append(box),
         El.create("span").cls("list-group-item-content text-truncate").append(El.create("span").cls("list-group-item-title text-truncate").text(v.value)),
-        El.create("span").cls("badge bg-secondary-lt ms-auto flex-shrink-0").attr("aria-label", `${v.rows} ${one.toLowerCase()} rows`).text(String(v.rows)),
+        El.create("span").cls("badge badge-muted ms-auto flex-shrink-0").attr("aria-label", `${v.rows} ${one.toLowerCase()} rows`).text(String(v.rows)),
       ).node);
     });
-    const state = ticked === 0 ? "bg-red-lt" : ticked === values.length ? "bg-secondary-lt" : "bg-blue-lt";
+    const state = ticked === 0 ? "badge-bad" : ticked === values.length ? "badge-muted" : "badge-info";
     const button = El.create("button").cls(`accordion-button${expanded ? "" : " collapsed"}`).prop("type", "button")
       .attr("data-bs-toggle", "collapse").attr("data-bs-target", `#${id}`).attr("aria-expanded", String(expanded)).attr("aria-controls", id)
       .append(El.create("span").text(heading), El.create("span").cls(`badge ${state} ms-2`).text(ticked === values.length ? String(values.length) : `${ticked}/${values.length}`));
@@ -548,10 +548,10 @@ export class ExportPage extends Component {
       if (n <= 0) {
         return;
       }
-      reasons.push(El.create("span").cls("badge bg-secondary-lt d-inline-flex align-items-center gap-1").append(
+      reasons.push(El.create("span").cls("tag").append(
         document.createTextNode(`${n} ${what}`),
-        El.create("button").cls("btn btn-sm btn-link p-0 border-0 lh-1").prop("type", "button").attr("aria-label", `Stop leaving out rows ${what}`)
-          .text("×").on("click", () => {
+        El.create("button").cls("btn-close").prop("type", "button").attr("aria-label", `Stop leaving out rows ${what}`)
+          .attr("title", `Stop leaving out rows ${what}`).on("click", () => {
             const where = { ...this.#sel.where };
             for (const f of facets) {
               delete where[f];

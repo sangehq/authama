@@ -130,7 +130,7 @@
     </div>
     {{end}}
     {{if and .Authed .DevRoot}}
-    <div class="dev-banner" role="status">
+    <div class="alert alert-warning rounded-0 mb-0" role="status">
       <div class="container-xl">{{icon "alert-triangle"}}<span class="ms-1"><strong>Dev mode.</strong> Reading a sandbox under <code>{{.DevRoot}}</code>, not your real <code>~/.ssh</code>.</span></div>
     </div>
     {{end}}

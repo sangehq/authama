@@ -140,6 +140,9 @@ main:focus { outline: none; }
 /* Sortable headers take the header cell's colour: Tabler's .table-sort grey is
    below 4.5:1 on the header tint (axe, every sorted table). */
 .table-sort, .table-sort:hover, .table-sort.asc, .table-sort.desc { color: inherit; }
+/* Tabler gives .table-sort the header's background, which is translucent, so
+   the button tinted its cell twice and every sortable header looked patchy. */
+.table thead .table-sort { background-color: transparent; }
 /* Table header text: Tabler's grey is 4.38:1 on the header tint in the light
    theme; one step darker clears 4.5:1. */
 :root:not([data-bs-theme=dark]) .table thead th { color: #5c5c5c; }
