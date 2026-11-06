@@ -1,0 +1,47 @@
+# authama flat export - every host inline, absolute paths, no Include.
+# Generated from the manifest by `authama ssh config export --flat`; ssh does not read this file
+# unless you point it here. Edit the manifest, not this copy, and export again.
+
+# --- profile: personal ---------------------------------------------
+Host github-imani
+    HostName github.com
+    User git
+    IdentityFile /home/u/.ssh/profiles/internal/personal/imani_github-ed25519
+    IdentitiesOnly yes
+    UserKnownHostsFile /home/u/.ssh/known_hosts
+
+# --- profile: legacy -----------------------------------------------
+Host box
+    HostName box.example
+    User me
+    Port 2222
+    IdentityFile /home/u/.ssh/profiles/legacy/legacy-ed25519
+    IdentitiesOnly yes
+    UserKnownHostsFile /home/u/.ssh/known_hosts
+
+# --- profile: simtabi ----------------------------------------------
+Host oribi-web
+    HostName 203.0.113.23
+    User ploi
+    IdentityFile /home/u/.ssh/profiles/orgs/simtabi/simtabi_oribi-web-ed25519
+    IdentitiesOnly yes
+    UserKnownHostsFile /home/u/.ssh/known_hosts
+
+Host devbox
+    HostName devbox
+    User imani
+    IdentityFile /home/u/.ssh/profiles/orgs/simtabi/simtabi_devbox-ed25519
+    IdentitiesOnly yes
+    UserKnownHostsFile /home/u/.ssh/known_hosts
+    ProxyCommand "/usr/local/bin/authama" vm proxy devbox
+
+# --- git ssh mode: github.com as personal --------------------------
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile /home/u/.ssh/profiles/internal/personal/imani_github-ed25519
+    IdentitiesOnly yes
+    UserKnownHostsFile /home/u/.ssh/known_hosts
+
+Host *
+    HashKnownHosts yes

@@ -1,0 +1,2 @@
+devbox: reached through a ProxyCommand, which SecureCRT (an XML settings file for File > Import Settings; Termius imports it too) does not run; use windows-terminal or iterm2, which go through ssh
+In SecureCRT, File > Import Settings and choose authama-securecrt.xml (Termius: Import > SecureCRT takes the same file). Key paths are this machine's; edit them if SecureCRT runs elsewhere. A host whose key is in 1Password uses the agent.

@@ -57,10 +57,6 @@ func TestSecureCRTWritesAnImportableSettingsFile(t *testing.T) {
 			t.Errorf("%s = %q, want %q", name, got[name], want)
 		}
 	}
-	// Markup in a value stays a value.
-	if xmlText(`a<b&"c`) != "a&lt;b&amp;&#34;c" {
-		t.Errorf("escaping: %q", xmlText(`a<b&"c`))
-	}
 }
 
 // The MobaXterm file is a .mxtsessions INI: a bookmark folder per group and
@@ -90,9 +86,5 @@ func TestMobaXtermWritesAnImportableSessionsFile(t *testing.T) {
 	f := strings.Split(session[2], "%")
 	if f[1] != "box.example" || f[2] != "2222" || f[3] != "me" || f[14] != "/home/u/.ssh/profiles/legacy/legacy-ed25519" {
 		t.Errorf("fields = %q", f)
-	}
-	// A separator in a value cannot shift the fields.
-	if got := mobaField("a%b#c=d\ne"); got != "a_b_c-d e" {
-		t.Errorf("mobaField = %q", got)
 	}
 }

@@ -8,6 +8,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Hosts for ssh and SSH clients in `authama export`.** `authama export hosts --format` takes
+  `ssh_config`, `termius` and every `ssh host export` client (`hosts-csv`, `windows-terminal`,
+  `iterm2`, `putty`, `remmina`, `securecrt`, `mobaxterm`), filtered like any list. `ssh_config` is
+  the managed config of the hosts kept, byte for byte `ssh config export --flat` when every host is
+  kept; the others are byte for byte the old commands' files. Hosts come in manifest order unless
+  `--sort`, git hosts need `--include-git`, and remmina's files go out as one zip. `/exports/run` and
+  the Export page's Hosts tab offer the same formats, and the page says how many hosts a format
+  leaves out.
+- **Copy as command on the Export page.** It copies the `authama export` command that writes the file
+  the page previews: the list, filters, columns, sort, format and options, quoted for the shell.
 - **About shows this computer.** A *This computer* card lists the OS and its version, build and
   kernel, the architecture and computer name, how long it has been up, and the hardware: model,
   processor, cores (performance and efficiency on Apple silicon) and memory. It is read on each load
@@ -114,6 +124,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   shared empty state; a job's question is marked with Tabler's card status bar. CSS no longer used
   by any page (log, editor and finding styles from another project, the hand-made tabs, clear
   buttons and dev banner) is removed, with the rule that forced panel columns to full width.
+### Deprecated
+
+- **`authama ssh host export <client>` and `authama ssh termius export`**, in favour of
+  `authama export hosts --format <client>` (`hosts-csv` for the generic CSV) and `--format termius`,
+  which write the same bytes through the export pipeline. Both keep working unchanged and are not
+  removed before v1.0.0.
+
 ### Fixed
 
 - Tabs on the Export page and in the CSV dialog used Bootstrap's `nav-underline`, which picked up

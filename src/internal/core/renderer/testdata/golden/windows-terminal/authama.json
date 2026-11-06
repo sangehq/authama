@@ -1,0 +1,20 @@
+{
+  "profiles": [
+    {
+      "name": "personal / github-imani",
+      "commandline": "ssh.exe github-imani"
+    },
+    {
+      "name": "legacy / box",
+      "commandline": "ssh.exe box"
+    },
+    {
+      "name": "simtabi / oribi-web",
+      "commandline": "ssh.exe oribi-web"
+    },
+    {
+      "name": "simtabi / devbox",
+      "commandline": "ssh.exe devbox"
+    }
+  ]
+}

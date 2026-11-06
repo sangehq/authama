@@ -1,0 +1,1 @@
+Copy authama-hosts.json to ~/Library/Application Support/iTerm2/DynamicProfiles/; iTerm2 loads it at once. Each profile runs ssh, which reads your ~/.ssh/config.

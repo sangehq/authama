@@ -27,8 +27,11 @@ func newHostExportCmd() *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:   "export <client>",
-		Short: "Write your hosts as another SSH client imports them",
-		Long: "Write every host as another SSH client imports it, into\n" +
+		Short: "Write your hosts as another SSH client imports them (deprecated: use export hosts --format <client>)",
+		Long: "Deprecated: `" + brand.Command + " export hosts --format <client>` writes the same files through the export\n" +
+			"pipeline, with its filters, and the Export page offers them too (the generic csv is hosts-csv\n" +
+			"there). This command keeps working and writes the same bytes; it is not removed before v1.0.0.\n\n" +
+			"Write every host as another SSH client imports it, into\n" +
 			"<config home>/exports/<client>/ (or --out DIR, or - for stdout when the export is\n" +
 			"one file). ~/.ssh is never written. The clients:\n\n" +
 			strings.Join(list, "\n") + "\n\n" +

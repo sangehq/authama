@@ -1,0 +1,1 @@
+Copy authama.json to %LOCALAPPDATA%\Microsoft\Windows Terminal\Fragments\authama\ and restart Windows Terminal. Each profile runs ssh, which reads your ~/.ssh/config, so keys and ProxyCommands work as at the terminal.
