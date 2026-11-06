@@ -181,7 +181,11 @@ main:focus { outline: none; }
 .palette-icon { display: inline-flex; align-items: center; justify-content: center; width: 1.9rem; height: 1.9rem; flex: none; border-radius: .4rem; background: var(--tblr-bg-surface-secondary); color: var(--tblr-secondary); }
 .palette-item.active .palette-icon { color: var(--tblr-primary); background: rgba(var(--tblr-primary-rgb), .12); }
 .palette-icon .icon { width: 1.1rem; height: 1.1rem; }
-.palette-label { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.palette-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.palette-label { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+/* What choosing it does, under the highlighted entry only, so the list stays compact. */
+.palette-desc { display: none; font-size: .78rem; line-height: 1.3; color: var(--tblr-secondary); white-space: normal; }
+.palette-item.active .palette-desc { display: block; }
 .palette-group { margin-left: .5rem; font-size: .8rem; color: var(--tblr-secondary); }
 .palette-keys { display: inline-flex; align-items: center; gap: .25rem; flex: none; }
 .palette-then { font-size: .7rem; color: var(--tblr-secondary); }

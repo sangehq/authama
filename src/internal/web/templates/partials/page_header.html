@@ -66,5 +66,5 @@
 {{define "panel_footer"}}<div class="d-flex align-items-center gap-2 pt-3 border-top">
   <span class="text-secondary small me-auto">The same as <code>{{.Command}}</code>.</span>
   <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
-  <button type="submit" class="btn {{.Style}}">{{if .Icon}}{{icon .Icon}}<span class="ms-1">{{.Label}}</span>{{else}}{{.Label}}{{end}}</button>
+  <button type="submit" class="btn {{.Style}}"{{tip "panel-submit"}}>{{if .Icon}}{{icon .Icon}}<span class="ms-1">{{.Label}}</span>{{else}}{{.Label}}{{end}}</button>
 </div>{{end}}

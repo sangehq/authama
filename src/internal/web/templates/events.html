@@ -9,8 +9,8 @@
     <div class="card-actions d-flex align-items-center gap-2">
       {{template "csv" (print "/exports/events.csv?area=" .Area "&kind=" .Kind)}}
       <nav aria-label="Filter by area" class="nav nav-segmented nav-sm">
-        <a class="nav-link{{if eq .Area ""}} active{{end}}" href="{{basePath}}/events{{with .Kind}}?kind={{.}}{{end}}"{{if eq .Area ""}} aria-current="page"{{end}}>All</a>
-        {{range (list "ssh" "auth" "config")}}<a class="nav-link{{if eq $.Data.Area .}} active{{end}}" href="{{basePath}}/events?area={{.}}{{with $.Data.Kind}}&amp;kind={{.}}{{end}}"{{if eq $.Data.Area .}} aria-current="page"{{end}}>{{.}}</a>{{end}}
+        <a class="nav-link{{if eq .Area ""}} active{{end}}" href="{{basePath}}/events{{with .Kind}}?kind={{.}}{{end}}"{{if eq .Area ""}} aria-current="page"{{end}}{{tip "events-area"}}>All</a>
+        {{range (list "ssh" "auth" "config")}}<a class="nav-link{{if eq $.Data.Area .}} active{{end}}" href="{{basePath}}/events?area={{.}}{{with $.Data.Kind}}&amp;kind={{.}}{{end}}"{{if eq $.Data.Area .}} aria-current="page"{{end}}{{tip "events-area"}}>{{.}}</a>{{end}}
       </nav>
     </div>
   </div>

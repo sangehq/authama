@@ -44,3 +44,64 @@ func TestEveryTipATemplateNamesExists(t *testing.T) {
 		}
 	}
 }
+
+// controlTag is the opening tag of a button, a link styled as a button or a
+// menu entry, or a menu link: the things a person clicks to make something
+// happen. Template actions inside the tag ({{…}}) are kept whole.
+var controlTag = regexp.MustCompile(`<(?:button|a)\b(?:[^>{]|\{\{.*?\}\})*>`)
+
+// templateComment is a {{/* … */}} comment, whose examples are not controls.
+var templateComment = regexp.MustCompile(`(?s)\{\{/\*.*?\*/\}\}`)
+
+// Every control on every page says what using it does: a catalogue tip, a
+// header action's tip, or Bootstrap's own tooltip or popover with a title.
+// The only controls exempt are the ones whose meaning is their shape: a
+// dialog's close button, Cancel (both data-bs-dismiss), and an accordion's
+// header, which shows the text it is named for.
+func TestEveryControlHasAnExplainer(t *testing.T) {
+	controls, files := 0, 0
+	err := fs.WalkDir(templateFS, "templates", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".html") {
+			return err
+		}
+		files++
+		b, err := fs.ReadFile(templateFS, path)
+		if err != nil {
+			return err
+		}
+		src := templateComment.ReplaceAllString(string(b), "")
+		for _, loc := range controlTag.FindAllStringIndex(src, -1) {
+			tag := src[loc[0]:loc[1]]
+			// A disabled control gets no hover, so its explainer sits on a
+			// wrapping element (Bootstrap's pattern for disabled tooltips).
+			if before := src[:loc[0]]; strings.Contains(tag, " disabled") {
+				if i := strings.LastIndex(before, "<"); i >= 0 && strings.Contains(before[i:], "{{tip ") {
+					controls++
+					continue
+				}
+			}
+			if strings.HasPrefix(tag, "<a ") && !regexp.MustCompile(`class="[^"]*\b(btn|dropdown-item|nav-link)\b`).MatchString(tag) {
+				continue // a link in running text says where it goes
+			}
+			if strings.Contains(tag, "data-bs-dismiss") || strings.Contains(tag, "btn-close") || strings.Contains(tag, "accordion-button") {
+				continue
+			}
+			controls++
+			explained := strings.Contains(tag, "{{tip ") || strings.Contains(tag, "data-tip=") ||
+				strings.Contains(tag, `template "action_attrs"`) || strings.Contains(tag, ` title=`)
+			if !explained {
+				t.Errorf("%s: a control without an explainer: %s", path, shorten(tag, 160))
+			}
+			if strings.Contains(tag, ` title=`) && (strings.Contains(tag, "{{tip ") || strings.Contains(tag, "data-tip=")) {
+				t.Errorf("%s: a control with both a tip and a title shows two tooltips: %s", path, shorten(tag, 160))
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if files < 25 || controls < 120 {
+		t.Fatalf("read %d templates and %d controls; the scan is not reading them", files, controls)
+	}
+}

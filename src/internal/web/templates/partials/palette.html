@@ -5,9 +5,9 @@
      sheet (?) lists the same shortcuts, from the same list, so the two cannot
      disagree. */}}
 {{define "palette_keys"}}{{range $i, $k := shortcutKeys .}}{{if $i}}<span class="palette-then" aria-hidden="true">then</span>{{end}}<kbd>{{$k}}</kbd>{{end}}{{end}}
-{{define "palette_item"}}<a class="palette-item" href="{{u .Href}}" id="pal-{{.ID}}" role="option" aria-selected="false" data-palette-item data-palette-keywords="{{.Keywords}} {{.Group}}"{{if .Keys}} data-palette-keys="{{.Keys}}"{{end}}>
+{{define "palette_item"}}<a class="palette-item" href="{{u .Href}}" id="pal-{{.ID}}" role="option" aria-selected="false" data-palette-item data-palette-keywords="{{.Keywords}} {{.Group}}"{{if .Tip}} aria-description="{{.Tip}}"{{end}}{{if .Keys}} data-palette-keys="{{.Keys}}"{{end}}>
   <span class="palette-icon" aria-hidden="true">{{icon .Icon}}</span>
-  <span class="palette-label">{{.Label}}{{if and (ne .Group "Page") (ne .Group "Action") (ne .Group "Export")}}<span class="palette-group">{{.Group}}</span>{{end}}</span>
+  <span class="palette-text"><span class="palette-label">{{.Label}}{{if and (ne .Group "Page") (ne .Group "Action") (ne .Group "Export")}}<span class="palette-group">{{.Group}}</span>{{end}}</span>{{if .Tip}}<span class="palette-desc">{{.Tip}}</span>{{end}}</span>
   {{if .Keys}}<span class="palette-keys" aria-label="Shortcut: {{.Keys}}">{{template "palette_keys" .Keys}}</span>{{end}}
 </a>{{end}}
 {{define "palette"}}<div class="modal fade palette-modal" id="command-palette" tabindex="-1" aria-labelledby="command-palette-title" aria-hidden="true" data-command-palette>
@@ -30,7 +30,7 @@
         <span><kbd>↑</kbd><kbd>↓</kbd> move</span>
         <span><kbd>↵</kbd> open</span>
         <span><kbd>Esc</kbd> close</span>
-        <button type="button" class="palette-footer-link ms-auto" data-shortcuts-open><kbd>?</kbd> all shortcuts</button>
+        <button type="button" class="palette-footer-link ms-auto" data-shortcuts-open{{tip "shortcuts"}}><kbd>?</kbd> all shortcuts</button>
       </div>
     </div>
   </div>

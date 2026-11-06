@@ -17,8 +17,8 @@
           <td class="text-end">
             {{template "menu_open" (printf "Actions for snapshot %s" .ID)}}
               {{if .KeyBearing}}<span class="dropdown-item disabled" aria-disabled="true">{{icon "lock"}}<span class="ms-2">Not opened: it holds private keys</span></span>
-              {{else}}<a class="dropdown-item" href="{{basePath}}/snapshots/{{.ID}}" data-inline>{{icon "git-compare"}}<span class="ms-2">Compare with now</span></a>{{end}}
-              <button type="button" class="dropdown-item" data-copy="{{.ID}}">{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
+              {{else}}<a class="dropdown-item" href="{{basePath}}/snapshots/{{.ID}}" data-inline{{tip "snapshot-compare-now"}}>{{icon "git-compare"}}<span class="ms-2">Compare with now</span></a>{{end}}
+              <button type="button" class="dropdown-item" data-copy="{{.ID}}"{{tip "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
             {{template "menu_close"}}
           </td>
         </tr>
@@ -52,7 +52,7 @@
           <td class="text-end">
             {{if not $.ReadOnly}}<form method="post" action="{{basePath}}/jobs/review" data-inline id="f-bundle-{{.Name}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="bundle-restore"><input type="hidden" name="bundle" value="{{.Name}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for bundle %s" .Name)}}
-              <button type="button" class="dropdown-item" data-copy="{{.Name}}">{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
+              <button type="button" class="dropdown-item" data-copy="{{.Name}}"{{tip "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
               {{if not $.ReadOnly}}<div class="dropdown-divider"></div>
               <button type="submit" class="dropdown-item text-danger" form="f-bundle-{{.Name}}" data-confirm="m-bundle-{{.Name}}"{{tip "restore"}}>{{icon "archive"}}<span class="ms-2">Restore</span></button>{{end}}
             {{template "menu_close"}}
