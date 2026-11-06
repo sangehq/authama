@@ -6,7 +6,7 @@ auth-token-manager merged in. It has two features, under two groups:
 - `authama ssh …` - SSH keys, profiles, hosts, config and trust (all of v3's `sshmgr`).
 - `authama token …` - package-manager and git auth tokens (all of auth-token-manager).
 
-`doctor`, `init`, `migrate`, `settings`, `history`, `serve`, `tui` and
+`doctor`, `init`, `migrate`, `settings`, `history`, `serve` and
 `version` stay at the top level, because they cover both.
 
 > The versions 0.1.1 to 0.1.4 named below are builds released before 2026-11-06, when the
@@ -128,7 +128,7 @@ Nothing you have stops working.
 | Binary | `sshmgr` | `authama`; `sshmgr` shipped beside it as a deprecated alias from [0.1.2](#to-012-authama-everywhere-sshmgr-deprecated) until it was [removed](#removing-the-sshmgr-alias) |
 | SSH verbs | `sshmgr reconcile`, `sshmgr host add …` | `authama ssh reconcile`, `authama ssh host add …`. The top-level spellings (`authama reconcile`, `sshmgr reconcile`) still work; they are hidden from help |
 | Shared verbs | `sshmgr doctor`, `sshmgr serve` | `authama doctor`, `authama serve` |
-| `ui` | alias of `serve` | still works, deprecated: use `serve` (web) or `tui` (terminal) |
+| `ui` | alias of `serve` | still works, deprecated: use `serve` |
 | Config home | `~/.config/ssh-manager` | `~/.config/authama` from 0.1.1, copied in on the first run ([above](#to-011-the-authama-config-home-and-authama_-names)) |
 | Variables | `SSH_MANAGER_*`, `SSHMGR_DEV_ROOT` | `AUTHAMA_*` from 0.1.1; the old names still work, with a notice |
 | `~/.ssh` | managed-block markers, `known_hosts` tags | the managed block's markers are rewritten under the authama name on the next render, with no other diff; new `known_hosts` pins are tagged `authama` from 0.1.2, and `sshmgr`-tagged ones are still recognized |
@@ -226,12 +226,12 @@ commands) and `--list --json` (with and without secrets).
 | `--copy T H` | `token copy T H` | `TestTokenCopyCopiesWithoutPrinting` |
 | `--add --host H …` | `token set --server H …` (`--username`, `--service`, `--scope`, `--target` unchanged) | `TestTokenSetGitFromStdin`, `TestTokenSetComposerViaService`, `TestTokenSetNPMWithScope`, `TestTokenSetRefusesIncompleteRequests` |
 | `--remove T H` | `token delete T H` (asks first at a terminal; `-y`) | `TestPurgesMatchThePythonTool`, `TestTokenDeleteRefusals`, `TestTokenDeleteAsksAtATerminal`, E |
-| `--ui` | `authama tui` → **Auth tokens**; the **Tokens** page of `authama serve` | `tui_tokens_test.go`, `TestEveryWebChangeMatchesItsCommand` |
-| `--ui` add: provider → cloud or self-hosted → URL → secret | **Add or replace a token**, same questions | `TestTheTUIAsksForAHostWhenTheProviderHasNoCloud`, `TestTheTUIRemindsAboutSelfHostedComposerDomains` |
-| `--ui` Bitbucket key + secret, custom headers | the same prompts | `TestTheTUIStoresComposerPairsAndHeaders` |
-| `--ui` edit | **Replace** an installed entry (Enter keeps the user name); `token set` on the CLI | `TestTheTUIReplacesAnInstalledToken` |
-| `--ui` self-hosted `*-domains` reminder | printed after a self-hosted save | `TestTheTUIRemindsAboutSelfHostedComposerDomains` |
-| `--ui` list "reveal?" question | the menu list stays masked; `token show --reveal` / `token list --reveal` ask instead | `TestTheTUIStoresATokenInTheSandbox` |
+| `--ui` | the **Auth tokens** page of `authama serve` (the terminal menu that also covered it was [removed](tools/tui.md)) | `TestEveryWebChangeMatchesItsCommand` |
+| `--ui` add: provider → cloud or self-hosted → URL → secret | `token set` on the CLI; the Auth tokens page in the web UI | none since the menu was [removed](tools/tui.md) |
+| `--ui` Bitbucket key + secret, custom headers | `token set` | none since the menu was [removed](tools/tui.md) |
+| `--ui` edit | `token set` replaces the entry for that host | none since the menu was [removed](tools/tui.md) |
+| `--ui` self-hosted `*-domains` reminder | was printed by the removed terminal menu | none since the menu was [removed](tools/tui.md) |
+| `--ui` list "reveal?" question | lists stay masked; `token show --reveal` / `token list --reveal` ask instead | none since the menu was [removed](tools/tui.md) |
 | `--version` | `authama version` | `TestVersionCommand` |
 | `auth-token-manager-aliases [status]` | `token shell-aliases` | `TestTokenShellAliasesInstallRemoveStatus` |
 | `… install` / `update` | `token shell-aliases --install` | same |
@@ -261,7 +261,7 @@ commands) and `--list --json` (with and without secrets).
 | Windows owner-only ACL (`icacls`, `USERNAME`) | the same | `util/perms/windows_acl_test.go`, `TestOwnerOnlyAndPermsOnWindows` |
 | `AUTH_TOKEN_MANAGER_CATALOG` (a replacement `catalog.json`) | `AUTHAMA_TOKENS_CATALOG`; the old name is still read, with a deprecation notice | `TestTokenCatalogOverride` |
 | `ATM_DEBUG` (show the Python traceback) | dropped | Go errors are already one line; there is no traceback to show |
-| 0600 atomic writes | the same (owner-only ACL on Windows) | `TestTheTUIStoresATokenInTheSandbox`, E |
+| 0600 atomic writes | the same (owner-only ACL on Windows) | `TestOwnerOnlyAndPermsOnWindows`, E |
 
 #### Packaging, tests and docs
 
@@ -275,14 +275,14 @@ commands) and `--list --json` (with and without secrets).
 | `tests/test_catalog.py`, `test_templates.py` | `port_test.go` catalog and template tests | |
 | `tests/test_windows.py` | `port_test.go` Windows tests, `util/perms/windows_acl_test.go`, `tokensvc_test.go`; `install.ps1` is parsed and checked by PSScriptAnalyzer in CI | |
 | `tests/test_aliases.py` | `TestAliasBlockTransforms`, `TestTokenShellAliases*` | |
-| `tests/test_tui.py` | `cli/tui_tokens_test.go` | 11 tests |
+| `tests/test_tui.py` | none: the terminal menu was [removed](tools/tui.md) | |
 | `tests/test_no_install.py` | not applicable | it checked the Python package ran without `rich`/`questionary`; a static binary has no optional runtime dependencies |
 | `.atm.bak` | `.authama.bak` | `TestTokenShellAliasesInstallRemoveStatus` |
 | `docs/usage.md` (workflow, self-hosted, token sources, CI, troubleshooting) | [`token`](tools/tokens.md) | |
 | `docs/configuration.md`, `docs/templates.md` | [`token` › The config / Templates](tools/tokens.md#the-config), [configuration](configuration.md#auth-tokens) | |
 | `docs/tools/{composer,npm,docker,git,netrc}.md` | [tools/tokens/](tools/tokens/composer.md) | |
-| `docs/tools/ui.md` | [`tui` › Auth tokens](tools/tui.md#auth-tokens), [`serve`](tools/serve.md) | |
-| Make targets `run`, `ui`, `services`, `aliases-*`, `docker-build`/`up`/`check`/`clean`, `venv`, `pyz`, `binary` | dropped | each is one `authama` command (`token apply`, `tui`, `token providers`, `token shell-aliases`); the container is `make docker-shell`/`docker-run`/`docker-down`; there is no venv or zipapp to build |
+| `docs/tools/ui.md` | [`serve`](tools/serve.md) (the terminal menu that first replaced it was [removed](tools/tui.md)) | |
+| Make targets `run`, `ui`, `services`, `aliases-*`, `docker-build`/`up`/`check`/`clean`, `venv`, `pyz`, `binary` | dropped | each is one `authama` command (`token apply`, `serve`, `token providers`, `token shell-aliases`); the container is `make docker-shell`/`docker-run`/`docker-down`; there is no venv or zipapp to build |
 | `.env.example` `ATM_*` container variables | `AUTHAMA_*` in `compose.yaml` (`ATM_AUTH_HOME` is `AUTHAMA_DEV_HOME`, `ATM_UBUNTU_VERSION` is `AUTHAMA_GO_VERSION`) | [installation](installation.md#dev-container) |
 | `docs/aliases.md` | [`token` › Shell aliases](tools/tokens.md#shell-aliases); the Make shortcuts are the repo's `make help` | |
 | `docs/container.md` | [installation › Dev container](installation.md#dev-container) | |

@@ -15,7 +15,7 @@ authama --dev-root ./scratch serve
 A bare `authama` on a terminal runs `serve` with every flag at its default; the
 global `--dev-root` and `--no-dotenv` still apply. With no terminal (a pipe, a
 script, CI) a bare run prints help instead, since `serve` runs until Ctrl-C. The
-web UI replaces the `authama tui` menu, which is deprecated.
+web UI replaced the terminal menu, which was removed ([`tui`](tui.md)).
 
 It prints an address like this:
 
@@ -212,7 +212,7 @@ Events) and **System** (Doctor, Settings, About). On a narrow screen it folds be
 
 | Page | Shows |
 |---|---|
-| Overview | the rows the `authama tui` menu prints at the top, each problem with the command that fixes it; counts; key health, auth tokens and snapshots; quick actions; hosts by profile; the newest file events; keys due for rotation; recent changes |
+| Overview | the state rows (`overview.Rows`), each problem with the command that fixes it; counts; key health, auth tokens and snapshots; quick actions; hosts by profile; the newest file events; keys due for rotation; recent changes |
 | Profiles | each profile's category, key scope, key store, and host and key counts |
 | Hosts | every host by profile. A host's page shows its manifest entry, its deployments, the block rendered into `~/.ssh/config`, and the host keys pinned for it |
 | Keys | every key with its fingerprint and expiry, and the reserved keys (loose keys kept on purpose). A key's page shows its public key and fingerprint, each with a copy button, where the key is deployed and every operation that touched it. A `.pub` that is not a single public key line is not shown |
@@ -384,7 +384,7 @@ Some changes are terminal-only:
 ## What it will not do
 
 - **Hold the lock while you read.** It holds the lock only while it checks and makes a change you
-  confirmed. The `authama tui` menu now does the same.
+  confirmed.
 - **Open a snapshot that holds private keys.** A snapshot written before private keys were left out
   is listed but never opened. `authama ssh snapshots prune --keep 0` removes it.
 - **Show private keys.** Pages read public keys, `known_hosts` and config only.

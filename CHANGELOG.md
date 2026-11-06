@@ -75,12 +75,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   column, so it has no Keys tab; the dialog now says so, with a link to the lists that have one.
 
 
-### Deprecated
+### Removed
 
 - **`authama tui`, the terminal menu.** The web UI is the interactive surface: a bare `authama` on
-  a terminal opens it, and every menu entry has a CLI command beside it. The menu still works. It
-  prints a notice on stderr and is left out of `--help` and the CLI reference. The `atm-ui` shell
-  alias still opens it.
+  a terminal opens it, and every menu entry was already a CLI command. `docs/tools/tui.md` lists
+  where each entry went. `authama tui` still answers, but it only prints that pointer and exits
+  with an error. History rows the menu recorded keep their `tui` source.
+- **The `atm-ui` shell alias now runs `authama serve`.** A block installed earlier keeps calling
+  `authama tui`, which prints the pointer; `token shell-aliases --install` rewrites it.
 
 ### Changed
 

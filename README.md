@@ -130,7 +130,7 @@ else is in the [documentation index](#documentation).
 - [`man`](docs/tools/man.md) — a manual page for every command, and the layout every `--help` shares.
 - [`serve`](docs/tools/serve.md) — the web UI: overview, hosts, keys, snapshots, auth tokens and history in a browser, with previewed changes.
 - [`recover`](docs/tools/recover.md) — break-glass when you are locked out.
-- [`tui`](docs/tools/tui.md) — the interactive menu (deprecated: use `serve` or the CLI).
+- [`tui`](docs/tools/tui.md) — the terminal menu, removed: where each of its entries went.
 
 ### Recipes
 

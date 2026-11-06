@@ -87,6 +87,14 @@ var v1Dropped = map[string]string{
 		"plus the user's, so there is nothing left for the flag to select",
 }
 
+// v1RemovedVerbs names every v1 verb deliberately removed from Go, with the
+// decision. Each must be absent from the visible tree; a hidden stub that says
+// where the feature went is allowed.
+var v1RemovedVerbs = map[string]string{
+	"tui": "removed 2026-11-06 by owner decision: the web UI is the interactive surface; " +
+		"a hidden `tui` stub points at `serve`",
+}
+
 // goOnly names every verb and flag with no v1 counterpart, against the
 // deviation that authorises it. An entry here is a decision someone made; an
 // addition without one is a test failure.
@@ -418,6 +426,12 @@ func TestTheCommandSurfaceMatchesTheOneItReplaced(t *testing.T) {
 
 	// 1. Everything v1 had, Go still has - verb and flag.
 	for verb, want := range v1Surface {
+		if why, removed := v1RemovedVerbs[verb]; removed {
+			if _, present := got[verb]; present {
+				t.Errorf("%q is listed as removed (%s) but is visible in the Go tree", verb, why)
+			}
+			continue
+		}
 		have, ok := got[verb]
 		if !ok {
 			t.Errorf("%q is in v1's CLI and gone from the Go tree", verb)

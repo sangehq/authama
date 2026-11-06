@@ -90,7 +90,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newDoctorCmd())
 	root.AddCommand(newInitCmd())
 	root.AddCommand(newMigrateCmd())
-	root.AddCommand(newTuiCmd())
+	root.AddCommand(newTuiRemovedCmd())
 	root.AddCommand(newHistoryCmd())
 	root.AddCommand(newEventsCmd())
 	root.AddCommand(newManCmd())
