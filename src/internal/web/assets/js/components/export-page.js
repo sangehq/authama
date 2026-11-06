@@ -207,7 +207,8 @@ export class ExportPage extends Component {
 
   #bind() {
     for (const b of /** @type {HTMLElement[]} */ ([...this.el.querySelectorAll("[data-export-grain]")])) {
-      b.addEventListener("click", () => {
+      b.addEventListener("click", (e) => {
+        e.preventDefault(); // a tab link, not a navigation
         const grain = b.dataset.exportGrain ?? "host";
         if (grain !== this.#sel.grain) {
           this.#sel = { version: 1, grain, where: {} };
@@ -278,8 +279,7 @@ export class ExportPage extends Component {
     for (const b of /** @type {HTMLElement[]} */ ([...this.el.querySelectorAll("[data-export-grain]")])) {
       const on = b.dataset.exportGrain === this.#sel.grain;
       b.setAttribute("aria-selected", String(on));
-      b.classList.toggle("btn-primary", on);
-      b.classList.toggle("btn-ghost-secondary", !on);
+      b.classList.toggle("active", on);
     }
     for (const t of /** @type {HTMLInputElement[]} */ ([...this.el.querySelectorAll("[data-export-text]")])) {
       const v = this.#sel.where[t.dataset.exportText ?? ""];
@@ -294,11 +294,26 @@ export class ExportPage extends Component {
     this.#renderOutput();
   }
 
-  /** @param {Preview} p */
+  /** An icon from the page's sprite. @param {string} name */
+  static icon(name) {
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("class", "icon");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    const use = document.createElementNS(ns, "use");
+    use.setAttribute("href", `#tabler-${name}`);
+    svg.appendChild(use);
+    return svg;
+  }
+
+  /** The facets as a Tabler accordion, one item each, open as they were. @param {Preview} p */
   #renderFacets(p) {
     const box = this.#part("facets");
+    const open = new Set([...box.querySelectorAll(".accordion-collapse.show")].map((e) => e.id));
+    const first = box.children.length === 0;
     /** @type {Node[]} */
-    const sections = [];
+    const items = [];
     const profiles = /** @type {string[] | undefined} */ (this.#sel.where.profile);
     for (const [facet, heading, one] of FACETS) {
       let values = p.facets[facet] ?? [];
@@ -308,61 +323,66 @@ export class ExportPage extends Component {
       if (values.length === 0 || (values.length === 1 && facet !== "key" && facet !== "profile")) {
         continue;
       }
-      sections.push(this.#facet(facet, heading, one, values));
+      const id = `export-facet-${facet}`;
+      items.push(this.#facet(facet, heading, one, values, id, first ? items.length < 2 : open.has(id)));
     }
-    box.replaceChildren(...sections);
+    box.replaceChildren(...items);
   }
 
   /**
-   * One facet: a table with a tick box per value and a header box that
-   * ticks all, none or some; keys grouped by profile when several show.
+   * One facet: an accordion item holding a list-group, a check box per
+   * value with its count, an "All" box that ticks all, none or some, and
+   * keys under a header per profile when several show.
    * @param {string} facet @param {string} heading @param {string} one @param {FacetValue[]} values
+   * @param {string} id @param {boolean} expanded
    */
-  #facet(facet, heading, one, values) {
+  #facet(facet, heading, one, values, id, expanded) {
     const chosen = /** @type {string[] | undefined} */ (this.#sel.where[facet]);
     const on = (/** @type {string} */ v) => !chosen || chosen.includes(v);
     const ticked = values.filter((v) => on(v.value)).length;
     const all = values.map((v) => v.value);
     /** @param {string[]} next */
     const commit = (next) => this.#setFacet(facet, all.every((v) => next.includes(v)) ? null : next);
-    const head = El.create("input").cls("form-check-input m-0").prop("type", "checkbox").attr("aria-label", `All ${heading.toLowerCase()}`)
+    const head = El.create("input").cls("form-check-input m-0 me-2").prop("type", "checkbox").attr("aria-label", `All ${heading.toLowerCase()}`)
       .on("change", (e) => commit(/** @type {HTMLInputElement} */ (e.target).checked ? all : []));
     head.node.checked = ticked === values.length;
     head.node.indeterminate = ticked > 0 && ticked < values.length;
     const several = new Set(values.map((v) => v.profile ?? "")).size > 1;
     /** @type {Node[]} */
-    const rows = [];
+    const list = [
+      El.create("label").cls("list-group-item d-flex align-items-center bg-body-tertiary").append(
+        head, El.create("span").cls("fw-medium").text(`All ${heading.toLowerCase()}`),
+        El.create("span").cls("ms-auto text-secondary small").text(`${ticked} of ${values.length}`),
+      ).node,
+    ];
     let group = "";
-    values.forEach((v, i) => {
+    values.forEach((v) => {
       if (several && v.profile && v.profile !== group) {
         group = v.profile;
-        rows.push(El.create("tr").cls("csv-group").append(El.create("td").attr("colspan", "3").text(group)).node);
+        list.push(El.create("div").cls("list-group-header sticky-top").text(group).node);
       }
-      const id = `export-${facet}-${i}`;
-      const box = El.create("input").cls("form-check-input m-0").prop("type", "checkbox").prop("id", id).prop("checked", on(v.value))
+      const box = El.create("input").cls("form-check-input list-group-selectable-check m-0").prop("type", "checkbox").prop("checked", on(v.value))
+        .attr("aria-label", v.value)
         .on("change", (e) => {
           const rest = all.filter(on).filter((x) => x !== v.value);
           commit(/** @type {HTMLInputElement} */ (e.target).checked ? [...rest, v.value] : rest);
         });
-      rows.push(El.create("tr").append(
-        El.create("td").append(box),
-        El.create("td").append(El.create("label").cls("d-block text-truncate m-0").attr("for", id).text(v.value)),
-        El.create("td").cls("csv-num").text(String(v.rows)),
+      // Tabler's selectable list item: the whole row is the label, and a
+      // ticked box gives it the active look.
+      list.push(El.create("label").cls("list-group-item").attr("title", v.value).append(
+        El.create("span").cls("list-group-item-media").append(box),
+        El.create("span").cls("list-group-item-content text-truncate").append(El.create("span").cls("list-group-item-title text-truncate").text(v.value)),
+        El.create("span").cls("badge bg-secondary-lt ms-auto flex-shrink-0").attr("aria-label", `${v.rows} ${one.toLowerCase()} rows`).text(String(v.rows)),
       ).node);
     });
-    const badge = El.create("span").cls(`badge ms-1 ${ticked === 0 ? "bg-danger-lt" : ticked === values.length ? "bg-secondary-lt" : "bg-primary-lt"}`)
-      .text(ticked === values.length ? String(values.length) : `${ticked}/${values.length}`);
-    return El.create("details").cls("export-facet").attr("open", "").append(
-      El.create("summary").text(heading).append(badge),
-      El.create("div").cls("csv-pick-scroll").append(
-        El.create("table").cls("table table-sm table-hover table-vcenter card-table mb-0 csv-pick-table").append(
-          El.create("thead").append(El.create("tr").append(
-            El.create("th").attr("scope", "col").append(head),
-            El.create("th").attr("scope", "col").text(one),
-            El.create("th").attr("scope", "col").cls("csv-num").text("Rows"),
-          )),
-          El.create("tbody").append(...rows),
-        ),
+    const state = ticked === 0 ? "bg-red-lt" : ticked === values.length ? "bg-secondary-lt" : "bg-blue-lt";
+    const button = El.create("button").cls(`accordion-button${expanded ? "" : " collapsed"}`).prop("type", "button")
+      .attr("data-bs-toggle", "collapse").attr("data-bs-target", `#${id}`).attr("aria-expanded", String(expanded)).attr("aria-controls", id)
+      .append(El.create("span").text(heading), El.create("span").cls(`badge ${state} ms-2`).text(ticked === values.length ? String(values.length) : `${ticked}/${values.length}`));
+    return El.create("div").cls("accordion-item").append(
+      El.create("h4").cls("accordion-header").append(button),
+      El.create("div").cls(`accordion-collapse collapse${expanded ? " show" : ""}`).prop("id", id).append(
+        El.create("div").cls("accordion-body p-0").append(El.create("div").cls("list-group list-group-flush list-group-selectable export-list").append(...list)),
       ),
     ).node;
   }
@@ -373,8 +393,8 @@ export class ExportPage extends Component {
   }
 
   /**
-   * The columns: the file's, in order, each with a heading to rename it and
-   * buttons to move it; then every other field, to add.
+   * The file's columns, in order: each with a heading to rename it and icon
+   * buttons to move or remove it; below, a list of every other field to add.
    * @param {Preview} p
    */
   #renderColumns(p) {
@@ -387,46 +407,52 @@ export class ExportPage extends Component {
       next.splice(Math.max(0, Math.min(next.length, i + d)), 0, c);
       set(next);
     };
-    /** @type {Node[]} */
-    const rows = cols.map((c, i) => {
-      const id = `export-col-${i}`;
-      const name = El.create("input").cls("form-control form-control-sm").prop("value", c.as ?? "").attr("placeholder", c.field)
-        .attr("aria-label", `Heading for ${c.field}`)
-        .on("change", (e) => set(cols.map((x, j) => (j === i ? { field: x.field, ...(/** @type {HTMLInputElement} */ (e.target).value.trim() ? { as: /** @type {HTMLInputElement} */ (e.target).value.trim() } : {}) } : x))));
-      const btn = (/** @type {string} */ label, /** @type {string} */ text, /** @type {() => void} */ fn, /** @type {boolean} */ off) =>
-        El.create("button").cls("btn btn-sm btn-ghost-secondary px-2").prop("type", "button").attr("aria-label", label).prop("disabled", off).text(text).on("click", fn);
-      return El.create("tr").append(
-        El.create("td").append(El.create("input").cls("form-check-input m-0").prop("type", "checkbox").prop("id", id).prop("checked", true)
-          .prop("disabled", cols.length === 1).on("change", () => set(cols.filter((_, j) => j !== i)))),
-        El.create("td").append(El.create("label").cls("m-0 font-monospace small").attr("for", id).text(c.field)),
-        El.create("td").append(name),
-        El.create("td").cls("text-nowrap").append(
-          btn(`Move ${c.field} up`, "↑", () => move(i, -1), i === 0),
-          btn(`Move ${c.field} down`, "↓", () => move(i, 1), i === cols.length - 1),
-        ),
-      ).node;
-    });
-    const used = new Set(cols.map((c) => c.field));
-    for (const f of p.fields.filter((x) => !used.has(x))) {
-      const id = `export-field-${f}`;
-      rows.push(El.create("tr").cls("text-secondary").append(
-        El.create("td").append(El.create("input").cls("form-check-input m-0").prop("type", "checkbox").prop("id", id)
-          .on("change", () => set([...cols, { field: f }]))),
-        El.create("td").append(El.create("label").cls("m-0 font-monospace small").attr("for", id).text(f)),
-        El.create("td"),
-        El.create("td"),
+    const iconBtn = (/** @type {string} */ icon, /** @type {string} */ label, /** @type {() => void} */ fn, /** @type {boolean} */ off) =>
+      El.create("button").cls("btn btn-icon btn-sm btn-ghost-secondary").prop("type", "button").attr("aria-label", label).attr("title", label)
+        .prop("disabled", off).append(ExportPage.icon(icon)).on("click", fn);
+    const rows = cols.map((c, i) =>
+      El.create("tr").append(
+        El.create("td").cls("text-secondary w-1").text(String(i + 1)),
+        El.create("td").append(El.create("code").text(c.field)),
+        El.create("td").append(El.create("input").cls("form-control form-control-sm").prop("value", c.as ?? "").attr("placeholder", c.field)
+          .attr("aria-label", `Heading for ${c.field}`)
+          .on("change", (e) => {
+            const v = /** @type {HTMLInputElement} */ (e.target).value.trim();
+            set(cols.map((x, j) => (j === i ? (v ? { field: x.field, as: v } : { field: x.field }) : x)));
+          })),
+        El.create("td").cls("w-1").append(El.create("div").cls("btn-list flex-nowrap").append(
+          iconBtn("arrow-up", `Move ${c.field} up`, () => move(i, -1), i === 0),
+          iconBtn("arrow-down", `Move ${c.field} down`, () => move(i, 1), i === cols.length - 1),
+          iconBtn("x", `Remove ${c.field}`, () => set(cols.filter((_, j) => j !== i)), cols.length === 1),
+        )),
       ).node);
-    }
-    const table = El.create("table").cls("table table-sm table-vcenter card-table mb-0 csv-pick-table").append(
+    const table = El.create("table").cls("table table-vcenter card-table table-sm mb-0").append(
       El.create("thead").append(El.create("tr").append(
-        El.create("th").attr("scope", "col").append(El.create("span").cls("visually-hidden").text("In the file")),
+        El.create("th").attr("scope", "col").text("#"),
         El.create("th").attr("scope", "col").text("Field"),
-        El.create("th").attr("scope", "col").text("Heading"),
-        El.create("th").attr("scope", "col").append(El.create("span").cls("visually-hidden").text("Order")),
+        El.create("th").attr("scope", "col").text("Heading in the file"),
+        El.create("th").attr("scope", "col").append(El.create("span").cls("visually-hidden").text("Move or remove")),
       )),
       El.create("tbody").append(...rows),
     );
-    this.#part("columns").replaceChildren(El.create("div").cls("csv-pick-scroll").append(table).node);
+    this.#part("columns").replaceChildren(table.node);
+
+    const used = new Set(cols.map((c) => c.field));
+    const rest = p.fields.filter((f) => !used.has(f));
+    const add = /** @type {HTMLSelectElement} */ (this.#part("add"));
+    add.replaceChildren(
+      El.create("option").prop("value", "").text(rest.length ? `Add one of ${rest.length} more fields…` : "Every field is a column").node,
+      ...rest.map((f) => El.create("option").prop("value", f).text(f).node),
+    );
+    add.disabled = rest.length === 0;
+    const button = /** @type {HTMLButtonElement} */ (this.#part("add-button"));
+    button.disabled = rest.length === 0;
+    button.onclick = () => {
+      if (add.value) {
+        set([...cols, { field: add.value }]);
+      }
+    };
+    add.onchange = () => button.click();
   }
 
   /** @param {Preview} p */
@@ -462,14 +488,15 @@ export class ExportPage extends Component {
 
     const cols = this.#columns();
     const sort = this.#sel.sort?.[0];
-    const table = El.create("table").cls("table table-sm table-striped table-vcenter card-table mb-0");
+    const table = El.create("table").cls("table table-vcenter card-table table-striped mb-0");
     table.append(
       El.create("thead").append(El.create("tr").append(...p.columns.map((h, i) => {
         const field = cols[i]?.field ?? h;
         const dir = sort?.field === field ? (sort.desc ? "descending" : "ascending") : "none";
+        // Tabler's sortable header: the button's asc/desc class draws the arrow.
         return El.create("th").attr("scope", "col").attr("aria-sort", dir).append(
-          El.create("button").cls("btn btn-link p-0 text-reset text-decoration-none export-sort").prop("type", "button")
-            .text(h + (dir === "ascending" ? " ▲" : dir === "descending" ? " ▼" : ""))
+          El.create("button").cls(`table-sort${dir === "ascending" ? " asc" : dir === "descending" ? " desc" : ""}`).prop("type", "button")
+            .attr("data-sort", field).text(h)
             .on("click", () => this.#update({ sort: [{ field, desc: sort?.field === field && !sort.desc }] })),
         );
       }))),
@@ -513,7 +540,7 @@ export class ExportPage extends Component {
     const download = /** @type {HTMLAnchorElement} */ (this.#part("download"));
     const note = this.#part("blocked");
     note.textContent = why;
-    note.hidden = why === "";
+    this.#part("blocked-row").hidden = why === "";
     for (const b of [this.#part("copy"), this.#part("share")]) {
       /** @type {HTMLButtonElement} */ (b).disabled = why !== "";
     }

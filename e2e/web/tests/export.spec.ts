@@ -21,7 +21,7 @@ test('the Export page filters, chooses columns and formats, and downloads what i
   // Leave a column out: the preview loses it.
   const columns = await preview.locator('thead th').allTextContents();
   const last = columns[columns.length - 1].trim();
-  await page.getByRole('checkbox', { name: last, exact: true }).first().uncheck();
+  await page.getByRole('button', { name: `Remove ${last}` }).click();
   await expect(preview.locator('thead th')).toHaveCount(columns.length - 1);
 
   // JSON: the file holds the preview's rows, without the column left out.

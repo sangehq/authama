@@ -53,3 +53,9 @@ terminal-2
 trash
 users
 x
+arrow-down
+arrow-up
+columns
+filter
+link
+table
