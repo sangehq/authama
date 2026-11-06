@@ -118,6 +118,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - The keepalive workflow calls the reusable workflow at a commit, not at `main`, so an upstream
   change cannot alter this repository's CI unseen.
+- The migration guide no longer offers Homebrew, Scoop or `go install` as a way to install, nor says
+  the installers carry both binaries: releases are on hold, so it points at building from source.
+  The README's `export` line names `authama export <list>`. A test fails on a docs page that offers
+  a release channel as current, outside the release page and the historical upgrade notes.
+
 - Installation covers checking what is installed, restarting the web UI after an update (with the
   commands to stop a server on the usual ports), and uninstalling, including what is kept.
 

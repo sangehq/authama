@@ -121,7 +121,7 @@ else is in the [documentation index](#documentation).
 - [`knownhosts`](docs/tools/knownhosts.md) — pinning host keys into the trust store.
 - [`git`](docs/tools/git.md) — checkouts' GitHub remotes in profile SSH, plain SSH or HTTPS mode.
 - [`vm`](docs/tools/vm.md) — local VMs as hosts, addressed through their hypervisor; configuring hypervisors, `vm sync`, `vm adopt-key`, keeping a key for later (`key reserve`).
-- [`export`](docs/tools/export.md) — a flat `ssh_config`, a Termius CSV, or your hosts for Windows Terminal, iTerm2, PuTTY, Remmina or any CSV importer.
+- [`export`](docs/tools/export.md) — `authama export <list>`: any list (hosts, keys, profiles, tokens, history, events, snapshots, deployments), filtered, with the columns you choose, in nine formats; and a flat `ssh_config`, a Termius CSV, or your hosts for Windows Terminal, iTerm2, PuTTY, Remmina or any CSV importer.
 - [`net`](docs/tools/network.md) — reachability and VPN-gated hosts.
 - [`validate`](docs/tools/validate.md) — keypair integrity checks.
 - [`bundle`](docs/tools/bundle.md) — encrypted backup and restore.
