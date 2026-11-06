@@ -340,8 +340,8 @@ written to the home, so `--read-only` keeps them.
 
 ## Jobs
 
-Deploying, rotating and rolling back reach the hosts that use a key, so no copy can preview them.
-A key's page offers each as a **job**:
+Deploying, rotating and rolling back reach the hosts that use a key, and pinning host keys asks
+hosts for theirs, so no copy can preview them. Each runs as a **job**:
 
 1. **Review.** The page says what the job will do, and the command it is the same as.
 2. **Run.** The job starts, and its page shows the output as it comes. It holds the lock until it
@@ -354,10 +354,13 @@ A key's page offers each as a **job**:
 | Roll a key back to its predecessor | the key's page | `authama ssh rollback <profile/key> --yes` |
 | Rotate a profile's keys, or every key | Profiles | `authama ssh rotate <profile> --yes`, `authama ssh rotate --all --yes` |
 | Restore an encrypted bundle from `dist/` | Snapshots | `authama ssh restore <bundle> --yes` |
+| Pin one host's keys, after you have seen their fingerprints | the host's page | `authama ssh knownhosts pin <alias>`, answered yes |
+| Pin a profile's hosts, or every host (trust on first use) | Hosts → Pin host keys | `authama ssh knownhosts init <profile> --yes`, `authama ssh knownhosts init --all --yes` |
 
 - **Not in dev mode.** Deploy, rotate and rollback reach real servers, so under `--dev-root` the key
   and profile pages say so instead of offering them, as the CLI refuses them. A bundle restore is
-  local, and is offered.
+  local, and pinning host keys only reads them and writes the sandbox's own `known_hosts`, so both
+  are offered.
 - **One job at a time.** Starting a second while one runs takes you to the one running. No change
   is previewed or made while a job runs.
 - **Nothing a job runs can prompt.** `ssh` and `ssh-copy-id` run with stdin closed and

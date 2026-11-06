@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Pin host keys from the web UI.** A host's page scans it, shows each key's fingerprint, and pins
+  the keys only once you trust them, as `ssh knownhosts pin` does. **Hosts → Pin host keys** runs
+  `ssh knownhosts init` for a profile or every profile (trust on first use). Both run as jobs, with
+  the same notice and service as the CLI, and both work in dev mode, which reaches no server. The
+  web pins manifest hosts only: no free hostname or port goes to `ssh-keyscan` from a form. A host
+  with nothing pinned now shows the shared empty state.
+
 - **About shows this computer.** A *This computer* card lists the OS and its version, build and
   kernel, the architecture and computer name, how long it has been up, and the hardware: model,
   processor, cores (performance and efficiency on Apple silicon) and memory. It is read on each load

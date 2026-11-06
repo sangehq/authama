@@ -19,7 +19,7 @@ points `atm-ui` at `authama serve`.
 | Expiry status | `ssh expiry` | Keys, Overview (keys due for rotation) |
 | Audit deployments & expiry | `ssh audit` | Doctor, Audit |
 | Reconcile — apply the manifest | `ssh reconcile` | Overview quick actions (previewed) |
-| Pin host keys into known_hosts | `ssh knownhosts init --all` | not yet; planned |
+| Pin host keys into known_hosts | `ssh knownhosts init --all` | Hosts → Pin host keys; a host's page pins one host |
 | Deploy a key to its target | `ssh deploy` | Keys (a job) |
 | Rotate a key | `ssh rotate` | Keys (a job) |
 | Snapshots — list and restore | `ssh snapshots` | Snapshots |

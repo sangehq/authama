@@ -44,6 +44,11 @@ type ScannedKey struct {
 	Fingerprint string
 }
 
+// InitNotice is what `knownhosts init` confirms with, at a terminal and in the
+// web UI: it is trust on first use, so both say so in the same words.
+const InitNotice = "knownhosts init scans the hosts it can reach and pins their keys " +
+	"into ~/.ssh/known_hosts (trust on first use)."
+
 // Service manages the single, user-wide known_hosts trust store.
 type Service struct {
 	sshDir string
