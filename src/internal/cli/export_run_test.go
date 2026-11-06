@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -69,7 +70,8 @@ func TestExportTakesASavedSelectionAndWritesAFile(t *testing.T) {
 	if err != nil || string(b) != "- alias: web1\n" {
 		t.Fatalf("file = %q, %v", b, err)
 	}
-	if fi, _ := os.Stat(target); fi.Mode().Perm()&0o077 != 0 {
+	// Windows keeps no Unix mode bits: an ACL guards the file there instead.
+	if fi, _ := os.Stat(target); runtime.GOOS != "windows" && fi.Mode().Perm()&0o077 != 0 {
 		t.Errorf("mode %v is not private", fi.Mode().Perm())
 	}
 }
