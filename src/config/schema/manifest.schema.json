@@ -1,0 +1,403 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "authama manifest",
+  "type": "object",
+  "required": [
+    "version",
+    "profiles"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "key_type": {
+          "type": "string"
+        },
+        "key_scope": {
+          "enum": [
+            "per_service",
+            "shared"
+          ]
+        },
+        "rotate_after_days": {
+          "type": "integer"
+        },
+        "warn_before_days": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "expiry_check": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "debounce_hours": {
+              "type": "integer"
+            },
+            "desktop_notify": {
+              "type": "boolean"
+            }
+          }
+        },
+        "global_options": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          }
+        },
+        "key_comment": {
+          "type": "string",
+          "description": "ssh-keygen -C template for new keys. Placeholders: {profile} {alias} {key} {date} {device}. Empty = {profile}/{alias} {date}."
+        },
+        "key_root": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_][A-Za-z0-9._-]*$",
+          "description": "The directory under ~/.ssh holding the profile directories; empty = profiles. One name, not hidden and not one of ssh's own files. Change it with `authama ssh key root <dir>`, which moves the keys."
+        },
+        "naming": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "How servers and their keys are named. See docs/configuration.md#naming-servers.",
+          "properties": {
+            "alias": {
+              "type": "string",
+              "description": "The alias template, from {code}, {env}, {role} and a number ({nn}, or {nnn} for three digits); a part written {env?} is optional and left out with its separator. Default {code}-{env}-{role}-{nn}."
+            },
+            "key_name": {
+              "type": "string",
+              "pattern": "^\\{profile\\}_.*-\\{algo\\}$",
+              "description": "The key-name template, from {profile}, {alias}, {code}, {env}, {role}, {nn} and {algo}; it starts with {profile}_ and ends with -{algo}. Default {profile}_{alias}-{algo}. Change it with `authama ssh naming key-template`, which keeps existing hosts' key names."
+            },
+            "envs": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+$"
+              },
+              "description": "The values {env} may take, such as prd, stg, dev. Empty allows any."
+            },
+            "roles": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+$"
+              },
+              "description": "The values {role} may take, such as web, db. Empty allows any."
+            },
+            "enforce": {
+              "enum": [
+                "off",
+                "warn",
+                "error"
+              ],
+              "description": "What adding a host whose alias breaks the rules does. Default off; hosts already there are only reported."
+            },
+            "start": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "The first number a generated alias takes: 0 (00, the default) or 1 (01)."
+            },
+            "code_fallback": {
+              "enum": [
+                "none",
+                "profile"
+              ],
+              "description": "The {code} of a profile with no code of its own: none (the default) or profile (its name)."
+            }
+          }
+        },
+        "onepassword_agent": {
+          "type": "string",
+          "description": "1Password SSH agent socket for key_store 1password profiles; empty = the platform default."
+        },
+        "git": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "`authama ssh git`: default remote mode, default identity, and owner-to-profile map.",
+          "properties": {
+            "mode": {
+              "enum": [
+                "profile",
+                "ssh",
+                "https"
+              ]
+            },
+            "profile": {
+              "type": "string",
+              "description": "Default identity; its GitHub key is bound to the rendered Host github.com."
+            },
+            "orgs": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "GitHub owner -> profile."
+            }
+          }
+        }
+      }
+    },
+    "profiles": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "key_scope": {
+            "enum": [
+              "per_service",
+              "shared"
+            ]
+          },
+          "key_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hosts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "alias",
+                "hostname",
+                "user"
+              ],
+              "properties": {
+                "alias": {
+                  "type": "string"
+                },
+                "hostname": {
+                  "type": "string"
+                },
+                "user": {
+                  "type": "string"
+                },
+                "port": {
+                  "type": "integer",
+                  "default": 22
+                },
+                "provider": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "token_env": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "key_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "requires_vpn": {
+                  "type": "boolean",
+                  "description": "Host is only reachable over a VPN."
+                },
+                "vpn_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Which VPN (shown in the reachability hint)."
+                },
+                "vpn_url": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Where to connect that VPN (shown in the hint)."
+                },
+                "raw_options": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "integer"
+                    ]
+                  }
+                },
+                "vm": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "hypervisor",
+                    "name"
+                  ],
+                  "description": "A local VM: its address comes from the hypervisor at connect time.",
+                  "properties": {
+                    "hypervisor": {
+                      "enum": [
+                        "parallels",
+                        "vmpal",
+                        "vmware",
+                        "utm",
+                        "lima"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "proxy": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "kind"
+                  ],
+                  "description": "Route connections through a proxy command authama renders: cloudflared reaches the host through Cloudflare Access (ssh runs `cloudflared access ssh --hostname %h`). A host is a VM or proxied, not both.",
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "cloudflared"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "category": {
+            "type": "string",
+            "description": "Groups the profile under profiles/<category>/."
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+$",
+            "description": "The organisation's code name, the {code} of its servers' aliases (simtabi's is simbi)."
+          },
+          "key_store": {
+            "enum": [
+              "file",
+              "1password"
+            ]
+          },
+          "op_vault": {
+            "type": "string",
+            "description": "1Password vault for key_store 1password."
+          },
+          "key_comment": {
+            "type": "string",
+            "description": "ssh-keygen -C template for keys minted in this profile; empty inherits defaults.key_comment."
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "rotate_after_days": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Adopt the key where it already is: the private key's path relative to ~/.ssh (forward slashes). authama never moves or deletes it."
+                }
+              }
+            }
+          },
+          "naming": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "This profile's own naming rules, over defaults.naming field by field: a client with a convention of its own.",
+            "properties": {
+              "alias": {
+                "type": "string",
+                "description": "The alias template, from {code}, {env}, {role} and a number ({nn}, or {nnn} for three digits); a part written {env?} is optional and left out with its separator. Default {code}-{env}-{role}-{nn}."
+              },
+              "key_name": {
+                "type": "string",
+                "pattern": "^\\{profile\\}_.*-\\{algo\\}$",
+                "description": "The key-name template, from {profile}, {alias}, {code}, {env}, {role}, {nn} and {algo}; it starts with {profile}_ and ends with -{algo}. Default {profile}_{alias}-{algo}. Change it with `authama ssh naming key-template`, which keeps existing hosts' key names."
+              },
+              "envs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9]+$"
+                },
+                "description": "The values {env} may take, such as prd, stg, dev. Empty allows any."
+              },
+              "roles": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9]+$"
+                },
+                "description": "The values {role} may take, such as web, db. Empty allows any."
+              },
+              "enforce": {
+                "enum": [
+                  "off",
+                  "warn",
+                  "error"
+                ],
+                "description": "What adding a host whose alias breaks the rules does. Default off; hosts already there are only reported."
+              },
+              "start": {
+                "type": "integer",
+                "enum": [
+                  0,
+                  1
+                ],
+                "description": "The first number a generated alias takes: 0 (00, the default) or 1 (01)."
+              },
+              "code_fallback": {
+                "enum": [
+                  "none",
+                  "profile"
+                ],
+                "description": "The {code} of a profile with no code of its own: none (the default) or profile (its name)."
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

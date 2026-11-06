@@ -1,0 +1,102 @@
+package cli
+
+import (
+	"errors"
+	"fmt"
+	"os"
+
+	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/platform"
+
+	"github.com/spf13/cobra"
+)
+
+// The exit-code contract, and the one place it is applied.
+//
+// Parity with the implementation it replaced is a plain binary: 0 on success, 1
+// on anything else. That one mapped every error to 1, exited 1 on a declined
+// confirmation, and had `doctor` exit 0 for a clean report and 1 otherwise. No
+// other code was ever produced, so none is invented here.
+//
+// What changes is where it is decided. Commands used to call os.Exit(1) inline,
+// in fourteen places across the CLI. That is unreachable from a test - os.Exit
+// takes the test binary with it - so no command could be exercised end to end
+// through Execute, which is exactly the gate this migration needs. It also
+// skipped every deferred function on the way out.
+//
+// So: a command returns an error, always, and Execute turns it into a code.
+
+// errAborted is returned when the user declines a confirmation. It exits 1 like
+// any other failure, but silently: the prompt already said what happened, and
+// "authama: aborted" underneath it reads like a fault rather than a choice.
+var errAborted = errors.New("aborted at the user's request")
+
+// errNotClean is returned by a command whose *report* is the failure - doctor
+// finding problems, validate finding a broken key. The report has already been
+// printed in full; the exit code is the machine-readable half of it.
+var errNotClean = errors.New("checks reported problems")
+
+// errChanged is returned when what a command asked about moved while the
+// person was deciding. Nothing has been done; running the command again shows
+// what it would do now. It is recorded as aborted, like a "no".
+var errChanged = errors.New("something changed while you were deciding, so nothing was done; " +
+	"run the command again to see what it would do now")
+
+// stdinIsTerminal is platform.StdinIsTerminal, as a variable so a test can say
+// a person is there to answer.
+var stdinIsTerminal = platform.StdinIsTerminal
+
+// asks reports whether confirmChange will put its question to someone.
+func asks(yes bool) bool { return !yes && stdinIsTerminal() }
+
+// silent reports whether an error is one whose message has already reached the
+// user by another route.
+func silent(err error) bool {
+	return errors.Is(err, errAborted) || errors.Is(err, errNotClean)
+}
+
+// Execute runs the root command and is the only place in the binary that maps
+// an outcome to an exit code.
+func Execute() {
+	root := newRootCmd()
+	err := root.Execute()
+	if err == nil {
+		return
+	}
+	if !silent(err) {
+		fmt.Fprintln(os.Stderr, brand.Command+":", err)
+	}
+	os.Exit(1)
+}
+
+// confirmOrAbort runs a confirmation and converts a "no" into errAborted, so a
+// declining user gets the same exit code as before without a command having to
+// reach for os.Exit.
+func confirmOrAbort(c *cobra.Command, prompt string, skip bool) error {
+	if skip || confirm(c, prompt) {
+		return nil
+	}
+	return errAborted
+}
+
+// confirmChange asks before a command changes anything, and is the guard every
+// mutating verb goes through.
+//
+// It asks only when someone is there to answer. With no terminal - a pipe, a
+// cron job, a CI step - there is nobody to prompt, so it proceeds: refusing
+// instead would turn every existing script into a silent no-op, and a command
+// that declines on its own is not safer than one that runs, it is just harder to
+// diagnose. `--yes` skips the question outright, which is how a script says so
+// explicitly rather than relying on the absence of a terminal.
+//
+// summary is what the command is about to do, printed above the prompt. A
+// confirmation that does not say what it is confirming trains people to type y.
+func confirmChange(c *cobra.Command, summary string, yes bool) error {
+	if !asks(yes) {
+		return nil
+	}
+	if summary != "" {
+		_, _ = fmt.Fprintln(c.OutOrStdout(), summary)
+	}
+	return confirmOrAbort(c, "Proceed?", false)
+}

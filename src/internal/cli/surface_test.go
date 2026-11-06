@@ -1,0 +1,566 @@
+package cli
+
+import (
+	"sort"
+	"strings"
+	"testing"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+
+	"github.com/simtabi/authama/src/internal/brand"
+)
+
+// The command surface, checked against the implementation it was ported from.
+//
+// Transcribed from the v1 CLI, which declared every flag inline. This is the "same flags" half of the parity
+// definition the matrix header uses, and it is the thing most at risk in a CLI
+// port: a verb quietly renamed, a flag dropped in translation, a shorthand that
+// silently changed meaning. None of that shows up in a service-level test.
+//
+// The table is checked in BOTH directions. A v1 flag that is missing fails;
+// a Go verb or flag with no v1 counterpart fails too, unless it is listed in
+// `goOnly` with the deviation that authorises it. So the surface cannot widen
+// without someone writing down why.
+
+// v1Surface is verb -> the long flags v1 declared on it. Subcommands are
+// spelled "parent child". Verbs with no flags map to an empty slice.
+var v1Surface = map[string][]string{
+	"version":   {},
+	"tui":       {},
+	"recover":   {},
+	"doctor":    {"fix", "json"},
+	"init":      {"force", "backup"},
+	"migrate":   {"force"},
+	"import":    {"dry-run", "force"},
+	"reconcile": {"dry-run", "passphrase", "no-passphrase", "no-pin"},
+	"diff":      {},
+	"keygen":    {"passphrase", "no-passphrase", "force", "no-pin"},
+	"deploy":    {},
+	"list":      {"profile", "provider", "type", "tag"},
+	"view":      {},
+	"load":      {},
+	"rotate":    {"allow-unverified", "passphrase", "no-passphrase"},
+	"rollback":  {},
+	"expiry":    {},
+	"providers": {"export", "force"},
+	"net":       {},
+	"validate":  {},
+	"audit":     {"notify"},
+	"bundle":    {"recipient", "output"},
+	"restore":   {"identity"},
+
+	"config check":  {},
+	"config render": {"dry-run"},
+	"config show":   {},
+
+	"profile add":    {"shared", "key-name"},
+	"profile edit":   {"key-scope", "key-name"},
+	"profile delete": {"revoke"},
+
+	"host add":    {"hostname", "user", "port", "provider", "token-env", "key-name", "tag"},
+	"host edit":   {"hostname", "user", "port", "provider", "token-env", "key-name"},
+	"host delete": {"revoke"},
+
+	"notify install": {},
+	"notify test":    {},
+
+	"snapshots list":    {},
+	"snapshots restore": {},
+	"snapshots prune":   {"keep"},
+
+	"knownhosts init": {"all", "force"},
+	"knownhosts pin":  {"all", "port", "yes"},
+}
+
+// v1Dropped names every v1 flag deliberately NOT carried into Go, with
+// the decision that removed it.
+//
+// It exists because omission is invisible. v1Surface is a transcription, and
+// the check below can only compare what was transcribed - so a flag left out of
+// it is unverified in both directions at once: nothing notices it is gone, and
+// nothing notices if it comes back. --user was recorded that way, as a comment
+// next to a shortened list, which documents the decision for a reader and
+// asserts nothing. Listing it here makes the removal a checked fact.
+var v1Dropped = map[string]string{
+	"knownhosts init --user": "D4: there is one trust store now, not one per profile " +
+		"plus the user's, so there is nothing left for the flag to select",
+}
+
+// goOnly names every verb and flag with no v1 counterpart, against the
+// deviation that authorises it. An entry here is a decision someone made; an
+// addition without one is a test failure.
+var goOnly = map[string]string{
+	"events":     "D1 - every change seen to a tracked file under ~/.ssh, the config home or a token file",
+	"man":        "D1 - the help of every command as section-1 manual pages",
+	"key":        "D1 - key add/list/delete, the dangling-key lifecycle v1 had no verb for",
+	"key add":    "D1",
+	"key list":   "D1",
+	"key delete": "D1",
+	"show":       "D1 - reconciles manifest, key files, rendered config and trust store in one view",
+	"clean":      "D1 - prunes stale pins and records left by deletions",
+
+	"doctor --strict": "settings - CI gate: escalates every dangling-key state to fatal",
+	"list --csv":      "exports - every host as CSV, the columns the web UI downloads",
+	"audit --csv":     "exports - every key's deployments as CSV, the columns the web UI downloads",
+
+	"snapshots list --csv": "exports - every snapshot as CSV, the columns the web UI downloads",
+
+	// The key lifecycle: a lifetime per key or by default, and revocation that
+	// keeps the key declared. v1 had neither.
+	"key lifetime":              "key lifecycle - set a key's rotate_after_days and count its expiry again",
+	"owner":                     "owner binding - a PIN, and a seal over the state files bound to this account and machine",
+	"owner status":              "owner binding - whether the home is bound, where the key is, whether a PIN is set",
+	"owner init":                "owner binding - keep a sealing key in the OS store and seal the state files",
+	"owner verify":              "owner binding - name the state files changed outside authama",
+	"owner reseal":              "owner binding - accept outside changes and seal them",
+	"owner forget":              "owner binding - remove the key, seal and PIN",
+	"owner pin":                 "owner binding - the PIN's lifecycle",
+	"owner pin set":             "owner binding - set or change the PIN",
+	"owner pin reset":           "owner binding - replace a forgotten PIN by proving the OS account",
+	"owner pin remove":          "owner binding - turn the PIN off",
+	"owner fingerprint":         "owner binding - fingerprint unlock through fprintd",
+	"key adopt":                 "key layout - manage a key where it already is in ~/.ssh",
+	"key root":                  "key layout - show or move the directory under ~/.ssh holding the profile directories",
+	"host export":               "exports - the hosts as another SSH client imports them (csv, windows-terminal, iterm2, putty, remmina)",
+	"host export --out":         "exports",
+	"host export --skip":        "exports",
+	"host export --include-git": "exports",
+	"key root --yes":            "key layout",
+
+	// The naming rules: how servers and keys are named, and generating the
+	// next server's alias. v1 named keys one fixed way and every alias by hand.
+	"naming":                        "naming - the rules servers and keys are named by",
+	"naming show":                   "naming - the rules in effect and each profile's code",
+	"naming check":                  "naming - the hosts whose alias breaks the rules",
+	"naming check --strict":         "naming",
+	"naming set":                    "naming - the alias template, allowed envs and roles, enforcement",
+	"naming set --alias":            "naming",
+	"naming set --envs":             "naming",
+	"naming set --roles":            "naming",
+	"naming set --enforce":          "naming",
+	"naming key-template":           "naming - how new keys are named, keeping existing keys' names",
+	"naming key-template --yes":     "naming",
+	"host add --env":                "naming - with no alias, the environment the generated alias names",
+	"host add --role":               "naming - with no alias, the role the generated alias names",
+	"profile add --code":            "naming - the organisation's code name, the first part of its servers' aliases",
+	"profile edit --code":           "naming",
+	"naming set --profile":          "naming - one profile's own rules, over the manifest's",
+	"naming set --start":            "naming - number from 00 or 01",
+	"naming set --code-fallback":    "naming - the code of a profile with none",
+	"naming key-template --profile": "naming",
+	"repair":                        "repair - find and fix what is wrong with the home, ~/.ssh and the token files",
+	"reset":                         "factory reset - move the home aside, kept, and start again",
+	"key lifetime --default":        "key lifecycle - the lifetime every key without its own inherits",
+	"key lifetime --clear":          "key lifecycle - drop a key's own lifetime",
+	"key lifetime --yes":            "key lifecycle",
+	"key revoke":                    "key lifecycle - remove a key from every target, never deploy it again",
+	"key revoke --reason":           "key lifecycle - why, recorded with the revocation",
+	"key revoke --yes":              "key lifecycle",
+
+	// Categories group profiles under profiles/<category>/ with one Include per
+	// category. v1 had only the flat layout.
+	// Bulk key work: rotate a selection instead of one key at a time, and
+	// rebuild public keys from their private key or 1Password item.
+	"rotate --all":             "bulk rotation - every key a host uses",
+	"rotate --category":        "bulk rotation - every key in a category's profiles",
+	"rotate --dry-run":         "bulk rotation - list the batch, change nothing",
+	"key regen-pub":            "rebuild .pub files from the private key or the 1Password item",
+	"key regen-pub --all":      "regen-pub - every key",
+	"key regen-pub --category": "regen-pub - every key in a category",
+	"key regen-pub --dry-run":  "regen-pub - report only",
+	"key regen-pub --yes":      "confirm-before-changing",
+
+	// Reserved keys (0.1.4): keep a loose ~/.ssh key on purpose.
+	"key reserve":           "reserved keys - keep a loose key on purpose",
+	"key reserve --for":     "reserved keys - what it is kept for",
+	"key reserve --note":    "reserved keys - a note",
+	"key reserve --dry-run": "reserved keys - report only",
+	"key reserve --yes":     "confirm-before-changing",
+	"key unreserve":         "reserved keys - drop the reservation",
+	"key unreserve --yes":   "confirm-before-changing",
+
+	// Git remote modes (3.4.0): profile SSH by default, plain SSH or HTTPS on demand,
+	// switched per checkout with an ls-remote check before origin is rewritten.
+	"git":               "git remote modes - group",
+	"git status":        "git remote modes - each checkout's mode, owner and profile",
+	"git use":           "git remote modes - point origin at profile, ssh or https",
+	"git use --mode":    "git remote modes - the mode when not given as the first argument",
+	"git use --profile": "git remote modes - override the owner-to-profile mapping",
+	"git use --dry-run": "git remote modes - show the rewrite, touch nothing",
+	"git use --yes":     "confirm-before-changing",
+
+	// Devboxes (3.4.0): a VM's address comes from its hypervisor at connect time.
+	"vm":                  "devboxes - group",
+	"vm list":             "devboxes - every hypervisor's VMs and the host using each",
+	"vm add":              "devboxes - add a VM as a host",
+	"vm add --hypervisor": "devboxes - which hypervisor",
+	"vm add --vm":         "devboxes - the VM's name",
+	"vm add --user":       "devboxes - guest user",
+	"vm add --key-name":   "devboxes - key override, as host add",
+	"vm add --yes":        "confirm-before-changing",
+	"vm docker-context":   "devboxes - Docker context ssh://<alias>",
+
+	// VM upkeep (0.1.3): keep VM hosts in line with their hypervisors, and
+	// adopt a loose key onto a VM.
+	"vm sync":                       "vm-sync - reconcile VM hosts with their hypervisors",
+	"vm sync --dry-run":             "vm-sync - show the plan only",
+	"vm sync --yes":                 "confirm-before-changing",
+	"vm sync --quiet":               "vm-sync - quiet when nothing changed, for a schedule",
+	"vm sync --repin":               "vm-sync - replace a changed guest host key pin",
+	"vm sync --no-probe":            "vm-sync - ask the hypervisors only, connect to no guest",
+	"vm sync --install-schedule":    "vm-sync - daily job with launchd, systemd/cron or Task Scheduler",
+	"vm sync --remove-schedule":     "vm-sync - remove the daily job",
+	"vm adopt-key":                  "vm-sync - adopt a loose keypair onto a VM host",
+	"vm adopt-key --hypervisor":     "vm-sync - which hypervisor",
+	"vm adopt-key --vm":             "vm-sync - the VM's name",
+	"vm adopt-key --user":           "vm-sync - guest user",
+	"vm adopt-key --key-name":       "vm-sync - the key's name in the profile",
+	"vm adopt-key --move":           "vm-sync - move rather than copy the loose files",
+	"vm adopt-key --docker-context": "vm-sync - also make the Docker context",
+	"vm adopt-key --dry-run":        "vm-sync - show the plan only",
+	"vm adopt-key --yes":            "confirm-before-changing",
+	"doctor --dry-run":              "vm-sync - show what --fix would do",
+	"doctor --yes":                  "confirm-before-changing",
+
+	// Exports (3.4.0): copies for tools that cannot read the split config. Neither
+	// touches ~/.ssh; both refuse a file `config render` owns as their target.
+	"config export":                "exports - the config as one file for another tool",
+	"config export --flat":         "exports - every host inline, absolute paths, no Include",
+	"config export --out":          "exports - target file, or - for stdout",
+	"termius":                      "exports - group for the Termius app",
+	"termius export":               "exports - Termius CSV import plus the key to attach to each host",
+	"termius export --out":         "exports - target file, or - for stdout",
+	"termius export --include-git": "exports - also export git hosts, which are not shells",
+	"termius export --open":        "exports - macOS: open Termius and show the file in Finder",
+	"termius export --skip":        "exports - leave out a named host",
+	"termius keys":                 "exports - Termius key label per host; copy one host's private key to the clipboard",
+	"termius keys --include-git":   "exports - also list git hosts",
+	"termius keys --print":         "exports - print the key instead of copying, with a stderr warning",
+	"termius keys --clear":         "exports - empty the clipboard",
+	"history":                      "history - the operation history in log/history.db",
+	"history --host":               "history - filter by host alias",
+	"history --profile":            "history - filter by profile",
+	"history --key":                "history - filter by key",
+	"history --since":              "history - lower time bound",
+	"history --until":              "history - upper time bound",
+	"history --command":            "history - filter by command or command group",
+	"history --source":             "history - filter by cli, tui, web or backfill",
+	"history --limit":              "history - cap the number listed",
+	"history --json":               "history - one JSON object per operation",
+	"history show":                 "history - one operation, its events and its manifest diff",
+	"serve":                        "web UI - the read-only pages in internal/web",
+	"serve --addr":                 "web UI - listen address, host or host:port",
+	"serve --port":                 "web UI - listen port; pinned when given",
+	"serve --allow-remote":         "web UI - permit a non-loopback bind",
+	"serve --allow-host":           "web UI - extra Host header for a proxy",
+	"serve --read-only":            "web UI - serve no route that changes anything",
+	"serve --no-open":              "web UI - do not open a browser",
+	"serve --token-file":           "web UI - write the sign-in address to a 0600 file",
+	"termius keys --clear-after":   "exports - auto-clear the clipboard after a delay",
+
+	// Cloudflare Access (3.4.0): a host reached through cloudflared, rendered by authama since
+	// raw_options may not set a ProxyCommand.
+	"host add --proxy":  "cloudflare access - route the host through cloudflared",
+	"host edit --proxy": "cloudflare access - set or remove (none) the proxy",
+	"host edit --tag":   "G7 - replace a host's tags; nothing else could take one off",
+	"host edit --untag": "G7 - remove one tag from a host",
+
+	// Compact host specs (unreleased): add-or-update one host or many from
+	// `<alias> <host>[:port] <user> [role]`.
+	"host apply": "host specs - upsert hosts from compact specs, a file or JSON",
+
+	"profile add --category":     "categories - file a new profile under profiles/<category>/",
+	"profile add --key-scope":    "G8 - the --key-scope profile edit takes; --shared is its shorthand",
+	"profile edit --shared":      "G8 - the shorthand profile add takes, so the two commands match",
+	"profile add --key-comment":  "G11 - ssh-keygen -C template for the profile's keys",
+	"profile edit --key-comment": "G11 - set or clear (\"\") the profile's key_comment",
+	"profile edit --category":    "categories - move a profile's keys and records under profiles/<category>/",
+
+	// Confirmation and safety flags. v1 prompted; the Go verbs take an
+	// explicit --yes so they are usable from a script, and refuse to destroy key
+	// material without a backup path.
+	// Every verb that changes ~/.ssh now confirms first when there is a terminal
+	// to ask at, and --yes is how a script says "go ahead" explicitly rather than
+	// relying on the absence of one. v1 prompted only on the destructive
+	// verbs and had no flag at all.
+	"reconcile --yes":                "confirm-before-changing; see confirmChange",
+	"keygen --yes":                   "confirm-before-changing; also answers the per-key overwrite prompts",
+	"import --yes":                   "confirm-before-changing",
+	"deploy --yes":                   "confirm-before-changing",
+	"clean --yes":                    "confirm-before-changing",
+	"config render --yes":            "confirm-before-changing",
+	"knownhosts init --yes":          "confirm-before-changing",
+	"migrate --yes":                  "confirm-before-changing",
+	"notify install --yes":           "confirm-before-changing",
+	"keygen --no-key-backup":         "refuses to destroy key material unless told; no v1 counterpart",
+	"rotate --yes":                   "confirmation flag",
+	"rollback --yes":                 "confirmation flag",
+	"restore --yes":                  "confirmation flag",
+	"snapshots restore --yes":        "confirmation flag",
+	"profile delete --yes":           "confirmation flag",
+	"profile delete --purge":         "D1 - removes the key files, not just the manifest entry",
+	"profile delete --no-key-backup": "as keygen",
+	"host delete --yes":              "confirmation flag",
+	"host delete --purge":            "D1",
+	"host delete --no-key-backup":    "as keygen",
+
+	"bundle --keep":          "retention for the encrypted bundles",
+	"clean --dry-run":        "D1",
+	"clean --adopt":          "D1",
+	"rotate --no-key-backup": "as keygen",
+
+	// The token group (4.0.0): auth-token-manager's CLI, ported. Each verb is
+	// one of its flags-as-actions; see docs/tools/tokens.md for the mapping.
+	"token list":                      "tokens - atm --list: what the credential files hold, masked",
+	"token list --json":               "tokens - atm --list --json",
+	"token list --reveal":             "tokens - atm --show-secrets",
+	"token list --yes":                "tokens - atm --yes: reveal without asking",
+	"token list --target":             "tokens - atm --target",
+	"token list --project":            "tokens - atm --project",
+	"token set":                       "tokens - atm --add",
+	"token set --target":              "tokens - atm --target",
+	"token set --service":             "tokens - atm --service",
+	"token set --server":              "tokens - atm --host, renamed: ssh's --host is a host alias, not a server",
+	"token set --username":            "tokens - atm --username",
+	"token set --scope":               "tokens - atm --scope",
+	"token set --project":             "tokens - atm --project",
+	"token set --creds-store-mode":    "tokens - docker credential stores: docker login or refuse (security fix)",
+	"token delete":                    "tokens - atm --remove",
+	"token delete --project":          "tokens - atm --project",
+	"token delete --yes":              "tokens - confirmation at a terminal, as every ssh delete asks",
+	"token copy":                      "tokens - atm --copy",
+	"token copy --project":            "tokens - atm --project",
+	"token apply":                     "tokens - atm's default action: resolve the config and write the files",
+	"token apply --config":            "tokens - atm --config",
+	"token apply --target":            "tokens - atm --target",
+	"token apply --project":           "tokens - atm --project",
+	"token apply --source":            "tokens - atm --source",
+	"token apply --exports":           "tokens - atm --env, renamed so env is not a verb with two meanings",
+	"token apply --dry-run":           "tokens - atm --stdout, masked; named like reconcile --dry-run and host apply --dry-run",
+	"token apply --no-env-hint":       "tokens - atm --no-env-hint",
+	"token apply --creds-store-mode":  "tokens - docker credential stores: docker login or refuse (security fix)",
+	"token examples":                  "tokens - atm --template",
+	"token examples --project":        "tokens - atm --template --project",
+	"token examples --target":         "tokens - atm --target",
+	"token examples --json":           "tokens - atm --template --stdout, masked JSON",
+	"token init":                      "tokens - atm --init",
+	"token init --target":             "tokens - atm --init --target",
+	"settings":                        "settings - user settings (authama.json + .env), named apart from ssh config",
+	"settings path":                   "settings - where the config home, state home, .env and authama.json are",
+	"settings path --json":            "settings",
+	"settings show":                   "settings - the settings file as validated",
+	"settings show --effective":       "settings - every setting with its effective value and source",
+	"settings show --json":            "settings",
+	"settings validate":               "settings - check authama.json against the schema and .env for malformed lines",
+	"settings init":                   "settings - write a starter authama.json",
+	"settings init --force":           "settings",
+	"token providers":                 "tokens - atm --services, plus the catalog's known registries and git hosts",
+	"token audit":                     "tokens - atm --doctor",
+	"token audit --config":            "tokens - atm --config with --doctor",
+	"token audit --target":            "tokens - atm --target with --doctor",
+	"token audit --project":           "tokens - atm --project with --doctor",
+	"token import":                    "tokens - move an auth-token-manager (or any named) config to tokens.json",
+	"token import --dry-run":          "tokens - check the config parses and where it would go, as ssh import --dry-run",
+	"token show":                      "tokens - one entry of token list in full (new: a complete token manager inspects one entry)",
+	"token show --project":            "tokens - atm --project",
+	"token show --json":               "tokens - as token list --json, one object",
+	"token show --reveal":             "tokens - atm --show-secrets, for one entry",
+	"token show --yes":                "tokens - reveal without asking, as token list --yes",
+	"token status":                    "tokens - new: config in use, file paths, modes, counts and unset variables, read-only",
+	"token status --config":           "tokens - atm --config",
+	"token status --project":          "tokens - atm --project",
+	"token status --json":             "tokens - machine-readable status",
+	"token shell-aliases":             "tokens - atm-aliases: the atm shell aliases",
+	"token shell-aliases --install":   "tokens - atm-aliases install",
+	"token shell-aliases --uninstall": "tokens - atm-aliases remove",
+	"token shell-aliases --print":     "tokens - atm-aliases print",
+	"token shell-aliases --file":      "tokens - atm-aliases --file",
+	"token shell-aliases --login":     "tokens - atm-aliases --login",
+	"token shell-aliases --no-backup": "tokens - atm-aliases --no-backup",
+	"token shell-aliases --quiet":     "tokens - atm-aliases --quiet",
+}
+
+// walk collects the tree as "parent child" -> long flag names. The ssh group
+// is walked as if its verbs were top-level, which they were in v1 and still
+// are as hidden spellings: v1's "config check" is "ssh config check" now.
+func walk(c *cobra.Command, prefix string, out map[string][]string) {
+	for _, sub := range c.Commands() {
+		if sub.Hidden || sub.Name() == "help" || sub.Name() == "completion" {
+			continue
+		}
+		if !c.HasParent() && sub.Name() == sshGroup {
+			walk(sub, prefix, out)
+			continue
+		}
+		name := strings.TrimSpace(prefix + " " + sub.Name())
+		var flags []string
+		sub.LocalFlags().VisitAll(func(f *pflag.Flag) {
+			if f.Name != "help" {
+				flags = append(flags, f.Name)
+			}
+		})
+		sort.Strings(flags)
+		out[name] = flags
+		walk(sub, name, out)
+	}
+}
+
+func TestTheCommandSurfaceMatchesTheOneItReplaced(t *testing.T) {
+	got := map[string][]string{}
+	walk(newRootCmd(), "", got)
+
+	// Groups exist only to hold subcommands; v1 had them as sub-apps
+	// with no flags of their own.
+	groups := map[string]bool{"config": true, "profile": true, "host": true,
+		"notify": true, "snapshots": true, "knownhosts": true, "key": true, "token": true}
+
+	// 1. Everything v1 had, Go still has - verb and flag.
+	for verb, want := range v1Surface {
+		have, ok := got[verb]
+		if !ok {
+			t.Errorf("%q is in v1's CLI and gone from the Go tree", verb)
+			continue
+		}
+		for _, f := range want {
+			if !contains(have, f) {
+				t.Errorf("%s: --%s was declared in v1 and is missing here (have: %v)", verb, f, have)
+			}
+		}
+	}
+
+	// 2. Nothing widened without a written reason.
+	for verb, flags := range got {
+		if groups[verb] {
+			continue
+		}
+		known, inV1 := v1Surface[verb]
+		if !inV1 {
+			if _, allowed := goOnly[verb]; !allowed {
+				t.Errorf("%q has no v1 counterpart and no entry in goOnly; "+
+					"add the deviation that authorises it", verb)
+			}
+			continue
+		}
+		for _, f := range flags {
+			if contains(known, f) {
+				continue
+			}
+			if _, allowed := goOnly[verb+" --"+f]; !allowed {
+				t.Errorf("%s: --%s is not in v1 and has no entry in goOnly; "+
+					"add the deviation that authorises it", verb, f)
+			}
+		}
+	}
+
+	// 3. goOnly is the record of why each addition exists, so it must not carry
+	//    entries for things that are not there. An unused allowlist entry is
+	//    silently ignored - three sat here claiming a --no-passphrase that was
+	//    dropped in the 2.0.0 rewrite, and docs/features.md documented it because
+	//    this table said it existed.
+	present := map[string]bool{}
+	for verb, flags := range got {
+		present[verb] = true
+		for _, f := range flags {
+			present[verb+" --"+f] = true
+		}
+	}
+	for entry := range goOnly {
+		if !present[entry] {
+			t.Errorf("goOnly has an entry for %q, which does not exist. "+
+				"Remove it: an unused justification reads as documentation of a real flag.", entry)
+		}
+	}
+
+	// 4. A dropped flag stays dropped, and every drop is a recorded decision.
+	//    Both halves matter: re-adding one silently would undo the design change
+	//    that removed it, and an entry here for a flag that is present would mean
+	//    the record and the tree disagree about what the tool does.
+	for entry, why := range v1Dropped {
+		if present[entry] {
+			t.Errorf("%q is listed in v1Dropped (%s) but exists in the Go tree. "+
+				"Either the removal was reverted, or the record is stale.", entry, why)
+		}
+		verb := strings.TrimSpace(strings.Split(entry, " --")[0])
+		if _, ok := got[verb]; !ok {
+			t.Errorf("v1Dropped names %q, whose verb %q does not exist; "+
+				"the entry can no longer be checked against anything", entry, verb)
+		}
+	}
+
+	// 5. Every command explains itself. A verb with no Short is invisible in
+	//    `authama --help`, which is the only place most users look.
+	var noShort []string
+	var check func(c *cobra.Command, prefix string)
+	check = func(c *cobra.Command, prefix string) {
+		for _, sub := range c.Commands() {
+			if sub.Hidden || sub.Name() == "help" || sub.Name() == "completion" {
+				continue
+			}
+			name := strings.TrimSpace(prefix + " " + sub.Name())
+			if strings.TrimSpace(sub.Short) == "" {
+				noShort = append(noShort, name)
+			}
+			sub.LocalFlags().VisitAll(func(f *pflag.Flag) {
+				if f.Name != "help" && strings.TrimSpace(f.Usage) == "" {
+					noShort = append(noShort, name+" --"+f.Name)
+				}
+			})
+			check(sub, name)
+		}
+	}
+	check(newRootCmd(), "")
+	if len(noShort) > 0 {
+		sort.Strings(noShort)
+		t.Errorf("these carry no description and so are undocumented in --help: %v", noShort)
+	}
+}
+
+// pflag reads the first `backticked` word of a flag's usage as the value's name,
+// so "see `authama ssh providers`" printed as "--provider authama providers" in --help.
+// A flag that names a value does it with a plain word instead.
+func TestFlagUsageHasNoBackticks(t *testing.T) {
+	var bad []string
+	inspected := 0
+	var check func(c *cobra.Command, prefix string)
+	check = func(c *cobra.Command, prefix string) {
+		c.LocalFlags().VisitAll(func(f *pflag.Flag) {
+			inspected++
+			if strings.Contains(f.Usage, "`") {
+				bad = append(bad, strings.TrimSpace(prefix+" --"+f.Name))
+			}
+		})
+		for _, sub := range c.Commands() {
+			check(sub, strings.TrimSpace(prefix+" "+sub.Name()))
+		}
+	}
+	check(newRootCmd(), "")
+	if inspected < 100 {
+		t.Fatalf("inspected only %d flags; the walk is not reaching the tree", inspected)
+	}
+	if len(bad) > 0 {
+		sort.Strings(bad)
+		t.Errorf("these flags show a backticked phrase as their value name in --help: %v", bad)
+	}
+}
+
+// The root's own contract: --version answers without a manifest, and an unknown
+// verb is an error rather than a silent no-op.
+func TestTheRootAnswersVersionAndRejectsAnUnknownVerb(t *testing.T) {
+	editHome(t)
+	if out := run(t, "--version"); !strings.Contains(out, brand.Command) {
+		t.Errorf("--version printed %q", out)
+	}
+	if _, err := runErr(t, "no-such-verb"); err == nil {
+		t.Error("an unknown verb should be an error")
+	}
+}
+
+func contains(xs []string, v string) bool {
+	for _, x := range xs {
+		if x == v {
+			return true
+		}
+	}
+	return false
+}

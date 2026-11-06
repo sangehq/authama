@@ -1,0 +1,212 @@
+package cli
+
+import (
+	"errors"
+	"fmt"
+
+	"github.com/spf13/cobra"
+
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/core/naming"
+	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/simtabi/authama/src/internal/services/editor"
+	"github.com/simtabi/authama/src/internal/services/lifecycle"
+)
+
+func intPtrIf(cmd *cobra.Command, flag string, val int) *int {
+	if cmd.Flags().Changed(flag) {
+		return &val
+	}
+	return nil
+}
+
+const proxyFlagHelp = "reach the host through a proxy: cloudflared (Cloudflare Access; ssh runs " +
+	"'cloudflared access ssh --hostname %h')"
+
+func newHostCmd() *cobra.Command {
+	cmd := &cobra.Command{Use: "host", Short: "Manage a host within a profile (add/edit/delete/apply)"}
+
+	var hostname, user, provider, tokenEnv, keyName, proxy, env, role string
+	var port int
+	var tags []string
+	add := &cobra.Command{
+		Use:   "add <profile> [<alias>]",
+		Short: "Add a host to a profile (or name it by the naming rules with --env and --role)",
+		Long: "Add a host to a profile.\n\n" +
+			"Without <alias>, --env and --role name it by the naming rules\n" +
+			"(defaults.naming.alias, {code}-{env}-{role}-{nn} unless set): the profile's code,\n" +
+			"the environment, the role and the next free number, so a third web server of\n" +
+			"simtabi in production is simbi-prd-web-02. The role and environment are added as\n" +
+			"tags. With defaults.naming.enforce at error, an alias that breaks the rules is\n" +
+			"refused; at warn it is added and the reason printed.",
+		Args: cobra.RangeArgs(1, 2),
+		RunE: func(c *cobra.Command, args []string) error {
+			p, err := resolvePaths(c)
+			if err != nil {
+				return err
+			}
+			if len(args) == 1 {
+				m, err := manifest.Load(p.Manifest())
+				if err != nil {
+					return err
+				}
+				alias, extra, err := generatedAlias(m, args[0], env, role)
+				if err != nil {
+					return err
+				}
+				args = append(args, alias)
+				tags = appendMissing(tags, extra...)
+			} else if env != "" || role != "" {
+				return errors.New("--env and --role name the host; leave out <alias> to use them, or add them as --tag")
+			}
+			lockForMutation(p)
+			f := editor.HostFields{
+				Hostname: &hostname, User: &user, Port: &port,
+				Provider: strPtrIf(c, "provider", provider),
+				TokenEnv: strPtrIf(c, "token-env", tokenEnv),
+				KeyName:  strPtrIf(c, "key-name", keyName),
+				Tags:     tags,
+				Proxy:    strPtrIf(c, "proxy", proxy),
+			}
+			snapshotBeforeMutation(p)
+			if err := editor.New(p).AddHost(args[0], args[1], f); err != nil {
+				return err
+			}
+			// The block renders now; the key it points at does not exist until
+			// something mints it, so say so rather than leaving ssh to report it
+			// as a permission denial.
+			_, _ = fmt.Fprintf(c.OutOrStdout(), "added host %s to %s (run `authama ssh reconcile` to mint its "+
+				"key)\n", args[1], args[0])
+			if m, err := manifest.Load(p.Manifest()); err == nil && manifest.ProfileNamingRules(m, args[0]).Enforce == naming.EnforceWarn {
+				if v := manifest.NamingViolation(m, args[0], args[1]); v != "" {
+					_, _ = fmt.Fprintf(c.ErrOrStderr(), "naming: %s\n", v)
+				}
+			}
+			return applyManifestEdit(c, p)
+		},
+	}
+	add.Flags().StringVarP(&hostname, "hostname", "H", "", "host to connect to")
+	add.Flags().StringVarP(&user, "user", "u", "", "ssh user")
+	add.Flags().IntVarP(&port, "port", "p", 22, "ssh port")
+	add.Flags().StringVar(&provider, "provider", "", "deployment adapter for this host (see 'authama ssh providers')")
+	add.Flags().StringVar(&tokenEnv, "token-env", "", "env var holding the provider API token (e.g. GH_TOKEN_WORK)")
+	add.Flags().StringVar(&keyName, "key-name", "", "use this key instead of the derived <profile>_<alias>-<algo> name")
+	add.Flags().StringArrayVar(&tags, "tag", nil, "repeatable")
+	add.Flags().StringVar(&proxy, "proxy", "", proxyFlagHelp)
+	add.Flags().StringVar(&env, "env", "", "with no <alias>: the environment the generated alias names (prd, stg, dev)")
+	add.Flags().StringVar(&role, "role", "", "with no <alias>: the role the generated alias names (web, db, ...)")
+	_ = add.MarkFlagRequired("hostname")
+	_ = add.MarkFlagRequired("user")
+	cmd.AddCommand(add)
+
+	var eHostname, eUser, eProvider, eTokenEnv, eKeyName, eProxy string
+	var ePort int
+	var eTags, eUntag []string
+	edit := &cobra.Command{
+		Use:   "edit <profile> <alias>",
+		Short: "Edit a host",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(c *cobra.Command, args []string) error {
+			p, err := resolvePaths(c)
+			if err != nil {
+				return err
+			}
+			lockForMutation(p)
+			f := editor.HostFields{
+				Hostname: strPtrIf(c, "hostname", eHostname),
+				User:     strPtrIf(c, "user", eUser),
+				Port:     intPtrIf(c, "port", ePort),
+				Provider: strPtrIf(c, "provider", eProvider),
+				TokenEnv: strPtrIf(c, "token-env", eTokenEnv),
+				KeyName:  strPtrIf(c, "key-name", eKeyName),
+				Proxy:    strPtrIf(c, "proxy", eProxy),
+				Untag:    eUntag,
+			}
+			if c.Flags().Changed("tag") {
+				f.SetTags = &eTags
+			}
+			snapshotBeforeMutation(p)
+			if err := editor.New(p).EditHost(args[0], args[1], f); err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintf(c.OutOrStdout(), "edited host %s\n", args[1])
+			if c.Flags().Changed("key-name") {
+				_, _ = fmt.Fprintln(c.OutOrStdout(), "  the key it now names may not exist yet - "+
+					"run `authama ssh reconcile` to mint it")
+			}
+			if err := applyManifestEdit(c, p); err != nil {
+				return err
+			}
+			// Pointing a host at a different key strands the one it used to name,
+			// the same way deleting the host would - so it is reported the same way.
+			if m, err := manifest.Load(p.Manifest()); err == nil {
+				warnDangling(c.OutOrStdout(), p, m)
+			}
+			return nil
+		},
+	}
+	edit.Flags().StringVarP(&eHostname, "hostname", "H", "", "host to connect to")
+	edit.Flags().StringVarP(&eUser, "user", "u", "", "ssh user")
+	edit.Flags().IntVarP(&ePort, "port", "p", 22, "ssh port")
+	edit.Flags().StringVar(&eProvider, "provider", "", "deployment adapter for this host (see 'authama ssh providers')")
+	edit.Flags().StringVar(&eTokenEnv, "token-env", "", "env var holding the provider API token (e.g. GH_TOKEN_WORK)")
+	edit.Flags().StringVar(&eKeyName, "key-name", "", "use this key instead of the derived <profile>_<alias>-<algo> name")
+	edit.Flags().StringVar(&eProxy, "proxy", "", proxyFlagHelp+`; "none" removes it`)
+	edit.Flags().StringArrayVar(&eTags, "tag", nil,
+		"replace the host's tags with these (repeatable); --tag '' removes them all")
+	edit.Flags().StringArrayVar(&eUntag, "untag", nil,
+		"remove this tag (repeatable; applied after --tag; a tag the host lacks is ignored)")
+	cmd.AddCommand(edit)
+
+	var yes, revoke, purge, noKeyBackup bool
+	del := &cobra.Command{
+		Use:   "delete <profile> <alias>",
+		Short: "Delete a host, its config block and its pins",
+		Long: "Delete a host, its config block and its pins.\n\n" +
+			"The key the host used is reported, not assumed: another host may still\n" +
+			"use it, or the profile may still declare it. --purge deletes its files\n" +
+			"only in the remaining case, where the key left the manifest with the host\n" +
+			"and nothing tracks it any more.",
+		Args: cobra.ExactArgs(2),
+		RunE: func(c *cobra.Command, args []string) error {
+			profile, alias := args[0], args[1]
+			if err := confirmOrAbort(c, fmt.Sprintf("Delete host %q from %q?", alias, profile), yes); err != nil {
+				return err
+			}
+			doRevoke := revoke
+			if !yes {
+				doRevoke = confirm(c, "Revoke the deployed public key from its targets first?")
+			}
+			p, err := resolvePaths(c)
+			if err != nil {
+				return err
+			}
+			lockForMutation(p)
+			out := c.OutOrStdout()
+			if purge {
+				if err := backupKeysBeforeDestroying(p, out, noKeyBackup); err != nil {
+					return err
+				}
+			}
+			snapshotBeforeMutation(p)
+			res, err := lifecycle.New(p, platform.EmitUseKeychain()).
+				DeleteHost(profile, alias, lifecycle.Options{Purge: purge, Revoke: doRevoke})
+			if err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintln(out, res.Format())
+			return nil
+		},
+	}
+	del.Flags().BoolVarP(&yes, "yes", "y", false, "skip confirmation prompts")
+	del.Flags().BoolVar(&revoke, "revoke", false, "also revoke the deployed key from targets (with --yes)")
+	del.Flags().BoolVar(&purge, "purge", false, "also delete the key files, if the host was the only thing naming the key")
+	del.Flags().BoolVar(&noKeyBackup, "no-key-backup", false,
+		"purge without writing an encrypted backup first (the key is then unrecoverable)")
+	cmd.AddCommand(del)
+	cmd.AddCommand(newHostExportCmd())
+
+	cmd.AddCommand(newHostApplyCmd())
+
+	return cmd
+}

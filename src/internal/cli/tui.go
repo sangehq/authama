@@ -1,0 +1,665 @@
+package cli
+
+import (
+	"bufio"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/spf13/cobra"
+
+	"github.com/simtabi/authama/src/internal/core/inventory"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/simtabi/authama/src/internal/services/configsvc"
+	"github.com/simtabi/authama/src/internal/services/deployer"
+	"github.com/simtabi/authama/src/internal/services/history"
+	"github.com/simtabi/authama/src/internal/services/knownhosts"
+	"github.com/simtabi/authama/src/internal/services/mutation"
+	"github.com/simtabi/authama/src/internal/services/notifier"
+	"github.com/simtabi/authama/src/internal/services/query"
+	"github.com/simtabi/authama/src/internal/services/reconciler"
+	"github.com/simtabi/authama/src/internal/services/rotator"
+	"github.com/simtabi/authama/src/internal/services/snapshots"
+	"github.com/simtabi/authama/src/internal/util/paths"
+)
+
+const (
+	tuiBack   = "<- back"
+	tuiCancel = "(cancel)"
+)
+
+// prompter is the TUI's interaction seam: production reads stdin, tests inject a
+// scripted fake so the navigation loop is testable without a TTY.
+type prompter interface {
+	Select(message string, choices []string) (string, bool) // ok=false on cancel/EOF
+	Confirm(message string) bool
+	// Line reads one raw answer to a prompt the caller has already rendered.
+	// The root menu is grouped and annotated, so the TUI draws it and only the
+	// answer travels back through this seam; Select still renders the flat
+	// sub-menus, where a bare numbered list is the right shape.
+	Line(prompt string) (string, bool)
+}
+
+// stdinPrompter is a dependency-free numbered-menu prompter over stdin.
+type stdinPrompter struct {
+	out io.Writer
+	in  *bufio.Reader
+}
+
+// newStdinPrompter builds the prompter over the streams it is given. Input
+// comes from the caller rather than os.Stdin directly, matching how the output
+// half already goes through the command: the two halves of one conversation
+// should not disagree about which streams they are on, and reaching past the
+// command meant the whole menu loop could only be driven by a real terminal.
+func newStdinPrompter(out io.Writer, in io.Reader) *stdinPrompter {
+	return &stdinPrompter{out: out, in: bufio.NewReader(in)}
+}
+
+func (s *stdinPrompter) Select(message string, choices []string) (string, bool) {
+	_, _ = fmt.Fprintln(s.out, message+":")
+	for i, ch := range choices {
+		_, _ = fmt.Fprintf(s.out, "  %d) %s\n", i+1, ch)
+	}
+	_, _ = fmt.Fprint(s.out, "> ")
+	line, err := s.in.ReadString('\n')
+	if err != nil && line == "" {
+		return "", false
+	}
+	n, err := strconv.Atoi(strings.TrimSpace(line))
+	if err != nil || n < 1 || n > len(choices) {
+		return "", false
+	}
+	return choices[n-1], true
+}
+
+func (s *stdinPrompter) Line(prompt string) (string, bool) {
+	_, _ = fmt.Fprint(s.out, prompt)
+	line, err := s.in.ReadString('\n')
+	if err != nil && line == "" {
+		return "", false // EOF: a closed input ends the session
+	}
+	return strings.TrimSpace(line), true
+}
+
+func (s *stdinPrompter) Confirm(message string) bool {
+	_, _ = fmt.Fprintf(s.out, "%s [y/N] ", message)
+	line, _ := s.in.ReadString('\n')
+	switch strings.ToLower(strings.TrimSpace(line)) {
+	case "y", "yes":
+		return true
+	default:
+		return false
+	}
+}
+
+// Menu groups, in the order they are drawn. They are ordered by consequence
+// rather than by frequency: everything above "Change ~/.ssh" is safe to pick by
+// accident, and everything below it rewrites the tree. A flat list of ten
+// entries put "Reconcile" one keystroke away from "Expiry status" and gave no
+// indication which of the two would touch anything.
+const (
+	groupInspect = "Inspect"
+	groupChange  = "Change ~/.ssh"
+	groupRecover = "Recover"
+	// groupTokens is the token feature's corner of the menu. It is last so the
+	// SSH entries keep the numbers people learned before it existed.
+	groupTokens = "Auth tokens"
+)
+
+var menuGroups = []string{groupInspect, groupChange, groupRecover, groupTokens}
+
+type menuItem struct {
+	group   string
+	label   string
+	verb    string // the CLI that does the same thing - and an accepted answer
+	handler string
+	mutates bool
+	// formerly lists verbs the entry was once shown under, so an answer people
+	// learned from an older menu still selects it. Never drawn.
+	formerly []string
+}
+
+var tuiMenu = []menuItem{
+	{groupInspect, "Browse profiles & hosts", "list", "browse", false, nil},
+	{groupInspect, "Show the rendered config", "config show", "show_config", false, nil},
+	{groupInspect, "Expiry status", "expiry", "expiry", false, nil},
+	{groupInspect, "Audit deployments & expiry", "audit", "audit", false, nil},
+
+	{groupChange, "Reconcile - apply the manifest", "reconcile", "reconcile", true, nil},
+	// The verb column teaches the CLI, so it names what the entry runs: a TOFU
+	// scan of every manifest host. It was shown as `knownhosts pin`, which asks
+	// per key and needs a host or --all; that answer still selects it.
+	{groupChange, "Pin host keys into known_hosts", "knownhosts init --all", "knownhosts", true,
+		[]string{"knownhosts pin"}},
+	{groupChange, "Deploy a key to its target", "deploy", "deploy", true, nil},
+	{groupChange, "Rotate a key", "rotate", "rotate", true, nil},
+
+	{groupRecover, "Snapshots - list and restore", "snapshots", "snapshots", true, nil},
+
+	{groupTokens, "List installed tokens", "token list", "tok_list", false, nil},
+	{groupTokens, "Token setup status", "token status", "tok_status", false, nil},
+	{groupTokens, "Audit the token files", "token audit", "tok_audit", false, nil},
+	{groupTokens, "Copy a token to the clipboard", "token copy", "tok_copy", false, nil},
+	{groupTokens, "Add or replace a token", "token set", "tok_set", true, nil},
+	{groupTokens, "Apply the token config", "token apply", "tok_apply", true, nil},
+	{groupTokens, "Delete a token", "token delete", "tok_delete", true, nil},
+}
+
+// shownVerb is the command an entry prints beside it: SSH entries under their
+// `ssh` group, token entries as they are.
+func shownVerb(m menuItem) string {
+	if m.group == groupTokens {
+		return m.verb
+	}
+	return sshGroup + " " + m.verb
+}
+
+// menuWidth is the label column, sized to the longest label so the verb column
+// lines up. Computed rather than hard-coded: a hand-counted constant is wrong
+// the first time someone renames an entry, and silently so.
+func menuWidth() int {
+	w := 0
+	for _, m := range tuiMenu {
+		if len(m.label) > w {
+			w = len(m.label)
+		}
+	}
+	return w
+}
+
+// writeMenu draws the grouped menu.
+func (t *tui) writeMenu() {
+	width := menuWidth()
+	for _, group := range menuGroups {
+		header := "  " + group
+		if group == groupChange || group == groupTokens {
+			header += "   (each one asks before it writes)"
+		}
+		t.print(header)
+		for i, m := range tuiMenu {
+			if m.group != group {
+				continue
+			}
+			// %2d so 10+ entries stay aligned with single digits.
+			_, _ = fmt.Fprintf(t.out, "  %2d  %-*s  %s\n", i+1, width, m.label, shownVerb(m))
+		}
+		t.print("")
+	}
+	// No padding on the last column here: %-*s would pad "Quit" out to the label
+	// width and leave trailing spaces on the line, which show up as soon as
+	// anyone pipes the screen into a file or a diff.
+	_, _ = fmt.Fprintf(t.out, "  %2s  %s\n\n", "q", "Quit")
+	t.print("  Type a number, or the command name beside it.")
+}
+
+// lookupMenu resolves an answer to an entry. A number or the verb both work -
+// the verb because it is already on screen in the right-hand column, and typing
+// what you see should not be a dead end.
+//
+// It reports found=false for anything else, and the caller re-prompts rather
+// than acting: an answer that is not a listed choice must never select one, and
+// a typo should not end the session.
+func lookupMenu(answer string) (menuItem, bool) {
+	a := strings.ToLower(strings.TrimSpace(answer))
+	if a == "" {
+		return menuItem{}, false
+	}
+	if n, err := strconv.Atoi(a); err == nil {
+		if n >= 1 && n <= len(tuiMenu) {
+			return tuiMenu[n-1], true
+		}
+		return menuItem{}, false
+	}
+	// What the menu shows (`ssh list`) and the v3 spelling (`list`) both work.
+	a = strings.TrimSpace(strings.TrimPrefix(a, sshGroup+" "))
+	for _, m := range tuiMenu {
+		if m.group == groupTokens && a == strings.TrimPrefix(m.verb, tokenGroup+" ") {
+			continue // a bare `set` is not a menu answer; `token set` is
+		}
+		if a == m.verb || a == strings.ToLower(m.label) {
+			return m, true
+		}
+		for _, old := range m.formerly {
+			if a == old {
+				return m, true
+			}
+		}
+	}
+	return menuItem{}, false
+}
+
+// isQuit recognises the ways someone ends a session. "q" is the documented one;
+// the rest are what people type anyway.
+func isQuit(answer string) bool {
+	switch strings.ToLower(strings.TrimSpace(answer)) {
+	case "q", "quit", "exit":
+		return true
+	}
+	return false
+}
+
+// tui drives the interactive menu over the native services. No business logic
+// lives here - every action calls a service.
+type tui struct {
+	p   paths.Paths
+	pr  prompter
+	out io.Writer
+}
+
+func newTuiCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "tui",
+		Short: "Interactive menu over the manager",
+		Args:  cobra.NoArgs,
+		RunE:  func(c *cobra.Command, _ []string) error { return runTUI(c) },
+	}
+}
+
+// runTUI is the entry point for `authama tui`. A bare `authama` on a terminal
+// opened it until the web UI took that place (see runBare).
+func runTUI(c *cobra.Command) error {
+	out := c.OutOrStdout()
+	p, err := resolvePaths(c)
+	if err != nil {
+		return err
+	}
+	t := &tui{p: p, pr: newStdinPrompter(out, c.InOrStdin()), out: out}
+	t.run()
+	return nil
+}
+
+func (t *tui) run() {
+	t.banner()
+	for {
+		t.writeMenu()
+		answer, ok := t.pr.Line("> ")
+		if !ok || isQuit(answer) {
+			return // EOF, or asked to leave
+		}
+		if strings.TrimSpace(answer) == "" {
+			continue // a bare Enter redraws the menu, and says nothing about it
+		}
+		item, found := lookupMenu(answer)
+		if !found {
+			// Re-prompt instead of acting or exiting. Selecting on an
+			// unrecognised answer would run whichever entry happened to be
+			// first; exiting on one turns a typo into a lost session.
+			t.print("  not a choice: " + answer + "   (a number, a command name, or q)\n")
+			continue
+		}
+		// Each change chosen from the menu is its own operation in the
+		// history, not one long "tui" operation covering the whole session.
+		if item.mutates {
+			mutation.Begin(mutation.Scope{Command: item.verb, Source: history.SourceTUI})
+		}
+		t.dispatch(item.handler)
+		if item.mutates {
+			mutation.End(mutation.Outcome{})
+			// The lock is scoped to the action, as the web's is. A CLI command
+			// holds it until it exits; a menu that did the same would block
+			// every other authama command for as long as it stayed open.
+			mutation.Release()
+		}
+		t.print("")
+		// A mutating action changes what the banner reports - drift, pin
+		// coverage, key counts - so redraw it. Seeing "drifted" become "in
+		// sync" is the confirmation that the action landed.
+		if item.mutates {
+			t.banner()
+		}
+	}
+}
+
+func (t *tui) dispatch(handler string) {
+	switch handler {
+	case "browse":
+		t.browse()
+	case "show_config":
+		t.showConfig()
+	case "expiry":
+		t.expiry()
+	case "audit":
+		t.audit()
+	case "reconcile":
+		t.reconcile()
+	case "knownhosts":
+		t.knownhosts()
+	case "deploy":
+		t.deploy()
+	case "rotate":
+		t.rotate()
+	case "snapshots":
+		t.snapshots()
+	default:
+		t.tokenAction(handler)
+	}
+}
+
+func (t *tui) manifest() *manifest.Manifest {
+	m, err := manifest.Load(t.p.Manifest())
+	if err != nil {
+		return nil
+	}
+	return m
+}
+
+func (t *tui) query() (*query.Query, *manifest.Manifest) {
+	m := t.manifest()
+	if m == nil {
+		return nil, nil
+	}
+	inv, _ := inventory.Load(t.p.Inventory())
+	return query.New(m, inv, t.p.Providers()), m
+}
+
+func (t *tui) browse() {
+	m := t.manifest()
+	if m == nil || len(m.Profiles) == 0 {
+		t.print("no profiles - run init / edit the manifest")
+		return
+	}
+	p, ok := t.pr.Select("Profile", append(m.ProfileNames(), tuiBack))
+	if !ok || p == tuiBack {
+		return
+	}
+	t.view(p)
+	var aliases []string
+	for _, h := range m.Profiles[p].Hosts {
+		aliases = append(aliases, h.Alias)
+	}
+	if len(aliases) > 0 {
+		h, ok := t.pr.Select("Host", append(aliases, tuiBack))
+		if ok && h != tuiBack {
+			t.view(h)
+		}
+	}
+}
+
+func (t *tui) view(selector string) {
+	q, _ := t.query()
+	if q == nil {
+		t.print("no manifest")
+		return
+	}
+	d, err := q.Detail(selector)
+	if err != nil {
+		t.print("error: " + err.Error())
+		return
+	}
+	switch v := d.(type) {
+	case *query.ProfileSummary:
+		renderProfileSummary(t.out, v)
+	case *query.HostDetail:
+		renderHostDetail(t.out, v)
+	}
+}
+
+func (t *tui) showConfig() {
+	m := t.manifest()
+	if m == nil {
+		t.print("no manifest")
+		return
+	}
+	out, err := configsvc.New(t.p.SSHDir, m, platform.EmitUseKeychain()).Show("")
+	if err != nil {
+		t.print("error: " + err.Error())
+		return
+	}
+	t.print(out)
+}
+
+func (t *tui) expiry() {
+	m := t.manifest()
+	if m == nil {
+		t.print("no manifest")
+		return
+	}
+	states, err := notifier.New(t.p, m).States(time.Now())
+	if err != nil {
+		t.print("error: " + err.Error())
+		return
+	}
+	writeExpiryTable(t.out, states)
+}
+
+func (t *tui) audit() {
+	m := t.manifest()
+	if m == nil {
+		t.print("no manifest")
+		return
+	}
+	report, err := auditReport(t.p, m, time.Now(), false)
+	if err != nil {
+		t.print("error: " + err.Error())
+		return
+	}
+	t.print(report)
+}
+
+// reconcile follows reconcileApply, the CLI's applying half: preview as the
+// confirmation, asked without the lock; then lock, preview again and stop if
+// anything moved, snapshot, apply, pin unless AUTHAMA_AUTO_PIN turns it
+// off, then warn about keys nothing uses.
+func (t *tui) reconcile() {
+	var m *manifest.Manifest
+	emit := platform.EmitUseKeychain()
+	preview := func() (string, error) {
+		if m = t.manifest(); m == nil {
+			return "", errors.New("no manifest")
+		}
+		inv, _ := inventory.Load(t.p.Inventory())
+		dry, err := reconciler.New(t.p, m, inv, emit).Reconcile(true, "")
+		if err != nil {
+			return "", err
+		}
+		return dry.Format(), nil
+	}
+	shown, err := preview()
+	if err != nil {
+		t.print("error: " + err.Error())
+		return
+	}
+	t.print(shown)
+	if !t.pr.Confirm("Apply these changes to ~/.ssh?") {
+		t.print("cancelled")
+		return
+	}
+	// Under the lock now, and m is re-read: a save cannot overwrite a newer copy.
+	if err := recheck(t.p, shown, preview); err != nil {
+		t.print("error: " + err.Error())
+		return
+	}
+	snap := snapshotBeforeMutation(t.p)
+	inv2, _ := inventory.Load(t.p.Inventory())
+	res, err := reconciler.New(t.p, m, inv2, emit).Reconcile(false, "")
+	if err != nil {
+		t.print("error: " + err.Error())
+		return
+	}
+	if snap != "" {
+		res.Snapshot = &snap
+	}
+	res.Pinned = knownhosts.New(t.p.SSHDir).AutoPin(m, nil, os.Getenv)
+	t.print(res.Format())
+	warnDangling(t.out, t.p, m)
+}
+
+func (t *tui) knownhosts() {
+	m := t.manifest()
+	if m == nil {
+		t.print("no manifest")
+		return
+	}
+	// The same notice `knownhosts init` confirms with: this is trust on first
+	// use, and the menu promises every Change entry asks before it writes.
+	if !t.pr.Confirm("Scan every manifest host it can reach and pin its keys into " +
+		"~/.ssh/known_hosts (trust on first use)?") {
+		t.print("cancelled")
+		return
+	}
+	snapshotBeforeMutation(t.p)
+	report, err := knownhosts.New(t.p.SSHDir).Init(m, "", true, false)
+	if err != nil {
+		t.print("error: " + err.Error())
+		return
+	}
+	t.print(report.Format())
+}
+
+func (t *tui) deploy() {
+	m := t.manifest()
+	if m == nil {
+		t.print("no manifest")
+		return
+	}
+	keys := keyNames(m)
+	if len(keys) == 0 {
+		t.print("no keys yet - reconcile first")
+		return
+	}
+	k, ok := t.pr.Select("Key to deploy", append(keys, tuiBack))
+	if !ok || k == tuiBack {
+		return
+	}
+	// The guards `deploy` applies, in its order: dev mode refuses, the user
+	// confirms, then lock, re-read and snapshot before anything is installed.
+	if err := refuseInDevMode(t.p, "deploy",
+		"it uploads a public key to a live account, which is still there "+
+			"after the sandbox is deleted"); err != nil {
+		t.print("error: " + err.Error())
+		return
+	}
+	if !t.pr.Confirm(fmt.Sprintf("Install the public half of %s on its target?", k)) {
+		t.print("cancelled")
+		return
+	}
+	lockForMutation(t.p) // deploy records to the inventory: read it under the lock
+	if m = t.manifest(); m == nil {
+		t.print("no manifest")
+		return
+	}
+	snapshotBeforeMutation(t.p)
+	inv, _ := inventory.Load(t.p.Inventory())
+	report, err := deployer.New(t.p, m, inv).Deploy(k, "")
+	if err != nil {
+		t.print("error: " + err.Error())
+		return
+	}
+	// A swallowed save is a deploy that happened remotely and is recorded
+	// nowhere: audit keeps saying needs-redeploy and nobody knows why.
+	if err := inv.Save(t.p.Inventory()); err != nil {
+		t.print("WARNING: the key was deployed but the inventory could not be saved: " + err.Error())
+	}
+	t.print(report.Format())
+}
+
+func (t *tui) rotate() {
+	m := t.manifest()
+	if m == nil {
+		t.print("no manifest")
+		return
+	}
+	keys := keyNames(m)
+	if len(keys) == 0 {
+		t.print("no keys yet - reconcile first")
+		return
+	}
+	k, ok := t.pr.Select("Key to rotate", append(keys, tuiBack))
+	if !ok || k == tuiBack {
+		return
+	}
+	if !t.pr.Confirm(fmt.Sprintf("Rotate %s? (destructive; ~/.ssh snapshotted first)", k)) {
+		t.print("cancelled")
+		return
+	}
+	// `rotate` stops without an encrypted backup, because rotating discards
+	// the key before the one it archives. The TUI has no --no-key-backup, so
+	// it always needs AUTHAMA_AGE_RECIPIENT; the error says so.
+	lockForMutation(t.p)
+	if err := t.p.RefuseOutsideSandbox("rotate"); err != nil {
+		t.print("error: " + err.Error())
+		return
+	}
+	if err := backupKeysBeforeDestroying(t.p, t.out, false); err != nil {
+		t.print("error: " + err.Error())
+		return
+	}
+	if m = t.manifest(); m == nil {
+		t.print("no manifest")
+		return
+	}
+	snapshotBeforeMutation(t.p)
+	inv, _ := inventory.Load(t.p.Inventory())
+	report, err := rotator.New(t.p, m, inv).Rotate(k, false, "")
+	if err != nil {
+		t.print("error: " + err.Error())
+		return
+	}
+	if report.Committed {
+		if err := inv.Save(t.p.Inventory()); err != nil {
+			t.print("WARNING: the rotation completed but the inventory could not be saved: " + err.Error())
+		}
+	}
+	t.print(report.Format())
+}
+
+func (t *tui) snapshots() {
+	snaps := snapshots.List(t.p.SnapshotsDir())
+	if len(snaps) == 0 {
+		t.print("no snapshots yet")
+		return
+	}
+	names := []string{tuiCancel}
+	for _, s := range snaps {
+		names = append(names, filepath.Base(s))
+	}
+	choice, ok := t.pr.Select("Restore which snapshot?", names)
+	if !ok || choice == tuiCancel {
+		return
+	}
+	if !t.pr.Confirm(fmt.Sprintf("Restore %s? (current tree snapshotted first)", choice)) {
+		return
+	}
+	// RestoreByIDIn, as `snapshots restore` uses: it accepts the dev sandbox's
+	// ssh dir and reports the public keys it kept to avoid splitting a pair. It
+	// leaves the lock to its caller, as the CLI command now takes it.
+	lockForMutation(t.p)
+	res, err := snapshots.RestoreByIDIn(t.p, snapshotRetain(), choice)
+	if err != nil {
+		t.print("error: " + err.Error())
+		return
+	}
+	for _, rel := range res.Skipped {
+		t.print("kept " + rel + ": the snapshot's copy does not match the private key on disk")
+	}
+	t.print("restored from " + filepath.Base(res.Snapshot))
+}
+
+// banner draws the header: what this binary is, where it will operate, and the
+// state of that tree. See tuibanner.go.
+func (t *tui) banner() { writeBanner(t.out, t.p, t.manifest(), time.Now()) }
+
+func (t *tui) print(text string) { _, _ = fmt.Fprintln(t.out, text) }
+
+// keyNames lists keys as "profile/key" selectors. The composite form is used
+// even when a name is unique, so the picker never hides which profile a key
+// belongs to when the same person's name appears under several orgs.
+func keyNames(m *manifest.Manifest) []string {
+	refs, err := m.KeyRefs()
+	if err != nil {
+		return nil
+	}
+	out := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		out = append(out, ref.String())
+	}
+	sort.Strings(out)
+	return out
+}

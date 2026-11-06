@@ -1,0 +1,157 @@
+package cli
+
+import (
+	"fmt"
+	"path/filepath"
+	"strings"
+
+	"github.com/spf13/cobra"
+
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/simtabi/authama/src/internal/services/configsvc"
+	"github.com/simtabi/authama/src/internal/services/knownhosts"
+	"github.com/simtabi/authama/src/internal/util/paths"
+)
+
+// loadConfigService resolves the home, loads the manifest, and builds the config
+// service. emitUseKeychain matches the platform (macOS only), as in v1.
+func loadConfigService(c *cobra.Command) (paths.Paths, *manifest.Manifest, *configsvc.Service, error) {
+	p, err := resolvePaths(c)
+	if err != nil {
+		return paths.Paths{}, nil, nil, err
+	}
+	m, err := manifest.Load(p.Manifest())
+	if err != nil {
+		return paths.Paths{}, nil, nil, err
+	}
+	return p, m, configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()), nil
+}
+
+// migrateLegacyKnownHosts merges any known_hosts left over under profiles/*/
+// from before the trust store consolidated into one file, then deletes them.
+// One-shot and idempotent: a tree with none is a no-op, so render can call this
+// unconditionally every time rather than requiring a separate migration step.
+func migrateLegacyKnownHosts(c *cobra.Command, p paths.Paths, dryRun bool) error {
+	legacy, _ := filepath.Glob(filepath.Join(p.SSHDir, "profiles", "*", "known_hosts"))
+	if len(legacy) == 0 {
+		return nil
+	}
+	if dryRun {
+		_, _ = fmt.Fprintf(c.OutOrStdout(), "would migrate: %d legacy known_hosts file(s) into the single store\n", len(legacy))
+		return nil
+	}
+	snapshotBeforeMutation(p)
+	rep, err := knownhosts.New(p.SSHDir).MigrateLegacyStores()
+	if err != nil {
+		return err
+	}
+	if len(rep.Removed) > 0 {
+		_, _ = fmt.Fprintf(c.OutOrStdout(), "migrated %d known_hosts line(s) from %s into the single store\n",
+			rep.Merged, strings.Join(rep.Removed, ", "))
+	}
+	return nil
+}
+
+// newConfigCmd is the first verb group running natively in Go (no engine).
+func newConfigCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "config",
+		Short: "Render, check, or show the SSH config",
+	}
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "check",
+		Short: "Verify the config matches the manifest (read-only; exit non-zero on drift)",
+		Args:  cobra.NoArgs,
+		RunE: func(c *cobra.Command, _ []string) error {
+			_, _, svc, err := loadConfigService(c)
+			if err != nil {
+				return err
+			}
+			res, err := svc.Check(true)
+			if err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintln(c.OutOrStdout(), res.Format())
+			if !res.InSync() {
+				return errNotClean
+			}
+			return nil
+		},
+	})
+
+	var dryRun, renderYes bool
+	render := &cobra.Command{
+		Use:   "render",
+		Short: "Render the config files from the manifest",
+		Args:  cobra.NoArgs,
+		RunE: func(c *cobra.Command, _ []string) error {
+			p, _, svc, err := loadConfigService(c)
+			if err != nil {
+				return err
+			}
+			if !dryRun {
+				if err := confirmChange(c,
+					"render rewrites the authama block in "+p.SSHDir+
+						"/config from the manifest.\nContent outside the markers is preserved.", renderYes); err != nil {
+					return err
+				}
+				// Lock after the question, not before it, so nobody's reading time
+				// holds other commands; then read the manifest again under it, so
+				// the render is of what is there now.
+				lockForMutation(p)
+				if p, _, svc, err = loadConfigService(c); err != nil {
+					return err
+				}
+			}
+			if err := migrateLegacyKnownHosts(c, p, dryRun); err != nil {
+				return err
+			}
+			res, err := svc.Write(dryRun)
+			if err != nil {
+				return err
+			}
+			verb := "wrote"
+			if dryRun {
+				verb = "would write"
+			}
+			out := c.OutOrStdout()
+			if len(res.Written) > 0 {
+				_, _ = fmt.Fprintf(out, "%s: %s\n", verb, strings.Join(res.Written, ", "))
+			}
+			if len(res.Pruned) > 0 {
+				_, _ = fmt.Fprintf(out, "pruned: %s\n", strings.Join(res.Pruned, ", "))
+			}
+			if len(res.Written) == 0 && len(res.Pruned) == 0 {
+				_, _ = fmt.Fprintln(out, "config: already in sync")
+			}
+			return nil
+		},
+	}
+	render.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "preview changes without writing")
+	render.Flags().BoolVarP(&renderYes, "yes", "y", false, "render without confirming (implied when there is no terminal)")
+	cmd.AddCommand(render)
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "show [alias]",
+		Short: "Print the rendered config, or ssh -G for one alias",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			_, _, svc, err := loadConfigService(c)
+			if err != nil {
+				return err
+			}
+			alias := ""
+			if len(args) > 0 {
+				alias = args[0]
+			}
+			out, err := svc.Show(alias)
+			_, _ = fmt.Fprint(c.OutOrStdout(), out)
+			return err
+		},
+	})
+
+	cmd.AddCommand(newConfigExportCmd())
+	return cmd
+}

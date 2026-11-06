@@ -1,0 +1,18 @@
+{
+  "//": "Type-checks the web UI's ES modules (plain JavaScript with JSDoc types; nothing is emitted, so the binary embeds the files as written).",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "types": []
+  },
+  "include": ["../../src/internal/web/assets/app.js", "../../src/internal/web/assets/js/**/*.js"]
+}

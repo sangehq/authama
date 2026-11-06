@@ -1,0 +1,101 @@
+{{define "content"}}
+{{if .ReadOnly}}
+{{template "page_header" (header "SSH" "Profiles" "Each profile: its category, key scope and key store, and its hosts and keys.")}}
+{{else}}
+{{template "page_header" (header "SSH" "Profiles" "Each profile: its category, key scope and key store, and its hosts and keys." (panel "Add a profile" "add-profile" "plus" | withTip "profile-add") (only (gt (len .Data) 0) (panel "Change a key scope" "profile-scope" "key" | withTip "profile-scope")) (only (gt (len .Data) 0) (panel "Change a key comment" "profile-comment" "pencil" | withTip "profile-comment")) (only (gt (len .Data) 0) (panel "Move to a category" "profile-category" "folder" | withTip "profile-category")) (only (and (gt (len .Data) 0) (not .DevRoot)) (panel "Rotate keys" "profile-rotate" "recycle" | withTip "profile-rotate")))}}
+{{end}}
+<div class="card">
+  <div class="card-header"><h2 class="card-title">Profiles</h2>{{if .Data}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data}} in the manifest</span>{{template "csv" "/exports/profiles.csv"}}</div>{{end}}</div>
+  {{if .Data}}
+  <div class="table-responsive" tabindex="0">
+    <table class="table table-vcenter card-table table-hover" id="profiles-table" data-table="profiles">
+      <caption class="visually-hidden">Every profile in the manifest</caption>
+      <thead><tr><th scope="col">Profile</th><th scope="col">Category</th><th scope="col">Key scope</th><th scope="col">Key store</th><th scope="col">Key comment</th><th scope="col">Hosts</th><th scope="col">Keys</th><th scope="col" data-nosort><span class="visually-hidden">Actions</span></th></tr></thead>
+      <tbody>
+        {{range .Data}}
+        <tr>
+          <th scope="row"><code>{{.Name}}</code></th>
+          <td>{{orDash .Category}}</td>
+          <td>{{.KeyScope}}</td>
+          <td>{{.KeyStore}}</td>
+          <td>{{if .KeyComment}}<code>{{.KeyComment}}</code>{{else}}<span class="text-secondary">default</span>{{end}}</td>
+          <td>{{.Hosts}}</td>
+          <td>{{.Keys}}</td>
+          <td class="text-end">
+            {{if not $.ReadOnly}}<form method="post" action="{{basePath}}/changes/preview" data-inline id="f-profile-{{.Name}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="profile-delete"><input type="hidden" name="name" value="{{.Name}}"></form>{{end}}
+            {{template "menu_open" (printf "Actions for profile %s" .Name)}}
+              <a class="dropdown-item" href="{{basePath}}/hosts?q={{.Name}}">{{icon "server"}}<span class="ms-2">Its hosts</span></a>
+              <a class="dropdown-item" href="{{basePath}}/history?profile={{.Name}}">{{icon "history"}}<span class="ms-2">History</span></a>
+              <button type="button" class="dropdown-item" data-copy="{{.Name}}">{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
+              {{if not $.ReadOnly}}<div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="#profile-scope" data-panel-open="profile-scope" data-panel-fill-name="{{.Name}}">{{icon "key"}}<span class="ms-2">Change key scope</span></a>
+              <a class="dropdown-item" href="#profile-comment" data-panel-open="profile-comment" data-panel-fill-name="{{.Name}}">{{icon "pencil"}}<span class="ms-2">Change key comment</span></a>
+              <a class="dropdown-item" href="#profile-category" data-panel-open="profile-category" data-panel-fill-name="{{.Name}}">{{icon "folder"}}<span class="ms-2">Move to a category</span></a>
+              {{if not $.DevRoot}}<a class="dropdown-item" href="#profile-rotate" data-panel-open="profile-rotate" data-panel-fill-profile="{{.Name}}">{{icon "recycle"}}<span class="ms-2">Rotate its keys</span></a>{{end}}
+              <div class="dropdown-divider"></div>
+              <button type="submit" class="dropdown-item text-danger" form="f-profile-{{.Name}}" data-confirm="m-profile-{{.Name}}"{{tip "delete"}}>{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
+            {{template "menu_close"}}
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{if not $.ReadOnly}}{{range .Data}}{{template "confirm" (withPurge (confirm (printf "m-profile-%s" .Name) (printf "f-profile-%s" .Name) (printf "Delete profile %s?" .Name) "Its hosts, their config blocks and their pins go. Its key files stay unless you tick the box below. You see the change before it is made." "Preview the delete"))}}{{end}}{{end}}
+  {{else}}{{template "empty" (empty "users" "No profiles yet" "Add one with the button above, or with authama ssh profile add <name>.")}}{{end}}
+</div>
+<p class="text-secondary mt-2">Deleting a profile removes its hosts, their config blocks and their pins. Its key files stay on disk unless you tick <strong>and its key files</strong> when you confirm: then they are deleted too, after authama writes an encrypted backup of <code>~/.ssh</code>, which needs <code>AUTHAMA_AGE_RECIPIENT</code>.</p>
+
+{{if not .ReadOnly}}
+{{template "panel_open" (header "add-profile" "Add a profile" "A profile groups hosts that share a key policy and a directory under ~/.ssh/profiles/.")}}
+        {{template "change_open" .}}<input type="hidden" name="action" value="profile-add">
+          <div class="mb-3"><label class="form-label required" for="p-name">Name</label><input class="form-control" id="p-name" name="name" required pattern="[A-Za-z0-9][A-Za-z0-9._\-]*" autocomplete="off" spellcheck="false"><small class="form-hint">Letters, digits, dots, dashes and underscores.</small></div>
+          <div class="mb-3"><label class="form-label" for="p-scope">Key scope</label><select class="form-select" id="p-scope" name="key_scope"><option value="per_service">per service: one key for each host</option><option value="shared">shared: one key for every host</option></select></div>
+          <div class="mb-3" data-show-when="#p-scope" data-show-when-in="shared"><label class="form-label" for="p-keyname">Shared key name</label><input class="form-control" id="p-keyname" name="key_name" autocomplete="off" spellcheck="false"><small class="form-hint">The one key every host in the profile uses.</small></div>
+          <div class="mb-3"><label class="form-label" for="p-category">Category</label><input class="form-control" id="p-category" name="category" autocomplete="off" spellcheck="false"><small class="form-hint">Optional: files the profile under <code>~/.ssh/profiles/&lt;category&gt;/</code>.</small></div>
+          <div class="mb-3"><label class="form-label" for="p-comment">Key comment</label><input class="form-control" id="p-comment" name="key_comment" autocomplete="off" spellcheck="false" placeholder="{profile}/{alias} {date}"><small class="form-hint">Optional. Placeholders: <code>{profile}</code> <code>{alias}</code> <code>{key}</code> <code>{date}</code> <code>{device}</code>.</small></div>
+          <div class="d-flex align-items-center gap-2 pt-3 border-top">
+            <span class="text-secondary small me-auto">The same as <code>authama ssh profile add</code>.</span>
+            <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
+            <button type="submit" class="btn btn-primary">Preview</button>
+          </div>
+        </form>
+{{template "panel_close"}}
+{{if .Data}}
+{{template "panel_open" (header "profile-scope" "Change a profile's key scope" "")}}
+        {{template "change_open" .}}<input type="hidden" name="action" value="profile-edit">
+          <div class="mb-2"><label class="form-label" for="e-name">Profile</label><select class="form-select" id="e-name" name="name">{{range .Data}}<option value="{{.Name}}">{{.Name}} ({{.KeyScope}})</option>{{end}}</select></div>
+          <div class="mb-2"><label class="form-label" for="e-scope">Key scope</label><select class="form-select" id="e-scope" name="key_scope"><option value="per_service">per service</option><option value="shared">shared</option></select></div>
+          <div class="mb-3" data-show-when="#e-scope" data-show-when-in="shared"><label class="form-label" for="e-keyname">Shared key name</label><input class="form-control" id="e-keyname" name="key_name" autocomplete="off" spellcheck="false"></div>
+          {{template "panel_actions" ""}}
+        </form>
+{{template "panel_close"}}
+{{template "panel_open" (header "profile-comment" "Change a profile's key comment" "")}}
+        {{template "change_open" .}}<input type="hidden" name="action" value="profile-comment">
+          <div class="mb-2"><label class="form-label" for="k-name">Profile</label><select class="form-select" id="k-name" name="name">{{range .Data}}<option value="{{.Name}}">{{.Name}}{{with .KeyComment}} ({{.}}){{end}}</option>{{end}}</select></div>
+          <div class="mb-2"><label class="form-label" for="k-comment">Key comment <span class="text-secondary">(empty inherits the default)</span></label><input class="form-control" id="k-comment" name="key_comment" autocomplete="off" spellcheck="false" placeholder="{profile}/{alias} {date}"></div>
+          <p class="text-secondary small mb-3">The <code>ssh-keygen -C</code> comment for keys the profile mints from now on: <code>{profile}</code>, <code>{alias}</code>, <code>{key}</code>, <code>{date}</code> and <code>{device}</code> are filled in. Keys that exist keep theirs.</p>
+          {{template "panel_actions" ""}}
+        </form>
+{{template "panel_close"}}
+  {{if not $.DevRoot}}
+{{template "panel_open" (header "profile-rotate" "Rotate keys" "")}}
+        {{template "job_open" .}}<input type="hidden" name="action" value="rotate-keys">
+          <div class="mb-2"><label class="form-label" for="r-profile">Profile</label><select class="form-select" id="r-profile" name="profile">{{range .Data}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div>
+          <div class="mb-3"><label class="form-check"><input class="form-check-input" type="checkbox" name="all" value="1"><span class="form-check-label">Every key in every profile instead</span></label></div>
+          <p class="text-secondary small mb-3">Each key a host uses rotates in turn, as a job. A key that fails is left as it was. An encrypted backup is written first.</p>
+          {{template "panel_actions" "btn-outline-danger"}}
+        </form>
+{{template "panel_close"}}
+  {{end}}
+{{template "panel_open" (header "profile-category" "Move a profile to a category" "")}}
+        {{template "change_open" .}}<input type="hidden" name="action" value="profile-category">
+          <div class="mb-2"><label class="form-label" for="c-name">Profile</label><select class="form-select" id="c-name" name="name">{{range .Data}}<option value="{{.Name}}">{{.Name}}{{with .Category}} ({{.}}){{end}}</option>{{end}}</select></div>
+          <div class="mb-2"><label class="form-label" for="c-category">Category <span class="text-secondary">(empty returns it to the flat layout)</span></label><input class="form-control" id="c-category" name="category" autocomplete="off" spellcheck="false"></div>
+          <p class="text-secondary small mb-3">Its key directory moves to <code>~/.ssh/profiles/&lt;category&gt;/</code>, private keys and all, and its inventory records follow.</p>
+          {{template "panel_actions" ""}}
+        </form>
+{{template "panel_close"}}
+  {{end}}
+{{end}}
+{{end}}

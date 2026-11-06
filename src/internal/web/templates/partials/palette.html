@@ -1,0 +1,24 @@
+{{/* The command palette (Ctrl+K, ⌘K): a Tabler modal listing every page, the
+     forms that open in a panel, and the downloads. js/components/palette.js
+     filters it as you type; without the script the trigger does nothing. */}}
+{{define "palette_item"}}<a class="list-group-item list-group-item-action d-flex align-items-center gap-2" href="{{u .Href}}" id="pal-{{.ID}}" role="option" aria-selected="false" data-palette-item data-palette-keywords="{{.Keywords}}">{{icon .Icon}}<span class="me-auto">{{.Label}}</span><span class="text-secondary small">{{.Group}}</span></a>{{end}}
+{{define "palette"}}<div class="modal modal-blur fade" id="command-palette" tabindex="-1" aria-labelledby="command-palette-title" aria-hidden="true" data-command-palette>
+  <div class="modal-dialog modal-dialog-scrollable" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title visually-hidden" id="command-palette-title">Go to</h2>
+        <div class="input-icon w-100">
+          <span class="input-icon-addon">{{icon "search"}}</span>
+          <input type="search" class="form-control" placeholder="Go to a page or an action…" aria-label="Go to a page or an action" role="combobox" aria-expanded="true" aria-controls="command-palette-list" autocomplete="off" data-palette-input>
+        </div>
+        <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="list-group list-group-flush" id="command-palette-list" role="listbox" aria-label="Pages and actions">
+        {{range paletteItems .ReadOnly}}{{template "palette_item" .}}{{end}}
+      </div>
+      <div class="modal-footer text-secondary small justify-content-start">
+        <kbd>↑</kbd> <kbd>↓</kbd> to move · <kbd>Enter</kbd> to open · <kbd>Esc</kbd> to close
+      </div>
+    </div>
+  </div>
+</div>{{end}}

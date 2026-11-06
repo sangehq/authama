@@ -1,0 +1,40 @@
+name: Bug report
+description: Report a defect in Authentication Access Manager (authama)
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, plus what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The exact commands run (redact secrets).
+      placeholder: |
+        1. authama ssh reconcile
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: authama version
+      placeholder: "output of: authama version"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS / platform
+      placeholder: "macOS 15.x (arm64)"
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: "`authama doctor` output"
+      render: shell

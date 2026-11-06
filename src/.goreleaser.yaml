@@ -1,0 +1,247 @@
+version: 2
+project_name: authama
+
+# This config lives in src/ with the module, but GoReleaser is invoked from the
+# repo root (`goreleaser --config src/.goreleaser.yaml`), so every path here is
+# repo-relative and only the Go build is pointed into the module, via builds[].dir
+# below. Running it the other way round does not work: archive `files:` globbing
+# rejects a `..` prefix outright, so LICENSE/README/CHANGELOG become unreachable
+# from inside src/.
+#
+# build/ holds one folder per OS and nothing else (see the Makefile), so
+# GoReleaser's working output - per-target folders, artifacts.json,
+# metadata.json - goes to .goreleaser-dist/ at the root (gitignored). The
+# release assets it uploads are flat, as before.
+dist: .goreleaser-dist
+
+before:
+  hooks:
+    - go -C src mod tidy
+
+# One pure-Go binary cross-compiled to the full OS/arch matrix: authama
+# (Authentication Access Manager). The sshmgr alias older releases shipped
+# beside it is gone; their bare sshmgr_* assets stay on those releases. CGO is disabled
+# so every target is a static, portable binary; -trimpath makes builds
+# reproducible and -s -w strips debug info for smaller artifacts.
+builds:
+  - id: authama
+    # The module root. GoReleaser runs from the repo root, so this is the one
+    # place that has to know the Go code lives under src/.
+    dir: src
+    main: ./cmd/authama
+    binary: authama
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64 # 64-bit x86
+      - arm64 # 64-bit ARM (Apple silicon, Graviton, RPi 64-bit)
+      - arm # 32-bit ARM (RPi, etc.)
+      - "386" # 32-bit x86
+    goarm:
+      - "6"
+      - "7"
+    ignore:
+      # macOS ships only amd64 + arm64.
+      - { goos: darwin, goarch: arm }
+      - { goos: darwin, goarch: "386" }
+      # 32-bit ARM is uncommon / unsupported on Windows.
+      - { goos: windows, goarch: arm }
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    ldflags:
+      - -s -w
+      - -X github.com/simtabi/authama/src/internal/version.Version={{ .Version }}
+      - -X github.com/simtabi/authama/src/internal/version.Commit={{ .Commit }}
+      - -X github.com/simtabi/authama/src/internal/version.Date={{ .CommitDate }}
+
+# A single macOS universal binary (amd64 + arm64) alongside the per-arch ones.
+universal_binaries:
+  - id: authama
+    ids: [authama]
+    name_template: authama
+    replace: false
+
+# All artifacts use one flat, versionless, Go-style naming scheme:
+#   authama_<os>_<arch>[.ext]  with darwin → macos, e.g.
+#   authama_macos_arm64, authama_linux_amd64, authama_windows_386.exe,
+#   authama_macos_universal, authama_linux_armv7.
+# The tar.gz/zip archives and the Linux packages carry the same name (they were
+# sshmgr_ up to 0.1.1). The release tag carries the version; the install
+# scripts reconstruct these names.
+archives:
+  - id: binary
+    ids: [authama]
+    formats: [binary]
+    name_template: &name >-
+      authama_{{- if eq .Os "darwin" }}macos{{ else }}{{ .Os }}{{ end }}_
+      {{- if eq .Arch "all" }}universal{{ else if eq .Arch "arm" }}armv{{ .Arm }}{{ else }}{{ .Arch }}{{ end }}
+
+  - id: archive
+    ids: [authama]
+    name_template: *name
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+      # The web UI embeds Tabler, Bootstrap and Popper; their MIT notices ship
+      # with the binary that carries them.
+      - third-party-notices.md
+
+# Native Linux packages (nfpm operates on the Linux builds only).
+nfpms:
+  - id: authama
+    ids: [authama]
+    package_name: authama
+    # The package was named sshmgr up to 0.1.1. Installing authama replaces it
+    # (deb Replaces/Conflicts, rpm Obsoletes), so an old sshmgr package is
+    # removed rather than left beside it. authama no longer provides sshmgr.
+    replaces: [sshmgr]
+    conflicts: [sshmgr]
+    vendor: Simtabi LLC
+    homepage: "https://github.com/simtabi/authama"
+    maintainer: "Imani Manyara <imani@simtabi.com>"
+    description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
+    license: MIT
+    formats: [deb, rpm, apk]
+    bindir: /usr/bin
+    file_name_template: 'authama_linux_{{ if eq .Arch "arm" }}armv{{ .Arm }}{{ else }}{{ .Arch }}{{ end }}'
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+# Reproducible source tarball, uploaded as a first-class release asset next to
+# GitHub's auto-generated "Source code" links, so every release ships the exact
+# code as well as the binaries.
+source:
+  enabled: true
+  name_template: "{{ .ProjectName }}_{{ .Version }}_source"
+
+# One SBOM per archive (syft, SPDX-JSON), attached as release assets so
+# consumers can audit the supply chain of what they download.
+sboms:
+  - id: archive
+    artifacts: archive
+
+# Gated on the tap deploy key. Without a credential GoReleaser falls back to
+# GITHUB_TOKEN, which cannot write to another repo, and
+# the whole release fails at the last step - after every artifact is uploaded but
+# before provenance is attested, leaving a published release that is unsigned.
+homebrew_casks:
+  # The cask was sshmgr up to 0.1.1. The tap's cask_renames.json maps sshmgr to
+  # authama, so `brew upgrade` moves an existing install over and
+  # `brew install simtabi/tap/sshmgr` still resolves (docs/release.md).
+  - name: authama
+    ids: [archive]
+    # Skipped unless the deploy key is present, so `make dist` works in a shell that
+    # did not export it. The key is the only way in: v3.4.0 and v3.5.0 pushed with it,
+    # and no TAP_GITHUB_TOKEN secret exists at repo or org level (checked 2026-10-27).
+    skip_upload: '{{ if envOrDefault "HOMEBREW_TAP_DEPLOY_KEY" "" }}false{{ else }}true{{ end }}'
+    repository:
+      owner: simtabi
+      name: homebrew-tap
+      # Write deploy key on simtabi/homebrew-tap (secret HOMEBREW_TAP_DEPLOY_KEY): reaches that
+      # one repository only, and is the only credential used for it.
+      git:
+        url: git@github.com:simtabi/homebrew-tap.git
+        private_key: '{{ envOrDefault "HOMEBREW_TAP_DEPLOY_KEY" "" }}'
+    directory: Casks
+    binaries: [authama]
+    homepage: "https://github.com/simtabi/authama"
+    description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr",
+              args: ["-dr", "com.apple.quarantine", "#{staged_path}/authama"],
+              sudo: false
+          end
+
+scoops:
+  - name: authama
+    ids: [archive]
+    repository:
+      owner: simtabi
+      name: scoop-bucket
+      # Write deploy key on simtabi/scoop-bucket (secret SCOOP_BUCKET_DEPLOY_KEY): reaches that
+      # one repository only, and is the only credential used for it.
+      # The bucket's default branch requires a pull request and, unlike the tap, lets no
+      # deploy key bypass it: v3.6.0 failed here pushing to master (GH013), after every asset
+      # was uploaded, which skipped the provenance attestation. The manifest goes to its own
+      # branch instead, which the rule does not cover, and is merged into master by a pull
+      # request (docs/release.md). GoReleaser's git client never opens one itself - with
+      # `git.url` set it pushes and returns before reading `pull_request` (checked against
+      # internal/pipe/scoop at v2.18) - and the only credential for the bucket is this deploy
+      # key, which cannot call the API. The bucket's workflow opens and merges the pull
+      # request for any authama-* branch.
+      branch: 'authama-{{ .Version }}'
+      git:
+        url: git@github.com:simtabi/scoop-bucket.git
+        private_key: '{{ envOrDefault "SCOOP_BUCKET_DEPLOY_KEY" "" }}'
+    directory: bucket
+    homepage: "https://github.com/simtabi/authama"
+    description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
+    license: MIT
+    # Scoop publishes on its own switch: SKIP_SCOOP, else SKIP_WINDOWS_PKGS, else skipped. `or` takes the
+    # first non-empty value, so a variable CI sets to empty falls through instead of publishing
+    # (envOrDefault returns an empty value as set; measured with GoReleaser 2.18.3).
+    skip_upload: '{{ or (envOrDefault "SKIP_SCOOP" "") (envOrDefault "SKIP_WINDOWS_PKGS" "") "true" }}'
+
+# Winget (Microsoft's default Windows package manager). Publishes a manifest to
+# a simtabi/winget-pkgs fork and opens a PR to microsoft/winget-pkgs. Package id
+# is Simtabi.authama (never published under the old name). Gated behind
+# SKIP_WINDOWS_PKGS until the fork exists (it does not yet; docs/release.md#winget).
+winget:
+  - name: authama
+    publisher: Simtabi
+    ids: [archive]
+    license: MIT
+    homepage: "https://github.com/simtabi/authama"
+    short_description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
+    description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
+    publisher_url: "https://simtabi.com"
+    release_notes_url: "https://github.com/simtabi/authama/releases/tag/{{ .Tag }}"
+    repository:
+      owner: simtabi
+      name: winget-pkgs
+      branch: "authama-{{ .Version }}"
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+      pull_request:
+        enabled: true
+        draft: false
+        base:
+          owner: microsoft
+          name: winget-pkgs
+          branch: master
+    skip_upload: '{{ envOrDefault "SKIP_WINDOWS_PKGS" "true" }}'
+
+release:
+  github:
+    owner: simtabi
+    name: authama
+  draft: false
+  prerelease: auto
+  # The install scripts ship with the release, so `curl | bash` has a URL on the
+  # same host as the binaries it downloads, versioned with them, and reachable
+  # through the stable releases/latest/download/ redirect. The documented URL
+  # pointed at a vanity path that was never published and returned 404 - the
+  # primary install command in the README could not fetch the script at all.
+  extra_files:
+    - glob: src/scripts/install.sh
+    - glob: src/scripts/install.ps1
+
+changelog:
+  # Do not set disable: true. GoReleaser reads --release-notes inside its
+  # changelog pipe, so disabling the pipe dropped the notes and v3.2.0 and
+  # v3.4.0 published empty bodies. With --release-notes given, GoReleaser uses
+  # that file (the tagged CHANGELOG.md section) and generates nothing itself.
+  use: git

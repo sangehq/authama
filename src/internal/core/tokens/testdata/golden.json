@@ -1,0 +1,1729 @@
+{
+ "source": "simtabi/auth-token-manager",
+ "renders": [
+  {
+   "set": "template",
+   "target": "composer",
+   "existing": null,
+   "out": "{\n  \"github-oauth\": {\n    \"github.com\": \"<github-personal-access-token>\"\n  },\n  \"gitlab-oauth\": {\n    \"gitlab.example.org\": \"<gitlab-oauth-token>\"\n  },\n  \"gitlab-token\": {\n    \"gitlab.com\": \"<gitlab-personal-or-deploy-token>\"\n  },\n  \"bitbucket-oauth\": {\n    \"bitbucket.org\": {\n      \"consumer-key\": \"<consumer-key>\",\n      \"consumer-secret\": \"<consumer-secret>\"\n    }\n  },\n  \"http-basic\": {\n    \"repo.packagist.com\": {\n      \"username\": \"<username>\",\n      \"password\": \"<password>\"\n    },\n    \"repo.magento.com\": {\n      \"username\": \"<magento-public-key>\",\n      \"password\": \"<magento-private-key>\"\n    }\n  },\n  \"bearer\": {\n    \"private.example.org\": \"<bearer-token>\"\n  },\n  \"custom-headers\": {\n    \"repo.example.org\": [\n      \"API-TOKEN: <token>\",\n      \"X-Org: acme\"\n    ]\n  },\n  \"forgejo-token\": {\n    \"code.example.org\": \"<forgejo-token>\"\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "template",
+   "target": "composer",
+   "existing": "",
+   "out": "{\n  \"github-oauth\": {\n    \"github.com\": \"<github-personal-access-token>\"\n  },\n  \"gitlab-oauth\": {\n    \"gitlab.example.org\": \"<gitlab-oauth-token>\"\n  },\n  \"gitlab-token\": {\n    \"gitlab.com\": \"<gitlab-personal-or-deploy-token>\"\n  },\n  \"bitbucket-oauth\": {\n    \"bitbucket.org\": {\n      \"consumer-key\": \"<consumer-key>\",\n      \"consumer-secret\": \"<consumer-secret>\"\n    }\n  },\n  \"http-basic\": {\n    \"repo.packagist.com\": {\n      \"username\": \"<username>\",\n      \"password\": \"<password>\"\n    },\n    \"repo.magento.com\": {\n      \"username\": \"<magento-public-key>\",\n      \"password\": \"<magento-private-key>\"\n    }\n  },\n  \"bearer\": {\n    \"private.example.org\": \"<bearer-token>\"\n  },\n  \"custom-headers\": {\n    \"repo.example.org\": [\n      \"API-TOKEN: <token>\",\n      \"X-Org: acme\"\n    ]\n  },\n  \"forgejo-token\": {\n    \"code.example.org\": \"<forgejo-token>\"\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "template",
+   "target": "composer",
+   "existing": "   \n",
+   "out": "{\n  \"github-oauth\": {\n    \"github.com\": \"<github-personal-access-token>\"\n  },\n  \"gitlab-oauth\": {\n    \"gitlab.example.org\": \"<gitlab-oauth-token>\"\n  },\n  \"gitlab-token\": {\n    \"gitlab.com\": \"<gitlab-personal-or-deploy-token>\"\n  },\n  \"bitbucket-oauth\": {\n    \"bitbucket.org\": {\n      \"consumer-key\": \"<consumer-key>\",\n      \"consumer-secret\": \"<consumer-secret>\"\n    }\n  },\n  \"http-basic\": {\n    \"repo.packagist.com\": {\n      \"username\": \"<username>\",\n      \"password\": \"<password>\"\n    },\n    \"repo.magento.com\": {\n      \"username\": \"<magento-public-key>\",\n      \"password\": \"<magento-private-key>\"\n    }\n  },\n  \"bearer\": {\n    \"private.example.org\": \"<bearer-token>\"\n  },\n  \"custom-headers\": {\n    \"repo.example.org\": [\n      \"API-TOKEN: <token>\",\n      \"X-Org: acme\"\n    ]\n  },\n  \"forgejo-token\": {\n    \"code.example.org\": \"<forgejo-token>\"\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "template",
+   "target": "composer",
+   "existing": "{\"github-oauth\": {\"other.com\": \"keep\", \"github.com\": \"old\"}, \"zeta\": 1, \"http-basic\": \"notadict\", \"config\": {\"x\": [1, 2.5, true, null]}}",
+   "out": "{\n  \"github-oauth\": {\n    \"other.com\": \"keep\",\n    \"github.com\": \"<github-personal-access-token>\"\n  },\n  \"zeta\": 1,\n  \"http-basic\": {\n    \"repo.packagist.com\": {\n      \"username\": \"<username>\",\n      \"password\": \"<password>\"\n    },\n    \"repo.magento.com\": {\n      \"username\": \"<magento-public-key>\",\n      \"password\": \"<magento-private-key>\"\n    }\n  },\n  \"config\": {\n    \"x\": [\n      1,\n      2.5,\n      true,\n      null\n    ]\n  },\n  \"gitlab-oauth\": {\n    \"gitlab.example.org\": \"<gitlab-oauth-token>\"\n  },\n  \"gitlab-token\": {\n    \"gitlab.com\": \"<gitlab-personal-or-deploy-token>\"\n  },\n  \"bitbucket-oauth\": {\n    \"bitbucket.org\": {\n      \"consumer-key\": \"<consumer-key>\",\n      \"consumer-secret\": \"<consumer-secret>\"\n    }\n  },\n  \"bearer\": {\n    \"private.example.org\": \"<bearer-token>\"\n  },\n  \"custom-headers\": {\n    \"repo.example.org\": [\n      \"API-TOKEN: <token>\",\n      \"X-Org: acme\"\n    ]\n  },\n  \"forgejo-token\": {\n    \"code.example.org\": \"<forgejo-token>\"\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "template",
+   "target": "composer",
+   "existing": "{\"gitlab-token\": {}, \"bearer\": {\"a\": \"b\"}}",
+   "out": "{\n  \"gitlab-token\": {\n    \"gitlab.com\": \"<gitlab-personal-or-deploy-token>\"\n  },\n  \"bearer\": {\n    \"a\": \"b\",\n    \"private.example.org\": \"<bearer-token>\"\n  },\n  \"github-oauth\": {\n    \"github.com\": \"<github-personal-access-token>\"\n  },\n  \"gitlab-oauth\": {\n    \"gitlab.example.org\": \"<gitlab-oauth-token>\"\n  },\n  \"bitbucket-oauth\": {\n    \"bitbucket.org\": {\n      \"consumer-key\": \"<consumer-key>\",\n      \"consumer-secret\": \"<consumer-secret>\"\n    }\n  },\n  \"http-basic\": {\n    \"repo.packagist.com\": {\n      \"username\": \"<username>\",\n      \"password\": \"<password>\"\n    },\n    \"repo.magento.com\": {\n      \"username\": \"<magento-public-key>\",\n      \"password\": \"<magento-private-key>\"\n    }\n  },\n  \"custom-headers\": {\n    \"repo.example.org\": [\n      \"API-TOKEN: <token>\",\n      \"X-Org: acme\"\n    ]\n  },\n  \"forgejo-token\": {\n    \"code.example.org\": \"<forgejo-token>\"\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "template",
+   "target": "docker",
+   "existing": null,
+   "out": "{\n  \"auths\": {\n    \"ghcr.io\": {\n      \"auth\": \"PGRvY2tlci11c2VybmFtZT46PGRvY2tlci10b2tlbj4=\"\n    }\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "template",
+   "target": "docker",
+   "existing": "{\"credsStore\": \"desktop\", \"auths\": {\"ghcr.io\": {\"auth\": \"b2xk\"}, \"quay.io\": {}}, \"proxies\": {\"default\": {\"httpProxy\": \"http://p\"}}}",
+   "out": "{\n  \"credsStore\": \"desktop\",\n  \"auths\": {\n    \"ghcr.io\": {\n      \"auth\": \"PGRvY2tlci11c2VybmFtZT46PGRvY2tlci10b2tlbj4=\"\n    },\n    \"quay.io\": {}\n  },\n  \"proxies\": {\n    \"default\": {\n      \"httpProxy\": \"http://p\"\n    }\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "template",
+   "target": "docker",
+   "existing": "{\"auths\": \"weird\", \"x\": \"é\"}",
+   "out": "{\n  \"auths\": {\n    \"ghcr.io\": {\n      \"auth\": \"PGRvY2tlci11c2VybmFtZT46PGRvY2tlci10b2tlbj4=\"\n    }\n  },\n  \"x\": \"\\u00e9\"\n}",
+   "warnings": []
+  },
+  {
+   "set": "template",
+   "target": "npm",
+   "existing": null,
+   "out": "//registry.npmjs.org/:_authToken=<npm-token>\n@your-org:registry=https://npm.pkg.github.com/\n//npm.pkg.github.com/:_authToken=<github-token>",
+   "warnings": []
+  },
+  {
+   "set": "template",
+   "target": "npm",
+   "existing": "registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=old\n; comment\n# c\n\n@org:registry=https://old/\n//npm.pkg.github.com/:always-auth=true\nsave-exact=true\n",
+   "out": "registry=https://registry.npmjs.org/\n; comment\n# c\n\n@org:registry=https://old/\nsave-exact=true\n//registry.npmjs.org/:_authToken=<npm-token>\n@your-org:registry=https://npm.pkg.github.com/\n//npm.pkg.github.com/:_authToken=<github-token>",
+   "warnings": []
+  },
+  {
+   "set": "template",
+   "target": "npm",
+   "existing": "\n\n//x/:_authToken=y\n\n",
+   "out": "//x/:_authToken=y\n\n//registry.npmjs.org/:_authToken=<npm-token>\n@your-org:registry=https://npm.pkg.github.com/\n//npm.pkg.github.com/:_authToken=<github-token>",
+   "warnings": []
+  },
+  {
+   "set": "template",
+   "target": "git",
+   "existing": null,
+   "out": "https://%3Cgit-username%3E:%3Cgit-token%3E@github.com",
+   "warnings": []
+  },
+  {
+   "set": "template",
+   "target": "git",
+   "existing": "https://u:p@github.com\n# comment\n\nhttps://a:b@gitlab.com\nhttps://u:p@GITHUB.COM/\nhttps://u:p@git.acme:8443/org\nhttps://u:p@git.acme:bad/org\nhttps://u:p@[::1]:99/x\n",
+   "out": "# comment\n\nhttps://a:b@gitlab.com\nhttps://u:p@git.acme:8443/org\nhttps://u:p@git.acme:bad/org\nhttps://u:p@[::1]:99/x\nhttps://%3Cgit-username%3E:%3Cgit-token%3E@github.com",
+   "warnings": []
+  },
+  {
+   "set": "template",
+   "target": "netrc",
+   "existing": null,
+   "out": "machine api.heroku.com login <login> password <api-key>",
+   "warnings": []
+  },
+  {
+   "set": "template",
+   "target": "netrc",
+   "existing": "machine h1 login a password b\nmachine h2 login c password d machine h3 login e password f\ndefault login anon password x\n",
+   "out": "machine h1 login a password b\nmachine h2 login c password d machine h3 login e password f\ndefault login anon password x\nmachine api.heroku.com login <login> password <api-key>",
+   "warnings": []
+  },
+  {
+   "set": "template",
+   "target": "_json",
+   "existing": null,
+   "out": "{\n  \"composer\": [\n    {\n      \"host\": \"github.com\",\n      \"kind\": \"token\",\n      \"token\": \"********\"\n    },\n    {\n      \"host\": \"gitlab.example.org\",\n      \"kind\": \"token\",\n      \"token\": \"********\"\n    },\n    {\n      \"host\": \"gitlab.com\",\n      \"kind\": \"token\",\n      \"token\": \"********\"\n    },\n    {\n      \"host\": \"bitbucket.org\",\n      \"kind\": \"pair\",\n      \"secret\": \"********\",\n      \"key\": \"********\"\n    },\n    {\n      \"host\": \"repo.packagist.com\",\n      \"kind\": \"basic\",\n      \"password\": \"********\",\n      \"username\": \"<username>\"\n    },\n    {\n      \"host\": \"repo.magento.com\",\n      \"kind\": \"basic\",\n      \"password\": \"********\",\n      \"username\": \"<magento-public-key>\"\n    },\n    {\n      \"host\": \"private.example.org\",\n      \"kind\": \"token\",\n      \"token\": \"********\"\n    },\n    {\n      \"host\": \"repo.example.org\",\n      \"kind\": \"headers\",\n      \"headers\": \"2 header(s)\"\n    },\n    {\n      \"host\": \"code.example.org\",\n      \"kind\": \"token\",\n      \"token\": \"********\"\n    }\n  ],\n  \"npm\": [\n    {\n      \"host\": \"registry.npmjs.org\",\n      \"kind\": \"token\",\n      \"token\": \"********\"\n    },\n    {\n      \"host\": \"npm.pkg.github.com\",\n      \"kind\": \"token\",\n      \"token\": \"********\",\n      \"scope\": \"@your-org\"\n    }\n  ],\n  \"docker\": [\n    {\n      \"host\": \"ghcr.io\",\n      \"kind\": \"basic\",\n      \"password\": \"********\",\n      \"username\": \"<docker-username>\"\n    }\n  ],\n  \"git\": [\n    {\n      \"host\": \"github.com\",\n      \"kind\": \"basic\",\n      \"password\": \"********\",\n      \"username\": \"<git-username>\"\n    }\n  ],\n  \"netrc\": [\n    {\n      \"host\": \"api.heroku.com\",\n      \"kind\": \"basic\",\n      \"password\": \"********\",\n      \"username\": \"<login>\"\n    }\n  ]\n}",
+   "warnings": []
+  },
+  {
+   "set": "template",
+   "target": "_composer_env",
+   "existing": null,
+   "out": "export COMPOSER_AUTH='{\"github-oauth\":{\"github.com\":\"<github-personal-access-token>\"},\"gitlab-oauth\":{\"gitlab.example.org\":\"<gitlab-oauth-token>\"},\"gitlab-token\":{\"gitlab.com\":\"<gitlab-personal-or-deploy-token>\"},\"bitbucket-oauth\":{\"bitbucket.org\":{\"consumer-key\":\"<consumer-key>\",\"consumer-secret\":\"<consumer-secret>\"}},\"http-basic\":{\"repo.packagist.com\":{\"username\":\"<username>\",\"password\":\"<password>\"},\"repo.magento.com\":{\"username\":\"<magento-public-key>\",\"password\":\"<magento-private-key>\"}},\"bearer\":{\"private.example.org\":\"<bearer-token>\"},\"custom-headers\":{\"repo.example.org\":[\"API-TOKEN: <token>\",\"X-Org: acme\"]},\"forgejo-token\":{\"code.example.org\":\"<forgejo-token>\"}}'",
+   "warnings": []
+  },
+  {
+   "set": "mixed",
+   "target": "composer",
+   "existing": null,
+   "out": "{\n  \"github-oauth\": {\n    \"github.com\": \"ghp_x\"\n  },\n  \"http-basic\": {\n    \"repo.magento.com\": {\n      \"username\": \"pub\",\n      \"password\": \"pri\"\n    }\n  },\n  \"bitbucket-oauth\": {\n    \"bitbucket.org\": {\n      \"consumer-key\": \"k\",\n      \"consumer-secret\": \"s\"\n    }\n  },\n  \"custom-headers\": {\n    \"r.example.org\": [\n      \"A: b\",\n      \"Caf\\u00e9: \\u2603 \\ud83d\\ude00\"\n    ]\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "mixed",
+   "target": "composer",
+   "existing": "",
+   "out": "{\n  \"github-oauth\": {\n    \"github.com\": \"ghp_x\"\n  },\n  \"http-basic\": {\n    \"repo.magento.com\": {\n      \"username\": \"pub\",\n      \"password\": \"pri\"\n    }\n  },\n  \"bitbucket-oauth\": {\n    \"bitbucket.org\": {\n      \"consumer-key\": \"k\",\n      \"consumer-secret\": \"s\"\n    }\n  },\n  \"custom-headers\": {\n    \"r.example.org\": [\n      \"A: b\",\n      \"Caf\\u00e9: \\u2603 \\ud83d\\ude00\"\n    ]\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "mixed",
+   "target": "composer",
+   "existing": "   \n",
+   "out": "{\n  \"github-oauth\": {\n    \"github.com\": \"ghp_x\"\n  },\n  \"http-basic\": {\n    \"repo.magento.com\": {\n      \"username\": \"pub\",\n      \"password\": \"pri\"\n    }\n  },\n  \"bitbucket-oauth\": {\n    \"bitbucket.org\": {\n      \"consumer-key\": \"k\",\n      \"consumer-secret\": \"s\"\n    }\n  },\n  \"custom-headers\": {\n    \"r.example.org\": [\n      \"A: b\",\n      \"Caf\\u00e9: \\u2603 \\ud83d\\ude00\"\n    ]\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "mixed",
+   "target": "composer",
+   "existing": "{\"github-oauth\": {\"other.com\": \"keep\", \"github.com\": \"old\"}, \"zeta\": 1, \"http-basic\": \"notadict\", \"config\": {\"x\": [1, 2.5, true, null]}}",
+   "out": "{\n  \"github-oauth\": {\n    \"other.com\": \"keep\",\n    \"github.com\": \"ghp_x\"\n  },\n  \"zeta\": 1,\n  \"http-basic\": {\n    \"repo.magento.com\": {\n      \"username\": \"pub\",\n      \"password\": \"pri\"\n    }\n  },\n  \"config\": {\n    \"x\": [\n      1,\n      2.5,\n      true,\n      null\n    ]\n  },\n  \"bitbucket-oauth\": {\n    \"bitbucket.org\": {\n      \"consumer-key\": \"k\",\n      \"consumer-secret\": \"s\"\n    }\n  },\n  \"custom-headers\": {\n    \"r.example.org\": [\n      \"A: b\",\n      \"Caf\\u00e9: \\u2603 \\ud83d\\ude00\"\n    ]\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "mixed",
+   "target": "composer",
+   "existing": "{\"gitlab-token\": {}, \"bearer\": {\"a\": \"b\"}}",
+   "out": "{\n  \"gitlab-token\": {},\n  \"bearer\": {\n    \"a\": \"b\"\n  },\n  \"github-oauth\": {\n    \"github.com\": \"ghp_x\"\n  },\n  \"http-basic\": {\n    \"repo.magento.com\": {\n      \"username\": \"pub\",\n      \"password\": \"pri\"\n    }\n  },\n  \"bitbucket-oauth\": {\n    \"bitbucket.org\": {\n      \"consumer-key\": \"k\",\n      \"consumer-secret\": \"s\"\n    }\n  },\n  \"custom-headers\": {\n    \"r.example.org\": [\n      \"A: b\",\n      \"Caf\\u00e9: \\u2603 \\ud83d\\ude00\"\n    ]\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "mixed",
+   "target": "docker",
+   "existing": null,
+   "out": "{\n  \"auths\": {\n    \"ghcr.io\": {\n      \"auth\": \"dTpwOnc=\"\n    }\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "mixed",
+   "target": "docker",
+   "existing": "{\"credsStore\": \"desktop\", \"auths\": {\"ghcr.io\": {\"auth\": \"b2xk\"}, \"quay.io\": {}}, \"proxies\": {\"default\": {\"httpProxy\": \"http://p\"}}}",
+   "out": "{\n  \"credsStore\": \"desktop\",\n  \"auths\": {\n    \"ghcr.io\": {\n      \"auth\": \"dTpwOnc=\"\n    },\n    \"quay.io\": {}\n  },\n  \"proxies\": {\n    \"default\": {\n      \"httpProxy\": \"http://p\"\n    }\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "mixed",
+   "target": "docker",
+   "existing": "{\"auths\": \"weird\", \"x\": \"é\"}",
+   "out": "{\n  \"auths\": {\n    \"ghcr.io\": {\n      \"auth\": \"dTpwOnc=\"\n    }\n  },\n  \"x\": \"\\u00e9\"\n}",
+   "warnings": []
+  },
+  {
+   "set": "mixed",
+   "target": "npm",
+   "existing": null,
+   "out": "@org:registry=https://npm.pkg.github.com/\n//npm.pkg.github.com/:_authToken=t1\n//npm.pkg.github.com/:always-auth=true\n//registry.npmjs.org/:_authToken=t2",
+   "warnings": []
+  },
+  {
+   "set": "mixed",
+   "target": "npm",
+   "existing": "registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=old\n; comment\n# c\n\n@org:registry=https://old/\n//npm.pkg.github.com/:always-auth=true\nsave-exact=true\n",
+   "out": "registry=https://registry.npmjs.org/\n; comment\n# c\n\nsave-exact=true\n@org:registry=https://npm.pkg.github.com/\n//npm.pkg.github.com/:_authToken=t1\n//npm.pkg.github.com/:always-auth=true\n//registry.npmjs.org/:_authToken=t2",
+   "warnings": []
+  },
+  {
+   "set": "mixed",
+   "target": "npm",
+   "existing": "\n\n//x/:_authToken=y\n\n",
+   "out": "//x/:_authToken=y\n\n@org:registry=https://npm.pkg.github.com/\n//npm.pkg.github.com/:_authToken=t1\n//npm.pkg.github.com/:always-auth=true\n//registry.npmjs.org/:_authToken=t2",
+   "warnings": []
+  },
+  {
+   "set": "mixed",
+   "target": "git",
+   "existing": null,
+   "out": "https://me%40x:p%2Fw%3A%3F%23%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%20%25~@github.com\nhttp://u:p@git.acme:8443/org/",
+   "warnings": []
+  },
+  {
+   "set": "mixed",
+   "target": "git",
+   "existing": "https://u:p@github.com\n# comment\n\nhttps://a:b@gitlab.com\nhttps://u:p@GITHUB.COM/\nhttps://u:p@git.acme:8443/org\nhttps://u:p@git.acme:bad/org\nhttps://u:p@[::1]:99/x\n",
+   "out": "# comment\n\nhttps://a:b@gitlab.com\nhttps://u:p@git.acme:bad/org\nhttps://u:p@[::1]:99/x\nhttps://me%40x:p%2Fw%3A%3F%23%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%20%25~@github.com\nhttp://u:p@git.acme:8443/org/",
+   "warnings": []
+  },
+  {
+   "set": "mixed",
+   "target": "netrc",
+   "existing": null,
+   "out": "machine api.heroku.com login l password k",
+   "warnings": []
+  },
+  {
+   "set": "mixed",
+   "target": "netrc",
+   "existing": "machine h1 login a password b\nmachine h2 login c password d machine h3 login e password f\ndefault login anon password x\n",
+   "out": "machine h1 login a password b\nmachine h2 login c password d machine h3 login e password f\ndefault login anon password x\nmachine api.heroku.com login l password k",
+   "warnings": []
+  },
+  {
+   "set": "mixed",
+   "target": "_json",
+   "existing": null,
+   "out": "{\n  \"composer\": [\n    {\n      \"host\": \"github.com\",\n      \"kind\": \"token\",\n      \"token\": \"********\"\n    },\n    {\n      \"host\": \"repo.magento.com\",\n      \"kind\": \"basic\",\n      \"password\": \"********\",\n      \"username\": \"pub\"\n    },\n    {\n      \"host\": \"bitbucket.org\",\n      \"kind\": \"pair\",\n      \"secret\": \"********\",\n      \"key\": \"********\"\n    },\n    {\n      \"host\": \"r.example.org\",\n      \"kind\": \"headers\",\n      \"headers\": \"2 header(s)\"\n    }\n  ],\n  \"npm\": [\n    {\n      \"host\": \"https://npm.pkg.github.com/\",\n      \"kind\": \"token\",\n      \"token\": \"********\",\n      \"scope\": \"@org\"\n    },\n    {\n      \"host\": \"registry.npmjs.org\",\n      \"kind\": \"token\",\n      \"token\": \"********\"\n    }\n  ],\n  \"docker\": [\n    {\n      \"host\": \"ghcr.io\",\n      \"kind\": \"basic\",\n      \"password\": \"********\",\n      \"username\": \"u\"\n    }\n  ],\n  \"git\": [\n    {\n      \"host\": \"github.com\",\n      \"kind\": \"basic\",\n      \"password\": \"********\",\n      \"username\": \"me@x\"\n    },\n    {\n      \"host\": \"http://git.acme:8443/org/\",\n      \"kind\": \"basic\",\n      \"password\": \"********\",\n      \"username\": \"u\"\n    }\n  ],\n  \"netrc\": [\n    {\n      \"host\": \"api.heroku.com\",\n      \"kind\": \"basic\",\n      \"password\": \"********\",\n      \"username\": \"l\"\n    }\n  ]\n}",
+   "warnings": []
+  },
+  {
+   "set": "mixed",
+   "target": "_composer_env",
+   "existing": null,
+   "out": "export COMPOSER_AUTH='{\"github-oauth\":{\"github.com\":\"ghp_x\"},\"http-basic\":{\"repo.magento.com\":{\"username\":\"pub\",\"password\":\"pri\"}},\"bitbucket-oauth\":{\"bitbucket.org\":{\"consumer-key\":\"k\",\"consumer-secret\":\"s\"}},\"custom-headers\":{\"r.example.org\":[\"A: b\",\"Caf\\u00e9: \\u2603 \\ud83d\\ude00\"]}}'",
+   "warnings": []
+  },
+  {
+   "set": "replace",
+   "target": "composer",
+   "existing": null,
+   "out": "{\n  \"github-oauth\": {\n    \"github.com\": \"new\"\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "replace",
+   "target": "composer",
+   "existing": "",
+   "out": "{\n  \"github-oauth\": {\n    \"github.com\": \"new\"\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "replace",
+   "target": "composer",
+   "existing": "   \n",
+   "out": "{\n  \"github-oauth\": {\n    \"github.com\": \"new\"\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "replace",
+   "target": "composer",
+   "existing": "{\"github-oauth\": {\"other.com\": \"keep\", \"github.com\": \"old\"}, \"zeta\": 1, \"http-basic\": \"notadict\", \"config\": {\"x\": [1, 2.5, true, null]}}",
+   "out": "{\n  \"github-oauth\": {\n    \"other.com\": \"keep\",\n    \"github.com\": \"new\"\n  },\n  \"zeta\": 1,\n  \"http-basic\": \"notadict\",\n  \"config\": {\n    \"x\": [\n      1,\n      2.5,\n      true,\n      null\n    ]\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "replace",
+   "target": "composer",
+   "existing": "{\"gitlab-token\": {}, \"bearer\": {\"a\": \"b\"}}",
+   "out": "{\n  \"gitlab-token\": {},\n  \"bearer\": {\n    \"a\": \"b\"\n  },\n  \"github-oauth\": {\n    \"github.com\": \"new\"\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "replace",
+   "target": "docker",
+   "existing": null,
+   "out": "{\n  \"auths\": {\n    \"docker.io\": {\n      \"auth\": \"dTpw\"\n    }\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "replace",
+   "target": "docker",
+   "existing": "{\"credsStore\": \"desktop\", \"auths\": {\"ghcr.io\": {\"auth\": \"b2xk\"}, \"quay.io\": {}}, \"proxies\": {\"default\": {\"httpProxy\": \"http://p\"}}}",
+   "out": "{\n  \"credsStore\": \"desktop\",\n  \"auths\": {\n    \"ghcr.io\": {\n      \"auth\": \"b2xk\"\n    },\n    \"quay.io\": {},\n    \"docker.io\": {\n      \"auth\": \"dTpw\"\n    }\n  },\n  \"proxies\": {\n    \"default\": {\n      \"httpProxy\": \"http://p\"\n    }\n  }\n}",
+   "warnings": []
+  },
+  {
+   "set": "replace",
+   "target": "docker",
+   "existing": "{\"auths\": \"weird\", \"x\": \"é\"}",
+   "out": "{\n  \"auths\": {\n    \"docker.io\": {\n      \"auth\": \"dTpw\"\n    }\n  },\n  \"x\": \"\\u00e9\"\n}",
+   "warnings": []
+  },
+  {
+   "set": "replace",
+   "target": "npm",
+   "existing": null,
+   "out": "//registry.npmjs.org/:_authToken=n",
+   "warnings": []
+  },
+  {
+   "set": "replace",
+   "target": "npm",
+   "existing": "registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=old\n; comment\n# c\n\n@org:registry=https://old/\n//npm.pkg.github.com/:always-auth=true\nsave-exact=true\n",
+   "out": "registry=https://registry.npmjs.org/\n; comment\n# c\n\n@org:registry=https://old/\n//npm.pkg.github.com/:always-auth=true\nsave-exact=true\n//registry.npmjs.org/:_authToken=n",
+   "warnings": []
+  },
+  {
+   "set": "replace",
+   "target": "npm",
+   "existing": "\n\n//x/:_authToken=y\n\n",
+   "out": "//x/:_authToken=y\n\n//registry.npmjs.org/:_authToken=n",
+   "warnings": []
+  },
+  {
+   "set": "replace",
+   "target": "git",
+   "existing": null,
+   "out": "https://u:p@GitHub.com",
+   "warnings": []
+  },
+  {
+   "set": "replace",
+   "target": "git",
+   "existing": "https://u:p@github.com\n# comment\n\nhttps://a:b@gitlab.com\nhttps://u:p@GITHUB.COM/\nhttps://u:p@git.acme:8443/org\nhttps://u:p@git.acme:bad/org\nhttps://u:p@[::1]:99/x\n",
+   "out": "# comment\n\nhttps://a:b@gitlab.com\nhttps://u:p@git.acme:8443/org\nhttps://u:p@git.acme:bad/org\nhttps://u:p@[::1]:99/x\nhttps://u:p@GitHub.com",
+   "warnings": []
+  },
+  {
+   "set": "replace",
+   "target": "netrc",
+   "existing": null,
+   "out": "machine h1 login u password p",
+   "warnings": []
+  },
+  {
+   "set": "replace",
+   "target": "netrc",
+   "existing": "machine h1 login a password b\nmachine h2 login c password d machine h3 login e password f\ndefault login anon password x\n",
+   "out": "machine h2 login c password d machine h3 login e password f\ndefault login anon password x\nmachine h1 login u password p",
+   "warnings": []
+  },
+  {
+   "set": "replace",
+   "target": "_json",
+   "existing": null,
+   "out": "{\n  \"composer\": [\n    {\n      \"host\": \"github.com\",\n      \"kind\": \"token\",\n      \"token\": \"********\"\n    }\n  ],\n  \"npm\": [\n    {\n      \"host\": \"registry.npmjs.org\",\n      \"kind\": \"token\",\n      \"token\": \"********\"\n    }\n  ],\n  \"git\": [\n    {\n      \"host\": \"GitHub.com\",\n      \"kind\": \"basic\",\n      \"password\": \"********\",\n      \"username\": \"u\"\n    }\n  ],\n  \"netrc\": [\n    {\n      \"host\": \"h1\",\n      \"kind\": \"basic\",\n      \"password\": \"********\",\n      \"username\": \"u\"\n    }\n  ],\n  \"docker\": [\n    {\n      \"host\": \"docker.io\",\n      \"kind\": \"basic\",\n      \"password\": \"********\",\n      \"username\": \"u\"\n    }\n  ]\n}",
+   "warnings": []
+  },
+  {
+   "set": "replace",
+   "target": "_composer_env",
+   "existing": null,
+   "out": "export COMPOSER_AUTH='{\"github-oauth\":{\"github.com\":\"new\"}}'",
+   "warnings": []
+  }
+ ],
+ "scans": [
+  {
+   "target": "composer",
+   "text": "{\"github-oauth\": {\"other.com\": \"keep\", \"github.com\": \"old\"}, \"zeta\": 1, \"http-basic\": \"notadict\", \"config\": {\"x\": [1, 2.5, true, null]}}",
+   "out": [
+    {
+     "target": "composer",
+     "host": "other.com",
+     "kind": "github-oauth",
+     "username": "",
+     "secret_present": true,
+     "secret": "keep",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "composer",
+     "host": "github.com",
+     "kind": "github-oauth",
+     "username": "",
+     "secret_present": true,
+     "secret": "old",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "composer",
+     "host": "x",
+     "kind": "config",
+     "username": "",
+     "secret_present": true,
+     "secret": "1; 2.5; True; None",
+     "description": "",
+     "file": ""
+    }
+   ]
+  },
+  {
+   "target": "composer",
+   "text": "{\"gitlab-token\": {}, \"bearer\": {\"a\": \"b\"}}",
+   "out": [
+    {
+     "target": "composer",
+     "host": "a",
+     "kind": "bearer",
+     "username": "",
+     "secret_present": true,
+     "secret": "b",
+     "description": "",
+     "file": ""
+    }
+   ]
+  },
+  {
+   "target": "composer",
+   "text": "{\"http-basic\": {\"h\": {\"username\": \"u\", \"password\": \"\"}, \"b\": {\"consumer-key\": \"k\", \"consumer-secret\": \"s\"}, \"n\": {\"username\": 5, \"password\": true}}, \"custom-headers\": {\"c\": [\"a\", 1]}, \"github-oauth\": {\"e\": \"\"}}",
+   "out": [
+    {
+     "target": "composer",
+     "host": "h",
+     "kind": "http-basic",
+     "username": "u",
+     "secret_present": false,
+     "secret": "",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "composer",
+     "host": "b",
+     "kind": "http-basic",
+     "username": "k",
+     "secret_present": true,
+     "secret": "s",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "composer",
+     "host": "n",
+     "kind": "http-basic",
+     "username": "5",
+     "secret_present": true,
+     "secret": "True",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "composer",
+     "host": "c",
+     "kind": "custom-headers",
+     "username": "",
+     "secret_present": true,
+     "secret": "a; 1",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "composer",
+     "host": "e",
+     "kind": "github-oauth",
+     "username": "",
+     "secret_present": false,
+     "secret": "",
+     "description": "",
+     "file": ""
+    }
+   ]
+  },
+  {
+   "target": "composer",
+   "text": "not json",
+   "out": []
+  },
+  {
+   "target": "composer",
+   "text": "[1]",
+   "out": []
+  },
+  {
+   "target": "npm",
+   "text": "registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=old\n; comment\n# c\n\n@org:registry=https://old/\n//npm.pkg.github.com/:always-auth=true\nsave-exact=true\n",
+   "out": [
+    {
+     "target": "npm",
+     "host": "registry.npmjs.org",
+     "kind": "token",
+     "username": "",
+     "secret_present": true,
+     "secret": "old",
+     "description": "",
+     "file": ""
+    }
+   ]
+  },
+  {
+   "target": "npm",
+   "text": "\n\n//x/:_authToken=y\n\n",
+   "out": [
+    {
+     "target": "npm",
+     "host": "x",
+     "kind": "token",
+     "username": "",
+     "secret_present": true,
+     "secret": "y",
+     "description": "",
+     "file": ""
+    }
+   ]
+  },
+  {
+   "target": "npm",
+   "text": "//r1/:_auth=dTpw\n//r2/:username=bob\n//r2/:_password=c2VjcmV0\n//r3/:_auth=!!!\n//r4/:_password=bad=\n//r5:_authToken= spaced \n",
+   "out": [
+    {
+     "target": "npm",
+     "host": "r1",
+     "kind": "basic",
+     "username": "u",
+     "secret_present": true,
+     "secret": "p",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "npm",
+     "host": "r3",
+     "kind": "basic",
+     "username": "",
+     "secret_present": true,
+     "secret": "",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "npm",
+     "host": "r5",
+     "kind": "token",
+     "username": "",
+     "secret_present": true,
+     "secret": "spaced",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "npm",
+     "host": "r2",
+     "kind": "basic",
+     "username": "bob",
+     "secret_present": true,
+     "secret": "secret",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "npm",
+     "host": "r4",
+     "kind": "basic",
+     "username": "",
+     "secret_present": true,
+     "secret": "m�",
+     "description": "",
+     "file": ""
+    }
+   ]
+  },
+  {
+   "target": "docker",
+   "text": "{\"credsStore\": \"desktop\", \"auths\": {\"ghcr.io\": {\"auth\": \"b2xk\"}, \"quay.io\": {}}, \"proxies\": {\"default\": {\"httpProxy\": \"http://p\"}}}",
+   "out": [
+    {
+     "target": "docker",
+     "host": "ghcr.io",
+     "kind": "basic",
+     "username": "old",
+     "secret_present": true,
+     "secret": "",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "docker",
+     "host": "quay.io",
+     "kind": "basic",
+     "username": "",
+     "secret_present": false,
+     "secret": "",
+     "description": "",
+     "file": ""
+    }
+   ]
+  },
+  {
+   "target": "docker",
+   "text": "{\"auths\": \"weird\", \"x\": \"é\"}",
+   "out": []
+  },
+  {
+   "target": "docker",
+   "text": "{\"auths\": {\"a\": {\"auth\": \"dTpwOng=\"}, \"b\": {\"identitytoken\": \"idt\"}, \"c\": {\"auth\": \"%%%\"}, \"d\": \"s\"}}",
+   "out": [
+    {
+     "target": "docker",
+     "host": "a",
+     "kind": "basic",
+     "username": "u",
+     "secret_present": true,
+     "secret": "p:x",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "docker",
+     "host": "b",
+     "kind": "basic",
+     "username": "",
+     "secret_present": true,
+     "secret": "idt",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "docker",
+     "host": "c",
+     "kind": "basic",
+     "username": "",
+     "secret_present": true,
+     "secret": "",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "docker",
+     "host": "d",
+     "kind": "basic",
+     "username": "",
+     "secret_present": false,
+     "secret": "",
+     "description": "",
+     "file": ""
+    }
+   ]
+  },
+  {
+   "target": "docker",
+   "text": "nope",
+   "out": []
+  },
+  {
+   "target": "git",
+   "text": "https://u:p@github.com\n# comment\n\nhttps://a:b@gitlab.com\nhttps://u:p@GITHUB.COM/\nhttps://u:p@git.acme:8443/org\nhttps://u:p@git.acme:bad/org\nhttps://u:p@[::1]:99/x\n",
+   "out": [
+    {
+     "target": "git",
+     "host": "github.com",
+     "kind": "basic",
+     "username": "u",
+     "secret_present": true,
+     "secret": "p",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "git",
+     "host": "gitlab.com",
+     "kind": "basic",
+     "username": "a",
+     "secret_present": true,
+     "secret": "b",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "git",
+     "host": "github.com",
+     "kind": "basic",
+     "username": "u",
+     "secret_present": true,
+     "secret": "p",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "git",
+     "host": "git.acme:8443/org",
+     "kind": "basic",
+     "username": "u",
+     "secret_present": true,
+     "secret": "p",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "git",
+     "host": "git.acme:bad/org",
+     "kind": "basic",
+     "username": "",
+     "secret_present": false,
+     "secret": "",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "git",
+     "host": "::1:99/x",
+     "kind": "basic",
+     "username": "u",
+     "secret_present": true,
+     "secret": "p",
+     "description": "",
+     "file": ""
+    }
+   ]
+  },
+  {
+   "target": "git",
+   "text": "github.com\nhttps://%E2%9C%93:p%2Fw%ZZ@h.example/x/\nftp://u@h2\nhttps://u:@h3\nhttps://u:p@[bad]/x\nhttps://u:p@h4:0/\nhttps://u:p@h5:070000\n",
+   "out": [
+    {
+     "target": "git",
+     "host": "github.com",
+     "kind": "basic",
+     "username": "",
+     "secret_present": false,
+     "secret": "",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "git",
+     "host": "h.example/x",
+     "kind": "basic",
+     "username": "✓",
+     "secret_present": true,
+     "secret": "p/w%ZZ",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "git",
+     "host": "h2",
+     "kind": "basic",
+     "username": "u",
+     "secret_present": false,
+     "secret": "",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "git",
+     "host": "h3",
+     "kind": "basic",
+     "username": "u",
+     "secret_present": false,
+     "secret": "",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "git",
+     "host": "[bad]/x",
+     "kind": "basic",
+     "username": "",
+     "secret_present": false,
+     "secret": "",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "git",
+     "host": "h4",
+     "kind": "basic",
+     "username": "u",
+     "secret_present": true,
+     "secret": "p",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "git",
+     "host": "h5:070000",
+     "kind": "basic",
+     "username": "",
+     "secret_present": false,
+     "secret": "",
+     "description": "",
+     "file": ""
+    }
+   ]
+  },
+  {
+   "target": "netrc",
+   "text": "machine h1 login a password b\nmachine h2 login c password d machine h3 login e password f\ndefault login anon password x\n",
+   "out": [
+    {
+     "target": "netrc",
+     "host": "h1",
+     "kind": "basic",
+     "username": "a",
+     "secret_present": true,
+     "secret": "b",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "netrc",
+     "host": "h2",
+     "kind": "basic",
+     "username": "c",
+     "secret_present": true,
+     "secret": "d",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "netrc",
+     "host": "h3",
+     "kind": "basic",
+     "username": "e",
+     "secret_present": true,
+     "secret": "f",
+     "description": "",
+     "file": ""
+    }
+   ]
+  },
+  {
+   "target": "netrc",
+   "text": "machine m1 login\nmachine m2 password p login l account a\nmacdef init\ncd /\n\nmachine m3 login x password y\nmachine",
+   "out": [
+    {
+     "target": "netrc",
+     "host": "m1",
+     "kind": "basic",
+     "username": "",
+     "secret_present": false,
+     "secret": "",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "netrc",
+     "host": "m2",
+     "kind": "basic",
+     "username": "l",
+     "secret_present": true,
+     "secret": "p",
+     "description": "",
+     "file": ""
+    },
+    {
+     "target": "netrc",
+     "host": "m3",
+     "kind": "basic",
+     "username": "x",
+     "secret_present": true,
+     "secret": "y",
+     "description": "",
+     "file": ""
+    }
+   ]
+  }
+ ],
+ "purges": [
+  {
+   "target": "composer",
+   "host": "github.com",
+   "text": "{\"github-oauth\": {\"other.com\": \"keep\", \"github.com\": \"old\"}, \"zeta\": 1, \"http-basic\": \"notadict\", \"config\": {\"x\": [1, 2.5, true, null]}}",
+   "out": "{\n  \"github-oauth\": {\n    \"other.com\": \"keep\"\n  },\n  \"zeta\": 1,\n  \"http-basic\": \"notadict\",\n  \"config\": {\n    \"x\": [\n      1,\n      2.5,\n      true,\n      null\n    ]\n  }\n}"
+  },
+  {
+   "target": "composer",
+   "host": "other.com",
+   "text": "{\"github-oauth\": {\"other.com\": \"keep\", \"github.com\": \"old\"}, \"zeta\": 1, \"http-basic\": \"notadict\", \"config\": {\"x\": [1, 2.5, true, null]}}",
+   "out": "{\n  \"github-oauth\": {\n    \"github.com\": \"old\"\n  },\n  \"zeta\": 1,\n  \"http-basic\": \"notadict\",\n  \"config\": {\n    \"x\": [\n      1,\n      2.5,\n      true,\n      null\n    ]\n  }\n}"
+  },
+  {
+   "target": "composer",
+   "host": "a",
+   "text": "{\"github-oauth\": {\"other.com\": \"keep\", \"github.com\": \"old\"}, \"zeta\": 1, \"http-basic\": \"notadict\", \"config\": {\"x\": [1, 2.5, true, null]}}",
+   "out": "{\n  \"github-oauth\": {\n    \"other.com\": \"keep\",\n    \"github.com\": \"old\"\n  },\n  \"zeta\": 1,\n  \"http-basic\": \"notadict\",\n  \"config\": {\n    \"x\": [\n      1,\n      2.5,\n      true,\n      null\n    ]\n  }\n}"
+  },
+  {
+   "target": "composer",
+   "host": "github.com",
+   "text": "{\"gitlab-token\": {}, \"bearer\": {\"a\": \"b\"}}",
+   "out": "{\n  \"bearer\": {\n    \"a\": \"b\"\n  }\n}"
+  },
+  {
+   "target": "composer",
+   "host": "other.com",
+   "text": "{\"gitlab-token\": {}, \"bearer\": {\"a\": \"b\"}}",
+   "out": "{\n  \"bearer\": {\n    \"a\": \"b\"\n  }\n}"
+  },
+  {
+   "target": "composer",
+   "host": "a",
+   "text": "{\"gitlab-token\": {}, \"bearer\": {\"a\": \"b\"}}",
+   "out": "{}"
+  },
+  {
+   "target": "composer",
+   "host": "github.com",
+   "text": "{\"http-basic\": {\"h\": {\"username\": \"u\", \"password\": \"\"}, \"b\": {\"consumer-key\": \"k\", \"consumer-secret\": \"s\"}, \"n\": {\"username\": 5, \"password\": true}}, \"custom-headers\": {\"c\": [\"a\", 1]}, \"github-oauth\": {\"e\": \"\"}}",
+   "out": "{\n  \"http-basic\": {\n    \"h\": {\n      \"username\": \"u\",\n      \"password\": \"\"\n    },\n    \"b\": {\n      \"consumer-key\": \"k\",\n      \"consumer-secret\": \"s\"\n    },\n    \"n\": {\n      \"username\": 5,\n      \"password\": true\n    }\n  },\n  \"custom-headers\": {\n    \"c\": [\n      \"a\",\n      1\n    ]\n  },\n  \"github-oauth\": {\n    \"e\": \"\"\n  }\n}"
+  },
+  {
+   "target": "composer",
+   "host": "other.com",
+   "text": "{\"http-basic\": {\"h\": {\"username\": \"u\", \"password\": \"\"}, \"b\": {\"consumer-key\": \"k\", \"consumer-secret\": \"s\"}, \"n\": {\"username\": 5, \"password\": true}}, \"custom-headers\": {\"c\": [\"a\", 1]}, \"github-oauth\": {\"e\": \"\"}}",
+   "out": "{\n  \"http-basic\": {\n    \"h\": {\n      \"username\": \"u\",\n      \"password\": \"\"\n    },\n    \"b\": {\n      \"consumer-key\": \"k\",\n      \"consumer-secret\": \"s\"\n    },\n    \"n\": {\n      \"username\": 5,\n      \"password\": true\n    }\n  },\n  \"custom-headers\": {\n    \"c\": [\n      \"a\",\n      1\n    ]\n  },\n  \"github-oauth\": {\n    \"e\": \"\"\n  }\n}"
+  },
+  {
+   "target": "composer",
+   "host": "a",
+   "text": "{\"http-basic\": {\"h\": {\"username\": \"u\", \"password\": \"\"}, \"b\": {\"consumer-key\": \"k\", \"consumer-secret\": \"s\"}, \"n\": {\"username\": 5, \"password\": true}}, \"custom-headers\": {\"c\": [\"a\", 1]}, \"github-oauth\": {\"e\": \"\"}}",
+   "out": "{\n  \"http-basic\": {\n    \"h\": {\n      \"username\": \"u\",\n      \"password\": \"\"\n    },\n    \"b\": {\n      \"consumer-key\": \"k\",\n      \"consumer-secret\": \"s\"\n    },\n    \"n\": {\n      \"username\": 5,\n      \"password\": true\n    }\n  },\n  \"custom-headers\": {\n    \"c\": [\n      \"a\",\n      1\n    ]\n  },\n  \"github-oauth\": {\n    \"e\": \"\"\n  }\n}"
+  },
+  {
+   "target": "composer",
+   "host": "github.com",
+   "text": "not json",
+   "out": "not json"
+  },
+  {
+   "target": "composer",
+   "host": "other.com",
+   "text": "not json",
+   "out": "not json"
+  },
+  {
+   "target": "composer",
+   "host": "a",
+   "text": "not json",
+   "out": "not json"
+  },
+  {
+   "target": "composer",
+   "host": "github.com",
+   "text": "[1]",
+   "out": "[1]"
+  },
+  {
+   "target": "composer",
+   "host": "other.com",
+   "text": "[1]",
+   "out": "[1]"
+  },
+  {
+   "target": "composer",
+   "host": "a",
+   "text": "[1]",
+   "out": "[1]"
+  },
+  {
+   "target": "npm",
+   "host": "registry.npmjs.org",
+   "text": "registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=old\n; comment\n# c\n\n@org:registry=https://old/\n//npm.pkg.github.com/:always-auth=true\nsave-exact=true\n",
+   "out": "registry=https://registry.npmjs.org/\n; comment\n# c\n\n@org:registry=https://old/\n//npm.pkg.github.com/:always-auth=true\nsave-exact=true"
+  },
+  {
+   "target": "npm",
+   "host": "https://old/",
+   "text": "registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=old\n; comment\n# c\n\n@org:registry=https://old/\n//npm.pkg.github.com/:always-auth=true\nsave-exact=true\n",
+   "out": "registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=old\n; comment\n# c\n\n//npm.pkg.github.com/:always-auth=true\nsave-exact=true"
+  },
+  {
+   "target": "npm",
+   "host": "npm.pkg.github.com",
+   "text": "registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=old\n; comment\n# c\n\n@org:registry=https://old/\n//npm.pkg.github.com/:always-auth=true\nsave-exact=true\n",
+   "out": "registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=old\n; comment\n# c\n\n@org:registry=https://old/\nsave-exact=true"
+  },
+  {
+   "target": "npm",
+   "host": "registry.npmjs.org",
+   "text": "\n\n//x/:_authToken=y\n\n",
+   "out": "\n\n//x/:_authToken=y\n"
+  },
+  {
+   "target": "npm",
+   "host": "https://old/",
+   "text": "\n\n//x/:_authToken=y\n\n",
+   "out": "\n\n//x/:_authToken=y\n"
+  },
+  {
+   "target": "npm",
+   "host": "npm.pkg.github.com",
+   "text": "\n\n//x/:_authToken=y\n\n",
+   "out": "\n\n//x/:_authToken=y\n"
+  },
+  {
+   "target": "npm",
+   "host": "registry.npmjs.org",
+   "text": "//r1/:_auth=dTpw\n//r2/:username=bob\n//r2/:_password=c2VjcmV0\n//r3/:_auth=!!!\n//r4/:_password=bad=\n//r5:_authToken= spaced \n",
+   "out": "//r1/:_auth=dTpw\n//r2/:username=bob\n//r2/:_password=c2VjcmV0\n//r3/:_auth=!!!\n//r4/:_password=bad=\n//r5:_authToken= spaced "
+  },
+  {
+   "target": "npm",
+   "host": "https://old/",
+   "text": "//r1/:_auth=dTpw\n//r2/:username=bob\n//r2/:_password=c2VjcmV0\n//r3/:_auth=!!!\n//r4/:_password=bad=\n//r5:_authToken= spaced \n",
+   "out": "//r1/:_auth=dTpw\n//r2/:username=bob\n//r2/:_password=c2VjcmV0\n//r3/:_auth=!!!\n//r4/:_password=bad=\n//r5:_authToken= spaced "
+  },
+  {
+   "target": "npm",
+   "host": "npm.pkg.github.com",
+   "text": "//r1/:_auth=dTpw\n//r2/:username=bob\n//r2/:_password=c2VjcmV0\n//r3/:_auth=!!!\n//r4/:_password=bad=\n//r5:_authToken= spaced \n",
+   "out": "//r1/:_auth=dTpw\n//r2/:username=bob\n//r2/:_password=c2VjcmV0\n//r3/:_auth=!!!\n//r4/:_password=bad=\n//r5:_authToken= spaced "
+  },
+  {
+   "target": "docker",
+   "host": "ghcr.io",
+   "text": "{\"credsStore\": \"desktop\", \"auths\": {\"ghcr.io\": {\"auth\": \"b2xk\"}, \"quay.io\": {}}, \"proxies\": {\"default\": {\"httpProxy\": \"http://p\"}}}",
+   "out": "{\n  \"credsStore\": \"desktop\",\n  \"auths\": {\n    \"quay.io\": {}\n  },\n  \"proxies\": {\n    \"default\": {\n      \"httpProxy\": \"http://p\"\n    }\n  }\n}"
+  },
+  {
+   "target": "docker",
+   "host": "quay.io",
+   "text": "{\"credsStore\": \"desktop\", \"auths\": {\"ghcr.io\": {\"auth\": \"b2xk\"}, \"quay.io\": {}}, \"proxies\": {\"default\": {\"httpProxy\": \"http://p\"}}}",
+   "out": "{\n  \"credsStore\": \"desktop\",\n  \"auths\": {\n    \"ghcr.io\": {\n      \"auth\": \"b2xk\"\n    }\n  },\n  \"proxies\": {\n    \"default\": {\n      \"httpProxy\": \"http://p\"\n    }\n  }\n}"
+  },
+  {
+   "target": "docker",
+   "host": "a",
+   "text": "{\"credsStore\": \"desktop\", \"auths\": {\"ghcr.io\": {\"auth\": \"b2xk\"}, \"quay.io\": {}}, \"proxies\": {\"default\": {\"httpProxy\": \"http://p\"}}}",
+   "out": "{\n  \"credsStore\": \"desktop\",\n  \"auths\": {\n    \"ghcr.io\": {\n      \"auth\": \"b2xk\"\n    },\n    \"quay.io\": {}\n  },\n  \"proxies\": {\n    \"default\": {\n      \"httpProxy\": \"http://p\"\n    }\n  }\n}"
+  },
+  {
+   "target": "docker",
+   "host": "ghcr.io",
+   "text": "{\"auths\": \"weird\", \"x\": \"é\"}",
+   "out": "{\n  \"auths\": \"weird\",\n  \"x\": \"\\u00e9\"\n}"
+  },
+  {
+   "target": "docker",
+   "host": "quay.io",
+   "text": "{\"auths\": \"weird\", \"x\": \"é\"}",
+   "out": "{\n  \"auths\": \"weird\",\n  \"x\": \"\\u00e9\"\n}"
+  },
+  {
+   "target": "docker",
+   "host": "a",
+   "text": "{\"auths\": \"weird\", \"x\": \"é\"}",
+   "out": "{\n  \"auths\": \"weird\",\n  \"x\": \"\\u00e9\"\n}"
+  },
+  {
+   "target": "docker",
+   "host": "ghcr.io",
+   "text": "{\"auths\": {\"a\": {\"auth\": \"dTpwOng=\"}, \"b\": {\"identitytoken\": \"idt\"}, \"c\": {\"auth\": \"%%%\"}, \"d\": \"s\"}}",
+   "out": "{\n  \"auths\": {\n    \"a\": {\n      \"auth\": \"dTpwOng=\"\n    },\n    \"b\": {\n      \"identitytoken\": \"idt\"\n    },\n    \"c\": {\n      \"auth\": \"%%%\"\n    },\n    \"d\": \"s\"\n  }\n}"
+  },
+  {
+   "target": "docker",
+   "host": "quay.io",
+   "text": "{\"auths\": {\"a\": {\"auth\": \"dTpwOng=\"}, \"b\": {\"identitytoken\": \"idt\"}, \"c\": {\"auth\": \"%%%\"}, \"d\": \"s\"}}",
+   "out": "{\n  \"auths\": {\n    \"a\": {\n      \"auth\": \"dTpwOng=\"\n    },\n    \"b\": {\n      \"identitytoken\": \"idt\"\n    },\n    \"c\": {\n      \"auth\": \"%%%\"\n    },\n    \"d\": \"s\"\n  }\n}"
+  },
+  {
+   "target": "docker",
+   "host": "a",
+   "text": "{\"auths\": {\"a\": {\"auth\": \"dTpwOng=\"}, \"b\": {\"identitytoken\": \"idt\"}, \"c\": {\"auth\": \"%%%\"}, \"d\": \"s\"}}",
+   "out": "{\n  \"auths\": {\n    \"b\": {\n      \"identitytoken\": \"idt\"\n    },\n    \"c\": {\n      \"auth\": \"%%%\"\n    },\n    \"d\": \"s\"\n  }\n}"
+  },
+  {
+   "target": "docker",
+   "host": "ghcr.io",
+   "text": "nope",
+   "out": "nope"
+  },
+  {
+   "target": "docker",
+   "host": "quay.io",
+   "text": "nope",
+   "out": "nope"
+  },
+  {
+   "target": "docker",
+   "host": "a",
+   "text": "nope",
+   "out": "nope"
+  },
+  {
+   "target": "git",
+   "host": "github.com",
+   "text": "https://u:p@github.com\n# comment\n\nhttps://a:b@gitlab.com\nhttps://u:p@GITHUB.COM/\nhttps://u:p@git.acme:8443/org\nhttps://u:p@git.acme:bad/org\nhttps://u:p@[::1]:99/x\n",
+   "out": "# comment\n\nhttps://a:b@gitlab.com\nhttps://u:p@git.acme:8443/org\nhttps://u:p@git.acme:bad/org\nhttps://u:p@[::1]:99/x"
+  },
+  {
+   "target": "git",
+   "host": "https://GitHub.com/",
+   "text": "https://u:p@github.com\n# comment\n\nhttps://a:b@gitlab.com\nhttps://u:p@GITHUB.COM/\nhttps://u:p@git.acme:8443/org\nhttps://u:p@git.acme:bad/org\nhttps://u:p@[::1]:99/x\n",
+   "out": "# comment\n\nhttps://a:b@gitlab.com\nhttps://u:p@git.acme:8443/org\nhttps://u:p@git.acme:bad/org\nhttps://u:p@[::1]:99/x"
+  },
+  {
+   "target": "git",
+   "host": "git.acme:8443/org",
+   "text": "https://u:p@github.com\n# comment\n\nhttps://a:b@gitlab.com\nhttps://u:p@GITHUB.COM/\nhttps://u:p@git.acme:8443/org\nhttps://u:p@git.acme:bad/org\nhttps://u:p@[::1]:99/x\n",
+   "out": "https://u:p@github.com\n# comment\n\nhttps://a:b@gitlab.com\nhttps://u:p@GITHUB.COM/\nhttps://u:p@git.acme:bad/org\nhttps://u:p@[::1]:99/x"
+  },
+  {
+   "target": "git",
+   "host": "git.acme:bad/org",
+   "text": "https://u:p@github.com\n# comment\n\nhttps://a:b@gitlab.com\nhttps://u:p@GITHUB.COM/\nhttps://u:p@git.acme:8443/org\nhttps://u:p@git.acme:bad/org\nhttps://u:p@[::1]:99/x\n",
+   "out": "https://u:p@github.com\n# comment\n\nhttps://a:b@gitlab.com\nhttps://u:p@GITHUB.COM/\nhttps://u:p@git.acme:8443/org\nhttps://u:p@[::1]:99/x"
+  },
+  {
+   "target": "git",
+   "host": "github.com",
+   "text": "github.com\nhttps://%E2%9C%93:p%2Fw%ZZ@h.example/x/\nftp://u@h2\nhttps://u:@h3\nhttps://u:p@[bad]/x\nhttps://u:p@h4:0/\nhttps://u:p@h5:070000\n",
+   "out": "https://%E2%9C%93:p%2Fw%ZZ@h.example/x/\nftp://u@h2\nhttps://u:@h3\nhttps://u:p@[bad]/x\nhttps://u:p@h4:0/\nhttps://u:p@h5:070000"
+  },
+  {
+   "target": "git",
+   "host": "https://GitHub.com/",
+   "text": "github.com\nhttps://%E2%9C%93:p%2Fw%ZZ@h.example/x/\nftp://u@h2\nhttps://u:@h3\nhttps://u:p@[bad]/x\nhttps://u:p@h4:0/\nhttps://u:p@h5:070000\n",
+   "out": "https://%E2%9C%93:p%2Fw%ZZ@h.example/x/\nftp://u@h2\nhttps://u:@h3\nhttps://u:p@[bad]/x\nhttps://u:p@h4:0/\nhttps://u:p@h5:070000"
+  },
+  {
+   "target": "git",
+   "host": "git.acme:8443/org",
+   "text": "github.com\nhttps://%E2%9C%93:p%2Fw%ZZ@h.example/x/\nftp://u@h2\nhttps://u:@h3\nhttps://u:p@[bad]/x\nhttps://u:p@h4:0/\nhttps://u:p@h5:070000\n",
+   "out": "github.com\nhttps://%E2%9C%93:p%2Fw%ZZ@h.example/x/\nftp://u@h2\nhttps://u:@h3\nhttps://u:p@[bad]/x\nhttps://u:p@h4:0/\nhttps://u:p@h5:070000"
+  },
+  {
+   "target": "git",
+   "host": "git.acme:bad/org",
+   "text": "github.com\nhttps://%E2%9C%93:p%2Fw%ZZ@h.example/x/\nftp://u@h2\nhttps://u:@h3\nhttps://u:p@[bad]/x\nhttps://u:p@h4:0/\nhttps://u:p@h5:070000\n",
+   "out": "github.com\nhttps://%E2%9C%93:p%2Fw%ZZ@h.example/x/\nftp://u@h2\nhttps://u:@h3\nhttps://u:p@[bad]/x\nhttps://u:p@h4:0/\nhttps://u:p@h5:070000"
+  },
+  {
+   "target": "netrc",
+   "host": "h1",
+   "text": "machine h1 login a password b\nmachine h2 login c password d machine h3 login e password f\ndefault login anon password x\n",
+   "out": "machine h2 login c password d\nmachine h3 login e password f\ndefault login anon password x"
+  },
+  {
+   "target": "netrc",
+   "host": "h2",
+   "text": "machine h1 login a password b\nmachine h2 login c password d machine h3 login e password f\ndefault login anon password x\n",
+   "out": "machine h1 login a password b\nmachine h3 login e password f\ndefault login anon password x"
+  },
+  {
+   "target": "netrc",
+   "host": "m3",
+   "text": "machine h1 login a password b\nmachine h2 login c password d machine h3 login e password f\ndefault login anon password x\n",
+   "out": "machine h1 login a password b\nmachine h2 login c password d\nmachine h3 login e password f\ndefault login anon password x"
+  },
+  {
+   "target": "netrc",
+   "host": "h1",
+   "text": "machine m1 login\nmachine m2 password p login l account a\nmacdef init\ncd /\n\nmachine m3 login x password y\nmachine",
+   "out": "machine m1 login\nmachine m2 password p login l account a\nmacdef init\ncd /\n\nmachine m3 login x password y\nmachine"
+  },
+  {
+   "target": "netrc",
+   "host": "h2",
+   "text": "machine m1 login\nmachine m2 password p login l account a\nmacdef init\ncd /\n\nmachine m3 login x password y\nmachine",
+   "out": "machine m1 login\nmachine m2 password p login l account a\nmacdef init\ncd /\n\nmachine m3 login x password y\nmachine"
+  },
+  {
+   "target": "netrc",
+   "host": "m3",
+   "text": "machine m1 login\nmachine m2 password p login l account a\nmacdef init\ncd /\n\nmachine m3 login x password y\nmachine",
+   "out": "machine m1 login\nmachine m2 password p login l account a\nmacdef init\ncd /\n\nmachine"
+  }
+ ],
+ "misc": {
+  "gitkey": {
+   "github.com": "github.com",
+   "GitHub.com/": "github.com",
+   "https://u:p@Git.Acme:8443/Org/": "git.acme:8443/Org",
+   "git.acme:bad": "git.acme:bad",
+   "h:0": "h",
+   "h:65536": "h:65536",
+   "dev.azure.com/org": "dev.azure.com/org",
+   "[::1]:22": "::1:22",
+   "https://[v1.x]/a": "v1.x/a",
+   "ssh://h?x#y": "h",
+   "u@h": "h",
+   "HTTPS://H/p": "h/p"
+  },
+  "quote": {
+   "a b": "a%20b",
+   "é": "%C3%A9",
+   "~-._": "~-._",
+   "a/b@c": "a%2Fb%40c"
+  },
+  "env_export": [
+   {
+    "shell": "posix",
+    "value": "{\"a\":\"b\"}",
+    "out": "export X='{\"a\":\"b\"}'"
+   },
+   {
+    "shell": "posix",
+    "value": "it's",
+    "out": "export X='it'\\''s'"
+   },
+   {
+    "shell": "posix",
+    "value": "a\\b'c",
+    "out": "export X='a\\b'\\''c'"
+   },
+   {
+    "shell": "posix",
+    "value": "plain",
+    "out": "export X='plain'"
+   },
+   {
+    "shell": "posix",
+    "value": "x&y|z<>^()",
+    "out": "export X='x&y|z<>^()'"
+   },
+   {
+    "shell": "fish",
+    "value": "{\"a\":\"b\"}",
+    "out": "set -gx X '{\"a\":\"b\"}'"
+   },
+   {
+    "shell": "fish",
+    "value": "it's",
+    "out": "set -gx X 'it\\'s'"
+   },
+   {
+    "shell": "fish",
+    "value": "a\\b'c",
+    "out": "set -gx X 'a\\\\b\\'c'"
+   },
+   {
+    "shell": "fish",
+    "value": "plain",
+    "out": "set -gx X 'plain'"
+   },
+   {
+    "shell": "fish",
+    "value": "x&y|z<>^()",
+    "out": "set -gx X 'x&y|z<>^()'"
+   },
+   {
+    "shell": "powershell",
+    "value": "{\"a\":\"b\"}",
+    "out": "$env:X = '{\"a\":\"b\"}'"
+   },
+   {
+    "shell": "powershell",
+    "value": "it's",
+    "out": "$env:X = 'it''s'"
+   },
+   {
+    "shell": "powershell",
+    "value": "a\\b'c",
+    "out": "$env:X = 'a\\b''c'"
+   },
+   {
+    "shell": "powershell",
+    "value": "plain",
+    "out": "$env:X = 'plain'"
+   },
+   {
+    "shell": "powershell",
+    "value": "x&y|z<>^()",
+    "out": "$env:X = 'x&y|z<>^()'"
+   },
+   {
+    "shell": "cmd",
+    "value": "{\"a\":\"b\"}",
+    "out": "set X={^\"a^\":^\"b^\"}"
+   },
+   {
+    "shell": "cmd",
+    "value": "it's",
+    "out": "set \"X=it's\""
+   },
+   {
+    "shell": "cmd",
+    "value": "a\\b'c",
+    "out": "set \"X=a\\b'c\""
+   },
+   {
+    "shell": "cmd",
+    "value": "plain",
+    "out": "set \"X=plain\""
+   },
+   {
+    "shell": "cmd",
+    "value": "x&y|z<>^()",
+    "out": "set \"X=x&y|z<>^()\""
+   }
+  ],
+  "describe": [
+   {
+    "target": "composer",
+    "host": "github.com",
+    "out": "GitHub · Composer auth (PHP packages)"
+   },
+   {
+    "target": "composer",
+    "host": "github.com/org",
+    "out": "GitHub · Composer auth (PHP packages)"
+   },
+   {
+    "target": "composer",
+    "host": "gitlab.com",
+    "out": "GitLab · Composer auth (PHP packages)"
+   },
+   {
+    "target": "composer",
+    "host": "codeberg.org",
+    "out": "Codeberg · Composer auth (PHP packages)"
+   },
+   {
+    "target": "composer",
+    "host": "dev.azure.com",
+    "out": "Azure DevOps · Composer auth (PHP packages)"
+   },
+   {
+    "target": "composer",
+    "host": "https://index.docker.io/v1/",
+    "out": "Docker Hub · Composer auth (PHP packages)"
+   },
+   {
+    "target": "composer",
+    "host": "registry.npmjs.org",
+    "out": "npm public registry · Composer auth (PHP packages)"
+   },
+   {
+    "target": "composer",
+    "host": "nowhere.example",
+    "out": "nowhere.example · Composer auth (PHP packages)"
+   },
+   {
+    "target": "composer",
+    "host": "ghcr.io",
+    "out": "GitHub Container Registry · Composer auth (PHP packages)"
+   },
+   {
+    "target": "npm",
+    "host": "github.com",
+    "out": "GitHub · npm registry token"
+   },
+   {
+    "target": "npm",
+    "host": "github.com/org",
+    "out": "GitHub · npm registry token"
+   },
+   {
+    "target": "npm",
+    "host": "gitlab.com",
+    "out": "GitLab · npm registry token"
+   },
+   {
+    "target": "npm",
+    "host": "codeberg.org",
+    "out": "Codeberg · npm registry token"
+   },
+   {
+    "target": "npm",
+    "host": "dev.azure.com",
+    "out": "Azure DevOps · npm registry token"
+   },
+   {
+    "target": "npm",
+    "host": "https://index.docker.io/v1/",
+    "out": "Docker Hub · npm registry token"
+   },
+   {
+    "target": "npm",
+    "host": "registry.npmjs.org",
+    "out": "npm public registry · npm registry token"
+   },
+   {
+    "target": "npm",
+    "host": "nowhere.example",
+    "out": "nowhere.example · npm registry token"
+   },
+   {
+    "target": "npm",
+    "host": "ghcr.io",
+    "out": "GitHub Container Registry · npm registry token"
+   },
+   {
+    "target": "docker",
+    "host": "github.com",
+    "out": "GitHub · Docker registry login"
+   },
+   {
+    "target": "docker",
+    "host": "github.com/org",
+    "out": "GitHub · Docker registry login"
+   },
+   {
+    "target": "docker",
+    "host": "gitlab.com",
+    "out": "GitLab · Docker registry login"
+   },
+   {
+    "target": "docker",
+    "host": "codeberg.org",
+    "out": "Codeberg · Docker registry login"
+   },
+   {
+    "target": "docker",
+    "host": "dev.azure.com",
+    "out": "Azure DevOps · Docker registry login"
+   },
+   {
+    "target": "docker",
+    "host": "https://index.docker.io/v1/",
+    "out": "Docker Hub · Docker registry login"
+   },
+   {
+    "target": "docker",
+    "host": "registry.npmjs.org",
+    "out": "npm public registry · Docker registry login"
+   },
+   {
+    "target": "docker",
+    "host": "nowhere.example",
+    "out": "nowhere.example · Docker registry login"
+   },
+   {
+    "target": "docker",
+    "host": "ghcr.io",
+    "out": "GitHub Container Registry · Docker registry login"
+   },
+   {
+    "target": "git",
+    "host": "github.com",
+    "out": "GitHub · Git over HTTPS"
+   },
+   {
+    "target": "git",
+    "host": "github.com/org",
+    "out": "GitHub · Git over HTTPS"
+   },
+   {
+    "target": "git",
+    "host": "gitlab.com",
+    "out": "GitLab · Git over HTTPS"
+   },
+   {
+    "target": "git",
+    "host": "codeberg.org",
+    "out": "Codeberg · Git over HTTPS"
+   },
+   {
+    "target": "git",
+    "host": "dev.azure.com",
+    "out": "Azure DevOps · Git over HTTPS"
+   },
+   {
+    "target": "git",
+    "host": "https://index.docker.io/v1/",
+    "out": "Docker Hub · Git over HTTPS"
+   },
+   {
+    "target": "git",
+    "host": "registry.npmjs.org",
+    "out": "npm public registry · Git over HTTPS"
+   },
+   {
+    "target": "git",
+    "host": "nowhere.example",
+    "out": "nowhere.example · Git over HTTPS"
+   },
+   {
+    "target": "git",
+    "host": "ghcr.io",
+    "out": "GitHub Container Registry · Git over HTTPS"
+   },
+   {
+    "target": "netrc",
+    "host": "github.com",
+    "out": "GitHub · netrc machine login"
+   },
+   {
+    "target": "netrc",
+    "host": "github.com/org",
+    "out": "GitHub · netrc machine login"
+   },
+   {
+    "target": "netrc",
+    "host": "gitlab.com",
+    "out": "GitLab · netrc machine login"
+   },
+   {
+    "target": "netrc",
+    "host": "codeberg.org",
+    "out": "Codeberg · netrc machine login"
+   },
+   {
+    "target": "netrc",
+    "host": "dev.azure.com",
+    "out": "Azure DevOps · netrc machine login"
+   },
+   {
+    "target": "netrc",
+    "host": "https://index.docker.io/v1/",
+    "out": "Docker Hub · netrc machine login"
+   },
+   {
+    "target": "netrc",
+    "host": "registry.npmjs.org",
+    "out": "npm public registry · netrc machine login"
+   },
+   {
+    "target": "netrc",
+    "host": "nowhere.example",
+    "out": "nowhere.example · netrc machine login"
+   },
+   {
+    "target": "netrc",
+    "host": "ghcr.io",
+    "out": "GitHub Container Registry · netrc machine login"
+   }
+  ],
+  "alias_block": "# >>> auth-token-manager >>>\n# Managed by `auth-token-manager-aliases` — run `… remove` to delete this block.\nalias atm='authama'\nalias atm-ui='authama --ui'\nalias atm-doctor='authama --doctor'\nalias atm-init='authama --init'\n# <<< auth-token-manager <<<",
+  "strip_block": [
+   {
+    "text": "",
+    "install": "BLOCK\n",
+    "remove": ""
+   },
+   {
+    "text": "a\n",
+    "install": "a\n\nBLOCK\n",
+    "remove": "a\n"
+   },
+   {
+    "text": "a\n\n\n# >>> auth-token-manager >>>\nold\n# <<< auth-token-manager <<<\nb\n",
+    "install": "a\nb\n\nBLOCK\n",
+    "remove": "a\nb\n"
+   },
+   {
+    "text": "x\n# >>> auth-token-manager >>>\nunterminated",
+    "install": "x\n\nBLOCK\n",
+    "remove": "x\n"
+   }
+  ]
+ },
+ "configs": {
+  "env": {
+   "GH": " tok\n",
+   "U": "user",
+   "P": "pass",
+   "EMPTY": "",
+   "K": "k",
+   "S": "s",
+   "HV": "hv"
+  },
+  "cases": [
+   {
+    "doc": {
+     "composer": {
+      "github.com": {
+       "service": "github",
+       "env": "GH"
+      },
+      "x.org": {
+       "service": "nope"
+      },
+      "y.org": {},
+      "z.org": {
+       "type": "weird",
+       "env": "GH"
+      },
+      "m.org": {
+       "service": "magento",
+       "user_env": "U",
+       "pass_env": "P"
+      },
+      "b.org": {
+       "type": "bitbucket-oauth",
+       "key_env": "K",
+       "secret_env": "S"
+      },
+      "h.org": {
+       "type": "custom-headers",
+       "headers": [
+        "X: ${HV}",
+        "E: ${EMPTY}"
+       ]
+      },
+      "h2.org": {
+       "type": "custom-headers",
+       "headers": [
+        "X: ${MISSING}"
+       ]
+      },
+      "e.org": {
+       "service": "github",
+       "env": "EMPTY"
+      }
+     },
+     "npm": {
+      "r": {
+       "env": "GH",
+       "scope": "@o",
+       "always_auth": true
+      },
+      "r2": {
+       "env": "MISSING"
+      }
+     },
+     "docker": {
+      "d": {
+       "user_env": "U",
+       "pass_env": "P"
+      }
+     },
+     "git": {
+      "g": {
+       "user_env": "U",
+       "pass_env": "MISSING"
+      }
+     },
+     "netrc": {
+      "n": {
+       "user_env": "U",
+       "pass_env": "P"
+      }
+     },
+     "_help": "ignored"
+    },
+    "warnings": [
+     "skip composer:x.org: unknown service 'nope'",
+     "skip composer:y.org: missing 'type'/'service'",
+     "skip composer:z.org: unsupported type 'weird'",
+     "skip composer:z.org: required env var(s) not set",
+     "skip composer:h2.org: required env var(s) not set",
+     "skip composer:e.org: required env var(s) not set",
+     "skip npm:r2: required env var(s) not set",
+     "skip git:g: required env var(s) not set"
+    ],
+    "renders": {
+     "composer": "{\n  \"github-oauth\": {\n    \"github.com\": \"tok\"\n  },\n  \"http-basic\": {\n    \"m.org\": {\n      \"username\": \"user\",\n      \"password\": \"pass\"\n    }\n  },\n  \"bitbucket-oauth\": {\n    \"b.org\": {\n      \"consumer-key\": \"k\",\n      \"consumer-secret\": \"s\"\n    }\n  },\n  \"custom-headers\": {\n    \"h.org\": [\n      \"X: hv\",\n      \"E: \"\n    ]\n  }\n}",
+     "npm": "@o:registry=https://r/\n//r/:_authToken=tok\n//r/:always-auth=true",
+     "docker": "{\n  \"auths\": {\n    \"d\": {\n      \"auth\": \"dXNlcjpwYXNz\"\n    }\n  }\n}",
+     "netrc": "machine n login user password pass"
+    }
+   },
+   {
+    "doc": {
+     "credentials": {
+      "github.com": {
+       "service": "github",
+       "env": "GH"
+      },
+      "_c": {}
+     }
+    },
+    "warnings": [],
+    "renders": {
+     "composer": "{\n  \"github-oauth\": {\n    \"github.com\": \"tok\"\n  }\n}"
+    }
+   },
+   {
+    "doc": {
+     "github.com": {
+      "service": "github",
+      "env": "GH"
+     },
+     "_note": "x"
+    },
+    "warnings": [],
+    "renders": {
+     "composer": "{\n  \"github-oauth\": {\n    \"github.com\": \"tok\"\n  }\n}"
+    }
+   },
+   {
+    "doc": {
+     "credentials": "bad"
+    },
+    "warnings": [],
+    "renders": {}
+   },
+   {
+    "doc": {
+     "composer": {
+      "h0": {
+       "service": "github",
+       "env": "MISSING"
+      },
+      "h1": {
+       "service": "github",
+       "env": "MISSING"
+      },
+      "h2": {
+       "service": "github",
+       "env": "MISSING"
+      },
+      "h3": {
+       "service": "github",
+       "env": "MISSING"
+      },
+      "h4": {
+       "service": "github",
+       "env": "MISSING"
+      },
+      "h5": {
+       "service": "github",
+       "env": "MISSING"
+      },
+      "h6": {
+       "service": "github",
+       "env": "MISSING"
+      },
+      "h7": {
+       "service": "github",
+       "env": "MISSING"
+      }
+     }
+    },
+    "warnings": [
+     "skip composer:h0: required env var(s) not set",
+     "skip composer:h1: required env var(s) not set",
+     "skip composer:h2: required env var(s) not set",
+     "skip composer:h3: required env var(s) not set",
+     "skip composer:h4: required env var(s) not set",
+     "skip composer:h5: required env var(s) not set",
+     "skip composer:h6: required env var(s) not set",
+     "skip composer:h7: required env var(s) not set"
+    ],
+    "renders": {}
+   }
+  ]
+ }
+}

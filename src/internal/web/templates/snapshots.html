@@ -1,0 +1,85 @@
+{{define "content"}}
+{{template "page_header" (header "Config & backups" "Snapshots" "" (only (not .ReadOnly) (panel "Make a bundle" "bundle" "archive" | withTip "bundle")) (only (and (not .ReadOnly) (gt (len .Data.Snapshots) 0)) (panel "Prune old snapshots" "prune" "trash" | withTip "prune")))}}
+<p class="text-secondary">Every command that changes <code>~/.ssh</code> archives its config, <code>known_hosts</code> and public keys first. Private keys are never in a snapshot.</p>
+<div class="card">
+  <div class="card-header"><h2 class="card-title">Snapshots</h2>{{if .Data.Snapshots}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data.Snapshots}}, newest first</span>{{template "csv" "/exports/snapshots.csv"}}</div>{{end}}</div>
+  {{if .Data.Snapshots}}
+  <div class="table-responsive" tabindex="0">
+    <table class="table table-vcenter card-table table-hover" data-table="snapshots">
+      <caption class="visually-hidden">Snapshots, newest first</caption>
+      <thead><tr><th scope="col">Snapshot</th><th scope="col">Taken</th><th scope="col">Size</th><th scope="col" class="w-1" data-nosort><span class="visually-hidden">Actions</span></th></tr></thead>
+      <tbody>
+        {{range .Data.Snapshots}}
+        <tr>
+          <th scope="row"><code>{{.ID}}</code>{{if .KeyBearing}} <span class="badge badge-bad">holds private keys</span>{{end}}</th>
+          <td class="text-nowrap">{{when .Taken}}</td>
+          <td>{{size .Size}}</td>
+          <td class="text-end">
+            {{template "menu_open" (printf "Actions for snapshot %s" .ID)}}
+              {{if .KeyBearing}}<span class="dropdown-item disabled" aria-disabled="true">{{icon "lock"}}<span class="ms-2">Not opened: it holds private keys</span></span>
+              {{else}}<a class="dropdown-item" href="{{basePath}}/snapshots/{{.ID}}" data-inline>{{icon "git-compare"}}<span class="ms-2">Compare with now</span></a>{{end}}
+              <button type="button" class="dropdown-item" data-copy="{{.ID}}">{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
+            {{template "menu_close"}}
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}{{template "empty" (empty "archive" "No snapshots yet" "The first command that changes ~/.ssh takes one.")}}{{end}}
+</div>
+{{if and (not .ReadOnly) .Data.Snapshots}}
+{{template "panel_open" (header "prune" "Prune old snapshots" "Every snapshot older than the newest you keep is deleted, and no snapshot is taken first. You see the list before anything is removed.")}}
+    <form method="post" action="{{basePath}}/changes/preview" data-inline id="f-prune"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="action" value="snapshots-prune">
+      <div class="mb-3"><label class="form-label" for="s-keep">Keep the newest</label><input class="form-control" id="s-keep" name="keep" inputmode="numeric" pattern="[0-9]+" value="10" required></div>
+      <div class="d-flex align-items-center gap-2 pt-3 border-top">
+        <span class="text-secondary small me-auto">The same as <code>authama ssh snapshots prune</code>.</span>
+        <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
+        <button type="submit" class="btn btn-outline-danger">{{icon "trash"}}<span class="ms-1">Preview pruning</span></button>
+      </div>
+    </form>
+{{template "panel_close"}}
+{{end}}
+{{if .Data.Bundles}}
+<div class="card mt-3">
+  <div class="card-header"><h2 class="card-title">Bundles in <code>dist/</code></h2></div>
+  <div class="table-responsive" tabindex="0">
+    <table class="table table-vcenter card-table">
+      <caption class="visually-hidden">Encrypted bundles, newest first</caption>
+      <thead><tr><th scope="col">Bundle</th><th scope="col">Written</th><th scope="col">Size</th><th scope="col" class="w-1"><span class="visually-hidden">Actions</span></th></tr></thead>
+      <tbody>
+        {{range .Data.Bundles}}
+        <tr>
+          <th scope="row"><code>{{.Name}}</code></th>
+          <td class="text-nowrap">{{when .Written}}</td>
+          <td>{{size .Size}}</td>
+          <td class="text-end">
+            {{if not $.ReadOnly}}<form method="post" action="{{basePath}}/jobs/review" data-inline id="f-bundle-{{.Name}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="bundle-restore"><input type="hidden" name="bundle" value="{{.Name}}"></form>{{end}}
+            {{template "menu_open" (printf "Actions for bundle %s" .Name)}}
+              <button type="button" class="dropdown-item" data-copy="{{.Name}}">{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
+              {{if not $.ReadOnly}}<div class="dropdown-divider"></div>
+              <button type="submit" class="dropdown-item text-danger" form="f-bundle-{{.Name}}" data-confirm="m-bundle-{{.Name}}"{{tip "restore"}}>{{icon "archive"}}<span class="ms-2">Restore</span></button>{{end}}
+            {{template "menu_close"}}
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{if not $.ReadOnly}}{{range .Data.Bundles}}{{template "confirm" (confirm (printf "m-bundle-%s" .Name) (printf "f-bundle-%s" .Name) (printf "Restore %s?" .Name) "Its keys and files are laid back over ~/.ssh. You review the job before it runs." "Review the restore")}}{{end}}{{end}}
+  <div class="card-body text-secondary">Restoring decrypts with <code>AUTHAMA_AGE_IDENTITY_FILE</code>, as set where <code>authama serve</code> runs, and lays the keys back.</div>
+</div>
+{{end}}
+{{if not .ReadOnly}}
+{{template "panel_open" (header "bundle" "Make an encrypted bundle" "Snapshots leave private keys out. A bundle holds everything, keys included, encrypted with age to AUTHAMA_AGE_RECIPIENT, in the state home's dist/.")}}
+    {{template "change_open" .}}<input type="hidden" name="action" value="bundle">
+      <div class="mb-3"><label class="form-label" for="b-keep">Then keep the newest bundles</label><input class="form-control" id="b-keep" name="keep" inputmode="numeric" pattern="[0-9]*"><small class="form-hint">Empty keeps every bundle.</small></div>
+      <div class="d-flex align-items-center gap-2 pt-3 border-top">
+        <span class="text-secondary small me-auto">The same as <code>authama ssh bundle</code>.</span>
+        <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
+        <button type="submit" class="btn btn-primary">Preview a bundle</button>
+      </div>
+    </form>
+{{template "panel_close"}}
+{{end}}
+{{end}}

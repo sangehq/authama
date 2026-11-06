@@ -1,0 +1,5 @@
+{{define "pin_field"}}{{if .PINNeeded}}
+  <label class="visually-hidden" for="confirm-pin">PIN</label>
+  <input class="form-control w-auto" type="password" id="confirm-pin" name="pin" required autocomplete="current-password" inputmode="text" minlength="6" maxlength="128" placeholder="Your PIN" aria-describedby="confirm-pin-hint">
+  <span id="confirm-pin-hint" class="visually-hidden">Changes need your authama PIN. It is asked again after five minutes.</span>
+{{end}}{{end}}

@@ -1,0 +1,89 @@
+{{define "content"}}
+{{if .ReadOnly}}
+{{template "page_header" (header "SSH" "Hosts" "Every host, by profile, as it is rendered into ~/.ssh/config." (action "SSH config" "/ssh-config" "file-code" | withTip "ssh-config") (download "Download ssh_config, every host inline" "/exports/ssh_config" | withTip "download") (download "Download the Termius CSV" "/exports/termius-hosts.csv" | withTip "csv"))}}
+{{else}}
+{{template "page_header" (header "SSH" "Hosts" "Every host, by profile, as it is rendered into ~/.ssh/config." (panel "Add a host" "add-host" "plus" | withTip "host-add") (panel "Add a VM host" "add-vm-host" "device-desktop" | withTip "host-vm") (only (gt (len .Data) 0) (panel "Add hosts in bulk" "bulk-hosts" "server" | withTip "host-bulk")) (action "SSH config" "/ssh-config" "file-code" | withTip "ssh-config") (download "Download ssh_config, every host inline" "/exports/ssh_config" | withTip "download") (download "Download the Termius CSV" "/exports/termius-hosts.csv" | withTip "csv") (download "Download the Termius CSV, with git hosts" "/exports/termius-hosts.csv?include_git=1" | withTip "csv"))}}
+{{end}}
+<div class="card mb-3">
+  <div class="card-header"><h2 class="card-title">Hosts</h2><div class="card-actions">{{template "csv" "/exports/hosts.csv"}}</div></div>
+  {{if .Data}}
+  <div class="table-responsive" tabindex="0">
+    <table class="table table-vcenter card-table table-hover" id="hosts-table" data-table="hosts">
+      <caption class="visually-hidden">Every host in the manifest, with its profile</caption>
+      <thead><tr><th scope="col">Alias</th><th scope="col">Profile</th><th scope="col">Hostname</th><th scope="col">Provider</th><th scope="col">Key</th><th scope="col">Status</th><th scope="col">Tags</th><th scope="col" class="w-1" data-nosort><span class="visually-hidden">Actions</span></th></tr></thead>
+      <tbody>
+        {{range $g := .Data}}{{range .Rows}}
+        <tr>
+          <th scope="row"><a href="{{basePath}}/hosts/{{.Alias}}"><code>{{.Alias}}</code></a></th>
+          <td><code>{{$g.Name}}</code></td>
+          <td class="text-break">{{.Hostname}}</td>
+          <td>{{.ProviderLabel}}</td>
+          <td class="text-break"><code>{{.KeyName}}</code></td>
+          <td><span class="badge {{statusClass .Status}}">{{.Status}}</span></td>
+          <td class="text-secondary">{{orDash (join .Tags ", ")}}</td>
+          <td class="text-end">
+            {{if not $.ReadOnly}}<form method="post" action="{{basePath}}/changes/preview" data-inline id="f-host-{{.Alias}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="host-delete"><input type="hidden" name="profile" value="{{$g.Name}}"><input type="hidden" name="alias" value="{{.Alias}}"></form>{{end}}
+            {{template "menu_open" (printf "Actions for host %s" .Alias)}}
+              <a class="dropdown-item" href="{{basePath}}/hosts/{{.Alias}}" data-inline>{{icon "external-link"}}<span class="ms-2">Open</span></a>
+              <button type="button" class="dropdown-item" data-copy="ssh {{.Alias}}">{{icon "terminal-2"}}<span class="ms-2">Copy <code>ssh {{.Alias}}</code></span></button>
+              {{if .Hostname}}<button type="button" class="dropdown-item" data-copy="{{.Hostname}}">{{icon "copy"}}<span class="ms-2">Copy the hostname</span></button>{{end}}
+              <a class="dropdown-item" href="{{basePath}}/history?host={{.Alias}}" data-inline>{{icon "history"}}<span class="ms-2">History</span></a>
+              {{if not $.ReadOnly}}<div class="dropdown-divider"></div>
+              <button type="submit" class="dropdown-item text-danger" form="f-host-{{.Alias}}" data-confirm="m-host-{{.Alias}}"{{tip "delete"}}>{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
+            {{template "menu_close"}}
+          </td>
+        </tr>
+        {{end}}{{end}}
+      </tbody>
+    </table>
+  </div>
+  {{if not $.ReadOnly}}{{range $g := .Data}}{{range .Rows}}{{template "confirm" (confirm (printf "m-host-%s" .Alias) (printf "f-host-%s" .Alias) (printf "Delete host %s?" .Alias) "Its manifest entry, its block in ~/.ssh/config and its pinned host keys go; its key files stay. You see the change before it is made." "Preview the delete")}}{{end}}{{end}}{{end}}
+  {{else}}{{template "empty" (empty "server" "No profiles yet" "Add a profile first, then its hosts.")}}{{end}}
+</div>
+{{if and (not .ReadOnly) .Data}}
+{{template "panel_open" (header "add-host" "Add a host" "A host in a profile's config. Its key is minted by authama ssh reconcile in a terminal.")}}
+        {{template "change_open" .}}<input type="hidden" name="action" value="host-add">
+          <div class="mb-3"><label class="form-label required" for="h-profile">Profile</label><select class="form-select" id="h-profile" name="profile">{{range .Data}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div>
+          <div class="mb-3"><label class="form-label required" for="h-alias">Alias</label><input class="form-control" id="h-alias" name="alias" required autocomplete="off" spellcheck="false"><small class="form-hint">The name you type after <code>ssh</code>.</small></div>
+          <div class="mb-3"><label class="form-label required" for="h-hostname">Hostname</label><input class="form-control" id="h-hostname" name="hostname" required autocomplete="off" spellcheck="false" placeholder="203.0.113.10 or web1.example.com"></div>
+          <div class="row g-3 mb-3">
+            <div class="col-8"><label class="form-label required" for="h-user">User</label><input class="form-control" id="h-user" name="user" required autocomplete="off" spellcheck="false"></div>
+            <div class="col-4"><label class="form-label" for="h-port">Port</label><input class="form-control" id="h-port" name="port" type="number" min="1" max="65535" inputmode="numeric" value="22"></div>
+          </div>
+          <div class="mb-3"><label class="form-label" for="h-tags">Tags</label><input class="form-control" id="h-tags" name="tags" autocomplete="off" spellcheck="false" placeholder="prod, web"><small class="form-hint">Comma-separated.</small></div>
+          <div class="d-flex align-items-center gap-2 pt-3 border-top">
+            <span class="text-secondary small me-auto">The same as <code>authama ssh host add</code>.</span>
+            <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
+            <button type="submit" class="btn btn-primary">Preview</button>
+          </div>
+        </form>
+{{template "panel_close"}}
+{{template "panel_open" (header "add-vm-host" "Add a VM host" "A host whose address comes from its hypervisor each time ssh connects.")}}
+        {{template "change_open" .}}<input type="hidden" name="action" value="vm-add">
+          <div class="row g-2">
+            <div class="col-sm-6"><label class="form-label" for="v-profile">Profile</label><select class="form-select" id="v-profile" name="profile">{{range .Data}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div>
+            <div class="col-sm-6"><label class="form-label" for="v-alias">Alias</label><input class="form-control" id="v-alias" name="alias" required autocomplete="off" spellcheck="false"></div>
+            <div class="col-sm-6"><label class="form-label" for="v-hv">Hypervisor</label><select class="form-select" id="v-hv" name="hypervisor">{{range hypervisors}}<option value="{{.}}">{{.}}</option>{{end}}</select></div>
+            <div class="col-sm-6"><label class="form-label" for="v-vm">VM name</label><input class="form-control" id="v-vm" name="vm" required autocomplete="off" spellcheck="false"></div>
+            <div class="col-sm-6"><label class="form-label" for="v-user">Guest user</label><input class="form-control" id="v-user" name="user" required autocomplete="off" spellcheck="false"></div>
+          </div>
+          <p class="text-secondary small mt-2 mb-2">Its address comes from the hypervisor each time ssh connects.</p>
+          {{template "panel_actions" ""}}
+        </form>
+{{template "panel_close"}}
+{{if .Data}}
+{{template "panel_open" (header "bulk-hosts" "Add or update hosts in bulk" "")}}
+    {{template "change_open" .}}<input type="hidden" name="action" value="host-apply">
+      <div class="row g-2">
+        <div class="col-sm-6"><label class="form-label" for="a-profile">Profile</label><input class="form-control" id="a-profile" name="profile" list="a-profiles" required autocomplete="off" spellcheck="false"><datalist id="a-profiles">{{range .Data}}<option value="{{.Name}}">{{end}}</datalist></div>
+        <div class="col-sm-6"><label class="form-label" for="a-category">Category <span class="text-secondary">(for a new profile)</span></label><input class="form-control" id="a-category" name="category" autocomplete="off" spellcheck="false"></div>
+        <div class="col-12"><label class="form-label" for="a-specs">Hosts <span class="text-secondary">(one per line: <code>&lt;alias&gt; &lt;host&gt;[:port] &lt;user&gt; [role]</code>; # starts a comment)</span></label><textarea class="form-control font-monospace" id="a-specs" name="specs" rows="5" required spellcheck="false"></textarea></div>
+        <div class="col-12"><label class="form-check"><input class="form-check-input" type="checkbox" name="create" value="1"><span class="form-check-label">Create the profile if it does not exist</span></label></div>
+      </div>
+      <p class="text-secondary small mt-2 mb-2">A host already in the profile has its hostname, user and port set; the role is added to its tags, and no tag is removed. New hosts' keys are minted by Reconcile.</p>
+          {{template "panel_actions" ""}}
+    </form>
+{{template "panel_close"}}
+{{end}}
+{{end}}
+{{end}}

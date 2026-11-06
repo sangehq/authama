@@ -1,0 +1,284 @@
+name: CI
+
+on:
+  # Manually runnable, from the Actions tab or `gh workflow run`. Push events are
+  # not a reliable trigger: during the 2026-08-06 Actions incident GitHub
+  # throttled webhook delivery, so four consecutive pushes to main produced no
+  # runs at all and there was no supported way to ask for one. It is also how you
+  # re-run a green commit after changing a secret or a runner image, without
+  # pushing an empty commit to do it.
+  #
+  # A pull request with a merge conflict gets no pull_request run at all, which
+  # looks the same as a dropped event. On 2026-11-02 three pushes to #92 started
+  # nothing because main had just released 0.1.3 and CHANGELOG.md conflicted; the
+  # first push after the conflict was resolved ran normally. Check the PR's merge
+  # state before dispatching: a dispatch tests the branch, not the merge.
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+  # Weekly run on main: nothing re-runs after a merge, so this is what catches drift there
+  # (a dependency release, two green PRs that interact) and keeps the Tests badge current.
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+# Our own modules are fetched from git, never through proxy.golang.org or
+# sum.golang.org, so a CI build can never feed a version into the public cache.
+env:
+  GOPRIVATE: github.com/simtabi/*
+  GONOSUMDB: github.com/simtabi/*
+
+# Cancel superseded pull-request runs on the same ref; scheduled and manual runs on main finish.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    # The whole product: pure Go, every verb native. Build, vet, test and gofmt
+    # across the three first-class OSes - the Windows leg matters because the
+    # platform layer (icacls, schtasks, toast, console modes) only runs there.
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # Pull requests test on Linux and Windows; the macOS leg runs on the
+        # weekly schedule and on dispatch. GitHub's macOS arm64 runners went
+        # unscheduled for every PR from 2026-11-04 ("not acquired by Runner of
+        # type hosted"), so a required macOS leg blocked every merge. The darwin
+        # job below cross-compiles and vets for macOS on every PR instead.
+        os: ${{ github.event_name == 'pull_request' && fromJSON('["ubuntu-latest","windows-latest"]') || fromJSON('["ubuntu-latest","macos-latest","windows-latest"]') }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          # The module declares its toolchain; `stable` moved to 1.27 under a
+          # golangci-lint built with 1.26, which panics on the newer stdlib.
+          go-version-file: src/go.mod
+          # The module is src/, so the cache key has to name src/go.sum: the default
+          # looks for go.sum at the root, finds none, and restores and saves nothing
+          # ("Dependencies file is not found"), so every run downloaded every module
+          # and compiled every package from scratch.
+          cache-dependency-path: src/go.sum
+      # One gate, defined once, in the Makefile. Reimplementing these steps here
+      # let the local `make check` and CI drift apart silently.
+      - name: Gate
+        shell: bash
+        run: make ci
+      # Once per OS, not once overall: golangci-lint analyses a single GOOS, so
+      # a single run never sees the build-tagged platform files at all.
+      - name: Lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.14.0
+          # The module is src/, and the action runs where it is told to. Without
+          # this it lints a directory with no Go in it and passes.
+          working-directory: src
+      # No longer macOS-only: the shell version used BSD `stat -f`, which was the
+      # single reason two thirds of the matrix never ran it.
+      # The installer is a `curl | bash` entry point, so the only test that means
+      # anything is running it. Static checks did not catch either of the two bugs
+      # that made it fail outright on a stock Mac: an empty-array expansion that
+      # bash 3.2 rejects under `set -u`, and `curl | grep -m1`, where grep closes
+      # the pipe, curl exits 56, and pipefail turns that into a failed install.
+      # shellcheck sees neither, because neither is a syntax error.
+      - name: The installer actually installs
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir="$(mktemp -d)/bin"
+          # bash explicitly, so the macOS runner exercises its system bash 3.2
+          # rather than whatever `env bash` happens to find.
+          AUTHAMA_INSTALL_DIR="$dir" bash src/scripts/install.sh
+          test -x "$dir/authama"
+          "$dir/authama" version
+          # The sshmgr alias is no longer installed.
+          test ! -e "$dir/sshmgr"
+          # The deprecated variable name still picks the directory.
+          old="$(mktemp -d)/bin"
+          SSHMGR_INSTALL_DIR="$old" bash src/scripts/install.sh
+          test -x "$old/authama"
+
+      # The Windows installer is an `irm | iex` entry point and was only ever
+      # parsed, never run. Run it, then run it again with the API URL broken so
+      # the releases/latest fallback is what resolves the version.
+      - name: The Windows installer actually installs
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($case in 'api', 'redirect-fallback') {
+            $script = Get-Content -Raw src/scripts/install.ps1
+            if ($case -eq 'redirect-fallback') {
+              $broken = $script -replace 'api\.github\.com/repos/\$owner/\$repo/releases/latest', 'api.github.com/repos/$owner/$repo-forced-404/releases/latest'
+              if ($broken -eq $script) { throw 'could not break the API URL; the fallback would go untested' }
+              $script = $broken
+            }
+            $path = Join-Path $env:RUNNER_TEMP "install-$case.ps1"
+            Set-Content -Path $path -Value $script
+            $dir = Join-Path $env:RUNNER_TEMP "bin-$case"
+            & $path -InstallDir $dir
+            & (Join-Path $dir 'authama.exe') version
+            if ($LASTEXITCODE -ne 0) { throw "authama version failed ($case)" }
+            # The sshmgr alias is no longer installed.
+            if (Test-Path (Join-Path $dir 'sshmgr.exe')) { throw "the installer still installs sshmgr.exe ($case)" }
+          }
+
+      - name: E2E smoke
+        if: runner.os != 'Windows'
+        shell: bash
+        run: make e2e
+
+
+  darwin:
+    # macOS on every pull request without a macOS runner: build and vet every
+    # package, tests included, for darwin on both architectures. vet type-checks
+    # the build-tagged *_darwin.go files, which a Linux build never compiles.
+    # The tests themselves run on macOS in the scheduled leg above.
+    name: darwin cross-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: src/go.mod
+          cache-dependency-path: src/go.sum
+      - name: Build and vet for darwin
+        working-directory: src
+        run: |
+          set -euo pipefail
+          for arch in arm64 amd64; do
+            GOOS=darwin GOARCH=$arch CGO_ENABLED=0 go build ./...
+            GOOS=darwin GOARCH=$arch CGO_ENABLED=0 go vet ./...
+            echo "darwin/$arch: build and vet clean"
+          done
+
+  web-e2e:
+    # The web UI in a browser: Playwright drives every page of `authama serve` and
+    # its write flows against a throwaway home, and axe fails a serious or
+    # critical violation in either theme. Linux only, as the plan settled: the
+    # pages are the same on every OS and a browser leg costs the most minutes.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: src/go.mod
+          cache-dependency-path: src/go.sum
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+      # age writes and reads the bundle the restore job streams; ssh-keygen is
+      # on the runner already.
+      - name: Install age
+        run: sudo apt-get update -q && sudo apt-get install -y -q age
+      - name: Install the browser
+        working-directory: e2e/web
+        run: |
+          npm install --no-audit --no-fund --no-package-lock
+          npx playwright install --with-deps chromium
+      - name: Browser e2e and axe
+        run: make e2e-web
+      - name: Keep the report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: web-e2e-report
+          path: |
+            e2e/web/playwright-report/
+            e2e/web/test-results/
+          retention-days: 7
+
+  gitleaks:
+    # The only secret scanner now, and the only one that ever mattered: it runs
+    # against the full history, which the pre-commit hook of the same name could
+    # not do. That hook, and the interpreter the pre-commit job needed to run
+    # it, are gone; its file-hygiene rules are Go tests in cmd/authama.
+    #
+    # Run the gitleaks binary directly: gitleaks-action@v2 requires a paid
+    # GITLEAKS_LICENSE for organisation-owned repos (simtabi is an org).
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install gitleaks
+        run: |
+          VERSION=8.30.1
+          # From the release's gitleaks_8.30.1_checksums.txt; bump both together.
+          SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+          curl -fsSL -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
+          echo "${SHA256}  gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks
+          sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
+      - name: Scan for secrets
+        run: gitleaks detect --source . --redact --no-banner --exit-code 1
+
+  scripts:
+    # The four shell artifacts nothing else exercises. install.sh and install.ps1
+    # are user-facing `curl | bash` entry points with no test of any kind - a
+    # broken arch detection or a renamed asset would surface as a user report -
+    # and fixkeys.sh runs as root on a machine its user is locked out of.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: shellcheck
+        run: |
+          shellcheck --severity=warning \
+            src/scripts/install.sh \
+            src/scripts/build-all.sh \
+            src/scripts/extract-changelog.sh \
+            src/internal/services/recover/fixkeys.sh \
+            .github/scripts/requeue-stranded.sh
+      - name: PowerShell parses
+        shell: pwsh
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "src/scripts/install.ps1", [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
+          Write-Output "src/scripts/install.ps1 parses"
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          # A parse catches syntax; the analyzer catches what parses but misbehaves
+          # (unused or misspelled variables, automatic-variable overwrites). The one
+          # deliberate exception, Write-Host for irm | iex progress, is suppressed
+          # in the script itself with its reason.
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+          $r = Invoke-ScriptAnalyzer -Path src/scripts/install.ps1 -Severity Error,Warning,Information
+          if ($r) { $r | Format-Table -AutoSize RuleName,Severity,Line,Message | Out-String -Width 250; exit 1 }
+          Write-Output "src/scripts/install.ps1: no PSScriptAnalyzer findings"
+      - name: The installers reconstruct the artifact names GoReleaser writes
+        run: |
+          # Both installers build "authama_{os}_{arch}", and .goreleaser.yaml maps
+          # darwin -> macos and names archives and packages authama_. A drift here is
+          # invisible until a release is cut.
+          grep -q 'darwin' src/scripts/install.sh || { echo "install.sh no longer maps darwin"; exit 1; }
+          grep -q 'macos'  src/scripts/install.sh || { echo "install.sh no longer produces the macos token"; exit 1; }
+          grep -q 'macos'  src/.goreleaser.yaml  || { echo ".goreleaser.yaml no longer produces the macos token"; exit 1; }
+          grep -q 'BINARY="authama"' src/scripts/install.sh || { echo "install.sh no longer installs authama first"; exit 1; }
+          grep -q "binBase = 'authama'" src/scripts/install.ps1 || { echo "install.ps1 no longer installs authama first"; exit 1; }
+          grep -q 'authama_linux_' src/.goreleaser.yaml || { echo ".goreleaser.yaml no longer names the packages authama_"; exit 1; }
+          grep -q 'checksums.txt' src/scripts/install.sh || { echo "install.sh stopped verifying checksums"; exit 1; }
+          grep -qi 'checksums.txt' src/scripts/install.ps1 || { echo "install.ps1 stopped verifying checksums"; exit 1; }
+          echo "installers and GoReleaser agree on the artifact naming"

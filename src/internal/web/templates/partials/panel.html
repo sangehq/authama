@@ -1,0 +1,15 @@
+{{/* "panel" frames a page for the side panel: its content alone, with its
+     title for the panel's header. "side_panel" is the panel's empty shell,
+     which the layout carries on every signed-in page. */}}
+{{define "panel"}}<div data-panel-page data-title="{{.Title}}">{{template "content" .}}</div>{{end}}
+
+{{define "side_panel"}}<div class="offcanvas offcanvas-end side-panel" tabindex="-1" id="side-panel" aria-labelledby="side-panel-title" data-side-panel>
+  <div class="offcanvas-header gap-2">
+    <button type="button" class="btn btn-icon btn-ghost-secondary" data-side-panel-back hidden aria-label="Back">{{icon "arrow-left"}}</button>
+    {{/* The page's own heading shows in the body; this one names the dialog. */}}
+    <h2 class="offcanvas-title visually-hidden" id="side-panel-title" data-side-panel-title></h2>
+    <a class="btn btn-icon btn-ghost-secondary ms-auto" href="{{basePath}}/" data-side-panel-full data-panel-skip title="Open as a page" aria-label="Open as a page">{{icon "external-link"}}</a>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body" data-side-panel-body aria-live="polite"></div>
+</div>{{end}}

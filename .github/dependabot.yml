@@ -1,0 +1,45 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    # The module lives in src/, not at the root; "/" finds no go.mod and the
+    # update job fails.
+    directory: "/src"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "go"]
+    groups:
+      # modernc.org/sqlite is built against one modernc.org/libc and breaks with
+      # another, so the two move in one PR, whatever the update type. Listed
+      # first: Dependabot puts an update in the first group it matches.
+      modernc:
+        patterns: ["modernc.org/*"]
+      gomod-minor-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "github-actions"]
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/New_York
+    groups:
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]

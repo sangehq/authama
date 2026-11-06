@@ -1,0 +1,127 @@
+{
+  "_help": "Internal catalog for token management (ported from auth-token-manager) — the single source of truth for targets, the Composer service catalog, enterprise/cloud hosts, interactive providers, and config field requirements. Add a service or provider HERE (no code change needed). This is NOT your credentials config (that is tokens.json in the config home); this file ships with the package.",
+
+  "targets": ["composer", "npm", "docker", "git", "netrc", "pypi", "cargo", "gem", "gradle", "maven", "yarn", "helm", "helm-oci", "gh"],
+
+  "menu": [
+    { "key": "composer", "label": "Composer — PHP packages (auth.json / COMPOSER_AUTH)" },
+    { "key": "git",      "label": "Git — clone/push over HTTPS (git-credentials)" },
+    { "key": "docker",   "label": "Docker — registry login (config.json)" },
+    { "key": "npm",      "label": "npm — registry token (.npmrc)" },
+    { "key": "netrc",    "label": "netrc — generic machine login (.netrc; also pip, uv and Go)" },
+    { "key": "pypi",     "label": "PyPI — package uploads (.pypirc)" },
+    { "key": "cargo",    "label": "Cargo — Rust registries (credentials.toml)" },
+    { "key": "gem",      "label": "RubyGems — gem push (~/.gem/credentials)" },
+    { "key": "gradle",   "label": "Gradle — repository credentials (gradle.properties)" },
+    { "key": "maven",    "label": "Maven — repository credentials (settings.xml)" },
+    { "key": "yarn",     "label": "Yarn Berry — registry token (.yarnrc.yml)" },
+    { "key": "helm",     "label": "Helm — chart repository login (repositories.yaml)" },
+    { "key": "helm-oci", "label": "Helm — OCI registry login (registry/config.json)" },
+    { "key": "gh",       "label": "GitHub CLI — account token (hosts.yml)" }
+  ],
+
+  "target_fields": {
+    "composer": {
+      "token":           ["env"],
+      "http-basic":      ["user_env", "pass_env"],
+      "bitbucket-oauth": ["key_env", "secret_env"],
+      "custom-headers":  ["headers"]
+    },
+    "npm":    { "token": ["env"] },
+    "docker": { "basic": ["user_env", "pass_env"] },
+    "git":    { "basic": ["user_env", "pass_env"] },
+    "netrc":  { "basic": ["user_env", "pass_env"] },
+    "pypi":     { "basic": ["user_env", "pass_env"] },
+    "cargo":    { "token": ["env"] },
+    "gem":      { "token": ["env"] },
+    "gradle":   { "basic": ["user_env", "pass_env"] },
+    "maven":    { "basic": ["user_env", "pass_env"] },
+    "yarn":     { "token": ["env"] },
+    "helm":     { "basic": ["user_env", "pass_env"] },
+    "helm-oci": { "basic": ["user_env", "pass_env"] },
+    "gh":       { "basic": ["user_env", "pass_env"] }
+  },
+
+  "default_config": {
+    "composer": { "github.com": { "service": "github", "env": "GH_TOKEN" } }
+  },
+
+  "composer": {
+    "token_methods": {
+      "github-oauth":  "github",
+      "gitlab-oauth":  "gitlab_oauth",
+      "gitlab-token":  "gitlab_token",
+      "bearer":        "bearer",
+      "forgejo-token": "forgejo"
+    },
+    "services": {
+      "github":            "github-oauth",
+      "github-enterprise": "github-oauth",
+      "gitlab":            "gitlab-token",
+      "gitlab-oauth":      "gitlab-oauth",
+      "bitbucket":         "bitbucket-oauth",
+      "gitea":             "http-basic",
+      "forgejo":           "forgejo-token",
+      "codeberg":          "forgejo-token",
+      "azure-devops":      "http-basic",
+      "sourcehut":         "http-basic",
+      "private-packagist": "http-basic",
+      "packagist":         "http-basic",
+      "satis":             "http-basic",
+      "repman":            "http-basic",
+      "packeton":          "http-basic",
+      "artifactory":       "http-basic",
+      "cloudsmith":        "http-basic",
+      "nexus":             "http-basic",
+      "gemfury":           "http-basic",
+      "unlock-sh":         "http-basic",
+      "magento":           "http-basic",
+      "laravel-nova":      "http-basic",
+      "laravel-spark":     "http-basic",
+      "generic-token":     "bearer",
+      "generic-headers":   "custom-headers"
+    },
+    "enterprise_hosts": {
+      "github":            { "cloud": "github.com",    "domains": "github-domains" },
+      "github-enterprise": { "cloud": null,            "domains": "github-domains" },
+      "gitlab":            { "cloud": "gitlab.com",    "domains": "gitlab-domains" },
+      "gitlab-oauth":      { "cloud": "gitlab.com",    "domains": "gitlab-domains" },
+      "bitbucket":         { "cloud": "bitbucket.org", "domains": null },
+      "gitea":             { "cloud": null,            "domains": null },
+      "forgejo":           { "cloud": null,            "domains": null },
+      "codeberg":          { "cloud": "codeberg.org",  "domains": null },
+      "azure-devops":      { "cloud": "dev.azure.com", "domains": null },
+      "sourcehut":         { "cloud": "git.sr.ht",     "domains": null }
+    }
+  },
+
+  "providers": {
+    "git": [
+      { "key": "github",    "label": "GitHub",                     "cloud": "github.com",    "hostable": true },
+      { "key": "gitlab",    "label": "GitLab",                     "cloud": "gitlab.com",    "hostable": true },
+      { "key": "bitbucket", "label": "Bitbucket",                  "cloud": "bitbucket.org", "hostable": true },
+      { "key": "gitea",     "label": "Gitea / Forgejo / Codeberg", "cloud": "",              "hostable": true },
+      { "key": "azure",     "label": "Azure DevOps",               "cloud": "dev.azure.com", "hostable": true },
+      { "key": "custom",    "label": "Other host…",                "cloud": "",              "hostable": true }
+    ],
+    "docker": [
+      { "key": "dockerhub", "label": "Docker Hub",                "cloud": "https://index.docker.io/v1/", "hostable": false },
+      { "key": "ghcr",      "label": "GitHub Container Registry", "cloud": "ghcr.io",             "hostable": false },
+      { "key": "quay",      "label": "Quay.io",                   "cloud": "quay.io",             "hostable": false },
+      { "key": "gitlab",    "label": "GitLab Container Registry", "cloud": "registry.gitlab.com", "hostable": true },
+      { "key": "custom",    "label": "Other registry…",           "cloud": "",                    "hostable": true }
+    ],
+    "npm": [
+      { "key": "npmjs",       "label": "npm public registry", "cloud": "registry.npmjs.org", "hostable": false },
+      { "key": "github",      "label": "GitHub Packages",     "cloud": "npm.pkg.github.com", "hostable": false },
+      { "key": "gitlab",      "label": "GitLab Packages",     "cloud": "",                   "hostable": true },
+      { "key": "artifactory", "label": "Artifactory",         "cloud": "",                   "hostable": true },
+      { "key": "gemfury",     "label": "Gemfury",             "cloud": "",                   "hostable": true },
+      { "key": "unlock-sh",   "label": "unlock.sh",           "cloud": "",                   "hostable": true },
+      { "key": "custom",      "label": "Other registry…",     "cloud": "",                   "hostable": true }
+    ],
+    "netrc": [
+      { "key": "custom", "label": "Any host", "cloud": "", "hostable": true }
+    ]
+  }
+}

@@ -1,0 +1,99 @@
+{{define "content"}}
+{{template "page_header" (header "SSH" "Keys" "Every key with its fingerprint and expiry, and the loose keys kept on purpose." (only (not .ReadOnly) (panel "Add a key" "add-key" "plus" | withTip "key-add")) (only (not .ReadOnly) (panel "Mint missing keys" "mint-keys" "key" | withTip "key-mint")))}}
+<div class="card">
+  <div class="card-header"><h2 class="card-title">Keys</h2>{{if .Data.Rows}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data.Rows}} in the manifest</span>{{template "csv" "/exports/keys.csv"}}</div>{{end}}</div>
+  {{if .Data.Rows}}
+  <div class="table-responsive" tabindex="0">
+    <table class="table table-vcenter card-table table-hover" id="keys-table" data-table="keys">
+      <caption class="visually-hidden">Every key the manifest declares or a host uses</caption>
+      <thead><tr><th scope="col">Key</th><th scope="col">Type</th><th scope="col">Fingerprint</th><th scope="col">Expires</th><th scope="col">Hosts</th><th scope="col">On disk</th><th scope="col" class="w-1" data-nosort><span class="visually-hidden">Actions</span></th></tr></thead>
+      <tbody>
+        {{range .Data.Rows}}
+        <tr>
+          <th scope="row"><a href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}"><code>{{.Ref}}</code></a></th>
+          <td>{{.Type}}</td>
+          <td class="text-break"><code>{{orDash .Fingerprint}}</code></td>
+          <td class="text-nowrap">{{orDash .ExpiresOn}}</td>
+          <td>{{orDash (join .Hosts ", ")}}</td>
+          <td>{{if .Vault}}1Password <span class="text-secondary">({{.Vault}})</span>{{else if .PrivateOnDisk}}<span class="badge badge-ok">yes</span>{{else}}<span class="badge badge-warn">not minted</span>{{end}}</td>
+          <td class="text-end">
+            {{if and (not $.ReadOnly) .Declared (not .Hosts)}}<form method="post" action="{{basePath}}/changes/preview" data-inline id="f-key-{{.Ref.Profile}}-{{.Ref.KeyName}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="key-delete"><input type="hidden" name="profile" value="{{.Ref.Profile}}"><input type="hidden" name="key" value="{{.Ref.KeyName}}"></form>{{end}}
+            {{template "menu_open" (printf "Actions for key %s" .Ref)}}
+              <a class="dropdown-item" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}" data-inline>{{icon "external-link"}}<span class="ms-2">Open</span></a>
+              {{with index $.Data.Public .Ref.String}}<button type="button" class="dropdown-item" data-copy="{{.}}">{{icon "copy"}}<span class="ms-2">Copy the public key</span></button>{{end}}
+              {{if .Fingerprint}}<button type="button" class="dropdown-item" data-copy="{{.Fingerprint}}">{{icon "fingerprint"}}<span class="ms-2">Copy the fingerprint</span></button>{{end}}
+              <button type="button" class="dropdown-item" data-copy="{{.IdentityFile}}">{{icon "copy"}}<span class="ms-2">Copy the identity file's path</span></button>
+              <a class="dropdown-item" href="{{basePath}}/history?key={{.Ref.KeyName}}&amp;profile={{.Ref.Profile}}" data-inline>{{icon "history"}}<span class="ms-2">History</span></a>
+              {{if not $.ReadOnly}}<a class="dropdown-item" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}#lifetime"{{tip "key-lifetime"}}>{{icon "hourglass"}}<span class="ms-2">Set lifetime</span></a>
+              {{if not $.DevRoot}}<a class="dropdown-item" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}" data-inline>{{icon "recycle"}}<span class="ms-2">Rotate or roll back</span></a>
+              <a class="dropdown-item text-danger" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}#revoke"{{tip "key-revoke"}}>{{icon "ban"}}<span class="ms-2">Revoke</span></a>{{end}}{{end}}
+              {{if and (not $.ReadOnly) .Declared (not .Hosts)}}<div class="dropdown-divider"></div>
+              <button type="submit" class="dropdown-item text-danger" form="f-key-{{.Ref.Profile}}-{{.Ref.KeyName}}" data-confirm="m-key-{{.Ref.Profile}}-{{.Ref.KeyName}}"{{tip "delete"}}>{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
+            {{template "menu_close"}}
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{if not $.ReadOnly}}{{range .Data.Rows}}{{if and .Declared (not .Hosts)}}{{template "confirm" (confirm (printf "m-key-%s-%s" .Ref.Profile .Ref.KeyName) (printf "f-key-%s-%s" .Ref.Profile .Ref.KeyName) (printf "Delete key %s?" .Ref.KeyName) "Its declaration and inventory record go; the key files stay on disk. You see the change before it is made." "Preview the delete")}}{{end}}{{end}}{{end}}
+  {{else}}{{template "empty" (empty "key" "No keys in the manifest yet" "Add one below, or add a host and reconcile.")}}{{end}}
+</div>
+<p class="text-secondary mt-2">A key's menu sets its lifetime, rotates, rolls back or revokes it (on its page), and deletes a declared key no host uses: the declaration and its record go, the files stay. Overwriting a key in place, a passphrase and keys kept in 1Password stay in the terminal: <code>authama ssh keygen --force</code>, <code>--passphrase</code>.</p>
+<div class="card mt-3" id="loose">
+  <div class="card-header"><h2 class="card-title">Reserved keys</h2></div>
+  {{if .Data.Reserved}}
+  <div class="table-responsive" tabindex="0">
+    <table class="table table-vcenter card-table">
+      <caption class="visually-hidden">Loose keys in ~/.ssh kept on purpose</caption>
+      <thead><tr><th scope="col">Key</th><th scope="col">For</th><th scope="col">Note</th><th scope="col">Since</th><th scope="col">State</th>{{if not $.ReadOnly}}<th scope="col"><span class="visually-hidden">Actions</span></th>{{end}}</tr></thead>
+      <tbody>
+        {{range .Data.Reserved}}
+        <tr>
+          <th scope="row"><code>~/.ssh/{{.Name}}</code></th>
+          <td>{{orDash .For}}</td>
+          <td>{{orDash .Note}}</td>
+          <td>{{orDash .Since}}</td>
+          <td>{{if .Problem}}<span class="badge badge-warn">{{.State}}</span> <span class="text-secondary">{{.Detail}}</span>{{else}}<span class="badge badge-ok">kept</span>{{end}}{{if ne .Source "manifest"}} <span class="text-secondary">({{.Source}} in authama.json)</span>{{end}}</td>
+          {{if not $.ReadOnly}}<td class="text-end">{{if eq .Source "manifest"}}{{template "change_open" $}}<input type="hidden" name="action" value="key-unreserve"><input type="hidden" name="key" value="{{.Name}}"><button class="btn btn-sm btn-outline-secondary" type="submit">Unreserve {{.Name}}</button></form>{{end}}</td>{{end}}
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}<div class="card-body text-secondary">None. A loose key in <code>~/.ssh</code> you keep on purpose (say, for a devbox you have not made yet) can be reserved so doctor stops calling it loose.</div>{{end}}
+  {{if and (not .ReadOnly) .Data.Loose}}
+  <div class="card-body border-top">
+    {{template "change_open" .}}<input type="hidden" name="action" value="key-reserve">
+      <div class="row g-2">
+        <div class="col-sm-4"><label class="form-label" for="r-key">Loose key</label><select class="form-select" id="r-key" name="key">{{range .Data.Loose}}<option value="{{.Name}}">{{.Name}}{{if .Devbox}} (looks like a devbox key){{end}}</option>{{end}}</select></div>
+        <div class="col-sm-4"><label class="form-label" for="r-for">Kept for <span class="text-secondary">(optional)</span></label><input class="form-control" id="r-for" name="for" maxlength="200" placeholder="devbox" autocomplete="off"></div>
+        <div class="col-sm-4"><label class="form-label" for="r-note">Note <span class="text-secondary">(optional)</span></label><input class="form-control" id="r-note" name="note" maxlength="200" autocomplete="off"></div>
+      </div>
+      <p class="text-secondary small mt-2 mb-2">Records the key as reserved in manifest.json; the key file is not touched. Adopting it onto a VM later releases the reservation.</p>
+      <button type="submit" class="btn btn-primary">Preview</button>
+    </form>
+  </div>
+  {{end}}
+</div>
+{{if not .ReadOnly}}
+{{template "panel_open" (header "add-key" "Add a key" "Declares the key and mints it, with no passphrase.")}}
+        {{template "change_open" .}}<input type="hidden" name="action" value="key-add">
+          <div class="row g-2">
+            <div class="col-sm-4"><label class="form-label" for="k-profile">Profile</label><input class="form-control" id="k-profile" name="profile" required autocomplete="off" spellcheck="false" list="k-profiles"></div>
+            <div class="col-sm-4"><label class="form-label" for="k-name">Key name</label><input class="form-control" id="k-name" name="key" required autocomplete="off" spellcheck="false"></div>
+            <div class="col-sm-4"><label class="form-label" for="k-type">Type</label><select class="form-select" id="k-type" name="key_type"><option value="">the manifest's default</option><option>ed25519</option><option>ecdsa</option><option>rsa</option></select></div>
+            <div class="col-12"><label class="form-label" for="k-host">Wire it to host <span class="text-secondary">(optional alias in that profile)</span></label><input class="form-control" id="k-host" name="host" autocomplete="off" spellcheck="false"></div>
+          </div>
+          <datalist id="k-profiles">{{range .Data.Rows}}<option value="{{.Ref.Profile}}">{{end}}</datalist>
+          {{template "panel_actions" ""}}
+        </form>
+{{template "panel_close"}}
+{{template "panel_open" (header "mint-keys" "Mint missing keys" "Keys that exist are left alone.")}}
+        {{template "change_open" .}}<input type="hidden" name="action" value="keygen">
+          <div class="mb-2"><label class="form-label" for="g-target">For a profile or host alias</label><input class="form-control" id="g-target" name="target" required autocomplete="off" spellcheck="false" list="k-profiles"></div>
+          {{template "panel_actions" ""}}
+        </form>
+{{template "panel_close"}}
+{{end}}
+{{end}}

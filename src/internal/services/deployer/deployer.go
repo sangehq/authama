@@ -1,0 +1,235 @@
+// Package deployer installs a key's public half on its target(s) and records the
+// deployment. A key name maps to the host(s)
+// that reference it (one per_service, many shared); each host's provider does the
+// install (named adapter -> generic ssh -> manual) and the result is recorded in
+// the inventory keyed by fingerprint.
+package deployer
+
+import (
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/simtabi/authama/src/internal/core/inventory"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/core/providers"
+	"github.com/simtabi/authama/src/internal/services/keystore"
+	"github.com/simtabi/authama/src/internal/util/netcheck"
+	"github.com/simtabi/authama/src/internal/util/paths"
+)
+
+// DeployRecord is one target's deploy outcome.
+type DeployRecord struct {
+	Target   string
+	Provider string
+	Method   string
+	Verified bool
+	Detail   string
+	Error    bool
+}
+
+// DeployReport summarizes a deploy run.
+type DeployReport struct {
+	KeyName     string
+	Fingerprint string
+	Records     []DeployRecord
+}
+
+// Format renders the deploy summary (mirrors DeployReport.format).
+func (r DeployReport) Format() string {
+	lines := []string{fmt.Sprintf("deploy %s  (%s)", r.KeyName, r.Fingerprint)}
+	for _, rec := range r.Records {
+		flag := "MANUAL/needs-redeploy"
+		if rec.Verified {
+			flag = "verified"
+		}
+		lines = append(lines, fmt.Sprintf("  -> %s via %s/%s: %s", rec.Target, rec.Provider, rec.Method, flag))
+		if rec.Detail != "" {
+			lines = append(lines, "     "+rec.Detail)
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// AnyError reports whether any target's deploy was attempted and failed.
+func (r DeployReport) AnyError() bool {
+	for _, rec := range r.Records {
+		if rec.Error {
+			return true
+		}
+	}
+	return false
+}
+
+// Deployer deploys keys to their targets.
+type Deployer struct {
+	p   paths.Paths
+	m   *manifest.Manifest
+	inv *inventory.Inventory
+	ks  *keystore.KeyStore
+	// unattended, when set, is where the deploy's ssh output goes, and means
+	// no prompt can be answered (see providers.Target.Unattended).
+	unattended io.Writer
+}
+
+// New builds a Deployer.
+func New(p paths.Paths, m *manifest.Manifest, inv *inventory.Inventory) *Deployer {
+	return &Deployer{p: p, m: m, inv: inv, ks: keystore.New()}
+}
+
+// Unattended makes the deploy run with nobody to answer a prompt, writing the
+// output of ssh and ssh-copy-id to w. The web UI deploys this way.
+func (d *Deployer) Unattended(w io.Writer) *Deployer {
+	d.unattended = w
+	return d
+}
+
+// Deploy installs key keyName on its target(s) (all hosts using it, or just
+// targetAlias) and records each deployment. Mirrors Deployer.deploy.
+func (d *Deployer) Deploy(selector, targetAlias string) (DeployReport, error) {
+	if err := d.p.RefuseOutsideSandbox("deploy"); err != nil {
+		return DeployReport{}, err
+	}
+	hosts, ref, err := d.targets(selector, targetAlias)
+	if err != nil {
+		return DeployReport{}, err
+	}
+	profile, keyName := ref.Profile, ref.KeyName
+	pub := d.m.KeyPath(d.p.SSHDir, ref) + ".pub"
+	if _, err := os.Stat(pub); err != nil {
+		return DeployReport{}, fmt.Errorf("public key not found: %s - run `authama ssh reconcile` first", pub)
+	}
+	fp, err := d.ks.Fingerprint(pub)
+	if err != nil {
+		return DeployReport{}, err
+	}
+	// A revoked key is never deployed again, wherever the request comes from.
+	revs, err := inventory.LoadRevocations(inventory.RevokedPath(d.p.Inventory()))
+	if err != nil {
+		return DeployReport{}, err
+	}
+	if r, revoked := revs[fp]; revoked {
+		return DeployReport{}, fmt.Errorf("key %s (%s) was revoked on %s and is never deployed again: "+
+			"mint a new one with `authama ssh keygen %s --force` or `authama ssh rotate %s`", ref, fp, r.RevokedOn, ref, ref)
+	}
+	pubText := ""
+	if b, err := os.ReadFile(pub); err == nil {
+		pubText = string(b)
+	}
+	fpKey := d.ensureRecord(fp, profile, keyName)
+	rec := d.inv.Keys[fpKey]
+
+	report := DeployReport{KeyName: keyName, Fingerprint: fp}
+	knownHosts := filepath.Join(d.p.SSHDir, "known_hosts")
+	for _, host := range hosts {
+		provider := providers.Resolve(deref(host.Provider), d.p.Providers())
+		if provider.Category() == "server" {
+			st := netcheck.Check(host.Hostname, host.Port, host.RequiresVPN, deref(host.VPNName), deref(host.VPNURL), 4*time.Second, true)
+			if !st.Reachable {
+				recordDeployment(&rec, host.Alias, "unreachable", false)
+				report.Records = append(report.Records, DeployRecord{
+					Target: host.Alias, Provider: provider.Name(), Method: "unreachable",
+					Verified: false, Detail: st.Message(), Error: true,
+				})
+				continue
+			}
+		}
+		tgt := providers.Target{
+			Alias: host.Alias, Hostname: host.Hostname, User: host.User, Port: host.Port,
+			PubkeyPath: pub, PubkeyText: pubText, TokenEnv: deref(host.TokenEnv),
+			KnownHosts: knownHosts, Unattended: d.unattended,
+		}
+		outcome := provider.Deploy(tgt)
+		recordDeployment(&rec, host.Alias, outcome.Method, outcome.Verified)
+		report.Records = append(report.Records, DeployRecord{
+			Target: host.Alias, Provider: provider.Name(), Method: outcome.Method,
+			Verified: outcome.Verified, Detail: outcome.Detail, Error: outcome.Error,
+		})
+	}
+	d.inv.Keys[fpKey] = rec
+	return report, nil
+}
+
+// targets resolves a key selector to the hosts it should be deployed to. Hosts
+// come from the key's own profile only - the public key lives in that profile's
+// directory, so a same-named key elsewhere is a different key entirely.
+func (d *Deployer) targets(selector, targetAlias string) ([]manifest.Host, manifest.KeyRef, error) {
+	ref, err := d.m.ResolveKeySelector(selector)
+	if err != nil {
+		return nil, manifest.KeyRef{}, err
+	}
+	using, err := d.m.HostsForKey(ref)
+	if err != nil {
+		return nil, manifest.KeyRef{}, err
+	}
+	if len(using) == 0 {
+		return nil, manifest.KeyRef{}, fmt.Errorf("no host in the manifest uses key %q", ref)
+	}
+	if targetAlias == "" {
+		return using, ref, nil
+	}
+	var chosen []manifest.Host
+	var aliases []string
+	for _, h := range using {
+		aliases = append(aliases, h.Alias)
+		if h.Alias == targetAlias {
+			chosen = append(chosen, h)
+		}
+	}
+	if len(chosen) == 0 {
+		return nil, manifest.KeyRef{}, fmt.Errorf("host %q does not use key %q (it's used by: %s)", targetAlias, ref, strings.Join(aliases, ", "))
+	}
+	return chosen, ref, nil
+}
+
+// ensureRecord makes sure an inventory record exists for fp and returns the
+// fingerprint key. A new record takes the type and rotation interval the
+// manifest gives this key, as the reconciler's mint does: hard-coded ed25519
+// and 365 days misreported an rsa key, and put a 90-day key's expiry nine
+// months late. Any other record at the same path belongs to a key that is no
+// longer on disk there, so it is dropped rather than left beside this one,
+// two records claiming one file.
+func (d *Deployer) ensureRecord(fp, profile, keyName string) string {
+	if _, ok := d.inv.Keys[fp]; ok {
+		return fp
+	}
+	ref := manifest.KeyRef{Profile: profile, KeyName: keyName}
+	ident := d.m.IdentityFile(profile, keyName)
+	for other, rec := range d.inv.Keys {
+		if rec.Path == ident {
+			delete(d.inv.Keys, other)
+		}
+	}
+	keyType := d.m.KeyTypeFor(ref)
+	if d.m.Profiles[profile].InOnePassword() {
+		keyType = "ed25519" // what 1Password generates
+	}
+	d.inv.Record(fp, inventory.KeyRecord{
+		Profile: profile, Path: ident,
+		Type: keyType, RotateAfterDays: d.m.RotateAfterDaysFor(ref),
+	})
+	return fp
+}
+
+// recordDeployment replaces any existing entry for target with a fresh one.
+func recordDeployment(rec *inventory.KeyRecord, target, method string, verified bool) {
+	kept := rec.Deployments[:0:0]
+	for _, dep := range rec.Deployments {
+		if dep.Target != target {
+			kept = append(kept, dep)
+		}
+	}
+	date := inventory.Today()
+	kept = append(kept, inventory.Deployment{Target: target, Method: method, Date: &date, Verified: verified})
+	rec.Deployments = kept
+}
+
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}

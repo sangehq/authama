@@ -1,0 +1,76 @@
+# Host specs: add or update many hosts at once
+
+`authama ssh host apply` takes hosts as one-line specs and upserts them into a
+profile:
+
+```text
+<alias> <host>[:port] <user> [role]
+```
+
+| Field | Meaning |
+|---|---|
+| `alias` | the name you `ssh` to; also names the key (`<profile>_<alias>-ed25519`) |
+| `host` | hostname or IP; `host:port`, `[v6]` and `[v6]:port` also work (port defaults to 22 on add, unchanged on update) |
+| `user` | ssh user |
+| `role` | optional; stored as a tag |
+
+## One host
+
+```sh
+authama ssh host apply clientco web-01 203.0.113.21 ploi web
+```
+
+## Many hosts
+
+```sh
+authama ssh host apply clientco \
+  --host "web-01 203.0.113.21 ploi web" \
+  --host "db-01  203.0.113.22 ploi db" \
+  --tag prd --reconcile
+```
+
+Or keep them in a file and re-run it whenever an IP changes:
+
+```text
+# hosts.txt
+web-01 203.0.113.21 ploi web
+db-01  203.0.113.22 ploi db
+bastion         203.0.113.5:2222 admin
+```
+
+```sh
+authama ssh host apply clientco -f hosts.txt --dry-run   # preview
+authama ssh host apply clientco -f hosts.txt --reconcile # apply, then mint keys
+cat hosts.txt | authama ssh host apply clientco -f -     # from stdin
+```
+
+A JSON array works too, of spec strings or objects:
+
+```json
+[
+  "web-01 203.0.113.21 ploi web",
+  {"alias": "db-01", "host": "203.0.113.22", "user": "ploi", "role": "db", "tags": ["prd"]}
+]
+```
+
+## What it does
+
+- A new alias is added exactly as `host add` would add it.
+- An existing alias gets its hostname, user and (if given) port set, as `host
+  edit` would. The role and any `--tag` are merged into its tags; `host apply`
+  never removes one. Use `authama ssh host edit <profile> <alias> --untag TAG` for that,
+  or `--tag` there to replace the whole list.
+- Each host is reported `added`, `updated` (with what changed) or `unchanged`.
+  Running the same specs again reports everything unchanged.
+- The whole batch is validated by the manifest's rules and saved once; a bad or
+  duplicated spec changes nothing.
+- A missing profile is refused unless you pass `--create-profile` or
+  `--category <name>` (which implies it). If the batch is then refused, the
+  new profile is removed again.
+- Without `--reconcile`, new hosts have no key until you run `authama ssh
+  reconcile`. With it, the reconcile preview is shown and confirmed as usual
+  (`-y` skips the prompt; `--no-pin` skips known_hosts auto-pinning).
+
+---
+
+[← Docs index](../../README.md#documentation)

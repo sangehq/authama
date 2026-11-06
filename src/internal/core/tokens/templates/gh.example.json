@@ -1,0 +1,9 @@
+{
+  "_help": "The GitHub CLI's hosts.yml ($GH_CONFIG_DIR, else gh's config directory). Each host is github.com or an Enterprise Server host; 'user_env' names the account's login and 'pass_env' its token. The token is written where gh reads it when it is not in the keyring: users.<login>.oauth_token, and the host's own oauth_token and user. GH_TOKEN and GH_ENTERPRISE_TOKEN still win. This file stores ENV VAR NAMES, not secrets. Writes MERGE, keeping every other host, account and key.",
+  "gh": {
+    "github.com": {
+      "user_env": "GITHUB_USER",
+      "pass_env": "GH_TOKEN"
+    }
+  }
+}

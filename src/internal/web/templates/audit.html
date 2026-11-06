@@ -1,0 +1,44 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "Security" "Audit" "Key age, expiry and hygiene, as authama ssh audit reports them.")}}
+<div class="card mb-3">
+  <div class="card-header"><h2 class="card-title">Deployments</h2>{{if .Keys}}<div class="card-actions">{{template "csv" "/exports/deployments.csv"}}</div>{{end}}</div>
+  {{if .Keys}}
+  <div class="table-responsive" tabindex="0">
+    <table class="table table-vcenter card-table table-hover" data-table="keys">
+      <caption class="visually-hidden">Each recorded key and where it is deployed</caption>
+      <thead><tr><th scope="col">Key file</th><th scope="col">Status</th><th scope="col">Deployed to</th></tr></thead>
+      <tbody>
+        {{range .Keys}}
+        <tr>
+          <th scope="row"><code>{{.Path}}</code><div class="text-secondary small fw-normal text-break">{{.Fingerprint}}</div></th>
+          <td><span class="badge {{statusClass .Status}}">{{.Status}}</span></td>
+          <td>{{range .Deployments}}<div>{{.Target}} <span class="text-secondary">via {{.Method}}{{with deref .Date}}, {{.}}{{end}}</span> {{if .Verified}}<span class="badge badge-ok">verified</span>{{else}}<span class="badge badge-warn">unverified</span>{{end}}</div>{{else}}<span class="text-secondary">nowhere yet</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}<div class="card-body text-secondary">The inventory is empty. Run <code>authama ssh reconcile</code>, then <code>authama ssh deploy</code>.</div>{{end}}
+</div>
+<div class="row row-cards">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Expiry</h2></div>
+      {{if .Expiry}}
+      <ul class="list-group list-group-flush">{{range .Expiry}}<li class="list-group-item d-flex justify-content-between gap-2"><a href="{{basePath}}/keys/{{.Profile}}/{{.KeyName}}"><code>{{.Ref}}</code></a><span><span class="badge {{statusClass .State}}">{{.State}}</span> <span class="text-secondary">{{orDash (deref .ExpiresOn)}}, {{expiryDays .}}</span></span></li>{{end}}</ul>
+      {{else}}<div class="card-body text-secondary">Nothing tracked.</div>{{end}}
+      {{if not $.ReadOnly}}<div class="card-footer d-flex flex-wrap align-items-center gap-2">
+        <span class="text-secondary small me-auto">Desktop alerts, as the scheduled reminder sends them.</span>
+        {{template "change_open" $}}<input type="hidden" name="action" value="audit-notify"><button type="submit" class="btn btn-sm btn-outline-secondary">{{icon "bell"}}<span class="ms-1">Alert if one is due</span></button></form>
+        {{template "change_open" $}}<input type="hidden" name="action" value="notify-test"><button type="submit" class="btn btn-sm btn-outline-secondary">Send a test</button></form>
+      </div>{{end}}
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Recent activity</h2><div class="card-actions"><a href="{{basePath}}/history">All history</a></div></div>
+      {{template "op_table" .Recent}}
+    </div>
+  </div>
+</div>
+{{end}}{{end}}

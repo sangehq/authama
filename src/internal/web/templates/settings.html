@@ -1,0 +1,73 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "System" "Settings" "The settings files authama reads at start-up, and every setting's value in effect.")}}
+<div class="card mb-3" id="appearance">
+  <div class="card-body d-flex flex-wrap align-items-center gap-3">
+    <div class="me-auto">
+      <h2 class="card-title mb-1">Appearance</h2>
+      <p class="text-secondary mb-0">The colour theme for this browser. Following the system matches the light or dark setting of this computer.</p>
+    </div>
+    <div class="btn-group" role="group" aria-label="Colour theme">
+      <a href="?theme=light" class="btn btn-outline-secondary" data-theme-choice="light">{{icon "sun"}}<span class="ms-1">Light</span></a>
+      <a href="?theme=dark" class="btn btn-outline-secondary" data-theme-choice="dark">{{icon "moon"}}<span class="ms-1">Dark</span></a>
+      <a href="?theme=auto" class="btn btn-outline-secondary" data-theme-choice="auto" title="Follow the system" aria-label="Follow the system">{{icon "device-desktop"}}<span class="ms-1">System</span></a>
+    </div>
+  </div>
+</div>
+<div class="row row-cards mb-3">
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header"><h2 class="card-title">Files</h2></div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-3">Config home</dt><dd class="col-sm-9 text-break"><code>{{.ConfigHome}}</code>{{if .ConfigSource}} <span class="text-secondary">({{.ConfigSource}})</span>{{end}}</dd>
+          <dt class="col-sm-3">State home</dt><dd class="col-sm-9 text-break"><code>{{.StateHome}}</code> <span class="text-secondary">(history, logs, snapshots, bundles, lock)</span></dd>
+          <dt class="col-sm-3"><code>.env</code></dt><dd class="col-sm-9 text-break"><code>{{.Dotenv}}</code>{{if .DotenvState}} <span class="text-secondary">({{.DotenvState}})</span>{{end}}</dd>
+          <dt class="col-sm-3"><code>authama.json</code></dt><dd class="col-sm-9 text-break mb-0"><code>{{.Settings}}</code>{{if .SettingsState}} <span class="text-secondary">({{.SettingsState}})</span>{{end}}</dd>
+        </dl>
+      </div>
+      {{if and (not .HasSettings) (not $.ReadOnly)}}
+      <div class="card-footer d-flex flex-wrap gap-2 align-items-center">
+        <span class="text-secondary me-auto">No <code>authama.json</code> yet: every setting is at its default unless the environment or <code>.env</code> sets it.</span>
+        {{template "change_open" $}}<input type="hidden" name="action" value="settings-init"><button type="submit" class="btn btn-primary mt-2">{{icon "plus"}}<span class="ms-1">Create a starter authama.json</span></button></form>
+      </div>
+      {{end}}
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header"><h2 class="card-title">Validation</h2></div>
+      <div class="card-body">
+        {{if .Problems}}
+        <div class="alert alert-warning mb-2" role="status">{{icon "alert-triangle"}}<span class="ms-1">{{len .Problems}} problem(s), as <code>authama settings validate</code> reports them.</span></div>
+        <ul class="mb-0">{{range .Problems}}<li>{{.}}</li>{{end}}</ul>
+        {{else}}<p class="text-success mb-0">{{icon "circle-check"}}<span class="ms-1">settings: ok</span></p>{{end}}
+      </div>
+    </div>
+  </div>
+</div>
+<div class="row row-cards">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">In effect</h2><div class="card-actions text-secondary small">{{len .Effective}} settings</div></div>
+      {{if .Effective}}
+      <div class="table-responsive" tabindex="0">
+        <table class="table table-vcenter card-table table-hover" data-table="settings">
+          <caption class="visually-hidden">Every setting, its value in effect, and where the value came from</caption>
+          <thead><tr><th scope="col">Setting</th><th scope="col">Value</th><th scope="col">From</th></tr></thead>
+          <tbody>
+            {{range .Effective}}
+            <tr>
+              <th scope="row"><code>{{.Key}}</code><div class="small text-secondary"><code>${{.Variable}}</code></div></th>
+              <td class="text-break w-50">{{if .Value}}{{.Value}}{{else}}<span class="text-secondary">(unset)</span>{{end}}</td>
+              <td>{{if eq .Source "default"}}<span class="badge badge-muted">default</span>{{else}}<span class="badge badge-info text-wrap text-start">{{.Source}}</span>{{end}}</td>
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+      {{else}}<div class="card-body text-secondary">The values in effect are known only to the command that started this server.</div>{{end}}
+      <div class="card-footer text-secondary">Precedence: command-line flags, then the environment, then <code>.env</code>, then <code>authama.json</code>, then the defaults. The values are those this server started with; <code>authama settings show --effective</code> prints them for a new run.</div>
+    </div>
+  </div>
+</div>
+{{end}}{{end}}

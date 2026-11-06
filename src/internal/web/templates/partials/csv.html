@@ -1,0 +1,72 @@
+{{/* A list's CSV download: `{{template "csv" "/exports/hosts.csv"}}`. A page
+     with filters passes them on, so the file holds what the page shows. With
+     the script, the button opens "csv_dialog" first: pick the profiles, keys and
+     columns, leave out rows, see the first rows, then download. Without it, it
+     downloads. */}}
+{{define "csv"}}<a class="btn btn-sm btn-outline-secondary" href="{{u .}}" download data-csv-export{{tip "csv"}}>{{icon "download"}}<span class="ms-1">CSV</span></a>{{end}}
+
+{{define "csv_pick"}}<div class="csv-pick-panel" role="tabpanel" id="csv-tab-{{.}}" aria-labelledby="csv-tab-{{.}}-btn" data-csv-panel="{{.}}" hidden>
+            <div class="px-3 pt-3 pb-2">
+              <div class="input-icon">
+                <span class="input-icon-addon">{{icon "search"}}</span>
+                <input class="form-control form-control-sm" type="search" placeholder="Find" aria-label="Find in this list" autocomplete="off" data-csv-find="{{.}}">
+              </div>
+            </div>
+            <div class="csv-pick-scroll">
+              <table class="table table-sm table-hover table-vcenter card-table mb-0 csv-pick-table">
+                <thead><tr data-csv-head="{{.}}"></tr></thead>
+                <tbody data-csv-list="{{.}}"></tbody>
+              </table>
+            </div>
+          </div>{{end}}
+
+{{define "csv_dialog"}}<div class="modal modal-blur fade" id="csv-dialog" tabindex="-1" aria-labelledby="csv-dialog-title" aria-hidden="true" data-csv-dialog>
+  <div class="modal-dialog modal-xl modal-dialog-scrollable csv-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h3" id="csv-dialog-title">{{icon "download"}}<span class="ms-1">Download CSV</span> <code class="ms-1" data-csv-name></code></h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0 csv-body">
+        <aside class="csv-pick" aria-label="What the file holds">
+          <div class="csv-tabs" role="tablist" aria-label="Choose">
+            <button type="button" class="csv-tab" role="tab" id="csv-tab-profiles-btn" aria-controls="csv-tab-profiles" data-csv-tab="profiles" hidden>Profiles <span class="badge bg-secondary-lt ms-1" data-csv-count="profiles"></span></button>
+            <button type="button" class="csv-tab" role="tab" id="csv-tab-keys-btn" aria-controls="csv-tab-keys" data-csv-tab="keys" hidden>Keys <span class="badge bg-secondary-lt ms-1" data-csv-count="keys"></span></button>
+            <button type="button" class="csv-tab" role="tab" id="csv-tab-columns-btn" aria-controls="csv-tab-columns" data-csv-tab="columns">Columns <span class="badge bg-secondary-lt ms-1" data-csv-count="columns"></span></button>
+          </div>
+          {{template "csv_pick" "profiles"}}
+          {{template "csv_pick" "keys"}}
+          {{template "csv_pick" "columns"}}
+          <div class="csv-pick-option" data-csv-narrow-box hidden>
+            <label class="form-check form-switch mb-1">
+              <input class="form-check-input" type="checkbox" data-csv-narrow checked>
+              <span class="form-check-label">Count only the ticked keys</span>
+            </label>
+            <small class="form-hint">On: each profile's <code>keys</code>, <code>hosts</code> and <code>key_names</code> cover the ticked keys alone. Off: a profile holding a ticked key is kept with its whole counts.</small>
+          </div>
+          <p class="csv-pick-note small text-secondary mb-0" data-csv-keys-note hidden>{{icon "info-circle"}}<span class="ms-1">This list has no key column, so there are no keys to choose here. Keys are chosen in the CSV of <a href="{{u "/hosts"}}">Hosts</a>, <a href="{{u "/keys"}}">Keys</a> or <a href="{{u "/profiles"}}">Profiles</a>, per profile or across all of them.</span></p>
+        </aside>
+        <section class="csv-main" aria-label="Preview">
+          <div class="csv-toolbar">
+            <div class="input-icon flex-fill">
+              <span class="input-icon-addon">{{icon "search"}}</span>
+              <input class="form-control" id="csv-exclude" type="search" maxlength="200" autocomplete="off" placeholder="Leave out rows containing…" aria-label="Leave out rows containing" aria-describedby="csv-exclude-hint" data-csv-exclude>
+            </div>
+          </div>
+          <small class="form-hint px-3" id="csv-exclude-hint">Any row with this text in any column is left out, ignoring case. Your choice is remembered for this list in this browser.</small>
+          <div class="csv-summary" role="status" aria-live="polite">
+            <span class="fw-medium" data-csv-summary></span>
+            <span class="d-inline-flex flex-wrap gap-1" data-csv-reasons></span>
+          </div>
+          <div class="csv-preview" tabindex="0" role="region" aria-label="Preview of the first rows" data-csv-preview></div>
+        </section>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link link-secondary me-auto" data-csv-reset>Reset</button>
+        <span class="text-danger small me-2" data-csv-blocked hidden></span>
+        <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Cancel</button>
+        <a class="btn btn-primary" role="link" href="#" download data-csv-download>{{icon "download"}}<span class="ms-1">Download</span></a>
+      </div>
+    </div>
+  </div>
+</div>{{end}}

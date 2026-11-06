@@ -1,0 +1,439 @@
+package bundler
+
+import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
+	"io"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"testing"
+
+	"github.com/simtabi/authama/src/internal/core/renderer"
+)
+
+// tmpResidue lists every regular file currently under dir, so a test can assert
+// that no plaintext was staged there.
+func tmpResidue(t *testing.T, dir string) []string {
+	t.Helper()
+	var found []string
+	_ = filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+		if err == nil && !d.IsDir() {
+			rel, _ := filepath.Rel(dir, p)
+			found = append(found, rel)
+		}
+		return nil
+	})
+	return found
+}
+
+// watchingCipher is an identity copy that snapshots the temp dir at the moment
+// the cipher is invoked - the point where a staging implementation would have
+// just finished writing the plaintext archive.
+type watchingCipher struct {
+	t      *testing.T
+	tmpDir string
+	seen   *[]string
+}
+
+func (c watchingCipher) Encrypt(dst io.Writer, src io.Reader, _ string) error {
+	*c.seen = append(*c.seen, tmpResidue(c.t, c.tmpDir)...)
+	_, err := io.Copy(dst, src)
+	return err
+}
+
+func (c watchingCipher) Decrypt(dst io.Writer, src io.Reader, _ string) error {
+	_, err := io.Copy(dst, src)
+	return err
+}
+
+// $TMPDIR is world-traversable, frequently on a different filesystem than the
+// one holding ~/.ssh, and survives a crash. A private key must never land there.
+func TestBundleStagesNoPlaintext(t *testing.T) {
+	ssh, cfg := writeSrc(t)
+	tmpDir := t.TempDir()
+	t.Setenv("TMPDIR", tmpDir)
+
+	var seen []string
+	b := New(ssh, cfg, watchingCipher{t: t, tmpDir: tmpDir, seen: &seen})
+	if _, err := b.Bundle("age1fake", filepath.Join(t.TempDir(), "out"), "20260101"); err != nil {
+		t.Fatal(err)
+	}
+	if len(seen) > 0 {
+		t.Errorf("plaintext was staged in the temp dir before encryption: %v", seen)
+	}
+	if left := tmpResidue(t, tmpDir); len(left) > 0 {
+		t.Errorf("temp residue left after bundling: %v", left)
+	}
+}
+
+func TestRestoreStagesNoPlaintext(t *testing.T) {
+	ssh, cfg := writeSrc(t)
+	dest := filepath.Join(t.TempDir(), "out")
+	res, err := New(ssh, cfg, fakeCipher{}).Bundle("age1fake", dest, "20260101")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tmpDir := t.TempDir()
+	t.Setenv("TMPDIR", tmpDir)
+	base := t.TempDir()
+	// Sampled from inside lay-down, by which point a staging implementation has
+	// both the decrypted tar and the extracted tree on disk.
+	var duringLayDown []string
+	fp := func(p string) (string, error) {
+		duringLayDown = append(duringLayDown, tmpResidue(t, tmpDir)...)
+		return "SHA256:fake", nil
+	}
+	if _, err := New(filepath.Join(base, ".ssh"), filepath.Join(base, "cfg"), fakeCipher{}).
+		Restore(res.AgePath, "", fp); err != nil {
+		t.Fatal(err)
+	}
+	if len(duringLayDown) > 0 {
+		t.Errorf("decrypted plaintext was staged in the temp dir: %v", duringLayDown)
+	}
+	if left := tmpResidue(t, tmpDir); len(left) > 0 {
+		t.Errorf("temp residue left after restoring: %v", left)
+	}
+}
+
+func TestBundleIsOwnerOnly(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX modes only")
+	}
+	ssh, cfg := writeSrc(t)
+	res, err := New(ssh, cfg, fakeCipher{}).Bundle("age1fake", filepath.Join(t.TempDir(), "out"), "20260101")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{res.AgePath, res.AgePath + ".sha256", res.AgePath + ".contents"} {
+		fi, err := os.Stat(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if fi.Mode().Perm() != 0o600 {
+			t.Errorf("%s is %o, want 0600", filepath.Base(p), fi.Mode().Perm())
+		}
+	}
+}
+
+// failingCipher stands in for age exiting non-zero (missing binary, bad
+// recipient). The half-written output must not survive to be trusted later.
+type failingCipher struct{}
+
+func (failingCipher) Encrypt(dst io.Writer, src io.Reader, _ string) error {
+	_, _ = io.CopyN(dst, src, 16)
+	return io.ErrUnexpectedEOF
+}
+
+func (failingCipher) Decrypt(dst io.Writer, src io.Reader, _ string) error {
+	return io.ErrUnexpectedEOF
+}
+
+func TestFailedEncryptLeavesNoBundle(t *testing.T) {
+	ssh, cfg := writeSrc(t)
+	dest := filepath.Join(t.TempDir(), "out")
+	if _, err := New(ssh, cfg, failingCipher{}).Bundle("age1fake", dest, "20260101"); err == nil {
+		t.Fatal("expected the encrypt failure to surface")
+	}
+	if _, err := os.Stat(filepath.Join(dest, "ssh-manager-20260101.age")); !os.IsNotExist(err) {
+		t.Error("a partial bundle was left behind and would look restorable")
+	}
+}
+
+func TestDecryptFailureIsReportedAsSuch(t *testing.T) {
+	ssh, cfg := writeSrc(t)
+	dest := filepath.Join(t.TempDir(), "out")
+	res, err := New(ssh, cfg, fakeCipher{}).Bundle("age1fake", dest, "20260101")
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := t.TempDir()
+	_, err = New(filepath.Join(base, ".ssh"), filepath.Join(base, "cfg"), failingCipher{}).
+		Restore(res.AgePath, "", fakeFP)
+	if err == nil {
+		t.Fatal("expected the decrypt failure to surface")
+	}
+	// The cipher error is the root cause; reporting "corrupt archive" would send
+	// the user looking at the wrong thing when their identity file is simply wrong.
+	if strings.Contains(err.Error(), "corrupt") {
+		t.Errorf("decrypt failure was misreported as corruption: %v", err)
+	}
+}
+
+// writeArchive builds a bundle by hand so a member name can be crafted.
+func writeArchive(t *testing.T, dir string, names ...string) string {
+	t.Helper()
+	agePath := filepath.Join(dir, "ssh-manager-crafted.age")
+	f, err := os.Create(agePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gz := gzip.NewWriter(f)
+	tw := tar.NewWriter(gz)
+	body := []byte("OWNED\n")
+	for _, n := range names {
+		if err := tw.WriteHeader(&tar.Header{
+			Name: n, Mode: 0o600, Size: int64(len(body)), Typeflag: tar.TypeReg,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tw.Write(body); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, c := range []io.Closer{tw, gz, f} {
+		if err := c.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return agePath
+}
+
+func TestRestoreRefusesEscapingMembers(t *testing.T) {
+	for _, name := range []string{
+		"ssh/../../../../etc/evil",
+		"config/../../evil",
+		"../evil",
+		"/etc/evil",
+	} {
+		t.Run(name, func(t *testing.T) {
+			base := t.TempDir()
+			ssh := filepath.Join(base, ".ssh")
+			cfg := filepath.Join(base, "cfg")
+			crafted := writeArchive(t, t.TempDir(), name)
+
+			if _, err := New(ssh, cfg, fakeCipher{}).Restore(crafted, "", fakeFP); err == nil {
+				t.Error("a member pointing outside the managed tree was accepted")
+			}
+			outside := filepath.Join(base, "evil")
+			if _, err := os.Stat(outside); err == nil {
+				t.Error("a file was written outside the managed tree")
+			}
+		})
+	}
+}
+
+// A bundle is decompressed before it is inspected, so its expanded size is
+// bounded. Without the limit a small .age file could expand to gigabytes -
+// restore reads every member into memory before touching disk, on purpose, so
+// a corrupt archive is rejected before it can destroy anything.
+func TestOversizedArchiveIsRejectedNotExpanded(t *testing.T) {
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+
+	// Well past maxBundleBytes, but all zeros, so the compressed form is tiny -
+	// which is exactly the shape of a decompression bomb.
+	const size = int64(maxBundleBytes) + (8 << 20)
+	if err := tw.WriteHeader(&tar.Header{
+		Name: "ssh/config", Mode: 0o600, Size: size, Typeflag: tar.TypeReg,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	chunk := make([]byte, 1<<20)
+	for written := int64(0); written < size; written += int64(len(chunk)) {
+		n := int64(len(chunk))
+		if remaining := size - written; remaining < n {
+			n = remaining
+		}
+		if _, err := tw.Write(chunk[:n]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := gz.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// The point: a tiny file that claims to hold far more than the limit.
+	if buf.Len() > 1<<20 {
+		t.Fatalf("the fixture should compress small, got %d bytes", buf.Len())
+	}
+
+	if _, err := readTarGz(&buf); err == nil {
+		t.Error("an archive expanding past the limit should be rejected")
+	}
+}
+
+// A well-formed archive under the limit still reads, so the bound does not
+// reject ordinary bundles.
+func TestOrdinaryArchiveStillReads(t *testing.T) {
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	body := []byte("Host gh\n    HostName github.com\n")
+	if err := tw.WriteHeader(&tar.Header{
+		Name: "ssh/config", Mode: 0o600, Size: int64(len(body)), Typeflag: tar.TypeReg,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tw.Write(body); err != nil {
+		t.Fatal(err)
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := gz.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	members, err := readTarGz(&buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(members) != 1 {
+		t.Fatalf("got %d members, want 1", len(members))
+	}
+}
+
+// The same containment property the snapshot restorer has: a symlink already in
+// the destination must not be a way out of it. Every member name here is an
+// ordinary relative path, so name checks pass it and the joined path is
+// textually inside ~/.ssh - the escape happens when the OS resolves the link.
+func TestRestoreWillNotWriteThroughASymlinkOutOfTheDestination(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink creation needs privilege on Windows")
+	}
+	ssh, cfg := writeSrc(t)
+	dest := filepath.Join(t.TempDir(), "out")
+	res, err := New(ssh, cfg, fakeCipher{}).Bundle("age1fake", dest, "20260101")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	base := t.TempDir()
+	destSSH := filepath.Join(base, ".ssh")
+	outside := filepath.Join(base, "outside")
+	if err := os.MkdirAll(filepath.Join(destSSH, "profiles"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(outside, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	victim := filepath.Join(outside, "work_a-ed25519")
+	const original = "# a key outside the destination\n"
+	if err := os.WriteFile(victim, []byte(original), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// The bundle carries profiles/work/*, so link that directory out of the tree.
+	if err := os.Symlink(outside, filepath.Join(destSSH, "profiles", "work")); err != nil {
+		t.Skipf("cannot create symlinks here: %v", err)
+	}
+
+	_, restoreErr := New(destSSH, filepath.Join(base, "cfg"), fakeCipher{}).
+		Restore(res.AgePath, "", func(string) (string, error) { return "SHA256:fake", nil })
+
+	got, readErr := os.ReadFile(victim)
+	if readErr != nil {
+		t.Fatalf("the file outside the destination is gone: %v", readErr)
+	}
+	if string(got) != original {
+		t.Errorf("the bundle wrote through a symlink and out of the destination.\n"+
+			"%s = %q\nRestore returned: %v", victim, got, restoreErr)
+	}
+}
+
+// age encrypts but does not authenticate the sender: anyone holding the public
+// recipient can build a bundle that decrypts cleanly with the victim's
+// identity. So restore must lay down only the members bundle itself writes. A
+// forged ssh/authorized_keys grants the forger a login, and a forged ssh/config
+// runs their ProxyCommand on the next ssh - both sit inside ~/.ssh, so the
+// os.Root containment never sees anything wrong with them.
+func TestRestoreRefusesMembersBundleNeverWrites(t *testing.T) {
+	for _, forged := range [][]string{
+		{"ssh/authorized_keys"},
+		{"ssh/config"},
+		{"ssh/rc"},
+		{"ssh/known_hosts"},
+		{"ssh/environment"},
+		{"ssh/profiles"},                   // a file where the profiles dir belongs
+		{"ssh/profiles/work/.staging/key"}, // bundle skips staging residue
+		{"config/.env"},                    // NEVER bundled
+		{"config/sub/manifest.json"},       // bundle's config members are flat
+		{"config/settings.json"},           // not one of the three models
+		// A legitimate member sorts first, so a restore that checks as it
+		// writes would already have touched disk before reaching the bad one.
+		{"ssh/profiles/work/work_a-ed25519", "ssh/rc"},
+		{"config/manifest.json", "ssh/config"},
+	} {
+		t.Run(strings.Join(forged, "+"), func(t *testing.T) {
+			base := t.TempDir()
+			ssh := filepath.Join(base, ".ssh")
+			cfg := filepath.Join(base, "cfg")
+			crafted := writeArchive(t, t.TempDir(), forged...)
+
+			_, err := New(ssh, cfg, fakeCipher{}).Restore(crafted, "", fakeFP)
+			if err == nil {
+				t.Fatal("a member bundle never writes was accepted")
+			}
+			bad := forged[len(forged)-1]
+			if !strings.Contains(err.Error(), bad) {
+				t.Errorf("the error should name the offending member %q: %v", bad, err)
+			}
+			// Refused means nothing written, not the bad member skipped.
+			if left := tmpResidue(t, base); len(left) > 0 {
+				t.Errorf("a refused restore still wrote: %v", left)
+			}
+		})
+	}
+}
+
+// The allow-list must not reject anything bundle legitimately produces: every
+// file under profiles/ in both layouts (keys, .pub, old/ archives, the rendered
+// per-category config) and all three config models.
+func TestRestoreAcceptsEverythingBundleWrites(t *testing.T) {
+	ssh, cfg := writeSrc(t)
+	mk := func(p string) {
+		if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(filepath.Base(p)+"\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mk(filepath.Join(ssh, "profiles", "work", "old", "work_a-ed25519"))
+	mk(filepath.Join(ssh, "profiles", "clients", "acme", "acme_k-ed25519"))
+	mk(filepath.Join(ssh, "profiles", "clients", "acme", "acme_k-ed25519.pub"))
+	// The rendered category config is not bundled (it is re-rendered on
+	// restore), so the round trip below must not expect it back.
+	if err := os.WriteFile(filepath.Join(ssh, "profiles", "clients", "config"),
+		[]byte(renderer.ManagedHeader+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	mk(filepath.Join(cfg, "providers.json"))
+	// Outside what bundle walks, so it must be neither bundled nor restored.
+	mk(filepath.Join(ssh, "authorized_keys"))
+
+	res, err := New(ssh, cfg, fakeCipher{}).Bundle("age1fake", t.TempDir(), "20260101")
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := t.TempDir()
+	ssh2, cfg2 := filepath.Join(base, ".ssh"), filepath.Join(base, "cfg")
+	rr, err := New(ssh2, cfg2, fakeCipher{}).Restore(res.AgePath, "", fakeFP)
+	if err != nil {
+		t.Fatalf("a genuine bundle was refused: %v\ncontents: %v", err, res.Contents)
+	}
+	if len(rr.Restored) != len(res.Contents) {
+		t.Errorf("restored %d of %d members: %v", len(rr.Restored), len(res.Contents), rr.Restored)
+	}
+	for _, c := range res.Contents {
+		var p string
+		if rel, ok := strings.CutPrefix(c, sshPrefix); ok {
+			p = filepath.Join(ssh2, filepath.FromSlash(rel))
+		} else {
+			p = filepath.Join(cfg2, strings.TrimPrefix(c, configPrefix))
+		}
+		if _, err := os.Stat(p); err != nil {
+			t.Errorf("%s was not laid back: %v", c, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(ssh2, "authorized_keys")); err == nil {
+		t.Error("authorized_keys was restored, but bundle never writes it")
+	}
+}

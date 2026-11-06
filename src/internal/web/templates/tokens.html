@@ -1,0 +1,207 @@
+{{define "content"}}{{with .Data}}
+{{if $.ReadOnly}}
+{{template "page_header" (header "Security" "Auth tokens" "Package-manager and git credentials: what is installed and how it audits. A secret is never shown.")}}
+{{else}}
+{{template "page_header" (header "Security" "Auth tokens" "Package-manager and git credentials: what is installed and how it audits. A secret is never shown." (panel "Add a token" "add-token" "plus" | withTip "token-add") (action "Apply the config" "#apply-config" "refresh" | withTip "token-apply") (only (ne .ConfigText "") (modal "Edit tokens.json" "edit-token-config" "pencil" | withTip "token-config")))}}
+{{end}}
+<div class="card mb-3">
+  <div class="card-header"><h2 class="card-title">Installed</h2>{{if .Items}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Items}} installed</span>{{template "csv" "/exports/tokens.csv"}}</div>{{end}}</div>
+  {{if .Items}}
+  <div class="table-responsive" tabindex="0">
+    <table class="table table-vcenter card-table table-hover" id="tokens-table" data-table="tokens">
+      <caption class="visually-hidden">The tokens in each tool's credential file; secrets are never shown here</caption>
+      <thead><tr><th scope="col">Tool</th><th scope="col">Host</th><th scope="col">What</th><th scope="col">User</th><th scope="col">Secret</th><th scope="col">File</th><th scope="col" class="w-1" data-nosort><span class="visually-hidden">Actions</span></th></tr></thead>
+      <tbody>
+        {{range .Items}}
+        <tr>
+          <td>{{.Target}}</td>
+          <td class="text-break">{{.Host}}</td>
+          <td>{{.Description}}</td>
+          <td>{{orDash .Username}}</td>
+          <td>{{if .SecretPresent}}<span class="badge badge-ok">set</span>{{else}}<span class="badge badge-warn">empty</span>{{end}}</td>
+          <td><code class="text-nowrap">{{.File}}</code></td>
+          <td class="text-end">
+            {{if not $.ReadOnly}}<form method="post" action="{{basePath}}/changes/preview" data-inline id="f-token-{{.Target}}-{{.Host}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="token-delete"><input type="hidden" name="target" value="{{.Target}}"><input type="hidden" name="host" value="{{.Host}}"></form>{{end}}
+            {{template "menu_open" (printf "Actions for the %s token for %s" .Target .Host)}}
+              <a class="dropdown-item" href="{{basePath}}/history?credential={{.Target}}/{{.Host}}">{{icon "history"}}<span class="ms-2">History</span></a>
+              <button type="button" class="dropdown-item" data-copy="{{.Host}}">{{icon "copy"}}<span class="ms-2">Copy the host</span></button>
+              <button type="button" class="dropdown-item" data-copy="{{.File}}">{{icon "copy"}}<span class="ms-2">Copy the file's path</span></button>
+              {{if not $.ReadOnly}}<button type="button" class="dropdown-item" data-panel-open="add-token" data-panel-fill-target="{{.Target}}" data-panel-fill-server="{{.Host}}">{{icon "refresh"}}<span class="ms-2">Replace or rotate</span></button>
+              <div class="dropdown-divider"></div>
+              <button type="submit" class="dropdown-item text-danger" form="f-token-{{.Target}}-{{.Host}}" data-confirm="m-token-{{.Target}}-{{.Host}}"{{tip "delete"}}>{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
+            {{template "menu_close"}}
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{if not $.ReadOnly}}{{range .Items}}{{template "confirm" (confirm (printf "m-token-%s-%s" .Target .Host) (printf "f-token-%s-%s" .Target .Host) (printf "Remove the %s token for %s?" .Target .Host) (printf "It is removed from %s. You see the change before it is made." .File) "Preview the removal")}}{{end}}{{end}}
+  {{else}}{{template "empty" (empty "cloud-lock" "No tokens installed" "Add one with the button above, or write the token config and apply it.")}}{{end}}
+</div>
+
+<div class="row row-cards mb-3">
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header"><h2 class="card-title">Status</h2></div>
+      <div class="card-body pb-0">
+        <p class="mb-2">Token config: {{if .Status.Config.Builtin}}none found, so the built-in default (GitHub for Composer from <code>$GH_TOKEN</code>){{else}}<code>{{.Status.Config.Path}}</code>{{if .Status.Config.Legacy}} (an auth-token-manager location){{end}}{{end}}</p>
+      </div>
+      <div class="table-responsive" tabindex="0">
+        <table class="table table-vcenter card-table table-sm">
+          <caption class="visually-hidden">Each tool's credential file, and how many entries are installed, in the config and resolvable now</caption>
+          <thead><tr><th scope="col">Tool</th><th scope="col">File</th><th scope="col">Mode</th><th scope="col">Installed</th><th scope="col">In config</th><th scope="col">Resolved</th></tr></thead>
+          <tbody>
+            {{range .Status.Targets}}
+            <tr>
+              <th scope="row">{{.Target}}</th>
+              <td><code class="text-nowrap">{{.File}}</code></td>
+              <td>{{if .Exists}}<code>{{.Mode}}</code>{{else}}<span class="text-secondary">absent</span>{{end}}</td>
+              <td>{{.Installed}}</td>
+              <td>{{.Configured}}</td>
+              <td>{{.Resolved}}</td>
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+      {{if .Status.Warnings}}
+      <div class="card-body">
+        <p class="mb-1"><code>authama token apply</code> would skip:</p>
+        <ul class="mb-0">{{range .Status.Warnings}}<li>{{.}}</li>{{end}}</ul>
+      </div>
+      {{end}}
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header" id="audit"><h2 class="card-title">Audit</h2></div>
+      <div class="card-body">
+        {{if .Failed}}<div class="alert alert-warning" role="status">{{icon "alert-triangle"}}<span class="ms-1">The token audit found a problem, marked ✗ below: a credential file others can read (<code>authama doctor --fix</code> makes it owner-only), or a <code>.gitignore</code>, where <code>authama serve</code> runs, that does not cover the secret files.</span></div>{{end}}
+        <ul class="list-unstyled mb-0">{{range .Findings}}<li>{{if eq .Level "ok"}}✓{{else if eq .Level "warn"}}✗{{else}}·{{end}} {{.Text}}</li>{{end}}</ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{if not $.ReadOnly}}
+{{template "panel_open" (header "add-token" "Add or replace a token" "One credential, written into its tool's file over the one already there for that server: how a token is added, rotated or edited.")}}
+      {{template "change_open" $}}<input type="hidden" name="action" value="token-set">
+        <div class="mb-3">
+          <label class="form-label required" for="ts-target">Tool</label>
+          <select class="form-select" id="ts-target" name="target" required>
+            <option value="">Choose a tool</option>
+            {{if .Services}}<option value="composer">composer</option>{{end}}
+            {{range .Targets}}<option value="{{.}}">{{.}}</option>{{end}}
+          </select>
+        </div>
+        <div class="mb-3" data-show-when="#ts-target" data-show-when-in="composer">
+          <label class="form-label required" for="ts-service">Composer service</label>
+          <select class="form-select" id="ts-service" name="service">
+            <option value="">Choose a service</option>
+            {{range .Services}}<option value="{{.Name}}">{{.Name}} ({{.Mechanism}})</option>{{end}}
+          </select>
+          <small class="form-hint">Composer only. Picking a service sets the tool to composer.</small>
+        </div>
+        <div class="mb-3">
+          <label class="form-label required" for="ts-server">Server</label>
+          <input class="form-control" id="ts-server" name="server" required autocomplete="off" spellcheck="false" placeholder="github.com">
+          <small class="form-hint">The registry or git server: <code>github.com</code>, <code>registry.npmjs.org</code>, <code>upload.pypi.org</code>, <code>crates.io</code> or a Cargo registry name, <code>rubygems.org</code>, a Gradle repository name, a Maven server id, a Helm repository's URL (<code>https://charts.example.com/stable</code>) or OCI registry (<code>ghcr.io</code>), or <code>github.com</code> for the GitHub CLI.</small>
+        </div>
+        <div class="mb-3" data-show-when="#ts-target" data-show-when-in="- composer docker git netrc pypi gradle maven helm helm-oci gh">
+          <label class="form-label" for="ts-username">User name</label>
+          <input class="form-control" id="ts-username" name="username" autocomplete="off" spellcheck="false">
+          <small class="form-hint">Required for docker, git, netrc, Gradle, Maven and Helm, and for a Composer http-basic service; for the GitHub CLI it is the account's login. For a PyPI API token it is <code>__token__</code>.</small>
+        </div>
+        <div class="mb-3" data-show-when="#ts-target" data-show-when-in="- npm">
+          <label class="form-label" for="ts-scope">npm scope</label>
+          <input class="form-control" id="ts-scope" name="scope" autocomplete="off" spellcheck="false" placeholder="@acme">
+          <small class="form-hint">npm only: binds an <code>@org</code> scope to this registry.</small>
+        </div>
+        <div class="mb-3" data-show-when="#ts-target" data-show-when-in="- docker">
+          <label class="form-label" for="ts-docker">Docker credential store</label>
+          <select class="form-select" id="ts-docker" name="docker_mode">
+            <option value="">Default</option>
+            <option value="login">login</option>
+            <option value="refuse">refuse</option>
+          </select>
+          <small class="form-hint">When Docker keeps credentials in a helper: <strong>Default</strong> follows <code>AUTHAMA_DOCKER_CREDS_STORE</code> and refuses without it; <strong>login</strong> runs <code>docker login --password-stdin</code>.</small>
+        </div>
+        <div class="mb-3">
+          <label class="form-label required" for="ts-secret">Token or password</label>
+          <input class="form-control" type="password" id="ts-secret" name="secret" required autocomplete="new-password" spellcheck="false">
+          <small class="form-hint">Sent to this server once and held in memory until you confirm. It is never shown or put into a page.</small>
+        </div>
+        <div class="d-flex align-items-center gap-2 pt-3 border-top">
+          <span class="text-secondary small me-auto">The same as <code>authama token set</code>.</span>
+          <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
+          <button type="submit" class="btn btn-primary">Preview</button>
+        </div>
+      </form>
+{{template "panel_close"}}
+{{if .ConfigText}}
+<div class="modal modal-blur fade" id="edit-token-config" tabindex="-1" aria-labelledby="edit-token-config-title" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+    <div class="modal-content">
+      {{template "change_open" $}}<input type="hidden" name="action" value="token-config-edit">
+      <div class="modal-header">
+        <h2 class="modal-title" id="edit-token-config-title">Edit tokens.json</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-secondary">It names environment variables, never secrets: <code>env</code>, <code>user_env</code>, <code>pass_env</code>, <code>key_env</code> and <code>secret_env</code> must each be a variable name, and a credential header takes its value from <code>${VAR}</code>. A file that holds a value is refused.</p>
+        <label class="form-label" for="tc-body">tokens.json</label>
+        <textarea class="form-control font-monospace" id="tc-body" name="body" rows="18" spellcheck="false" autocomplete="off" required data-json>{{.ConfigText}}</textarea>
+        <small class="form-hint">You see the diff before anything is written. <code>authama token examples</code> lists every field.</small>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link link-secondary me-auto" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Preview the change</button>
+      </div>
+      </form>
+    </div>
+  </div>
+</div>
+{{end}}
+<div class="row row-cards mb-3">
+  <div class="col-lg-6">
+    <div class="card h-100" id="apply-config">
+      <div class="card-header"><h2 class="card-title">Apply the token config</h2></div>
+      <div class="card-body">
+        <p class="text-secondary mb-0">Resolve the config from the environment <code>authama serve</code> was started in, and merge every tool's file, as <code>authama token apply</code> does. A variable set in another terminal is not seen.</p>
+      </div>
+      <div class="card-footer">{{template "change_open" $}}<input type="hidden" name="action" value="token-apply"><button type="submit" class="btn btn-primary">Preview applying the token config</button></form></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><h2 class="card-title">Token config</h2></div>
+      {{if .HasConfig}}
+      <div class="card-body text-secondary">The config home holds a <code>tokens.json</code>. It names the variables each tool's token comes from; <code>token init</code> and <code>token import</code> never write over it.</div>
+      {{if not $.ReadOnly}}<div class="card-footer">
+        {{if .ConfigText}}<button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#edit-token-config">{{icon "pencil"}}<span class="ms-1">Edit tokens.json</span></button>
+        {{else}}<p class="text-secondary small mb-0">{{icon "lock"}} Not editable here: {{.ConfigRefused}}. Edit it in a terminal.</p>{{end}}
+      </div>{{end}}
+      {{else}}
+      {{template "change_open" $}}<input type="hidden" name="action" value="token-init">
+      <div class="card-body">
+        <p class="text-secondary">Write a starter <code>tokens.json</code> into the config home, as <code>authama token init</code> does. It names environment variables, never secrets. Tick tools to start from their templates; none starts from all of them.</p>
+        <div class="d-flex flex-wrap gap-3">
+          {{range (list "composer" "npm" "docker" "git" "netrc" "pypi" "cargo" "gem" "gradle" "maven" "yarn" "helm" "helm-oci" "gh")}}<label class="form-check mb-0"><input class="form-check-input" type="checkbox" name="t_{{.}}" value="1"><span class="form-check-label">{{.}}</span></label>{{end}}
+        </div>
+      </div>
+      <div class="card-footer"><button type="submit" class="btn btn-outline-primary">Preview a starter tokens.json</button></div>
+      </form>
+      {{if .Legacy}}
+      <div class="card-footer">
+        <p class="text-secondary small mb-2">The config in use is at an auth-token-manager location. Copy it to the config home's <code>tokens.json</code>, as <code>authama token import</code> does; the old file is left in place.</p>
+        {{template "change_open" $}}<input type="hidden" name="action" value="token-import"><button type="submit" class="btn btn-outline-primary">Preview importing it</button></form>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+  </div>
+</div>
+{{end}}
+<p class="text-secondary">The same lists as <code>authama token list</code>, <code>authama token status</code> and <code>authama token audit</code>. Revealing a stored secret or copying it to the clipboard stays in the terminal (<code>token list --reveal</code>, <code>token copy</code>): a page never shows one.</p>
+{{end}}{{end}}

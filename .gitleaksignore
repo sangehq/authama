@@ -1,0 +1,25 @@
+# Findings retired by fingerprint, in the form commit:file:rule:line.
+#
+# CI scans the full history (fetch-depth: 0), so fixing the working tree does not
+# clear a finding - the commit that introduced it is still published. This file
+# is how a reviewed non-secret is retired without rewriting history.
+#
+# Every entry must say what the string actually is and why it is not a secret.
+# An entry without that is indistinguishable from suppressing a real leak.
+#
+# Paths here are the paths AS OF THE NAMED COMMIT, so they do not track later
+# moves: the entry below predates the move of the Go tree into src/ and must
+# keep saying internal/... or it stops matching and the finding returns.
+
+# A test literal, not a credential. TestSecretTravelsOnlyInTheEnvironment asserts
+# that a passphrase reaches ssh-keygen through the environment and never through
+# argv, so it needs a value it can find again in the child's environ. The
+# original was high-entropy and sat next to an identifier called `secret` - the
+# exact shape generic-api-key exists to catch, and a fair hit on a fake. The
+# working tree now uses THE-TEST-VALUE; this retires the published commit.
+a05bdcdefcfdfe5dc51c21f032ec13e02bfc58ad:internal/util/askpass/askpass_test.go:generic-api-key:114
+
+# termius keys test fixture: the literal "throwaway-test-key" between OpenSSH armor
+# lines, written to a temp dir by the test; not a key (the body is plain text).
+# Later commits build the armor at run time so it is not flagged again.
+eb1bf5e242d3752cbdd82a68950fc200bfa58227:src/internal/cli/termius_keys_test.go:private-key:11

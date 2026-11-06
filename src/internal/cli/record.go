@@ -1,0 +1,203 @@
+package cli
+
+import (
+	"errors"
+	"strings"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+
+	"github.com/simtabi/authama/src/internal/core/tokens"
+	"github.com/simtabi/authama/src/internal/services/history"
+	"github.com/simtabi/authama/src/internal/services/mutation"
+)
+
+// recordedFlags are the string flags whose values are names from the manifest
+// or settings that carry no secret, so the history keeps them. Every other
+// string value is recorded as "<set>": a path, an identity file or an output
+// location is the person's business, and an allowlist cannot leak a flag added
+// later the way a denylist would.
+var recordedFlags = map[string]string{
+	"profile":    history.KindProfile,
+	"host":       history.KindHost,
+	"key-name":   history.KindKey,
+	"category":   "",
+	"user":       "",
+	"hostname":   "",
+	"tag":        "",
+	"untag":      "",
+	"provider":   "",
+	"type":       "",
+	"proxy":      "",
+	"key-scope":  "",
+	"vm":         "",
+	"mode":       "",
+	"hypervisor": "",
+	"skip":       "",
+	"token-env":  "", // the variable's name, never its value
+	// token set and apply: which tool, Composer service, server and npm scope.
+	// None is a secret; the secret itself never arrives as a flag.
+	"target":  "",
+	"service": "",
+	"server":  "",
+	"scope":   "",
+}
+
+// positional names what each mutating command's arguments are, for the
+// history's --host, --profile and --key filters. A "[profile/]key" argument is
+// split into both. Commands not listed contribute their events' subjects only.
+var positional = map[string][]string{
+	"profile add":       {history.KindProfile},
+	"profile edit":      {history.KindProfile},
+	"profile delete":    {history.KindProfile},
+	"host add":          {history.KindProfile, history.KindHost},
+	"host edit":         {history.KindProfile, history.KindHost},
+	"host delete":       {history.KindProfile, history.KindHost},
+	"host apply":        {history.KindProfile, history.KindHost},
+	"key add":           {history.KindProfile, history.KindKey},
+	"key delete":        {history.KindKey},
+	"key reserve":       {history.KindKey},
+	"key unreserve":     {history.KindKey},
+	"deploy":            {history.KindKey, history.KindTarget},
+	"rollback":          {history.KindKey},
+	"rotate":            {history.KindKey},
+	"recover":           {history.KindKey},
+	"knownhosts pin":    {history.KindHost},
+	"vm docker-context": {history.KindHost},
+	"vm adopt-key":      {history.KindKey, history.KindProfile, history.KindHost},
+	"load":              {history.KindProfile},
+	"init":              {history.KindProfile},
+}
+
+func positionalSubjects(command string, args []string) []history.Subject {
+	var out []history.Subject
+	for i, kind := range positional[command] {
+		if i >= len(args) || args[i] == "" {
+			break
+		}
+		a := args[i]
+		if kind == history.KindKey {
+			if prof, key, ok := strings.Cut(a, "/"); ok {
+				out = append(out, history.Subject{Kind: history.KindProfile, Name: prof})
+				a = key
+			}
+		}
+		out = append(out, history.Subject{Kind: kind, Name: a})
+	}
+	return out
+}
+
+// recordCommands wraps every command's RunE in a history scope. The scope
+// records nothing unless the command mutates - the guard opens the operation
+// when the command takes the lock - so read-only commands pass through.
+//
+// The TUI is a scope of its own, and each action chosen from its menu opens a
+// scope inside it, so a session of five changes is five operations.
+func recordCommands(root *cobra.Command) {
+	mutation.InstallSink()
+	var walk func(c *cobra.Command)
+	walk = func(c *cobra.Command) {
+		// serve hosts scopes of its own, one per change a browser confirms; a
+		// scope around the whole server would claim every event it ever sees.
+		if run := c.RunE; run != nil && c.Name() != "serve" {
+			c.RunE = func(c *cobra.Command, args []string) error {
+				if err := gateDestructive(c); err != nil {
+					return err
+				}
+				mutation.Begin(scopeFor(c, args))
+				err := run(c, args)
+				mutation.End(mutation.Outcome{Err: err, Aborted: errors.Is(err, errAborted) || errors.Is(err, errChanged)})
+				return err
+			}
+		}
+		for _, sub := range c.Commands() {
+			walk(sub)
+		}
+	}
+	walk(root)
+}
+
+func scopeFor(c *cobra.Command, args []string) mutation.Scope {
+	name := strings.TrimSpace(strings.TrimPrefix(c.CommandPath(), c.Root().Name()))
+	// `ssh deploy` and the hidden top-level `deploy` are one command, and the
+	// history, its --command filter and every operation recorded before the
+	// group existed all spell it without the group.
+	name = strings.TrimPrefix(name, sshGroup+" ")
+	source := history.SourceCLI
+	if name == "" || name == "tui" {
+		name, source = "tui", history.SourceTUI
+	}
+	s := mutation.Scope{Command: name, Source: source, Args: append([]string{}, args...),
+		Subjects: positionalSubjects(name, args)}
+	c.Flags().Visit(func(f *pflag.Flag) {
+		if f.Name == devRootFlag {
+			return
+		}
+		if f.Name == "dry-run" && f.Value.String() == "true" {
+			s.DryRun = true
+		}
+		s.Args = append(s.Args, "--"+f.Name+"="+recordedValue(f))
+		kind := recordedFlags[f.Name]
+		if kind == "" || f.Value.String() == "" {
+			return
+		}
+		// A repeatable flag records each value. `host apply --host` takes a
+		// whole spec, "<alias> <host>[:port] <user> [role]", and the host it
+		// names is the alias - the name `history --host` is asked for - not
+		// the line as typed.
+		if sv, ok := f.Value.(pflag.SliceValue); ok {
+			for _, v := range sv.GetSlice() {
+				name := v
+				if kind == history.KindHost {
+					if fields := strings.Fields(v); len(fields) > 0 {
+						name = fields[0]
+					}
+				}
+				if name != "" {
+					s.Subjects = append(s.Subjects, history.Subject{Kind: kind, Name: name})
+				}
+			}
+			return
+		}
+		s.Subjects = append(s.Subjects, history.Subject{Kind: kind, Name: f.Value.String()})
+	})
+	s.Subjects = append(s.Subjects, tokenSubjects(c, name, args)...)
+	return s
+}
+
+// tokenSubjects names the credential a token command is about, as
+// "<tool>/<host>", so `history --token npm` finds every change to and every
+// read of an npm token. `token set` names it by flags, the rest by arguments.
+func tokenSubjects(c *cobra.Command, command string, args []string) []history.Subject {
+	var target, host string
+	switch command {
+	case tokenGroup + " delete", tokenGroup + " copy", tokenGroup + " show":
+		if len(args) < 2 {
+			return nil
+		}
+		target, host = args[0], args[1]
+	case tokenGroup + " set":
+		target, _ = c.Flags().GetString("target")
+		if svc, _ := c.Flags().GetString("service"); svc != "" {
+			target = tokens.Composer
+		}
+		host, _ = c.Flags().GetString("server")
+	default:
+		return nil
+	}
+	if target == "" || strings.TrimSpace(host) == "" {
+		return nil
+	}
+	return []history.Subject{{Kind: history.KindToken, Name: target + "/" + tokens.CanonicalHost(target, strings.TrimSpace(host))}}
+}
+
+func recordedValue(f *pflag.Flag) string {
+	switch f.Value.Type() {
+	case "bool", "int", "int64", "uint", "duration", "count":
+		return f.Value.String()
+	}
+	if _, ok := recordedFlags[f.Name]; ok {
+		return f.Value.String()
+	}
+	return "<set>"
+}

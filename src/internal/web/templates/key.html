@@ -1,0 +1,109 @@
+{{define "content"}}{{with .Data}}
+<div class="page-header d-print-none mb-3">
+  <div class="row g-2 align-items-center">
+    <div class="col">
+      <div class="text-secondary"><a href="{{basePath}}/keys">Keys</a> / profile <code>{{.Detail.Ref.Profile}}</code></div>
+      <h1 class="page-title"><code>{{.Detail.Ref.KeyName}}</code></h1>
+    </div>
+    {{if not $.ReadOnly}}<div class="col-auto ms-auto btn-list">
+      <a href="#lifetime" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" role="button" aria-controls="lifetime"{{tip "key-lifetime"}}>{{icon "hourglass"}}<span class="ms-1">Set lifetime</span></a>
+      {{if not $.DevRoot}}<a href="#revoke" class="btn btn-outline-danger" data-bs-toggle="offcanvas" role="button" aria-controls="revoke"{{tip "key-revoke"}}>{{icon "ban"}}<span class="ms-1">Revoke</span></a>{{end}}
+    </div>{{end}}
+  </div>
+</div>
+<div class="row row-cards">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Key</h2></div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-5">Type</dt><dd class="col-7">{{.Detail.Type}}</dd>
+          <dt class="col-5">Fingerprint {{template "help" (help "Fingerprint" "The SHA-256 hash of the public key. Compare it with what a server or GitHub shows to know it is the same key.")}}</dt><dd class="col-7 text-break"><code>{{orDash .Detail.Fingerprint}}</code>{{with .Detail.Fingerprint}} {{template "copy" (copy . "the fingerprint")}}{{end}}</dd>
+          {{if and .Detail.DiskFingerprint (ne .Detail.DiskFingerprint .Detail.Fingerprint)}}<dt class="col-5">On disk</dt><dd class="col-7 text-break"><span class="badge badge-bad">different key</span> <code>{{.Detail.DiskFingerprint}}</code></dd>{{end}}
+          {{if .Detail.FingerprintErr}}<dt class="col-5">Public key</dt><dd class="col-7">{{.Detail.FingerprintErr}}</dd>{{end}}
+          <dt class="col-5">Created</dt><dd class="col-7">{{orDash .Detail.Created}}</dd>
+          <dt class="col-5">Lifetime {{template "help" (help "Lifetime" "How long the key lives before rotation is due. Set it per key, or as the default every key inherits; the expiry date is counted from when the key was made.")}}</dt><dd class="col-7">{{.Detail.RotateAfterDays}} days{{if .Revoked}} <span class="badge badge-bad">revoked {{.Revoked}}</span>{{end}}</dd>
+          <dt class="col-5">Expires</dt><dd class="col-7">{{orDash .Detail.ExpiresOn}}{{with .Expiry}} <span class="badge {{statusClass .State}}">{{.State}}</span> <span class="text-secondary">{{expiryDays .}}</span>{{end}}</dd>
+          <dt class="col-5">Store</dt><dd class="col-7">{{if .Detail.Vault}}1Password vault <code>{{.Detail.Vault}}</code>{{else}}disk{{end}}</dd>
+          <dt class="col-5">Identity file</dt><dd class="col-7 text-break"><code>{{.Detail.IdentityFile}}</code> {{template "copy" (copy .Detail.IdentityFile "the identity file's path")}}</dd>
+          <dt class="col-5">Used by</dt><dd class="col-7">{{range $i, $h := .Detail.Hosts}}{{if $i}}, {{end}}<a href="{{basePath}}/hosts/{{$h}}"><code>{{$h}}</code></a>{{else}}–{{end}}</dd>
+        </dl>
+      </div>
+      {{if .PublicKey}}<div class="card-footer">
+        <div class="d-flex align-items-center mb-1"><span class="form-label mb-0">Public key</span>{{template "help" (help "Public key" "Safe to share: this is what goes into a server's authorized_keys or GitHub's SSH keys page. The private key never leaves this machine.")}}<span class="ms-auto">{{template "copy" (copy .PublicKey "the public key")}}</span></div>
+        <pre class="code-block mb-0 text-break text-wrap small">{{.PublicKey}}</pre>
+      </div>{{end}}
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Deployments</h2></div>
+      {{if .Detail.Deployments}}
+      <ul class="list-group list-group-flush">{{range .Detail.Deployments}}<li class="list-group-item d-flex justify-content-between"><span>{{.Target}} <span class="text-secondary">via {{.Method}}{{with deref .Date}}, {{.}}{{end}}</span></span>{{if .Verified}}<span class="badge badge-ok">verified</span>{{else}}<span class="badge badge-warn">unverified</span>{{end}}</li>{{end}}</ul>
+      {{else}}<div class="card-body text-secondary">Not deployed anywhere yet.</div>{{end}}
+    </div>
+    <div class="card mt-3">
+      <div class="card-header"><h2 class="card-title">History</h2></div>
+      {{template "op_table" .Ops}}
+    </div>
+  </div>
+</div>
+{{if and (not $.ReadOnly) $.DevRoot}}
+<div class="card mt-3">
+  <div class="card-header"><h2 class="card-title">On its targets</h2></div>
+  <div class="card-body text-secondary">Deploying, rotating and rolling back reach real servers, which the sandbox under <code>{{$.DevRoot}}</code> cannot contain, so dev mode refuses them, as the CLI does.</div>
+</div>
+{{else if not $.ReadOnly}}
+<div class="card mt-3">
+  <div class="card-header"><h2 class="card-title">On its targets</h2></div>
+  <div class="card-body">
+    <p class="text-secondary">These reach the hosts that use the key. Each runs as a job: you review what it will do, then watch its output.</p>
+    <div class="btn-list">
+      {{template "job_open" $}}<input type="hidden" name="action" value="deploy"><input type="hidden" name="key" value="{{.Detail.Ref}}"><button type="submit" class="btn btn-primary"{{if .Revoked}} disabled title="A revoked key is never deployed again"{{end}}>{{icon "refresh"}}<span class="ms-1">Deploy</span></button></form>
+      {{template "job_open" $}}<input type="hidden" name="action" value="rotate"><input type="hidden" name="key" value="{{.Detail.Ref}}"><button type="submit" class="btn btn-outline-primary" data-bs-toggle="tooltip" title="Recycle: mint a successor, deploy and verify it everywhere, then retire this key">{{icon "recycle"}}<span class="ms-1">Rotate</span></button></form>
+      {{template "job_open" $}}<input type="hidden" name="action" value="rollback"><input type="hidden" name="key" value="{{.Detail.Ref}}"><button type="submit" class="btn btn-outline-secondary">{{icon "arrow-back-up"}}<span class="ms-1">Roll back</span></button></form>
+    </div>
+    <p class="text-secondary small mt-3 mb-0">To regenerate it now, without the staged deploy, run <code>authama ssh keygen {{.Detail.Ref}} --force</code> in a terminal {{template "copy" (copy (printf "authama ssh keygen %s --force" .Detail.Ref) "the command")}}: it writes an encrypted backup first, and the old pair moves to <code>old/</code>.</p>
+  </div>
+</div>
+{{end}}
+{{if not $.ReadOnly}}
+{{template "panel_open" (header "lifetime" "Set the key's lifetime" "How long it lives before rotation is due. The expiry date is counted again from when the key was made.")}}
+  {{template "change_open" $}}<input type="hidden" name="action" value="key-lifetime"><input type="hidden" name="key" value="{{.Detail.Ref}}">
+    <div class="mb-3">
+      <label class="form-label" for="kl-lifetime">Lifetime</label>
+      <select class="form-select" id="kl-lifetime" name="lifetime">
+        <option value="365">Annual: 365 days (the usual floor for SSH user keys)</option>
+        <option value="180">Semiannual: 180 days</option>
+        <option value="90">Quarterly: 90 days</option>
+        <option value="30">Monthly: 30 days</option>
+        <option value="default">The default ({{.DefaultDays}} days)</option>
+      </select>
+      <small class="form-hint">Now {{.Detail.RotateAfterDays}} days. Any number from 1 to 1825 works from the terminal: <code>authama ssh key lifetime {{.Detail.Ref}} 120</code>.</small>
+    </div>
+    <div class="d-flex align-items-center gap-2 pt-3 border-top">
+      <span class="text-secondary small me-auto">The same as <code>authama ssh key lifetime</code>.</span>
+      <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
+      <button type="submit" class="btn btn-primary">Preview</button>
+    </div>
+  </form>
+{{template "panel_close"}}
+{{if not $.DevRoot}}
+{{template "panel_open" (header "revoke" "Revoke this key" "Removes it from every target it is deployed to, through each host's provider, and records it as revoked: deploy and rollback refuse it from then on.")}}
+  <form method="post" action="{{basePath}}/jobs/review" data-inline><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="revoke"><input type="hidden" name="key" value="{{.Detail.Ref}}">
+    <div class="alert alert-warning" role="status">{{icon "alert-triangle"}}<span class="ms-1">Anything that logs in with this key stops working where it is removed. Mint its successor next: <strong>Rotate</strong>, or <code>keygen --force</code>.</span></div>
+    <div class="mb-3">
+      <label class="form-label" for="kr-reason">Reason</label>
+      <input class="form-control" id="kr-reason" name="reason" maxlength="200" autocomplete="off" placeholder="laptop lost">
+      <small class="form-hint">Optional, kept with the revocation.</small>
+    </div>
+    <div class="d-flex align-items-center gap-2 pt-3 border-top">
+      <span class="text-secondary small me-auto">The same as <code>authama ssh key revoke</code>.</span>
+      <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
+      <button type="submit" class="btn btn-danger">Review the revocation</button>
+    </div>
+  </form>
+{{template "panel_close"}}
+{{end}}
+{{end}}
+{{end}}{{end}}

@@ -1,0 +1,244 @@
+{
+  "_help": "Token config \u2014 maps each host to how its credential is built from the environment, grouped by TARGET tool. Stores ENV VAR NAMES, not secrets, so it is safe to commit. Token entries use 'env'; http-basic/docker/git/netrc use 'user_env'+'pass_env'; bitbucket uses 'key_env'+'secret_env'; custom-headers uses 'headers' with ${VAR}. Composer entries may name a 'service' (run `authama token providers`) instead of a 'type'. Per-tool starter templates live in the built-in templates \u2014 scaffold one with `authama token init --target <tool>`. Delete the hosts you don't use.",
+  "composer": {
+    "github.com": {
+      "service": "github",
+      "env": "GH_TOKEN"
+    },
+    "github.example.com": {
+      "service": "github-enterprise",
+      "env": "GHE_TOKEN"
+    },
+    "gitlab.com": {
+      "service": "gitlab",
+      "env": "GITLAB_TOKEN"
+    },
+    "gitlab.example.org": {
+      "service": "gitlab-oauth",
+      "env": "GITLAB_OAUTH_TOKEN"
+    },
+    "bitbucket.org": {
+      "service": "bitbucket",
+      "key_env": "BB_KEY",
+      "secret_env": "BB_SECRET"
+    },
+    "gitea.example.org": {
+      "service": "gitea",
+      "user_env": "GITEA_USER",
+      "pass_env": "GITEA_TOKEN"
+    },
+    "codeberg.org": {
+      "service": "codeberg",
+      "env": "CODEBERG_TOKEN"
+    },
+    "code.example.org": {
+      "service": "forgejo",
+      "env": "FORGEJO_TOKEN"
+    },
+    "dev.azure.com": {
+      "service": "azure-devops",
+      "user_env": "ADO_USER",
+      "pass_env": "ADO_PAT"
+    },
+    "git.sr.ht": {
+      "service": "sourcehut",
+      "user_env": "SRHT_USER",
+      "pass_env": "SRHT_TOKEN"
+    },
+    "repo.packagist.com": {
+      "service": "private-packagist",
+      "user_env": "PACKAGIST_USER",
+      "pass_env": "PACKAGIST_TOKEN"
+    },
+    "packagist.com": {
+      "service": "packagist",
+      "user_env": "PACKAGIST_COM_USER",
+      "pass_env": "PACKAGIST_COM_TOKEN"
+    },
+    "satis.example.org": {
+      "service": "satis",
+      "user_env": "SATIS_USER",
+      "pass_env": "SATIS_PASS"
+    },
+    "repo.repman.io": {
+      "service": "repman",
+      "user_env": "REPMAN_USER",
+      "pass_env": "REPMAN_TOKEN"
+    },
+    "packeton.example.org": {
+      "service": "packeton",
+      "user_env": "PACKETON_USER",
+      "pass_env": "PACKETON_TOKEN"
+    },
+    "example.jfrog.io": {
+      "service": "artifactory",
+      "user_env": "ARTIFACTORY_USER",
+      "pass_env": "ARTIFACTORY_TOKEN"
+    },
+    "dl.cloudsmith.io": {
+      "service": "cloudsmith",
+      "user_env": "CLOUDSMITH_USER",
+      "pass_env": "CLOUDSMITH_TOKEN"
+    },
+    "nexus.example.org": {
+      "service": "nexus",
+      "user_env": "NEXUS_USER",
+      "pass_env": "NEXUS_PASS"
+    },
+    "php.fury.io": {
+      "service": "gemfury",
+      "user_env": "GEMFURY_USER",
+      "pass_env": "GEMFURY_TOKEN"
+    },
+    "composer.unlock.sh": {
+      "service": "unlock-sh",
+      "user_env": "UNLOCK_USER",
+      "pass_env": "UNLOCK_TOKEN"
+    },
+    "repo.magento.com": {
+      "service": "magento",
+      "user_env": "MAGENTO_PUBLIC",
+      "pass_env": "MAGENTO_PRIVATE"
+    },
+    "nova.laravel.com": {
+      "service": "laravel-nova",
+      "user_env": "NOVA_USERNAME",
+      "pass_env": "NOVA_LICENSE"
+    },
+    "spark.laravel.com": {
+      "service": "laravel-spark",
+      "user_env": "SPARK_USERNAME",
+      "pass_env": "SPARK_LICENSE"
+    },
+    "bearer.example.org": {
+      "service": "generic-token",
+      "env": "BEARER_TOKEN"
+    },
+    "headers.example.org": {
+      "service": "generic-headers",
+      "headers": [
+        "API-TOKEN: ${MY_API_TOKEN}",
+        "X-Org: acme"
+      ]
+    }
+  },
+  "npm": {
+    "registry.npmjs.org": {
+      "env": "NPM_TOKEN"
+    },
+    "npm.pkg.github.com": {
+      "env": "GH_TOKEN",
+      "scope": "@your-org"
+    },
+    "gitlab.example.org/api/v4/packages/npm": {
+      "env": "GITLAB_NPM_TOKEN",
+      "scope": "@team"
+    },
+    "example.jfrog.io/artifactory/api/npm/npm": {
+      "env": "ARTIFACTORY_NPM_TOKEN"
+    }
+  },
+  "docker": {
+    "ghcr.io": {
+      "user_env": "GH_USER",
+      "pass_env": "GH_TOKEN"
+    },
+    "docker.io": {
+      "user_env": "DOCKERHUB_USER",
+      "pass_env": "DOCKERHUB_TOKEN"
+    },
+    "registry.gitlab.com": {
+      "user_env": "GITLAB_USER",
+      "pass_env": "GITLAB_TOKEN"
+    },
+    "quay.io": {
+      "user_env": "QUAY_USER",
+      "pass_env": "QUAY_TOKEN"
+    }
+  },
+  "git": {
+    "github.com": {
+      "user_env": "GH_USER",
+      "pass_env": "GH_TOKEN"
+    },
+    "gitlab.com": {
+      "user_env": "GITLAB_USER",
+      "pass_env": "GITLAB_TOKEN"
+    },
+    "git.acme.corp": {
+      "user_env": "ACME_USER",
+      "pass_env": "ACME_TOKEN"
+    }
+  },
+  "netrc": {
+    "api.heroku.com": {
+      "user_env": "HEROKU_USER",
+      "pass_env": "HEROKU_API_KEY"
+    },
+    "api.example.com": {
+      "user_env": "API_USER",
+      "pass_env": "API_TOKEN"
+    }
+  },
+  "pypi": {
+    "upload.pypi.org": {
+      "user_env": "PYPI_USER",
+      "pass_env": "PYPI_TOKEN"
+    },
+    "test.pypi.org": {
+      "user_env": "TESTPYPI_USER",
+      "pass_env": "TESTPYPI_TOKEN"
+    }
+  },
+  "cargo": {
+    "crates.io": {
+      "env": "CARGO_REGISTRY_TOKEN"
+    },
+    "acme": {
+      "env": "ACME_CARGO_TOKEN"
+    }
+  },
+  "gem": {
+    "rubygems.org": {
+      "env": "RUBYGEMS_API_KEY"
+    },
+    "rubygems.pkg.github.com/acme": {
+      "env": "GH_PACKAGES_TOKEN"
+    }
+  },
+  "gradle": {
+    "acme": {
+      "user_env": "ACME_MAVEN_USER",
+      "pass_env": "ACME_MAVEN_TOKEN"
+    }
+  },
+  "maven": {
+    "acme-releases": {
+      "user_env": "ACME_MAVEN_USER",
+      "pass_env": "ACME_MAVEN_TOKEN"
+    }
+  },
+  "yarn": {
+    "npm.pkg.github.com": {
+      "env": "GH_PACKAGES_TOKEN"
+    }
+  },
+  "helm": {
+    "https://charts.example.com/stable": {
+      "user_env": "ACME_CHARTS_USER",
+      "pass_env": "ACME_CHARTS_TOKEN"
+    }
+  },
+  "helm-oci": {
+    "ghcr.io": {
+      "user_env": "GITHUB_USER",
+      "pass_env": "GH_PACKAGES_TOKEN"
+    }
+  },
+  "gh": {
+    "github.com": {
+      "user_env": "GITHUB_USER",
+      "pass_env": "GH_TOKEN"
+    }
+  }
+}

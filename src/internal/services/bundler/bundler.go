@@ -1,0 +1,651 @@
+// Package bundler makes and restores an age-encrypted backup. bundle tars
+// {private keys + manifest + inventory + providers.json} (NEVER .env) and
+// age-encrypts it with a SHA256 sidecar + a contents list; restore decrypts and
+// lays the SAME keys back (same fingerprint). The cipher is behind a seam
+// (Cipher) so tests inject a fake and the tar / lay-down / fingerprint guarantees
+// are verifiable without age installed.
+//
+// Plaintext never touches the disk. The tar is piped straight into age and the
+// decrypted stream is read into memory and written to its final destination, so
+// there is no staging copy in $TMPDIR - which is world-traversable, often on a
+// different filesystem, and outlives a crash.
+package bundler
+
+import (
+	"archive/tar"
+	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"path" // tar member names are always slash-separated
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/core/renderer"
+)
+
+const ageHint = "install age: brew install age  (Linux: apt install age / get from FiloSottile/age)"
+
+const (
+	sshPrefix    = "ssh/"
+	configPrefix = "config/"
+)
+
+var configMembers = []string{"manifest.json", "inventory.json", "providers.json"}
+
+// Cipher transforms a stream. It is deliberately stream-shaped rather than
+// file-shaped: a file-based cipher forces the caller to stage plaintext on disk.
+type Cipher interface {
+	Encrypt(dst io.Writer, src io.Reader, recipient string) error
+	Decrypt(dst io.Writer, src io.Reader, identityFile string) error
+}
+
+// AgeCipher shells out to age (X25519 + ChaCha20-Poly1305) over stdin/stdout.
+type AgeCipher struct{}
+
+func (AgeCipher) Encrypt(dst io.Writer, src io.Reader, recipient string) error {
+	return pipeThrough(dst, src, "-r", recipient)
+}
+
+func (AgeCipher) Decrypt(dst io.Writer, src io.Reader, identityFile string) error {
+	args := []string{"-d"}
+	if identityFile != "" {
+		args = append(args, "-i", identityFile)
+	}
+	return pipeThrough(dst, src, args...)
+}
+
+func pipeThrough(dst io.Writer, src io.Reader, args ...string) error {
+	if _, err := exec.LookPath("age"); err != nil {
+		return fmt.Errorf("age not found: %s", ageHint)
+	}
+	cmd := exec.Command("age", args...)
+	cmd.Stdin = src
+	cmd.Stdout = dst
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		if msg := strings.TrimSpace(stderr.String()); msg != "" {
+			return fmt.Errorf("age: %s", msg)
+		}
+		return err
+	}
+	return nil
+}
+
+// BundleResult summarizes a bundle run.
+type BundleResult struct {
+	AgePath  string
+	SHA256   string
+	Contents []string
+}
+
+// Format renders the bundle summary (mirrors BundleResult.format).
+func (r BundleResult) Format() string {
+	lines := []string{
+		"bundle: " + r.AgePath,
+		"  sha256: " + r.SHA256,
+		fmt.Sprintf("  contents (%d files; .env excluded):", len(r.Contents)),
+	}
+	for _, c := range r.Contents {
+		lines = append(lines, "    "+c)
+	}
+	return strings.Join(lines, "\n")
+}
+
+// FP is one restored key's fingerprint (ordered by lay-down).
+type FP struct{ Name, Fingerprint string }
+
+// RestoreResult summarizes a restore run.
+type RestoreResult struct {
+	Restored     []string
+	Fingerprints []FP
+	// Skipped lists rendered files an older (or forged) bundle carried, which
+	// restore does not lay down: the caller re-renders them from the manifest.
+	Skipped []string
+}
+
+// Format renders the restore summary (mirrors RestoreResult.format).
+func (r RestoreResult) Format() string {
+	lines := []string{fmt.Sprintf("restore: laid down %d file(s)", len(r.Restored))}
+	for _, f := range r.Fingerprints {
+		lines = append(lines, "  "+f.Name+"  "+f.Fingerprint)
+	}
+	for _, s := range r.Skipped {
+		lines = append(lines, "  skipped "+s+" (rendered from the manifest, not taken from the bundle)")
+	}
+	return strings.Join(lines, "\n")
+}
+
+// Bundler makes/restores bundles.
+type Bundler struct {
+	sshDir, configDir string
+	cipher            Cipher
+	keyRoot           string
+}
+
+// New builds a Bundler over the default key root, ~/.ssh/profiles.
+func New(sshDir, configDir string, cipher Cipher) *Bundler {
+	return &Bundler{sshDir: sshDir, configDir: configDir, cipher: cipher, keyRoot: manifest.DefaultKeyRoot}
+}
+
+// WithKeyRoot points the bundler at another key root (defaults.key_root):
+// Bundle reads the keys from ~/.ssh/<root>, and Restore lays them down there
+// when the bundle carries no manifest of its own. "" keeps the default.
+func (b *Bundler) WithKeyRoot(root string) *Bundler {
+	if root != "" {
+		b.keyRoot = root
+	}
+	return b
+}
+
+// Bundle tars the keys + config models, encrypts to dest/authama-<stamp>.age,
+// and writes the .sha256 + .contents sidecars. The tar is piped directly into the
+// cipher, so the plaintext archive exists only in memory.
+func (b *Bundler) Bundle(recipient, destDir, stamp string) (BundleResult, error) {
+	if recipient == "" {
+		return BundleResult{}, fmt.Errorf("no age recipient - set AUTHAMA_AGE_RECIPIENT or pass --recipient")
+	}
+	if err := os.MkdirAll(destDir, 0o700); err != nil {
+		return BundleResult{}, err
+	}
+	// A bundle never replaces another: two in one second - a bundle, then the
+	// backup a purge or a rotation writes - would otherwise share a name, and
+	// the second would truncate the first, which may be the only copy of keys
+	// since deleted. The file is created exclusively, so a name taken between
+	// looking and writing moves on to the next suffix too.
+	var agePath string
+	var contents []string
+	for n := 0; ; n++ {
+		agePath = filepath.Join(destDir, BundlePrefix+stamp+".age")
+		if n > 0 {
+			agePath = filepath.Join(destDir, fmt.Sprintf("%s%s-%d.age", BundlePrefix, stamp, n))
+		}
+		var err error
+		contents, err = b.encryptTo(agePath, recipient)
+		if errors.Is(err, os.ErrExist) {
+			continue
+		}
+		if err != nil {
+			_ = os.Remove(agePath) // never leave a half-written bundle to be trusted later
+			return BundleResult{}, err
+		}
+		break
+	}
+	sha, err := sha256File(agePath)
+	if err != nil {
+		return BundleResult{}, err
+	}
+	name := filepath.Base(agePath)
+	if err := os.WriteFile(agePath+".sha256", []byte(sha+"  "+name+"\n"), 0o600); err != nil {
+		return BundleResult{}, err
+	}
+	if err := os.WriteFile(agePath+".contents", []byte(strings.Join(contents, "\n")+"\n"), 0o600); err != nil {
+		return BundleResult{}, err
+	}
+	return BundleResult{AgePath: agePath, SHA256: sha, Contents: contents}, nil
+}
+
+// encryptTo streams a fresh tar through the cipher into agePath, returning the
+// member list. The two halves run concurrently over an io.Pipe, so nothing is
+// buffered to disk in between.
+func (b *Bundler) encryptTo(agePath, recipient string) ([]string, error) {
+	// Owner-only from creation: the cipher must never be handed a descriptor to a
+	// file that was briefly world-readable.
+	out, err := os.OpenFile(agePath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return nil, err // os.ErrExist: Bundle picks the next name
+	}
+	defer func() { _ = out.Close() }()
+
+	type built struct {
+		members []string
+		err     error
+	}
+	pr, pw := io.Pipe()
+	done := make(chan built, 1)
+	go func() {
+		members, err := b.writeTarGz(pw)
+		// Closing with the error makes the cipher fail rather than encrypt and
+		// sign a truncated archive that would look restorable.
+		_ = pw.CloseWithError(err)
+		done <- built{members, err}
+	}()
+
+	encErr := b.cipher.Encrypt(out, pr, recipient)
+	// If the cipher died early the tar writer is still blocked on a write.
+	_ = pr.CloseWithError(encErr)
+	tar := <-done
+
+	if tar.err != nil {
+		return nil, tar.err // the upstream producer holds the root cause
+	}
+	if encErr != nil {
+		return nil, encErr
+	}
+	return tar.members, out.Close()
+}
+
+func (b *Bundler) writeTarGz(w io.Writer) ([]string, error) {
+	gz := gzip.NewWriter(w)
+	tw := tar.NewWriter(gz)
+	var members []string
+
+	// Members are named under the canonical ssh/profiles/ whatever the key
+	// root, so a bundle made under one root restores under another and the
+	// restore-side allow-list (checkMember) has one shape to know.
+	profiles := filepath.Join(b.sshDir, b.keyRoot)
+	if fi, err := os.Stat(profiles); err == nil && fi.IsDir() {
+		var paths []string
+		_ = filepath.WalkDir(profiles, func(p string, d os.DirEntry, err error) error {
+			if err == nil && !d.IsDir() {
+				paths = append(paths, p)
+			}
+			return nil
+		})
+		sort.Strings(paths)
+		for _, p := range paths {
+			under, _ := filepath.Rel(profiles, p)
+			rel := manifest.DefaultKeyRoot + "/" + filepath.ToSlash(under)
+			if hasStaging(rel) || isRenderedFile(rel, p) {
+				continue
+			}
+			arc := sshPrefix + rel
+			if err := addFile(tw, p, arc); err != nil {
+				closeAll(tw, gz)
+				return nil, err
+			}
+			members = append(members, arc)
+		}
+	}
+	for _, name := range configMembers { // NEVER .env
+		src := filepath.Join(b.configDir, name)
+		if _, err := os.Stat(src); err == nil {
+			arc := configPrefix + name
+			if err := addFile(tw, src, arc); err != nil {
+				closeAll(tw, gz)
+				return nil, err
+			}
+			members = append(members, arc)
+		}
+	}
+	if err := tw.Close(); err != nil {
+		_ = gz.Close()
+		return nil, err
+	}
+	return members, gz.Close()
+}
+
+// renderedSlot reports whether rel (relative to ~/.ssh) is where authama puts a
+// file it renders rather than a key: profiles/<category>/config, which the
+// root config Includes, or a legacy per-profile profiles/<p>/known_hosts. A key
+// can carry either name too, which is why callers look at the content.
+func renderedSlot(rel string) bool {
+	parts := strings.Split(rel, "/")
+	return len(parts) == 3 && parts[0] == manifest.DefaultKeyRoot && (parts[2] == "config" || parts[2] == "known_hosts")
+}
+
+// isRenderedFile reports whether the file at path, in a rendered slot, is one
+// authama rendered: a legacy known_hosts, or a config carrying the managed
+// header. Rendered files are rebuilt from the manifest after a restore, so a
+// bundle does not carry them - carrying them is what let a forged bundle plant
+// a category config with a ProxyCommand. A key named config is still a key.
+func isRenderedFile(rel, path string) bool {
+	if !renderedSlot(rel) {
+		return false
+	}
+	if strings.HasSuffix(rel, "/known_hosts") {
+		return true
+	}
+	b, err := os.ReadFile(path)
+	return err == nil && renderer.IsManagedFile(string(b))
+}
+
+func hasStaging(rel string) bool {
+	for _, part := range strings.Split(rel, "/") {
+		if part == ".staging" {
+			return true
+		}
+	}
+	return false
+}
+
+func addFile(tw *tar.Writer, path, arc string) error {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	hdr, err := tar.FileInfoHeader(fi, "")
+	if err != nil {
+		return err
+	}
+	hdr.Name = arc
+	if err := tw.WriteHeader(hdr); err != nil {
+		return err
+	}
+	src, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = src.Close() }()
+	_, err = io.Copy(tw, src)
+	return err
+}
+
+func closeAll(tw *tar.Writer, gz *gzip.Writer) {
+	_ = tw.Close()
+	_ = gz.Close()
+}
+
+// Restore decrypts bundlePath and lays the same keys back down (verifying the
+// SHA256 sidecar first). fingerprintOf fingerprints each restored .pub.
+//
+// The decrypted stream is read into memory and written straight to its final
+// destination. Reading it whole before writing anything also means a corrupt or
+// wrongly-keyed bundle is rejected before it has half-overwritten the tree.
+func (b *Bundler) Restore(bundlePath, identityFile string, fingerprintOf func(string) (string, error)) (RestoreResult, error) {
+	if _, err := os.Stat(bundlePath); err != nil {
+		return RestoreResult{}, fmt.Errorf("bundle not found: %s", bundlePath)
+	}
+	if err := verifyChecksum(bundlePath); err != nil {
+		return RestoreResult{}, err
+	}
+	members, err := b.decrypt(bundlePath, identityFile)
+	if err != nil {
+		return RestoreResult{}, err
+	}
+	return b.layDown(members, fingerprintOf)
+}
+
+// decrypt streams bundlePath through the cipher and returns the archive members.
+func (b *Bundler) decrypt(bundlePath, identityFile string) ([]member, error) {
+	f, err := os.Open(bundlePath)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+
+	pr, pw := io.Pipe()
+	done := make(chan error, 1)
+	go func() {
+		err := b.cipher.Decrypt(pw, f, identityFile)
+		_ = pw.CloseWithError(err)
+		done <- err
+	}()
+
+	members, readErr := readTarGz(pr)
+	if readErr != nil {
+		// The cipher is still writing into a pipe nobody will read again.
+		_ = pr.CloseWithError(readErr)
+	} else {
+		// Drain any trailing bytes so the cipher can finish and exit.
+		_, _ = io.Copy(io.Discard, pr)
+	}
+	if err := <-done; err != nil {
+		return nil, err // a bad identity surfaces here, not as a corrupt archive
+	}
+	if readErr != nil {
+		return nil, fmt.Errorf("bundle is corrupt or not a valid archive - check the identity/recipient: %w", readErr)
+	}
+	return members, nil
+}
+
+// profilesPrefix is the canonical name of the only subtree of ~/.ssh that
+// writeTarGz walks: the key root, whatever its name on disk.
+const profilesPrefix = sshPrefix + manifest.DefaultKeyRoot + "/"
+
+// checkMember reports whether name is something writeTarGz could have written,
+// and is the restore-side mirror of it: change one and the other must follow.
+//
+// It is an allow-list rather than a deny-list because age encrypts but does not
+// authenticate the sender. Anyone holding the public recipient can forge a
+// bundle that decrypts cleanly with the owner's identity, so a valid decryption
+// says nothing about who made it. A member like ssh/authorized_keys (a login for
+// the forger) or ssh/config (a ProxyCommand run on the next ssh) is entirely
+// inside ~/.ssh, so the os.Root containment in layDown has no objection to it;
+// only knowing exactly what a real bundle holds does.
+func checkMember(name string) error {
+	if rel, ok := strings.CutPrefix(name, profilesPrefix); ok && rel != "" {
+		// writeTarGz skips .staging, so a member inside one is not ours.
+		if hasStaging(rel) {
+			return fmt.Errorf("refusing member bundle never writes: %s", name)
+		}
+		return nil
+	}
+	if base, ok := strings.CutPrefix(name, configPrefix); ok {
+		// Exact names, not path.Base: the config members are flat, and taking
+		// the base name of config/x/.env would have let .env back in.
+		for _, c := range configMembers {
+			if base == c {
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("refusing member bundle never writes: %s", name)
+}
+
+func (b *Bundler) layDown(members []member, fingerprintOf func(string) (string, error)) (RestoreResult, error) {
+	res := RestoreResult{}
+	sorted := append([]member(nil), members...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].name < sorted[j].name })
+	// Vet every member before writing any. Checking inside the write loop would
+	// lay down the members that sort ahead of a forged one, so a refused restore
+	// would still have changed the tree.
+	for _, m := range sorted {
+		if err := checkMember(m.name); err != nil {
+			return res, err
+		}
+	}
+	keyRoot, err := restoreKeyRoot(sorted, b.keyRoot)
+	if err != nil {
+		return res, err
+	}
+	// One root per destination, opened once. Every write below goes through one
+	// of them, so a member can only ever land inside the directory it is routed
+	// to - enforced by the kernel on the resolved path, not by us on the
+	// spelling of it. The difference is not academic: the string checks this
+	// replaces passed a member whose name was an ordinary relative path, and the
+	// write still escaped by following a symlink that was already in the tree.
+	// Both must exist before they can be opened as roots; the previous code
+	// created them lazily, on the first write into each.
+	if err := os.MkdirAll(b.sshDir, 0o700); err != nil {
+		return res, err
+	}
+	if err := os.MkdirAll(b.configDir, 0o700); err != nil {
+		return res, err
+	}
+	sshRoot, err := os.OpenRoot(b.sshDir)
+	if err != nil {
+		return res, err
+	}
+	defer func() { _ = sshRoot.Close() }()
+	configRoot, err := os.OpenRoot(b.configDir)
+	if err != nil {
+		return res, err
+	}
+	defer func() { _ = configRoot.Close() }()
+
+	for _, m := range sorted {
+		// A rendered slot holding anything but a key came from an older bundle
+		// or a forged one. It is never trusted: the caller re-renders it.
+		if rel, ok := strings.CutPrefix(m.name, sshPrefix); ok && renderedSlot(rel) && !looksLikeKey(m.data) {
+			res.Skipped = append(res.Skipped, rel)
+			continue
+		}
+		var root *os.Root
+		var rel, label string
+		switch {
+		case strings.HasPrefix(m.name, sshPrefix):
+			root, rel = sshRoot, strings.TrimPrefix(m.name, sshPrefix)
+			// checkMember has pinned it under profilesPrefix; the keys go to
+			// the key root the restored manifest names.
+			rel = keyRoot + strings.TrimPrefix(rel, manifest.DefaultKeyRoot)
+			label = rel
+		case strings.HasPrefix(m.name, configPrefix):
+			// checkMember has pinned this to a flat, known name already.
+			root, rel = configRoot, strings.TrimPrefix(m.name, configPrefix)
+			label = configPrefix + rel
+		default:
+			// Unreachable once checkMember has passed every member; kept so a
+			// future change to the allow-list cannot fall through to a write.
+			return res, fmt.Errorf("refusing unexpected member in bundle: %s", m.name)
+		}
+		if err := writeBytesAtomicIn(root, rel, m.data); err != nil {
+			return res, err
+		}
+		res.Restored = append(res.Restored, label)
+		if strings.HasSuffix(rel, ".pub") {
+			if fp, err := fingerprintOf(filepath.Join(root.Name(), filepath.FromSlash(rel))); err == nil {
+				res.Fingerprints = append(res.Fingerprints, FP{Name: stem(path.Base(rel)), Fingerprint: fp})
+			}
+		}
+	}
+	return res, nil
+}
+
+// restoreKeyRoot is where a restore lays the keys down: the key root the
+// bundle's own manifest names, since that manifest is restored with them and
+// every path it renders will point there; fallback when the bundle carries no
+// manifest. A name the manifest could not hold refuses the whole restore,
+// before anything is written: age does not authenticate the sender, so the
+// manifest member is checked like any other.
+func restoreKeyRoot(members []member, fallback string) (string, error) {
+	for _, m := range members {
+		if m.name != configPrefix+"manifest.json" {
+			continue
+		}
+		var doc struct {
+			Defaults struct {
+				KeyRoot string `json:"key_root"`
+			} `json:"defaults"`
+		}
+		if err := json.Unmarshal(m.data, &doc); err != nil {
+			return "", fmt.Errorf("the bundle's manifest.json does not parse: %w", err)
+		}
+		if err := manifest.CheckKeyRoot(doc.Defaults.KeyRoot); err != nil {
+			return "", fmt.Errorf("refusing bundle: %w", err)
+		}
+		if doc.Defaults.KeyRoot == "" {
+			return manifest.DefaultKeyRoot, nil
+		}
+		return doc.Defaults.KeyRoot, nil
+	}
+	return fallback, nil
+}
+
+func verifyChecksum(bundlePath string) error {
+	sidecar := bundlePath + ".sha256"
+	data, err := os.ReadFile(sidecar)
+	if err != nil {
+		return nil // no sidecar -> nothing to verify
+	}
+	parts := strings.Fields(string(data))
+	if len(parts) == 0 {
+		return nil
+	}
+	want := parts[0]
+	got, err := sha256File(bundlePath)
+	if err != nil {
+		return err
+	}
+	if want != got {
+		return fmt.Errorf("bundle checksum mismatch: expected %s, got %s - refusing to restore", want, got)
+	}
+	return nil
+}
+
+// member is one decrypted archive entry, held in memory rather than staged on
+// disk. Bundles are keys and small JSON models, so the whole thing fits easily.
+type member struct {
+	name string
+	data []byte
+}
+
+// maxBundleBytes bounds what a bundle can expand to, so a malicious or corrupt
+// archive cannot exhaust memory during the read-it-all-first step.
+const maxBundleBytes = 64 << 20
+
+func readTarGz(r io.Reader) ([]member, error) {
+	gz, err := gzip.NewReader(r)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = gz.Close() }()
+	tr := tar.NewReader(io.LimitReader(gz, maxBundleBytes))
+	var members []member
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			return members, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		if hdr.Typeflag != tar.TypeReg {
+			continue
+		}
+		data, err := io.ReadAll(tr)
+		if err != nil {
+			return nil, err
+		}
+		members = append(members, member{name: path.Clean(hdr.Name), data: data})
+	}
+}
+
+// within reports whether dest stays inside root, so a crafted member name cannot
+// write outside the tree it claims to belong to.
+
+// writeBytesAtomicIn writes name (a slash-separated path relative to root)
+// through a temp file and a rename, without any operation escaping root.
+func writeBytesAtomicIn(root *os.Root, name string, data []byte) error {
+	if dir := path.Dir(name); dir != "." {
+		if err := root.MkdirAll(dir, 0o700); err != nil {
+			return err
+		}
+	}
+	tmp := path.Join(path.Dir(name), "."+path.Base(name)+".tmp")
+	f, err := root.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Remove(tmp) }() // a no-op once the rename succeeds
+	if _, err := f.Write(data); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if err := f.Sync(); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return root.Rename(tmp, name)
+}
+
+func sha256File(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = f.Close() }()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return "sha256:" + hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func stem(name string) string {
+	if i := strings.LastIndex(name, "."); i > 0 {
+		return name[:i]
+	}
+	return name
+}

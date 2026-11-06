@@ -1,0 +1,26 @@
+{{/* "diff" is a diffView's lines as a table: the old and the new line number,
+     then the line in its file's syntax. "file_diff" is that inside a card
+     whose header names the file, its state, its counts and, for JSON, whether
+     the new content is valid. A diffView comes from fileDiff or diffOf. */}}
+{{define "diff"}}<div class="diff-wrap" tabindex="0" role="region" aria-label="Changes{{if .Path}} to {{.Path}}{{end}}">
+<table class="diff">
+  <thead class="visually-hidden"><tr><th scope="col">Old line</th><th scope="col">New line</th><th scope="col">Content</th></tr></thead>
+  <tbody>{{range .Rows}}{{if eq .Op 64}}
+    <tr class="diff-hunk"><td colspan="3"><span aria-hidden="true">⋯</span> {{if .Skipped}}{{.Skipped}} unchanged line{{if ne .Skipped 1}}s{{end}}{{else}}unchanged lines{{end}}</td></tr>{{else}}
+    <tr class="{{diffClass .Op}}"><td class="diff-num">{{if .Old}}{{.Old}}{{end}}</td><td class="diff-num">{{if .New}}{{.New}}{{end}}</td><td class="diff-code"><span class="diff-mark" aria-hidden="true">{{diffMark .Op}}</span>{{if eq .Op 43}}<span class="visually-hidden">added: </span>{{else if eq .Op 45}}<span class="visually-hidden">removed: </span>{{end}}{{hl (print $.Lang) .Text}}</td></tr>{{end}}{{end}}
+  </tbody>
+</table>
+</div>{{end}}
+
+{{define "file_diff"}}<div class="card mb-3 file-diff">
+  <div class="card-header flex-wrap gap-2">
+    <h3 class="card-title mb-0"><code>{{.Path}}</code></h3>
+    {{if .State}}<span class="badge {{if eq .State "changed"}}badge-info{{else if eq .State "added"}}badge-ok{{else}}badge-bad{{end}}">{{.State}}</span>{{end}}
+    {{if .LangLabel}}<span class="badge badge-muted">{{.LangLabel}}</span>{{end}}
+    {{if .Checked}}{{if .Problem}}<span class="badge badge-bad" title="{{.Problem}}">{{icon "circle-x"}}<span class="ms-1">invalid {{.LangLabel}}</span></span>{{else}}<span class="badge badge-ok">{{icon "circle-check"}}<span class="ms-1">valid {{.LangLabel}}</span></span>{{end}}{{end}}
+    <span class="ms-auto diff-counts"><span class="text-success">+{{.Added}}</span> <span class="text-danger">&minus;{{.Removed}}</span></span>
+    {{template "copy" (copy .Path "the path")}}
+  </div>
+  {{if .Problem}}<div class="alert alert-danger rounded-0 mb-0" role="alert">{{icon "alert-triangle"}}<span class="ms-1">This file would not be valid {{.LangLabel}}: {{.Problem}}</span></div>{{end}}
+  {{template "diff" .}}
+</div>{{end}}

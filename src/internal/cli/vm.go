@@ -1,0 +1,264 @@
+package cli
+
+import (
+	"errors"
+	"fmt"
+	"io"
+	"net"
+	"os"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/spf13/cobra"
+
+	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/core/hypervisor"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/services/dockerctx"
+	"github.com/simtabi/authama/src/internal/services/editor"
+)
+
+func newVMCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "vm",
+		Short: "Local VMs as SSH hosts: list, add, adopt a key, keep in sync, connect through the hypervisor",
+		Long: "A VM's IP changes, so a VM host renders ProxyCommand \"<authama>\" vm proxy <alias>:\n" +
+			"each connection asks the hypervisor for the VM's current address. Built in:\n" +
+			strings.Join(manifest.Hypervisors, ", ") + ". OrbStack and Podman run their own SSH and keys;\n" +
+			"they are listed, and get a Docker context, but authama does not take their keys over.\n\n" +
+			"Which hypervisors you use is vm.hypervisors (AUTHAMA_VM_HYPERVISORS); any other tool can be\n" +
+			"added as a command driver in authama.json's \"hypervisors\" section, and the VMs you work\n" +
+			"in declared in its \"devboxes\" section (docs/tools/vm.md). `vm sync` keeps the hosts in\n" +
+			"step with the VMs; `vm adopt-key` turns a key you already use for a VM into a VM host.",
+	}
+	cmd.AddCommand(newVMListCmd(), newVMAddCmd(), newVMSyncCmd(), newVMAdoptKeyCmd(), newVMProxyCmd(), newVMDockerContextCmd())
+	return cmd
+}
+
+func newVMListCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List every hypervisor's VMs, and which manifest host uses each",
+		Args:  cobra.NoArgs,
+		RunE: func(c *cobra.Command, _ []string) error {
+			used := map[string]string{} // hypervisor/vm -> profile/alias
+			if m, err := loadManifestFor(c); err == nil {
+				for _, name := range m.ProfileNames() {
+					for _, h := range m.Profiles[name].Hosts {
+						if h.VM != nil {
+							used[h.VM.Hypervisor+"/"+h.VM.Name] = name + "/" + h.Alias
+						}
+					}
+				}
+			}
+			out := c.OutOrStdout()
+			for _, d := range hypervisor.All() {
+				tag := ""
+				if hypervisor.IsCustom(d) {
+					tag = "  [" + hypervisor.Describe(d) + "]"
+				}
+				if !hypervisor.IsEnabled(d.Name()) {
+					_, _ = fmt.Fprintf(out, "%-10s disabled (not in vm.hypervisors)%s\n", d.Name(), tag)
+					continue
+				}
+				if !hypervisor.Available(d) {
+					_, _ = fmt.Fprintf(out, "%-10s not installed%s\n", d.Name(), tag)
+					continue
+				}
+				vms, err := d.List()
+				if err != nil {
+					_, _ = fmt.Fprintf(out, "%-10s error: %v\n", d.Name(), err)
+					continue
+				}
+				if len(vms) == 0 {
+					_, _ = fmt.Fprintf(out, "%-10s no VMs\n", d.Name())
+				}
+				for _, v := range vms {
+					host := used[d.Name()+"/"+v.Name]
+					if host != "" {
+						host = "  host " + host
+					}
+					_, _ = fmt.Fprintf(out, "%-10s %-30s %s%s\n", d.Name(), v.Name, v.State, host)
+				}
+			}
+			for _, n := range hypervisor.UnknownEnabled() {
+				_, _ = fmt.Fprintf(out, "%-10s enabled in vm.hypervisors, but no such driver (add it under \"hypervisors\" in authama.json)\n", n)
+			}
+			if p, err := resolvePaths(c); err == nil {
+				cfg := vmConfig(p)
+				if aliases := cfg.DevboxAliases(); len(aliases) > 0 {
+					_, _ = fmt.Fprintln(out, "devboxes declared in authama.json:")
+					for _, a := range aliases {
+						d := cfg.Devboxes[a]
+						_, _ = fmt.Fprintf(out, "  %-20s %s %q user %s profile %s\n", a, d.Hypervisor, d.VM, d.User, d.Profile)
+					}
+				}
+			}
+			return nil
+		},
+	}
+}
+
+func newVMAddCmd() *cobra.Command {
+	var hv, vmName, user, keyName string
+	var yes bool
+	c := &cobra.Command{
+		Use:   "add <profile> <alias>",
+		Short: "Add a VM as a host: its address comes from the hypervisor at connect time",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(c *cobra.Command, args []string) error {
+			if hv == manifest.HypervisorOrbStack || hv == manifest.HypervisorPodman {
+				return fmt.Errorf("%s manages its own SSH access and keys; use `authama ssh vm docker-context` instead of a host", hv)
+			}
+			if !hypervisor.IsEnabled(hv) {
+				_, _ = fmt.Fprintf(c.ErrOrStderr(), "warning: %s is not in vm.hypervisors; `vm sync` will leave this host alone until it is\n", hv)
+			}
+			if err := confirmChange(c, fmt.Sprintf("vm add records %s as a %s VM host and re-renders ~/.ssh/config.",
+				args[1], hv), yes); err != nil {
+				return err
+			}
+			p, err := resolvePaths(c)
+			if err != nil {
+				return err
+			}
+			lockForMutation(p)
+			// HostName is the alias: ProxyCommand ignores it, and a real address would only go stale.
+			alias := args[1]
+			f := editor.HostFields{
+				Hostname: &alias, User: &user,
+				KeyName: strPtrIf(c, "key-name", keyName),
+				VM:      &manifest.VMSpec{Hypervisor: hv, Name: vmName},
+			}
+			snapshotBeforeMutation(p)
+			if err := editor.New(p).AddHost(args[0], alias, f); err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintf(c.OutOrStdout(), "added VM host %s to %s (%s %q); run `authama ssh reconcile` to mint its key, "+
+				"then `authama ssh vm sync` to pin the guest and install the public key in it\n", alias, args[0], hv, vmName)
+			return applyManifestEdit(c, p)
+		},
+	}
+	c.Flags().StringVar(&hv, "hypervisor", "", strings.Join(manifest.KnownHypervisors(), ", ")+", or a custom one from authama.json")
+	c.Flags().StringVar(&vmName, "vm", "", "the VM's name as the hypervisor lists it (see 'authama ssh vm list')")
+	c.Flags().StringVarP(&user, "user", "u", "", "guest user")
+	c.Flags().StringVar(&keyName, "key-name", "", "use this key instead of the derived <profile>_<alias>-<algo> name")
+	c.Flags().BoolVarP(&yes, "yes", "y", false, "add without confirming (implied when there is no terminal)")
+	_ = c.MarkFlagRequired("hypervisor")
+	_ = c.MarkFlagRequired("vm")
+	_ = c.MarkFlagRequired("user")
+	return c
+}
+
+// vmHost finds the manifest host alias with a vm spec.
+func vmHost(m *manifest.Manifest, alias string) (manifest.Host, error) {
+	return manifest.VMHost(m, alias)
+}
+
+// startWait bounds how long `vm proxy` waits for a VM it had to start.
+var startWait = 3 * time.Minute
+
+func newVMProxyCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:    "proxy <alias>",
+		Short:  "ProxyCommand for a VM host: resolve its address now, start it if stopped, relay stdio",
+		Args:   cobra.ExactArgs(1),
+		Hidden: true, // ssh runs it; nobody types it
+		RunE: func(c *cobra.Command, args []string) error {
+			m, err := loadManifestFor(c)
+			if err != nil {
+				return err
+			}
+			h, err := vmHost(m, args[0])
+			if err != nil {
+				return err
+			}
+			d, err := hypervisor.For(h.VM.Hypervisor)
+			if err != nil {
+				return err
+			}
+			if !hypervisor.Available(d) {
+				return fmt.Errorf("%s: %s is not installed", args[0], d.Name())
+			}
+			ep, err := d.Address(h.VM.Name)
+			if err != nil && !errors.Is(err, hypervisor.ErrOwnKeys) {
+				// Stopped: start it and wait for an address. ssh shows this on stderr.
+				_, _ = fmt.Fprintf(c.ErrOrStderr(), brand.Command+": %v; starting %s %q\n", err, d.Name(), h.VM.Name)
+				if serr := d.Start(h.VM.Name); serr != nil {
+					return fmt.Errorf("start %q: %w", h.VM.Name, serr)
+				}
+				deadline := time.Now().Add(startWait)
+				for ep, err = d.Address(h.VM.Name); err != nil && time.Now().Before(deadline); ep, err = d.Address(h.VM.Name) {
+					time.Sleep(2 * time.Second)
+				}
+			}
+			if err != nil {
+				return err
+			}
+			port := ep.Port
+			if h.Port != 0 && h.Port != 22 {
+				port = h.Port // an explicit port in the manifest wins over the hypervisor's default 22
+			}
+			return relay(net.JoinHostPort(ep.Host, fmt.Sprint(port)), c.InOrStdin(), c.OutOrStdout())
+		},
+	}
+}
+
+// relay connects to addr and copies stdin to it and it to stdout until either side closes.
+func relay(addr string, in io.Reader, out io.Writer) error {
+	conn, err := net.DialTimeout("tcp", addr, 20*time.Second)
+	if err != nil {
+		return err
+	}
+	return relayConn(conn, in, out)
+}
+
+// relayConn is relay over an open connection, split out so it can be tested without a listener.
+func relayConn(conn net.Conn, in io.Reader, out io.Writer) error {
+	defer func() { _ = conn.Close() }()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, _ = io.Copy(conn, in)
+		if tc, ok := conn.(*net.TCPConn); ok {
+			_ = tc.CloseWrite() // tell the server we are done sending; keep reading its reply
+		}
+	}()
+	_, err := io.Copy(out, conn)
+	if f, ok := in.(*os.File); ok && f == os.Stdin {
+		return err // stdin may never close; returning ends the process
+	}
+	wg.Wait()
+	return err
+}
+
+func newVMDockerContextCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "docker-context <alias>",
+		Short: "Create or update a Docker context ssh://<alias> for a VM host",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			m, err := loadManifestFor(c)
+			if err != nil {
+				return err
+			}
+			h, err := vmHost(m, args[0])
+			if err != nil {
+				return err
+			}
+			if err := dockerctx.Available(); err != nil {
+				return err
+			}
+			if p, err := resolvePaths(c); err == nil {
+				lockForMutation(p)
+			}
+			line, err := dockerctx.Apply(h.Alias)
+			if err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintln(c.OutOrStdout(), line)
+			return nil
+		},
+	}
+}

@@ -1,0 +1,889 @@
+// Package doctor diagnoses the install: deps, perms, agent, known_hosts,
+// manifest-vs-disk drift, and dangling keys.
+//
+// It no longer mirrors v1 check for check. The dangling-key section comes from
+// the keyaudit service and, unlike the orphan list it replaced, decides the
+// verdict; --strict escalates every state for CI.
+package doctor
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/simtabi/authama/src/internal/core/hypervisor"
+	"github.com/simtabi/authama/src/internal/core/inventory"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/core/renderer"
+	"github.com/simtabi/authama/src/internal/services/configsvc"
+	"github.com/simtabi/authama/src/internal/services/keyaudit"
+	"github.com/simtabi/authama/src/internal/services/keystore"
+	"github.com/simtabi/authama/src/internal/services/knownhosts"
+	"github.com/simtabi/authama/src/internal/services/opstore"
+	"github.com/simtabi/authama/src/internal/services/owner"
+	"github.com/simtabi/authama/src/internal/services/preflight"
+	"github.com/simtabi/authama/src/internal/services/settings"
+	"github.com/simtabi/authama/src/internal/util/clipboard"
+	"github.com/simtabi/authama/src/internal/util/envnames"
+	"github.com/simtabi/authama/src/internal/util/fs"
+	"github.com/simtabi/authama/src/internal/util/homeperms"
+	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/util/perms"
+)
+
+// Report is the full doctor diagnosis.
+type Report struct {
+	Preflight     preflight.Report
+	Home          string
+	State         string // the state home, when it is not Home
+	SSHDir        string
+	PermIssues    []string
+	AgentStatus   string
+	KnownHosts    bool
+	OldKeys       map[string]int // key_name -> archived count
+	StaleOldKeys  []string       // archived predecessors past the retention window
+	ConfigInSync  bool
+	OrphanKeys    []string
+	Dangling      keyaudit.Report
+	DuplicateKeys []string
+	UnpinnedHosts []string
+	// UnpinnedVMHosts are the VM hosts with no pin: `vm sync` pins them
+	// while their VM runs (a VM's address is not a hostname keyscan can use).
+	UnpinnedVMHosts []string
+	// StalePins counts tagged known_hosts lines no manifest host uses.
+	StalePins int
+	// VM is the VM hosts and what `vm sync` would do; nil with none.
+	VM                 *VMStatus
+	AliasCollisions    []string
+	ProvidersSource    string // "user file" | "shipped default"
+	StrandedLegacyHome string
+	// StrandedKeyRoot says that ~/.ssh/profiles/ still holds files while
+	// defaults.key_root names another directory: the manifest was edited by
+	// hand instead of through `ssh key root`, and nothing sees those keys.
+	StrandedKeyRoot string
+	// OnePassword lists what stops a 1Password profile from working: no op
+	// CLI, or no agent socket. Empty when no profile uses 1Password.
+	OnePassword []string
+	// StaleProxy lists rendered VM ProxyCommands whose authama binary no longer exists (an upgrade
+	// moved it); `authama ssh config render` rewrites them.
+	StaleProxy []string
+	// ShadowedHosts lists managed aliases a foreign block above the managed
+	// block overrides: ssh reads it first, so the manifest's values never
+	// apply. authama does not edit that content, so the user has to.
+	ShadowedHosts []string
+	// RawOptionOverlaps lists raw_options keys that duplicate a managed line.
+	// The rendered config already resolves the managed value; this is advice.
+	RawOptionOverlaps []string
+	// NeededTools lists commands the manifest relies on that are not on PATH: a
+	// VM host's hypervisor CLI (its address comes from it at connect time), and
+	// git once defaults.git configures `authama ssh git`.
+	NeededTools []string
+	// Clipboard is set when no clipboard tool is found. Advice only: `termius
+	// keys` then needs --print.
+	Clipboard string
+	// OwnerSeal is why the owner seal does not match: a state file changed
+	// outside authama, or the home copied from another account or machine.
+	// Empty when the home has no owner or the seal matches. It fails the
+	// verdict: authama would otherwise act on a state it did not write.
+	OwnerSeal string
+	// Strict is set by Run(strict=true), the CI mode: every warning then counts
+	// against the verdict, so `doctor --strict` never says clean over one.
+	Strict bool
+}
+
+// Warnings lists the problems that are reported but, outside --strict, do not
+// fail the verdict: they need the user (a VPN, a rename, a cleanup), not a
+// broken setup. Advice (raw_options overlaps, a missing clipboard tool) is not
+// a warning.
+func (r Report) Warnings() []string {
+	var w []string
+	for _, h := range r.UnpinnedHosts {
+		w = append(w, "host key not pinned: "+h)
+	}
+	for _, h := range r.UnpinnedVMHosts {
+		w = append(w, "VM host key not pinned: "+h)
+	}
+	if r.VM != nil {
+		for _, g := range r.VM.Gone {
+			w = append(w, "VM no longer exists: "+g)
+		}
+		for _, a := range r.VM.Undeclared {
+			w = append(w, "devbox declared in authama.json but not a host yet: "+a)
+		}
+	}
+	for _, k := range r.Dangling.ReservedProblems() {
+		w = append(w, "reserved key "+k.State+": "+k.Name)
+	}
+	for _, a := range r.AliasCollisions {
+		w = append(w, "alias used in more than one profile: "+a)
+	}
+	if len(r.DuplicateKeys) > 0 {
+		w = append(w, "keys share a fingerprint: "+strings.Join(r.DuplicateKeys, ", "))
+	}
+	for _, k := range r.StaleOldKeys {
+		w = append(w, "archived predecessor past retention: "+k)
+	}
+	if r.StrandedLegacyHome != "" {
+		w = append(w, "legacy home not migrated: "+r.StrandedLegacyHome)
+	}
+	if r.StrandedKeyRoot != "" {
+		w = append(w, "keys left outside the key root: "+r.StrandedKeyRoot)
+	}
+	return w
+}
+
+// OK is the overall verdict.
+//
+// Dangling keys count. They used to be printed and then ignored by the verdict,
+// so doctor could list an orphaned key and still say "clean" - a check whose
+// result nothing acts on is not a check. Which states are fatal is keyaudit's
+// call, not this one's (--strict makes all of them fatal).
+func (r Report) OK() bool {
+	if r.Strict && len(r.Warnings()) > 0 {
+		return false
+	}
+	if !r.Preflight.OK() || len(r.PermIssues) > 0 || !r.ConfigInSync || len(r.OnePassword) > 0 || len(r.StaleProxy) > 0 ||
+		len(r.ShadowedHosts) > 0 || len(r.NeededTools) > 0 || r.OwnerSeal != "" {
+		return false
+	}
+	if !r.Dangling.OK() {
+		return false
+	}
+	for _, n := range r.OldKeys {
+		if n > 1 {
+			return false
+		}
+	}
+	return true
+}
+
+func stateIfSeparate(p paths.Paths) string {
+	if paths.SeparateState(p) {
+		return p.State()
+	}
+	return ""
+}
+
+// Format renders the human-readable report (mirrors DoctorReport.format; the
+// preflight block carries the Go runtime line in place of an interpreter version).
+func (r Report) Format() string {
+	lines := []string{preflight.Format(r.Preflight), ""}
+	switch {
+	case r.Home != "" && r.State != "":
+		lines = append(lines, fmt.Sprintf("home:  %s  (config + secrets)", r.Home),
+			fmt.Sprintf("state: %s  (history, logs, snapshots, bundles)", r.State))
+	case r.Home != "":
+		lines = append(lines, fmt.Sprintf("home: %s  (config + secrets + logs + snapshots live here)", r.Home))
+	}
+	if r.SSHDir != "" {
+		lines = append(lines, fmt.Sprintf("ssh:  %s  (generated)", r.SSHDir))
+	}
+	lines = append(lines, "providers: "+r.ProvidersSource)
+	if r.StrandedLegacyHome != "" {
+		lines = append(lines, fmt.Sprintf("WARNING: a legacy home %s was NOT migrated "+
+			"(the standard home already existed). Compare the two, then run "+
+			"`authama migrate --force` (backs up the current home and replaces it with "+
+			"the legacy one).", r.StrandedLegacyHome))
+	}
+	if r.OwnerSeal != "" {
+		lines = append(lines, "OWNER SEAL: "+r.OwnerSeal+" - `authama owner verify` shows what changed, "+
+			"`authama owner reseal` accepts it")
+	}
+	lines = append(lines, "agent: "+r.AgentStatus)
+	for _, issue := range r.OnePassword {
+		lines = append(lines, "1Password: "+issue)
+	}
+	for _, issue := range r.StaleProxy {
+		if strings.Contains(issue, "cloudflared") {
+			lines = append(lines, "proxy: "+issue+" - install it (`brew install cloudflared`), then "+
+				"`authama ssh config render`")
+			continue
+		}
+		lines = append(lines, "vm proxy: "+issue+" - run `authama ssh config render`")
+	}
+	for _, t := range r.NeededTools {
+		lines = append(lines, "MISSING tool: "+t)
+	}
+	if r.Clipboard != "" {
+		lines = append(lines, "clipboard: "+r.Clipboard+" (`termius keys` needs --print)")
+	}
+	lines = append(lines, "known_hosts: "+presentAbsent(r.KnownHosts))
+	if len(r.UnpinnedHosts) > 0 {
+		lines = append(lines, "host keys NOT pinned (ssh/git will fail host-key "+
+			"verification until these are pinned):")
+		for _, h := range r.UnpinnedHosts {
+			lines = append(lines, "  "+h)
+		}
+		lines = append(lines, "  -> run: authama ssh knownhosts pin --all   "+
+			"(VPN-gated hosts: connect the VPN first)")
+	}
+	lines = append(lines, r.vmLines()...)
+	if len(r.AliasCollisions) > 0 {
+		lines = append(lines, "WARNING: the same Host alias is used in >1 profile - ssh "+
+			"applies the FIRST match, so the others are shadowed:")
+		for _, a := range r.AliasCollisions {
+			lines = append(lines, "  "+a)
+		}
+		lines = append(lines, "  -> give each host a distinct, profile-prefixed alias")
+	}
+	if len(r.ShadowedHosts) > 0 {
+		lines = append(lines, "WARNING: a block above authama's managed block matches a managed "+
+			"alias - ssh applies the FIRST value it finds, so the manifest does not apply:")
+		for _, s := range r.ShadowedHosts {
+			lines = append(lines, "  "+s)
+		}
+		lines = append(lines, "  -> "+configsvc.ShadowFix)
+	}
+	if len(r.RawOptionOverlaps) > 0 {
+		lines = append(lines, "raw_options that duplicate a field authama manages:")
+		for _, s := range r.RawOptionOverlaps {
+			lines = append(lines, "  "+s)
+		}
+	}
+	drift := "none"
+	if !r.ConfigInSync {
+		drift = "DRIFT (run config render)"
+	}
+	lines = append(lines, "config drift: "+drift)
+	if len(r.PermIssues) > 0 {
+		lines = append(lines, "perm issues:")
+		for _, p := range r.PermIssues {
+			lines = append(lines, "  "+p)
+		}
+	} else {
+		lines = append(lines, "perms: ok")
+	}
+	var badOld []string
+	for _, k := range sortedIntKeys(r.OldKeys) {
+		if r.OldKeys[k] > 1 {
+			badOld = append(badOld, fmt.Sprintf("%s=%d", k, r.OldKeys[k]))
+		}
+	}
+	if len(badOld) > 0 {
+		lines = append(lines, "WARNING: >1 archived predecessor (invariant <=1-old): "+strings.Join(badOld, ", "))
+	}
+	if len(r.StaleOldKeys) > 0 {
+		lines = append(lines, "archived predecessors past the retention window "+
+			"(unencrypted private keys nobody is using):")
+		for _, k := range r.StaleOldKeys {
+			lines = append(lines, "  "+k)
+		}
+		lines = append(lines, "  -> remove them once the rotation is confirmed good "+
+			"(keep them longer with AUTHAMA_OLD_KEY_MAX_AGE_DAYS)")
+	}
+	lines = append(lines, r.Dangling.Lines()...)
+	lines = append(lines, r.Dangling.ReservedLines()...)
+	if len(r.DuplicateKeys) > 0 {
+		lines = append(lines, "WARNING: keys reuse the same fingerprint (blast radius): "+strings.Join(r.DuplicateKeys, ", "))
+	}
+	lines = append(lines, "")
+	switch n := len(r.Warnings()); {
+	case r.OK() && n > 0:
+		lines = append(lines, fmt.Sprintf("doctor: no errors, %d warning(s) (--strict fails on them)", n))
+	case r.OK():
+		lines = append(lines, "doctor: clean")
+	case r.Strict && n > 0:
+		lines = append(lines, fmt.Sprintf("doctor: issues found (--strict: %d warning(s) count as failures)", n))
+	default:
+		lines = append(lines, "doctor: issues found")
+	}
+	return strings.Join(lines, "\n")
+}
+
+// JSON returns the machine-readable view (mirrors DoctorReport.as_dict key order),
+// with empty lists/maps as []/{} and unset paths as null.
+func (r Report) JSON() ([]byte, error) {
+	strOrNil := func(s string) *string {
+		if s == "" {
+			return nil
+		}
+		return &s
+	}
+	type doc struct {
+		OK                 bool           `json:"ok"`
+		Home               *string        `json:"home"`
+		SSHDir             *string        `json:"ssh_dir"`
+		ProvidersSource    string         `json:"providers_source"`
+		PreflightOK        bool           `json:"preflight_ok"`
+		Agent              string         `json:"agent"`
+		KnownHosts         bool           `json:"known_hosts"`
+		ConfigInSync       bool           `json:"config_in_sync"`
+		PermIssues         []string       `json:"perm_issues"`
+		OldKeys            map[string]int `json:"old_keys"`
+		StaleOldKeys       []string       `json:"stale_old_keys"`
+		OrphanKeys         []string       `json:"orphan_keys"`
+		DanglingKeys       []danglingJSON `json:"dangling_keys"`
+		DuplicateKeys      []string       `json:"duplicate_keys"`
+		UnpinnedHosts      []string       `json:"unpinned_hosts"`
+		AliasCollisions    []string       `json:"alias_collisions"`
+		StaleProxy         []string       `json:"stale_proxy"`
+		ShadowedHosts      []string       `json:"shadowed_hosts"`
+		RawOptionOverlaps  []string       `json:"raw_option_overlaps"`
+		NeededTools        []string       `json:"needed_tools"`
+		Clipboard          *string        `json:"clipboard"`
+		StrandedLegacyHome *string        `json:"stranded_legacy_home"`
+		// Added in 0.1.3, after every 3.x key so a 3.x parser is unaffected.
+		UnpinnedVMHosts []string  `json:"unpinned_vm_hosts"`
+		StalePins       int       `json:"stale_pins"`
+		VM              *VMStatus `json:"vm"`
+		// Added in 0.1.4.
+		ReservedKeys []keyaudit.Reserved `json:"reserved_keys"`
+		// Added after 0.1.4.
+		OwnerSeal       *string `json:"owner_seal"`
+		StrandedKeyRoot *string `json:"stranded_key_root"`
+	}
+	nz := func(s []string) []string {
+		if s == nil {
+			return []string{}
+		}
+		return s
+	}
+	old := r.OldKeys
+	if old == nil {
+		old = map[string]int{}
+	}
+	return jsonIndent(doc{
+		OK: r.OK(), Home: strOrNil(r.Home), SSHDir: strOrNil(r.SSHDir),
+		ProvidersSource: r.ProvidersSource, PreflightOK: r.Preflight.OK(),
+		Agent: r.AgentStatus, KnownHosts: r.KnownHosts, ConfigInSync: r.ConfigInSync,
+		PermIssues: nz(r.PermIssues), OldKeys: old, StaleOldKeys: nz(r.StaleOldKeys),
+		OrphanKeys: nz(r.OrphanKeys), DanglingKeys: danglingRows(r.Dangling),
+		DuplicateKeys: nz(r.DuplicateKeys), UnpinnedHosts: nz(r.UnpinnedHosts),
+		UnpinnedVMHosts: nz(r.UnpinnedVMHosts), StalePins: r.StalePins, VM: r.VM,
+		ReservedKeys:    reservedRows(r.Dangling),
+		AliasCollisions: nz(r.AliasCollisions), StaleProxy: nz(r.StaleProxy),
+		ShadowedHosts: nz(r.ShadowedHosts), RawOptionOverlaps: nz(r.RawOptionOverlaps),
+		NeededTools: nz(r.NeededTools), Clipboard: strOrNil(r.Clipboard),
+		StrandedLegacyHome: strOrNil(r.StrandedLegacyHome),
+		OwnerSeal:          strOrNil(r.OwnerSeal),
+		StrandedKeyRoot:    strOrNil(r.StrandedKeyRoot),
+	})
+}
+
+// FixPerms re-asserts canonical perms on the tool-managed ~/.ssh paths and the
+// config-home secrets, returning the paths it changed. Mirrors facade.fix_perms
+// (the advisory lock is the CLI's mutation guard, upstream of this).
+func (s *Service) FixPerms() []string {
+	var changed []string
+	for _, mp := range perms.IterManagedPathsIn(s.p.SSHDir, manifest.KeyRoot(s.m)) {
+		if !perms.PermsOK(mp.Path, mp.Mode) {
+			_ = perms.SetPerms(mp.Path, mp.Mode)
+			changed = append(changed, fmt.Sprintf("%s -> %o", mp.Path, uint32(mp.Mode.Perm())))
+		}
+	}
+	for _, sp := range homeperms.SecretPerms(s.p) {
+		if fs.Exists(sp.Path) && !perms.PermsOK(sp.Path, sp.Mode) {
+			_ = perms.SetPerms(sp.Path, sp.Mode)
+			changed = append(changed, fmt.Sprintf("%s -> %o", sp.Path, uint32(sp.Mode.Perm())))
+		}
+	}
+	return changed
+}
+
+// Service runs doctor over a resolved home + (optional) manifest.
+type Service struct {
+	p               paths.Paths
+	m               *manifest.Manifest // nil when no/invalid manifest -> drift checks skipped
+	emitUseKeychain bool
+}
+
+// New builds a doctor service. m may be nil (no manifest yet).
+func New(p paths.Paths, m *manifest.Manifest, emitUseKeychain bool) *Service {
+	return &Service{p: p, m: m, emitUseKeychain: emitUseKeychain}
+}
+
+// Run gathers the full report. strict escalates every dangling-key state to
+// fatal, for CI.
+func (s *Service) Run(strict bool) Report {
+	rep := Report{
+		Preflight:       preflight.Check(),
+		Home:            s.p.ConfigDir,
+		State:           stateIfSeparate(s.p),
+		SSHDir:          s.p.SSHDir,
+		ProvidersSource: s.providersSource(),
+		ConfigInSync:    true,
+		OldKeys:         map[string]int{},
+		Strict:          strict,
+	}
+	if legacy := s.p.FirstLegacyHome(); legacy != "" && fs.Exists(s.p.ConfigDir) {
+		rep.StrandedLegacyHome = legacy
+	}
+	ssh := s.p.SSHDir
+	rep.PermIssues = permIssues(ssh, s.p)
+	rep.AgentStatus = agentStatus()
+	if st := owner.Verify(s.p); !st.Clean() {
+		rep.OwnerSeal = st.Describe()
+	}
+	rep.KnownHosts = knownHostsPresent(ssh)
+	rep.OldKeys, rep.StaleOldKeys = archivedKeys(ssh, manifest.KeyRoot(s.m), OldKeyMaxAge(nil), time.Now())
+	rep.StrandedKeyRoot = strandedKeyRoot(ssh, manifest.KeyRoot(s.m))
+	if _, _, err := clipboard.Command(); err != nil {
+		rep.Clipboard = "none found"
+	}
+	if s.m != nil {
+		if chk, err := configsvc.New(ssh, s.m, s.emitUseKeychain).Check(false); err == nil {
+			// Drift is what `config render` fixes; shadowing is reported on its
+			// own line because render cannot fix it.
+			rep.ConfigInSync = chk.BlockInSync()
+			for _, sh := range chk.Shadowed {
+				rep.ShadowedHosts = append(rep.ShadowedHosts, sh.String())
+			}
+		}
+		rep.RawOptionOverlaps = manifest.RawOptionOverlaps(s.m)
+		rep.Dangling = s.dangling(strict)
+		// orphan_keys stays in the JSON as the untracked view of the same audit:
+		// same meaning as before, now without the .pub requirement that hid the
+		// worst cases.
+		for _, f := range rep.Dangling.ByState(keyaudit.Untracked) {
+			rep.OrphanKeys = append(rep.OrphanKeys, f.Subject)
+		}
+		rep.DuplicateKeys = duplicateKeys(ssh, manifest.KeyRoot(s.m))
+		rep.UnpinnedHosts, rep.UnpinnedVMHosts = s.unpinnedHosts(ssh)
+		rep.StalePins = s.stalePins()
+		rep.VM = s.vmStatus()
+		rep.AliasCollisions = aliasCollisions(s.m)
+		rep.OnePassword = onePasswordIssues(s.m)
+		rep.StaleProxy = staleProxies(ssh, s.m)
+		rep.NeededTools = neededTools(s.m)
+	}
+	return rep
+}
+
+// onePasswordIssues reports what a profile with key_store "1password" needs and
+// lacks: the op CLI (to mint, validate and rotate) and the agent socket (which
+// ssh is pointed at for every such host).
+func onePasswordIssues(m *manifest.Manifest) []string {
+	if !manifest.UsesOnePassword(m) {
+		return nil
+	}
+	var out []string
+	if err := opstore.New().Available(); err != nil {
+		out = append(out, err.Error())
+	}
+	if sock := m.Defaults.OnePasswordAgentSocket(); sock != "" {
+		path := sock
+		if strings.HasPrefix(path, "~/") {
+			if home, err := os.UserHomeDir(); err == nil {
+				path = filepath.Join(home, path[2:])
+			}
+		}
+		if _, err := os.Stat(path); err != nil {
+			out = append(out, "the SSH agent socket "+sock+" is missing - turn on "+
+				"Settings > Developer > Use the SSH agent in the 1Password app")
+		}
+	}
+	// A key in a vault the agent does not serve is never offered to ssh, which
+	// shows up only as "Permission denied (publickey)".
+	seen := map[string]bool{}
+	for _, name := range m.ProfileNames() {
+		p := m.Profiles[name]
+		if !p.InOnePassword() || seen[strings.ToLower(p.OPVault)] {
+			continue
+		}
+		seen[strings.ToLower(p.OPVault)] = true
+		if ok, why := opstore.AgentServesVault(p.OPVault, opstore.AgentConfigPath()); !ok {
+			out = append(out, why)
+		}
+	}
+	return out
+}
+
+func (s *Service) providersSource() string {
+	if fs.Exists(s.p.Providers()) {
+		return "user file"
+	}
+	return "shipped default"
+}
+
+// permIssues walks exactly what FixPerms repairs, config home included. The two
+// used to disagree: FixPerms tightened the config home while the check only
+// looked at ~/.ssh, so a world-readable manifest or providers.json was silently
+// repaired but never reported, and doctor called it clean.
+func permIssues(ssh string, p paths.Paths) []string {
+	var issues []string
+	report := func(mp perms.ManagedPath) {
+		if perms.PermsOK(mp.Path, mp.Mode) {
+			return
+		}
+		fi, err := os.Lstat(mp.Path)
+		if err != nil {
+			return
+		}
+		issues = append(issues, fmt.Sprintf("%s: %o (want %o)",
+			mp.Path, uint32(fi.Mode().Perm()), uint32(mp.Mode.Perm())))
+	}
+	for _, mp := range perms.IterManagedPathsIn(ssh, manifest.KeyRootAt(p.Manifest())) {
+		report(mp)
+	}
+	for _, mp := range homeperms.SecretPerms(p) {
+		if fs.Exists(mp.Path) {
+			report(mp)
+		}
+	}
+	return issues
+}
+
+func agentStatus() string {
+	if _, err := exec.LookPath("ssh-add"); err != nil {
+		return "ssh-add not found"
+	}
+	out, err := exec.Command("ssh-add", "-l").Output()
+	code := 0
+	if err != nil {
+		if ee, ok := err.(*exec.ExitError); ok {
+			code = ee.ExitCode()
+		} else {
+			code = -1
+		}
+	}
+	switch code {
+	case 0:
+		n := 0
+		if t := strings.TrimSpace(string(out)); t != "" {
+			n = len(strings.Split(t, "\n"))
+		}
+		if n == 1 {
+			return "running, 1 key loaded"
+		}
+		return fmt.Sprintf("running, %d keys loaded", n)
+	case 1:
+		return "running, no identities loaded"
+	default:
+		return "not running"
+	}
+}
+
+func knownHostsPresent(ssh string) bool {
+	return fs.Exists(filepath.Join(ssh, "known_hosts"))
+}
+
+// DefaultOldKeyMaxAge is how long an archived predecessor is considered useful.
+// Past that, the rotation it belongs to has long since been verified in practice
+// and the file is just an unencrypted private key nobody is watching.
+const DefaultOldKeyMaxAge = 90 * 24 * time.Hour
+
+// OldKeyMaxAge is the staleness threshold, overridable with
+// $AUTHAMA_OLD_KEY_MAX_AGE_DAYS. A value of 0 or less disables the check
+// rather than marking everything stale, so the escape hatch is not a footgun.
+func OldKeyMaxAge(get func(string) string) time.Duration {
+	if get == nil {
+		get = os.Getenv
+	}
+	raw := strings.TrimSpace(envnames.Get(get, envnames.OldKeyMaxAgeDays))
+	if raw == "" {
+		return DefaultOldKeyMaxAge
+	}
+	days, err := strconv.Atoi(raw)
+	if err != nil {
+		return DefaultOldKeyMaxAge
+	}
+	if days <= 0 {
+		return 0
+	}
+	return time.Duration(days) * 24 * time.Hour
+}
+
+// archivedKeys walks profiles/*/old/ once and returns both the per-key archive
+// count and the entries older than maxAge. They share a walk so the count and the
+// staleness verdict can never describe different sets of files. maxAge 0 skips
+// the staleness pass. Paths are relative to ssh, for display.
+func archivedKeys(ssh, root string, maxAge time.Duration, now time.Time) (map[string]int, []string) {
+	counts := map[string]int{}
+	var stale []string
+	olds := manifest.GlobKeyTree(ssh, root, "old")
+	sort.Strings(olds)
+	for _, old := range olds {
+		fi, err := os.Stat(old)
+		if err != nil || !fi.IsDir() {
+			continue
+		}
+		profile := filepath.Base(filepath.Dir(old))
+		entries, _ := os.ReadDir(old)
+		for _, e := range entries {
+			if e.IsDir() || strings.HasSuffix(e.Name(), ".pub") {
+				continue
+			}
+			// Counted per profile: merging same-named archives from two profiles
+			// would falsely trip the "more than one predecessor" check.
+			counts[profile+"/"+e.Name()]++
+			if maxAge <= 0 {
+				continue
+			}
+			info, err := e.Info()
+			if err != nil {
+				continue
+			}
+			if age := now.Sub(info.ModTime()); age > maxAge {
+				stale = append(stale, fmt.Sprintf("%s/old/%s (%d days old)",
+					profile, e.Name(), int(age.Hours()/24)))
+			}
+		}
+	}
+	sort.Strings(stale)
+	return counts, stale
+}
+
+// dangling runs the key audit. A missing/unreadable inventory is not fatal here:
+// doctor's job is to report the state of a broken install, so it audits with an
+// empty inventory rather than refusing to run - every key then reads as
+// unrecorded, which is the truth.
+func (s *Service) dangling(strict bool) keyaudit.Report {
+	inv, err := inventory.Load(s.p.Inventory())
+	if err != nil {
+		inv = inventory.New()
+	}
+	// Planned devboxes (authama.json, no vm yet) keep their keys reserved.
+	cfg, _ := settings.LoadVMConfig(s.p.SettingsFile())
+	rep, err := keyaudit.New(s.m, inv, s.p.SSHDir).WithPlanned(cfg.PlannedKeys()).Audit(strict)
+	if err != nil {
+		return keyaudit.Report{Strict: strict}
+	}
+	return rep
+}
+
+func reservedRows(rep keyaudit.Report) []keyaudit.Reserved {
+	if rep.Reserved == nil {
+		return []keyaudit.Reserved{}
+	}
+	return rep.Reserved
+}
+
+// danglingJSON is one finding in the machine-readable report.
+type danglingJSON struct {
+	State    string `json:"state"`
+	Subject  string `json:"subject"`
+	Detail   string `json:"detail"`
+	Fix      string `json:"fix"`
+	Blocking bool   `json:"blocking"`
+}
+
+func danglingRows(rep keyaudit.Report) []danglingJSON {
+	out := make([]danglingJSON, 0, len(rep.Findings))
+	for _, f := range rep.Findings {
+		out = append(out, danglingJSON{
+			State: f.State, Subject: f.Subject, Detail: f.Detail, Fix: f.Fix,
+			Blocking: rep.Strict || keyaudit.Blocking(f.State),
+		})
+	}
+	return out
+}
+
+// strandedKeyRoot describes the files still under the default key root when
+// defaults.key_root names another directory, and how to bring them over; ""
+// when there are none. Only `ssh key root` moves the tree, so files left
+// there mean the manifest was edited by hand, and no scan looks there.
+func strandedKeyRoot(ssh, root string) string {
+	if root == manifest.DefaultKeyRoot {
+		return ""
+	}
+	old := filepath.Join(ssh, manifest.DefaultKeyRoot)
+	files := 0
+	_ = filepath.WalkDir(old, func(_ string, d os.DirEntry, err error) error {
+		if err == nil && !d.IsDir() {
+			files++
+		}
+		return nil
+	})
+	if files == 0 {
+		return ""
+	}
+	return fmt.Sprintf("~/.ssh/%s/ holds %d file(s) while defaults.key_root names ~/.ssh/%s/; "+
+		"run `authama ssh key root %s`, then `authama ssh key root %s` to move them",
+		manifest.DefaultKeyRoot, files, root, manifest.DefaultKeyRoot, root)
+}
+
+func duplicateKeys(ssh, root string) []string {
+	profDir := filepath.Join(ssh, root)
+	if !isDir(profDir) {
+		return nil
+	}
+	if _, err := exec.LookPath("ssh-keygen"); err != nil {
+		return nil
+	}
+	ks := keystore.New()
+	byFP := map[string][]string{}
+	var order []string // first-encounter fp order (pubs sorted), matching v1
+	pubs := manifest.GlobKeyTree(ssh, root, "*.pub")
+	sort.Strings(pubs)
+	for _, pub := range pubs {
+		fp, err := ks.Fingerprint(pub)
+		if err != nil {
+			continue
+		}
+		if _, seen := byFP[fp]; !seen {
+			order = append(order, fp)
+		}
+		name := strings.TrimSuffix(filepath.Base(pub), ".pub")
+		byFP[fp] = append(byFP[fp], filepath.Base(filepath.Dir(pub))+"/"+name)
+	}
+	var dups []string
+	for _, fp := range order {
+		names := byFP[fp]
+		if len(names) > 1 {
+			sort.Strings(names)
+			dups = append(dups, strings.Join(names, " = "))
+		}
+	}
+	return dups
+}
+
+func (s *Service) unpinnedHosts(ssh string) (out, vms []string) {
+	rks, err := s.m.IterResolved()
+	if err != nil {
+		return nil, nil
+	}
+	seen := map[string]bool{}
+	for _, rk := range rks {
+		h := rk.Host
+		key := fmt.Sprintf("%s\x00%s\x00%d", rk.Profile, h.Hostname, h.Port)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		kh := filepath.Join(ssh, "known_hosts")
+		token := h.Hostname
+		if h.Port != 22 {
+			token = fmt.Sprintf("[%s]:%d", h.Hostname, h.Port)
+		}
+		if !knownhosts.HostInKnownHosts(kh, token) {
+			if h.VM != nil {
+				vms = append(vms, fmt.Sprintf("%s (%s %q)", h.Alias, h.VM.Hypervisor, h.VM.Name))
+				continue
+			}
+			out = append(out, fmt.Sprintf("%s (%s)", h.Alias, h.Hostname))
+		}
+	}
+	return out, vms
+}
+
+func aliasCollisions(m *manifest.Manifest) []string {
+	where := map[string][]string{}
+	for pname, prof := range m.Profiles {
+		for _, h := range prof.Hosts {
+			where[h.Alias] = append(where[h.Alias], pname)
+		}
+	}
+	aliases := make([]string, 0, len(where))
+	for a := range where {
+		aliases = append(aliases, a)
+	}
+	sort.Strings(aliases)
+	var out []string
+	for _, alias := range aliases {
+		uniq := sortedUnique(where[alias])
+		if len(uniq) > 1 {
+			out = append(out, fmt.Sprintf("%s (profiles: %s)", alias, strings.Join(uniq, ", ")))
+		}
+	}
+	return out
+}
+
+func sortedUnique(xs []string) []string {
+	set := map[string]bool{}
+	for _, x := range xs {
+		set[x] = true
+	}
+	out := make([]string, 0, len(set))
+	for x := range set {
+		out = append(out, x)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func isDir(path string) bool {
+	fi, err := os.Stat(path)
+	return err == nil && fi.IsDir()
+}
+
+func presentAbsent(b bool) string {
+	if b {
+		return "present"
+	}
+	return "absent"
+}
+
+func sortedIntKeys(m map[string]int) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func jsonIndent(v any) ([]byte, error) { return json.MarshalIndent(v, "", "  ") }
+
+// staleProxies reads the rendered configs (root and every category's) for this tool's VM ProxyCommands
+// and reports each whose binary path is gone. A bare name ("authama", or "sshmgr" from a release before 0.1.2) resolves through PATH.
+func staleProxies(ssh string, m *manifest.Manifest) []string {
+	files := []string{filepath.Join(ssh, "config")}
+	for _, c := range m.Categories() {
+		files = append(files, filepath.Join(ssh, filepath.FromSlash(manifest.CategoryConfigRelIn(manifest.KeyRoot(m), c))))
+	}
+	var out []string
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(b), "\n") {
+			k, v, ok := strings.Cut(strings.TrimSpace(line), " ")
+			if !ok || !strings.EqualFold(k, "ProxyCommand") {
+				continue
+			}
+			bin := renderer.ProxyBinary(strings.TrimSpace(v))
+			if bin == "" {
+				continue
+			}
+			if !strings.ContainsAny(bin, `/\`) {
+				if _, err := exec.LookPath(bin); err == nil {
+					continue
+				}
+			} else if fi, err := os.Stat(bin); err == nil && !fi.IsDir() {
+				continue
+			}
+			out = append(out, bin+" (in "+f+") does not exist")
+		}
+	}
+	return sortedUnique(out)
+}
+
+// neededTools reports the commands the manifest relies on that are missing: the
+// hypervisor CLI behind each VM host, and git when defaults.git is set.
+func neededTools(m *manifest.Manifest) []string {
+	byHV := map[string][]string{}
+	var hvs []string
+	for _, prof := range m.ProfileNames() {
+		for _, h := range m.Profiles[prof].Hosts {
+			if h.VM == nil {
+				continue
+			}
+			if _, seen := byHV[h.VM.Hypervisor]; !seen {
+				hvs = append(hvs, h.VM.Hypervisor)
+			}
+			byHV[h.VM.Hypervisor] = append(byHV[h.VM.Hypervisor], prof+"/"+h.Alias)
+		}
+	}
+	var out []string
+	for _, name := range hvs {
+		d, err := hypervisor.For(name)
+		if err != nil || hypervisor.Available(d) {
+			continue // an unknown hypervisor is the manifest validator's to report
+		}
+		out = append(out, fmt.Sprintf("%s CLI not found (VM hosts %s cannot resolve their address)",
+			name, strings.Join(byHV[name], ", ")))
+	}
+	if m.Defaults.Git != nil {
+		if _, err := exec.LookPath("git"); err != nil {
+			out = append(out, "git (defaults.git is set, and `authama ssh git` runs it)")
+		}
+	}
+	return out
+}

@@ -1,0 +1,302 @@
+{
+  "$id": "https://raw.githubusercontent.com/simtabi/authama/main/docs/schema/authama.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "User settings for authama. Precedence: command-line flags > environment > <config home>/.env > authama.json > defaults.",
+  "properties": {
+    "$schema": {
+      "description": "The schema this file follows (for editors).",
+      "type": "string"
+    },
+    "backup": {
+      "additionalProperties": false,
+      "properties": {
+        "age_recipient": {
+          "description": "The age recipient (public key) bundles are encrypted to. Required for `ssh bundle` and the backups destructive commands take first. Sets $AUTHAMA_AGE_RECIPIENT.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "old_key_max_age_days": {
+          "default": 90,
+          "description": "Days an archived predecessor key may stay before doctor flags it; 0 turns the check off. Sets $AUTHAMA_OLD_KEY_MAX_AGE_DAYS. Default: 90.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "snapshot_retain": {
+          "default": 10,
+          "description": "How many ~/.ssh snapshots to keep. Sets $AUTHAMA_SNAPSHOT_RETAIN. Default: 10.",
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "devboxes": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "else": {
+          "required": [
+            "key"
+          ]
+        },
+        "if": {
+          "required": [
+            "vm"
+          ]
+        },
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "docker_context": {
+            "default": true,
+            "description": "Keep a Docker context ssh://<alias>.",
+            "type": "boolean"
+          },
+          "hypervisor": {
+            "description": "A built-in hypervisor (parallels, vmpal, vmware, utm, lima) or one from the hypervisors section.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "key": {
+            "description": "The key name the host uses; a loose ~/.ssh/<key> pair is adopted (copied) when the profile has no key of that name.",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+            "type": "string"
+          },
+          "profile": {
+            "description": "The profile the host belongs to (created when missing).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "user": {
+            "description": "The guest user.",
+            "pattern": "^[A-Za-z0-9_][A-Za-z0-9._-]{0,31}$",
+            "type": "string"
+          },
+          "vm": {
+            "description": "The VM's name as the hypervisor lists it. Leave it out for a planned devbox that only keeps its key.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "profile"
+        ],
+        "then": {
+          "required": [
+            "hypervisor",
+            "vm",
+            "user"
+          ]
+        },
+        "type": "object"
+      },
+      "description": "Devboxes authama keeps as SSH hosts, by alias. `ssh vm sync` adds a declared devbox that is not a host yet and adopts its loose key (a copy) when the profile lacks it. A devbox without vm is planned: it only keeps its key (doctor reports it as reserved) until the VM exists.",
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$"
+      },
+      "type": "object"
+    },
+    "git": {
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "description": "How `ssh git` rewrites remotes. Sets $AUTHAMA_GIT_MODE. Default: the manifest's defaults.git.mode, else profile.",
+          "enum": [
+            "profile",
+            "ssh",
+            "https"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "history": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": true,
+          "description": "Record every change in the history database (`authama history`). Sets $AUTHAMA_HISTORY. Default: true.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "hypervisors": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "description": "Prints where the VM's SSH server answers: host or host:port.",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "description": {
+            "description": "Shown by `ssh vm list`.",
+            "type": "string"
+          },
+          "exec": {
+            "description": "Runs a command in the guest; the guest argv is appended (optional; lets `ssh vm sync` re-install a missing key).",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "list": {
+            "description": "Lists the VMs: a JSON array of {\"name\",\"state\"} (optional boolean \"running\"), or one name<TAB>state per line. running, started and up mean running.",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "start": {
+            "description": "Starts the VM (optional; without it `ssh` to a stopped VM fails instead of starting it).",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "list",
+          "address"
+        ],
+        "type": "object"
+      },
+      "description": "Custom hypervisors: a command driver per name, for a VM tool authama has no built-in driver for. Each value is an argv array (no shell); {vm} is replaced with the VM's name. Enable one by naming it in vm.hypervisors (or leave that unset).",
+      "propertyNames": {
+        "not": {
+          "enum": [
+            "parallels",
+            "vmpal",
+            "vmware",
+            "utm",
+            "lima",
+            "orbstack",
+            "podman"
+          ]
+        },
+        "pattern": "^[a-z][a-z0-9_-]{0,31}$"
+      },
+      "type": "object"
+    },
+    "notifications": {
+      "additionalProperties": false,
+      "properties": {
+        "desktop": {
+          "default": true,
+          "description": "Show desktop notifications for keys due for rotation and dangling keys. Sets $AUTHAMA_NOTIFICATIONS. Default: true.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "paths": {
+      "additionalProperties": false,
+      "properties": {
+        "age_identity_file": {
+          "description": "The age identity (private key) `ssh restore` decrypts bundles with. Sets $AUTHAMA_AGE_IDENTITY_FILE.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "state_dir": {
+          "description": "Where authama keeps its own state: the history database and audit log, snapshots, bundles, the lock and caches. Sets $AUTHAMA_STATE_DIR. Default: $XDG_STATE_HOME/authama or ~/.local/state/authama.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "tokens_catalog": {
+          "description": "A catalog.json to use instead of the built-in token services and providers. Sets $AUTHAMA_TOKENS_CATALOG. Default: the built-in catalog.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "tokens_config": {
+          "description": "The token config: which environment variables build which registry credential. Sets $AUTHAMA_TOKENS_CONFIG. Default: ./authama-tokens.json, else <config home>/tokens.json.",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ssh": {
+      "additionalProperties": false,
+      "properties": {
+        "auto_pin": {
+          "default": true,
+          "description": "Pin a new host's key on first use (trust on first use) when a profile is minted. Sets $AUTHAMA_AUTO_PIN. Default: true.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "tokens": {
+      "additionalProperties": false,
+      "properties": {
+        "docker_creds_store": {
+          "description": "What to do with registries Docker keeps in a credential store: store them with `docker login` or refuse and warn. Sets $AUTHAMA_DOCKER_CREDS_STORE. Default: ask at a terminal, else refuse.",
+          "enum": [
+            "login",
+            "refuse"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "version": {
+      "const": 1,
+      "description": "The authama.json format version."
+    },
+    "vm": {
+      "additionalProperties": false,
+      "properties": {
+        "hypervisors": {
+          "description": "The hypervisors you have and use, comma-separated (e.g. \"parallels,vmpal\"). `ssh vm list`, `ssh vm sync`, doctor and the web UI query only these; a VM host on another hypervisor is reported, never changed. Sets $AUTHAMA_VM_HYPERVISORS. Default: every built-in driver and every custom one in the hypervisors section.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "prune_gone": {
+          "default": true,
+          "description": "Let `ssh vm sync` remove the host entry (never its key files) and Docker context of a VM its hypervisor no longer has. Off: sync only reports it. Sets $AUTHAMA_VM_PRUNE_GONE. Default: true.",
+          "type": "boolean"
+        },
+        "repin_changed": {
+          "default": false,
+          "description": "Let `ssh vm sync` replace a VM host's known_hosts pin when the guest's host key changed (a rebuilt VM), as `--repin` does. Off: sync reports it. Sets $AUTHAMA_VM_REPIN. Default: false.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "web": {
+      "additionalProperties": false,
+      "properties": {
+        "addr": {
+          "description": "The address `serve` listens on. A non-loopback address still needs --allow-remote. Sets $AUTHAMA_WEB_ADDR. Default: 127.0.0.1.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "base_path": {
+          "description": "A path the web UI is served under, such as /authama, so it can sit behind a reverse proxy beside other sites. Every link, form and redirect carries it. Sets $AUTHAMA_WEB_BASE_PATH. Default: /.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "port": {
+          "default": 7822,
+          "description": "The port `serve` listens on first. When it is taken the next free one is used, as with the default; only --port makes a taken port an error. Sets $AUTHAMA_WEB_PORT. Default: 7822.",
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "title": "authama settings (authama.json)",
+  "type": "object"
+}

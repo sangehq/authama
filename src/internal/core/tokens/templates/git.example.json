@@ -1,0 +1,8 @@
+{
+  "_help": "git-credentials store (https://user:token@host lines). Each host uses 'user_env'+'pass_env'. Enable the helper first: git config --global credential.helper store. This file stores ENV VAR NAMES, not secrets — safe to commit. Delete the hosts you don't use. Writes MERGE into an existing ~/.git-credentials, preserving entries for other hosts.",
+  "git": {
+    "github.com":    { "user_env": "GH_USER", "pass_env": "GH_TOKEN" },
+    "gitlab.com":    { "user_env": "GITLAB_USER", "pass_env": "GITLAB_TOKEN" },
+    "git.acme.corp": { "user_env": "ACME_USER", "pass_env": "ACME_TOKEN" }
+  }
+}

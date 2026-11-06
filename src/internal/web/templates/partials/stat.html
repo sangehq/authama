@@ -1,0 +1,15 @@
+{{/* One count on the overview: a linked card with an icon, its label and the
+     number. Built with `stat "Label" count "/href" "icon" "colour"`. */}}
+{{define "stat"}}<div class="col-sm-6 col-lg-3">
+  <a class="card card-sm card-link card-link-pop" href="{{u .Href}}">
+    <div class="card-body">
+      <div class="row align-items-center">
+        <div class="col-auto"><span class="avatar bg-{{.Colour}}-lt">{{icon .Icon}}</span></div>
+        <div class="col">
+          <div class="text-secondary">{{.Label}}</div>
+          <div class="h2 mb-0">{{.Count}}</div>
+        </div>
+      </div>
+    </div>
+  </a>
+</div>{{end}}

@@ -1,0 +1,7 @@
+{
+  "_help": "~/.gem/credentials, read by gem push. Each host is rubygems.org (the :rubygems_api_key key) or another gem server, such as rubygems.pkg.github.com/OWNER. Each uses 'env'. gem refuses the file unless it is owner-only, which authama keeps it. This file stores ENV VAR NAMES, not secrets. Writes MERGE, keeping every other key.",
+  "gem": {
+    "rubygems.org": { "env": "RUBYGEMS_API_KEY" },
+    "rubygems.pkg.github.com/acme": { "env": "GH_PACKAGES_TOKEN" }
+  }
+}

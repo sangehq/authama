@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "defaults": {
+    "key_type": "ed25519",
+    "key_scope": "per_service",
+    "rotate_after_days": 365,
+    "warn_before_days": [
+      30,
+      14,
+      7,
+      1
+    ],
+    "expiry_check": {
+      "enabled": true,
+      "debounce_hours": 24,
+      "desktop_notify": true
+    },
+    "global_options": {
+      "AddKeysToAgent": "yes",
+      "IgnoreUnknown": "UseKeychain",
+      "UseKeychain": "yes",
+      "IdentitiesOnly": "yes",
+      "ServerAliveInterval": 60
+    }
+  },
+  "profiles": {
+    "work": {
+      "key_scope": "per_service",
+      "hosts": [
+        {
+          "alias": "hpc",
+          "hostname": "hpc.example.edu",
+          "user": "researcher",
+          "port": 443,
+          "key_name": "work_hpc-ed25519",
+          "requires_vpn": true,
+          "vpn_name": "Campus VPN",
+          "vpn_url": "https://vpn.example.edu"
+        }
+      ]
+    },
+    "personal": {
+      "key_scope": "per_service",
+      "hosts": [
+        {
+          "alias": "github-personal",
+          "hostname": "github.com",
+          "user": "git",
+          "provider": "github",
+          "key_name": "personal_github-ed25519"
+        }
+      ]
+    },
+    "simtabi": {
+      "key_scope": "per_service",
+      "hosts": [
+        {
+          "alias": "github-simtabi",
+          "hostname": "github.com",
+          "user": "git",
+          "provider": "github",
+          "token_env": "GH_TOKEN_SIMTABI",
+          "key_name": "simtabi_github-ed25519"
+        }
+      ]
+    },
+    "development": {
+      "key_scope": "per_service",
+      "hosts": [
+        {
+          "alias": "app-web",
+          "hostname": "192.0.2.10",
+          "user": "deploy",
+          "provider": "ploi",
+          "key_name": "development_app-web-ed25519",
+          "tags": [
+            "app"
+          ]
+        },
+        {
+          "alias": "app-db-maria",
+          "hostname": "198.51.100.20",
+          "user": "deploy",
+          "provider": "ploi",
+          "key_name": "development_app-db-maria-ed25519",
+          "tags": [
+            "db"
+          ]
+        },
+        {
+          "alias": "app-db-psql",
+          "hostname": "203.0.113.30",
+          "user": "deploy",
+          "provider": "ploi",
+          "key_name": "development_app-db-psql-ed25519",
+          "tags": [
+            "db"
+          ]
+        }
+      ]
+    },
+    "school": {
+      "key_scope": "per_service",
+      "hosts": []
+    }
+  }
+}

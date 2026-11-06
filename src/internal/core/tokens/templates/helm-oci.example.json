@@ -1,0 +1,9 @@
+{
+  "_help": "Helm's OCI registry credentials, registry/config.json ($HELM_REGISTRY_CONFIG), in Docker's format. Each host is a registry host as `helm registry login` takes it (ghcr.io), never oci:// or a path. Each uses 'user_env'+'pass_env'. A credsStore or credHelpers named in the file takes precedence over it. This file stores ENV VAR NAMES, not secrets. Writes MERGE, keeping every other key.",
+  "helm-oci": {
+    "ghcr.io": {
+      "user_env": "GITHUB_USER",
+      "pass_env": "GH_PACKAGES_TOKEN"
+    }
+  }
+}

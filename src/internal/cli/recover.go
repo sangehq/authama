@@ -1,0 +1,38 @@
+package cli
+
+import (
+	"fmt"
+
+	"github.com/spf13/cobra"
+
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/services/recover"
+)
+
+// newRecoverCmd is the native recover verb: print a break-glass recovery script.
+func newRecoverCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "recover [[profile/]key]",
+		Short: "Print a break-glass snippet for regaining access when a key is lost",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			keyName := ""
+			if len(args) > 0 {
+				keyName = args[0]
+			}
+			p, err := resolvePaths(c)
+			if err != nil {
+				return err
+			}
+			// The manifest is only needed for a per-key snippet; tolerate its
+			// absence when emitting the full fixkeys tool.
+			m, _ := manifest.Load(p.Manifest())
+			script, err := recover.Script(p, m, keyName)
+			if err != nil {
+				return err
+			}
+			_, _ = fmt.Fprint(c.OutOrStdout(), script)
+			return nil
+		},
+	}
+}

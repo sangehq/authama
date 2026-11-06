@@ -1,0 +1,38 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "System" "Repair" "What is wrong with the authama home, ~/.ssh and the token files, and the fixes that are safe to make. Nothing is deleted." (only (not $.ReadOnly) (panel "Factory reset" "factory-reset" "refresh" | withTip "factory-reset")))}}
+<div class="card mb-3">
+  <div class="card-header"><h2 class="card-title">Findings</h2>{{if .Findings}}<span class="ms-2 badge badge-warn">{{len .Findings}}</span>{{else}}<span class="ms-2 badge badge-ok">{{icon "circle-check"}}<span class="ms-1">all clear</span></span>{{end}}</div>
+  {{if .Findings}}
+  <div class="table-responsive" tabindex="0">
+    <table class="table table-vcenter card-table">
+      <caption class="visually-hidden">What repair found</caption>
+      <thead><tr><th scope="col">Area</th><th scope="col">Problem</th><th scope="col">Fix</th></tr></thead>
+      <tbody>{{range .Findings}}<tr>
+        <td><span class="badge badge-muted">{{.Area}}</span></td>
+        <td>{{.Problem}}</td>
+        <td>{{if .Fixable}}<span class="badge badge-ok me-1">automatic</span>{{else}}<span class="badge badge-warn me-1">by hand</span>{{end}}<span class="text-secondary">{{.Fix}}</span></td>
+      </tr>{{end}}</tbody>
+    </table>
+  </div>
+  {{if and (not $.ReadOnly) (gt .Fixable 0)}}<div class="card-footer d-flex flex-wrap align-items-center gap-2">
+    <span class="text-secondary small me-auto">{{.Fixable}} can be fixed now. ~/.ssh is snapshotted first, and the fixes are previewed before they run.</span>
+    {{template "change_open" $}}<input type="hidden" name="action" value="repair"><button type="submit" class="btn btn-primary"{{tip "repair"}}>{{icon "refresh"}}<span class="ms-1">Preview the fixes</span></button></form>
+  </div>{{end}}
+  {{else}}<div class="card-body text-secondary">The home, ~/.ssh and the token files are as authama expects.</div>{{end}}
+</div>
+<p class="text-secondary small">The same checks at a terminal:</p>
+{{template "command_line" "authama repair --check"}}
+{{if not $.ReadOnly}}
+{{template "panel_open" (header "factory-reset" "Factory reset" "Puts authama back to how it was before it was set up. Nothing is deleted: the folders are renamed aside, and renaming them back undoes it.")}}
+  <ul class="mb-3">
+    {{if .Reset.Unbinds}}<li>The owner is unbound first: the PIN and the sealing key go, so a restored home is never bound to a key that is gone.</li>{{end}}
+    {{range .Reset.Moves}}<li><code>{{index . 0}}</code> is moved to <code>{{index . 1}}</code></li>{{else}}<li>There is no config home to move.</li>{{end}}
+    <li><code>~/.ssh</code> is not touched: your keys, config and <code>known_hosts</code> stay.</li>
+  </ul>
+  {{if .Reset.Moves}}{{template "change_open" $}}<input type="hidden" name="action" value="factory-reset">
+    <div class="mb-3"><label class="form-label" for="reset-confirm">Type <code>reset</code> to confirm</label><input class="form-control" id="reset-confirm" name="confirm" required pattern="reset" autocomplete="off" spellcheck="false"></div>
+    {{template "panel_actions" "btn-outline-danger"}}
+  </form>{{end}}
+{{template "panel_close"}}
+{{end}}
+{{end}}{{end}}

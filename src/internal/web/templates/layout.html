@@ -1,0 +1,147 @@
+{{define "layout"}}<!doctype html>
+<html lang="en" data-base="{{basePath}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="csrf-token" content="{{.CSRF}}">
+<title>{{.Title}} · {{brandName}}</title>
+<script src="{{asset "vendor/tabler/tabler-theme.min.js"}}"></script>
+<link rel="icon" type="image/svg+xml" href="{{asset "favicon.svg"}}">
+<link rel="stylesheet" href="{{asset "vendor/tabler/tabler.min.css"}}">
+<link rel="stylesheet" href="{{asset "app.css"}}">
+</head>
+<body>
+{{sprite}}
+<a class="visually-hidden-focusable skip-link" href="#main">Skip to content</a>
+<div class="page">
+  <header class="navbar navbar-expand-md d-print-none">
+    <div class="container-xl">
+      {{if .Authed}}<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-menu" aria-controls="navbar-menu" aria-expanded="false" aria-label="Show the menu"><span class="navbar-toggler-icon"></span></button>{{end}}
+      <a class="navbar-brand navbar-brand-autodark pe-0 pe-md-3" href="{{basePath}}/">{{icon "terminal-2"}}<span class="ms-2">{{brandCommand}}</span></a>
+      <div class="navbar-nav flex-row order-md-last">
+        {{if .Authed}}<div class="nav-item d-none d-md-flex me-3">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#command-palette" data-tour="1" data-tour-title="Search" data-tour-text="Ctrl+K (or ⌘K) jumps to any page, form or download as you type.">{{icon "search"}}<span class="ms-1">Search</span><kbd class="ms-2" data-palette-hint>Ctrl K</kbd></button>
+        </div>{{end}}
+        <div class="nav-item d-none d-md-flex me-2">
+          <a href="?theme=dark" class="nav-link px-0 hide-theme-dark" title="Dark theme" data-bs-toggle="tooltip" data-bs-placement="bottom">{{icon "moon"}}<span class="visually-hidden">Dark theme</span></a>
+          <a href="?theme=light" class="nav-link px-0 hide-theme-light" title="Light theme" data-bs-toggle="tooltip" data-bs-placement="bottom">{{icon "sun"}}<span class="visually-hidden">Light theme</span></a>
+        </div>
+        {{if .Authed}}
+        <div class="nav-item dropdown d-none d-md-flex me-3">
+          <a href="#" class="nav-link px-0" data-bs-toggle="dropdown" tabindex="0" data-tour="5" data-tour-title="File events" data-tour-text="Every change to ~/.ssh, the config home or a token file, by anyone. A dot means one in the last day." aria-label="Recent file events{{if .BellNew}}: {{.BellNew}} in the last day{{end}}" aria-expanded="false">{{icon "bell"}}{{if .BellNew}}<span class="badge bg-red"></span>{{end}}</a>
+          <div class="dropdown-menu dropdown-menu-arrow dropdown-menu-end dropdown-menu-card">
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Recent file events</h3></div>
+              {{if .Bell}}
+              <div class="list-group list-group-flush list-group-hoverable">
+                {{range .Bell}}<div class="list-group-item">
+                  <div class="row align-items-center">
+                    <div class="col-auto"><span class="status-dot {{eventDot .Kind}} d-block"></span></div>
+                    <div class="col text-truncate">
+                      <span class="text-body d-block text-truncate">{{.Kind}} {{base .Path}}</span>
+                      <div class="d-block text-secondary text-truncate mt-n1">{{.Area}} · {{when .Seen}}</div>
+                    </div>
+                  </div>
+                </div>{{end}}
+              </div>
+              {{else}}<div class="card-body text-secondary">No file events yet.</div>{{end}}
+              <div class="card-footer"><a href="{{basePath}}/events" class="btn btn-outline-primary w-100">All events</a></div>
+            </div>
+          </div>
+        </div>
+        <div class="nav-item dropdown">
+          <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-expanded="false" data-tour="6" data-tour-title="Your account" data-tour-text="Settings, events, the doctor's checks, About, and this tour again.">
+            <span class="avatar avatar-sm avatar-initials" aria-hidden="true">{{.Initials}}</span>
+            <span class="d-none d-xl-inline ps-2 align-self-center">{{if .User}}{{.User}}{{else}}{{brandCommand}}{{end}}</span>
+            <span class="visually-hidden">: account menu</span>
+          </a>
+          <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+            <a href="{{basePath}}/settings" class="dropdown-item">{{icon "settings"}}<span class="ms-2">Settings</span></a>
+            <a href="{{basePath}}/events" class="dropdown-item">{{icon "activity"}}<span class="ms-2">Events</span></a>
+            <a href="{{basePath}}/doctor" class="dropdown-item">{{icon "stethoscope"}}<span class="ms-2">Doctor</span></a>
+            <div class="dropdown-divider"></div>
+            <button type="button" class="dropdown-item" data-tour-start{{if eq .Nav "overview"}} data-tour-start-auto="true"{{end}}>{{icon "route"}}<span class="ms-2">Take the tour</span></button>
+            <a href="{{basePath}}/about" class="dropdown-item">{{icon "info-circle"}}<span class="ms-2">About {{brandCommand}}</span></a>
+          </div>
+        </div>
+        {{end}}
+      </div>
+    </div>
+  </header>
+  {{if .Authed}}
+  <header class="navbar-expand-md">
+    <div class="collapse navbar-collapse" id="navbar-menu">
+      <div class="navbar">
+        <div class="container-xl">
+          <nav class="d-flex flex-wrap align-items-center w-100" aria-label="Main">
+            <ul class="navbar-nav">
+              {{template "navlink" (navItem . "overview" "/" "layout-dashboard" "Overview")}}
+              {{template "navgroup" (navGroup . "ssh" "key" "SSH" (navItem . "profiles" "/profiles" "users" "Profiles") (navItem . "hosts" "/hosts" "server" "Hosts") (navItem . "keys" "/keys" "key" "Keys") (navItem . "vms" "/vms" "device-desktop" "VMs"))}}
+              {{template "navgroup" (navGroup . "files" "file-code" "Config & backups" (navItem . "sshconfig" "/ssh-config" "file-code" "SSH config") (navItem . "snapshots" "/snapshots" "archive" "Snapshots"))}}
+              {{template "navgroup" (navGroup . "auth" "lock" "Security" (navItem . "tokens" "/tokens" "cloud-lock" "Auth tokens") (navItem . "audit" "/audit" "shield-check" "Audit") (navItem . "security" "/security" "lock" "Owner & PIN"))}}
+              {{template "navgroup" (navGroup . "activity" "activity" "Activity" (navItem . "history" "/history" "history" "History") (navItem . "events" "/events" "activity" "Events"))}}
+              {{template "navgroup" (navGroup . "system" "settings" "System" (navItem . "doctor" "/doctor" "stethoscope" "Doctor") (navItem . "repair" "/repair" "refresh" "Repair") (navItem . "settings" "/settings" "settings" "Settings") (navItem . "about" "/about" "info-circle" "About"))}}
+            </ul>
+            <div data-tour="4" data-tour-title="Who and where" data-tour-text="The account and machine this server runs as: every change it makes is theirs." class="session-strip ms-md-auto d-flex align-items-center gap-2 small text-secondary py-2 py-md-0">
+              {{icon "device-desktop"}}<span>Running as <strong class="text-body">{{if .User}}{{.User}}{{else}}this machine's user{{end}}</strong>{{if .Host}} on <strong class="text-body">{{.Host}}</strong>{{end}}</span>
+              {{if .DevRoot}}<span class="badge badge-warn">dev mode</span>{{end}}
+              {{if .ReadOnly}}<span class="badge badge-muted">read-only</span>{{end}}
+            </div>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </header>
+  {{end}}
+  <div class="page-wrapper">
+    {{if and .Authed .SealProblem}}
+    <div class="alert alert-danger rounded-0 mb-0" role="alert">
+      <div class="container-xl">{{icon "alert-triangle"}}<span class="ms-1"><strong>Changed outside authama:</strong> {{.SealProblem}}. Run <code>authama owner verify</code> to see what changed, and <code>authama owner reseal</code> to accept it.</span></div>
+    </div>
+    {{end}}
+    {{if and .Authed .Rebuilt (not .Panel)}}
+    <div class="alert alert-warning rounded-0 mb-0" role="status" data-rebuilt>
+      <div class="container-xl">{{icon "alert-triangle"}}<span class="ms-1"><strong>This page is from an older build.</strong> <code>{{.Rebuilt}}</code> changed after this server started, and a running server keeps the code it started with. Stop it (Ctrl-C where it runs) and run <code>authama serve</code> again to see the new build.</span></div>
+    </div>
+    {{end}}
+    {{if and .Authed .DevRoot}}
+    <div class="dev-banner" role="status">
+      <div class="container-xl">{{icon "alert-triangle"}}<span class="ms-1"><strong>Dev mode.</strong> Reading a sandbox under <code>{{.DevRoot}}</code>, not your real <code>~/.ssh</code>.</span></div>
+    </div>
+    {{end}}
+    <main id="main" class="page-body" tabindex="-1">
+      <div class="container-xl">
+        {{template "content" .}}
+      </div>
+    </main>
+    <footer class="footer footer-transparent d-print-none">
+      <div class="container-xl">
+        <div class="row text-center align-items-center flex-row-reverse">
+          <div class="col-lg-auto ms-lg-auto">
+            <ul class="list-inline list-inline-dots mb-0">
+              {{if .Authed}}<li class="list-inline-item"><a href="{{basePath}}/about" class="link-secondary">About</a></li>{{end}}
+              <li class="list-inline-item"><a href="https://opensource.simtabi.com/documentation/simtabi/{{brandCommand}}/" class="link-secondary" rel="noopener">Documentation</a></li>
+              <li class="list-inline-item"><a href="https://github.com/simtabi/{{brandCommand}}" class="link-secondary" rel="noopener">Source code</a></li>
+              {{if .Authed}}<li class="list-inline-item"><a href="{{basePath}}/about#licences" class="link-secondary">Licences</a></li>{{end}}
+            </ul>
+          </div>
+          <div class="col-12 col-lg-auto mt-3 mt-lg-0">
+            <ul class="list-inline list-inline-dots mb-0">
+              <li class="list-inline-item">Copyright &copy; {{.Year}} Simtabi LLC</li>
+              <li class="list-inline-item"><span class="text-secondary">{{brandCommand}}</span> {{.Version}}</li>
+              {{if .ReadOnly}}<li class="list-inline-item">{{icon "lock"}} read-only</li>{{end}}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+  {{if .Authed}}{{template "side_panel" .}}{{template "csv_dialog" .}}{{end}}
+</div>
+{{if .Authed}}{{template "palette" .}}{{end}}
+<script src="{{asset "vendor/tabler/tabler.min.js"}}" defer></script>
+<script type="module" src="{{asset "app.js"}}"></script>
+</body>
+</html>
+{{end}}
