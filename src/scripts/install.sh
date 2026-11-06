@@ -23,6 +23,12 @@ LEGACY="sshmgr"
 # AUTHAMA_INSTALL_DIR, else the deprecated SSHMGR_INSTALL_DIR, else /usr/local/bin.
 INSTALL_DIR="${AUTHAMA_INSTALL_DIR:-${SSHMGR_INSTALL_DIR:-/usr/local/bin}}"
 
+# AUTHAMA_RELEASE_BASE is where the binaries and checksums.txt are read from
+# instead of the GitHub release: a URL, or file:///path to a directory. CI
+# points it at a binary it just built, since binary releases are on hold and
+# the release has none to download.
+RELEASE_BASE="${AUTHAMA_RELEASE_BASE:-}"
+
 err()  { printf 'error: %s\n' "$*" >&2; exit 1; }
 info() { printf '%s\n' "$*" >&2; }
 
@@ -84,7 +90,7 @@ fi
 case "$VERSION" in v*) ;; *) VERSION="v$VERSION" ;; esac
 
 # Bare, ready-to-run binaries (the release tag carries the version).
-base="https://github.com/${OWNER}/${REPO}/releases/download/${VERSION}"
+base="${RELEASE_BASE:-https://github.com/${OWNER}/${REPO}/releases/download/${VERSION}}"
 
 sha_check() { # <checksums file> <asset>
   if command -v sha256sum >/dev/null 2>&1; then

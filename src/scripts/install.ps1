@@ -22,7 +22,11 @@
 [CmdletBinding()]
 param(
   [string]$Version,
-  [string]$InstallDir
+  [string]$InstallDir,
+  # Where the executables and checksums.txt are read from instead of the GitHub
+  # release: a URL, or a local directory. CI points it at a binary it just built,
+  # since binary releases are on hold and the release has none to download.
+  [string]$ReleaseBase
 )
 
 $ErrorActionPreference = 'Stop'
@@ -42,6 +46,7 @@ foreach ($prefix in 'AUTHAMA', 'SSHMGR') {
   if (-not $Version)    { $Version    = [Environment]::GetEnvironmentVariable("${prefix}_VERSION") }
   if (-not $InstallDir) { $InstallDir = [Environment]::GetEnvironmentVariable("${prefix}_INSTALL_DIR") }
 }
+if (-not $ReleaseBase) { $ReleaseBase = $env:AUTHAMA_RELEASE_BASE }
 
 # Go-style GOARCH, matching the release artifact names.
 switch ($env:PROCESSOR_ARCHITECTURE) {
@@ -83,7 +88,13 @@ if (-not $Version) {
 if ($Version -notlike 'v*') { $Version = "v$Version" }
 
 # Bare, ready-to-run executables: <name>_windows_<arch>.exe.
-$base  = "https://github.com/$owner/$repo/releases/download/$Version"
+$base  = if ($ReleaseBase) { $ReleaseBase } else { "https://github.com/$owner/$repo/releases/download/$Version" }
+# Get-Asset fetches one file of the release: by HTTP, or a copy from a local
+# directory (Invoke-WebRequest does not read file:// paths).
+function Get-Asset([string]$name, [string]$out) {
+  if ($base -match '^https?://') { Invoke-WebRequest "$base/$name" -OutFile $out }
+  else { Copy-Item -LiteralPath (Join-Path $base $name) -Destination $out -ErrorAction Stop }
+}
 $tmp   = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid())
 New-Item -ItemType Directory -Path $tmp | Out-Null
 $installed = @()
@@ -91,14 +102,14 @@ $installed = @()
 try {
   $sums = Join-Path $tmp 'checksums.txt'
   $haveSums = $true
-  try { Invoke-WebRequest "$base/checksums.txt" -OutFile $sums } catch { $haveSums = $false; Write-Warning 'checksums.txt not found; skipping verification.' }
+  try { Get-Asset 'checksums.txt' $sums } catch { $haveSums = $false; Write-Warning 'checksums.txt not found; skipping verification.' }
 
   New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
   foreach ($name in @($binBase)) {
     $asset = "${name}_windows_${arch}.exe"
     $exe = Join-Path $tmp $asset
     Write-Host "Downloading $asset ($Version) ..."
-    try { Invoke-WebRequest "$base/$asset" -OutFile $exe }
+    try { Get-Asset $asset $exe }
     catch { throw "$Version has no ${binBase}_windows_${arch}.exe (releases before 0.1.0 shipped as $legacy)" }
     if ($haveSums) {
       # Anchored on the whole filename field, not a substring. checksums.txt lists
