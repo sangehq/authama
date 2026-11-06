@@ -213,3 +213,15 @@ main:focus { outline: none; }
    explainers: Bootstrap draws tooltips (1080) over popovers (1070), and a
    tooltip under the pointer would otherwise cover the tour's Next button. */
 .popover.tour-popover { --tblr-popover-zindex: 1090; --bs-popover-zindex: 1090; z-index: 1090; }
+
+/* Export page */
+.export-grains { display: flex; flex-wrap: wrap; gap: .25rem; }
+.export-facet { border-top: 1px solid var(--tblr-border-color); }
+.export-facet > summary { padding: .6rem 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; }
+.export-facet .csv-pick-scroll { max-height: 16rem; }
+.export-columns .csv-pick-scroll { max-height: 22rem; }
+.export-columns td input.form-control { min-width: 8rem; }
+.export-preview { overflow: auto; max-height: 28rem; }
+.export-preview thead th { position: sticky; top: 0; z-index: 1; background: var(--tblr-bg-surface-secondary); }
+.export-preview td { white-space: nowrap; max-width: 18rem; overflow: hidden; text-overflow: ellipsis; }
+.export-sort { font: inherit; text-transform: inherit; letter-spacing: inherit; }
