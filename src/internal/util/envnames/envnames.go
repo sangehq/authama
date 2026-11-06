@@ -51,6 +51,7 @@ const (
 	WebPort        = "AUTHAMA_WEB_PORT"
 	WebBasePath    = "AUTHAMA_WEB_BASE_PATH"
 	WebAutoRestart = "AUTHAMA_WEB_AUTO_RESTART"
+	WebMenuExport  = "AUTHAMA_WEB_MENU_EXPORT"
 	// ServeHandoff is set by a restarting `serve` for the one replacing it,
 	// never by a user: the token, port and old instance, as JSON.
 	ServeHandoff = "AUTHAMA_SERVE_HANDOFF"
@@ -90,7 +91,7 @@ func Names() []string {
 		AgeIdentityFile, AgeRecipient, AskpassMode, AskpassSecret, AutoPin, ConfigDir,
 		DevRoot, DockerCredsStore, GitMode, HelloCheck, History, NoDotenv, Notifications,
 		OldKeyMaxAgeDays, OwnerStore, ServeHandoff, SnapshotRetain, StateDir, TokensCatalog, TokensConfig,
-		VMHypervisors, VMPruneGone, VMRepin, WebAddr, WebAutoRestart, WebBasePath, WebPort,
+		VMHypervisors, VMPruneGone, VMRepin, WebAddr, WebAutoRestart, WebBasePath, WebMenuExport, WebPort,
 	}
 	sort.Strings(out)
 	return out

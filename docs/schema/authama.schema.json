@@ -292,6 +292,11 @@
           "minLength": 1,
           "type": "string"
         },
+        "menu_export": {
+          "default": true,
+          "description": "Show Export in the web UI's menu: every list in any format, filtered and with the columns you choose. Off hides the menu item; the page and each list's download stay. Sets $AUTHAMA_WEB_MENU_EXPORT. Default: true.",
+          "type": "boolean"
+        },
         "port": {
           "default": 7822,
           "description": "The port `serve` listens on first. When it is taken the next free one is used, as with the default; only --port makes a taken port an error. Sets $AUTHAMA_WEB_PORT. Default: 7822.",

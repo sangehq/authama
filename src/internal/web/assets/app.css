@@ -213,3 +213,15 @@ main:focus { outline: none; }
    explainers: Bootstrap draws tooltips (1080) over popovers (1070), and a
    tooltip under the pointer would otherwise cover the tour's Next button. */
 .popover.tour-popover { --tblr-popover-zindex: 1090; --bs-popover-zindex: 1090; z-index: 1090; }
+
+/* Export page: Tabler's components, with only what they leave open. */
+.export-list { max-height: 18rem; overflow-y: auto; }
+.export-list .list-group-header.sticky-top { z-index: 2; }
+.export-list .list-group-item { padding-top: .5rem; padding-bottom: .5rem; }
+.export-columns { max-height: 20rem; overflow-y: auto; }
+/* Sticky headers need an opaque background: Tabler's header tint is translucent,
+   so rows would show through it, and a table-sort button would tint it twice. */
+.export-columns thead th, .export-preview thead th { position: sticky; top: 0; z-index: 1; background: var(--tblr-bg-surface); box-shadow: inset 0 -1px 0 var(--tblr-border-color); }
+.export-preview .table-sort { background: transparent; }
+.export-preview { max-height: 28rem; }
+.export-preview td { white-space: nowrap; max-width: 18rem; overflow: hidden; text-overflow: ellipsis; }

@@ -211,6 +211,7 @@ func newServeCmd() *cobra.Command {
 					}
 				})
 			srv, err := web.New(web.Options{
+				HideExport:   envnames.Get(nil, envnames.WebMenuExport) == "false",
 				Instance:     instance,
 				Engine:       web.AppEngine{P: p, Retain: snapshotRetain()},
 				Settings:     settingsView,

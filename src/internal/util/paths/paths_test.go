@@ -299,6 +299,7 @@ func TestTheEnvironmentVariableNamesAreTheDocumentedOnes(t *testing.T) {
 		"AUTHAMA_OWNER_STORE":          "file keeps the owner's sealing key in a file, not the OS credential store",
 		"AUTHAMA_ASKPASS_MODE":         "internal: marks the askpass re-execution",
 		"AUTHAMA_ASKPASS_SECRET":       "internal: the passphrase handed to it",
+		"AUTHAMA_WEB_MENU_EXPORT":      "web.menu_export: show Export in the web UI's menu",
 		"AUTHAMA_HELLO_CHECK":          "internal: asks the Windows Hello script for availability only",
 		"AUTHAMA_WEB_AUTO_RESTART":     "web.auto_restart: restart serve by itself when its binary is rebuilt",
 		"AUTHAMA_SERVE_HANDOFF":        "internal: a restarting serve's token, port and instance, for the server replacing it",

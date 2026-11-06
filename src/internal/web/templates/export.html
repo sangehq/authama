@@ -1,0 +1,104 @@
+{{/* The Export page: choose the rows, filter them, choose the columns, see the
+     first rows, then download or copy in any format. Built from Tabler's own
+     components (card-header tabs, accordion, list-group, table-sort,
+     form-switch, btn-icon); the script (components/export-page.js) fills them
+     through /exports/run?preview=1. Without it, the page lists each list's
+     download. */}}
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "Export" "Export" "Any list as CSV, TSV, JSON, YAML, a PHP or JavaScript array, Markdown or HTML: filtered, with the columns you choose. Nothing here holds a secret.")}}
+<div class="export-page" data-export-page data-run="{{u "/exports/run"}}">
+  <div class="card">
+    <div class="card-header">
+      <ul class="nav nav-tabs card-header-tabs" role="tablist" aria-label="What each row is">
+        {{range .Grains}}<li class="nav-item" role="presentation"><a class="nav-link" href="#" role="tab" aria-selected="false" data-export-grain="{{.Name}}" data-preset="{{.Preset}}">{{icon .Icon}}<span class="ms-2">{{.Label}}</span></a></li>{{end}}
+      </ul>
+    </div>
+
+    <div class="card-body p-0">
+      <div class="row g-0">
+        <aside class="col-lg-4 col-xl-3 border-end" aria-label="Filters">
+          <div class="card-body border-bottom">
+            <div class="d-flex align-items-center mb-3">
+              <h3 class="card-title mb-0">{{icon "filter"}}<span class="ms-2">Filter</span></h3>
+              <button type="button" class="btn btn-sm btn-ghost-secondary ms-auto" data-export-clear>{{icon "x"}}<span class="ms-1">Clear</span></button>
+            </div>
+            <div class="mb-2">
+              <label class="form-label" for="export-include">Keep rows containing</label>
+              <div class="input-icon"><span class="input-icon-addon">{{icon "search"}}</span><input class="form-control" id="export-include" type="search" maxlength="200" autocomplete="off" data-export-text="include"></div>
+            </div>
+            <div class="mb-2">
+              <label class="form-label" for="export-exclude">Leave out rows containing</label>
+              <div class="input-icon"><span class="input-icon-addon">{{icon "ban"}}</span><input class="form-control" id="export-exclude" type="search" maxlength="200" autocomplete="off" data-export-text="exclude"></div>
+            </div>
+            <div class="row g-2" data-export-time hidden>
+              <div class="col-6"><label class="form-label" for="export-since">Since</label><input class="form-control" id="export-since" placeholder="2026-11" data-export-text="since"></div>
+              <div class="col-6"><label class="form-label" for="export-until">Until</label><input class="form-control" id="export-until" placeholder="2026-11-06" data-export-text="until"></div>
+            </div>
+            <small class="form-hint">Text matches any column, ignoring case. A date takes a prefix: 2026-11 is the month.</small>
+          </div>
+          <div class="accordion accordion-flush" id="export-facets" data-export-facets></div>
+        </aside>
+
+        <section class="col-lg-8 col-xl-9" aria-label="The file">
+          <div class="card-body border-bottom">
+            <div class="d-flex align-items-center mb-3">
+              <h3 class="card-title mb-0">{{icon "columns"}}<span class="ms-2">Columns</span> <span class="badge bg-blue-lt ms-2" data-export-colcount></span></h3>
+              <button type="button" class="btn btn-sm btn-ghost-secondary ms-auto" data-export-columns-reset>{{icon "refresh"}}<span class="ms-1">Default columns</span></button>
+            </div>
+            <div class="table-responsive border rounded export-columns" data-export-columns></div>
+            <div class="input-group input-group-sm mt-2 export-add">
+              <select class="form-select" aria-label="A field to add as a column" data-export-add></select>
+              <button type="button" class="btn" data-export-add-button>{{icon "plus"}}<span class="ms-1">Add column</span></button>
+            </div>
+          </div>
+
+          <div class="card-body pb-2">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+              <h3 class="card-title mb-0">{{icon "table"}}<span class="ms-2">Preview</span></h3>
+              <div class="ms-auto d-flex flex-wrap align-items-center gap-2" role="status" aria-live="polite">
+                <span class="text-secondary" data-export-summary></span>
+                <span class="d-inline-flex flex-wrap gap-1" data-export-reasons></span>
+              </div>
+            </div>
+          </div>
+          <div class="table-responsive export-preview" tabindex="0" role="region" aria-label="Preview of the first rows" data-export-preview></div>
+        </section>
+      </div>
+    </div>
+
+    <div class="card-footer">
+      <div class="row g-3 align-items-center">
+        <div class="col-sm-auto">
+          <div class="input-group">
+            <label class="input-group-text" for="export-format">Format</label>
+            <select class="form-select" id="export-format" data-export-format></select>
+          </div>
+        </div>
+        <div class="col-sm d-flex flex-wrap gap-3">
+          <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" data-export-opt="header" checked><span class="form-check-label">Heading row</span></label>
+          <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" data-export-opt="compact"><span class="form-check-label">Compact</span></label>
+          <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" data-export-opt="table"><span class="form-check-label">As {columns, rows}</span></label>
+          <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" data-export-opt="narrow" checked><span class="form-check-label">Count only the keys ticked</span></label>
+        </div>
+        <div class="col-auto ms-auto">
+          <div class="btn-list">
+            <button type="button" class="btn" data-export-copy>{{icon "copy"}}<span class="ms-1">Copy</span></button>
+            <button type="button" class="btn" data-export-share>{{icon "link"}}<span class="ms-1">Copy link</span></button>
+            <a class="btn btn-primary" role="link" href="{{u "/exports/run?preset=hosts"}}" download data-export-download>{{icon "download"}}<span class="ms-1">Download</span></a>
+          </div>
+        </div>
+        <div class="col-12" data-export-blocked-row hidden>
+          <div class="alert alert-warning mb-0 py-2" role="alert" data-export-blocked></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <noscript>
+    <div class="card mt-3"><div class="card-body">
+      <p>Without scripts, each list downloads whole:</p>
+      <ul>{{range .Grains}}<li>{{.Label}}: <a href="{{u (print "/exports/run?preset=" .Preset "&format=csv")}}">CSV</a> · <a href="{{u (print "/exports/run?preset=" .Preset "&format=json")}}">JSON</a> · <a href="{{u (print "/exports/run?preset=" .Preset "&format=yaml")}}">YAML</a></li>{{end}}</ul>
+    </div></div>
+  </noscript>
+</div>
+{{end}}{{end}}

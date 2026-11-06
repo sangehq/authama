@@ -478,6 +478,8 @@ type view struct {
 	// SealProblem is the owner seal's finding, shown on the overview when the
 	// state was changed outside authama.
 	SealProblem string
+	// HideExport leaves Export out of the menu (web.menu_export false).
+	HideExport bool
 	// Build is the running build, for the header's current-build mark:
 	// its version, when its binary was built, and when the server started.
 	Build buildInfo
@@ -502,6 +504,7 @@ func (s *Server) newView(r *http.Request, nav, title string, data any) view {
 		v.CSRF = sess.csrf
 		v.PINNeeded = ownerGate{s}.needsStepUp(sess)
 		v.Rebuilt = s.binary.replaced()
+		v.HideExport = s.opts.HideExport
 		v.Build = s.binary.info(s.opts.Version)
 		v.CanRestart = s.opts.Restart != nil
 		v.Instance = s.opts.Instance
@@ -619,6 +622,7 @@ func paletteItems(readOnly bool) []paletteItem {
 		{"security", "Owner & PIN", "/security", "lock", "Security", "owner pin seal tamper binding fingerprint"},
 		{"history", "History", "/history", "history", "Activity", "history operations changes log"},
 		{"events", "Events", "/events", "activity", "Activity", "events file changes tracking"},
+		{"export", "Export", "/export", "file-export", "Export", "export download csv json yaml php javascript markdown html filter columns"},
 		{"doctor", "Doctor", "/doctor", "stethoscope", "System", "doctor checks fix"},
 		{"repair", "Repair", "/repair", "refresh", "System", "repair fix corrupt permissions factory reset"},
 		{"settings", "Settings", "/settings", "settings", "System", "settings theme appearance env"},

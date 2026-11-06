@@ -82,6 +82,7 @@
               {{template "navgroup" (navGroup . "files" "file-code" "Config & backups" (navItem . "sshconfig" "/ssh-config" "file-code" "SSH config") (navItem . "snapshots" "/snapshots" "archive" "Snapshots"))}}
               {{template "navgroup" (navGroup . "auth" "lock" "Security" (navItem . "tokens" "/tokens" "cloud-lock" "Auth tokens") (navItem . "audit" "/audit" "shield-check" "Audit") (navItem . "security" "/security" "lock" "Owner & PIN"))}}
               {{template "navgroup" (navGroup . "activity" "activity" "Activity" (navItem . "history" "/history" "history" "History") (navItem . "events" "/events" "activity" "Events"))}}
+              {{if not .HideExport}}{{template "navlink" (navItem . "export" "/export" "file-export" "Export")}}{{end}}
               {{template "navgroup" (navGroup . "system" "settings" "System" (navItem . "doctor" "/doctor" "stethoscope" "Doctor") (navItem . "repair" "/repair" "refresh" "Repair") (navItem . "settings" "/settings" "settings" "Settings") (navItem . "about" "/about" "info-circle" "About"))}}
             </ul>
             <div data-tour="4" data-tour-title="Who and where" data-tour-text="The account and machine this server runs as: every change it makes is theirs." class="session-strip ms-md-auto d-flex align-items-center gap-2 small text-secondary py-2 py-md-0">

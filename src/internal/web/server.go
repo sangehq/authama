@@ -49,6 +49,9 @@ type Options struct {
 	// CleanBasePath gives it: "" for the root, else "/authama". Every link,
 	// form, asset, redirect and the session cookie carry it.
 	BasePath string
+	// HideExport leaves Export out of the menu (web.menu_export false); the
+	// page itself stays reachable, as each list's download does.
+	HideExport bool
 
 	// Settings reads the settings page for a home. The values in effect were
 	// settled at start-up, which the command that started the server owns,

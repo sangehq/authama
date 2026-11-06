@@ -29,6 +29,45 @@ type exportAPI struct{ s *Server }
 // MaxSelection caps the encoded selection a URL may carry.
 const MaxSelection = 16 << 10
 
+// exportPage is what the Export page starts from: the grains it offers.
+type exportPage struct {
+	Grains []exportGrain
+}
+
+type exportGrain struct {
+	Name, Label, Icon, Preset string
+}
+
+// exportGrains are the Export page's row kinds, in its order; each one's
+// preset is the built-in selection of that grain.
+var exportGrains = func() []exportGrain {
+	out := []exportGrain{
+		{selection.GrainHost, "Hosts", "server", ""},
+		{selection.GrainKey, "Keys", "key", ""},
+		{selection.GrainProfile, "Profiles", "users", ""},
+		{selection.GrainToken, "Auth tokens", "cloud-lock", ""},
+		{selection.GrainOp, "History", "history", ""},
+		{selection.GrainEvent, "Events", "activity", ""},
+		{selection.GrainSnapshot, "Snapshots", "archive", ""},
+		{selection.GrainDeployment, "Deployments", "route", ""},
+	}
+	for i := range out {
+		for name, sel := range selection.Presets {
+			if sel.Grain == out[i].Name {
+				out[i].Preset = name
+			}
+		}
+	}
+	return out
+}()
+
+// handlePage is the Export page: the rows, filters, columns and format of a
+// file, previewed as they are chosen. The page's script drives it through
+// /exports/run; without the script it lists each preset's download.
+func (x exportAPI) handlePage(w http.ResponseWriter, r *http.Request) {
+	x.s.render(w, http.StatusOK, "export", x.s.newView(r, "export", "Export", exportPage{Grains: exportGrains}))
+}
+
 func (x exportAPI) handleDataset(w http.ResponseWriter, r *http.Request) {
 	var parts []string
 	if p := strings.TrimSpace(r.URL.Query().Get("parts")); p != "" {
@@ -53,6 +92,9 @@ type exportPreview struct {
 	Fields  []string                          `json:"fields"`
 	Facets  map[string][]selection.FacetValue `json:"facets"`
 	Formats []exportFormat                    `json:"formats"`
+	// Defaults are the grain's default columns, field and heading, so a page
+	// can start its column list from them.
+	Defaults []selection.Column `json:"defaults"`
 }
 
 type exportFormat struct {
@@ -94,7 +136,8 @@ func (x exportAPI) handleRun(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		p := exportPreview{Grain: sel.Grain, Columns: res.Columns, Rows: [][]string{}, Stages: res.Stages,
-			Fields: res.Fields, Facets: facets, Total: res.Stages[0].Rows, Kept: len(res.Rows)}
+			Fields: res.Fields, Facets: facets, Total: res.Stages[0].Rows, Kept: len(res.Rows),
+			Defaults: selection.Defaults[sel.Grain]}
 		for i, row := range res.Rows {
 			if i == PreviewRows {
 				break
