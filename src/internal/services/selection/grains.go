@@ -20,6 +20,14 @@ var Defaults = map[string][]Column{
 		{Field: "hosts"}, {Field: "keys"}, {Field: "key_comment"}, {Field: "key_names"}},
 	GrainToken: {{Field: "target", As: "tool"}, {Field: "host"}, {Field: "kind"}, {Field: "description"},
 		{Field: "username", As: "user"}, {Field: "secret_present", As: "secret_set"}, {Field: "file"}},
+	GrainOp: {{Field: "op_id"}, {Field: "started_at"}, {Field: "finished_at"}, {Field: "command"}, {Field: "args"},
+		{Field: "result"}, {Field: "source"}, {Field: "user"}, {Field: "machine"}, {Field: "snapshot"},
+		{Field: "subjects"}, {Field: "events"}},
+	GrainEvent: {{Field: "time"}, {Field: "seen"}, {Field: "kind"}, {Field: "area"}, {Field: "path"}, {Field: "size"},
+		{Field: "mode"}, {Field: "detail"}},
+	GrainSnapshot: {{Field: "name", As: "snapshot"}, {Field: "taken"}, {Field: "bytes"}, {Field: "holds_private_keys"}},
+	GrainDeployment: {{Field: "key_path"}, {Field: "fingerprint"}, {Field: "status"}, {Field: "target"},
+		{Field: "method"}, {Field: "verified"}, {Field: "date"}},
 }
 
 // rowsOf is every row of a grain, and every field its rows have, sorted.
@@ -94,6 +102,35 @@ func rowsOf(ds *dataset.Dataset, grain string) ([]row, []string, error) {
 			rows = append(rows, row{f: map[string]any{
 				"target": t.Target, "host": t.Host, "kind": t.Kind, "username": t.Username,
 				"secret_present": t.SecretPresent, "description": t.Description, "file": t.File,
+			}})
+		}
+	case GrainOp:
+		for _, o := range ds.Ops {
+			rows = append(rows, row{f: map[string]any{
+				"op_id": o.OpID, "started_at": o.StartedAt, "time": o.StartedAt, "finished_at": o.FinishedAt,
+				"command": o.Command, "args": o.Args, "result": o.Result, "source": o.Source, "user": o.User,
+				"machine": o.Machine, "snapshot": o.Snapshot, "subjects": o.Subjects, "events": o.Events,
+			}})
+		}
+	case GrainEvent:
+		for _, e := range ds.Events {
+			rows = append(rows, row{f: map[string]any{
+				"time": e.Time, "seen": e.Seen, "kind": e.Kind, "area": e.Area, "path": e.Path, "size": e.Size,
+				"mode": e.Mode, "detail": e.Detail,
+			}})
+		}
+	case GrainSnapshot:
+		for _, sn := range ds.Snapshots {
+			rows = append(rows, row{f: map[string]any{
+				"name": sn.Name, "taken": sn.Taken, "time": sn.Taken, "bytes": sn.Bytes,
+				"holds_private_keys": sn.HoldsPrivateKeys,
+			}})
+		}
+	case GrainDeployment:
+		for _, d := range ds.Deployments {
+			rows = append(rows, row{f: map[string]any{
+				"key_path": d.KeyPath, "fingerprint": d.Fingerprint, "status": d.Status, "target": d.Target,
+				"method": d.Method, "verified": d.Verified, "date": d.Date, "time": d.Date,
 			}})
 		}
 	default:

@@ -11,9 +11,12 @@ package dataset
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/simtabi/authama/src/internal/core/inventory"
 	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/services/events"
+	"github.com/simtabi/authama/src/internal/services/history"
 	"github.com/simtabi/authama/src/internal/services/keysvc"
 	"github.com/simtabi/authama/src/internal/services/query"
 	"github.com/simtabi/authama/src/internal/services/tokensvc"
@@ -31,6 +34,12 @@ type Dataset struct {
 	Keys     []Key     `json:"keys"`
 	Hosts    []Host    `json:"hosts"`
 	Tokens   []Token   `json:"tokens"`
+	// The parts below are read only when asked for (Options.Parts): history
+	// opens a database, and a snapshot is read to tell whether it holds keys.
+	Ops         []Op         `json:"ops"`
+	Events      []Event      `json:"events"`
+	Snapshots   []Snapshot   `json:"snapshots"`
+	Deployments []Deployment `json:"deployments"`
 }
 
 // Profile is one profile and its rules.
@@ -124,6 +133,27 @@ type Options struct {
 	// Cwd is the directory project-level token files are looked for in; ""
 	// is the working directory.
 	Cwd string
+	// Parts are the optional parts to read: PartTokens, PartOps, PartEvents,
+	// PartSnapshots, PartDeployments. Empty reads every one. Profiles, keys
+	// and hosts are always read.
+	Parts []string
+	// History and Events narrow those parts as their pages' filters do, so a
+	// download of a filtered page holds what the page shows.
+	History history.Filter
+	Events  events.Filter
+}
+
+// The optional parts.
+const (
+	PartTokens      = "tokens"
+	PartOps         = "ops"
+	PartEvents      = "events"
+	PartSnapshots   = "snapshots"
+	PartDeployments = "deployments"
+)
+
+func (o Options) wants(part string) bool {
+	return len(o.Parts) == 0 || slices.Contains(o.Parts, part)
 }
 
 // Build reads the home's records.
@@ -136,7 +166,8 @@ func Build(p paths.Paths, o Options) (*Dataset, error) {
 	if err != nil {
 		inv = &inventory.Inventory{Keys: map[string]inventory.KeyRecord{}}
 	}
-	ds := &Dataset{Version: Version, Profiles: []Profile{}, Keys: []Key{}, Hosts: []Host{}, Tokens: []Token{}}
+	ds := &Dataset{Version: Version, Profiles: []Profile{}, Keys: []Key{}, Hosts: []Host{}, Tokens: []Token{},
+		Ops: []Op{}, Events: []Event{}, Snapshots: []Snapshot{}, Deployments: []Deployment{}}
 
 	rows, err := keysvc.New(m, inv, p.SSHDir).Rows("")
 	if err != nil {
@@ -166,10 +197,15 @@ func Build(p paths.Paths, o Options) (*Dataset, error) {
 		}
 	}
 
-	for _, t := range tokensvc.NewEnv(p, o.Getenv, nil, o.Cwd).Inventory("", false) {
-		// Inventory(..., false) never reads a secret; Token has no field for one.
-		ds.Tokens = append(ds.Tokens, Token{Target: t.Target, Host: t.Host, Kind: t.Kind, Username: t.Username,
-			SecretPresent: t.SecretPresent, Description: t.Description, File: t.File})
+	if o.wants(PartTokens) {
+		for _, t := range tokensvc.NewEnv(p, o.Getenv, nil, o.Cwd).Inventory("", false) {
+			// Inventory(..., false) never reads a secret; Token has no field for one.
+			ds.Tokens = append(ds.Tokens, Token{Target: t.Target, Host: t.Host, Kind: t.Kind, Username: t.Username,
+				SecretPresent: t.SecretPresent, Description: t.Description, File: t.File})
+		}
+	}
+	if err := readRecords(ds, p, o, inv); err != nil {
+		return nil, err
 	}
 	return ds, nil
 }

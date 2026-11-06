@@ -27,10 +27,15 @@ const (
 	GrainKey     = "key"
 	GrainHost    = "host"
 	GrainToken   = "token"
+	// The records: history, the events log, snapshots and deployments.
+	GrainOp         = "op"
+	GrainEvent      = "event"
+	GrainSnapshot   = "snapshot"
+	GrainDeployment = "deployment"
 )
 
 // Grains lists them, in the order a page offers them.
-var Grains = []string{GrainProfile, GrainKey, GrainHost, GrainToken}
+var Grains = []string{GrainProfile, GrainKey, GrainHost, GrainToken, GrainOp, GrainEvent, GrainSnapshot, GrainDeployment}
 
 // Selection is what an export holds.
 type Selection struct {
@@ -55,8 +60,19 @@ type Where struct {
 	Tag     []string `json:"tag,omitempty"`
 	Status  []string `json:"status,omitempty"` // a host's status, a key's state
 	Target  []string `json:"target,omitempty"` // a token's tool
-	Include string   `json:"include,omitempty"`
-	Exclude string   `json:"exclude,omitempty"`
+	Kind    []string `json:"kind,omitempty"`   // an event's kind (added, changed, ...), a token's kind
+	Area    []string `json:"area,omitempty"`   // an event's area (ssh, config, auth)
+	Source  []string `json:"source,omitempty"` // an operation's source (cli, web, ...)
+	// Command keeps operations whose command is one of these, or starts with
+	// one and a space ("host" keeps "host add").
+	Command []string `json:"command,omitempty"`
+	// Since and Until bound a row's time (an operation's start, an event's
+	// time, a snapshot's, a deployment's date), inclusive; a prefix such as
+	// 2026-11 or 2026-11-06 works.
+	Since   string `json:"since,omitempty"`
+	Until   string `json:"until,omitempty"`
+	Include string `json:"include,omitempty"`
+	Exclude string `json:"exclude,omitempty"`
 }
 
 // Column is one column of the result: a field, and its heading.
@@ -147,7 +163,9 @@ func Run(ds *dataset.Dataset, s Selection) (Result, error) {
 
 	rows = keep(rows, func(r row) bool {
 		return in(w.Env, str(r.f["env"])) && in(w.Role, str(r.f["role"])) && anyIn(w.Tag, list(r.f["tags"])) &&
-			in(w.Status, str(r.f["status"])) && in(w.Target, str(r.f["target"]))
+			in(w.Status, str(r.f["status"])) && in(w.Target, str(r.f["target"])) &&
+			in(w.Kind, str(r.f["kind"])) && in(w.Area, str(r.f["area"])) && in(w.Source, str(r.f["source"])) &&
+			commandIn(w.Command, str(r.f["command"])) && within(str(r.f["time"]), w.Since, w.Until)
 	})
 	res.Stages = append(res.Stages, Stage{"facets", len(rows)})
 
@@ -239,6 +257,32 @@ func keep(rows []row, ok func(row) bool) []row {
 		}
 	}
 	return out
+}
+
+// commandIn is true when list is empty, or v is one of its commands or a
+// subcommand of one.
+func commandIn(list []string, v string) bool {
+	if len(list) == 0 {
+		return true
+	}
+	for _, c := range list {
+		if v == c || strings.HasPrefix(v, c+" ") {
+			return true
+		}
+	}
+	return false
+}
+
+// within is true when t is between since and until, inclusive, comparing
+// as many characters as each bound has, so "2026-11" covers the month.
+func within(t, since, until string) bool {
+	if since != "" && (t == "" || t[:min(len(t), len(since))] < since) {
+		return false
+	}
+	if until != "" && (t == "" || t[:min(len(t), len(until))] > until) {
+		return false
+	}
+	return true
 }
 
 // in is true when list is empty or holds v.
