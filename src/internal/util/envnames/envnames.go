@@ -43,14 +43,18 @@ const (
 	AskpassSecret    = "AUTHAMA_ASKPASS_SECRET"
 	// HelloCheck asks the Windows Hello script for availability only; set by
 	// authama for the powershell.exe it runs, never by a user.
-	HelloCheck    = "AUTHAMA_HELLO_CHECK"
-	VMHypervisors = "AUTHAMA_VM_HYPERVISORS"
-	VMPruneGone   = "AUTHAMA_VM_PRUNE_GONE"
-	VMRepin       = "AUTHAMA_VM_REPIN"
-	WebAddr       = "AUTHAMA_WEB_ADDR"
-	WebPort       = "AUTHAMA_WEB_PORT"
-	WebBasePath   = "AUTHAMA_WEB_BASE_PATH"
-	WebMenuExport = "AUTHAMA_WEB_MENU_EXPORT"
+	HelloCheck     = "AUTHAMA_HELLO_CHECK"
+	VMHypervisors  = "AUTHAMA_VM_HYPERVISORS"
+	VMPruneGone    = "AUTHAMA_VM_PRUNE_GONE"
+	VMRepin        = "AUTHAMA_VM_REPIN"
+	WebAddr        = "AUTHAMA_WEB_ADDR"
+	WebPort        = "AUTHAMA_WEB_PORT"
+	WebBasePath    = "AUTHAMA_WEB_BASE_PATH"
+	WebAutoRestart = "AUTHAMA_WEB_AUTO_RESTART"
+	WebMenuExport  = "AUTHAMA_WEB_MENU_EXPORT"
+	// ServeHandoff is set by a restarting `serve` for the one replacing it,
+	// never by a user: the token, port and old instance, as JSON.
+	ServeHandoff = "AUTHAMA_SERVE_HANDOFF"
 	// OwnerStore set to "file" keeps the owner's sealing key in an owner-only
 	// file instead of the OS credential store (see services/owner).
 	OwnerStore = "AUTHAMA_OWNER_STORE"
@@ -86,8 +90,8 @@ func Names() []string {
 	out := []string{
 		AgeIdentityFile, AgeRecipient, AskpassMode, AskpassSecret, AutoPin, ConfigDir,
 		DevRoot, DockerCredsStore, GitMode, HelloCheck, History, NoDotenv, Notifications,
-		OldKeyMaxAgeDays, OwnerStore, SnapshotRetain, StateDir, TokensCatalog, TokensConfig,
-		VMHypervisors, VMPruneGone, VMRepin, WebAddr, WebBasePath, WebMenuExport, WebPort,
+		OldKeyMaxAgeDays, OwnerStore, ServeHandoff, SnapshotRetain, StateDir, TokensCatalog, TokensConfig,
+		VMHypervisors, VMPruneGone, VMRepin, WebAddr, WebAutoRestart, WebBasePath, WebMenuExport, WebPort,
 	}
 	sort.Strings(out)
 	return out

@@ -107,6 +107,8 @@ var Specs = []Spec{
 		Doc: "A path the web UI is served under, such as /authama, so it can sit behind a reverse proxy beside other sites. Every link, form and redirect carries it."},
 	{Section: "web", Name: "menu_export", Env: envnames.WebMenuExport, Kind: KindBool, Default: "true",
 		Doc: "Show Export in the web UI's menu: every list in any format, filtered and with the columns you choose. Off hides the menu item; the page and each list's download stay."},
+	{Section: "web", Name: "auto_restart", Env: envnames.WebAutoRestart, Kind: KindBool, Default: "true",
+		Doc: "Restart `serve` by itself when its binary is rebuilt or reinstalled (make install), on the same address with the same sign-in, and reload every open page into the new build; a page with unsaved input offers Reload instead. Off: a page says it is from an older build and offers Restart now."},
 }
 
 // Find returns the spec for a dotted key.

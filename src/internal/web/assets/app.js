@@ -13,6 +13,7 @@ import { Inline, SidePanel } from "./js/components/side-panel.js";
 import { CsvExport } from "./js/components/csv-export.js";
 import { JsonField } from "./js/components/json-field.js";
 import { ExportPage } from "./js/components/export-page.js";
+import { LiveBuild, RestartServer, Restarted } from "./js/components/restart.js";
 
 App.create()
   .use(SidePanel)
@@ -20,6 +21,9 @@ App.create()
   .use(CsvExport)
   .use(JsonField)
   .use(ExportPage)
+  .use(RestartServer)
+  .use(Restarted)
+  .use(LiveBuild)
   .use(ThemeChoice)
   .use(Tip)
   .use(DataTable)
