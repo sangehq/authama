@@ -8,6 +8,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Any list exports in nine formats, filtered and with the columns you choose.** `GET /exports/run`
+  takes a built-in preset (`?preset=hosts`, one per list) or a selection (`?s=`, base64url JSON):
+  rows of profiles, keys, hosts, tokens, history, events, snapshots or deployments; filters on
+  profile, key, env, role, tag, status, tool, kind, area, source, command and a time range; columns
+  that follow relations (`key.fingerprint`, `profile.code`); sort and limit. `?format=` is csv, tsv,
+  json, jsonl, yaml, php, js, markdown or html, each escaped for what reads it. `?preview=1` answers
+  with the first rows, the rows left after each filter, every field and every filter value with its
+  count. Each preset as CSV is byte for byte its list's CSV.
+- **`GET /api/dataset`** serves a home's records as related JSON (profiles, keys, hosts with every
+  SSH setting and their naming parts, tokens without their values, and with `?parts=` history,
+  events, snapshots and deployments). No secret is on any record, by type and by test.
 - **The installers can install from a release of your own.** `AUTHAMA_RELEASE_BASE` (`-ReleaseBase`
   for `install.ps1`) names where the binary and `checksums.txt` are read from instead of the GitHub
   release: a URL, or a directory (`file:///path` for `install.sh`). CI uses it to install a binary

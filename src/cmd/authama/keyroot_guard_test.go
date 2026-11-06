@@ -30,6 +30,7 @@ var keyRootExempt = map[string]struct {
 	"internal/web/render.go":                     {1, "the Profiles page's nav key and URL, not a path under ~/.ssh"},
 	"internal/web/routes.go":                     {1, "the Profiles page's template and view name"},
 	"internal/services/overview/overview.go":     {1, `the English plural "profiles"`},
+	"internal/services/selection/presets.go":     {1, `the built-in export preset named for the profiles list (?preset=profiles), not a path (measured 2026-11-06)`},
 }
 
 // Every path into the key tree is built from manifest.KeyRoot, so a

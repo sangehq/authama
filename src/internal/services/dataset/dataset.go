@@ -134,8 +134,8 @@ type Options struct {
 	// is the working directory.
 	Cwd string
 	// Parts are the optional parts to read: PartTokens, PartOps, PartEvents,
-	// PartSnapshots, PartDeployments. Empty reads every one. Profiles, keys
-	// and hosts are always read.
+	// PartSnapshots, PartDeployments. Empty reads every one; PartCore alone
+	// reads none. Profiles, keys and hosts are always read.
 	Parts []string
 	// History and Events narrow those parts as their pages' filters do, so a
 	// download of a filtered page holds what the page shows.
@@ -145,6 +145,8 @@ type Options struct {
 
 // The optional parts.
 const (
+	// PartCore asks for none of the optional parts: profiles, keys and hosts only.
+	PartCore        = "core"
 	PartTokens      = "tokens"
 	PartOps         = "ops"
 	PartEvents      = "events"
