@@ -6,58 +6,39 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Removed
+## [0.1.0] - 2026-11-06
 
-- **The `sshmgr` alias binary.** It shipped beside `authama` as a deprecated compatibility build
-  since 0.1.2 and is no longer built, released or installed: `make build`, both installers, the
-  archives, the Linux packages, the Homebrew cask and the Docker dev image carry `authama` alone,
-  and the `simtabi/sshmgr` Scoop manifest stops updating. An `sshmgr` already installed is left
-  alone; the installers name it and print the command that removes it. Everything older releases
-  wrote under the old name is still recognized. Before removing an old copy, run
-  `authama ssh config render` (a VM `ProxyCommand` that names it) and `authama ssh notify install`
-  (an expiry reminder job); see [docs/migration.md](docs/migration.md#removing-the-sshmgr-alias).
+The first release of authama: SSH keys and config, and package-manager and git auth tokens, from one manifest, at the command line and in a local web UI. It brings together what earlier builds of this history shipped as 0.1.0 to 0.1.4, and the work after them.
 
-### Changed
+A key you keep on purpose is no longer a warning: reserve a loose `~/.ssh` key for a devbox you have
+not made yet, or declare the devbox without a VM, and `doctor` lists it as information.
 
-- **The owner PIN is hashed with Argon2id** (t=3, 64 MiB, p=4), memory-hard where PBKDF2 costs only
-  time. A PIN set by an earlier release still unlocks and is rehashed as Argon2id the next time it
-  is given correctly. This links `golang.org/x/crypto`, a fourth recorded dependency.
-- **`build/` holds one folder per OS and nothing else.** `make build` writes
-  `build/<your-os>/authama` (`build/macos/authama`, `build/windows/authama.exe` - which also fixes
-  `make install` on Windows, which looked for an `.exe` the build never wrote); `make cross` writes
-  every target to `build/{os}/authama_{os}_{arch}` with `build/checksums.txt` listing `{os}/{file}`
-  so it verifies as-is; `make dist` adds `build/archives/`. There is no `build/dist/`: GoReleaser
-  works in `.goreleaser-dist/` (`make release-snapshot`), and `make man` packs its pages into
-  `build/archives/authama_man.tar.gz`. A test fails on anything else in `build/`.
-- **A double-click app for the web UI.** `make dist` packages `Authama.app` for macOS
-  (`build/archives/authama_macos_app.zip`, opening Terminal running `authama serve`) and adds
-  `Start authama.cmd` to the Windows zips. See [docs/installation.md](docs/installation.md).
+Local VMs look after themselves: `ssh vm sync` keeps every VM host matching its VM, the hypervisors
+you use are configured (with a generic command driver for any other tool), a loose devbox key can be
+adopted with a guided command, and `doctor --fix` runs the same upkeep.
 
-- **`--revoke` revokes.** `key delete`, `host delete` and `profile delete --revoke` called a stub
-  that revoked nothing, while their help said it removed the key from its targets. They now ask each
-  deployment's host's provider to remove it, as rotation does, and report each target they could
-  not revoke from rather than counting it as revoked.
+The final rename: authama is the only primary name. Release assets, packages, the Homebrew cask and
+the Scoop manifest are all `authama`; `sshmgr` remains only as a deprecated alias that still runs
+every command. Upgrading is covered in [docs/migration.md](docs/migration.md#to-012-authama-everywhere-sshmgr-deprecated).
 
-- **The web UI's slide-in forms are one column, each hint under its field**: the token, host and
-  profile panels no longer squeeze two fields side by side in a panel 400 pixels wide, where labels
-  wrapped and fields fell out of line. The token form starts with the tool and shows only the fields
-  that tool uses; a hidden field is disabled, so it is never sent. Each panel has a Cancel button.
-- **The overview's three summary cards share one layout**, a count, a bar and three badged rows, so
-  they line up: the token card's tool count comes from the catalog rather than a fixed 5, and the
-  snapshot card shows kept of the most kept, the oldest and newest, and how many still hold private
-  keys. The header bell's dot means an event in the last day, not that there was ever one.
-- **`token set --service` beside a `--target` other than composer is refused** instead of writing a
-  Composer token silently; the web form no longer drops the tool it was given either.
+The rename to authama is complete: one config home, `AUTHAMA_*` variable names, and settings
+files that authama loads itself. Everything from 0.1.0 keeps working and moves over on the first run.
 
-- **Running `authama` on its own, on a terminal, opens the web UI**, as `authama serve` does with its
-  defaults; `--dev-root` and `--no-dotenv` still apply. The menu it used to open is `authama tui`. With
-  no terminal a bare run still prints help, since `serve` would hang a script.
-- **The web UI is redesigned on Tabler's own layout**, as its preview dashboard has it: a header with
-  the name, the mode badges and the theme switch, then a menu with SSH, Auth and System dropdowns that
-  folds behind a button on a narrow screen. Every page header names its section, has a one-line summary
-  and links to its forms; the overview's counts are linked cards; empty lists use Tabler's empty state.
-  The custom stylesheet is down to the contrast fixes the accessibility pass needs. Every page, form,
-  change and job works as before.
+First release under the authama name, with version numbers restarted at 0.1.0. authama (Authentication
+Access Manager) is one static, dependency-free binary that manages two kinds of credentials:
+
+- **SSH** (`authama ssh …`, formerly ssh-manager 3.6.1): per-profile keys, a split `~/.ssh/config`
+  rendered from one manifest, a single pinned `known_hosts` trust store, staged zero-downtime key
+  rotation with rollback, deploy to 25 providers, expiry reminders, encrypted bundles, snapshots, devbox
+  and Cloudflare Access hosts.
+- **Auth tokens** (`authama token …`, formerly auth-token-manager 0.3.0): Composer `auth.json`, `.npmrc`,
+  Docker `config.json`, git credentials and `.netrc`, built from a config that names environment
+  variables, never secrets; list, copy, set, delete, audit and import, owner-only atomic writes.
+- **Shared:** `doctor`, `init`, `migrate`, `history`, a terminal UI (`tui`) and a local web UI (`serve`).
+
+Two binaries ship: `authama`, and `sshmgr`, the same program under its original name so existing scripts,
+aliases and `ProxyCommand` lines keep working. Config stays in `~/.config/ssh-manager`, and a 3.x setup
+needs no migration. See [migration](docs/migration.md).
 
 ### Added
 
@@ -265,56 +246,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   where it came from, and what `settings validate` reports. When there is no `authama.json`, it offers a
   previewed *Create a starter authama.json*, the same change as `authama settings init`.
 
-### Fixed
-
-- **The tour could jump back to its first step.** On the overview it starts by itself after the page
-  lays out; a tour started by hand in that moment was restarted by the timer. It is left alone now.
-  The tour also sits above the hover explainers, so a tooltip under the pointer cannot cover Next.
-- **Launching the web UI again started another server every time**, and none ever stopped: after
-  twenty launches ports 7822-7841 were all taken and the next one failed. `authama serve` now opens
-  the server already running for the home (checked through a new `/healthz` and an owner-only
-  record), `--status` and `--stop` report and stop it, `--new` starts another on purpose, and a
-  full port range falls back to any free port.
-- **`token apply` skipped every PyPI, Cargo, RubyGems and Gradle entry** as an "unknown target":
-  resolving a config from the environment knew only the first five tools. They resolve now.
-- **Saving the manifest turned numbers and booleans in `raw_options` into strings**
-  (`ServerAliveInterval 60` became `"60"`) whenever anything else in it changed. A value that was
-  not changed is written back exactly as it was read.
-- **Menu labels showed `&amp;`** ("Config &amp; backups", "Owner &amp; PIN"), and several pages'
-  section names did not match the menu they are in.
-
-- **A token's History link signed the browser out.** The history's token filter used `?token=`,
-  which is also the sign-in link's parameter, so following History from a token's menu answered
-  401 "Sign-in link required" to a browser that was signed in. The filter is `?credential=` now,
-  and a `?token=` that is not the server's sign-in token no longer overrides a live session.
-
-- The Auth tokens page and the dashboard said a credential file was readable by others whenever the
-  token audit failed, including when what failed was the `.gitignore` check where the server runs.
-- A web preview now shows `authama.json` and `tokens.json` with the other config files. It was left out of the preview's
-  copy, so a change writing it would have previewed as writing nothing.
-
-### Changed (CI)
-
-- Pull requests test on Linux and Windows and run a darwin cross-check (build and vet for macOS arm64
-  and amd64); the full macOS test runs weekly and on dispatch. The required checks follow.
-
-### Security
-
-- The web server refuses a request body over 1 MiB (413) before parsing it, holds headers to 64 KiB
-  and a body to 30 seconds, and sends a `Permissions-Policy` that turns off every device API.
-
-- The web UI's sign-in redirect is now guarded inline, on the exact value passed to `http.Redirect`, by a
-  pattern equal to `isLocalURL` (`/` alone, or `/` not followed by `/` or a backslash). Behaviour is unchanged:
-  a token link on a path a browser reads as another host still lands on `/`. A test holds the pattern and
-  `isLocalURL` to the same answer. Resolves CodeQL `go/unvalidated-url-redirection` alert 12.
-
-## [0.1.4] - 2026-11-02
-
-A key you keep on purpose is no longer a warning: reserve a loose `~/.ssh` key for a devbox you have
-not made yet, or declare the devbox without a VM, and `doctor` lists it as information.
-
-### Added
-
 - **`authama ssh key reserve <name|path> [--for ...] [--note ...]`** and **`key unreserve <name>`**. A
   key pair directly in `~/.ssh` that no host uses and authama does not manage can be kept on purpose.
   The reservation is a new optional `reserved_keys` section in `manifest.json` (what it is for, a note,
@@ -336,53 +267,6 @@ not made yet, or declare the devbox without a VM, and `doctor` lists it as infor
   whose event stream is read to the end. An axe pass over the same pages fails on serious or critical
   violations in the light and the dark theme. Run it with `make e2e-web`; CI runs it on Linux in the
   new `web-e2e` job.
-
-### Changed
-
-- `vm adopt-key` and `vm sync` release a key's reservation when they adopt it; the adopt-key picker
-  labels reserved keys. doctor's fix for a loose devbox-looking key also mentions `key reserve`.
-- The issue-template security link names `security@simtabi.com`, the disclosure inbox, instead of
-  the community address.
-- `.github/pull_request_template.md` is `.github/PULL_REQUEST_TEMPLATE.md`, the name the org
-  standard requires; the lowercase-markdown hygiene test lists it as a conventional name.
-- CI verifies the gitleaks tarball against its published SHA-256 before installing it.
-- CI, the release workflow and the Makefile set `GOPRIVATE`/`GONOSUMDB` for `github.com/simtabi/*`,
-  so our own builds never feed a version into the public Go proxy or checksum database.
-- The release workflow no longer starts on a tag push. Binary releases are on hold, and a release
-  runs only when dispatched by hand on a `v[0-9]*` tag with `-f confirm=release-go`; a test fails
-  if an automatic trigger returns.
-- The README and installation guide build authama from source only: no download, package-manager
-  or `go install` path is offered while binary releases are on hold. The 0.1.0 to 0.1.3 channels
-  are described as frozen, not removed.
-- Tests generate every token, password and passphrase at run time (`internal/util/testcred`)
-  instead of spelling them as literals, and a hygiene test fails on a credential literal in any
-  test file, the TypeScript browser tests under `e2e/web` included.
-- A CI run whose only failures are jobs GitHub never gave a runner (the macOS arm64 pool's "not
-  acquired" failure) is re-run once on its own by the new `requeue.yml`. A run with any real failure,
-  a second attempt, or a run superseded by a newer one is left alone.
-
-### Fixed
-
-- **Changes made from the web UI in Chromium were refused as cross-origin.** The server sent
-  `Referrer-Policy: no-referrer`, under which Chromium sends `Origin: null` on the page's own form
-  posts, and the same-origin check refuses that. It now sends `Referrer-Policy: same-origin`, which
-  still sends no referrer to another site. Found by the new browser tests.
-- **Four contrast failures in the web UI**, found by the axe pass: the outline delete button on a
-  card footer in the light theme, the Cancel link button on a review page in both themes, and `code`
-  in the overview's attention rows and in alerts in the dark theme.
-
-### Compatibility
-
-- A manifest with `reserved_keys` is refused by authama 0.1.3 and earlier (unknown fields are an
-  error). Without reservations the manifest is written exactly as before.
-
-## [0.1.3] - 2026-11-02
-
-Local VMs look after themselves: `ssh vm sync` keeps every VM host matching its VM, the hypervisors
-you use are configured (with a generic command driver for any other tool), a loose devbox key can be
-adopted with a guided command, and `doctor --fix` runs the same upkeep.
-
-### Added
 
 - **`authama ssh vm sync`** asks each VM host's hypervisor what became of its VM. A running VM gets its
   host key pinned when nothing is pinned, its public key re-installed in the guest when the guest
@@ -411,7 +295,86 @@ adopted with a guided command, and `doctor --fix` runs the same upkeep.
 - Docs for shell completion, the web UI's third-party licences page, and the six service packages
   `architecture.md` did not list.
 
+- **`<config home>/.env` is loaded at startup.** A variable already in the environment is never
+  replaced. Supports comments, an `export ` prefix, and single- or double-quoted values; a missing file is
+  fine, and a malformed line is skipped with a warning naming its line number, never its content. A
+  `.env` readable by group or others is not loaded (`chmod 600` or `doctor --fix`). `--no-dotenv` or
+  `AUTHAMA_NO_DOTENV=1` skips it for a run.
+- **`authama.json`**: optional non-secret settings in the config home, validated against
+  `docs/schema/authama.schema.json` (JSON Schema 2020-12). An invalid file stops the command with
+  every problem listed.
+- Precedence, documented and tested: command-line flags > environment > `.env` > `authama.json` >
+  defaults.
+- **`authama settings`** (`path`, `show [--effective]`, `validate`, `init`): where the files are,
+  every setting's value and source (secrets never printed), schema validation, and a starter file.
+  It is a separate group from `ssh config`, which renders `~/.ssh/config`.
+- A separate **state home** for history, the audit log, snapshots and bundles:
+  `$AUTHAMA_STATE_DIR`, else `$XDG_STATE_HOME/authama`, else `~/.local/state/authama`.
+- `make settings` and `make generate` (regenerates the CLI reference and the settings schema).
+
 ### Changed
+
+- **The owner PIN is hashed with Argon2id** (t=3, 64 MiB, p=4), memory-hard where PBKDF2 costs only
+  time. A PIN set by an earlier release still unlocks and is rehashed as Argon2id the next time it
+  is given correctly. This links `golang.org/x/crypto`, a fourth recorded dependency.
+- **`build/` holds one folder per OS and nothing else.** `make build` writes
+  `build/<your-os>/authama` (`build/macos/authama`, `build/windows/authama.exe` - which also fixes
+  `make install` on Windows, which looked for an `.exe` the build never wrote); `make cross` writes
+  every target to `build/{os}/authama_{os}_{arch}` with `build/checksums.txt` listing `{os}/{file}`
+  so it verifies as-is; `make dist` adds `build/archives/`. There is no `build/dist/`: GoReleaser
+  works in `.goreleaser-dist/` (`make release-snapshot`), and `make man` packs its pages into
+  `build/archives/authama_man.tar.gz`. A test fails on anything else in `build/`.
+- **A double-click app for the web UI.** `make dist` packages `Authama.app` for macOS
+  (`build/archives/authama_macos_app.zip`, opening Terminal running `authama serve`) and adds
+  `Start authama.cmd` to the Windows zips. See [docs/installation.md](docs/installation.md).
+
+- **`--revoke` revokes.** `key delete`, `host delete` and `profile delete --revoke` called a stub
+  that revoked nothing, while their help said it removed the key from its targets. They now ask each
+  deployment's host's provider to remove it, as rotation does, and report each target they could
+  not revoke from rather than counting it as revoked.
+
+- **The web UI's slide-in forms are one column, each hint under its field**: the token, host and
+  profile panels no longer squeeze two fields side by side in a panel 400 pixels wide, where labels
+  wrapped and fields fell out of line. The token form starts with the tool and shows only the fields
+  that tool uses; a hidden field is disabled, so it is never sent. Each panel has a Cancel button.
+- **The overview's three summary cards share one layout**, a count, a bar and three badged rows, so
+  they line up: the token card's tool count comes from the catalog rather than a fixed 5, and the
+  snapshot card shows kept of the most kept, the oldest and newest, and how many still hold private
+  keys. The header bell's dot means an event in the last day, not that there was ever one.
+- **`token set --service` beside a `--target` other than composer is refused** instead of writing a
+  Composer token silently; the web form no longer drops the tool it was given either.
+
+- **Running `authama` on its own, on a terminal, opens the web UI**, as `authama serve` does with its
+  defaults; `--dev-root` and `--no-dotenv` still apply. The menu it used to open is `authama tui`. With
+  no terminal a bare run still prints help, since `serve` would hang a script.
+- **The web UI is redesigned on Tabler's own layout**, as its preview dashboard has it: a header with
+  the name, the mode badges and the theme switch, then a menu with SSH, Auth and System dropdowns that
+  folds behind a button on a narrow screen. Every page header names its section, has a one-line summary
+  and links to its forms; the overview's counts are linked cards; empty lists use Tabler's empty state.
+  The custom stylesheet is down to the contrast fixes the accessibility pass needs. Every page, form,
+  change and job works as before.
+
+- `vm adopt-key` and `vm sync` release a key's reservation when they adopt it; the adopt-key picker
+  labels reserved keys. doctor's fix for a loose devbox-looking key also mentions `key reserve`.
+- The issue-template security link names `security@simtabi.com`, the disclosure inbox, instead of
+  the community address.
+- `.github/pull_request_template.md` is `.github/PULL_REQUEST_TEMPLATE.md`, the name the org
+  standard requires; the lowercase-markdown hygiene test lists it as a conventional name.
+- CI verifies the gitleaks tarball against its published SHA-256 before installing it.
+- CI, the release workflow and the Makefile set `GOPRIVATE`/`GONOSUMDB` for `github.com/simtabi/*`,
+  so our own builds never feed a version into the public Go proxy or checksum database.
+- The release workflow no longer starts on a tag push. Binary releases are on hold, and a release
+  runs only when dispatched by hand on a `v[0-9]*` tag with `-f confirm=release-go`; a test fails
+  if an automatic trigger returns.
+- The README and installation guide build authama from source only: no download, package-manager
+  or `go install` path is offered while binary releases are on hold. The 0.1.0 to 0.1.3 channels
+  are described as frozen, not removed.
+- Tests generate every token, password and passphrase at run time (`internal/util/testcred`)
+  instead of spelling them as literals, and a hygiene test fails on a credential literal in any
+  test file, the TypeScript browser tests under `e2e/web` included.
+- A CI run whose only failures are jobs GitHub never gave a runner (the macOS arm64 pool's "not
+  acquired" failure) is re-run once on its own by the new `requeue.yml`. A run with any real failure,
+  a second attempt, or a run superseded by a newer one is left alone.
 
 - **`doctor --fix`** also runs the VM sync and removes stale authama pins from `known_hosts`, after a
   confirmation that lists them (declining fixes permissions only). `doctor --dry-run` shows the plan;
@@ -426,29 +389,6 @@ adopted with a guided command, and `doctor --fix` runs the same upkeep.
 - `docs/reference/cli.md` ends with the docs-index footer every other page has.
 - **`init --backup` help and the `ssh` group's help** say where the backup goes and that the bare
   top-level verbs still work.
-
-### Fixed
-
-- **Docs corrected against the code.** SECURITY.md no longer says a key passphrase goes on
-  `ssh-keygen`'s command line (it goes through askpass and stdin) or that each profile has its own
-  `known_hosts` (there is one hashed store). `.state/`, `dist/` and the `init --backup` copy are
-  placed in the state home, where they live. `serve` shows its real start-up line, `settings init`
-  is described as the minimal starter it writes, and install examples pin v0.1.2.
-- **winget is no longer listed as an install method.** No release has published it: its GoReleaser
-  manifest waits on a `simtabi/winget-pkgs` fork that does not exist yet. `docs/release.md` now says so.
-- **The age identity has no default path.** `docs/configuration.md` said `paths.age_identity_file`
-  defaults to `<config home>/age-identity.txt`; nothing reads that file unless `--identity` or
-  `AUTHAMA_AGE_IDENTITY_FILE` points at it, and the docs now say so.
-- **The web UI places bundles in the state home's `dist/`**, where they are, not the config home's.
-- The 0.1.2 entry named `known-hosts show`; the command that shows pins is `ssh show`.
-
-## [0.1.2] - 2026-11-02
-
-The final rename: authama is the only primary name. Release assets, packages, the Homebrew cask and
-the Scoop manifest are all `authama`; `sshmgr` remains only as a deprecated alias that still runs
-every command. Upgrading is covered in [docs/migration.md](docs/migration.md#to-012-authama-everywhere-sshmgr-deprecated).
-
-### Changed
 
 - **Release assets are named `authama_*`**: archives (`authama_<os>_<arch>.tar.gz`/`.zip`), the
   bare binaries, the Linux packages (`authama_linux_<arch>.{deb,rpm,apk}`) and the source tarball
@@ -480,32 +420,6 @@ every command. Upgrading is covered in [docs/migration.md](docs/migration.md#to-
 - Markdown file names are lowercase: `code-of-conduct.md`, `third-party-notices.md` (in every
   archive) and `.github/pull_request_template.md`.
 
-## [0.1.1] - 2026-11-02
-
-The rename to authama is complete: one config home, `AUTHAMA_*` variable names, and settings
-files that authama loads itself. Everything from 0.1.0 keeps working and moves over on the first run.
-
-### Added
-
-- **`<config home>/.env` is loaded at startup.** A variable already in the environment is never
-  replaced. Supports comments, an `export ` prefix, and single- or double-quoted values; a missing file is
-  fine, and a malformed line is skipped with a warning naming its line number, never its content. A
-  `.env` readable by group or others is not loaded (`chmod 600` or `doctor --fix`). `--no-dotenv` or
-  `AUTHAMA_NO_DOTENV=1` skips it for a run.
-- **`authama.json`**: optional non-secret settings in the config home, validated against
-  `docs/schema/authama.schema.json` (JSON Schema 2020-12). An invalid file stops the command with
-  every problem listed.
-- Precedence, documented and tested: command-line flags > environment > `.env` > `authama.json` >
-  defaults.
-- **`authama settings`** (`path`, `show [--effective]`, `validate`, `init`): where the files are,
-  every setting's value and source (secrets never printed), schema validation, and a starter file.
-  It is a separate group from `ssh config`, which renders `~/.ssh/config`.
-- A separate **state home** for history, the audit log, snapshots and bundles:
-  `$AUTHAMA_STATE_DIR`, else `$XDG_STATE_HOME/authama`, else `~/.local/state/authama`.
-- `make settings` and `make generate` (regenerates the CLI reference and the settings schema).
-
-### Changed
-
 - **Config home is `~/.config/authama` on every OS**, Windows included
   (`%USERPROFILE%\.config\authama`, no longer `%APPDATA%`). `$AUTHAMA_CONFIG_DIR` overrides it, then
   `$XDG_CONFIG_HOME/authama`.
@@ -528,13 +442,100 @@ files that authama loads itself. Everything from 0.1.0 keeps working and moves o
 - The package homepage (Homebrew, Scoop, winget, deb/rpm/apk) is https://github.com/simtabi/authama.
 - `.env-example` uses the `AUTHAMA_*` names and quotes values with spaces or special characters.
 
+- **Versions restart at 0.1.0.** The ssh-manager 1.x–3.6.1 and auth-token-manager tags and GitHub
+  releases were removed; their history is kept below.
+- **The Go module is `github.com/simtabi/authama/src`** (no `/v3`):
+  `go install github.com/simtabi/authama/src/cmd/authama@latest`. The old `.../src/v3` path still resolves
+  through the Go proxy for 3.6.1 and earlier, but is no longer maintained.
+
+### Removed
+
+- **The `sshmgr` alias binary.** It shipped beside `authama` as a deprecated compatibility build
+  since 0.1.2 and is no longer built, released or installed: `make build`, both installers, the
+  archives, the Linux packages, the Homebrew cask and the Docker dev image carry `authama` alone,
+  and the `simtabi/sshmgr` Scoop manifest stops updating. An `sshmgr` already installed is left
+  alone; the installers name it and print the command that removes it. Everything older releases
+  wrote under the old name is still recognized. Before removing an old copy, run
+  `authama ssh config render` (a VM `ProxyCommand` that names it) and `authama ssh notify install`
+  (an expiry reminder job); see [docs/migration.md](docs/migration.md#removing-the-sshmgr-alias).
+
 ### Fixed
+
+- **The tour could jump back to its first step.** On the overview it starts by itself after the page
+  lays out; a tour started by hand in that moment was restarted by the timer. It is left alone now.
+  The tour also sits above the hover explainers, so a tooltip under the pointer cannot cover Next.
+- **Launching the web UI again started another server every time**, and none ever stopped: after
+  twenty launches ports 7822-7841 were all taken and the next one failed. `authama serve` now opens
+  the server already running for the home (checked through a new `/healthz` and an owner-only
+  record), `--status` and `--stop` report and stop it, `--new` starts another on purpose, and a
+  full port range falls back to any free port.
+- **`token apply` skipped every PyPI, Cargo, RubyGems and Gradle entry** as an "unknown target":
+  resolving a config from the environment knew only the first five tools. They resolve now.
+- **Saving the manifest turned numbers and booleans in `raw_options` into strings**
+  (`ServerAliveInterval 60` became `"60"`) whenever anything else in it changed. A value that was
+  not changed is written back exactly as it was read.
+- **Menu labels showed `&amp;`** ("Config &amp; backups", "Owner &amp; PIN"), and several pages'
+  section names did not match the menu they are in.
+
+- **A token's History link signed the browser out.** The history's token filter used `?token=`,
+  which is also the sign-in link's parameter, so following History from a token's menu answered
+  401 "Sign-in link required" to a browser that was signed in. The filter is `?credential=` now,
+  and a `?token=` that is not the server's sign-in token no longer overrides a live session.
+
+- The Auth tokens page and the dashboard said a credential file was readable by others whenever the
+  token audit failed, including when what failed was the `.gitignore` check where the server runs.
+- A web preview now shows `authama.json` and `tokens.json` with the other config files. It was left out of the preview's
+  copy, so a change writing it would have previewed as writing nothing.
+
+- **Changes made from the web UI in Chromium were refused as cross-origin.** The server sent
+  `Referrer-Policy: no-referrer`, under which Chromium sends `Origin: null` on the page's own form
+  posts, and the same-origin check refuses that. It now sends `Referrer-Policy: same-origin`, which
+  still sends no referrer to another site. Found by the new browser tests.
+- **Four contrast failures in the web UI**, found by the axe pass: the outline delete button on a
+  card footer in the light theme, the Cancel link button on a review page in both themes, and `code`
+  in the overview's attention rows and in alerts in the dark theme.
+
+- **Docs corrected against the code.** SECURITY.md no longer says a key passphrase goes on
+  `ssh-keygen`'s command line (it goes through askpass and stdin) or that each profile has its own
+  `known_hosts` (there is one hashed store). `.state/`, `dist/` and the `init --backup` copy are
+  placed in the state home, where they live. `serve` shows its real start-up line, `settings init`
+  is described as the minimal starter it writes, and install examples pin v0.1.2.
+- **winget is no longer listed as an install method.** No release has published it: its GoReleaser
+  manifest waits on a `simtabi/winget-pkgs` fork that does not exist yet. `docs/release.md` now says so.
+- **The age identity has no default path.** `docs/configuration.md` said `paths.age_identity_file`
+  defaults to `<config home>/age-identity.txt`; nothing reads that file unless `--identity` or
+  `AUTHAMA_AGE_IDENTITY_FILE` points at it, and the docs now say so.
+- **The web UI places bundles in the state home's `dist/`**, where they are, not the config home's.
+- The 0.1.2 entry named `known-hosts show`; the command that shows pins is `ssh show`.
 
 - `doctor --strict` exits non-zero on any warning and never reports a clean tree while listing
   warnings.
 - `history` records a host's resolved alias instead of the raw `--host` spec, and `history --host`
   still finds entries written by 0.1.0.
 - The `.env` parser no longer takes `KEY=   # note` as the value `# note`.
+
+- **`--no-passphrase` works again on `keygen`, `reconcile` and `rotate`.** v1 accepted it; the 2.0.0 Go
+  rewrite dropped it without a note, so scripts that passed it failed with "unknown flag". It is back,
+  hidden, as the spelling of the default (no passphrase), and cannot be combined with `--passphrase`.
+- **A custom token catalog can be used again.** auth-token-manager read its service catalog from
+  `$AUTH_TOKEN_MANAGER_CATALOG`; the port embedded the catalog and lost the override. `authama token`
+  now reads `$SSH_MANAGER_TOKENS_CATALOG`, and the old name with a deprecation notice. A missing file
+  warns and falls back to the built-in catalog; an invalid one stops the command.
+
+### Security
+
+- The web server refuses a request body over 1 MiB (413) before parsing it, holds headers to 64 KiB
+  and a body to 30 seconds, and sends a `Permissions-Policy` that turns off every device API.
+
+- The web UI's sign-in redirect is now guarded inline, on the exact value passed to `http.Redirect`, by a
+  pattern equal to `isLocalURL` (`/` alone, or `/` not followed by `/` or a backslash). Behaviour is unchanged:
+  a token link on a path a browser reads as another host still lands on `/`. A test holds the pattern and
+  `isLocalURL` to the same answer. Resolves CodeQL `go/unvalidated-url-redirection` alert 12.
+
+### Compatibility
+
+- A manifest with `reserved_keys` is refused by authama 0.1.3 and earlier (unknown fields are an
+  error). Without reservations the manifest is written exactly as before.
 
 ### Documentation
 
@@ -552,49 +553,16 @@ files that authama loads itself. Everything from 0.1.0 keeps working and moves o
 - A test parses every `authama`/`sshmgr` command shown in the docs against the
   real command tree, so a renamed verb or flag fails CI.
 
-## [0.1.0] - 2026-11-02
-
-First release under the authama name, with version numbers restarted at 0.1.0. authama (Authentication
-Access Manager) is one static, dependency-free binary that manages two kinds of credentials:
-
-- **SSH** (`authama ssh …`, formerly ssh-manager 3.6.1): per-profile keys, a split `~/.ssh/config`
-  rendered from one manifest, a single pinned `known_hosts` trust store, staged zero-downtime key
-  rotation with rollback, deploy to 25 providers, expiry reminders, encrypted bundles, snapshots, devbox
-  and Cloudflare Access hosts.
-- **Auth tokens** (`authama token …`, formerly auth-token-manager 0.3.0): Composer `auth.json`, `.npmrc`,
-  Docker `config.json`, git credentials and `.netrc`, built from a config that names environment
-  variables, never secrets; list, copy, set, delete, audit and import, owner-only atomic writes.
-- **Shared:** `doctor`, `init`, `migrate`, `history`, a terminal UI (`tui`) and a local web UI (`serve`).
-
-Two binaries ship: `authama`, and `sshmgr`, the same program under its original name so existing scripts,
-aliases and `ProxyCommand` lines keep working. Config stays in `~/.config/ssh-manager`, and a 3.x setup
-needs no migration. See [migration](docs/migration.md).
-
-### Changed
-
-- **Versions restart at 0.1.0.** The ssh-manager 1.x–3.6.1 and auth-token-manager tags and GitHub
-  releases were removed; their history is kept below.
-- **The Go module is `github.com/simtabi/authama/src`** (no `/v3`):
-  `go install github.com/simtabi/authama/src/cmd/authama@latest`. The old `.../src/v3` path still resolves
-  through the Go proxy for 3.6.1 and earlier, but is no longer maintained.
-
-### Fixed
-
-- **`--no-passphrase` works again on `keygen`, `reconcile` and `rotate`.** v1 accepted it; the 2.0.0 Go
-  rewrite dropped it without a note, so scripts that passed it failed with "unknown flag". It is back,
-  hidden, as the spelling of the default (no passphrase), and cannot be combined with `--passphrase`.
-- **A custom token catalog can be used again.** auth-token-manager read its service catalog from
-  `$AUTH_TOKEN_MANAGER_CATALOG`; the port embedded the catalog and lost the override. `authama token`
-  now reads `$SSH_MANAGER_TOKENS_CATALOG`, and the old name with a deprecation notice. A missing file
-  warns and falls back to the built-in catalog; an invalid one stops the command.
-
-### Documentation
-
 - **[release](docs/release.md#homebrew-and-scoop)**: the Scoop manifest no longer needs a manual pull request.
   The bucket's workflow opens and merges the `sshmgr-X.Y.Z` branch the release pushes.
 - **[migration](docs/migration.md#history-audit)** records an audit of every tag, release note and commit
   of sshmgr and auth-token-manager against this release, with what was restored and what was dropped on
   purpose.
+
+### Changed (CI)
+
+- Pull requests test on Linux and Windows and run a darwin cross-check (build and vet for macOS arm64
+  and amd64); the full macOS test runs weekly and on dispatch. The required checks follow.
 
 ## Pre-0.1.0 history (formerly ssh-manager 1.x–3.6.1 and auth-token-manager 0.x)
 
@@ -1766,9 +1734,5 @@ generalised beyond Composer, packaged for PyPI, and given an interactive UI.
 ##### Security
 - Owner-only hardening now applies on Windows (ACL), not just POSIX `chmod`.
 
-[Unreleased]: https://github.com/simtabi/authama/compare/v0.1.4...HEAD
-[0.1.4]: https://github.com/simtabi/authama/compare/v0.1.3...v0.1.4
-[0.1.3]: https://github.com/simtabi/authama/compare/v0.1.2...v0.1.3
-[0.1.2]: https://github.com/simtabi/authama/compare/v0.1.1...v0.1.2
-[0.1.1]: https://github.com/simtabi/authama/compare/v0.1.0...v0.1.1
+[Unreleased]: https://github.com/simtabi/authama/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/simtabi/authama/releases/tag/v0.1.0
