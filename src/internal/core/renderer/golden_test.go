@@ -74,3 +74,37 @@ func TestTermiusAndFlatConfigMatchTheirGoldenFiles(t *testing.T) {
 	}
 	golden(t, "ssh_config/ssh_config", []byte(flat))
 }
+
+// The flat export of every host, named one by one, is the flat export; of
+// some, it is their blocks as the whole export writes them, the git block only
+// with its github.com host, and Host * last.
+func TestFlatConfigOfChosenHostsIsTheirPartOfTheWhole(t *testing.T) {
+	m := mustManifest(t, exportJSON)
+	whole, err := RenderFlatConfig(m, testExportPaths, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	all, err := RenderFlatConfigOf(m, testExportPaths, false, []string{"devbox", "box", "github-imani", "oribi-web"})
+	if err != nil || all != whole {
+		t.Fatalf("every host named is not the whole export (%v):\n%s", err, all)
+	}
+	some, err := RenderFlatConfigOf(m, testExportPaths, false, []string{"box"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(whole, some[len(FlatHeader)+1:strings.Index(some, "Host *")]) {
+		t.Errorf("box's part is not as the whole export writes it:\n%s", some)
+	}
+	for _, gone := range []string{"Host github.com", "Host oribi-web", "profile: simtabi"} {
+		if strings.Contains(some, gone) {
+			t.Errorf("%q is in the export of box alone:\n%s", gone, some)
+		}
+	}
+	withGit, _ := RenderFlatConfigOf(m, testExportPaths, false, []string{"github-imani"})
+	if !strings.Contains(withGit, "Host github.com\n") || !strings.HasSuffix(strings.TrimSpace(withGit), "HashKnownHosts yes") {
+		t.Errorf("the git block comes with its github host, Host * last:\n%s", withGit)
+	}
+	if _, err := RenderFlatConfigOf(m, testExportPaths, false, []string{"nope"}); err == nil {
+		t.Error("an unknown alias was accepted")
+	}
+}

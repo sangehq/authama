@@ -85,16 +85,7 @@ func RenderClientExport(m *manifest.Manifest, p ExportPaths, format string, opts
 			skipped = append(skipped, h.Alias+": a git host, not a shell (export it with --include-git)")
 			continue
 		}
-		port := h.Port
-		if port == 0 {
-			port = 22
-		}
-		file, agent := identityFor(m, rk.Profile, rk.KeyName)
-		ch := ClientHost{Group: rk.Profile, Alias: h.Alias, Hostname: h.Hostname, User: h.User, Port: port, Tags: h.Tags, Agent: p.expand(agent)}
-		if agent == "" {
-			ch.KeyFile = p.expand(file)
-		}
-		hosts = append(hosts, ch)
+		hosts = append(hosts, clientHost(m, p, rk))
 	}
 	if len(skip) > 0 {
 		var unknown []string

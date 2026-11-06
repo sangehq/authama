@@ -40,8 +40,15 @@ func write(t *testing.T, name string, tb Table, o Options) string {
 
 func TestEveryFormatIsRegisteredAndWrites(t *testing.T) {
 	want := []string{"csv", "html", "js", "json", "jsonl", "markdown", "php", "tsv", "yaml"}
-	if got := Names(); strings.Join(got, ",") != strings.Join(want, ",") {
-		t.Fatalf("formats = %v, want %v", got, want)
+	if got := TableNames(); strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("table formats = %v, want %v", got, want)
+	}
+	hosts := []string{"hosts-csv", "iterm2", "mobaxterm", "putty", "remmina", "securecrt", "ssh_config", "termius", "windows-terminal"}
+	if got := HostNames(); strings.Join(got, ",") != strings.Join(hosts, ",") {
+		t.Fatalf("host formats = %v, want %v", got, hosts)
+	}
+	if len(Names()) != len(want)+len(hosts) {
+		t.Fatalf("Names() = %v", Names())
 	}
 	for _, n := range want {
 		f, _ := Get(n)

@@ -11,6 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/core/renderer"
 	"github.com/simtabi/authama/src/internal/platform"
@@ -154,8 +155,12 @@ func newTermiusCmd() *cobra.Command {
 	var skip []string
 	export := &cobra.Command{
 		Use:   "export",
-		Short: "Write a Termius CSV import of every host, and list the key to attach to each",
-		Args:  cobra.NoArgs,
+		Short: "Write a Termius CSV import of every host, and list the key to attach to each (deprecated: use export hosts --format termius)",
+		Long: "Write a Termius CSV import of every host, and list the key to attach to each.\n\n" +
+			"Deprecated: `" + brand.Command + " export hosts --format termius` writes the same CSV through the export\n" +
+			"pipeline, with its filters, and the Export page offers it too. This command keeps working and\n" +
+			"writes the same bytes; it is not removed before v1.0.0.",
+		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			if open && !onMacOS() {
 				return errors.New("--open needs macOS; import the file in Termius by hand")

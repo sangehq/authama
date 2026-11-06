@@ -71,6 +71,41 @@ const FlatHeader = "# authama flat export - every host inline, absolute paths, n
 //
 // It is an export, never written over a file `config render` owns.
 func RenderFlatConfig(m *manifest.Manifest, p ExportPaths, emitUseKeychain bool) (string, error) {
+	return renderFlat(m, p, emitUseKeychain, nil)
+}
+
+// RenderFlatConfigOf is RenderFlatConfig of only the hosts named: each one's
+// block exactly as the whole export writes it, under its profile's banner, in
+// manifest order. The git ssh-mode block comes with the git profile's
+// github.com host, and Host * always closes the file. An alias the manifest
+// does not have is an error.
+func RenderFlatConfigOf(m *manifest.Manifest, p ExportPaths, emitUseKeychain bool, aliases []string) (string, error) {
+	keep := map[string]bool{}
+	for _, a := range aliases {
+		keep[a] = true
+	}
+	known := map[string]bool{}
+	for _, pname := range m.ProfileNames() {
+		for _, h := range m.Profiles[pname].Hosts {
+			known[h.Alias] = true
+		}
+	}
+	var unknown []string
+	for a := range keep {
+		if !known[a] {
+			unknown = append(unknown, a)
+		}
+	}
+	if len(unknown) > 0 {
+		sort.Strings(unknown)
+		return "", fmt.Errorf("no host named %s", strings.Join(unknown, ", "))
+	}
+	return renderFlat(m, p, emitUseKeychain, keep)
+}
+
+// renderFlat is the flat export of the hosts keep holds, or of every host when
+// keep is nil.
+func renderFlat(m *manifest.Manifest, p ExportPaths, emitUseKeychain bool, keep map[string]bool) (string, error) {
 	byProfile, err := hostsByProfile(m)
 	if err != nil {
 		return "", err
@@ -78,15 +113,22 @@ func RenderFlatConfig(m *manifest.Manifest, p ExportPaths, emitUseKeychain bool)
 	var b strings.Builder
 	b.WriteString(FlatHeader + "\n")
 	for _, pname := range m.ProfileNames() {
-		hosts := byProfile[pname]
-		for i := range hosts {
-			hosts[i] = p.expandHost(hosts[i])
+		var hosts []RenderHost
+		for _, h := range byProfile[pname] {
+			if keep == nil || keep[h.Alias] {
+				hosts = append(hosts, p.expandHost(h))
+			}
 		}
 		writeProfile(&b, pname, hosts)
 	}
 	gh, err := gitHubBlock(m)
 	if err != nil {
 		return "", err
+	}
+	if gh != nil && keep != nil {
+		if h, ok := manifest.GitHubHostOf(m, m.Defaults.Git.Profile); !ok || !keep[h.Alias] {
+			gh = nil
+		}
 	}
 	if gh != nil {
 		b.WriteString(gitBanner(m.Defaults.Git.Profile) + "\n")
