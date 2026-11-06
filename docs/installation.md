@@ -36,9 +36,12 @@ authama doctor          # verify deps, perms, agent, known_hosts, drift, token-f
 
 `make install` builds first, so what lands on `PATH` is the checkout as it is now, and says
 whether `~/.local/bin` is on your `PATH` and whether another `authama` shadows it. Any
-directory works: `make install BINDIR=/usr/local/bin`. `make uninstall` (with the same
-`BINDIR`) removes that one file, after checking it answers `version` as authama, and prints
-where your config and state homes are; it never touches them, `~/.ssh` or a token file.
+directory works: `make install BINDIR=/usr/local/bin`. To check what is installed:
+
+```sh
+command -v authama      # which file runs: ~/.local/bin/authama after make install
+authama version         # the commit it was built from
+```
 
 On a Mac with Xcode's command line tools (`xcode-select --install`), `make build` also builds
 `build/macos/authama-touchid`, the helper that lets Touch ID stand in for the owner PIN, and
@@ -80,6 +83,36 @@ make -C ~/src/authama install
 
 `authama version` reports the commit it was built from, so a build from a branch
 is still identifiable.
+
+**Restart the web UI after updating.** A running `authama serve` keeps the code it
+started with, so after `make install` the browser still shows the old UI. Each page then
+says so in a yellow banner (*This page is from an older build*). Stop the server with
+Ctrl-C where it runs, or, when you no longer know where that is, by the port it listens on
+(7822, or the next free one up to 7841), and start it again:
+
+```sh
+lsof -ti tcp:7822-7841 -sTCP:LISTEN | xargs kill -INT   # stop every authama serve on the usual ports
+authama serve                                           # start the new build; it opens your browser
+```
+
+`lsof -nP -iTCP:7822-7841 -sTCP:LISTEN` lists them first, if anything else on your machine
+uses those ports. On Windows, close the console window `authama serve` runs in.
+
+### Uninstalling
+
+```sh
+make -C ~/src/authama uninstall                       # or with the BINDIR you installed to
+make -C ~/src/authama uninstall BINDIR=/usr/local/bin
+```
+
+It removes `authama` from `BINDIR` (default `~/.local/bin`), after checking the file answers
+`version` as authama, and the Touch ID helper `authama-touchid` beside it. It prints where
+your config and state homes are and leaves them as they are, with `~/.ssh` and every token
+file: uninstalling never removes a key or a credential. To remove those too, use the paths
+it prints (`authama settings path` shows them while authama is still installed); do that only
+when you mean to, since the config home holds the manifest your keys are made from. Stop any
+running `authama serve` first (see above); the checkout in `~/src/authama` is yours to keep
+or delete.
 
 ### Earlier binary releases
 

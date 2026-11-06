@@ -6,6 +6,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **The web UI says when it is older than the installed binary.** A running `authama serve` keeps
+  the code it started with, so after `make install` the browser showed the old UI with nothing to
+  say why. Every page now shows a banner naming the binary that changed and how to restart.
+- **The profiles CSV says where keys are chosen.** It has one row per profile and no key column,
+  so it has no Keys tab; the dialog now says that keys are chosen in the Hosts or Keys CSV, with a
+  link to each.
+
+### Fixed
+
+- `make uninstall` also removes the Touch ID helper `authama-touchid` that `make install` puts
+  beside `authama`.
+
+### Documentation
+
+- Installation covers checking what is installed, restarting the web UI after an update (with the
+  commands to stop a server on the usual ports), and uninstalling, including what is kept.
+
 ## [0.1.0] - 2026-11-06
 
 The first release of authama: SSH keys and config, and package-manager and git auth tokens, from one manifest, at the command line and in a local web UI. It brings together what earlier builds of this history shipped as 0.1.0 to 0.1.4, and the work after them.

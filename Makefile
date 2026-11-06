@@ -280,6 +280,7 @@ uninstall: ## remove the authama binary from BINDIR (default ~/.local/bin); conf
 	esac; \
 	homes="$$("$(INSTALLED)" settings path 2>/dev/null | grep -E '^(config|state) home:')"; \
 	rm -f "$(INSTALLED)" && echo "removed $(INSTALLED)"; \
+	if [ -e "$(BINDIR)/authama-touchid" ]; then rm -f "$(BINDIR)/authama-touchid" && echo "removed $(BINDIR)/authama-touchid"; fi; \
 	echo "kept, as they were: ~/.ssh, every token file, and"; \
 	printf '%s\n' "$$homes" | sed 's/^/  /'; \
 	if [ -e "$(BINDIR)/sshmgr$(EXE)" ]; then echo "note: an older sshmgr is still at $(BINDIR)/sshmgr$(EXE)"; fi

@@ -84,6 +84,21 @@ test('a CSV opens a dialog: profiles, keys, columns and rows are chosen in table
   await expect(panel.getByRole('checkbox', { name: dropped, exact: true })).toBeChecked();
 });
 
+test('a CSV with no key column says where keys are chosen', async ({ page }) => {
+  await page.goto('/profiles');
+  await page.getByRole('link', { name: 'CSV' }).first().click();
+  const dialog = page.getByRole('dialog', { name: /Download CSV/ });
+  await expect(dialog.getByRole('tab', { name: /Profiles/ })).toBeVisible();
+  await expect(dialog.getByRole('tab', { name: /Keys/ })).toHaveCount(0);
+  await expect(dialog.getByText('no keys to choose here')).toBeVisible();
+  await expect(dialog.getByRole('link', { name: 'Hosts' })).toHaveAttribute('href', /\/hosts$/);
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+
+  await page.goto('/hosts');
+  await page.getByRole('link', { name: 'CSV' }).first().click();
+  await expect(dialog.getByText('no keys to choose here')).toBeHidden();
+});
+
 test('tokens.json is checked as it is typed, and cannot be sent while it is not JSON', async ({ page }) => {
   await page.goto('/tokens');
   await page.getByRole('button', { name: 'Edit tokens.json' }).click();

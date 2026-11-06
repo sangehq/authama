@@ -478,6 +478,9 @@ type view struct {
 	// SealProblem is the owner seal's finding, shown on the overview when the
 	// state was changed outside authama.
 	SealProblem string
+	// Rebuilt is the server's own executable when it changed after the
+	// server started: the page is the old build, and the layout says so.
+	Rebuilt string
 }
 
 func (s *Server) newView(r *http.Request, nav, title string, data any) view {
@@ -490,6 +493,7 @@ func (s *Server) newView(r *http.Request, nav, title string, data any) view {
 		v.Authed = true
 		v.CSRF = sess.csrf
 		v.PINNeeded = ownerGate{s}.needsStepUp(sess)
+		v.Rebuilt = s.binary.replaced()
 		if nav == "overview" || nav == "doctor" {
 			if st := owner.Verify(p); !st.Clean() {
 				v.SealProblem = st.Describe()

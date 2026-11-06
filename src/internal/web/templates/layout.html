@@ -100,6 +100,11 @@
       <div class="container-xl">{{icon "alert-triangle"}}<span class="ms-1"><strong>Changed outside authama:</strong> {{.SealProblem}}. Run <code>authama owner verify</code> to see what changed, and <code>authama owner reseal</code> to accept it.</span></div>
     </div>
     {{end}}
+    {{if and .Authed .Rebuilt (not .Panel)}}
+    <div class="alert alert-warning rounded-0 mb-0" role="status" data-rebuilt>
+      <div class="container-xl">{{icon "alert-triangle"}}<span class="ms-1"><strong>This page is from an older build.</strong> <code>{{.Rebuilt}}</code> changed after this server started, and a running server keeps the code it started with. Stop it (Ctrl-C where it runs) and run <code>authama serve</code> again to see the new build.</span></div>
+    </div>
+    {{end}}
     {{if and .Authed .DevRoot}}
     <div class="dev-banner" role="status">
       <div class="container-xl">{{icon "alert-triangle"}}<span class="ms-1"><strong>Dev mode.</strong> Reading a sandbox under <code>{{.DevRoot}}</code>, not your real <code>~/.ssh</code>.</span></div>

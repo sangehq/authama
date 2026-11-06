@@ -85,6 +85,7 @@ type Server struct {
 	who      whoami
 	jobs     *jobs.Registry
 	handler  http.Handler
+	binary   binaryWatch
 }
 
 // New builds a Server. It parses every template once, so a template error is
@@ -112,7 +113,7 @@ func New(opts Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{opts: opts, pages: pages, assets: assets, jobs: jobs.NewRegistry(), who: currentUser()}
+	s := &Server{opts: opts, pages: pages, assets: assets, jobs: jobs.NewRegistry(), who: currentUser(), binary: watchOwnBinary(opts.Now())}
 	s.handler = securityHeaders(withBasePath(base, s.hostCheck(s.auth(s.sameOrigin(ownerGate{s}.requireUnlock(s.routes()))))))
 	return s, nil
 }

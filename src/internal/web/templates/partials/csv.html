@@ -37,6 +37,7 @@
           {{template "csv_pick" "profiles"}}
           {{template "csv_pick" "keys"}}
           {{template "csv_pick" "columns"}}
+          <p class="csv-pick-note small text-secondary mb-0" data-csv-keys-note hidden>{{icon "info-circle"}}<span class="ms-1">This list has one row per profile, so there are no keys to choose here. Keys are chosen in the CSV of <a href="{{u "/hosts"}}">Hosts</a> or <a href="{{u "/keys"}}">Keys</a>, per profile or across all of them.</span></p>
         </aside>
         <section class="csv-main" aria-label="Preview">
           <div class="csv-toolbar">

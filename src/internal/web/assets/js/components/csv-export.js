@@ -259,6 +259,9 @@ export class CsvExport extends Component {
       p.columns.filter((c) => !this.#choice.drop.includes(c)),
       (kept) => this.#update({ drop: kept === null ? [] : p.columns.filter((c) => !kept.includes(c)) }),
     );
+    // A list with profiles but no key column (profiles.csv) says where keys
+    // are chosen, rather than leaving the Keys tab silently missing.
+    CsvExport.#part(dialog, "keys-note").hidden = !(profiles.length > 0 && (p.keys ?? []).length === 0);
     this.#showTabs(dialog);
     this.#renderSummary(dialog);
     this.#renderPreview(dialog);

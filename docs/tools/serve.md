@@ -135,12 +135,18 @@ Events) and **System** (Doctor, Settings, About). On a narrow screen it folds be
   pages. Hosts, keys, profiles, auth tokens, snapshots, key deployments (on the Audit page), history
   and events each download as CSV, with the same columns as `--csv` on their command. The History and
   Events downloads keep the page's filters, so the file holds what the page shows.
+- **A page from an older build says so.** When the `authama` binary is rebuilt, reinstalled or
+  removed after `authama serve` started, every page shows a yellow banner naming the file: the
+  server keeps the code it started with, so restart it to see the new build
+  ([Restart the web UI after updating](../installation.md#updating)).
 - **A CSV is previewed before it downloads.** Its button opens a dialog with a tab per list on the left,
   each a table with a tick box per row:
   - **Profiles**, for a list with a profile column (hosts, keys, profiles, the Termius CSV).
   - **Keys**, for a list with a key column (hosts, keys): the keys of the profiles ticked, grouped under
     their profile when several are shown. Ticking a profile brings its keys in; unticking it takes them
     out.
+  - A list with a profile column but no key column (the profiles CSV, one row per profile) has no
+    Keys tab, and says so: keys are chosen in the Hosts or Keys CSV.
   - **Columns**, each with its value in the first row, so a cryptic name says what it holds.
 
   Everything is ticked to start with, which means everything, including profiles and keys added later.
