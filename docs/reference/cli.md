@@ -61,7 +61,7 @@ Every command also takes the global flag:
     - [`authama ssh git status`](#authama-ssh-git-status) - Show each checkout's remote mode, owner and profile
     - [`authama ssh git use`](#authama-ssh-git-use) - Point checkouts' origin at a mode, after proving the new URL with ls-remote
   - [`authama ssh host`](#authama-ssh-host) - Manage a host within a profile (add/edit/delete/apply)
-    - [`authama ssh host add`](#authama-ssh-host-add) - Add a host to a profile
+    - [`authama ssh host add`](#authama-ssh-host-add) - Add a host to a profile (or name it by the naming rules with --env and --role)
     - [`authama ssh host apply`](#authama-ssh-host-apply) - Add or update hosts from compact specs (one, many, or a file)
     - [`authama ssh host delete`](#authama-ssh-host-delete) - Delete a host, its config block and its pins
     - [`authama ssh host edit`](#authama-ssh-host-edit) - Edit a host
@@ -84,6 +84,11 @@ Every command also takes the global flag:
     - [`authama ssh knownhosts pin`](#authama-ssh-knownhosts-pin) - Seed known_hosts via ssh-keyscan, with confirmation
   - [`authama ssh list`](#authama-ssh-list) - Filterable tree across profiles
   - [`authama ssh load`](#authama-ssh-load) - Add a profile's keys to the agent
+  - [`authama ssh naming`](#authama-ssh-naming) - Show, check and set how servers and their keys are named
+    - [`authama ssh naming check`](#authama-ssh-naming-check) - List the hosts whose alias does not follow the naming rules
+    - [`authama ssh naming key-template`](#authama-ssh-naming-key-template) - Set how new keys are named, keeping every existing key's name
+    - [`authama ssh naming set`](#authama-ssh-naming-set) - Set the alias template, the allowed environments and roles, and how strictly they apply
+    - [`authama ssh naming show`](#authama-ssh-naming-show) - Show the naming rules in effect and each profile's code
   - [`authama ssh net`](#authama-ssh-net) - Per-host connection status + VPN indicator
   - [`authama ssh notify`](#authama-ssh-notify) - Manage the scheduled expiry notifier
     - [`authama ssh notify install`](#authama-ssh-notify-install) - Install the scheduled expiry notifier
@@ -760,6 +765,7 @@ Subcommands:
 - [`knownhosts`](#authama-ssh-knownhosts) - Pin host keys into the single ~/.ssh/known_hosts trust store
 - [`list`](#authama-ssh-list) - Filterable tree across profiles
 - [`load`](#authama-ssh-load) - Add a profile's keys to the agent
+- [`naming`](#authama-ssh-naming) - Show, check and set how servers and their keys are named
 - [`net`](#authama-ssh-net) - Per-host connection status + VPN indicator
 - [`notify`](#authama-ssh-notify) - Manage the scheduled expiry notifier
 - [`profile`](#authama-ssh-profile) - Manage a profile (add/edit/delete)
@@ -1065,7 +1071,7 @@ authama ssh host
 
 Subcommands:
 
-- [`add`](#authama-ssh-host-add) - Add a host to a profile
+- [`add`](#authama-ssh-host-add) - Add a host to a profile (or name it by the naming rules with --env and --role)
 - [`apply`](#authama-ssh-host-apply) - Add or update hosts from compact specs (one, many, or a file)
 - [`delete`](#authama-ssh-host-delete) - Delete a host, its config block and its pins
 - [`edit`](#authama-ssh-host-edit) - Edit a host
@@ -1075,8 +1081,15 @@ Subcommands:
 
 Add a host to a profile.
 
+Without <alias>, --env and --role name it by the naming rules
+(defaults.naming.alias, {code}-{env}-{role}-{nn} unless set): the profile's code,
+the environment, the role and the next free number, so a third web server of
+simtabi in production is simbi-prd-web-02. The role and environment are added as
+tags. With defaults.naming.enforce at error, an alias that breaks the rules is
+refused; at warn it is added and the reason printed.
+
 ```
-authama ssh host add <profile> <alias> [flags]
+authama ssh host add <profile> [<alias>] [flags]
 ```
 
 Examples:
@@ -1089,11 +1102,13 @@ Examples:
 Flags:
 
 ```
+      --env string         with no <alias>: the environment the generated alias names (prd, stg, dev)
   -H, --hostname string    host to connect to
       --key-name string    use this key instead of the derived <profile>_<alias>-<algo> name
   -p, --port int           ssh port (default 22)
       --provider string    deployment adapter for this host (see 'authama ssh providers')
       --proxy string       reach the host through a proxy: cloudflared (Cloudflare Access; ssh runs 'cloudflared access ssh --hostname %h')
+      --role string        with no <alias>: the role the generated alias names (web, db, ...)
       --tag stringArray    repeatable
       --token-env string   env var holding the provider API token (e.g. GH_TOKEN_WORK)
   -u, --user string        ssh user
@@ -1723,6 +1738,119 @@ Examples:
   authama ssh load work
 ```
 
+## authama ssh naming
+
+The naming rules live in the manifest's defaults.naming, and each profile's code
+name in profiles.<name>.code:
+
+  alias     the alias template, {code}-{env}-{role}-{nn} by default
+  key_name  the key-name template, {profile}_{alias}-{algo} by default
+  envs      the environments {env} may be (empty: any)
+  roles     the roles {role} may be (empty: any)
+  enforce   off, warn or error, when a host is added
+
+`host add <profile> --env prd --role web` names a server by them.
+
+```
+authama ssh naming
+```
+
+Subcommands:
+
+- [`check`](#authama-ssh-naming-check) - List the hosts whose alias does not follow the naming rules
+- [`key-template`](#authama-ssh-naming-key-template) - Set how new keys are named, keeping every existing key's name
+- [`set`](#authama-ssh-naming-set) - Set the alias template, the allowed environments and roles, and how strictly they apply
+- [`show`](#authama-ssh-naming-show) - Show the naming rules in effect and each profile's code
+
+## authama ssh naming check
+
+List every server whose alias does not follow the naming rules. Hosts named before
+the rules keep their names, so this is a report, not an error, unless --strict.
+VM hosts are devboxes, not servers, and are not checked.
+
+```
+authama ssh naming check [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh naming check
+  authama ssh naming check --strict
+```
+
+Flags:
+
+```
+      --strict   exit non-zero when any host breaks the rules
+```
+
+## authama ssh naming key-template
+
+Set defaults.naming.key_name: how the key of a new host is named, from
+{profile}, {alias}, {code}, {env}, {role}, {nn} and {algo}. It starts with
+{profile}_ and ends with -{algo}, which is how a key's profile and type are read
+back. Every host the new template would rename keeps the key name it has now,
+written into the manifest as its key_name, so no key is renamed or left behind;
+only hosts added from now on follow the template.
+
+```
+authama ssh naming key-template <template> [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh naming key-template '{profile}_{code}_{env}_{role}_{nn}-{algo}'
+  authama ssh naming key-template '{profile}_{alias}-{algo}' --yes
+```
+
+Flags:
+
+```
+  -y, --yes   skip the confirmation prompt
+```
+
+## authama ssh naming set
+
+Set the naming rules in defaults.naming. Only the flags given change. The key-name
+template has its own command, `naming key-template`, because changing it needs
+the existing hosts' key names kept.
+
+```
+authama ssh naming set [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh naming set --envs prd,stg,dev --enforce warn
+  authama ssh naming set --alias '{code}-{env}-{role}-{nn}' --roles web,db,cache
+```
+
+Flags:
+
+```
+      --alias string     the alias template, from {code}, {env}, {role} and {nn}
+      --enforce string   off, warn or error, when a host is added
+      --envs strings     the environments {env} may be, comma-separated (empty: any)
+      --roles strings    the roles {role} may be, comma-separated (empty: any)
+```
+
+## authama ssh naming show
+
+Show the naming rules in effect and each profile's code.
+
+```
+authama ssh naming show
+```
+
+Examples:
+
+```sh
+  authama ssh naming show
+```
+
 ## authama ssh net
 
 Per-host connection status + VPN indicator.
@@ -1818,6 +1946,7 @@ Flags:
 
 ```
       --category string      file the profile under profiles/<category>/ and render its hosts into profiles/<category>/config
+      --code string          the organisation's code name, the first part of its servers' aliases (simbi for simtabi)
       --key-comment string   comment template for keys minted from now on: {profile} {alias} {key} {date} {device} (default {profile}/{alias} {date})
       --key-name string      profile key name (shared scope)
       --key-scope string     per_service | shared (shared: one key, --key-name, for every host) (default "per_service")
@@ -1874,6 +2003,7 @@ Flags:
 
 ```
       --category string      move the profile under profiles/<category>/ (its key directory and inventory records follow); "" returns it to the flat layout
+      --code string          the organisation's code name, the first part of its servers' aliases; "" clears it
       --key-comment string   comment template for keys minted from now on: {profile} {alias} {key} {date} {device} (default {profile}/{alias} {date}); "" inherits defaults.key_comment
       --key-name string      the shared key every host in this profile uses (key_scope: shared)
       --key-scope string     per_service | shared

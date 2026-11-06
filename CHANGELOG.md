@@ -61,6 +61,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Servers named by rules you set.** `defaults.naming` holds the alias template
+  (`{code}-{env}-{role}-{nn}` by default), the allowed environments and roles, a key-name template
+  and how strictly they apply (`off`, `warn`, `error`); each profile can carry its organisation's
+  `code`. `authama ssh host add simtabi --env prd --role web` names the server `simbi-prd-web-00`, or
+  the next free number, and tags it. `authama ssh naming show`, `check`, `set` and `key-template`
+  manage the rules; `key-template` keeps every existing key's name, so nothing is renamed.
+- **A CSV export can hold some profiles only.** The download dialog lists the profiles a list's rows
+  belong to, with their row counts; ticking some keeps only theirs (`?profile=` for a script).
 - **Host exports for more SSH clients.** `authama ssh host export <client>` writes a Windows Terminal
   JSON fragment, iTerm2 Dynamic Profiles, a PuTTY `.reg` (with the `puttygen` command for each key),
   Remmina profiles, or a generic CSV with the key path (Royal TS, Xshell, SecureCRT, a spreadsheet).

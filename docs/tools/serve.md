@@ -135,12 +135,15 @@ Events) and **System** (Doctor, Settings, About). On a narrow screen it folds be
   pages. Hosts, keys, profiles, auth tokens, snapshots, key deployments (on the Audit page), history
   and events each download as CSV, with the same columns as `--csv` on their command. The History and
   Events downloads keep the page's filters, so the file holds what the page shows.
-- **A CSV is previewed before it downloads.** Its button opens a dialog: tick the columns to keep,
-  leave out the rows that contain some text, and see the first 25 rows as the file will hold them,
-  with how many rows and columns are kept. The choice is remembered for that list in the browser,
-  and *Reset* forgets it. The Termius CSV on the Hosts page works the same way. The server does the
-  shaping, so a script can too: `?drop=user,port` leaves columns out, `?exclude=staging` leaves out
-  rows containing that text, and `?preview=1` answers with the preview as JSON.
+- **A CSV is previewed before it downloads.** Its button opens a dialog: for a list with a profile
+  column (hosts, keys, profiles, the Termius CSV), tick the profiles whose rows it holds, each shown
+  with its row count (none ticked is every profile); tick the columns to keep, leave out the rows
+  that contain some text, and see the first 25 rows as the file will hold them, with how many rows
+  and columns are kept. The choice is remembered for that list in the browser, and *Reset* forgets
+  it. The server does the shaping, so a script can too: `?profile=simtabi,adelsaiq` keeps those
+  profiles' rows (even with the profile column dropped), `?drop=user,port` leaves columns out,
+  `?exclude=staging` leaves out rows containing that text, and `?preview=1` answers with the preview
+  as JSON, including every profile and its row count.
 - **The command palette**, Ctrl+K (⌘K on a Mac) or *Search* in the header, jumps to any page, opens
   the add-a-profile, host or token panel, or starts a download, as you type.
 

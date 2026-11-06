@@ -27,7 +27,7 @@ func TestEveryProfileFieldSurvivesSaving(t *testing.T) {
 			f.SetString("x")
 		case reflect.Slice:
 			f.Set(reflect.MakeSlice(f.Type(), 1, 1))
-		case reflect.Ptr:
+		case reflect.Pointer:
 			f.Set(reflect.New(f.Type().Elem()))
 		}
 	}

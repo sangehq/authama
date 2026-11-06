@@ -1,6 +1,8 @@
 // Package key implements the authama key-naming convention. Name grammar:
-// <profile>_<service>-<algo> with
-// exactly one underscore (the profile prefix); the rest is kebab-case.
+// <profile>_<rest>-<algo>: the profile is everything before the first
+// underscore, and the key type is the trailing -<algo>. The default name is
+// <profile>_<alias>-<algo> with the rest in kebab-case; a naming template
+// (core/naming) may put more underscores in the rest, never in the profile.
 package key
 
 import (

@@ -107,7 +107,7 @@ func CheckAlias(tpl string) error {
 	}
 	for _, l := range lits {
 		if !aliasLiteral.MatchString(l) {
-			return fmt.Errorf("naming.alias %q: %q is not allowed in a host name; use lowercase letters, digits, - and .", tpl, l)
+			return fmt.Errorf("naming.alias %q: %q is not allowed in a host name; use lowercase letters, digits, hyphens and dots", tpl, l)
 		}
 	}
 	return nil

@@ -5,14 +5,17 @@ import { Prefs } from "../core/prefs.js";
 import { Ui } from "../core/ui.js";
 
 /**
- * @typedef {{ columns: string[], header: string[], rows: string[][], total: number, kept: number }} CsvPreview
- * @typedef {{ drop: string[], exclude: string }} CsvChoice
+ * @typedef {{ name: string, rows: number }} CsvProfile
+ * @typedef {{ profiles?: CsvProfile[], columns: string[], header: string[], rows: string[][], total: number, kept: number }} CsvPreview
+ * @typedef {{ drop: string[], exclude: string, profiles: string[] }} CsvChoice
  */
 
 /**
- * CsvExport turns a CSV download link into a dialog: choose the columns, leave
- * out rows containing some text, see the first rows as they will be, then
- * download. The server does the shaping (?drop=, ?exclude=, ?preview=1), so
+ * CsvExport turns a CSV download link into a dialog: choose the profiles whose
+ * rows it holds (for a list that has a profile column), the columns, leave out
+ * rows containing some text, see the first rows as they will be, then
+ * download. The server does the shaping (?profile=, ?drop=, ?exclude=,
+ * ?preview=1), so
  * the file is exactly what the preview showed; the choice is remembered per
  * list in this browser. Without the script the link downloads the whole file.
  *
@@ -31,7 +34,7 @@ export class CsvExport extends Component {
   #link = /** @type {any} */ (null);
 
   /** @type {CsvChoice} */
-  #choice = { drop: [], exclude: "" };
+  #choice = { drop: [], exclude: "", profiles: [] };
 
   /** @type {string[]} */
   #columns = [];
@@ -64,7 +67,7 @@ export class CsvExport extends Component {
   /** Opens the dialog for this link's list. */
   open() {
     const dialog = /** @type {HTMLElement} */ (CsvExport.#dialog());
-    this.#choice = Prefs.get(`csv.${this.name}`, { drop: [], exclude: "" });
+    this.#choice = { drop: [], exclude: "", profiles: [], ...Prefs.get(`csv.${this.name}`, {}) };
     this.#columns = [];
     CsvExport.#part(dialog, "name").textContent = this.name;
     const exclude = /** @type {HTMLInputElement} */ (CsvExport.#part(dialog, "exclude"));
@@ -72,10 +75,11 @@ export class CsvExport extends Component {
     // The dialog is shared: rebind its controls to this link each time.
     exclude.oninput = () => this.#update({ exclude: exclude.value }, true);
     CsvExport.#part(dialog, "all").onclick = () => this.#update({ drop: [] });
+    CsvExport.#part(dialog, "profiles-all").onclick = () => this.#update({ profiles: [] });
     CsvExport.#part(dialog, "none").onclick = () => this.#update({ drop: [...this.#columns] });
     CsvExport.#part(dialog, "reset").onclick = () => {
       exclude.value = "";
-      this.#update({ drop: [], exclude: "" });
+      this.#update({ drop: [], exclude: "", profiles: [] });
     };
     Ui.modal(dialog)?.show();
     return this.#refresh();
@@ -100,6 +104,10 @@ export class CsvExport extends Component {
     u.searchParams.delete("drop");
     u.searchParams.delete("exclude");
     u.searchParams.delete("preview");
+    u.searchParams.delete("profile");
+    if (this.#choice.profiles.length) {
+      u.searchParams.set("profile", this.#choice.profiles.join(","));
+    }
     if (this.#choice.drop.length) {
       u.searchParams.set("drop", this.#choice.drop.join(","));
     }
@@ -127,6 +135,7 @@ export class CsvExport extends Component {
       /** @type {CsvPreview} */
       const p = await res.json();
       this.#columns = p.columns;
+      this.#renderProfiles(dialog, p.profiles ?? []);
       this.#renderColumns(dialog, p.columns);
       this.#renderPreview(dialog, p);
     } catch (err) {
@@ -135,6 +144,40 @@ export class CsvExport extends Component {
       }
     }
     return this;
+  }
+
+  /**
+   * The profiles the list's rows belong to, each with its row count; hidden
+   * for a list with no profile column. A remembered profile that no longer
+   * has rows is dropped from the choice.
+   * @param {HTMLElement} dialog @param {CsvProfile[]} profiles
+   */
+  #renderProfiles(dialog, profiles) {
+    const box = CsvExport.#part(dialog, "profiles-box");
+    box.hidden = profiles.length === 0;
+    const names = profiles.map((p) => p.name);
+    const kept = this.#choice.profiles.filter((n) => names.includes(n));
+    if (kept.length !== this.#choice.profiles.length) {
+      this.#choice = { ...this.#choice, profiles: kept };
+    }
+    CsvExport.#part(dialog, "profiles").replaceChildren(
+      ...profiles.map((p, i) => {
+        const id = `csv-prof-${i}`;
+        const input = El.create("input")
+          .cls("form-check-input")
+          .prop("type", "checkbox")
+          .prop("id", id)
+          .prop("checked", this.#choice.profiles.includes(p.name))
+          .on("change", (e) => {
+            const on = /** @type {HTMLInputElement} */ (e.target).checked;
+            const rest = this.#choice.profiles.filter((n) => n !== p.name);
+            this.#update({ profiles: on ? [...rest, p.name] : rest });
+          });
+        return El.create("div")
+          .cls("form-check")
+          .append(input, El.create("label").cls("form-check-label").attr("for", id).text(`${p.name} (${p.rows})`)).node;
+      }),
+    );
   }
 
   /** @param {HTMLElement} dialog @param {string[]} columns */
