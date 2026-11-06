@@ -65,7 +65,7 @@
           </tbody>
         </table>
       </div>
-      {{else}}<div class="card-body text-secondary">The values in effect are known only to the command that started this server.</div>{{end}}
+      {{else}}{{template "empty" (empty "info-circle" "Not known here" "The values in effect are known only to the command that started this server.")}}{{end}}
       <div class="card-footer text-secondary">Precedence: command-line flags, then the environment, then <code>.env</code>, then <code>authama.json</code>, then the defaults. The values are those this server started with; <code>authama settings show --effective</code> prints them for a new run.</div>
     </div>
   </div>

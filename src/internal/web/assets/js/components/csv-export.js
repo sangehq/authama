@@ -358,7 +358,7 @@ export class CsvExport extends Component {
     items.forEach((it, i) => {
       if (it.group && it.group !== group) {
         group = it.group;
-        rows.push(El.create("tr").cls("csv-group").attr("data-csv-group", "").append(El.create("td").cls("subheader").attr("colspan", String(width)).text(group)).node);
+        rows.push(El.create("tr").attr("data-csv-group", "").append(El.create("td").cls("subheader").attr("colspan", String(width)).text(group)).node);
       }
       const id = `csv-${list}-${i}`;
       const box = El.create("input")

@@ -1,7 +1,8 @@
 {{define "content"}}{{with .Data}}
 <div class="page-header d-print-none mb-3">
-  <div class="text-secondary">Job, started {{when .Started}}</div>
+  {{template "breadcrumb" (crumbs "History" "/history" "Job" "")}}
   <h1 class="page-title"><code>{{cmdline .Command}}</code></h1>
+  <p class="text-secondary mb-0 mt-1">Started {{when .Started}}</p>
 </div>
 <div class="mb-3" id="job-state" data-state="{{.State}}">
   {{if eq .State "running"}}<span class="badge badge-info">running</span>
@@ -12,7 +13,8 @@
   {{if .OpID}}<a class="ms-2" href="{{basePath}}/history/{{.OpID}}" data-inline>{{icon "history"}}<span class="ms-1">In the history</span></a>{{end}}
 </div>
 {{with .Question}}
-<div class="card mb-3 border-warning">
+<div class="card mb-3">
+  <div class="card-status-top bg-warning"></div>
   <div class="card-body">
     <p>{{.Prompt}}</p>
     {{if .Text}}<pre class="code-block" tabindex="0">{{.Text}}</pre>{{end}}

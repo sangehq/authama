@@ -54,11 +54,7 @@
           <div class="mb-3" data-show-when="#p-scope" data-show-when-in="shared"><label class="form-label" for="p-keyname">Shared key name</label><input class="form-control" id="p-keyname" name="key_name" autocomplete="off" spellcheck="false"><small class="form-hint">The one key every host in the profile uses.</small></div>
           <div class="mb-3"><label class="form-label" for="p-category">Category</label><input class="form-control" id="p-category" name="category" autocomplete="off" spellcheck="false"><small class="form-hint">Optional: files the profile under <code>~/.ssh/profiles/&lt;category&gt;/</code>.</small></div>
           <div class="mb-3"><label class="form-label" for="p-comment">Key comment</label><input class="form-control" id="p-comment" name="key_comment" autocomplete="off" spellcheck="false" placeholder="{profile}/{alias} {date}"><small class="form-hint">Optional. Placeholders: <code>{profile}</code> <code>{alias}</code> <code>{key}</code> <code>{date}</code> <code>{device}</code>.</small></div>
-          <div class="d-flex align-items-center gap-2 pt-3 border-top">
-            <span class="text-secondary small me-auto">The same as <code>authama ssh profile add</code>.</span>
-            <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
-            <button type="submit" class="btn btn-primary">Preview</button>
-          </div>
+          {{template "panel_footer" (footer "authama ssh profile add" "Preview" "btn-primary" "")}}
         </form>
 {{template "panel_close"}}
 {{if .Data}}

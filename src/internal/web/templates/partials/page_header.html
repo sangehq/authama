@@ -49,3 +49,22 @@
   <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
   <button type="submit" class="btn {{if .}}{{.}}{{else}}btn-primary{{end}}"{{if eq . "btn-outline-danger"}}{{tip "review"}}{{else}}{{tip "preview"}}{{end}}>{{if eq . "btn-outline-danger"}}Review{{else}}Preview{{end}}</button>
 </div>{{end}}
+
+
+{{/* A detail page's trail back to its list, as Tabler's breadcrumb:
+     `{{template "breadcrumb" (crumbs "Hosts" "/hosts" "profile work" "")}}` takes
+     label and path pairs; an empty path is the current page, not a link. */}}
+{{define "breadcrumb"}}<ol class="breadcrumb breadcrumb-arrows mb-1" aria-label="Breadcrumb">
+  {{range .}}{{if .Href}}<li class="breadcrumb-item"><a href="{{u .Href}}">{{.Label}}</a></li>{{else}}<li class="breadcrumb-item active" aria-current="page">{{.Label}}</li>{{end}}
+  {{end}}
+</ol>{{end}}
+
+
+{{/* A panel form's footer: what the form does from the terminal, Cancel, and
+     its submit button, `{{template "panel_footer" (footer "authama ssh host add" "Preview" "btn-primary" "")}}`
+     (the last argument an icon, or ""). One footer, so the forms cannot drift. */}}
+{{define "panel_footer"}}<div class="d-flex align-items-center gap-2 pt-3 border-top">
+  <span class="text-secondary small me-auto">The same as <code>{{.Command}}</code>.</span>
+  <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
+  <button type="submit" class="btn {{.Style}}">{{if .Icon}}{{icon .Icon}}<span class="ms-1">{{.Label}}</span>{{else}}{{.Label}}{{end}}</button>
+</div>{{end}}

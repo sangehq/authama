@@ -79,12 +79,10 @@
 {{if not .ReadOnly}}
 {{template "panel_open" (header "add-key" "Add a key" "Declares the key and mints it, with no passphrase.")}}
         {{template "change_open" .}}<input type="hidden" name="action" value="key-add">
-          <div class="row g-2">
-            <div class="col-sm-4"><label class="form-label" for="k-profile">Profile</label><input class="form-control" id="k-profile" name="profile" required autocomplete="off" spellcheck="false" list="k-profiles"></div>
-            <div class="col-sm-4"><label class="form-label" for="k-name">Key name</label><input class="form-control" id="k-name" name="key" required autocomplete="off" spellcheck="false"></div>
-            <div class="col-sm-4"><label class="form-label" for="k-type">Type</label><select class="form-select" id="k-type" name="key_type"><option value="">the manifest's default</option><option>ed25519</option><option>ecdsa</option><option>rsa</option></select></div>
-            <div class="col-12"><label class="form-label" for="k-host">Wire it to host <span class="text-secondary">(optional alias in that profile)</span></label><input class="form-control" id="k-host" name="host" autocomplete="off" spellcheck="false"></div>
-          </div>
+          <div class="mb-3"><label class="form-label required" for="k-profile">Profile</label><input class="form-control" id="k-profile" name="profile" required autocomplete="off" spellcheck="false" list="k-profiles"></div>
+          <div class="mb-3"><label class="form-label required" for="k-name">Key name</label><input class="form-control" id="k-name" name="key" required autocomplete="off" spellcheck="false"></div>
+          <div class="mb-3"><label class="form-label" for="k-type">Type</label><select class="form-select" id="k-type" name="key_type"><option value="">the manifest's default</option><option>ed25519</option><option>ecdsa</option><option>rsa</option></select></div>
+          <div class="mb-3"><label class="form-label" for="k-host">Wire it to host <span class="text-secondary">(optional alias in that profile)</span></label><input class="form-control" id="k-host" name="host" autocomplete="off" spellcheck="false"></div>
           <datalist id="k-profiles">{{range .Data.Rows}}<option value="{{.Ref.Profile}}">{{end}}</datalist>
           {{template "panel_actions" ""}}
         </form>

@@ -288,6 +288,20 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		"empty": func(icon, title, text string) emptyState {
 			return emptyState{Icon: icon, Title: title, Text: text}
 		},
+		// footer is a panel form's footer: the command it matches, the submit
+		// button's label, its style and its icon ("" for none).
+		"footer": func(command, label, style, icon string) panelFooter {
+			return panelFooter{Command: command, Label: label, Style: style, Icon: icon}
+		},
+		// crumbs is a breadcrumb trail from label, path pairs; an empty path
+		// is the current page.
+		"crumbs": func(pairs ...string) []crumb {
+			out := make([]crumb, 0, len(pairs)/2)
+			for i := 0; i+1 < len(pairs); i += 2 {
+				out = append(out, crumb{Label: pairs[i], Href: pairs[i+1]})
+			}
+			return out
+		},
 		"header": func(pretitle, title, subtitle string, actions ...headerAction) pageHeader {
 			h := pageHeader{Pretitle: pretitle, Title: title, Subtitle: subtitle}
 			for _, a := range actions {
@@ -654,3 +668,13 @@ type helpTip struct{ Title, Text string }
 
 // copyTip is a copy button for a public value, and what to call it.
 type copyTip struct{ Value, What string }
+
+// crumb is one step of a detail page's breadcrumb.
+type crumb struct {
+	Label, Href string
+}
+
+// panelFooter is a panel form's footer.
+type panelFooter struct {
+	Command, Label, Style, Icon string
+}
