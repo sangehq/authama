@@ -15,18 +15,18 @@ import { Prefs } from "../core/prefs.js";
  *   fields: string[], facets: Record<string, FacetValue[]>, formats: Format[], defaults: Column[] }} Preview
  */
 
-/** The facets the page offers, in its order, with their headings. */
+/** The facets the page offers, in its order: heading, and one value's name. */
 const FACETS = [
-  ["profile", "Profiles"],
-  ["key", "Keys"],
-  ["env", "Environments"],
-  ["role", "Roles"],
-  ["tag", "Tags"],
-  ["status", "Status"],
-  ["target", "Tools"],
-  ["kind", "Kinds"],
-  ["area", "Areas"],
-  ["source", "Sources"],
+  ["profile", "Profiles", "Profile"],
+  ["key", "Keys", "Key"],
+  ["env", "Environments", "Environment"],
+  ["role", "Roles", "Role"],
+  ["tag", "Tags", "Tag"],
+  ["status", "Status", "Status"],
+  ["target", "Tools", "Tool"],
+  ["kind", "Kinds", "Kind"],
+  ["area", "Areas", "Area"],
+  ["source", "Sources", "Source"],
 ];
 
 /** The grains whose rows have a time, so since/until apply. */
@@ -300,7 +300,7 @@ export class ExportPage extends Component {
     /** @type {Node[]} */
     const sections = [];
     const profiles = /** @type {string[] | undefined} */ (this.#sel.where.profile);
-    for (const [facet, heading] of FACETS) {
+    for (const [facet, heading, one] of FACETS) {
       let values = p.facets[facet] ?? [];
       if (facet === "key" && profiles) {
         values = values.filter((v) => !v.profile || profiles.includes(v.profile));
@@ -308,7 +308,7 @@ export class ExportPage extends Component {
       if (values.length === 0 || (values.length === 1 && facet !== "key" && facet !== "profile")) {
         continue;
       }
-      sections.push(this.#facet(facet, heading, values));
+      sections.push(this.#facet(facet, heading, one, values));
     }
     box.replaceChildren(...sections);
   }
@@ -316,9 +316,9 @@ export class ExportPage extends Component {
   /**
    * One facet: a table with a tick box per value and a header box that
    * ticks all, none or some; keys grouped by profile when several show.
-   * @param {string} facet @param {string} heading @param {FacetValue[]} values
+   * @param {string} facet @param {string} heading @param {string} one @param {FacetValue[]} values
    */
-  #facet(facet, heading, values) {
+  #facet(facet, heading, one, values) {
     const chosen = /** @type {string[] | undefined} */ (this.#sel.where[facet]);
     const on = (/** @type {string} */ v) => !chosen || chosen.includes(v);
     const ticked = values.filter((v) => on(v.value)).length;
@@ -358,7 +358,7 @@ export class ExportPage extends Component {
         El.create("table").cls("table table-sm table-hover table-vcenter card-table mb-0 csv-pick-table").append(
           El.create("thead").append(El.create("tr").append(
             El.create("th").attr("scope", "col").append(head),
-            El.create("th").attr("scope", "col").text(heading.replace(/s$/, "")),
+            El.create("th").attr("scope", "col").text(one),
             El.create("th").attr("scope", "col").cls("csv-num").text("Rows"),
           )),
           El.create("tbody").append(...rows),

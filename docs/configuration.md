@@ -657,6 +657,7 @@ every setting stays at its default until you add it.
 | `vm.repin_changed` | `AUTHAMA_VM_REPIN` | `false` (`ssh vm sync` reports a changed guest host key) |
 | `web.addr` | `AUTHAMA_WEB_ADDR` | `127.0.0.1` (a non-loopback address still needs `--allow-remote`) |
 | `web.port` | `AUTHAMA_WEB_PORT` | `7822` (the next free port is used when it is taken; only `--port` makes that an error) |
+| `web.menu_export` | `AUTHAMA_WEB_MENU_EXPORT` | `true` (show Export in the menu; off hides the item, and the page and each list's download stay) |
 | `web.base_path` | `AUTHAMA_WEB_BASE_PATH` | `/` (serve the UI under a path such as `/authama`; see [tools/serve.md](tools/serve.md#address)) |
 
 Two sections are not settings but declarations: `hypervisors` adds a command driver for a VM tool

@@ -38,17 +38,28 @@ type exportGrain struct {
 	Name, Label, Icon, Preset string
 }
 
-// exportGrains are the Export page's row kinds, in its order.
-var exportGrains = []exportGrain{
-	{"host", "Hosts", "server", "hosts"},
-	{"key", "Keys", "key", "keys"},
-	{"profile", "Profiles", "users", "profiles"},
-	{"token", "Auth tokens", "cloud-lock", "tokens"},
-	{"op", "History", "history", "history"},
-	{"event", "Events", "activity", "events"},
-	{"snapshot", "Snapshots", "archive", "snapshots"},
-	{"deployment", "Deployments", "route", "deployments"},
-}
+// exportGrains are the Export page's row kinds, in its order; each one's
+// preset is the built-in selection of that grain.
+var exportGrains = func() []exportGrain {
+	out := []exportGrain{
+		{selection.GrainHost, "Hosts", "server", ""},
+		{selection.GrainKey, "Keys", "key", ""},
+		{selection.GrainProfile, "Profiles", "users", ""},
+		{selection.GrainToken, "Auth tokens", "cloud-lock", ""},
+		{selection.GrainOp, "History", "history", ""},
+		{selection.GrainEvent, "Events", "activity", ""},
+		{selection.GrainSnapshot, "Snapshots", "archive", ""},
+		{selection.GrainDeployment, "Deployments", "route", ""},
+	}
+	for i := range out {
+		for name, sel := range selection.Presets {
+			if sel.Grain == out[i].Name {
+				out[i].Preset = name
+			}
+		}
+	}
+	return out
+}()
 
 // handlePage is the Export page: the rows, filters, columns and format of a
 // file, previewed as they are chosen. The page's script drives it through
