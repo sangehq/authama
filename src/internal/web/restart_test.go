@@ -46,8 +46,9 @@ func TestAServerRestartsItselfFromTheBanner(t *testing.T) {
 	}
 }
 
-// The header marks the running build current, or older with a way to
-// restart; /healthz names its process only to this machine.
+// About marks the running build current or older, and every page's banner
+// offers a restart when it is older; the header carries no build strip any
+// more. /healthz names its process only to this machine.
 func TestThePageSaysWhetherItsBuildIsCurrent(t *testing.T) {
 	s, _, _ := newTestServer(t)
 	s.opts.Restart = func() error { return nil }
@@ -59,18 +60,26 @@ func TestThePageSaysWhetherItsBuildIsCurrent(t *testing.T) {
 
 	s.binary = binaryWatch{path: exe, started: time.Now().Add(time.Hour)}
 	body := c.get("/hosts").Body.String()
-	if !strings.Contains(body, "test · current") || strings.Contains(body, "data-restart-server") {
-		t.Error("an unchanged binary is not marked current")
+	if strings.Contains(body, "test · current") || strings.Contains(body, "data-restart-server") {
+		t.Error("a page other than About carries the build mark, or a restart for a current build")
 	}
 	if !strings.Contains(body, "data-restarted hidden") {
 		t.Error("the restarted confirmation is missing")
 	}
+	if !strings.Contains(body, "data-running-as") {
+		t.Error("the account menu does not say who the server runs as")
+	}
+	if about := c.get("/about").Body.String(); !strings.Contains(about, "test · current") {
+		t.Error("About does not mark an unchanged binary current")
+	}
 
 	s.binary = binaryWatch{path: exe, started: time.Now().Add(-time.Hour)}
 	body = c.get("/hosts").Body.String()
-	if !strings.Contains(body, "test · older build") || !strings.Contains(body, "data-restart-server") ||
-		strings.Contains(body, "data-restarted hidden") {
-		t.Error("a rebuilt binary is not marked older with a restart button")
+	if !strings.Contains(body, "data-restart-server") || strings.Contains(body, "data-restarted hidden") {
+		t.Error("a rebuilt binary's page offers no restart")
+	}
+	if about := c.get("/about").Body.String(); !strings.Contains(about, "test · older build") {
+		t.Error("About does not mark a rebuilt binary older")
 	}
 
 	local := httptestGet("/healthz")

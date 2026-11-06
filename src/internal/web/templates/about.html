@@ -27,11 +27,15 @@
       <div class="card-body">
         <dl class="row mb-0">
           <dt class="col-5">Version</dt><dd class="col-7"><code>{{.Version}}</code></dd>
+          <dt class="col-5">Status</dt><dd class="col-7" data-build-status>{{if $.Rebuilt}}<span class="badge badge-warn" title="A newer build is installed; this page is from the build that was running when the server started">{{icon "alert-triangle"}}<span class="ms-1">{{$.Build.Version}} · older build</span></span>{{else}}<span class="badge badge-ok" title="This server runs the build now installed">{{icon "circle-check"}}<span class="ms-1">{{$.Build.Version}} · current</span></span>{{end}}</dd>
+          {{if not $.Build.Built.IsZero}}<dt class="col-5">Built</dt><dd class="col-7">{{when $.Build.Built}}</dd>{{end}}
+          {{if not $.Build.Started.IsZero}}<dt class="col-5">Server started</dt><dd class="col-7">{{when $.Build.Started}}</dd>{{end}}
           {{if .Revision}}<dt class="col-5">Commit</dt><dd class="col-7"><code>{{short .Revision}}</code>{{if .Modified}} <span class="badge badge-warn">modified</span>{{end}}</dd>{{end}}
           {{if .BuiltAt}}<dt class="col-5">Committed</dt><dd class="col-7">{{.BuiltAt}}</dd>{{end}}
           <dt class="col-5">Go</dt><dd class="col-7">{{.GoVersion}}</dd>
           <dt class="col-5">Platform</dt><dd class="col-7">{{.OS}}/{{.Arch}}</dd>
-          {{if .User}}<dt class="col-5">Running as</dt><dd class="col-7">{{.User}}{{if .Host}} on {{.Host}}{{end}}</dd>{{end}}
+          <dt class="col-5">Running as</dt><dd class="col-7">{{if .User}}{{.User}}{{else}}this machine's user{{end}}</dd>
+          {{if .Host}}<dt class="col-5">Host</dt><dd class="col-7">{{.Host}}</dd>{{end}}
           <dt class="col-5">Config home</dt><dd class="col-7 text-break"><code>{{.ConfigHome}}</code></dd>
           <dt class="col-5">State home</dt><dd class="col-7 text-break"><code>{{.StateHome}}</code></dd>
           <dt class="col-5">SSH directory</dt><dd class="col-7 text-break"><code>{{.SSHDir}}</code></dd>
