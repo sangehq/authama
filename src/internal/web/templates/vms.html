@@ -22,7 +22,7 @@
       </tbody>
     </table>
   </div>
-  {{else}}<div class="card-body text-secondary">No VM hosts. Add one on the Hosts page, adopt a loose key below, or declare a devbox in authama.json.</div>{{end}}
+  {{else}}{{template "empty" (empty "device-desktop" "No VM hosts" "Add one on the Hosts page, adopt a loose key below, or declare a devbox in authama.json.")}}{{end}}
 </div>
 <div class="card mb-3">
   <div class="card-header"><h2 class="card-title">Sync</h2></div>
@@ -95,14 +95,12 @@
 {{if .Loose}}
 {{template "panel_open" (header "adopt-key" "Adopt a loose key onto a VM" "Copies the keypair into the profile (the loose files stay) and adds the VM host. The manifest is backed up first. Run a sync afterwards to install the key on the guest.")}}
         {{template "change_open" $}}<input type="hidden" name="action" value="vm-adopt-key">
-          <div class="row g-2">
-            <div class="col-sm-6"><label class="form-label" for="ak-key">Loose key</label><select class="form-select" id="ak-key" name="key">{{range .Loose}}<option value="{{.Name}}">{{.Name}}{{if .Reserved}} (reserved{{if .ReservedFor}} for {{.ReservedFor}}{{end}}){{else if .Devbox}} (looks like a devbox key){{end}}</option>{{end}}</select></div>
-            <div class="col-sm-6"><label class="form-label" for="ak-profile">Profile</label><input class="form-control" id="ak-profile" name="profile" list="ak-profiles" value="devbox" required autocomplete="off" spellcheck="false"><datalist id="ak-profiles">{{range .Profiles}}<option value="{{.}}">{{end}}</datalist></div>
-            <div class="col-sm-6"><label class="form-label" for="ak-alias">Alias</label><input class="form-control" id="ak-alias" name="alias" required autocomplete="off" spellcheck="false"></div>
-            <div class="col-sm-6"><label class="form-label" for="ak-hv">Hypervisor</label><select class="form-select" id="ak-hv" name="hypervisor">{{range hypervisors}}{{if and (ne . "orbstack") (ne . "podman")}}<option value="{{.}}">{{.}}</option>{{end}}{{end}}</select></div>
-            <div class="col-sm-6"><label class="form-label" for="ak-vm">VM name</label><input class="form-control" id="ak-vm" name="vm" required autocomplete="off" spellcheck="false" list="ak-vms"><datalist id="ak-vms">{{range .Drivers}}{{range .VMs}}<option value="{{.Name}}">{{end}}{{end}}</datalist></div>
-            <div class="col-sm-6"><label class="form-label" for="ak-user">Guest user</label><input class="form-control" id="ak-user" name="user" required autocomplete="off" spellcheck="false"></div>
-          </div>
+          <div class="mb-3"><label class="form-label" for="ak-key">Loose key</label><select class="form-select" id="ak-key" name="key">{{range .Loose}}<option value="{{.Name}}">{{.Name}}{{if .Reserved}} (reserved{{if .ReservedFor}} for {{.ReservedFor}}{{end}}){{else if .Devbox}} (looks like a devbox key){{end}}</option>{{end}}</select></div>
+          <div class="mb-3"><label class="form-label required" for="ak-profile">Profile</label><input class="form-control" id="ak-profile" name="profile" list="ak-profiles" value="devbox" required autocomplete="off" spellcheck="false"><datalist id="ak-profiles">{{range .Profiles}}<option value="{{.}}">{{end}}</datalist></div>
+          <div class="mb-3"><label class="form-label required" for="ak-alias">Alias</label><input class="form-control" id="ak-alias" name="alias" required autocomplete="off" spellcheck="false"></div>
+          <div class="mb-3"><label class="form-label" for="ak-hv">Hypervisor</label><select class="form-select" id="ak-hv" name="hypervisor">{{range hypervisors}}{{if and (ne . "orbstack") (ne . "podman")}}<option value="{{.}}">{{.}}</option>{{end}}{{end}}</select></div>
+          <div class="mb-3"><label class="form-label required" for="ak-vm">VM name</label><input class="form-control" id="ak-vm" name="vm" required autocomplete="off" spellcheck="false" list="ak-vms"><datalist id="ak-vms">{{range .Drivers}}{{range .VMs}}<option value="{{.Name}}">{{end}}{{end}}</datalist></div>
+          <div class="mb-3"><label class="form-label required" for="ak-user">Guest user</label><input class="form-control" id="ak-user" name="user" required autocomplete="off" spellcheck="false"></div>
           {{template "panel_actions" ""}}
         </form>
 {{template "panel_close"}}

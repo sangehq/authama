@@ -58,6 +58,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **A CSV with no key column says where keys are chosen.** The Termius CSV has profiles but no key
   column, so it has no Keys tab; the dialog now says so, with a link to the lists that have one.
 
+
+### Changed
+
+- **The web UI uses Tabler's own components throughout.** Detail pages (a host, a key, an
+  operation, a snapshot, a job) carry Tabler's breadcrumb back to their list; every panel form
+  shares one footer, with its fields stacked and required ones marked; empty sections use the
+  shared empty state; a job's question is marked with Tabler's card status bar. CSS no longer used
+  by any page (log, editor and finding styles from another project, the hand-made tabs, clear
+  buttons and dev banner) is removed, with the rule that forced panel columns to full width.
 ### Fixed
 
 - `make uninstall` also removes the Touch ID helper `authama-touchid` that `make install` puts

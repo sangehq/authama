@@ -2,7 +2,7 @@
 <div class="page-header d-print-none mb-3">
   <div class="row g-2 align-items-center">
     <div class="col">
-      <div class="page-pretitle"><a href="{{basePath}}/hosts">Hosts</a> / profile {{.Profile}}</div>
+      {{template "breadcrumb" (crumbs "Hosts" "/hosts" (print "profile " .Profile) "")}}
       <h1 class="page-title font-monospace">{{.Alias}}</h1>
     </div>
     <div class="col-auto ms-auto btn-list">
@@ -35,7 +35,7 @@
       <div class="card-header"><h2 class="card-title">Deployments</h2></div>
       {{if .Deployments}}
       <ul class="list-group list-group-flush">{{range .Deployments}}<li class="list-group-item d-flex justify-content-between"><span>{{.Target}} <span class="text-secondary">via {{.Method}}</span></span>{{if .Verified}}<span class="badge badge-ok">verified</span>{{else}}<span class="badge badge-warn">unverified</span>{{end}}</li>{{end}}</ul>
-      {{else}}<div class="card-body text-secondary">Not deployed anywhere yet.</div>{{end}}
+      {{else}}{{template "empty" (empty "server" "Not deployed anywhere yet" "")}}{{end}}
     </div>
   </div>
 {{end}}

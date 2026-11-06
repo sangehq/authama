@@ -1,6 +1,6 @@
 {{define "content"}}{{with .Data}}
 <div class="page-header d-print-none mb-3">
-  <div class="text-secondary"><a href="{{basePath}}/snapshots">Snapshots</a></div>
+  {{template "breadcrumb" (crumbs "Snapshots" "/snapshots" .ID "")}}
   <h1 class="page-title"><code>{{.ID}}</code></h1>
 </div>
 {{if .Refused}}

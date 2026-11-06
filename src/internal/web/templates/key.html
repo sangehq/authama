@@ -2,7 +2,7 @@
 <div class="page-header d-print-none mb-3">
   <div class="row g-2 align-items-center">
     <div class="col">
-      <div class="text-secondary"><a href="{{basePath}}/keys">Keys</a> / profile <code>{{.Detail.Ref.Profile}}</code></div>
+      {{template "breadcrumb" (crumbs "Keys" "/keys" (print "profile " .Detail.Ref.Profile) "")}}
       <h1 class="page-title"><code>{{.Detail.Ref.KeyName}}</code></h1>
     </div>
     {{if not $.ReadOnly}}<div class="col-auto ms-auto btn-list">
@@ -40,7 +40,7 @@
       <div class="card-header"><h2 class="card-title">Deployments</h2></div>
       {{if .Detail.Deployments}}
       <ul class="list-group list-group-flush">{{range .Detail.Deployments}}<li class="list-group-item d-flex justify-content-between"><span>{{.Target}} <span class="text-secondary">via {{.Method}}{{with deref .Date}}, {{.}}{{end}}</span></span>{{if .Verified}}<span class="badge badge-ok">verified</span>{{else}}<span class="badge badge-warn">unverified</span>{{end}}</li>{{end}}</ul>
-      {{else}}<div class="card-body text-secondary">Not deployed anywhere yet.</div>{{end}}
+      {{else}}{{template "empty" (empty "server" "Not deployed anywhere yet" "")}}{{end}}
     </div>
     <div class="card mt-3">
       <div class="card-header"><h2 class="card-title">History</h2></div>
@@ -81,11 +81,7 @@
       </select>
       <small class="form-hint">Now {{.Detail.RotateAfterDays}} days. Any number from 1 to 1825 works from the terminal: <code>authama ssh key lifetime {{.Detail.Ref}} 120</code>.</small>
     </div>
-    <div class="d-flex align-items-center gap-2 pt-3 border-top">
-      <span class="text-secondary small me-auto">The same as <code>authama ssh key lifetime</code>.</span>
-      <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
-      <button type="submit" class="btn btn-primary">Preview</button>
-    </div>
+    {{template "panel_footer" (footer "authama ssh key lifetime" "Preview" "btn-primary" "")}}
   </form>
 {{template "panel_close"}}
 {{if not $.DevRoot}}
@@ -97,11 +93,7 @@
       <input class="form-control" id="kr-reason" name="reason" maxlength="200" autocomplete="off" placeholder="laptop lost">
       <small class="form-hint">Optional, kept with the revocation.</small>
     </div>
-    <div class="d-flex align-items-center gap-2 pt-3 border-top">
-      <span class="text-secondary small me-auto">The same as <code>authama ssh key revoke</code>.</span>
-      <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
-      <button type="submit" class="btn btn-danger">Review the revocation</button>
-    </div>
+    {{template "panel_footer" (footer "authama ssh key revoke" "Review the revocation" "btn-danger" "")}}
   </form>
 {{template "panel_close"}}
 {{end}}

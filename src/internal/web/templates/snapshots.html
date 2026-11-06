@@ -32,11 +32,7 @@
 {{template "panel_open" (header "prune" "Prune old snapshots" "Every snapshot older than the newest you keep is deleted, and no snapshot is taken first. You see the list before anything is removed.")}}
     <form method="post" action="{{basePath}}/changes/preview" data-inline id="f-prune"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="action" value="snapshots-prune">
       <div class="mb-3"><label class="form-label" for="s-keep">Keep the newest</label><input class="form-control" id="s-keep" name="keep" inputmode="numeric" pattern="[0-9]+" value="10" required></div>
-      <div class="d-flex align-items-center gap-2 pt-3 border-top">
-        <span class="text-secondary small me-auto">The same as <code>authama ssh snapshots prune</code>.</span>
-        <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
-        <button type="submit" class="btn btn-outline-danger">{{icon "trash"}}<span class="ms-1">Preview pruning</span></button>
-      </div>
+      {{template "panel_footer" (footer "authama ssh snapshots prune" "Preview pruning" "btn-outline-danger" "trash")}}
     </form>
 {{template "panel_close"}}
 {{end}}
@@ -74,11 +70,7 @@
 {{template "panel_open" (header "bundle" "Make an encrypted bundle" "Snapshots leave private keys out. A bundle holds everything, keys included, encrypted with age to AUTHAMA_AGE_RECIPIENT, in the state home's dist/.")}}
     {{template "change_open" .}}<input type="hidden" name="action" value="bundle">
       <div class="mb-3"><label class="form-label" for="b-keep">Then keep the newest bundles</label><input class="form-control" id="b-keep" name="keep" inputmode="numeric" pattern="[0-9]*"><small class="form-hint">Empty keeps every bundle.</small></div>
-      <div class="d-flex align-items-center gap-2 pt-3 border-top">
-        <span class="text-secondary small me-auto">The same as <code>authama ssh bundle</code>.</span>
-        <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
-        <button type="submit" class="btn btn-primary">Preview a bundle</button>
-      </div>
+      {{template "panel_footer" (footer "authama ssh bundle" "Preview a bundle" "btn-primary" "")}}
     </form>
 {{template "panel_close"}}
 {{end}}
