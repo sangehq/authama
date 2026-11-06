@@ -1,13 +1,13 @@
 {{define "navlink"}}<li class="nav-item{{if .Active}} active{{end}}">
-  <a class="nav-link" href="{{u .Href}}"{{if .Active}} aria-current="page"{{end}}><span class="nav-link-icon d-md-none d-lg-inline-block">{{icon .Icon}}</span><span class="nav-link-title">{{.Label}}</span></a>
+  <a class="nav-link" href="{{u .Href}}"{{if .Active}} aria-current="page"{{end}}{{if .Tip}} data-tip="{{.Tip}}" data-tip-placement="bottom"{{end}}><span class="nav-link-icon d-md-none d-lg-inline-block">{{icon .Icon}}</span><span class="nav-link-title">{{.Label}}</span></a>
 </li>{{end}}
 
 {{/* A menu with its pages in a Tabler dropdown. It is marked active when one
      of its pages is the current one. */}}
 {{define "navgroup"}}<li class="nav-item dropdown{{if .Active}} active{{end}}">
-  <a class="nav-link dropdown-toggle" href="#navbar-{{.Key}}" id="navbar-{{.Key}}"{{if eq .Key "ssh"}} data-tour="2" data-tour-title="SSH" data-tour-text="Profiles, hosts, keys and VMs. The rendered config and the snapshots of ~/.ssh are under Config & backups."{{else if eq .Key "auth"}} data-tour="3" data-tour-title="Security" data-tour-text="The tokens npm, Composer, Docker, git, PyPI and the rest read; the key audit; and the PIN and seal that bind this home to you."{{end}} data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false"><span class="nav-link-icon d-md-none d-lg-inline-block">{{icon .Icon}}</span><span class="nav-link-title">{{.Label}}</span></a>
+  <a class="nav-link dropdown-toggle" href="#navbar-{{.Key}}" id="navbar-{{.Key}}"{{if eq .Key "ssh"}} data-tour="2" data-tour-title="SSH" data-tour-text="Profiles, hosts, keys and VMs. The rendered config and the snapshots of ~/.ssh are under Config & backups."{{else if eq .Key "auth"}} data-tour="3" data-tour-title="Security" data-tour-text="The tokens npm, Composer, Docker, git, PyPI and the rest read; the key audit; and the PIN and seal that bind this home to you."{{end}} data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false"{{if .Tip}} data-tip="{{.Tip}}" data-tip-placement="bottom"{{end}}><span class="nav-link-icon d-md-none d-lg-inline-block">{{icon .Icon}}</span><span class="nav-link-title">{{.Label}}</span></a>
   <div class="dropdown-menu" aria-labelledby="navbar-{{.Key}}">
-    {{range .Items}}<a class="dropdown-item{{if .Active}} active{{end}}" href="{{u .Href}}"{{if .Active}} aria-current="page"{{end}}>{{icon .Icon}}<span class="ms-2">{{.Label}}</span></a>
+    {{range .Items}}<a class="dropdown-item{{if .Active}} active{{end}}" href="{{u .Href}}"{{if .Active}} aria-current="page"{{end}}{{if .Tip}} data-tip="{{.Tip}}" data-tip-placement="right"{{end}}>{{icon .Icon}}<span class="ms-2">{{.Label}}</span></a>
     {{end}}
   </div>
 </li>{{end}}

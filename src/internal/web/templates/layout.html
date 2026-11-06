@@ -18,15 +18,15 @@
 <div class="page">
   <header class="navbar navbar-expand-md d-print-none">
     <div class="container-xl">
-      {{if .Authed}}<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-menu" aria-controls="navbar-menu" aria-expanded="false" aria-label="Show the menu"><span class="navbar-toggler-icon"></span></button>{{end}}
+      {{if .Authed}}<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-menu" aria-controls="navbar-menu" aria-expanded="false" aria-label="Show the menu"{{tip "menu-toggle"}}><span class="navbar-toggler-icon"></span></button>{{end}}
       <a class="navbar-brand navbar-brand-autodark pe-0 pe-md-3" href="{{basePath}}/">{{icon "terminal-2"}}<span class="ms-2">{{brandCommand}}</span></a>
       {{if and .Authed .ReadOnly}}<span class="badge badge-muted" title="This server only reads: every form that would change something is hidden">{{icon "lock"}}<span class="ms-1">read-only</span></span>{{end}}
       <div class="navbar-nav flex-row order-md-last">
         {{if .Authed}}<div class="nav-item d-none d-md-flex me-3">
-          <button type="button" class="header-search" data-bs-toggle="modal" data-bs-target="#command-palette" aria-keyshortcuts="Control+K Meta+K /" data-tour="1" data-tour-title="Search" data-tour-text="Ctrl+K (⌘K on a Mac) or / jumps to any page, form or download as you type. ? lists every shortcut.">{{icon "search"}}<span class="header-search-text">Search pages and actions</span><kbd data-palette-hint>Ctrl K</kbd></button>
+          <button type="button" class="header-search" data-bs-toggle="modal" data-bs-target="#command-palette" aria-keyshortcuts="Control+K Meta+K /" data-tour="1" data-tour-title="Search" data-tour-text="Ctrl+K (⌘K on a Mac) or / jumps to any page, form or download as you type. ? lists every shortcut."{{tip "search"}}>{{icon "search"}}<span class="header-search-text">Search pages and actions</span><kbd data-palette-hint>Ctrl K</kbd></button>
         </div>
         <div class="nav-item d-md-none me-2">
-          <button type="button" class="nav-link px-0" data-bs-toggle="modal" data-bs-target="#command-palette" aria-label="Search pages and actions">{{icon "search"}}</button>
+          <button type="button" class="nav-link px-0" data-bs-toggle="modal" data-bs-target="#command-palette" aria-label="Search pages and actions"{{tip "search"}}>{{icon "search"}}</button>
         </div>{{end}}
         <div class="nav-item d-none d-md-flex me-2">
           <a href="?theme=dark" class="nav-link px-0 hide-theme-dark" title="Dark theme" data-bs-toggle="tooltip" data-bs-placement="bottom">{{icon "moon"}}<span class="visually-hidden">Dark theme</span></a>
@@ -34,7 +34,7 @@
         </div>
         {{if .Authed}}
         <div class="nav-item dropdown d-none d-md-flex me-3">
-          <a href="#" class="nav-link px-0" data-bs-toggle="dropdown" tabindex="0" data-tour="5" data-tour-title="File events" data-tour-text="Every change to ~/.ssh, the config home or a token file, by anyone. A dot means one in the last day." aria-label="Recent file events{{if .BellNew}}: {{.BellNew}} in the last day{{end}}" aria-expanded="false">{{icon "bell"}}{{if .BellNew}}<span class="badge bg-red"></span>{{end}}</a>
+          <a href="#" class="nav-link px-0" data-bs-toggle="dropdown" tabindex="0" data-tour="5" data-tour-title="File events" data-tour-text="Every change to ~/.ssh, the config home or a token file, by anyone. A dot means one in the last day." aria-label="Recent file events{{if .BellNew}}: {{.BellNew}} in the last day{{end}}" aria-expanded="false"{{tip "bell"}}>{{icon "bell"}}{{if .BellNew}}<span class="badge bg-red"></span>{{end}}</a>
           <div class="dropdown-menu dropdown-menu-arrow dropdown-menu-end dropdown-menu-card">
             <div class="card">
               <div class="card-header"><h3 class="card-title">Recent file events</h3></div>
@@ -51,12 +51,12 @@
                 </div>{{end}}
               </div>
               {{else}}<div class="card-body text-secondary">No file events yet.</div>{{end}}
-              <div class="card-footer"><a href="{{basePath}}/events" class="btn btn-outline-primary w-100">All events</a></div>
+              <div class="card-footer"><a href="{{basePath}}/events" class="btn btn-outline-primary w-100"{{tip "events-all"}}>All events</a></div>
             </div>
           </div>
         </div>
         <div class="nav-item dropdown">
-          <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-expanded="false" data-tour="6" data-tour-title="Your account" data-tour-text="Who this server runs as, and where: every change it makes is theirs. Settings, events, the doctor's checks, About (the build and whether it is current), and this tour again.">
+          <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-expanded="false" data-tour="6" data-tour-title="Your account" data-tour-text="Who this server runs as, and where: every change it makes is theirs. Settings, events, the doctor's checks, About (the build and whether it is current), and this tour again."{{tip "account"}}>
             <span class="avatar avatar-sm avatar-initials" aria-hidden="true">{{.Initials}}</span>
             <span class="d-none d-xl-inline ps-2 align-self-center">{{if .User}}{{.User}}{{else}}{{brandCommand}}{{end}}</span>
             <span class="visually-hidden">: account menu</span>
@@ -64,12 +64,12 @@
           <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
             <div class="px-3 py-2 small text-secondary text-wrap" data-running-as>{{icon "device-desktop"}}<span class="ms-1">Running as <strong class="text-body">{{if .User}}{{.User}}{{else}}this machine's user{{end}}</strong>{{if .Host}} on <strong class="text-body">{{.Host}}</strong>{{end}}</span></div>
             <div class="dropdown-divider"></div>
-            <a href="{{basePath}}/settings" class="dropdown-item">{{icon "settings"}}<span class="ms-2">Settings</span></a>
-            <a href="{{basePath}}/events" class="dropdown-item">{{icon "activity"}}<span class="ms-2">Events</span></a>
-            <a href="{{basePath}}/doctor" class="dropdown-item">{{icon "stethoscope"}}<span class="ms-2">Doctor</span></a>
+            <a href="{{basePath}}/settings" class="dropdown-item"{{tip "menu-settings"}}>{{icon "settings"}}<span class="ms-2">Settings</span></a>
+            <a href="{{basePath}}/events" class="dropdown-item"{{tip "menu-events"}}>{{icon "activity"}}<span class="ms-2">Events</span></a>
+            <a href="{{basePath}}/doctor" class="dropdown-item"{{tip "menu-doctor"}}>{{icon "stethoscope"}}<span class="ms-2">Doctor</span></a>
             <div class="dropdown-divider"></div>
-            <button type="button" class="dropdown-item" data-tour-start{{if eq .Nav "overview"}} data-tour-start-auto="true"{{end}}>{{icon "route"}}<span class="ms-2">Take the tour</span></button>
-            <a href="{{basePath}}/about" class="dropdown-item">{{icon "info-circle"}}<span class="ms-2">About {{brandCommand}}</span></a>
+            <button type="button" class="dropdown-item" data-tour-start{{if eq .Nav "overview"}} data-tour-start-auto="true"{{end}}{{tip "tour"}}>{{icon "route"}}<span class="ms-2">Take the tour</span></button>
+            <a href="{{basePath}}/about" class="dropdown-item"{{tip "menu-about"}}>{{icon "info-circle"}}<span class="ms-2">About {{brandCommand}}</span></a>
           </div>
         </div>
         {{end}}
@@ -106,7 +106,7 @@
     {{if and .Authed .Rebuilt (not .Panel)}}
     <div class="alert alert-warning rounded-0 mb-0" role="status" data-rebuilt>
       <div class="container-xl d-flex flex-wrap align-items-center gap-2"><span class="flex-fill">{{icon "alert-triangle"}} <strong>This page is from an older build.</strong> <code>{{.Rebuilt}}</code> changed after this server started, and a running server keeps the code it started with. {{if .CanRestart}}Restart it to load the new build: same address, and you stay signed in.{{else}}Stop it (Ctrl-C where it runs) and run <code>authama serve</code> again to see the new build.{{end}} <code>authama serve --restart</code> does it from a terminal, and stops any other authama web UI too.</span>
-        {{if .CanRestart}}<button type="button" class="btn btn-warning btn-sm" data-restart-server>{{icon "refresh"}}<span class="ms-1">Restart now</span></button>
+        {{if .CanRestart}}<button type="button" class="btn btn-warning btn-sm" data-restart-server{{tip "restart-now"}}>{{icon "refresh"}}<span class="ms-1">Restart now</span></button>
         <span class="small" role="status" aria-live="polite" data-restart-status></span>{{end}}
       </div>
     </div>
@@ -114,7 +114,7 @@
     {{if and .Authed (not .Panel)}}
     <div class="alert alert-info rounded-0 mb-0" role="status" data-live-build hidden>
       <div class="container-xl d-flex flex-wrap align-items-center gap-2"><span class="flex-fill">{{icon "refresh"}} <strong>A new build is running.</strong> This page is from the one before; reload to see the new one. You have unsaved input here, so it did not reload by itself.</span>
-        <button type="button" class="btn btn-info btn-sm" data-live-build-reload>{{icon "refresh"}}<span class="ms-1">Reload</span></button>
+        <button type="button" class="btn btn-info btn-sm" data-live-build-reload{{tip "reload"}}>{{icon "refresh"}}<span class="ms-1">Reload</span></button>
       </div>
     </div>
     {{end}}

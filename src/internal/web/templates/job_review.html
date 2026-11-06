@@ -8,7 +8,7 @@
   <input type="hidden" name="csrf" value="{{$.CSRF}}">
   {{range .Fields}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}
   {{template "pin_field" $}}
-  <button type="submit" class="btn btn-primary"{{if .Busy}} disabled{{end}}>Run {{.Command}}</button>
-  <a href="{{basePath}}/" class="btn btn-link link-secondary">Cancel</a>
+  <button type="submit" class="btn btn-primary"{{if .Busy}} disabled{{end}}{{tip "job-run"}}>Run {{.Command}}</button>
+  <a href="{{basePath}}/" class="btn btn-link link-secondary"{{tip "cancel-change"}}>Cancel</a>
 </form>
 {{end}}{{end}}

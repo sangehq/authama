@@ -160,7 +160,9 @@ export class CopyText extends Component {
     }
     CopyText.#live.textContent = message;
     const Tooltip = /** @type {any} */ (window).tabler?.Tooltip;
-    const tip = Tooltip?.getInstance(this.el);
+    // A menu closes as its entry is chosen, taking the entry's tooltip with
+    // it, so a copy from a menu says so in a toast the person can see.
+    const tip = this.el.closest(".dropdown-menu") ? null : Tooltip?.getInstance(this.el);
     if (tip) {
       const was = this.el.getAttribute("data-bs-original-title") ?? this.el.title;
       tip.setContent({ ".tooltip-inner": message });

@@ -134,7 +134,6 @@ Every command also takes the global flag:
   - [`authama token shell-aliases`](#authama-token-shell-aliases) - Show, install or remove the atm shell aliases (atm, atm-ui, atm-doctor, atm-init)
   - [`authama token show`](#authama-token-show) - Everything about one installed token: tool, host, kind, user and file (secret masked)
   - [`authama token status`](#authama-token-status) - Which config is in use, where each tool's file is, and which variables are missing; write nothing
-- [`authama tui`](#authama-tui) - Interactive menu over the manager
 - [`authama version`](#authama-version) - Print the authama version
 
 ## authama doctor
@@ -2887,7 +2886,7 @@ Flags:
 ## authama token shell-aliases
 
 The aliases auth-token-manager installed, pointed at this tool: atm runs
-`authama token`, atm-ui the menu, atm-doctor `token audit`,
+`authama token`, atm-ui the web UI, atm-doctor `token audit`,
 atm-init `token init`. They live in a marked block in your shell's rc file,
 which --install replaces (an auth-token-manager block included) and --uninstall
 removes. Without a flag it reports what the file holds.
@@ -2966,20 +2965,6 @@ Flags:
       --config string    the token config file (default: discovered)
       --json             machine-readable output (scripting)
       --project string   report the project's auth.json and .npmrc instead of the user ones
-```
-
-## authama tui
-
-Interactive menu over the manager.
-
-```
-authama tui
-```
-
-Examples:
-
-```sh
-  authama tui
 ```
 
 ## authama version

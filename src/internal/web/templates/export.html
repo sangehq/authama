@@ -9,8 +9,8 @@
 <div class="export-page" data-export-page data-run="{{u "/exports/run"}}" data-command="{{brandCommand}}">
   <div class="card">
     <div class="card-header">
-      <ul class="nav nav-underline" role="tablist" aria-label="What each row is">
-        {{range .Grains}}<li class="nav-item" role="presentation"><a class="nav-link" href="#" role="tab" aria-selected="false" data-export-grain="{{.Name}}" data-preset="{{.Preset}}">{{icon .Icon}}<span class="ms-2">{{.Label}}</span></a></li>{{end}}
+      <ul class="nav nav-bordered card-header-tabs" role="tablist" aria-label="What each row is">
+        {{range .Grains}}<li class="nav-item" role="presentation"><a class="nav-link" href="#" role="tab" aria-selected="false" data-export-grain="{{.Name}}" data-preset="{{.Preset}}"{{tip "export-grain"}}>{{icon .Icon}}<span class="ms-2">{{.Label}}</span></a></li>{{end}}
       </ul>
     </div>
 
@@ -20,7 +20,7 @@
           <div class="card-body border-bottom">
             <div class="d-flex align-items-center mb-3">
               <h3 class="card-title mb-0">{{icon "filter"}}<span class="ms-2">Filter</span></h3>
-              <button type="button" class="btn btn-sm btn-ghost-secondary ms-auto" data-export-clear>{{icon "x"}}<span class="ms-1">Clear</span></button>
+              <button type="button" class="btn btn-sm btn-ghost-secondary ms-auto" data-export-clear{{tip "export-clear"}}>{{icon "x"}}<span class="ms-1">Clear</span></button>
             </div>
             <div class="mb-2">
               <label class="form-label" for="export-include">Keep rows containing</label>
@@ -43,12 +43,12 @@
           <div class="card-body border-bottom">
             <div class="d-flex align-items-center mb-3">
               <h3 class="card-title mb-0">{{icon "columns"}}<span class="ms-2">Columns</span> <span class="badge badge-info ms-2" data-export-colcount></span></h3>
-              <button type="button" class="btn btn-sm btn-ghost-secondary ms-auto" data-export-columns-reset>{{icon "refresh"}}<span class="ms-1">Default columns</span></button>
+              <button type="button" class="btn btn-sm btn-ghost-secondary ms-auto" data-export-columns-reset{{tip "export-columns-reset"}}>{{icon "refresh"}}<span class="ms-1">Default columns</span></button>
             </div>
             <div class="table-responsive border rounded export-columns" data-export-columns></div>
             <div class="input-group input-group-sm mt-2 export-add">
               <select class="form-select" aria-label="A field to add as a column" data-export-add></select>
-              <button type="button" class="btn" data-export-add-button>{{icon "plus"}}<span class="ms-1">Add column</span></button>
+              <button type="button" class="btn" data-export-add-button{{tip "export-add-column"}}>{{icon "plus"}}<span class="ms-1">Add column</span></button>
             </div>
           </div>
 
@@ -83,10 +83,10 @@
         </div>
         <div class="col-auto ms-auto">
           <div class="btn-list">
-            <button type="button" class="btn" data-export-copy>{{icon "copy"}}<span class="ms-1">Copy</span></button>
-            <button type="button" class="btn" data-export-share>{{icon "link"}}<span class="ms-1">Copy link</span></button>
+            <button type="button" class="btn" data-export-copy{{tip "export-copy"}}>{{icon "copy"}}<span class="ms-1">Copy</span></button>
+            <button type="button" class="btn" data-export-share{{tip "export-share"}}>{{icon "link"}}<span class="ms-1">Copy link</span></button>
             <button type="button" class="btn" data-export-command{{tip "export-command"}}>{{icon "terminal-2"}}<span class="ms-1">Copy as command</span></button>
-            <a class="btn btn-primary" role="link" href="{{u "/exports/run?preset=hosts"}}" download data-export-download>{{icon "download"}}<span class="ms-1">Download</span></a>
+            <a class="btn btn-primary" role="link" href="{{u "/exports/run?preset=hosts"}}" download data-export-download{{tip "download"}}>{{icon "download"}}<span class="ms-1">Download</span></a>
           </div>
         </div>
         <div class="col-12" data-export-blocked-row hidden>

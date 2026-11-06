@@ -298,3 +298,51 @@ func TestTestsGenerateTheirCredentials(t *testing.T) {
 		t.Fatalf("inspected %d browser test files under e2e/web, want at least %d", browser, minBrowserTestFiles)
 	}
 }
+
+// releaseChannel is a command that installs authama from a release channel:
+// the Homebrew cask, the Scoop manifest, go install, or a piped install script.
+var releaseChannel = regexp.MustCompile(`brew install --cask simtabi/|scoop install simtabi/|go install github\.com/simtabi/authama|install\.(?:sh|ps1)\S* *\| *(?:ba)?sh|irm \S+install\.ps1`)
+
+// TestDocsOfferNoReleaseChannelAsCurrent keeps the docs to the one current way
+// to install while releases are on hold: build from source. The release page
+// documents channels for when releases resume, the "To 0.1.x" sections of the
+// migration guide are upgrade notes for withdrawn builds people still have,
+// and installation.md's "Earlier binary releases" says those channels are
+// frozen; everywhere else a channel command reads as an instruction that no
+// longer works (the cask and the Scoop manifest point at withdrawn assets).
+func TestDocsOfferNoReleaseChannelAsCurrent(t *testing.T) {
+	root, files := trackedFiles(t)
+	heading := regexp.MustCompile(`^#{1,6} `)
+	historical := regexp.MustCompile(`^#{1,6} (To 0\.|Earlier binary releases)`)
+	pages := 0
+	for _, name := range files {
+		if !strings.HasSuffix(name, ".md") || (!strings.HasPrefix(name, "docs/") && name != "README.md") || name == "docs/release.md" {
+			continue
+		}
+		body, err := os.ReadFile(filepath.Join(root, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		pages++
+		level, inHistory, fenced := 0, false, false
+		for i, line := range strings.Split(string(body), "\n") {
+			if strings.HasPrefix(strings.TrimSpace(line), "```") {
+				fenced = !fenced
+			}
+			if !fenced && heading.MatchString(line) {
+				l := strings.Index(line, " ")
+				if historical.MatchString(line) {
+					level, inHistory = l, true
+				} else if inHistory && l <= level {
+					inHistory = false
+				}
+			}
+			if !inHistory && releaseChannel.MatchString(line) {
+				t.Errorf("%s:%d offers a release channel as a way to install; releases are on hold, so point at building from source: %s", name, i+1, strings.TrimSpace(line))
+			}
+		}
+	}
+	if pages < 40 {
+		t.Fatalf("read %d docs pages; the walk is not finding them", pages)
+	}
+}

@@ -85,6 +85,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   column, so it has no Keys tab; the dialog now says so, with a link to the lists that have one.
 
 
+### Removed
+
+- **`authama tui`, the terminal menu.** The web UI is the interactive surface: a bare `authama` on
+  a terminal opens it, and every menu entry was already a CLI command. `docs/tools/tui.md` lists
+  where each entry went. `authama tui` still answers, but it only prints that pointer and exits
+  with an error. History rows the menu recorded keep their `tui` source.
+- **The `atm-ui` shell alias now runs `authama serve`.** A block installed earlier keeps calling
+  `authama tui`, which prints the pointer; `token shell-aliases --install` rewrites it.
+
 ### Changed
 
 - **The lists' CSV downloads (`/exports/hosts.csv` and the rest) now come from the export
@@ -92,6 +101,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   links carry. The files are unchanged byte for byte, which a test checks for every list and option.
   The download dialog's preview and the history list's host, token, profile and key filters
   still use the lists' own tables.
+- **Every control in the web UI explains itself.** Each button, menu entry, row action, tab and
+  menu heading shows a tooltip on hover and focus saying what it does and what to expect (that a
+  form only previews, that a copy changes nothing, what a job step does), which is also its
+  accessible description. The command palette describes the highlighted entry, and sortable table
+  headers say they sort. A test fails on any control without one.
 - **The web UI header is two bars, not three.** The strip under the menu that read *Running as
   <user> on <host>* with the build's *current* mark is gone. The user and host now head the account
   menu, and About shows the build's status (*current* or *older build*), when it was built and when
@@ -119,10 +133,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Tabs on the Export page and in the CSV dialog used Bootstrap's `nav-underline`, which picked up
+  Tabler's grey hover box; they are Tabler's own `nav-bordered` tabs now. Three controls showed two
+  tooltips at once (a `title` beside the explainer); a revoked key's disabled Deploy button showed
+  none, and now explains why through its wrapper.
+
+- The Overview's quick actions (Reconcile, Re-render, Apply the token config) and Re-render on the
+  SSH config page never showed their explainers: the tip was on the form's hidden input, not the
+  button.
+
 - `make uninstall` also removes the Touch ID helper `authama-touchid` that `make install` puts
   beside `authama`.
 
 ### Documentation
+
+- The keepalive workflow calls the reusable workflow at a commit, not at `main`, so an upstream
+  change cannot alter this repository's CI unseen.
+- The migration guide no longer offers Homebrew, Scoop or `go install` as a way to install, nor says
+  the installers carry both binaries: releases are on hold, so it points at building from source.
+  The README's `export` line names `authama export <list>`. A test fails on a docs page that offers
+  a release channel as current, outside the release page and the historical upgrade notes.
 
 - Installation covers checking what is installed, restarting the web UI after an update (with the
   commands to stop a server on the usual ports), and uninstalling, including what is kept.

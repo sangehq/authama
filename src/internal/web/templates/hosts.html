@@ -24,10 +24,10 @@
           <td class="text-end">
             {{if not $.ReadOnly}}<form method="post" action="{{basePath}}/changes/preview" data-inline id="f-host-{{.Alias}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="host-delete"><input type="hidden" name="profile" value="{{$g.Name}}"><input type="hidden" name="alias" value="{{.Alias}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for host %s" .Alias)}}
-              <a class="dropdown-item" href="{{basePath}}/hosts/{{.Alias}}" data-inline>{{icon "external-link"}}<span class="ms-2">Open</span></a>
-              <button type="button" class="dropdown-item" data-copy="ssh {{.Alias}}">{{icon "terminal-2"}}<span class="ms-2">Copy <code>ssh {{.Alias}}</code></span></button>
-              {{if .Hostname}}<button type="button" class="dropdown-item" data-copy="{{.Hostname}}">{{icon "copy"}}<span class="ms-2">Copy the hostname</span></button>{{end}}
-              <a class="dropdown-item" href="{{basePath}}/history?host={{.Alias}}" data-inline>{{icon "history"}}<span class="ms-2">History</span></a>
+              <a class="dropdown-item" href="{{basePath}}/hosts/{{.Alias}}" data-inline{{tip "open-row"}}>{{icon "external-link"}}<span class="ms-2">Open</span></a>
+              <button type="button" class="dropdown-item" data-copy="ssh {{.Alias}}"{{tip "copy-value"}}>{{icon "terminal-2"}}<span class="ms-2">Copy <code>ssh {{.Alias}}</code></span></button>
+              {{if .Hostname}}<button type="button" class="dropdown-item" data-copy="{{.Hostname}}"{{tip "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the hostname</span></button>{{end}}
+              <a class="dropdown-item" href="{{basePath}}/history?host={{.Alias}}" data-inline{{tip "row-history"}}>{{icon "history"}}<span class="ms-2">History</span></a>
               {{if not $.ReadOnly}}<div class="dropdown-divider"></div>
               <button type="submit" class="dropdown-item text-danger" form="f-host-{{.Alias}}" data-confirm="m-host-{{.Alias}}"{{tip "delete"}}>{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
             {{template "menu_close"}}

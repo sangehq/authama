@@ -19,8 +19,8 @@
     <p>{{.Prompt}}</p>
     {{if .Text}}<pre class="code-block" tabindex="0">{{.Text}}</pre>{{end}}
     <div class="d-flex gap-2">
-      <form method="post" action="{{basePath}}/jobs/{{$.Data.ID}}/answer"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="answer" value="yes"><button type="submit" class="btn btn-primary">Done, carry on</button></form>
-      <form method="post" action="{{basePath}}/jobs/{{$.Data.ID}}/answer"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="answer" value="no"><button type="submit" class="btn btn-outline-secondary">Not done, stop here</button></form>
+      <form method="post" action="{{basePath}}/jobs/{{$.Data.ID}}/answer"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="answer" value="yes"><button type="submit" class="btn btn-primary"{{tip "job-yes"}}>Done, carry on</button></form>
+      <form method="post" action="{{basePath}}/jobs/{{$.Data.ID}}/answer"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="answer" value="no"><button type="submit" class="btn btn-outline-secondary"{{tip "job-no"}}>Not done, stop here</button></form>
     </div>
   </div>
 </div>
@@ -32,7 +32,7 @@
 {{end}}</pre></div>
 </div>
 {{if or (eq .State "running") (eq .State "waiting")}}
-<form method="post" action="{{basePath}}/jobs/{{.ID}}/cancel"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="btn btn-outline-danger">Cancel at the next step</button></form>
+<form method="post" action="{{basePath}}/jobs/{{.ID}}/cancel"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="btn btn-outline-danger"{{tip "job-cancel"}}>Cancel at the next step</button></form>
 <p class="text-secondary small mt-2">The page updates as the job runs. Without JavaScript, reload it.</p>
 {{end}}
 {{end}}{{end}}

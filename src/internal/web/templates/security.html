@@ -31,7 +31,7 @@
       </div>
       {{if and (not $.ReadOnly) $.Data.Biometric $c.HasPIN}}<div class="card-footer">
         {{template "change_open" $}}<input type="hidden" name="action" value="owner-fingerprint"><input type="hidden" name="on" value="{{if $c.Biometric}}{{else}}1{{end}}">
-          <button type="submit" class="btn btn-sm btn-outline-secondary">{{icon "fingerprint"}}<span class="ms-1">{{if $c.Biometric}}Turn fingerprint unlock off{{else}}Turn fingerprint unlock on{{end}}</span></button>
+          <button type="submit" class="btn btn-sm btn-outline-secondary"{{tip "fingerprint"}}>{{icon "fingerprint"}}<span class="ms-1">{{if $c.Biometric}}Turn fingerprint unlock off{{else}}Turn fingerprint unlock on{{end}}</span></button>
         </form>
       </div>{{end}}
     </div>
@@ -46,7 +46,7 @@
       </div>
       {{if and (not .State.Clean) (not $.ReadOnly)}}<div class="card-footer d-flex flex-wrap align-items-center gap-2">
         <span class="text-secondary small me-auto">If you made the change yourself, accept it. If you did not, find out what did first: accepting seals whatever is there now.</span>
-        {{template "change_open" $}}<input type="hidden" name="action" value="owner-reseal"><button type="submit" class="btn btn-sm btn-outline-primary">Preview accepting it</button></form>
+        {{template "change_open" $}}<input type="hidden" name="action" value="owner-reseal"><button type="submit" class="btn btn-sm btn-outline-primary"{{tip "owner-reseal"}}>Preview accepting it</button></form>
       </div>{{end}}
     </div>
   </div>

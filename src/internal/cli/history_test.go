@@ -167,24 +167,6 @@ func TestHistoryListsShowsAndEmitsJSON(t *testing.T) {
 	_ = p
 }
 
-// The TUI is one process making several changes; each is its own operation.
-func TestEachTuiChangeIsItsOwnOperation(t *testing.T) {
-	releaseHeldLock(t)
-	tt, _ := tuiWith(t)
-	tt.pr.(*scriptPrompter).answers = []string{"reconcile", "snapshots", "", "q"}
-	t.Setenv("AUTHAMA_AUTO_PIN", "0")
-	accepting(tt).run()
-	var tui []history.Op
-	for _, o := range liveOps(t, tt.p) {
-		if o.Source == history.SourceTUI {
-			tui = append(tui, o)
-		}
-	}
-	if len(tui) == 0 || tui[len(tui)-1].Command != "reconcile" {
-		t.Fatalf("TUI operations = %+v, want reconcile recorded on its own", tui)
-	}
-}
-
 // audit.log is still the record; the store indexes it and must not change it.
 func TestAuditLogIsWrittenAsBefore(t *testing.T) {
 	p := editHome(t)

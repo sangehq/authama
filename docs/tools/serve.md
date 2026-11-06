@@ -15,7 +15,7 @@ authama --dev-root ./scratch serve
 A bare `authama` on a terminal runs `serve` with every flag at its default; the
 global `--dev-root` and `--no-dotenv` still apply. With no terminal (a pipe, a
 script, CI) a bare run prints help instead, since `serve` runs until Ctrl-C. The
-menu is `authama tui`.
+web UI replaced the terminal menu, which was removed ([`tui`](tui.md)).
 
 It prints an address like this:
 
@@ -78,15 +78,22 @@ accepted. A running server is reused only when its base path is the one asked fo
 
 ## Pages
 
-The layout is Tabler's. The header holds the name, a theme toggle (light or dark), a bell listing the
-newest [file events](events.md), and an account menu named for the system user the server runs as and
-the machine (or dev mode, or read-only), holding Settings, Events, Doctor and About. Following the
-system's light or dark theme is chosen on the Settings page, and the third-party licences are on the
-About page. The footer carries the copyright, the version, and links to About, the documentation, the
-source and the licences. Under it, a menu
-holds the Overview and five dropdowns: **SSH** (Profiles, Hosts, Keys, VMs), **Config & backups**
-(SSH config, Snapshots), **Security** (Auth tokens, Audit, Owner & PIN), **Activity** (History,
-Events) and **System** (Doctor, Settings, About). On a narrow screen it folds behind a button.
+The layout is Tabler's, in two bars. The top bar holds the name (with a *read-only* badge when the
+server only reads), a search box that opens the command palette, a theme toggle (light or dark), a
+bell listing the newest [file events](events.md), and an account menu named for the system user the
+server runs as. The account menu opens with *Running as <user> on <host>* and holds Settings, Events,
+Doctor, the tour and About. Under it, a menu holds the Overview and five dropdowns: **SSH**
+(Profiles, Hosts, Keys, VMs), **Config & backups** (SSH config, Snapshots), **Security** (Auth tokens,
+Audit, Owner & PIN), **Activity** (History, Events), Export, and **System** (Doctor, Repair, Settings,
+About). On a narrow screen it folds behind a button. About shows the build (and whether it is
+current), this computer, and the third-party licences; following the system's light or dark theme is
+chosen on the Settings page. The footer carries the copyright, the version, and links to About, the
+documentation, the source and the licences.
+
+- **Every control explains itself.** Hovering or focusing any button, menu entry or link styled as a
+  button shows what it does and what to expect, for instance that a form only previews and nothing
+  is written until you confirm. The text is also the control's accessible description, so a screen
+  reader reads it. Menu entries describe their page, and the palette describes the highlighted entry.
 
 - **Page headers** name the section, summarise the page, and hold its actions: the first two as
   buttons, any more (other forms, downloads) in one **More** menu.
@@ -212,7 +219,7 @@ Events) and **System** (Doctor, Settings, About). On a narrow screen it folds be
 
 | Page | Shows |
 |---|---|
-| Overview | the rows the `authama tui` menu prints at the top, each problem with the command that fixes it; counts; key health, auth tokens and snapshots; quick actions; hosts by profile; the newest file events; keys due for rotation; recent changes |
+| Overview | the state rows (`overview.Rows`), each problem with the command that fixes it; counts; key health, auth tokens and snapshots; quick actions; hosts by profile; the newest file events; keys due for rotation; recent changes |
 | Profiles | each profile's category, key scope, key store, and host and key counts |
 | Hosts | every host by profile. A host's page shows its manifest entry, its deployments, the block rendered into `~/.ssh/config`, and the host keys pinned for it |
 | Keys | every key with its fingerprint and expiry, and the reserved keys (loose keys kept on purpose). A key's page shows its public key and fingerprint, each with a copy button, where the key is deployed and every operation that touched it. A `.pub` that is not a single public key line is not shown |
@@ -384,7 +391,7 @@ Some changes are terminal-only:
 ## What it will not do
 
 - **Hold the lock while you read.** It holds the lock only while it checks and makes a change you
-  confirmed. The `authama tui` menu now does the same.
+  confirmed.
 - **Open a snapshot that holds private keys.** A snapshot written before private keys were left out
   is listed but never opened. `authama ssh snapshots prune --keep 0` removes it.
 - **Show private keys.** Pages read public keys, `known_hosts` and config only.

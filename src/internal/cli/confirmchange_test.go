@@ -85,7 +85,7 @@ func TestEveryMutatingVerbAlsoConfirms(t *testing.T) {
 	}
 	// tui.go composes the other verbs and confirms per action in its own menu;
 	// mutate.go is the guard itself.
-	exempt := map[string]bool{"mutate.go": true, "tui.go": true}
+	exempt := map[string]bool{"mutate.go": true}
 	var missing []string
 	for _, e := range entries {
 		name := e.Name()
