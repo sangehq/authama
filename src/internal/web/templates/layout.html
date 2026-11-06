@@ -85,17 +85,23 @@
               {{if not .HideExport}}{{template "navlink" (navItem . "export" "/export" "file-export" "Export")}}{{end}}
               {{template "navgroup" (navGroup . "system" "settings" "System" (navItem . "doctor" "/doctor" "stethoscope" "Doctor") (navItem . "repair" "/repair" "refresh" "Repair") (navItem . "settings" "/settings" "settings" "Settings") (navItem . "about" "/about" "info-circle" "About"))}}
             </ul>
-            <div data-tour="4" data-tour-title="Who and where" data-tour-text="The account and machine this server runs as: every change it makes is theirs." class="session-strip ms-md-auto d-flex align-items-center gap-2 small text-secondary py-2 py-md-0">
-              {{icon "device-desktop"}}<span>Running as <strong class="text-body">{{if .User}}{{.User}}{{else}}this machine's user{{end}}</strong>{{if .Host}} on <strong class="text-body">{{.Host}}</strong>{{end}}</span>
-              {{if .DevRoot}}<span class="badge badge-warn">dev mode</span>{{end}}
-              {{if .ReadOnly}}<span class="badge badge-muted">read-only</span>{{end}}
-              {{if .Authed}}{{if .Rebuilt}}<span class="badge badge-warn" title="A newer build is installed; this page is from the build that was running when the server started">{{icon "alert-triangle"}}<span class="ms-1">{{.Build.Version}}, older build</span></span>{{else}}<span class="badge badge-ok" title="Current: this server runs the build now installed, built {{when .Build.Built}}, started {{when .Build.Started}}">{{icon "circle-check"}}<span class="ms-1">{{.Build.Version}}, current</span></span>{{end}}{{end}}
-            </div>
           </nav>
         </div>
       </div>
     </div>
   </header>
+  {{/* Who and where, and which build: a strip of its own under the menu, so it
+       never wraps into the menu or crowds it. */}}
+  <div class="session-bar border-bottom d-print-none" data-tour="4" data-tour-title="Who and where" data-tour-text="The account and machine this server runs as: every change it makes is theirs. On the right, the build it runs and whether it is current.">
+    <div class="container-xl d-flex flex-wrap align-items-center gap-2 py-2 small">
+      <span class="d-inline-flex align-items-center gap-1 text-secondary">{{icon "device-desktop"}}<span>Running as <strong class="text-body">{{if .User}}{{.User}}{{else}}this machine's user{{end}}</strong>{{if .Host}} on <strong class="text-body">{{.Host}}</strong>{{end}}</span></span>
+      <span class="ms-auto d-inline-flex flex-wrap align-items-center gap-2">
+        {{if .DevRoot}}<span class="badge badge-warn">{{icon "alert-triangle"}}<span class="ms-1">dev mode</span></span>{{end}}
+        {{if .ReadOnly}}<span class="badge badge-muted">{{icon "lock"}}<span class="ms-1">read-only</span></span>{{end}}
+        {{if .Authed}}{{if .Rebuilt}}<span class="badge badge-warn" title="A newer build is installed; this page is from the build that was running when the server started">{{icon "alert-triangle"}}<span class="ms-1">{{.Build.Version}} · older build</span></span>{{else}}<span class="badge badge-ok" title="Current: this server runs the build now installed, built {{when .Build.Built}}, started {{when .Build.Started}}">{{icon "circle-check"}}<span class="ms-1">{{.Build.Version}} · current</span></span>{{end}}{{end}}
+      </span>
+    </div>
+  </div>
   {{end}}
   <div class="page-wrapper">
     {{if and .Authed .SealProblem}}
@@ -124,7 +130,7 @@
     </div>
     {{end}}
     {{if and .Authed .DevRoot}}
-    <div class="dev-banner" role="status">
+    <div class="alert alert-warning rounded-0 mb-0" role="status">
       <div class="container-xl">{{icon "alert-triangle"}}<span class="ms-1"><strong>Dev mode.</strong> Reading a sandbox under <code>{{.DevRoot}}</code>, not your real <code>~/.ssh</code>.</span></div>
     </div>
     {{end}}

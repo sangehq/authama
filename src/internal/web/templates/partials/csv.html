@@ -29,10 +29,10 @@
       </div>
       <div class="modal-body p-0 csv-body">
         <aside class="csv-pick" aria-label="What the file holds">
-          <div class="csv-tabs" role="tablist" aria-label="Choose">
-            <button type="button" class="csv-tab" role="tab" id="csv-tab-profiles-btn" aria-controls="csv-tab-profiles" data-csv-tab="profiles" hidden>Profiles <span class="badge bg-secondary-lt ms-1" data-csv-count="profiles"></span></button>
-            <button type="button" class="csv-tab" role="tab" id="csv-tab-keys-btn" aria-controls="csv-tab-keys" data-csv-tab="keys" hidden>Keys <span class="badge bg-secondary-lt ms-1" data-csv-count="keys"></span></button>
-            <button type="button" class="csv-tab" role="tab" id="csv-tab-columns-btn" aria-controls="csv-tab-columns" data-csv-tab="columns">Columns <span class="badge bg-secondary-lt ms-1" data-csv-count="columns"></span></button>
+          <div class="nav nav-tabs nav-fill csv-tabs" role="tablist" aria-label="Choose">
+            <button type="button" class="nav-link csv-tab" role="tab" id="csv-tab-profiles-btn" aria-controls="csv-tab-profiles" data-csv-tab="profiles" hidden>Profiles <span class="badge badge-muted ms-1" data-csv-count="profiles"></span></button>
+            <button type="button" class="nav-link csv-tab" role="tab" id="csv-tab-keys-btn" aria-controls="csv-tab-keys" data-csv-tab="keys" hidden>Keys <span class="badge badge-muted ms-1" data-csv-count="keys"></span></button>
+            <button type="button" class="nav-link csv-tab" role="tab" id="csv-tab-columns-btn" aria-controls="csv-tab-columns" data-csv-tab="columns">Columns <span class="badge badge-muted ms-1" data-csv-count="columns"></span></button>
           </div>
           {{template "csv_pick" "profiles"}}
           {{template "csv_pick" "keys"}}
@@ -64,6 +64,15 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-link link-secondary me-auto" data-csv-reset>Reset</button>
         <span class="text-danger small me-2" data-csv-blocked hidden></span>
+        <div class="input-group w-auto" data-csv-formats hidden>
+          <label class="input-group-text" for="csv-format">Format</label>
+          <select class="form-select" id="csv-format" data-csv-format>
+            <option value="csv">CSV</option><option value="tsv">TSV</option><option value="json">JSON</option>
+            <option value="jsonl">JSON Lines</option><option value="yaml">YAML</option><option value="php">PHP array</option>
+            <option value="js">JavaScript array</option><option value="markdown">Markdown table</option><option value="html">HTML table</option>
+          </select>
+        </div>
+        <a class="btn" href="{{u "/export"}}" data-csv-open hidden>{{icon "file-export"}}<span class="ms-1">Open in Export</span></a>
         <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Cancel</button>
         <a class="btn btn-primary" role="link" href="#" download data-csv-download>{{icon "download"}}<span class="ms-1">Download</span></a>
       </div>

@@ -11,7 +11,7 @@
       <tbody>
         {{range .Hosts}}
         <tr>
-          <th scope="row"><code>{{.Alias}}</code>{{if .Declared}} <span class="badge bg-blue-lt">declared</span>{{end}}</th>
+          <th scope="row"><code>{{.Alias}}</code>{{if .Declared}} <span class="badge badge-info">declared</span>{{end}}</th>
           <td>{{.Profile}}</td>
           <td>{{.Hypervisor}}</td>
           <td>{{.VM}}</td>
@@ -52,8 +52,8 @@
             <tr>
               <th scope="row"><code>{{.Name}}</code></th>
               <td class="text-secondary">{{.Kind}}</td>
-              <td>{{if not .Enabled}}<span class="badge bg-secondary-lt">disabled</span>{{else if not .CLI}}<span class="badge bg-secondary-lt">not installed</span>{{else}}<span class="badge bg-green-lt">enabled</span>{{end}}</td>
-              <td>{{if .Err}}<span class="text-danger">{{.Err}}</span>{{else}}{{range .VMs}}<div>{{.Name}} <span class="text-secondary">({{.State}})</span></div>{{else}}<span class="text-secondary">-</span>{{end}}{{end}}</td>
+              <td>{{if not .Enabled}}<span class="badge badge-muted">disabled</span>{{else if not .CLI}}<span class="badge badge-muted">not installed</span>{{else}}<span class="badge badge-ok">enabled</span>{{end}}</td>
+              <td>{{if .Err}}<span class="text-danger">{{.Err}}</span>{{else}}{{range .VMs}}<div>{{.Name}} <span class="text-secondary">({{.State}})</span></div>{{else}}<span class="text-secondary">–</span>{{end}}{{end}}</td>
             </tr>
             {{end}}
           </tbody>
@@ -75,7 +75,7 @@
           <thead><tr><th scope="col">Alias</th><th scope="col">Profile</th><th scope="col">VM</th><th scope="col">User</th><th scope="col">Key</th></tr></thead>
           <tbody>
             {{range .Devboxes}}
-            <tr><th scope="row"><code>{{.Alias}}</code></th><td>{{.Profile}}</td><td>{{if .Planned}}<span class="badge bg-secondary-lt">no VM yet</span>{{else}}{{.Hypervisor}}: {{.VM}}{{end}}</td><td>{{orDash .User}}</td><td>{{orDash .Key}}{{if .Planned}} <span class="text-secondary">(reserved)</span>{{end}}</td></tr>
+            <tr><th scope="row"><code>{{.Alias}}</code></th><td>{{.Profile}}</td><td>{{if .Planned}}<span class="badge badge-muted">no VM yet</span>{{else}}{{.Hypervisor}}: {{.VM}}{{end}}</td><td>{{orDash .User}}</td><td>{{orDash .Key}}{{if .Planned}} <span class="text-secondary">(reserved)</span>{{end}}</td></tr>
             {{end}}
           </tbody>
         </table>
@@ -84,7 +84,7 @@
       {{if .Reserved}}
       <div class="card-body border-top small">
         <div class="fw-bold mb-1">Reserved keys</div>
-        {{range .Reserved}}<div><code>~/.ssh/{{.Name}}</code> - reserved{{if .For}} for {{.For}}{{end}}{{if .Note}}: {{.Note}}{{end}}{{if .Problem}} <span class="badge badge-warn">{{.State}}</span>{{end}}</div>{{end}}
+        {{range .Reserved}}<div><code>~/.ssh/{{.Name}}</code> – reserved{{if .For}} for {{.For}}{{end}}{{if .Note}}: {{.Note}}{{end}}{{if .Problem}} <span class="badge badge-warn">{{.State}}</span>{{end}}</div>{{end}}
         <div class="text-secondary mt-1">Kept on purpose; adopting one onto a VM below releases its reservation. Manage them on the <a href="{{basePath}}/keys">Keys</a> page.</div>
       </div>
       {{end}}

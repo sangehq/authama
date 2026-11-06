@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/simtabi/authama/src/internal/brand"
@@ -110,6 +111,9 @@ func (x exportAPI) handleRun(w http.ResponseWriter, r *http.Request) {
 		x.fail(w, http.StatusBadRequest, err)
 		return
 	}
+	if q.Get("preset") != "" {
+		sel = shapedPreset(sel, q)
+	}
 	format := q.Get("format")
 	if format == "" {
 		format = "csv"
@@ -162,6 +166,36 @@ func (x exportAPI) handleRun(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", f.MediaType)
 	w.Header().Set("Content-Disposition", `attachment; filename="`+brand.Command+"-"+name+"."+f.Extension+`"`)
 	_, _ = w.Write(buf.Bytes())
+}
+
+// shapedPreset applies to a preset the options a list's CSV link carries, so
+// the download dialog can ask for its file in any format with the choice it
+// already holds: ?profile= ?key= ?narrow=1 ?exclude= keep and narrow rows,
+// ?drop= leaves columns out by their heading, and the events and history
+// pages' own filters (?area= ?kind= ?since= ?until= ?command= ?source=)
+// keep what the page shows.
+func shapedPreset(sel selection.Selection, q url.Values) selection.Selection {
+	shape := shapeOf(q)
+	sel.Where.Profile, sel.Where.Key, sel.Narrow = shape.Profiles, shape.Keys, shape.Narrow
+	sel.Where.Exclude = shape.Exclude
+	for param, to := range map[string]*[]string{"area": &sel.Where.Area, "kind": &sel.Where.Kind, "source": &sel.Where.Source, "command": &sel.Where.Command} {
+		if v := strings.TrimSpace(q.Get(param)); v != "" {
+			*to = []string{v}
+		}
+	}
+	sel.Where.Since, sel.Where.Until = strings.TrimSpace(q.Get("since")), strings.TrimSpace(q.Get("until"))
+	if len(shape.Drop) > 0 {
+		drop := map[string]bool{}
+		for _, d := range shape.Drop {
+			drop[d] = true
+		}
+		for _, c := range selection.Defaults[sel.Grain] {
+			if !drop[c.Heading()] {
+				sel.Columns = append(sel.Columns, c)
+			}
+		}
+	}
+	return sel
 }
 
 // selectionOf reads the selection a request names: a built-in preset by

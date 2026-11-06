@@ -191,8 +191,16 @@ func serverPorts(configured int, rec *serveRecord) []int {
 
 // stopAll stops every authama web UI found, says what it did, and returns
 // how many it could not stop.
-func stopAll(out io.Writer, host string, ports []int, basePath string) int {
+// A server that does not say its pid (one from before /healthz did) is
+// still stopped when the home's record names it: the record's instance
+// matches the one /healthz answers, and the record holds its pid.
+func stopAll(out io.Writer, host string, ports []int, basePath string, rec *serveRecord) int {
 	found := findServers(host, ports, basePath)
+	for i := range found {
+		if found[i].PID == 0 && rec != nil && rec.PID > 0 && rec.Instance == found[i].Instance {
+			found[i].PID = rec.PID
+		}
+	}
 	if len(found) == 0 {
 		_, _ = fmt.Fprintf(out, "no %s web UI answers on %s ports %d-%d\n", brand.Command, host, ports[0], ports[min(len(ports), web.DefaultPortAttempts)-1])
 		return 0

@@ -140,6 +140,9 @@ main:focus { outline: none; }
 /* Sortable headers take the header cell's colour: Tabler's .table-sort grey is
    below 4.5:1 on the header tint (axe, every sorted table). */
 .table-sort, .table-sort:hover, .table-sort.asc, .table-sort.desc { color: inherit; }
+/* Tabler gives .table-sort the header's background, which is translucent, so
+   the button tinted its cell twice and every sortable header looked patchy. */
+.table thead .table-sort { background-color: transparent; }
 /* Table header text: Tabler's grey is 4.38:1 on the header tint in the light
    theme; one step darker clears 4.5:1. */
 :root:not([data-bs-theme=dark]) .table thead th { color: #5c5c5c; }
@@ -150,8 +153,8 @@ main:focus { outline: none; }
 :root[data-bs-theme=dark] .avatar-initials { color: #a6cbf6; background: #1c2a3b; }
 /* The session strip at the right of the menu bar: who and where the server
    runs as, kept on one line so it never pushes the menu around. */
-.session-strip { white-space: nowrap; }
-.session-strip .icon { width: 1rem; height: 1rem; }
+.session-bar { background: var(--tblr-bg-surface); }
+.session-bar .icon { width: 1rem; height: 1rem; }
 
 /* The palette's keyboard hint inside the header button: Tabler's kbd grey is
    4.08:1 there in the light theme. */
@@ -216,7 +219,6 @@ main:focus { outline: none; }
 
 /* Export page: Tabler's components, with only what they leave open. */
 .export-list { max-height: 18rem; overflow-y: auto; }
-.export-list .list-group-header.sticky-top { z-index: 2; }
 .export-list .list-group-item { padding-top: .5rem; padding-bottom: .5rem; }
 .export-columns { max-height: 20rem; overflow-y: auto; }
 /* Sticky headers need an opaque background: Tabler's header tint is translucent,
@@ -225,3 +227,7 @@ main:focus { outline: none; }
 .export-preview .table-sort { background: transparent; }
 .export-preview { max-height: 28rem; }
 .export-preview td { white-space: nowrap; max-width: 18rem; overflow: hidden; text-overflow: ellipsis; }
+.export-columns tr[draggable=true] .export-handle { cursor: grab; }
+.export-columns tr.export-dragging { opacity: .5; }
+.export-columns tr.export-drop-before td { box-shadow: inset 0 2px 0 var(--tblr-primary); }
+.export-columns tr.export-drop-after td { box-shadow: inset 0 -2px 0 var(--tblr-primary); }

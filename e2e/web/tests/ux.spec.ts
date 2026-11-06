@@ -129,6 +129,26 @@ test('a CSV with profiles and no key column says where keys are chosen', async (
   await expect(dialog.getByRole('link', { name: 'Profiles', exact: true })).toHaveAttribute('href', /\/profiles$/);
 });
 
+test('the CSV dialog downloads any format, and opens its choice in Export', async ({ page }) => {
+  await page.goto('/hosts');
+  await page.getByRole('link', { name: 'CSV' }).first().click();
+  const dialog = page.getByRole('dialog', { name: /Download CSV/ });
+  const download = dialog.getByRole('link', { name: 'Download' });
+  await expect(download).toHaveAttribute('href', /\/exports\/hosts\.csv/);
+  await dialog.getByLabel('Format').selectOption('json');
+  await expect(download).toHaveAttribute('href', /\/exports\/run\?.*preset=hosts.*format=json|\/exports\/run\?.*format=json.*preset=hosts/);
+  const res = await page.request.get((await download.getAttribute('href')) ?? '');
+  expect(Array.isArray(await res.json())).toBe(true);
+  await expect(dialog.getByRole('link', { name: 'Open in Export' })).toHaveAttribute('href', /\/export#s=.+&f=json/);
+  await dialog.getByLabel('Format').selectOption('csv');
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+
+  // The Termius CSV is one format, with no preset to open.
+  await page.locator('a[href$="/exports/termius-hosts.csv"]').first().dispatchEvent('click');
+  await expect(dialog.getByLabel('Format')).toBeHidden();
+  await expect(dialog.getByRole('link', { name: 'Open in Export' })).toBeHidden();
+});
+
 test('tokens.json is checked as it is typed, and cannot be sent while it is not JSON', async ({ page }) => {
   await page.goto('/tokens');
   await page.getByRole('button', { name: 'Edit tokens.json' }).click();

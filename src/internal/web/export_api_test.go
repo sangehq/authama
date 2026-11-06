@@ -141,3 +141,40 @@ func TestTheExportAPINeedsASession(t *testing.T) {
 		}
 	}
 }
+
+// A preset takes the options a list's CSV link carries, and as CSV answers
+// byte for byte what that link answers with them, so the download dialog can
+// offer any format for the choice it holds.
+func TestAPresetTakesTheCSVLinksOptions(t *testing.T) {
+	s, _, _ := newTestServer(t)
+	c := signIn(t, s)
+	for list, opts := range map[string][]string{
+		"hosts":    {"profile=work", "drop=tags,provider", "exclude=nothing-matches", "drop=tags&exclude=gh"},
+		"keys":     {"drop=expires", "profile=work&drop=fingerprint,expires"},
+		"profiles": {"drop=key_names", "exclude=work"},
+		"events":   {"area=ssh", "kind=added"},
+	} {
+		for _, o := range opts {
+			old := c.get("/exports/" + list + ".csv?" + o)
+			run := c.get("/exports/run?preset=" + list + "&format=csv&" + o)
+			if old.Code != http.StatusOK || run.Code != http.StatusOK {
+				t.Fatalf("%s?%s: old %d, run %d %s", list, o, old.Code, run.Code, run.Body.String())
+			}
+			if run.Body.String() != old.Body.String() {
+				t.Errorf("%s?%s differs:\n--- csv link\n%s--- preset\n%s", list, o, old.Body.String(), run.Body.String())
+			}
+		}
+	}
+	// The same choice in another format.
+	rec := c.get("/exports/run?preset=keys&format=json&drop=expires")
+	var rows []map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &rows); err != nil || len(rows) == 0 {
+		t.Fatalf("json: %v %s", err, rec.Body.String())
+	}
+	if _, ok := rows[0]["expires"]; ok {
+		t.Error("the dropped column is in the JSON")
+	}
+	if _, ok := rows[0]["key"]; !ok {
+		t.Errorf("headings not kept: %v", rows[0])
+	}
+}

@@ -9,6 +9,6 @@
   {{range .Fields}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}
   {{template "pin_field" $}}
   <button type="submit" class="btn btn-primary"{{if .Busy}} disabled{{end}}>Run {{.Command}}</button>
-  <a href="{{basePath}}/" class="btn btn-link">Cancel</a>
+  <a href="{{basePath}}/" class="btn btn-link link-secondary">Cancel</a>
 </form>
 {{end}}{{end}}

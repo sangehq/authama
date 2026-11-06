@@ -9,11 +9,17 @@ import { Ui } from "../core/ui.js";
  * @typedef {{ name: string, profile?: string, rows: number, hosts?: number }} CsvKey
  * @typedef {{ profiles?: CsvProfile[], keys?: CsvKey[], key_list?: boolean, columns: string[], header: string[], rows: string[][],
  *   total: number, in_profiles: number, in_keys: number, kept: number }} CsvPreview
- * @typedef {{ drop: string[], exclude: string, profiles: string[] | null, keys: string[] | null, tab: string, narrow: boolean }} CsvChoice
+ * @typedef {{ drop: string[], exclude: string, profiles: string[] | null, keys: string[] | null, tab: string, narrow: boolean, format?: string }} CsvChoice
  * @typedef {"profiles" | "keys" | "columns"} CsvList
  * @typedef {{ value: string, rows?: number, sample?: string, group?: string }} PickItem
  * @typedef {{ label: string, always: boolean }} CountColumn
  */
+
+/** The grain each list's preset is, by the list's name. */
+const GRAINS = /** @type {Record<string, string>} */ ({
+  hosts: "host", keys: "key", profiles: "profile", tokens: "token",
+  history: "op", events: "event", snapshots: "snapshot", deployments: "deployment",
+});
 
 /** The heading of each list's name column, and the name of its select-all box. */
 const LABELS = {
@@ -321,7 +327,7 @@ export class CsvExport extends Component {
     const commit = (next) => set(values.every((v) => next.includes(v)) ? null : next);
     const badge = /** @type {HTMLElement} */ (dialog.querySelector(`[data-csv-count="${list}"]`));
     badge.textContent = ticked === items.length ? String(items.length) : `${ticked}/${items.length}`;
-    badge.className = `badge ms-1 ${ticked === 0 ? "bg-danger-lt" : ticked === items.length ? "bg-secondary-lt" : "bg-primary-lt"}`;
+    badge.className = `badge ms-1 ${ticked === 0 ? "badge-bad" : ticked === items.length ? "badge-muted" : "badge-info"}`;
 
     const counts = count.always || items.some((it) => (it.rows ?? 0) > 1);
     const samples = items.some((it) => it.sample);
@@ -352,7 +358,7 @@ export class CsvExport extends Component {
     items.forEach((it, i) => {
       if (it.group && it.group !== group) {
         group = it.group;
-        rows.push(El.create("tr").cls("csv-group").attr("data-csv-group", "").append(El.create("td").attr("colspan", String(width)).text(group)).node);
+        rows.push(El.create("tr").cls("csv-group").attr("data-csv-group", "").append(El.create("td").cls("subheader").attr("colspan", String(width)).text(group)).node);
       }
       const id = `csv-${list}-${i}`;
       const box = El.create("input")
@@ -445,6 +451,7 @@ export class CsvExport extends Component {
     for (const tab of /** @type {HTMLElement[]} */ ([...dialog.querySelectorAll("[data-csv-tab]")])) {
       const on = tab.getAttribute("data-csv-tab") === list;
       tab.setAttribute("aria-selected", String(on));
+      tab.classList.toggle("active", on);
       tab.tabIndex = on ? 0 : -1;
       if (on && focus) {
         tab.focus();
@@ -495,15 +502,14 @@ export class CsvExport extends Component {
       }
       reasons.push(
         El.create("span")
-          .cls("badge bg-secondary-lt d-inline-flex align-items-center gap-1")
+          .cls("tag")
           .append(
             document.createTextNode(`${n} ${what}`),
             El.create("button")
-              .cls("btn btn-ghost-secondary btn-icon p-0 border-0 csv-clear")
+              .cls("btn-close")
               .prop("type", "button")
               .attr("aria-label", label)
               .attr("title", label)
-              .append(CsvExport.#icon("x"))
               .on("click", () => {
                 if (clear.exclude === "") {
                   /** @type {HTMLInputElement} */ (CsvExport.#part(dialog, "exclude")).value = "";
@@ -540,9 +546,70 @@ export class CsvExport extends Component {
     box.replaceChildren(table.node);
   }
 
+  /** The built-in preset this list is, or "" for one with none (the Termius CSV). */
+  get preset() {
+    const name = this.name.replace(/\.csv$/, "");
+    return name in GRAINS ? name : "";
+  }
+
+  /**
+   * The URL of the file in the format chosen: the list's own CSV link for
+   * CSV, else /exports/run with its preset and the same options.
+   */
+  #fileURL() {
+    const csv = this.url(false);
+    const format = this.#choice.format ?? "csv";
+    if (format === "csv" || !this.preset) {
+      return csv;
+    }
+    const u = new URL(Ui.path("/exports/run"), location.href);
+    for (const [k, v] of csv.searchParams) {
+      u.searchParams.set(k, v);
+    }
+    u.searchParams.set("preset", this.preset);
+    u.searchParams.set("format", format);
+    return u;
+  }
+
+  /** The Export page with this choice: its rows, profiles, keys and text. */
+  #exportURL() {
+    /** @type {Record<string, unknown>} */
+    const where = {};
+    if (this.#choice.profiles) {
+      where.profile = this.#choice.profiles;
+    }
+    if (this.#choice.keys) {
+      where.key = this.#choice.keys;
+    }
+    if (this.#choice.exclude.trim()) {
+      where.exclude = this.#choice.exclude.trim();
+    }
+    const sel = JSON.stringify({ version: 1, grain: GRAINS[this.preset], where, ...(this.#choice.keys ? { narrow: true } : {}) });
+    const bytes = new TextEncoder().encode(sel);
+    let bin = "";
+    for (const b of bytes) {
+      bin += String.fromCharCode(b);
+    }
+    const s = btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    return `${Ui.path("/export")}#s=${s}&f=${this.#choice.format ?? "csv"}`;
+  }
+
   /** @param {HTMLElement} dialog */
   #renderDownload(dialog) {
     const download = /** @type {HTMLAnchorElement} */ (CsvExport.#part(dialog, "download"));
+    const formats = CsvExport.#part(dialog, "formats");
+    const open = /** @type {HTMLAnchorElement} */ (CsvExport.#part(dialog, "open"));
+    formats.hidden = open.hidden = !this.preset;
+    const select = /** @type {HTMLSelectElement} */ (CsvExport.#part(dialog, "format"));
+    select.value = this.preset ? (this.#choice.format ?? "csv") : "csv";
+    select.onchange = () => {
+      this.#choice = { ...this.#choice, format: select.value };
+      Prefs.set(`csv.${this.name}`, this.#choice);
+      this.#renderDownload(dialog);
+    };
+    if (this.preset) {
+      open.href = this.#exportURL();
+    }
     const why = this.blocked;
     const note = CsvExport.#part(dialog, "blocked");
     note.textContent = why;
@@ -552,24 +619,11 @@ export class CsvExport extends Component {
       download.setAttribute("aria-disabled", "true");
       download.classList.add("disabled");
     } else {
-      download.href = this.url(false).href;
+      download.href = this.#fileURL().href;
       download.setAttribute("download", "");
       download.removeAttribute("aria-disabled");
       download.classList.remove("disabled");
     }
-  }
-
-  /** An icon from the page's sprite. @param {string} name */
-  static #icon(name) {
-    const ns = "http://www.w3.org/2000/svg";
-    const svg = document.createElementNS(ns, "svg");
-    svg.setAttribute("class", "icon m-0");
-    svg.setAttribute("aria-hidden", "true");
-    svg.setAttribute("focusable", "false");
-    const use = document.createElementNS(ns, "use");
-    use.setAttribute("href", `#tabler-${name}`);
-    svg.appendChild(use);
-    return svg;
   }
 
   static #dialog() {

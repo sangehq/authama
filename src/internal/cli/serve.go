@@ -130,7 +130,7 @@ func newServeCmd() *cobra.Command {
 				pinnedPort = handoff.Port
 			}
 			if stopEvery || restart {
-				if failed := stopAll(out, displayHost(host), serverPorts(port, running), basePath); failed > 0 && stopEvery {
+				if failed := stopAll(out, displayHost(host), serverPorts(port, running), basePath, running); failed > 0 && stopEvery {
 					return fmt.Errorf("%d web UI(s) could not be stopped", failed)
 				}
 				removeServeRecord(p, recordInstance(running))

@@ -21,7 +21,7 @@
   {{range .Fields}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}
   {{template "pin_field" $}}
   <button type="submit" class="btn {{if .Destroy}}btn-danger{{else}}btn-primary{{end}}">{{if .Destroy}}Yes, {{.Command}}{{else}}Make this change{{end}}</button>
-  <a href="{{basePath}}/" class="btn btn-link">Cancel</a>
+  <a href="{{basePath}}/" class="btn btn-link link-secondary">Cancel</a>
 </form>
 {{end}}
 {{end}}{{end}}
