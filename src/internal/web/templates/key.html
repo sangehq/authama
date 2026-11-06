@@ -59,9 +59,9 @@
   <div class="card-body">
     <p class="text-secondary">These reach the hosts that use the key. Each runs as a job: you review what it will do, then watch its output.</p>
     <div class="btn-list">
-      {{template "job_open" $}}<input type="hidden" name="action" value="deploy"><input type="hidden" name="key" value="{{.Detail.Ref}}"><button type="submit" class="btn btn-primary"{{if .Revoked}} disabled title="A revoked key is never deployed again"{{end}}>{{icon "refresh"}}<span class="ms-1">Deploy</span></button></form>
+      {{template "job_open" $}}<input type="hidden" name="action" value="deploy"><input type="hidden" name="key" value="{{.Detail.Ref}}"><button type="submit" class="btn btn-primary"{{if .Revoked}} disabled title="A revoked key is never deployed again"{{end}}{{tip "key-deploy"}}>{{icon "refresh"}}<span class="ms-1">Deploy</span></button></form>
       {{template "job_open" $}}<input type="hidden" name="action" value="rotate"><input type="hidden" name="key" value="{{.Detail.Ref}}"><button type="submit" class="btn btn-outline-primary" data-bs-toggle="tooltip" title="Recycle: mint a successor, deploy and verify it everywhere, then retire this key">{{icon "recycle"}}<span class="ms-1">Rotate</span></button></form>
-      {{template "job_open" $}}<input type="hidden" name="action" value="rollback"><input type="hidden" name="key" value="{{.Detail.Ref}}"><button type="submit" class="btn btn-outline-secondary">{{icon "arrow-back-up"}}<span class="ms-1">Roll back</span></button></form>
+      {{template "job_open" $}}<input type="hidden" name="action" value="rollback"><input type="hidden" name="key" value="{{.Detail.Ref}}"><button type="submit" class="btn btn-outline-secondary"{{tip "key-rollback"}}>{{icon "arrow-back-up"}}<span class="ms-1">Roll back</span></button></form>
     </div>
     <p class="text-secondary small mt-3 mb-0">To regenerate it now, without the staged deploy, run <code>authama ssh keygen {{.Detail.Ref}} --force</code> in a terminal {{template "copy" (copy (printf "authama ssh keygen %s --force" .Detail.Ref) "the command")}}: it writes an encrypted backup first, and the old pair moves to <code>old/</code>.</p>
   </div>

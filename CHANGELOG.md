@@ -77,6 +77,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Every control in the web UI explains itself.** Each button, menu entry, row action, tab and
+  menu heading shows a tooltip on hover and focus saying what it does and what to expect (that a
+  form only previews, that a copy changes nothing, what a job step does), which is also its
+  accessible description. The command palette describes the highlighted entry, and sortable table
+  headers say they sort. A test fails on any control without one.
+
 - **The web UI header is two bars, not three.** The strip under the menu that read *Running as
   <user> on <host>* with the build's *current* mark is gone. The user and host now head the account
   menu, and About shows the build's status (*current* or *older build*), when it was built and when
@@ -96,6 +102,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   by any page (log, editor and finding styles from another project, the hand-made tabs, clear
   buttons and dev banner) is removed, with the rule that forced panel columns to full width.
 ### Fixed
+
+- The Overview's quick actions (Reconcile, Re-render, Apply the token config) and Re-render on the
+  SSH config page never showed their explainers: the tip was on the form's hidden input, not the
+  button.
 
 - `make uninstall` also removes the Touch ID helper `authama-touchid` that `make install` puts
   beside `authama`.

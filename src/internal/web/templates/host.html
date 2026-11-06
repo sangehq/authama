@@ -71,7 +71,7 @@
         {{if $.Data.VM}}<div class="mt-4 pt-3 border-top">
           <h3 class="h4">Docker</h3>
           {{template "change_open" $}}<input type="hidden" name="action" value="vm-docker-context"><input type="hidden" name="alias" value="{{.Alias}}">
-            <button type="submit" class="btn btn-outline-secondary">Create a Docker context for {{.Alias}}</button>
+            <button type="submit" class="btn btn-outline-secondary"{{tip "docker-context"}}>Create a Docker context for {{.Alias}}</button>
           </form>
         </div>{{end}}
         <div class="mt-4 pt-3 border-top">

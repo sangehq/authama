@@ -7,9 +7,9 @@
       <p class="text-secondary mb-0">The colour theme for this browser. Following the system matches the light or dark setting of this computer.</p>
     </div>
     <div class="btn-group" role="group" aria-label="Colour theme">
-      <a href="?theme=light" class="btn btn-outline-secondary" data-theme-choice="light">{{icon "sun"}}<span class="ms-1">Light</span></a>
-      <a href="?theme=dark" class="btn btn-outline-secondary" data-theme-choice="dark">{{icon "moon"}}<span class="ms-1">Dark</span></a>
-      <a href="?theme=auto" class="btn btn-outline-secondary" data-theme-choice="auto" title="Follow the system" aria-label="Follow the system">{{icon "device-desktop"}}<span class="ms-1">System</span></a>
+      <a href="?theme=light" class="btn btn-outline-secondary" data-theme-choice="light"{{tip "theme-light"}}>{{icon "sun"}}<span class="ms-1">Light</span></a>
+      <a href="?theme=dark" class="btn btn-outline-secondary" data-theme-choice="dark"{{tip "theme-dark"}}>{{icon "moon"}}<span class="ms-1">Dark</span></a>
+      <a href="?theme=auto" class="btn btn-outline-secondary" data-theme-choice="auto" title="Follow the system" aria-label="Follow the system"{{tip "theme-auto"}}>{{icon "device-desktop"}}<span class="ms-1">System</span></a>
     </div>
   </div>
 </div>
@@ -28,7 +28,7 @@
       {{if and (not .HasSettings) (not $.ReadOnly)}}
       <div class="card-footer d-flex flex-wrap gap-2 align-items-center">
         <span class="text-secondary me-auto">No <code>authama.json</code> yet: every setting is at its default unless the environment or <code>.env</code> sets it.</span>
-        {{template "change_open" $}}<input type="hidden" name="action" value="settings-init"><button type="submit" class="btn btn-primary mt-2">{{icon "plus"}}<span class="ms-1">Create a starter authama.json</span></button></form>
+        {{template "change_open" $}}<input type="hidden" name="action" value="settings-init"><button type="submit" class="btn btn-primary mt-2"{{tip "settings-init"}}>{{icon "plus"}}<span class="ms-1">Create a starter authama.json</span></button></form>
       </div>
       {{end}}
     </div>

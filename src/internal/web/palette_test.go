@@ -31,6 +31,11 @@ func TestPaletteShortcutsAreUniqueAndCoverEveryPage(t *testing.T) {
 		}
 		n := 0
 		for _, sec := range paletteSections(readOnly) {
+			for _, it := range sec.Items {
+				if it.Tip == "" {
+					t.Errorf("palette entry %s says nothing about what it does", it.ID)
+				}
+			}
 			if len(sec.Items) == 0 {
 				t.Errorf("section %s is empty", sec.Title)
 			}

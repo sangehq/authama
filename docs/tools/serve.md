@@ -78,15 +78,22 @@ accepted. A running server is reused only when its base path is the one asked fo
 
 ## Pages
 
-The layout is Tabler's. The header holds the name, a theme toggle (light or dark), a bell listing the
-newest [file events](events.md), and an account menu named for the system user the server runs as and
-the machine (or dev mode, or read-only), holding Settings, Events, Doctor and About. Following the
-system's light or dark theme is chosen on the Settings page, and the third-party licences are on the
-About page. The footer carries the copyright, the version, and links to About, the documentation, the
-source and the licences. Under it, a menu
-holds the Overview and five dropdowns: **SSH** (Profiles, Hosts, Keys, VMs), **Config & backups**
-(SSH config, Snapshots), **Security** (Auth tokens, Audit, Owner & PIN), **Activity** (History,
-Events) and **System** (Doctor, Settings, About). On a narrow screen it folds behind a button.
+The layout is Tabler's, in two bars. The top bar holds the name (with a *read-only* badge when the
+server only reads), a search box that opens the command palette, a theme toggle (light or dark), a
+bell listing the newest [file events](events.md), and an account menu named for the system user the
+server runs as. The account menu opens with *Running as <user> on <host>* and holds Settings, Events,
+Doctor, the tour and About. Under it, a menu holds the Overview and five dropdowns: **SSH**
+(Profiles, Hosts, Keys, VMs), **Config & backups** (SSH config, Snapshots), **Security** (Auth tokens,
+Audit, Owner & PIN), **Activity** (History, Events), Export, and **System** (Doctor, Repair, Settings,
+About). On a narrow screen it folds behind a button. About shows the build (and whether it is
+current), this computer, and the third-party licences; following the system's light or dark theme is
+chosen on the Settings page. The footer carries the copyright, the version, and links to About, the
+documentation, the source and the licences.
+
+- **Every control explains itself.** Hovering or focusing any button, menu entry or link styled as a
+  button shows what it does and what to expect, for instance that a form only previews and nothing
+  is written until you confirm. The text is also the control's accessible description, so a screen
+  reader reads it. Menu entries describe their page, and the palette describes the highlighted entry.
 
 - **Page headers** name the section, summarise the page, and hold its actions: the first two as
   buttons, any more (other forms, downloads) in one **More** menu.

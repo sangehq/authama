@@ -201,7 +201,8 @@ export class DataTable extends Component {
       if (th.hasAttribute("data-nosort") || !label) {
         return;
       }
-      const button = El.create("button").cls("table-sort").prop("type", "button").text(label);
+      const button = El.create("button").cls("table-sort").prop("type", "button").text(label)
+        .attr("title", `Sort by ${label}; again to reverse`);
       button.on("click", () => this.sortBy(i, this.#sortCol === i && this.#sortDir > 0 ? "desc" : "asc").render());
       El.of(th).empty().append(button);
     });
