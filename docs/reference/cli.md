@@ -21,7 +21,7 @@ Every command also takes the global flag:
 
 - [`authama doctor`](#authama-doctor) - Diagnose deps, perms, agent, known_hosts, drift, dangling keys, and token-file perms
 - [`authama events`](#authama-events) - Every change seen to a file under ~/.ssh, the config home or a token file, newest first
-- [`authama export`](#authama-export) - Write any list as CSV, JSON, YAML, a PHP or JS array, Markdown or HTML, filtered
+- [`authama export`](#authama-export) - Write any list as CSV, JSON, YAML, a PHP or JS array, Markdown or HTML, or hosts for an SSH client, filtered
 - [`authama history`](#authama-history) - List the changes authama has made, newest first
   - [`authama history show`](#authama-history-show) - Show one operation: its events and what it changed in the manifest
 - [`authama init`](#authama-init) - Create/converge the per-user home
@@ -66,7 +66,7 @@ Every command also takes the global flag:
     - [`authama ssh host apply`](#authama-ssh-host-apply) - Add or update hosts from compact specs (one, many, or a file)
     - [`authama ssh host delete`](#authama-ssh-host-delete) - Delete a host, its config block and its pins
     - [`authama ssh host edit`](#authama-ssh-host-edit) - Edit a host
-    - [`authama ssh host export`](#authama-ssh-host-export) - Write your hosts as another SSH client imports them
+    - [`authama ssh host export`](#authama-ssh-host-export) - Write your hosts as another SSH client imports them (deprecated: use export hosts --format <client>)
   - [`authama ssh import`](#authama-ssh-import) - Onboard an existing ssh setup - a config file or any folder of them - into the manifest
   - [`authama ssh key`](#authama-ssh-key) - Manage a profile's keys (add/list/delete)
     - [`authama ssh key add`](#authama-ssh-key-add) - Declare a key on a profile and mint it
@@ -110,7 +110,7 @@ Every command also takes the global flag:
     - [`authama ssh snapshots prune`](#authama-ssh-snapshots-prune) - Prune old snapshots, keeping the most recent N
     - [`authama ssh snapshots restore`](#authama-ssh-snapshots-restore) - Restore ~/.ssh config from a snapshot (private keys are left as they are)
   - [`authama ssh termius`](#authama-ssh-termius) - Export hosts for the Termius app
-    - [`authama ssh termius export`](#authama-ssh-termius-export) - Write a Termius CSV import of every host, and list the key to attach to each
+    - [`authama ssh termius export`](#authama-ssh-termius-export) - Write a Termius CSV import of every host, and list the key to attach to each (deprecated: use export hosts --format termius)
     - [`authama ssh termius keys`](#authama-ssh-termius-keys) - List the Termius key label for each host, or copy one host's private key to the clipboard
   - [`authama ssh validate`](#authama-ssh-validate) - Check keypairs parse, match, and have safe perms
   - [`authama ssh view`](#authama-ssh-view) - One host as ssh will use it: resolved config, key and deployment status (the connect view)
@@ -212,6 +212,14 @@ profile/name), --env, --role, --tag, --status, --tool, --kind, --area, --source,
 host's key), each optionally renamed as field=heading. --sort orders the rows (-field
 descends). --format is one of csv, html, js, json, jsonl, markdown, php, tsv, yaml.
 
+Hosts also go out as an SSH client imports them: --format hosts-csv, iterm2, mobaxterm, putty, remmina, securecrt, ssh_config, termius, windows-terminal.
+ssh_config is the managed config of the hosts kept, byte for byte what `ssh config export --flat`
+writes when every host is kept; termius is the Termius CSV; the rest are `ssh host export`'s
+clients (hosts-csv is its csv). Those formats write hosts in manifest order unless --sort is
+given, ignore --columns, leave out git hosts unless --include-git and, except ssh_config,
+windows-terminal and iterm2, hosts behind a ProxyCommand. remmina writes a zip of one file per
+host. What was left out, and what is left to do in the client, goes to stderr.
+
 The file goes to stdout, or to --out.
 
 ```
@@ -226,6 +234,8 @@ Examples:
   authama export profiles --key simtabi_simbi-prd-web-00-ed25519 --narrow --format yaml
   authama export hosts --fields
   authama export --selection sel.json --format php --out hosts.php
+  authama export hosts --profile simtabi --format ssh_config --out simtabi.ssh_config
+  authama export hosts --env prd --format putty --out prd.reg
 ```
 
 Flags:
@@ -238,8 +248,9 @@ Flags:
       --env strings        only these environments
       --exclude string     leave out rows containing this text, ignoring case
       --fields             list every field the list's rows have, and write nothing
-      --format string      csv, tsv, json, jsonl, yaml, php, js, markdown or html (default "csv")
+      --format string      csv, tsv, json, jsonl, yaml, php, js, markdown or html; for hosts also hosts-csv, iterm2, mobaxterm, putty, remmina, securecrt, ssh_config, termius, windows-terminal (default "csv")
       --include string     only rows containing this text, ignoring case
+      --include-git        host formats: also export git hosts (user git, or a github or gitlab provider)
       --key strings        only rows holding or using these keys (name or profile/name)
       --kind strings       events and tokens: only these kinds
       --limit int          at most this many rows (0: all)
@@ -1141,7 +1152,7 @@ Subcommands:
 - [`apply`](#authama-ssh-host-apply) - Add or update hosts from compact specs (one, many, or a file)
 - [`delete`](#authama-ssh-host-delete) - Delete a host, its config block and its pins
 - [`edit`](#authama-ssh-host-edit) - Edit a host
-- [`export`](#authama-ssh-host-export) - Write your hosts as another SSH client imports them
+- [`export`](#authama-ssh-host-export) - Write your hosts as another SSH client imports them (deprecated: use export hosts --format <client>)
 
 ## authama ssh host add
 
@@ -1291,6 +1302,10 @@ Flags:
 ```
 
 ## authama ssh host export
+
+Deprecated: `authama export hosts --format <client>` writes the same files through the export
+pipeline, with its filters, and the Export page offers them too (the generic csv is hosts-csv
+there). This command keeps working and writes the same bytes; it is not removed before v1.0.0.
 
 Write every host as another SSH client imports it, into
 <config home>/exports/<client>/ (or --out DIR, or - for stdout when the export is
@@ -2338,12 +2353,16 @@ authama ssh termius
 
 Subcommands:
 
-- [`export`](#authama-ssh-termius-export) - Write a Termius CSV import of every host, and list the key to attach to each
+- [`export`](#authama-ssh-termius-export) - Write a Termius CSV import of every host, and list the key to attach to each (deprecated: use export hosts --format termius)
 - [`keys`](#authama-ssh-termius-keys) - List the Termius key label for each host, or copy one host's private key to the clipboard
 
 ## authama ssh termius export
 
 Write a Termius CSV import of every host, and list the key to attach to each.
+
+Deprecated: `authama export hosts --format termius` writes the same CSV through the export
+pipeline, with its filters, and the Export page offers it too. This command keeps working and
+writes the same bytes; it is not removed before v1.0.0.
 
 ```
 authama ssh termius export [flags]
