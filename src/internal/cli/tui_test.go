@@ -318,3 +318,22 @@ func TestTheScreenHasNoTrailingWhitespace(t *testing.T) {
 		}
 	}
 }
+
+// The menu is deprecated in favour of the web UI, not removed: the command
+// still resolves and runs, says so on stderr, and is left out of help.
+func TestTheTUIIsDeprecatedButStillThere(t *testing.T) {
+	root := newRootCmd()
+	cmd, _, err := root.Find([]string{"tui"})
+	if err != nil || cmd == root || cmd.Name() != "tui" {
+		t.Fatalf("`tui` must still resolve to its command, got %v (%v)", cmd, err)
+	}
+	if cmd.RunE == nil {
+		t.Fatal("`tui` must still run the menu")
+	}
+	if !strings.Contains(cmd.Deprecated, "web UI") {
+		t.Errorf("the deprecation notice should point at the web UI: %q", cmd.Deprecated)
+	}
+	if cmd.IsAvailableCommand() {
+		t.Error("a deprecated command should be left out of help")
+	}
+}

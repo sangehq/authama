@@ -46,16 +46,16 @@ func newRootCmd() *cobra.Command {
 			"managers and git read, from one manifest in the config home.\n\n" +
 			"Run on its own, on a terminal, it opens the web UI on this machine, as\n" +
 			brand.Command + " serve does. Give it a command for the command line: " + brand.Command + " ssh for\n" +
-			"keys, profiles, hosts and config; " + brand.Command + " token (or auth) for auth tokens; " + brand.Command + " tui\n" +
-			"for the menu; and the commands below that serve both. Every group answers\n" +
+			"keys, profiles, hosts and config; " + brand.Command + " token (or auth) for auth tokens;\n" +
+			"and the commands below that serve both. Every group answers\n" +
 			"help <command>, and " + brand.Command + " man writes a manual page for every command.",
 		Version:       version.Version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Args:          rootArgs,
 		// Bare `authama` on a terminal opens the web UI, exactly as `authama serve`
-		// with its defaults; `authama <command>` is the CLI and `authama tui` the
-		// menu. Someone who runs the binary by double-clicking it, or by typing its
+		// with its defaults; `authama <command>` is the CLI. (`authama tui`, the
+		// menu, is deprecated and kept working.) Someone who runs the binary by double-clicking it, or by typing its
 		// name to see what it does, gets something they can use rather than a wall
 		// of help.
 		//
@@ -103,7 +103,7 @@ func newRootCmd() *cobra.Command {
 	// `ui` was serve's alias, one edit from `tui`: still accepted, never shown.
 	ui := newServeCmd()
 	ui.Use, ui.Hidden = "ui", true
-	ui.Deprecated = "use `" + brand.Command + " serve` (the web UI) or `" + brand.Command + " tui` (the terminal UI)"
+	ui.Deprecated = "use `" + brand.Command + " serve` (the web UI)"
 	root.AddCommand(ui)
 
 	// The two feature groups.

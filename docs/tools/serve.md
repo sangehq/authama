@@ -15,7 +15,7 @@ authama --dev-root ./scratch serve
 A bare `authama` on a terminal runs `serve` with every flag at its default; the
 global `--dev-root` and `--no-dotenv` still apply. With no terminal (a pipe, a
 script, CI) a bare run prints help instead, since `serve` runs until Ctrl-C. The
-menu is `authama tui`.
+web UI replaces the `authama tui` menu, which is deprecated.
 
 It prints an address like this:
 

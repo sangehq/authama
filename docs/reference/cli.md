@@ -134,7 +134,6 @@ Every command also takes the global flag:
   - [`authama token shell-aliases`](#authama-token-shell-aliases) - Show, install or remove the atm shell aliases (atm, atm-ui, atm-doctor, atm-init)
   - [`authama token show`](#authama-token-show) - Everything about one installed token: tool, host, kind, user and file (secret masked)
   - [`authama token status`](#authama-token-status) - Which config is in use, where each tool's file is, and which variables are missing; write nothing
-- [`authama tui`](#authama-tui) - Interactive menu over the manager
 - [`authama version`](#authama-version) - Print the authama version
 
 ## authama doctor
@@ -2947,20 +2946,6 @@ Flags:
       --config string    the token config file (default: discovered)
       --json             machine-readable output (scripting)
       --project string   report the project's auth.json and .npmrc instead of the user ones
-```
-
-## authama tui
-
-Interactive menu over the manager.
-
-```
-authama tui
-```
-
-Examples:
-
-```sh
-  authama tui
 ```
 
 ## authama version

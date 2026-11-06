@@ -3,6 +3,11 @@
 A numbered stdin menu over the same services the CLI verbs use, so nothing is
 reimplemented and the two cannot drift.
 
+> **Deprecated.** The web UI ([`serve`](serve.md), or a bare `authama` on a
+> terminal) is the interactive surface now, and every menu entry has a CLI command
+> printed beside it. `authama tui` still works. It prints a notice on stderr and is
+> left out of `--help`, and it stays until a release removes it.
+
 ```sh
 authama tui      # open the menu
 ```

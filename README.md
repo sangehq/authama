@@ -84,7 +84,6 @@ authama ssh vm sync --dry-run     # keep VM hosts matching their VMs (--install-
 authama ssh key reserve docker-tunnel --for devbox   # keep a loose key for later; doctor stops warning
 authama                           # on a terminal: the web UI on this machine, as authama serve
 authama serve                     # a web UI on this machine, with previewed changes
-authama tui                       # an interactive menu over both
 authama ssh help deploy           # help at any level: authama help, authama auth help set
 authama history                   # every change made, SSH or token
 authama events --since 24h        # every change to a tracked file, by anyone
@@ -131,7 +130,7 @@ else is in the [documentation index](#documentation).
 - [`man`](docs/tools/man.md) — a manual page for every command, and the layout every `--help` shares.
 - [`serve`](docs/tools/serve.md) — the web UI: overview, hosts, keys, snapshots, auth tokens and history in a browser, with previewed changes.
 - [`recover`](docs/tools/recover.md) — break-glass when you are locked out.
-- [`tui`](docs/tools/tui.md) — the interactive menu.
+- [`tui`](docs/tools/tui.md) — the interactive menu (deprecated: use `serve` or the CLI).
 
 ### Recipes
 

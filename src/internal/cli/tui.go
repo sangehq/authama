@@ -14,6 +14,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/core/inventory"
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/platform"
@@ -29,6 +30,11 @@ import (
 	"github.com/simtabi/authama/src/internal/services/snapshots"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
+
+// tuiDeprecated is the notice `authama tui` prints on stderr before the menu.
+const tuiDeprecated = "use the web UI (`" + brand.Command + " serve`, or a bare `" + brand.Command + "` on a terminal) " +
+	"or the command printed beside each menu entry. The menu still works and is " +
+	"kept until a release removes it; see CHANGELOG.md"
 
 const (
 	tuiBack   = "<- back"
@@ -256,9 +262,14 @@ type tui struct {
 func newTuiCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "tui",
-		Short: "Interactive menu over the manager",
-		Args:  cobra.NoArgs,
-		RunE:  func(c *cobra.Command, _ []string) error { return runTUI(c) },
+		Short: "Interactive menu over the manager (deprecated: use the web UI or the CLI)",
+		// Deprecated since the web UI became the interactive surface: a bare
+		// authama opens it, and every menu entry has a CLI command beside it.
+		// The menu still works; cobra prints this on stderr and leaves the
+		// command out of help. Recorded in .claude/design/authama/audits.
+		Deprecated: tuiDeprecated,
+		Args:       cobra.NoArgs,
+		RunE:       func(c *cobra.Command, _ []string) error { return runTUI(c) },
 	}
 }
 

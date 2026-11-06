@@ -75,6 +75,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   column, so it has no Keys tab; the dialog now says so, with a link to the lists that have one.
 
 
+### Deprecated
+
+- **`authama tui`, the terminal menu.** The web UI is the interactive surface: a bare `authama` on
+  a terminal opens it, and every menu entry has a CLI command beside it. The menu still works. It
+  prints a notice on stderr and is left out of `--help` and the CLI reference. The `atm-ui` shell
+  alias still opens it.
+
 ### Changed
 
 - **The lists' CSV downloads (`/exports/hosts.csv` and the rest) now come from the export
@@ -107,6 +114,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Documentation
 
+- The keepalive workflow calls the reusable workflow at a commit, not at `main`, so an upstream
+  change cannot alter this repository's CI unseen.
 - Installation covers checking what is installed, restarting the web UI after an update (with the
   commands to stop a server on the usual ports), and uninstalling, including what is kept.
 
