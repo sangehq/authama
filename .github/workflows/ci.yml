@@ -92,12 +92,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Binary releases are on hold, so the release carries no binary: build
+          # this commit's into a local "release" with a real checksums.txt, and
+          # install from it. The version is still resolved from GitHub.
+          case "$(uname -s)" in Darwin) os=macos ;; *) os=linux ;; esac
+          case "$(uname -m)" in x86_64|amd64) arch=amd64 ;; arm64|aarch64) arch=arm64 ;; *) arch="$(uname -m)" ;; esac
+          rel="$(mktemp -d)"
+          go -C src build -o "$rel/authama_${os}_${arch}" ./cmd/authama
+          if command -v sha256sum >/dev/null; then (cd "$rel" && sha256sum "authama_${os}_${arch}" > checksums.txt)
+          else (cd "$rel" && shasum -a 256 "authama_${os}_${arch}" > checksums.txt); fi
+          export AUTHAMA_RELEASE_BASE="file://$rel"
           dir="$(mktemp -d)/bin"
           # bash explicitly, so the macOS runner exercises its system bash 3.2
           # rather than whatever `env bash` happens to find.
-          AUTHAMA_INSTALL_DIR="$dir" bash src/scripts/install.sh
+          AUTHAMA_INSTALL_DIR="$dir" bash src/scripts/install.sh 2>&1 | tee "$rel/out"
           test -x "$dir/authama"
           "$dir/authama" version
+          # The checksum was checked, not skipped.
+          if grep -q 'skipping verification' "$rel/out"; then echo "the installer skipped checksum verification"; exit 1; fi
           # The sshmgr alias is no longer installed.
           test ! -e "$dir/sshmgr"
           # The deprecated variable name still picks the directory.
@@ -113,6 +125,17 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          # Binary releases are on hold, so the release carries no binary: build
+          # this commit's into a local "release" with a real checksums.txt, and
+          # install from it. The version is still resolved from GitHub.
+          $rel = Join-Path $env:RUNNER_TEMP 'release'
+          New-Item -ItemType Directory -Path $rel -Force | Out-Null
+          $asset = 'authama_windows_amd64.exe'
+          go -C src build -o (Join-Path $rel $asset) ./cmd/authama
+          if ($LASTEXITCODE -ne 0) { throw 'go build failed' }
+          $hash = (Get-FileHash (Join-Path $rel $asset) -Algorithm SHA256).Hash.ToLower()
+          Set-Content -Path (Join-Path $rel 'checksums.txt') -Value "$hash  $asset"
+          $env:AUTHAMA_RELEASE_BASE = $rel
           foreach ($case in 'api', 'redirect-fallback') {
             $script = Get-Content -Raw src/scripts/install.ps1
             if ($case -eq 'redirect-fallback') {

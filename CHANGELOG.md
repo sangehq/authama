@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The installers can install from a release of your own.** `AUTHAMA_RELEASE_BASE` (`-ReleaseBase`
+  for `install.ps1`) names where the binary and `checksums.txt` are read from instead of the GitHub
+  release: a URL, or a directory (`file:///path` for `install.sh`). CI uses it to install a binary
+  it just built, since binary releases are on hold and the release carries none; the checksum is
+  verified, not skipped.
 - **The web UI says when it is older than the installed binary.** A running `authama serve` keeps
   the code it started with, so after `make install` the browser showed the old UI with nothing to
   say why. Every page now shows a banner naming the binary that changed and how to restart.
