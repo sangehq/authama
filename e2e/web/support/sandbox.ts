@@ -25,11 +25,13 @@ const repo = resolve(here, '..', '..', '..');
 // `make build` writes build/{host-os}/authama: the OS folder is macos, not
 // darwin, and windows' binary ends .exe.
 const hostOS = process.platform === 'darwin' ? 'macos' : process.platform === 'win32' ? 'windows' : process.platform;
-const bin = process.env.AUTHAMA_BIN
+export const bin = process.env.AUTHAMA_BIN
   ? resolve(process.env.AUTHAMA_BIN)
   : join(repo, 'build', hostOS, process.platform === 'win32' ? 'authama.exe' : 'authama');
 
-function sandboxEnv(home: string): NodeJS.ProcessEnv {
+// The environment every command in the sandbox runs with; a spec running the
+// CLI against the server's home uses it too, with AUTHAMA_E2E_HOME.
+export function sandboxEnv(home: string): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {};
   for (const [k, v] of Object.entries(process.env)) {
     if (/^(AUTHAMA_|SSH_MANAGER_|SSHMGR_|XDG_)/.test(k) || k === 'SSH_AUTH_SOCK') continue;
