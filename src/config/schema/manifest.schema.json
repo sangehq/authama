@@ -66,6 +66,36 @@
           "pattern": "^[A-Za-z0-9_][A-Za-z0-9._-]*$",
           "description": "The directory under ~/.ssh holding the profile directories; empty = profiles. One name, not hidden and not one of ssh's own files. Change it with `authama ssh key root <dir>`, which moves the keys."
         },
+        "naming": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "How servers and their keys are named. See docs/configuration.md#naming-servers.",
+          "properties": {
+            "alias": {
+              "type": "string",
+              "description": "The alias template, from {code}, {env}, {role} and {nn}. Default {code}-{env}-{role}-{nn}."
+            },
+            "key_name": {
+              "type": "string",
+              "pattern": "^\\{profile\\}_.*-\\{algo\\}$",
+              "description": "The key-name template, from {profile}, {alias}, {code}, {env}, {role}, {nn} and {algo}; it starts with {profile}_ and ends with -{algo}. Default {profile}_{alias}-{algo}. Change it with `authama ssh naming key-template`, which keeps existing hosts' key names."
+            },
+            "envs": {
+              "type": "array",
+              "items": { "type": "string", "pattern": "^[a-z0-9]+$" },
+              "description": "The values {env} may take, such as prd, stg, dev. Empty allows any."
+            },
+            "roles": {
+              "type": "array",
+              "items": { "type": "string", "pattern": "^[a-z0-9]+$" },
+              "description": "The values {role} may take, such as web, db. Empty allows any."
+            },
+            "enforce": {
+              "enum": ["off", "warn", "error"],
+              "description": "What adding a host whose alias breaks the rules does. Default off; hosts already there are only reported."
+            }
+          }
+        },
         "onepassword_agent": {
           "type": "string",
           "description": "1Password SSH agent socket for key_store 1password profiles; empty = the platform default."
@@ -234,6 +264,11 @@
           "category": {
             "type": "string",
             "description": "Groups the profile under profiles/<category>/."
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+$",
+            "description": "The organisation's code name, the {code} of its servers' aliases (simtabi's is simbi)."
           },
           "key_store": {
             "enum": [

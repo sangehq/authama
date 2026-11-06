@@ -55,6 +55,7 @@ var sharedVerbs = map[string]string{
 	"audit":     "a read-only hygiene report over everything of a kind (keys / token files)",
 	"providers": "the catalog of services the group knows how to talk to (SSH key hosts / token services and registries)",
 	"status":    "a read-only summary of current state (git checkouts' remotes / the token setup)",
+	"set":       "store values given on the command line (one credential / the naming rules)",
 }
 
 func names(c *cobra.Command) []string { return append([]string{c.Name()}, c.Aliases...) }

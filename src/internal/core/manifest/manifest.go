@@ -292,7 +292,10 @@ func (k *KeySpec) UnmarshalJSON(b []byte) error {
 // written as an omitted field) keeps them under ~/.ssh; "1password" keeps them
 // as SSH Key items in OPVault, with only the public half on disk.
 type Profile struct {
-	Category string  `json:"category,omitempty"`
+	Category string `json:"category,omitempty"`
+	// Code is the organisation's code name, the first part of its servers'
+	// aliases under the naming rules (simtabi's is simbi: simbi-prd-web-00).
+	Code     string  `json:"code,omitempty"`
 	KeyStore string  `json:"key_store,omitempty"`
 	OPVault  string  `json:"op_vault,omitempty"`
 	KeyScope string  `json:"key_scope"`
@@ -322,6 +325,7 @@ func (p *Profile) UnmarshalJSON(b []byte) error {
 func (p Profile) MarshalJSON() ([]byte, error) {
 	type wire struct {
 		Category   string    `json:"category,omitempty"`
+		Code       string    `json:"code,omitempty"`
 		KeyStore   string    `json:"key_store,omitempty"`
 		OPVault    string    `json:"op_vault,omitempty"`
 		KeyScope   string    `json:"key_scope"`
@@ -334,7 +338,7 @@ func (p Profile) MarshalJSON() ([]byte, error) {
 	if hosts == nil {
 		hosts = []Host{}
 	}
-	return json.Marshal(wire{Category: p.Category, KeyStore: p.KeyStore, OPVault: p.OPVault, KeyScope: p.KeyScope, KeyName: p.KeyName, KeyComment: p.KeyComment, Keys: p.Keys, Hosts: hosts})
+	return json.Marshal(wire{Category: p.Category, Code: p.Code, KeyStore: p.KeyStore, OPVault: p.OPVault, KeyScope: p.KeyScope, KeyName: p.KeyName, KeyComment: p.KeyComment, Keys: p.Keys, Hosts: hosts})
 }
 
 // ExpiryCheck is the notifier policy.
@@ -378,6 +382,9 @@ type Defaults struct {
 	// KeyRoot is the directory under ~/.ssh holding the profile directories;
 	// empty means DefaultKeyRoot ("profiles"). Read it through KeyRoot.
 	KeyRoot string `json:"key_root,omitempty"`
+	// Naming holds the rules servers and keys are named by; nil is the
+	// defaults (see NamingRules).
+	Naming *Naming `json:"naming,omitempty"`
 }
 
 func newDefaults() Defaults {
@@ -412,6 +419,7 @@ func (d Defaults) MarshalJSON() ([]byte, error) {
 		KeyComment       string         `json:"key_comment,omitempty"`
 		Git              *GitDefaults   `json:"git,omitempty"`
 		KeyRoot          string         `json:"key_root,omitempty"`
+		Naming           *Naming        `json:"naming,omitempty"`
 	}
 	warn := d.WarnBeforeDays
 	if warn == nil {
@@ -421,7 +429,7 @@ func (d Defaults) MarshalJSON() ([]byte, error) {
 		KeyType: d.KeyType, KeyScope: d.KeyScope, RotateAfterDays: d.RotateAfterDays,
 		WarnBeforeDays: warn, ExpiryCheck: d.ExpiryCheck, GlobalOptions: d.GlobalOptions,
 		OnePasswordAgent: d.OnePasswordAgent, KeyComment: d.KeyComment, Git: d.Git,
-		KeyRoot: d.KeyRoot,
+		KeyRoot: d.KeyRoot, Naming: d.Naming,
 	})
 }
 
@@ -1013,6 +1021,9 @@ func (m *Manifest) validate() error {
 	if err := checkKeyRootFor(m); err != nil {
 		return err
 	}
+	if err := checkNaming(m); err != nil {
+		return err
+	}
 	for name, p := range m.Profiles {
 		if err := safeSegment("profile name", name); err != nil {
 			return err
@@ -1119,7 +1130,7 @@ func (m *Manifest) ResolvedKeyName(profileName string, host Host) (string, error
 	if host.KeyName != nil && *host.KeyName != "" {
 		return *host.KeyName, nil
 	}
-	return key.DeriveKeyName(profileName, host.Alias, m.Defaults.KeyType)
+	return derivedKeyName(m, profileName, host.Alias)
 }
 
 // ProfileRel is a profile's key directory relative to ~/.ssh, in forward-slash

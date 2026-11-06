@@ -1,11 +1,13 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
 
 	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/core/naming"
 	"github.com/simtabi/authama/src/internal/platform"
 	"github.com/simtabi/authama/src/internal/services/editor"
 	"github.com/simtabi/authama/src/internal/services/lifecycle"
@@ -24,17 +26,38 @@ const proxyFlagHelp = "reach the host through a proxy: cloudflared (Cloudflare A
 func newHostCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "host", Short: "Manage a host within a profile (add/edit/delete/apply)"}
 
-	var hostname, user, provider, tokenEnv, keyName, proxy string
+	var hostname, user, provider, tokenEnv, keyName, proxy, env, role string
 	var port int
 	var tags []string
 	add := &cobra.Command{
-		Use:   "add <profile> <alias>",
-		Short: "Add a host to a profile",
-		Args:  cobra.ExactArgs(2),
+		Use:   "add <profile> [<alias>]",
+		Short: "Add a host to a profile (or name it by the naming rules with --env and --role)",
+		Long: "Add a host to a profile.\n\n" +
+			"Without <alias>, --env and --role name it by the naming rules\n" +
+			"(defaults.naming.alias, {code}-{env}-{role}-{nn} unless set): the profile's code,\n" +
+			"the environment, the role and the next free number, so a third web server of\n" +
+			"simtabi in production is simbi-prd-web-02. The role and environment are added as\n" +
+			"tags. With defaults.naming.enforce at error, an alias that breaks the rules is\n" +
+			"refused; at warn it is added and the reason printed.",
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(c *cobra.Command, args []string) error {
 			p, err := resolvePaths(c)
 			if err != nil {
 				return err
+			}
+			if len(args) == 1 {
+				m, err := manifest.Load(p.Manifest())
+				if err != nil {
+					return err
+				}
+				alias, extra, err := generatedAlias(m, args[0], env, role)
+				if err != nil {
+					return err
+				}
+				args = append(args, alias)
+				tags = appendMissing(tags, extra...)
+			} else if env != "" || role != "" {
+				return errors.New("--env and --role name the host; leave out <alias> to use them, or add them as --tag")
 			}
 			lockForMutation(p)
 			f := editor.HostFields{
@@ -54,6 +77,11 @@ func newHostCmd() *cobra.Command {
 			// as a permission denial.
 			_, _ = fmt.Fprintf(c.OutOrStdout(), "added host %s to %s (run `authama ssh reconcile` to mint its "+
 				"key)\n", args[1], args[0])
+			if m, err := manifest.Load(p.Manifest()); err == nil && manifest.NamingRules(m).Enforce == naming.EnforceWarn {
+				if v := manifest.NamingViolation(m, args[0], args[1]); v != "" {
+					_, _ = fmt.Fprintf(c.ErrOrStderr(), "naming: %s\n", v)
+				}
+			}
 			return applyManifestEdit(c, p)
 		},
 	}
@@ -65,6 +93,8 @@ func newHostCmd() *cobra.Command {
 	add.Flags().StringVar(&keyName, "key-name", "", "use this key instead of the derived <profile>_<alias>-<algo> name")
 	add.Flags().StringArrayVar(&tags, "tag", nil, "repeatable")
 	add.Flags().StringVar(&proxy, "proxy", "", proxyFlagHelp)
+	add.Flags().StringVar(&env, "env", "", "with no <alias>: the environment the generated alias names (prd, stg, dev)")
+	add.Flags().StringVar(&role, "role", "", "with no <alias>: the role the generated alias names (web, db, ...)")
 	_ = add.MarkFlagRequired("hostname")
 	_ = add.MarkFlagRequired("user")
 	cmd.AddCommand(add)
