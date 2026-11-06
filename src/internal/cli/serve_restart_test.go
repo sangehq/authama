@@ -66,8 +66,16 @@ func TestStopAllFindsEveryAuthamaWebUI(t *testing.T) {
 		t.Error("stop-all would stop the process running it")
 	}
 	var out bytes.Buffer
-	if failed := stopAll(&out, host, []int{older}, ""); failed != 1 || !strings.Contains(out.String(), "could not stop the web UI at") {
+	if failed := stopAll(&out, host, []int{older}, "", nil); failed != 1 || !strings.Contains(out.String(), "could not stop the web UI at") {
 		t.Errorf("stopAll = %d, %q", failed, out.String())
+	}
+	// The home's record supplies the pid an older build does not say: here
+	// this test's own pid, which stopFound refuses, proving the record's pid
+	// was the one used.
+	out.Reset()
+	rec := &serveRecord{PID: os.Getpid(), Instance: "bbbb", Addr: found[1].Addr}
+	if failed := stopAll(&out, host, []int{older}, "", rec); failed != 1 || !strings.Contains(out.String(), "it is this process") {
+		t.Errorf("with the record: %q", out.String())
 	}
 }
 
