@@ -139,6 +139,31 @@ Events) and **System** (Doctor, Settings, About). On a narrow screen it folds be
   removed after `authama serve` started, every page shows a yellow banner naming the file: the
   server keeps the code it started with, so restart it to see the new build
   ([Restart the web UI after updating](../installation.md#updating)).
+- **Any list in any format.** `/exports/run` writes a selection of a home's records as a file.
+  A built-in preset is a list as its page shows it (`?preset=hosts`, `keys`, `profiles`, `tokens`,
+  `history`, `events`, `snapshots`, `deployments`); a selection (`?s=`, the JSON below as
+  base64url) chooses the rows, filters, columns, sort and limit. `?format=` is `csv` (the default),
+  `tsv`, `json`, `jsonl`, `yaml`, `php`, `js`, `markdown` or `html`; `?header=0`, `?compact=1` and
+  `?shape=table` (`{columns, rows}` instead of one object per row) tune it. `?preview=1` answers with
+  JSON: the first 25 rows, the rows left after each step, every field, and every value each filter
+  can take, with its count.
+
+  ```json
+  {"version": 1, "grain": "host",
+   "where": {"profile": ["simtabi"], "env": ["prd"], "exclude": "staging"},
+   "columns": [{"field": "alias"}, {"field": "key.fingerprint", "as": "fingerprint"}],
+   "sort": [{"field": "alias"}], "limit": 0}
+  ```
+
+  `grain` is `profile`, `key`, `host`, `token`, `op`, `event`, `snapshot` or `deployment`. `where`
+  takes `profile`, `key` (a key's name or `profile/name`), `env`, `role`, `tag`, `status`, `target`,
+  `kind`, `area`, `source`, `command` (a command or its subcommands), `since` and `until` (a time or
+  a prefix such as `2026-11`), and `include`/`exclude` text. `narrow: true` cuts a profile's key
+  list and counts down to the keys chosen. A selection of another `version` is refused.
+- **The records as JSON.** `/api/dataset` serves the home's profiles, keys, hosts (every SSH setting,
+  and the env, role, code and number their alias carries) and tokens (never a value);
+  `?parts=tokens,ops,events,snapshots,deployments` chooses the slower parts, and `?parts=core` reads
+  none of them.
 - **A CSV is previewed before it downloads.** Its button opens a dialog with a tab per list on the left,
   each a table with a tick box per row:
   - **Profiles**, for a list with a profile column (hosts, keys, profiles, the Termius CSV).
