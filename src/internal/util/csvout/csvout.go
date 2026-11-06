@@ -103,6 +103,37 @@ func (t Table) Without(text string) Table {
 }
 
 // Head returns t with at most n rows.
+// Column is the index of the first column named one of names, or -1.
+func (t Table) Column(names ...string) int {
+	for i, h := range t.Header {
+		for _, n := range names {
+			if h == n {
+				return i
+			}
+		}
+	}
+	return -1
+}
+
+// Only keeps the rows whose column col holds one of values; with no values,
+// or no such column, it keeps every row.
+func (t Table) Only(col int, values []string) Table {
+	if col < 0 || len(values) == 0 {
+		return t
+	}
+	keep := map[string]bool{}
+	for _, v := range values {
+		keep[v] = true
+	}
+	out := Table{Header: t.Header}
+	for _, r := range t.Rows {
+		if col < len(r) && keep[r[col]] {
+			out.Rows = append(out.Rows, r)
+		}
+	}
+	return out
+}
+
 func (t Table) Head(n int) Table {
 	if n >= 0 && len(t.Rows) > n {
 		t.Rows = t.Rows[:n]

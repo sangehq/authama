@@ -13,7 +13,16 @@
       </div>
       <div class="modal-body">
         <div class="row g-3">
-          <fieldset class="col-md-4">
+          <div class="col-md-4">
+          <fieldset class="mb-3" data-csv-profiles-box hidden>
+            <legend class="form-label">Profiles</legend>
+            <div class="d-flex gap-2 mb-2">
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-csv-profiles-all>All</button>
+            </div>
+            <div class="csv-columns" data-csv-profiles></div>
+            <small class="form-hint">None ticked is every profile.</small>
+          </fieldset>
+          <fieldset>
             <legend class="form-label">Columns</legend>
             <div class="d-flex gap-2 mb-2">
               <button type="button" class="btn btn-sm btn-outline-secondary" data-csv-all>All</button>
@@ -21,10 +30,11 @@
             </div>
             <div class="csv-columns" data-csv-columns></div>
           </fieldset>
+          </div>
           <div class="col-md-8">
             <label class="form-label" for="csv-exclude">Leave out rows containing</label>
             <input class="form-control" id="csv-exclude" type="search" maxlength="200" autocomplete="off" placeholder="staging" data-csv-exclude aria-describedby="csv-exclude-hint">
-            <small class="form-hint" id="csv-exclude-hint">Any row with this text in any column is left out, ignoring case. Your choice of columns and this text are remembered for this list in this browser.</small>
+            <small class="form-hint" id="csv-exclude-hint">Any row with this text in any column is left out, ignoring case. Your choice of profiles, columns and this text is remembered for this list in this browser.</small>
             <p class="mt-3 mb-1 text-secondary" data-csv-summary role="status" aria-live="polite"></p>
             <div class="table-responsive csv-preview" tabindex="0" role="region" aria-label="Preview of the first rows" data-csv-preview></div>
           </div>

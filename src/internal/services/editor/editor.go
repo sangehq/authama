@@ -18,6 +18,7 @@ import (
 
 	"github.com/simtabi/authama/src/internal/core/inventory"
 	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/core/naming"
 	"github.com/simtabi/authama/src/internal/core/providers"
 	"github.com/simtabi/authama/src/internal/util/log"
 	"github.com/simtabi/authama/src/internal/util/paths"
@@ -479,6 +480,14 @@ func addHostTo(m *manifest.Manifest, profile, alias string, f HostFields) error 
 	for _, h := range m.Profiles[profile].Hosts {
 		if h.Alias == alias {
 			return fmt.Errorf("host %q already exists in %q", alias, profile)
+		}
+	}
+	// A server whose alias breaks the naming rules is refused when they say
+	// error; warn is the caller's to print (manifest.NamingViolation). A VM
+	// host is a devbox, not a server, and is not held to them.
+	if f.VM == nil && manifest.ProfileNamingRules(m, profile).Enforce == naming.EnforceError {
+		if v := manifest.NamingViolation(m, profile, alias); v != "" {
+			return fmt.Errorf("naming: %s (see `authama ssh naming show`, or let `host add --env --role` name it)", v)
 		}
 	}
 	port := 22

@@ -31,6 +31,22 @@ test('a CSV opens a dialog: columns and rows are chosen, previewed, and the down
   const header = (await res.text()).split('\n')[0];
   expect(header).not.toContain(dropped);
 
+  // Only some profiles: their rows alone, and the choice is in the link.
+  await dialog.getByLabel('Leave out rows containing').fill('');
+  await expect(download).not.toHaveAttribute('href', /exclude=/);
+  const profiles = dialog.getByRole('group', { name: 'Profiles' });
+  await expect(profiles).toBeVisible();
+  const firstProfile = profiles.getByRole('checkbox').first();
+  const label = ((await profiles.locator('label').first().textContent()) ?? '').replace(/ \(\d+\)$/, '');
+  await firstProfile.check();
+  await expect(download).toHaveAttribute('href', new RegExp(`profile=${encodeURIComponent(label)}`));
+  const only = await page.request.get((await download.getAttribute('href')) ?? '');
+  const rows = (await only.text()).trim().split('\n').slice(1);
+  expect(rows.length).toBeGreaterThan(0);
+  await profiles.getByRole('button', { name: 'All' }).click();
+  await expect(firstProfile).not.toBeChecked();
+  await expect(download).not.toHaveAttribute('href', /profile=/);
+
   // The choice is remembered for this list.
   await dialog.getByRole('button', { name: 'Cancel' }).click();
   await page.reload();

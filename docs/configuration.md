@@ -235,7 +235,8 @@ keys, and nothing else - and nothing crosses profiles:
 
 ## <a name="naming-servers"></a>Naming servers
 
-A server's alias says whose it is, which environment, what it does and which one:
+A server's alias says whose it is, which environment, what it does and which one. The rules are in
+the manifest, so they can be changed, and authama can name a server by them:
 
 ```
 <code>-<env>-<role>-<nn>          simbi-prd-web-00   simbi-prd-db-00   dani-prd-web-00
@@ -243,37 +244,119 @@ A server's alias says whose it is, which environment, what it does and which one
 
 | Part | Meaning | Examples |
 |---|---|---|
-| `code` | the code name of the organisation or client the server belongs to | `simbi` (Simtabi), `dani` (AdelsaIQ) |
-| `env` | the environment | `prd` (production), `stg` (staging), `dev` |
+| `code` | the organisation's code name, set on its profile (`code`) | `simbi` (Simtabi), `dani` (AdelsaIQ) |
+| `env` | the environment | `prd`, `stg`, `dev` |
 | `role` | what the server does | `web`, `db`, `cache`, `worker`, `vpn` |
-| `nn` | two digits, from `00`, for the next server of the same role | `00`, `01` |
+| `nn` | two digits, from `00`: the next server of the same code, environment and role | `00`, `01` |
 
-The parts are lowercase letters and digits joined by `-`, so the alias is also a valid host name.
 The code name is only in the alias: the server goes in the organisation's own profile (`simtabi` for
 `simbi-*`, `adelsaiq` for `dani-*`), in the category that says what the organisation is to you
-(`orgs` for your own, `clients` for clients'). Each host carries its role and environment as tags,
-so the web UI, `list` and the exports can filter by them. The key name is left to authama, which
-derives one per host from the profile and the alias (`simtabi_simbi-prd-web-00-ed25519`):
+(`orgs` for your own, `clients` for clients'), tagged with its role and environment so the web UI,
+`list` and the exports can filter by them.
+
+### Let authama name it
 
 ```bash
-authama ssh host add simtabi simbi-prd-web-00 -H 203.0.113.10 -u ploi --tag web --tag prd
-authama ssh host add simtabi simbi-prd-db-00 -H 203.0.113.20 -u ploi --tag db --tag prd
+authama ssh profile edit simtabi --code simbi                 # once per organisation
+authama ssh host add simtabi --env prd --role web -H 203.0.113.10 -u ploi
+authama ssh host add simtabi --env prd --role web -H 203.0.113.11 -u ploi
 authama ssh reconcile --yes
 ```
 
+The first is `simbi-prd-web-00`, the second `simbi-prd-web-01`: the lowest number no server of the
+same code, environment and role has. Both are tagged `web` and `prd`. Naming a host yourself works as
+before: `authama ssh host add simtabi simbi-prd-db-00 -H 203.0.113.20 -u ploi --tag db --tag prd`.
+
+### The rules
+
+`defaults.naming` holds them for every profile, and a profile's own `naming` overrides them field by
+field; every field is optional.
+
 ```json
-"simtabi": {
-  "category": "orgs",
-  "hosts": [
-    { "alias": "simbi-prd-web-00", "hostname": "203.0.113.10", "user": "ploi", "tags": ["web", "prd"] },
-    { "alias": "simbi-prd-db-00",  "hostname": "203.0.113.20", "user": "ploi", "tags": ["db", "prd"] }
-  ]
+"defaults": {
+  "naming": {
+    "alias": "{code}-{env}-{role}-{nn}",
+    "key_name": "{profile}_{alias}-{algo}",
+    "envs": ["prd", "stg", "dev"],
+    "roles": ["web", "db", "cache", "worker", "vpn"],
+    "enforce": "warn",
+    "start": 0,
+    "code_fallback": "none"
+  }
+},
+"profiles": {
+  "simtabi":  { "category": "orgs", "code": "simbi", "hosts": [] },
+  "adelsaiq": { "category": "clients", "code": "dani",
+                "naming": { "alias": "{code}-{role}-{nn}", "start": 1 }, "hosts": [] }
 }
 ```
 
-New servers follow this convention. Servers named before it (such as `oribi-web` or
-`oribi-db-maria`) keep their names: an alias is in `~/.ssh/config`, in shell history and in other
-tools' imports, so renaming one is a change of its own, not a tidy-up.
+| Field | Default | Meaning |
+|---|---|---|
+| `alias` | `{code}-{env}-{role}-{nn}` | the alias template, from `{code}`, `{env}`, `{role}` and a number |
+| `key_name` | `{profile}_{alias}-{algo}` | the key-name template (see [Key names](#key-names)) |
+| `envs`, `roles` | any | the values `{env}` and `{role}` may take; listing them also makes reading an alias exact |
+| `enforce` | `off` | what adding a host whose alias breaks the rules does: `off`, `warn` (added, with the reason printed) or `error` (refused) |
+| `start` | `0` | the first number: `0` (`00`) or `1` (`01`) |
+| `code_fallback` | `none` | the `{code}` of a profile with no `code` of its own: `none`, or `profile` (its name, lowercased to letters and digits) |
+
+In a template:
+
+- `{nn}` is the number, two digits; `{nnn}` three. A template must have one, so a second server of
+  the same kind can be named.
+- `{env?}` (any part but the number) is **optional**: when it has no value it is left out with the
+  separator before it, or after it for the first part, so `{code}-{env?}-{role}-{nn}` names both
+  `simbi-prd-web-00` and `simbi-web-00`. Two optional parts in a row are refused, since an alias
+  with only one of them could not be read back.
+- Parts are joined by literal text, and only lowercase letters, digits, `-` and `.` keep the alias a
+  valid host name.
+
+```bash
+authama ssh naming show                                     # the rules in effect, each profile's code and own rules
+authama ssh naming check                                    # the servers that do not follow them (--strict for CI)
+authama ssh naming set --envs prd,stg,dev --enforce warn    # every profile
+authama ssh naming set --profile adelsaiq --alias '{code}-{role}-{nn}' --start 1
+authama ssh naming set --code-fallback profile
+authama ssh naming key-template '{profile}_{code}_{env}_{role}_{nn}-{algo}'
+```
+
+`naming check` only reports: a server named before the rules keeps its name, because an alias is in
+`~/.ssh/config`, in shell history and in other tools' imports, and renaming one is a change of its
+own. VM hosts are devboxes, not servers, and are never held to the rules.
+
+### Every setup
+
+| Setup | How |
+|---|---|
+| An organisation with a code | `profile edit <p> --code <code>`; aliases start with it |
+| A profile with no code | the default template needs one, so set it, or `naming set --code-fallback profile` to use the profile's name, or give the profile a template without `{code}` |
+| A convention with no code at all | `naming set --alias '{env}-{role}-{nn}'` |
+| A client with a convention of its own | `naming set --profile <client> --alias ...`, over the defaults |
+| One environment only, so no env in the name | `{env?}`: leave out `--env` and it drops out |
+| Numbering from 01, or three digits | `--start 1`; `{nnn}` |
+| Keys named with the code, when there is one | `naming key-template '{profile}_{code?}_{alias}-{algo}'` |
+| Hosts named by hand | `host add <p> <alias>` as ever; `enforce` decides whether a stray name warns or is refused |
+| A shared key for a whole profile | `key_scope: shared`; templates do not apply to it |
+
+### No change renames a key
+
+Every change a key name can depend on (setting or clearing a profile's `code`, `naming set` at either
+level, `naming key-template`) first works out every existing host's key name, makes the change, and
+writes the old name into the manifest as the `key_name` of each host whose name would otherwise
+change, and lists them (`kept its key name: acme/web1`). So no key already on disk is renamed or left
+behind; only hosts added afterwards follow the new rules. Editing those fields by hand in the
+manifest skips this step and would re-point existing hosts at keys that do not exist.
+
+### Key names
+
+By default a key is named `<profile>_<alias>-<algo>`, `simtabi_simbi-prd-web-00-ed25519`: the
+underscore ends the profile, and the alias keeps its hyphens, so it is clear where it starts and
+ends. A template can name keys from the alias's parts instead, such as
+`{profile}_{code}_{env}_{role}_{nn}-{algo}` for `simtabi_simbi_prd_web_00-ed25519`. A key-name
+template starts with `{profile}_` and ends with `-{algo}`, which is how a key's profile and type are
+read back, and needs at least one part that is always there between them. A host whose alias lacks a
+part the template needs (an alias named before the rules, or a profile with no code under `{code}`)
+keeps the default name; `{code?}` leaves the code out instead.
 
 ## Categories
 
