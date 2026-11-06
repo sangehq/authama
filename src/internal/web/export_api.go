@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 
 	"github.com/simtabi/authama/src/internal/brand"
@@ -114,6 +115,70 @@ func (x exportAPI) handleRun(w http.ResponseWriter, r *http.Request) {
 	if q.Get("preset") != "" {
 		sel = shapedPreset(sel, q)
 	}
+	x.run(w, r, sel, name)
+}
+
+// runPreset answers a list's old CSV URL (/exports/hosts.csv) through the
+// pipeline: its preset, shaped by the link's options, as CSV, under the
+// file name that URL always had.
+func (x exportAPI) runPreset(w http.ResponseWriter, r *http.Request, preset string) {
+	x.run(w, r, shapedPreset(selection.Presets[preset], r.URL.Query()), preset)
+}
+
+// enginePresetParams are the CSV links' options the pipeline answers byte for
+// byte as the old lists did, per list, proven by
+// TestTheOldCSVURLsAreTheirListsBytes. Every list took the download dialog's
+// shape (csvShape); events and history also took their own page's filters,
+// and ignored the rest, so another list's filter keeps the old path rather
+// than start filtering where it never did.
+var enginePresetParams = func() map[string]map[string]bool {
+	page := map[string][]string{"events": {"area", "kind"}, "history": {"since", "until", "command", "source"}}
+	out := map[string]map[string]bool{}
+	for name, sel := range selection.Presets {
+		allowed := map[string]bool{"exclude": true, "drop": true}
+		// csvShape filters by profile, or by key, only where the list has
+		// that column, and ignores the option elsewhere.
+		for _, c := range selection.Defaults[sel.Grain] {
+			switch h := c.Heading(); {
+			case slices.Contains(profileColumns, h):
+				allowed["profile"] = true
+			case slices.Contains(keyColumns, h), slices.Contains(keyListColumns, h):
+				allowed["key"], allowed["narrow"] = true, true
+			}
+		}
+		for _, p := range page[name] {
+			allowed[p] = true
+		}
+		out[name] = allowed
+	}
+	return out
+}()
+
+// enginePreset is the preset an old CSV URL maps onto, when the pipeline
+// serves it: one of csvLists, no preview (the download dialog reads the old
+// preview's shape), no format (the old URL is CSV), and only options the
+// pipeline matches for that list. History's profile and key filter its
+// operations by what they touched, which the pipeline's op rows do not carry,
+// so those stay on the old path.
+func enginePreset(file string, q url.Values) (string, bool) {
+	name, isCSV := strings.CutSuffix(file, ".csv")
+	if !isCSV || !slices.Contains(csvLists, file) {
+		return "", false
+	}
+	allowed, ok := enginePresetParams[name]
+	if !ok {
+		return "", false
+	}
+	for k := range q {
+		if !allowed[k] || (name == "history" && (k == "profile" || k == "key")) {
+			return "", false
+		}
+	}
+	return name, true
+}
+
+func (x exportAPI) run(w http.ResponseWriter, r *http.Request, sel selection.Selection, name string) {
+	q := r.URL.Query()
 	format := q.Get("format")
 	if format == "" {
 		format = "csv"
