@@ -65,6 +65,7 @@ var tips = map[string]string{
 	"profile-hosts":        "Lists the hosts in this profile.",
 	"key-open-rotate":      "Opens the key's page, where you can rotate it or roll it back.",
 	"key-deploy":           "Installs this key's public half on every host that uses it, then checks that ssh connects with it.",
+	"key-deploy-revoked":   "This key is revoked, so it is never deployed again. Mint or declare a new key instead.",
 	"key-rollback":         "Puts the previous key back on every host and retires this one; use it when a rotation went wrong.",
 	"key-unreserve":        "Previews removing the reservation, so doctor reports this loose key again. The key files stay.",
 	"docker-context":       "Previews creating a Docker context that reaches this host's Docker over ssh. Nothing is written until you confirm.",

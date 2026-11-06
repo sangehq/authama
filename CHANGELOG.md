@@ -107,6 +107,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   buttons and dev banner) is removed, with the rule that forced panel columns to full width.
 ### Fixed
 
+- Tabs on the Export page and in the CSV dialog used Bootstrap's `nav-underline`, which picked up
+  Tabler's grey hover box; they are Tabler's own `nav-bordered` tabs now. Three controls showed two
+  tooltips at once (a `title` beside the explainer); a revoked key's disabled Deploy button showed
+  none, and now explains why through its wrapper.
+
 - The Overview's quick actions (Reconcile, Re-render, Apply the token config) and Re-render on the
   SSH config page never showed their explainers: the tip was on the form's hidden input, not the
   button.

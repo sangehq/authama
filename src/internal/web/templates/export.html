@@ -9,7 +9,7 @@
 <div class="export-page" data-export-page data-run="{{u "/exports/run"}}">
   <div class="card">
     <div class="card-header">
-      <ul class="nav nav-underline" role="tablist" aria-label="What each row is">
+      <ul class="nav nav-bordered card-header-tabs" role="tablist" aria-label="What each row is">
         {{range .Grains}}<li class="nav-item" role="presentation"><a class="nav-link" href="#" role="tab" aria-selected="false" data-export-grain="{{.Name}}" data-preset="{{.Preset}}"{{tip "export-grain"}}>{{icon .Icon}}<span class="ms-2">{{.Label}}</span></a></li>{{end}}
       </ul>
     </div>

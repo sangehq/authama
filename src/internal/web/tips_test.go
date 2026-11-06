@@ -70,7 +70,16 @@ func TestEveryControlHasAnExplainer(t *testing.T) {
 			return err
 		}
 		src := templateComment.ReplaceAllString(string(b), "")
-		for _, tag := range controlTag.FindAllString(src, -1) {
+		for _, loc := range controlTag.FindAllStringIndex(src, -1) {
+			tag := src[loc[0]:loc[1]]
+			// A disabled control gets no hover, so its explainer sits on a
+			// wrapping element (Bootstrap's pattern for disabled tooltips).
+			if before := src[:loc[0]]; strings.Contains(tag, " disabled") {
+				if i := strings.LastIndex(before, "<"); i >= 0 && strings.Contains(before[i:], "{{tip ") {
+					controls++
+					continue
+				}
+			}
 			if strings.HasPrefix(tag, "<a ") && !regexp.MustCompile(`class="[^"]*\b(btn|dropdown-item|nav-link)\b`).MatchString(tag) {
 				continue // a link in running text says where it goes
 			}
@@ -82,6 +91,9 @@ func TestEveryControlHasAnExplainer(t *testing.T) {
 				strings.Contains(tag, `template "action_attrs"`) || strings.Contains(tag, ` title=`)
 			if !explained {
 				t.Errorf("%s: a control without an explainer: %s", path, shorten(tag, 160))
+			}
+			if strings.Contains(tag, ` title=`) && (strings.Contains(tag, "{{tip ") || strings.Contains(tag, "data-tip=")) {
+				t.Errorf("%s: a control with both a tip and a title shows two tooltips: %s", path, shorten(tag, 160))
 			}
 		}
 		return nil
