@@ -11,6 +11,9 @@ import (
 	"strings"
 
 	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/core/renderer"
+	"github.com/simtabi/authama/src/internal/platform"
 	"github.com/simtabi/authama/src/internal/services/dataset"
 	"github.com/simtabi/authama/src/internal/services/selection"
 	"github.com/simtabi/authama/src/internal/util/encode"
@@ -97,12 +100,19 @@ type exportPreview struct {
 	// Defaults are the grain's default columns, field and heading, so a page
 	// can start its column list from them.
 	Defaults []selection.Column `json:"defaults"`
+	// Skipped are the hosts the format asked for (?format=, a host format)
+	// leaves out of the file, each with the reason: the preview shows the
+	// selection's rows, the file only those the client can take.
+	Skipped []string `json:"skipped,omitempty"`
 }
 
 type exportFormat struct {
 	Name      string `json:"name"`
 	Label     string `json:"label"`
 	Extension string `json:"extension"`
+	// Hosts marks a host format, which writes host rows only and ignores
+	// the columns.
+	Hosts bool `json:"hosts,omitempty"`
 }
 
 func (x exportAPI) handleRun(w http.ResponseWriter, r *http.Request) {
@@ -213,11 +223,39 @@ func (x exportAPI) run(w http.ResponseWriter, r *http.Request, sel selection.Sel
 			}
 			p.Rows = append(p.Rows, selection.Cells(row))
 		}
-		for _, n := range encode.Names() {
+		for _, n := range append(encode.TableNames(), encode.HostNames()...) {
 			ef, _ := encode.Get(n)
-			p.Formats = append(p.Formats, exportFormat{Name: ef.Name, Label: ef.Label, Extension: ef.Extension})
+			if ef.IsHosts() && sel.Grain != selection.GrainHost {
+				continue
+			}
+			p.Formats = append(p.Formats, exportFormat{Name: ef.Name, Label: ef.Label, Extension: ef.Extension, Hosts: ef.IsHosts()})
+		}
+		if f.IsHosts() && sel.Grain == selection.GrainHost {
+			exp, err := x.hostExport(ds, sel, f, q)
+			if err != nil {
+				x.fail(w, http.StatusBadRequest, err)
+				return
+			}
+			p.Skipped = exp.Skipped
 		}
 		x.json(w, p)
+		return
+	}
+	if f.IsHosts() {
+		exp, err := x.hostExport(ds, sel, f, q)
+		if err != nil {
+			x.fail(w, http.StatusBadRequest, err)
+			return
+		}
+		data, err := encode.Bundle(f, exp)
+		if err != nil {
+			x.fail(w, http.StatusInternalServerError, err)
+			return
+		}
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Content-Type", f.MediaType)
+		w.Header().Set("Content-Disposition", `attachment; filename="`+encode.FileName(f, exp, brand.Command+"-"+name)+`"`)
+		_, _ = w.Write(data)
 		return
 	}
 	opts := encode.Options{NoHeader: q.Get("header") == "0", Compact: q.Get("compact") == "1", Shape: q.Get("shape"),
@@ -231,6 +269,19 @@ func (x exportAPI) run(w http.ResponseWriter, r *http.Request, sel selection.Sel
 	w.Header().Set("Content-Type", f.MediaType)
 	w.Header().Set("Content-Disposition", `attachment; filename="`+brand.Command+"-"+name+"."+f.Extension+`"`)
 	_, _ = w.Write(buf.Bytes())
+}
+
+// hostExport writes the hosts sel keeps in the host format f, from this
+// home's manifest. ?include_git=1 keeps git hosts, as --include-git does.
+func (x exportAPI) hostExport(ds *dataset.Dataset, sel selection.Selection, f encode.Format, q url.Values) (*encode.ClientExport, error) {
+	home := x.s.opts.Engine.Home()
+	m, err := manifest.Load(home.Manifest())
+	if err != nil {
+		return nil, err
+	}
+	src := renderer.Source{M: m, P: renderer.ExportPathsFor(home.SSHDir), EmitUseKeychain: platform.EmitUseKeychain()}
+	exp, _, err := selection.HostExport(ds, sel, f, src, encode.Options{IncludeGit: q.Get("include_git") == "1"})
+	return exp, err
 }
 
 // shapedPreset applies to a preset the options a list's CSV link carries, so
