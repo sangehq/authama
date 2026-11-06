@@ -295,7 +295,10 @@ type Profile struct {
 	Category string `json:"category,omitempty"`
 	// Code is the organisation's code name, the first part of its servers'
 	// aliases under the naming rules (simtabi's is simbi: simbi-prd-web-00).
-	Code     string  `json:"code,omitempty"`
+	Code string `json:"code,omitempty"`
+	// Naming, when set, overrides defaults.naming for this profile, field by
+	// field: a client with a convention of its own.
+	Naming   *Naming `json:"naming,omitempty"`
 	KeyStore string  `json:"key_store,omitempty"`
 	OPVault  string  `json:"op_vault,omitempty"`
 	KeyScope string  `json:"key_scope"`
@@ -326,6 +329,7 @@ func (p Profile) MarshalJSON() ([]byte, error) {
 	type wire struct {
 		Category   string    `json:"category,omitempty"`
 		Code       string    `json:"code,omitempty"`
+		Naming     *Naming   `json:"naming,omitempty"`
 		KeyStore   string    `json:"key_store,omitempty"`
 		OPVault    string    `json:"op_vault,omitempty"`
 		KeyScope   string    `json:"key_scope"`
@@ -338,7 +342,7 @@ func (p Profile) MarshalJSON() ([]byte, error) {
 	if hosts == nil {
 		hosts = []Host{}
 	}
-	return json.Marshal(wire{Category: p.Category, Code: p.Code, KeyStore: p.KeyStore, OPVault: p.OPVault, KeyScope: p.KeyScope, KeyName: p.KeyName, KeyComment: p.KeyComment, Keys: p.Keys, Hosts: hosts})
+	return json.Marshal(wire{Category: p.Category, Code: p.Code, Naming: p.Naming, KeyStore: p.KeyStore, OPVault: p.OPVault, KeyScope: p.KeyScope, KeyName: p.KeyName, KeyComment: p.KeyComment, Keys: p.Keys, Hosts: hosts})
 }
 
 // ExpiryCheck is the notifier policy.

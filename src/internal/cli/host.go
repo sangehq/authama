@@ -77,7 +77,7 @@ func newHostCmd() *cobra.Command {
 			// as a permission denial.
 			_, _ = fmt.Fprintf(c.OutOrStdout(), "added host %s to %s (run `authama ssh reconcile` to mint its "+
 				"key)\n", args[1], args[0])
-			if m, err := manifest.Load(p.Manifest()); err == nil && manifest.NamingRules(m).Enforce == naming.EnforceWarn {
+			if m, err := manifest.Load(p.Manifest()); err == nil && manifest.ProfileNamingRules(m, args[0]).Enforce == naming.EnforceWarn {
 				if v := manifest.NamingViolation(m, args[0], args[1]); v != "" {
 					_, _ = fmt.Fprintf(c.ErrOrStderr(), "naming: %s\n", v)
 				}

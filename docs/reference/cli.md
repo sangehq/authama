@@ -87,8 +87,8 @@ Every command also takes the global flag:
   - [`authama ssh naming`](#authama-ssh-naming) - Show, check and set how servers and their keys are named
     - [`authama ssh naming check`](#authama-ssh-naming-check) - List the hosts whose alias does not follow the naming rules
     - [`authama ssh naming key-template`](#authama-ssh-naming-key-template) - Set how new keys are named, keeping every existing key's name
-    - [`authama ssh naming set`](#authama-ssh-naming-set) - Set the alias template, the allowed environments and roles, and how strictly they apply
-    - [`authama ssh naming show`](#authama-ssh-naming-show) - Show the naming rules in effect and each profile's code
+    - [`authama ssh naming set`](#authama-ssh-naming-set) - Set the naming rules, for every profile or for one
+    - [`authama ssh naming show`](#authama-ssh-naming-show) - Show the naming rules in effect, and each profile's code and own rules
   - [`authama ssh net`](#authama-ssh-net) - Per-host connection status + VPN indicator
   - [`authama ssh notify`](#authama-ssh-notify) - Manage the scheduled expiry notifier
     - [`authama ssh notify install`](#authama-ssh-notify-install) - Install the scheduled expiry notifier
@@ -1740,16 +1740,19 @@ Examples:
 
 ## authama ssh naming
 
-The naming rules live in the manifest's defaults.naming, and each profile's code
-name in profiles.<name>.code:
+The naming rules live in the manifest's defaults.naming, a profile's own naming
+over them, and each profile's code name in profiles.<name>.code:
 
-  alias     the alias template, {code}-{env}-{role}-{nn} by default
-  key_name  the key-name template, {profile}_{alias}-{algo} by default
-  envs      the environments {env} may be (empty: any)
-  roles     the roles {role} may be (empty: any)
-  enforce   off, warn or error, when a host is added
+  alias          the alias template, {code}-{env}-{role}-{nn} by default;
+                 {env?} is optional, {nnn} is three digits
+  key_name       the key-name template, {profile}_{alias}-{algo} by default
+  envs, roles    the values {env} and {role} may take (empty: any)
+  enforce        off, warn or error, when a host is added
+  start          the first number, 0 (00) or 1 (01)
+  code_fallback  a profile without a code: none, or profile (its name)
 
-`host add <profile> --env prd --role web` names a server by them.
+`host add <profile> --env prd --role web` names a server by them. No change to
+them, or to a code, renames a key already minted.
 
 ```
 authama ssh naming
@@ -1759,8 +1762,8 @@ Subcommands:
 
 - [`check`](#authama-ssh-naming-check) - List the hosts whose alias does not follow the naming rules
 - [`key-template`](#authama-ssh-naming-key-template) - Set how new keys are named, keeping every existing key's name
-- [`set`](#authama-ssh-naming-set) - Set the alias template, the allowed environments and roles, and how strictly they apply
-- [`show`](#authama-ssh-naming-show) - Show the naming rules in effect and each profile's code
+- [`set`](#authama-ssh-naming-set) - Set the naming rules, for every profile or for one
+- [`show`](#authama-ssh-naming-show) - Show the naming rules in effect, and each profile's code and own rules
 
 ## authama ssh naming check
 
@@ -1808,14 +1811,16 @@ Examples:
 Flags:
 
 ```
-  -y, --yes   skip the confirmation prompt
+      --profile string   set this profile's own key template instead of the manifest's
+  -y, --yes              skip the confirmation prompt
 ```
 
 ## authama ssh naming set
 
-Set the naming rules in defaults.naming. Only the flags given change. The key-name
-template has its own command, `naming key-template`, because changing it needs
-the existing hosts' key names kept.
+Set the naming rules: the manifest's (defaults.naming), or with --profile that
+profile's own, which override the manifest's field by field. Only the flags given
+change; an empty value (--alias '') goes back to inheriting. Every existing host
+keeps its key name, written into the manifest when a change would alter it.
 
 ```
 authama ssh naming set [flags]
@@ -1825,21 +1830,25 @@ Examples:
 
 ```sh
   authama ssh naming set --envs prd,stg,dev --enforce warn
-  authama ssh naming set --alias '{code}-{env}-{role}-{nn}' --roles web,db,cache
+  authama ssh naming set --profile adelsaiq --alias '{code}-{role}-{nn}' --start 1
+  authama ssh naming set --code-fallback profile
 ```
 
 Flags:
 
 ```
-      --alias string     the alias template, from {code}, {env}, {role} and {nn}
-      --enforce string   off, warn or error, when a host is added
-      --envs strings     the environments {env} may be, comma-separated (empty: any)
-      --roles strings    the roles {role} may be, comma-separated (empty: any)
+      --alias string           the alias template, from {code}, {env}, {role} and a number such as {nn}; {env?} is optional
+      --code-fallback string   the {code} of a profile with none of its own: none or profile (its name)
+      --enforce string         off, warn or error, when a host is added
+      --envs strings           the environments {env} may be, comma-separated (empty: any)
+      --profile string         set this profile's own rules instead of the manifest's
+      --roles strings          the roles {role} may be, comma-separated (empty: any)
+      --start int              the first number: 0 (00) or 1 (01)
 ```
 
 ## authama ssh naming show
 
-Show the naming rules in effect and each profile's code.
+Show the naming rules in effect, and each profile's code and own rules.
 
 ```
 authama ssh naming show

@@ -8,65 +8,12 @@ import (
 	"github.com/simtabi/authama/src/internal/util/log"
 )
 
-// SetProfileCode sets a profile's code name ("" clears it).
-func SetProfileCode(e *Editor, profile, code string) error {
-	m, err := e.load()
-	if err != nil {
-		return err
-	}
-	p, ok := m.Profiles[profile]
-	if !ok {
-		return fmt.Errorf("unknown profile: %q", profile)
-	}
-	p.Code = code
-	m.SetProfile(profile, p)
-	if err := m.Validate(); err != nil {
-		return err
-	}
-	if err := e.save(m); err != nil {
-		return err
-	}
-	log.Audit(e.p.AuditLog(), "profile.code", log.Field{Key: "profile", Value: profile}, log.Field{Key: "code", Value: code})
-	return nil
-}
-
-// SetNaming changes defaults.naming through edit, and saves it once the
-// manifest still validates.
-func SetNaming(e *Editor, edit func(*manifest.Naming)) error {
-	m, err := e.load()
-	if err != nil {
-		return err
-	}
-	n := manifest.Naming{}
-	if m.Defaults.Naming != nil {
-		n = *m.Defaults.Naming
-	}
-	edit(&n)
-	if n.Alias == "" && n.KeyName == "" && len(n.Envs) == 0 && len(n.Roles) == 0 && n.Enforce == "" {
-		m.Defaults.Naming = nil
-	} else {
-		m.Defaults.Naming = &n
-	}
-	if err := m.Validate(); err != nil {
-		return err
-	}
-	if err := e.save(m); err != nil {
-		return err
-	}
-	log.Audit(e.p.AuditLog(), "naming.set")
-	return nil
-}
-
-// SetKeyTemplate makes tpl the key-name template. Every host whose key name
-// the new template would change keeps the name it has now, written into the
-// manifest as its key_name, so no key already minted is renamed or left
-// behind: only hosts added from now on are named by tpl. It returns the hosts
-// it pinned, as profile/alias.
-func SetKeyTemplate(e *Editor, tpl string) ([]string, error) {
-	m, err := e.load()
-	if err != nil {
-		return nil, err
-	}
+// keepKeyNames runs change on m, then gives every host whose derived key name
+// the change would alter the name it had before, written into the manifest as
+// its key_name. A code, a rule or a key-name template is changed this way, so
+// no key already minted is renamed or left behind; only hosts added afterwards
+// take the new name. It returns the hosts it kept, as profile/alias.
+func keepKeyNames(m *manifest.Manifest, change func() error) ([]string, error) {
 	before := map[string]string{}
 	for _, name := range m.ProfileNames() {
 		for _, h := range m.Profiles[name].Hosts {
@@ -75,16 +22,13 @@ func SetKeyTemplate(e *Editor, tpl string) ([]string, error) {
 			}
 		}
 	}
-	n := manifest.Naming{}
-	if m.Defaults.Naming != nil {
-		n = *m.Defaults.Naming
+	if err := change(); err != nil {
+		return nil, err
 	}
-	n.KeyName = tpl
-	m.Defaults.Naming = &n
 	if err := m.Validate(); err != nil {
 		return nil, err
 	}
-	var pinned []string
+	var kept []string
 	for _, name := range m.ProfileNames() {
 		p := m.Profiles[name]
 		changed := false
@@ -96,7 +40,7 @@ func SetKeyTemplate(e *Editor, tpl string) ([]string, error) {
 			if now, err := m.ResolvedKeyName(name, h); err == nil && now != old {
 				kn := old
 				p.Hosts[i].KeyName = &kn
-				pinned = append(pinned, name+"/"+h.Alias)
+				kept = append(kept, name+"/"+h.Alias)
 				changed = true
 			}
 		}
@@ -104,16 +48,94 @@ func SetKeyTemplate(e *Editor, tpl string) ([]string, error) {
 			m.SetProfile(name, p)
 		}
 	}
-	if err := m.Validate(); err != nil {
+	sort.Strings(kept)
+	return kept, m.Validate()
+}
+
+// SetProfileCode sets a profile's code name ("" clears it), keeping every
+// existing host's key name.
+func SetProfileCode(e *Editor, profile, code string) ([]string, error) {
+	m, err := e.load()
+	if err != nil {
+		return nil, err
+	}
+	if _, ok := m.Profiles[profile]; !ok {
+		return nil, fmt.Errorf("unknown profile: %q", profile)
+	}
+	kept, err := keepKeyNames(m, func() error {
+		p := m.Profiles[profile]
+		p.Code = code
+		m.SetProfile(profile, p)
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
 	if err := e.save(m); err != nil {
 		return nil, err
 	}
-	sort.Strings(pinned)
-	log.Audit(e.p.AuditLog(), "naming.key_template", log.Field{Key: "template", Value: tpl},
-		log.Field{Key: "pinned", Value: len(pinned)})
-	return pinned, nil
+	log.Audit(e.p.AuditLog(), "profile.code", log.Field{Key: "profile", Value: profile}, log.Field{Key: "code", Value: code})
+	return kept, nil
+}
+
+func emptyNaming(n manifest.Naming) bool {
+	return n.Alias == "" && n.KeyName == "" && n.Envs == nil && n.Roles == nil && n.Enforce == "" &&
+		n.Start == 0 && n.CodeFallback == ""
+}
+
+// SetNaming changes the naming rules through edit: the manifest's
+// (defaults.naming) when profile is "", else that profile's own. Every
+// existing host keeps its key name.
+func SetNaming(e *Editor, profile string, edit func(*manifest.Naming)) ([]string, error) {
+	m, err := e.load()
+	if err != nil {
+		return nil, err
+	}
+	if profile != "" {
+		if _, ok := m.Profiles[profile]; !ok {
+			return nil, fmt.Errorf("unknown profile: %q", profile)
+		}
+	}
+	kept, err := keepKeyNames(m, func() error {
+		var cur *manifest.Naming
+		if profile == "" {
+			cur = m.Defaults.Naming
+		} else {
+			cur = m.Profiles[profile].Naming
+		}
+		n := manifest.Naming{}
+		if cur != nil {
+			n = *cur
+		}
+		edit(&n)
+		var next *manifest.Naming
+		if !emptyNaming(n) {
+			next = &n
+		}
+		if profile == "" {
+			m.Defaults.Naming = next
+		} else {
+			p := m.Profiles[profile]
+			p.Naming = next
+			m.SetProfile(profile, p)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := e.save(m); err != nil {
+		return nil, err
+	}
+	log.Audit(e.p.AuditLog(), "naming.set", log.Field{Key: "profile", Value: profile}, log.Field{Key: "kept", Value: len(kept)})
+	return kept, nil
+}
+
+// SetKeyTemplate makes tpl the key-name template, the manifest's when profile
+// is "", else that profile's own, keeping every existing host's key name: only
+// hosts added from now on are named by tpl. It returns the hosts it kept.
+func SetKeyTemplate(e *Editor, profile, tpl string) ([]string, error) {
+	return SetNaming(e, profile, func(n *manifest.Naming) { n.KeyName = tpl })
 }
 
 // TakenAliases is every host alias in the manifest, for naming the next one.

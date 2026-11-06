@@ -83,7 +83,7 @@ func newProfileCmd() *cobra.Command {
 				}
 			}
 			if addCode != "" {
-				if err := editor.SetProfileCode(ed, args[0], addCode); err != nil {
+				if _, err := editor.SetProfileCode(ed, args[0], addCode); err != nil {
 					return err
 				}
 			}
@@ -139,9 +139,11 @@ func newProfileCmd() *cobra.Command {
 				}
 			}
 			if c.Flags().Changed("code") {
-				if err := editor.SetProfileCode(ed, args[0], editCode); err != nil {
+				kept, err := editor.SetProfileCode(ed, args[0], editCode)
+				if err != nil {
 					return err
 				}
+				reportKept(c, kept)
 			}
 			var scopePtr *string
 			if scope != "" {

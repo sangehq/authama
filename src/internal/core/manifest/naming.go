@@ -24,17 +24,47 @@ type Naming struct {
 	// Enforce is what adding a host whose alias breaks the rules does: off
 	// (the default), warn, or error. Hosts already there are only reported.
 	Enforce string `json:"enforce,omitempty"`
+	// Start is the first number a generated alias takes: 0 (00, the
+	// default) or 1 (01).
+	Start int `json:"start,omitempty"`
+	// CodeFallback is the {code} of a profile with no code of its own: none
+	// (the default) or profile, its name.
+	CodeFallback string `json:"code_fallback,omitempty"`
+}
+
+func (n *Naming) rules() naming.Rules {
+	if n == nil {
+		return naming.Rules{}
+	}
+	return naming.Rules{Alias: n.Alias, KeyName: n.KeyName, Envs: n.Envs, Roles: n.Roles, Enforce: n.Enforce,
+		Start: n.Start, CodeFallback: n.CodeFallback}
 }
 
 // NamingRules are m's naming rules with the defaults filled in. A nil m has
 // the defaults.
 func NamingRules(m *Manifest) naming.Rules {
-	var r naming.Rules
-	if m != nil && m.Defaults.Naming != nil {
-		n := m.Defaults.Naming
-		r = naming.Rules{Alias: n.Alias, KeyName: n.KeyName, Envs: n.Envs, Roles: n.Roles, Enforce: n.Enforce}
+	if m == nil {
+		return naming.Rules{}.WithDefaults()
 	}
-	return r.WithDefaults()
+	return m.Defaults.Naming.rules().WithDefaults()
+}
+
+// ProfileNamingRules are the rules a profile's servers are named by: the
+// manifest's, with the profile's own naming over them.
+func ProfileNamingRules(m *Manifest, profile string) naming.Rules {
+	r := NamingRules(m)
+	if m != nil {
+		if p, ok := m.Profiles[profile]; ok && p.Naming != nil {
+			r = r.Over(p.Naming.rules()).WithDefaults()
+		}
+	}
+	return r
+}
+
+// ProfileCode is a profile's {code}: its own code, or what the rules' code
+// fallback gives it ("" for none).
+func ProfileCode(m *Manifest, profile string) string {
+	return ProfileNamingRules(m, profile).Code(profile, m.Profiles[profile].Code)
 }
 
 var profileCode = regexp.MustCompile(`^[a-z0-9]+$`)
@@ -45,6 +75,9 @@ func checkNaming(m *Manifest) error {
 	}
 	owner := map[string]string{}
 	for _, name := range m.ProfileNames() {
+		if err := ProfileNamingRules(m, name).Check(); err != nil {
+			return fmt.Errorf("profile %q: %w", name, err)
+		}
 		c := m.Profiles[name].Code
 		if c == "" {
 			continue
@@ -69,12 +102,12 @@ func derivedKeyName(m *Manifest, profileName, alias string) (string, error) {
 	if algo == "" {
 		algo = "ed25519"
 	}
-	r := NamingRules(m)
+	r := ProfileNamingRules(m, profileName)
 	if r.KeyName == naming.DefaultKeyName {
 		return key.DeriveKeyName(profileName, alias, algo)
 	}
 	prof := strings.ReplaceAll(key.NormalizeSegment(profileName), "-", "")
-	name, err := r.RenderKeyName(prof, key.NormalizeSegment(alias), m.Profiles[profileName].Code, algo)
+	name, err := r.RenderKeyName(prof, key.NormalizeSegment(alias), ProfileCode(m, profileName), algo)
 	if errors.Is(err, naming.ErrNoParts) {
 		return key.DeriveKeyName(profileName, alias, algo)
 	}
@@ -89,5 +122,5 @@ func derivedKeyName(m *Manifest, profileName, alias string) (string, error) {
 
 // NamingViolation says why a host's alias does not follow m's rules, or "".
 func NamingViolation(m *Manifest, profileName, alias string) string {
-	return NamingRules(m).Violation(alias, m.Profiles[profileName].Code)
+	return ProfileNamingRules(m, profileName).Violation(alias, ProfileCode(m, profileName))
 }

@@ -70,17 +70,62 @@ func TestServersAreNamedByTheRules(t *testing.T) {
 		}
 	}
 	if out := run(t, "naming", "show"); !strings.Contains(out, "simtabi              code simbi") ||
-		!strings.Contains(out, "key_name  {profile}_{code}_{env}_{role}_{nn}-{algo}") {
+		!strings.Contains(out, "key_name       {profile}_{code}_{env}_{role}_{nn}-{algo}") {
 		t.Fatalf("show:\n%s", out)
 	}
 }
 
-// A profile with no code cannot have its servers named, and says how to fix it.
-func TestNamingAServerNeedsTheProfilesCode(t *testing.T) {
-	editHome(t)
+// A profile with no code cannot have its servers named under a template that
+// needs one, and says both ways out; with the code fallback it uses its name,
+// and under a template without {code} it needs none.
+func TestAProfileWithoutACode(t *testing.T) {
+	p := editHome(t)
 	run(t, "profile", "add", "work")
 	out, err := runErr(t, "host", "add", "work", "--env", "prd", "--role", "web", "-H", "203.0.113.10", "-u", "ploi")
-	if err == nil || !strings.Contains(err.Error()+out, "profile edit work --code") {
+	if err == nil || !strings.Contains(err.Error()+out, "profile edit work --code") || !strings.Contains(err.Error()+out, "--code-fallback profile") {
 		t.Fatalf("no code: %v\n%s", err, out)
+	}
+	run(t, "naming", "set", "--code-fallback", "profile")
+	run(t, "host", "add", "work", "--env", "prd", "--role", "web", "-H", "203.0.113.10", "-u", "ploi")
+	run(t, "profile", "add", "lab")
+	run(t, "naming", "set", "--profile", "lab", "--alias", "{env?}-{role}-{nn}", "--start", "1")
+	run(t, "host", "add", "lab", "--role", "gpu", "-H", "203.0.113.11", "-u", "ploi")
+	run(t, "host", "add", "lab", "--env", "dev", "--role", "gpu", "-H", "203.0.113.12", "-u", "ploi")
+	m, _ := manifest.Load(p.Manifest())
+	got := []string{}
+	for _, name := range []string{"work", "lab"} {
+		for _, h := range m.Profiles[name].Hosts {
+			got = append(got, h.Alias)
+		}
+	}
+	if strings.Join(got, " ") != "work-prd-web-00 gpu-01 dev-gpu-01" {
+		t.Fatalf("aliases = %v", got)
+	}
+}
+
+// Setting a code, or any rule a key name depends on, never renames a key
+// already minted: the hosts that would change keep their key names, written
+// into the manifest; a host added afterwards takes the new name.
+func TestANamingChangeNeverRenamesAKey(t *testing.T) {
+	p := editHome(t)
+	run(t, "profile", "add", "acme", "--category", "clients")
+	run(t, "naming", "key-template", "{profile}_{code?}_{alias}-{algo}", "--yes")
+	run(t, "host", "add", "acme", "web1", "-H", "203.0.113.10", "-u", "deploy")
+	m, _ := manifest.Load(p.Manifest())
+	before, _ := m.ResolvedKeyName("acme", m.Profiles["acme"].Hosts[0])
+	if before != "acme_web1-ed25519" {
+		t.Fatalf("before a code: %q", before)
+	}
+	if out := run(t, "profile", "edit", "acme", "--code", "acm"); !strings.Contains(out, "kept its key name: acme/web1") {
+		t.Fatalf("setting the code kept nothing:\n%s", out)
+	}
+	run(t, "host", "add", "acme", "web2", "-H", "203.0.113.11", "-u", "deploy")
+	m, _ = manifest.Load(p.Manifest())
+	names := map[string]string{}
+	for _, h := range m.Profiles["acme"].Hosts {
+		names[h.Alias], _ = m.ResolvedKeyName("acme", h)
+	}
+	if names["web1"] != before || names["web2"] != "acme_acm_web2-ed25519" {
+		t.Fatalf("key names = %v", names)
 	}
 }

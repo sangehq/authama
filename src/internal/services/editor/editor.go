@@ -485,7 +485,7 @@ func addHostTo(m *manifest.Manifest, profile, alias string, f HostFields) error 
 	// A server whose alias breaks the naming rules is refused when they say
 	// error; warn is the caller's to print (manifest.NamingViolation). A VM
 	// host is a devbox, not a server, and is not held to them.
-	if f.VM == nil && manifest.NamingRules(m).Enforce == naming.EnforceError {
+	if f.VM == nil && manifest.ProfileNamingRules(m, profile).Enforce == naming.EnforceError {
 		if v := manifest.NamingViolation(m, profile, alias); v != "" {
 			return fmt.Errorf("naming: %s (see `authama ssh naming show`, or let `host add --env --role` name it)", v)
 		}

@@ -73,7 +73,7 @@
           "properties": {
             "alias": {
               "type": "string",
-              "description": "The alias template, from {code}, {env}, {role} and {nn}. Default {code}-{env}-{role}-{nn}."
+              "description": "The alias template, from {code}, {env}, {role} and a number ({nn}, or {nnn} for three digits); a part written {env?} is optional and left out with its separator. Default {code}-{env}-{role}-{nn}."
             },
             "key_name": {
               "type": "string",
@@ -82,17 +82,42 @@
             },
             "envs": {
               "type": "array",
-              "items": { "type": "string", "pattern": "^[a-z0-9]+$" },
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+$"
+              },
               "description": "The values {env} may take, such as prd, stg, dev. Empty allows any."
             },
             "roles": {
               "type": "array",
-              "items": { "type": "string", "pattern": "^[a-z0-9]+$" },
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+$"
+              },
               "description": "The values {role} may take, such as web, db. Empty allows any."
             },
             "enforce": {
-              "enum": ["off", "warn", "error"],
+              "enum": [
+                "off",
+                "warn",
+                "error"
+              ],
               "description": "What adding a host whose alias breaks the rules does. Default off; hosts already there are only reported."
+            },
+            "start": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "The first number a generated alias takes: 0 (00, the default) or 1 (01)."
+            },
+            "code_fallback": {
+              "enum": [
+                "none",
+                "profile"
+              ],
+              "description": "The {code} of a profile with no code of its own: none (the default) or profile (its name)."
             }
           }
         },
@@ -312,6 +337,61 @@
                   "type": "string",
                   "description": "Adopt the key where it already is: the private key's path relative to ~/.ssh (forward slashes). authama never moves or deletes it."
                 }
+              }
+            }
+          },
+          "naming": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "This profile's own naming rules, over defaults.naming field by field: a client with a convention of its own.",
+            "properties": {
+              "alias": {
+                "type": "string",
+                "description": "The alias template, from {code}, {env}, {role} and a number ({nn}, or {nnn} for three digits); a part written {env?} is optional and left out with its separator. Default {code}-{env}-{role}-{nn}."
+              },
+              "key_name": {
+                "type": "string",
+                "pattern": "^\\{profile\\}_.*-\\{algo\\}$",
+                "description": "The key-name template, from {profile}, {alias}, {code}, {env}, {role}, {nn} and {algo}; it starts with {profile}_ and ends with -{algo}. Default {profile}_{alias}-{algo}. Change it with `authama ssh naming key-template`, which keeps existing hosts' key names."
+              },
+              "envs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9]+$"
+                },
+                "description": "The values {env} may take, such as prd, stg, dev. Empty allows any."
+              },
+              "roles": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9]+$"
+                },
+                "description": "The values {role} may take, such as web, db. Empty allows any."
+              },
+              "enforce": {
+                "enum": [
+                  "off",
+                  "warn",
+                  "error"
+                ],
+                "description": "What adding a host whose alias breaks the rules does. Default off; hosts already there are only reported."
+              },
+              "start": {
+                "type": "integer",
+                "enum": [
+                  0,
+                  1
+                ],
+                "description": "The first number a generated alias takes: 0 (00, the default) or 1 (01)."
+              },
+              "code_fallback": {
+                "enum": [
+                  "none",
+                  "profile"
+                ],
+                "description": "The {code} of a profile with no code of its own: none (the default) or profile (its name)."
               }
             }
           }
