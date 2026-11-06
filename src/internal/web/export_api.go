@@ -29,6 +29,34 @@ type exportAPI struct{ s *Server }
 // MaxSelection caps the encoded selection a URL may carry.
 const MaxSelection = 16 << 10
 
+// exportPage is what the Export page starts from: the grains it offers.
+type exportPage struct {
+	Grains []exportGrain
+}
+
+type exportGrain struct {
+	Name, Label, Icon, Preset string
+}
+
+// exportGrains are the Export page's row kinds, in its order.
+var exportGrains = []exportGrain{
+	{"host", "Hosts", "server", "hosts"},
+	{"key", "Keys", "key", "keys"},
+	{"profile", "Profiles", "users", "profiles"},
+	{"token", "Auth tokens", "cloud-lock", "tokens"},
+	{"op", "History", "history", "history"},
+	{"event", "Events", "activity", "events"},
+	{"snapshot", "Snapshots", "archive", "snapshots"},
+	{"deployment", "Deployments", "route", "deployments"},
+}
+
+// handlePage is the Export page: the rows, filters, columns and format of a
+// file, previewed as they are chosen. The page's script drives it through
+// /exports/run; without the script it lists each preset's download.
+func (x exportAPI) handlePage(w http.ResponseWriter, r *http.Request) {
+	x.s.render(w, http.StatusOK, "export", x.s.newView(r, "export", "Export", exportPage{Grains: exportGrains}))
+}
+
 func (x exportAPI) handleDataset(w http.ResponseWriter, r *http.Request) {
 	var parts []string
 	if p := strings.TrimSpace(r.URL.Query().Get("parts")); p != "" {
@@ -53,6 +81,9 @@ type exportPreview struct {
 	Fields  []string                          `json:"fields"`
 	Facets  map[string][]selection.FacetValue `json:"facets"`
 	Formats []exportFormat                    `json:"formats"`
+	// Defaults are the grain's default columns, field and heading, so a page
+	// can start its column list from them.
+	Defaults []selection.Column `json:"defaults"`
 }
 
 type exportFormat struct {
@@ -94,7 +125,8 @@ func (x exportAPI) handleRun(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		p := exportPreview{Grain: sel.Grain, Columns: res.Columns, Rows: [][]string{}, Stages: res.Stages,
-			Fields: res.Fields, Facets: facets, Total: res.Stages[0].Rows, Kept: len(res.Rows)}
+			Fields: res.Fields, Facets: facets, Total: res.Stages[0].Rows, Kept: len(res.Rows),
+			Defaults: selection.Defaults[sel.Grain]}
 		for i, row := range res.Rows {
 			if i == PreviewRows {
 				break

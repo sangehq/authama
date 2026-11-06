@@ -162,6 +162,7 @@ func newServeCmd() *cobra.Command {
 			token := web.NewToken()
 			instance := web.NewToken()[:16]
 			srv, err := web.New(web.Options{
+				HideExport:   envnames.Get(nil, envnames.WebMenuExport) == "false",
 				Instance:     instance,
 				Engine:       web.AppEngine{P: p, Retain: snapshotRetain()},
 				Settings:     settingsView,

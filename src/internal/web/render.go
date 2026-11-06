@@ -478,6 +478,8 @@ type view struct {
 	// SealProblem is the owner seal's finding, shown on the overview when the
 	// state was changed outside authama.
 	SealProblem string
+	// HideExport leaves Export out of the menu (web.menu_export false).
+	HideExport bool
 	// Rebuilt is the server's own executable when it changed after the
 	// server started: the page is the old build, and the layout says so.
 	Rebuilt string
@@ -494,6 +496,7 @@ func (s *Server) newView(r *http.Request, nav, title string, data any) view {
 		v.CSRF = sess.csrf
 		v.PINNeeded = ownerGate{s}.needsStepUp(sess)
 		v.Rebuilt = s.binary.replaced()
+		v.HideExport = s.opts.HideExport
 		if nav == "overview" || nav == "doctor" {
 			if st := owner.Verify(p); !st.Clean() {
 				v.SealProblem = st.Describe()
@@ -608,6 +611,7 @@ func paletteItems(readOnly bool) []paletteItem {
 		{"security", "Owner & PIN", "/security", "lock", "Security", "owner pin seal tamper binding fingerprint"},
 		{"history", "History", "/history", "history", "Activity", "history operations changes log"},
 		{"events", "Events", "/events", "activity", "Activity", "events file changes tracking"},
+		{"export", "Export", "/export", "file-export", "Export", "export download csv json yaml php javascript markdown html filter columns"},
 		{"doctor", "Doctor", "/doctor", "stethoscope", "System", "doctor checks fix"},
 		{"repair", "Repair", "/repair", "refresh", "System", "repair fix corrupt permissions factory reset"},
 		{"settings", "Settings", "/settings", "settings", "System", "settings theme appearance env"},
