@@ -27,16 +27,18 @@ mints anything — three ways, whichever suits:
 ```sh
 authama ssh profile add work
 authama ssh host add work gh -H github.com -u git --provider github   # or edit manifest.json
-authama ssh host apply work web1 203.0.113.10 deploy web   # add-or-update from a compact spec
+authama ssh host apply work acme-prd-web-00 203.0.113.10 deploy web   # add-or-update from a compact spec
 ```
 
 `host apply` takes `<alias> <host>[:port] <user> [role]` and adds the host if
-it is new or updates it if not, so the same line can be re-run. Many at once:
+it is new or updates it if not, so the same line can be re-run. Server aliases
+follow `<owner>-<env>-<role>-<nn>` (`acme-prd-web-00`); see
+[Naming servers](configuration.md#naming-servers). Many at once:
 
 ```sh
 authama ssh host apply work \
-  --host "web1 203.0.113.10 deploy web" \
-  --host "db1  203.0.113.11 deploy db" --reconcile
+  --host "acme-prd-web-00 203.0.113.10 deploy web" \
+  --host "acme-prd-db-00  203.0.113.11 deploy db" --reconcile
 authama ssh host apply work -f hosts.txt     # one spec per line, # comments, - for stdin
 authama ssh import ~/.ssh/config                        # or onboard an existing setup
 ```
