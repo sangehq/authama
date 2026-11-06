@@ -78,6 +78,13 @@ type Options struct {
 	// this one; nil when the server cannot (a test, an embedded use). The
 	// stale-build banner offers it as "Restart now".
 	Restart func() error
+	// AutoRestart restarts the server by itself when its binary is rebuilt
+	// or reinstalled (web.auto_restart, on by default), and every open page
+	// reloads into the new build. Off, the page says it is older and offers
+	// "Restart now".
+	AutoRestart bool
+	// Sessions are signed-in sessions a restarting server handed over.
+	Sessions []SessionState
 }
 
 // Server is the web UI.
@@ -119,6 +126,7 @@ func New(opts Options) (*Server, error) {
 		return nil, err
 	}
 	s := &Server{opts: opts, pages: pages, assets: assets, jobs: jobs.NewRegistry(), who: currentUser(), binary: watchOwnBinary(opts.Now())}
+	s.sessions.adopt(opts.Sessions)
 	s.handler = securityHeaders(withBasePath(base, s.hostCheck(s.auth(s.sameOrigin(ownerGate{s}.requireUnlock(s.routes()))))))
 	return s, nil
 }
@@ -127,6 +135,9 @@ func New(opts Options) (*Server, error) {
 func (s *Server) Handler() http.Handler { return s.handler }
 
 func (s *Server) now() time.Time { return s.opts.Now() }
+
+// BinaryCheckEvery is how often a server with AutoRestart looks at its binary.
+var BinaryCheckEvery = 2 * time.Second
 
 // Serve answers on ln until ctx is cancelled, then shuts down with a
 // ten-second grace for requests in flight.
@@ -152,6 +163,8 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 		close(watched)
 	}
 	defer func() { stopWatch(); <-watched }()
+	// Restart by itself when the binary is rebuilt (web.auto_restart).
+	go s.watchBinary(watchCtx.Done(), BinaryCheckEvery)
 	select {
 	case err := <-errc:
 		return err

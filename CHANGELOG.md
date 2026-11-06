@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The web UI follows a new build by itself.** `serve` watches its own binary; after `make
+  install`, once the new file holds still, it restarts itself from it on the same address, hands
+  every signed-in session to the new process, and open pages reload into the new build within a
+  few seconds and say so. A page with unsaved input offers **Reload** instead. `web.auto_restart`
+  (on by default) turns it off.
 - **Restart the web UI from the page, or every one from the terminal.** The older-build banner has
   **Restart now**: the server relaunches from the binary now installed, on the same address with
   the same sign-in, and the page reloads itself. The header marks the running build *current* or

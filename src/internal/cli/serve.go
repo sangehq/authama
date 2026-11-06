@@ -196,8 +196,15 @@ func newServeCmd() *cobra.Command {
 				record = handoff.Record
 			}
 			var stopServing context.CancelFunc
+			var srvRef *web.Server
 			restartFn := relaunch(serveHandoff{Token: token, Port: bound, Record: record,
 				Addr: net.JoinHostPort(displayHost(host), strconv.Itoa(bound)), BasePath: basePath, Instance: instance},
+				func() []web.SessionState {
+					if srvRef == nil {
+						return nil
+					}
+					return srvRef.Sessions()
+				},
 				func() {
 					if stopServing != nil {
 						stopServing()
@@ -217,11 +224,14 @@ func newServeCmd() *cobra.Command {
 				BindAddr:     ln.Addr().String(),
 				BasePath:     basePath,
 				Restart:      restartFn,
+				AutoRestart:  envnames.Get(nil, envnames.WebAutoRestart) != "false",
+				Sessions:     handoffSessions(handoff),
 			})
 			if err != nil {
 				_ = ln.Close()
 				return err
 			}
+			srvRef = srv
 
 			url := fmt.Sprintf("http://%s%s/?token=%s", net.JoinHostPort(displayHost(host), strconv.Itoa(bound)), basePath, token)
 			if record {

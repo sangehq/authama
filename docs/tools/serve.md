@@ -140,7 +140,9 @@ Events) and **System** (Doctor, Settings, About). On a narrow screen it folds be
   after `authama serve` started, every page shows a yellow banner naming the file, with **Restart
   now**: the server relaunches from the binary now installed, on the same address and with the
   same sign-in token, stops, and the page signs back in and reloads, then says in a green banner
-  that it runs the current build. `serve --restart` and `serve --stop-all` do the same from a
+  that it runs the current build. With `web.auto_restart` (the default) this happens by itself
+  when the binary is rebuilt: open pages reload into the new build, or offer **Reload** when
+  they hold unsaved input. `serve --restart` and `serve --stop-all` do the same from a
   terminal for every authama web UI on the machine
   ([Restart the web UI after updating](../installation.md#updating)).
 - **Any list in any format.** `/exports/run` writes a selection of a home's records as a file.

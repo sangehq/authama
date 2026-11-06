@@ -481,6 +481,9 @@ type view struct {
 	// Build is the running build, for the header's current-build mark:
 	// its version, when its binary was built, and when the server started.
 	Build buildInfo
+	// Instance is the server's instance id, so a page can tell when a new
+	// server (a new build) answers on its address.
+	Instance string
 	// CanRestart is a server that can restart itself from the stale banner.
 	CanRestart bool
 	// Rebuilt is the server's own executable when it changed after the
@@ -501,6 +504,7 @@ func (s *Server) newView(r *http.Request, nav, title string, data any) view {
 		v.Rebuilt = s.binary.replaced()
 		v.Build = s.binary.info(s.opts.Version)
 		v.CanRestart = s.opts.Restart != nil
+		v.Instance = s.opts.Instance
 		if nav == "overview" || nav == "doctor" {
 			if st := owner.Verify(p); !st.Clean() {
 				v.SealProblem = st.Describe()

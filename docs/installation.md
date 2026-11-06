@@ -84,15 +84,18 @@ make -C ~/src/authama install
 `authama version` reports the commit it was built from, so a build from a branch
 is still identifiable.
 
-**Restart the web UI after updating.** A running `authama serve` keeps the code it
-started with, so after `make install` the browser still shows the old UI. Each page then
-says so in a yellow banner (*This page is from an older build*), and the header marks the
-build *older*. Either:
+**The web UI follows a new build by itself.** A running `authama serve` watches its own
+binary. After `make install` (or any rebuild of the file it runs from), once the new file has
+stopped changing, the server restarts itself from it: same address, same sign-in, and every
+signed-in page stays signed in. Open pages notice the new server within a few seconds and
+reload; a green banner then says the page runs the current build, and the header marks the
+build *current*. A page with unsaved input in a form is not reloaded under you: it shows
+*A new build is running* with a **Reload** button. Owner-only changes ask for the PIN again
+after a restart.
 
-- press **Restart now** in that banner: the server relaunches from the binary now installed,
-  on the same address with the same sign-in, and the page reloads itself; a green banner
-  then says it runs the current build, and the header marks it *current*; or
-- from a terminal, restart every authama web UI on this machine at once:
+`web.auto_restart` (`AUTHAMA_WEB_AUTO_RESTART`) set to `false` turns this off. A page from an
+older build then says so in a yellow banner, and **Restart now** in it does the same restart
+on request. From a terminal, every authama web UI on this machine at once:
 
 ```sh
 authama serve --restart     # stop every authama web UI found, then start the new build
@@ -101,8 +104,8 @@ authama serve --stop-all    # only stop them
 
 `--stop-all` asks each of the usual ports (7822 to 7841, plus `web.port` and the recorded
 server's) whether authama answers there, and stops each that does, whichever home or build
-it serves. A server from before this release does not say which process it is; it is named
-with the command that stops it:
+it serves. A server from before this release can neither restart itself nor say which
+process it is; it is named with the command that stops it:
 
 ```sh
 lsof -ti tcp:7911 -sTCP:LISTEN | xargs kill -INT

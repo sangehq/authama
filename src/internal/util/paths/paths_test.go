@@ -300,6 +300,7 @@ func TestTheEnvironmentVariableNamesAreTheDocumentedOnes(t *testing.T) {
 		"AUTHAMA_ASKPASS_MODE":         "internal: marks the askpass re-execution",
 		"AUTHAMA_ASKPASS_SECRET":       "internal: the passphrase handed to it",
 		"AUTHAMA_HELLO_CHECK":          "internal: asks the Windows Hello script for availability only",
+		"AUTHAMA_WEB_AUTO_RESTART":     "web.auto_restart: restart serve by itself when its binary is rebuilt",
 		"AUTHAMA_SERVE_HANDOFF":        "internal: a restarting serve's token, port and instance, for the server replacing it",
 		// Earlier names, still read.
 		"SSH_MANAGER_HOME":                 "legacy AUTHAMA_CONFIG_DIR",

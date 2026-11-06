@@ -32,6 +32,8 @@ type serveHandoff struct {
 	Addr     string `json:"addr"` // host:port the old one listens on
 	BasePath string `json:"base_path"`
 	Instance string `json:"instance"`
+	// Sessions are the signed-in sessions, so open pages stay signed in.
+	Sessions []web.SessionState `json:"sessions,omitempty"`
 }
 
 // takeHandoff reads and clears the handoff, or nil when this server is not
@@ -64,8 +66,11 @@ func (h *serveHandoff) waitGone() {
 // again from the binary now at this executable's path, with a handoff, then
 // stop this server. The new one inherits the terminal, so its address is
 // printed where this one's was.
-func relaunch(h serveHandoff, stop func()) func() error {
+func relaunch(h serveHandoff, sessions func() []web.SessionState, stop func()) func() error {
 	return func() error {
+		if sessions != nil {
+			h.Sessions = sessions()
+		}
 		exe, err := os.Executable()
 		if err != nil {
 			return err
@@ -214,4 +219,12 @@ func recordInstance(r *serveRecord) string {
 		return ""
 	}
 	return r.Instance
+}
+
+// handoffSessions are the sessions a restarted server was handed, or none.
+func handoffSessions(h *serveHandoff) []web.SessionState {
+	if h == nil {
+		return nil
+	}
+	return h.Sessions
 }

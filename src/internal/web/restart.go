@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -52,4 +53,72 @@ func isLoopbackRequest(r *http.Request) bool {
 	}
 	ip := net.ParseIP(host)
 	return ip != nil && ip.IsLoopback()
+}
+
+// SessionState is a signed-in session handed to the server that replaces
+// this one, so a page signed in before a restart is still signed in after
+// it. The PIN unlock is not handed over: owner-only changes ask again.
+type SessionState struct {
+	ID      string    `json:"id"`
+	CSRF    string    `json:"csrf"`
+	Created time.Time `json:"created"`
+}
+
+// Sessions is every signed-in session, for the server replacing this one.
+func (s *Server) Sessions() []SessionState {
+	s.sessions.mu.Lock()
+	defer s.sessions.mu.Unlock()
+	out := make([]SessionState, 0, len(s.sessions.byID))
+	for id, sess := range s.sessions.byID {
+		out = append(out, SessionState{ID: id, CSRF: sess.csrf, Created: sess.created})
+	}
+	return out
+}
+
+// adopt takes over sessions a restarted server handed over.
+func (s *sessions) adopt(states []SessionState) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.byID == nil {
+		s.byID = map[string]*session{}
+	}
+	for _, st := range states {
+		if st.ID != "" && st.CSRF != "" && len(s.byID) < maxSessions {
+			s.byID[st.ID] = &session{csrf: st.CSRF, created: st.Created}
+		}
+	}
+}
+
+// watchBinary restarts the server when its binary is rebuilt or reinstalled:
+// once the file at its path has changed and then held still for two checks
+// in a row (a build still being written is never launched), Restart runs.
+// A removed binary is waited out, never restarted from.
+func (s *Server) watchBinary(stop <-chan struct{}, every time.Duration) {
+	if s.opts.Restart == nil || !s.opts.AutoRestart || s.binary.path == "" {
+		return
+	}
+	t := time.NewTicker(every)
+	defer t.Stop()
+	var last os.FileInfo
+	for {
+		select {
+		case <-stop:
+			return
+		case <-t.C:
+		}
+		if s.binary.replaced() == "" {
+			last = nil
+			continue
+		}
+		fi, err := os.Stat(s.binary.path)
+		if err != nil || fi.Mode()&0o111 == 0 {
+			last = nil
+			continue
+		}
+		if last != nil && fi.Size() == last.Size() && fi.ModTime().Equal(last.ModTime()) {
+			_ = s.opts.Restart()
+			return
+		}
+		last = fi
+	}
 }
