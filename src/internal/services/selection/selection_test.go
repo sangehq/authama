@@ -12,9 +12,12 @@ import (
 	"github.com/simtabi/authama/src/internal/core/inventory"
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/services/dataset"
+	"github.com/simtabi/authama/src/internal/services/events"
 	"github.com/simtabi/authama/src/internal/services/exports"
+	"github.com/simtabi/authama/src/internal/services/history"
 	"github.com/simtabi/authama/src/internal/services/keysvc"
 	"github.com/simtabi/authama/src/internal/services/query"
+	"github.com/simtabi/authama/src/internal/services/snapshots"
 	"github.com/simtabi/authama/src/internal/services/tokensvc"
 	"github.com/simtabi/authama/src/internal/util/csvout"
 	"github.com/simtabi/authama/src/internal/util/paths"
@@ -47,8 +50,29 @@ func fixture(t *testing.T) (paths.Paths, dataset.Options) {
 	    {"alias":"dani-stg-web-00","hostname":"203.0.113.20","user":"ploi","tags":["web","stg"]}]},
 	  "work":{"key_scope":"per_service","category":"personal","key_comment":"{alias}","hosts":[
 	    {"alias":"gh","hostname":"github.com","user":"git"}]}}}`)
-	write(p.Inventory(), `{"version":1,"keys":{}}`)
+	write(p.Inventory(), `{"version":1,"keys":{
+	  "SHA256:fixturefingerprint":{"profile":"simtabi","path":"profiles/simtabi/simtabi_simbi-prd-web-00-ed25519",
+	    "type":"ed25519","comment":null,"created":"2026-11-01","rotate_after_days":0,"expires_on":null,
+	    "deployments":[{"target":"ploi@203.0.113.10","method":"ssh-copy-id","date":"2026-11-02","verified":true},
+	                   {"target":"ploi@203.0.113.12","method":"manual","date":null,"verified":false}]}}}`)
 	write(filepath.Join(userHome, ".npmrc"), "//registry.npmjs.org/:_authToken="+hex.EncodeToString(b)+"\n")
+	write(events.LogFile(p), `{"time":"2026-11-05T10:00:00Z","seen":"2026-11-05T10:00:01Z","kind":"changed","area":"ssh","path":"~/.ssh/config","size":120,"mode":"0600"}`+"\n"+
+		`{"time":"2026-11-06T09:00:00Z","seen":"2026-11-06T09:00:01Z","kind":"added","area":"auth","path":"~/.npmrc","size":40,"mode":"0600"}`+"\n")
+	write(filepath.Join(p.SnapshotsDir(), "ssh-20261001-100000.tar.gz"), "not a real archive")
+	hs, err := history.Open(p.HistoryDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	op := &history.Op{Command: "host add", Source: history.SourceCLI, Args: []string{"simtabi", "simbi-prd-web-00"},
+		Subjects: []history.Subject{{Kind: history.KindHost, Name: "simbi-prd-web-00"}}}
+	if err := hs.Begin(op); err != nil {
+		t.Fatal(err)
+	}
+	op.Result = history.ResultOK
+	if err := hs.Finish(op); err != nil {
+		t.Fatal(err)
+	}
+	_ = hs.Close()
 	env := map[string]string{"HOME": userHome, "USERPROFILE": userHome}
 	return p, dataset.Options{Getenv: func(k string) string { return env[k] }, Cwd: base}
 }
@@ -123,6 +147,23 @@ func TestTheDefaultsReproduceTheListCSVsByteForByte(t *testing.T) {
 		GrainProfile: exports.Profiles(profs),
 		GrainToken:   exports.Tokens(tokensvc.NewEnv(p, o.Getenv, nil, o.Cwd).Inventory("", false)),
 	}
+	hs, err := history.Open(p.HistoryDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ops, err := hs.Query(history.Filter{})
+	_ = hs.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	evs, err := events.List(p, events.Filter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	before[GrainOp] = exports.History(ops)
+	before[GrainEvent] = exports.Events(evs)
+	before[GrainSnapshot] = exports.Snapshots(snapshots.List(p.SnapshotsDir()))
+	before[GrainDeployment] = exports.Deployments(inv)
 	if len(before) != len(Grains) {
 		t.Fatalf("%d lists compared, %d grains", len(before), len(Grains))
 	}
@@ -258,5 +299,35 @@ func TestASavedSelectionOfAnotherVersionIsRefused(t *testing.T) {
 	s, err := Parse([]byte(`{"version":1,"grain":"host","where":{"env":["prd"]},"narrow":true}`))
 	if err != nil || s.Grain != GrainHost || s.Where.Env[0] != "prd" || !s.Narrow {
 		t.Errorf("Parse = %+v, %v", s, err)
+	}
+}
+
+func TestRecordsFilterByKindAreaCommandAndTime(t *testing.T) {
+	ds, _, _ := build(t)
+	if r := run(t, ds, Selection{Grain: GrainEvent, Where: Where{Area: []string{"auth"}}}); len(r.Rows) != 1 {
+		t.Errorf("auth events = %d", len(r.Rows))
+	}
+	if r := run(t, ds, Selection{Grain: GrainEvent, Where: Where{Since: "2026-11-06"}}); len(r.Rows) != 1 {
+		t.Errorf("events since 2026-11-06 = %d", len(r.Rows))
+	}
+	if r := run(t, ds, Selection{Grain: GrainEvent, Where: Where{Until: "2026-11-05"}}); len(r.Rows) != 1 {
+		t.Errorf("events until 2026-11-05 = %d", len(r.Rows))
+	}
+	if r := run(t, ds, Selection{Grain: GrainOp, Where: Where{Command: []string{"host"}}}); len(r.Rows) != 1 {
+		t.Errorf("host operations = %d", len(r.Rows))
+	}
+	if r := run(t, ds, Selection{Grain: GrainOp, Where: Where{Command: []string{"ho"}}}); len(r.Rows) != 0 {
+		t.Errorf("a partial word matched %d operations", len(r.Rows))
+	}
+	all := run(t, ds, Selection{Grain: GrainDeployment})
+	if len(all.Rows) != 2 {
+		t.Fatalf("deployments = %d, want the fixture's 2", len(all.Rows))
+	}
+	status := column(all, "status")[0] // the inventory's own verdict on the key
+	if r := run(t, ds, Selection{Grain: GrainDeployment, Where: Where{Status: []string{status}}}); len(r.Rows) != 2 {
+		t.Errorf("deployments with status %s = %d", status, len(r.Rows))
+	}
+	if r := run(t, ds, Selection{Grain: GrainDeployment, Where: Where{Status: []string{"no-such-status"}}}); len(r.Rows) != 0 {
+		t.Errorf("an unknown status matched %d deployments", len(r.Rows))
 	}
 }

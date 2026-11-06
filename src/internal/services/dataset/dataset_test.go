@@ -135,6 +135,13 @@ func TestTheDatasetNeverHoldsASecret(t *testing.T) {
 			f := rt.Field(i)
 			name := strings.ToLower(f.Name + " " + f.Tag.Get("json"))
 			checked++
+			// A bool or a number cannot carry a secret's value (holds_private_keys
+			// says whether a snapshot has keys; it holds none), so only fields
+			// that can hold text are judged by their name.
+			if k := f.Type.Kind(); k == reflect.Bool || (k >= reflect.Int && k <= reflect.Float64) {
+				walk(f.Type)
+				continue
+			}
 			for _, bad := range []string{"secret", "password", "private", "passphrase", "value_of", "token_value"} {
 				if strings.Contains(name, bad) && !allowed[strings.Split(f.Tag.Get("json"), ",")[0]] {
 					t.Errorf("%s.%s may hold a secret (%q)", rt.Name(), f.Name, bad)
