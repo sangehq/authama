@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Host exports for SecureCRT and MobaXterm.** `authama ssh host export securecrt` writes SecureCRT's
+  settings XML (File > Import Settings) and `host export mobaxterm` a `.mxtsessions` file (Sessions >
+  Import), each with a folder per profile and each host's own key. Termius imports both, so every
+  import it offers (`~/.ssh`, CSV, SecureCRT, PuTTY, MobaXterm) now has an authama export.
 - **Any list exports in nine formats, filtered and with the columns you choose.** `GET /exports/run`
   takes a built-in preset (`?preset=hosts`, one per list) or a selection (`?s=`, base64url JSON):
   rows of profiles, keys, hosts, tokens, history, events, snapshots or deployments; filters on

@@ -99,6 +99,8 @@ authama ssh host export windows-terminal        # ~/.config/authama/exports/wind
 authama ssh host export iterm2
 authama ssh host export putty --skip bastion    # leave a host out (repeatable)
 authama ssh host export remmina --include-git   # also git hosts
+authama ssh host export securecrt               # SecureCRT, and Termius's SecureCRT import
+authama ssh host export mobaxterm               # MobaXterm, and Termius's MobaXterm import
 authama ssh host export csv --out - > hosts.csv # one-file exports can go to stdout
 ```
 
@@ -108,6 +110,8 @@ authama ssh host export csv --out - > hosts.csv # one-file exports can go to std
 | `iterm2` | `authama-hosts.json`, Dynamic Profiles running `ssh <alias>`, tagged with the profile and the host's tags | copy it to `~/Library/Application Support/iTerm2/DynamicProfiles/`; iTerm2 loads it at once | from `~/.ssh/config`, through ssh |
 | `putty` | `authama-putty.reg`, one session per host (UTF-16 with CRLF, as regedit writes) | double-click it, or `reg import authama-putty.reg` | `PublicKeyFile` names `<key>.ppk`; the report prints the `puttygen` command that makes each |
 | `remmina` | one `authama-<alias>.remmina` per host | copy them to `~/.local/share/remmina/`, or import them from Remmina's menu | `ssh_privatekey`, with `ssh_auth=1`; Remmina also wants the `.pub` beside it |
+| `securecrt` | `authama-securecrt.xml`, SecureCRT's settings XML: a session folder per profile, an SSH2 session per host | SecureCRT: **File → Import Settings**; Termius: **Import → SecureCRT** | each session's own `Identity Filename V2` (SecureCRT 8 and later read OpenSSH keys) |
+| `mobaxterm` | `authama.mxtsessions`: a bookmark folder per profile, an SSH session per host | MobaXterm: **Sessions → Import sessions from file**; Termius: **Import → MobaXterm** | the session's private key field (MobaXterm reads OpenSSH keys) |
 | `csv` | `hosts.csv`: `alias, group, hostname, port, user, key_path, tags` (tags `;`-separated) | import it, mapping the columns | `key_path` |
 
 `windows-terminal` and `iterm2` launch `ssh`, which reads your `~/.ssh/config`, so a host reached through a
@@ -118,8 +122,12 @@ are handed a host, port, user and key path and do not run a ProxyCommand, so suc
 
 Royal TS reads the CSV with its column-mapping dialog; map `hostname` to its `URI` column. Royal TS's and Xshell's CSV
 imports have no key column, so attach each key in the client. Tabby, WinSCP and Termius import an OpenSSH config, so
-give them the file `config export --flat` writes. MobaXterm, SecureCRT and Xshell's own session files are not written:
-their formats are undocumented or keep keys in a store of their own.
+give them the file `config export --flat` writes. Xshell's own session files are not written: its format keeps keys
+in a store of its own.
+
+**Termius imports all five ways it offers**: `~/.ssh` (the config authama renders, or `config export --flat`), CSV
+(`ssh termius export`), SecureCRT (`host export securecrt`), PuTTY (`host export putty`, the `.reg`) and MobaXterm
+(`host export mobaxterm`). Key paths in every file are this machine's: edit them when the client runs elsewhere.
 
 ---
 

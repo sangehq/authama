@@ -1232,8 +1232,10 @@ one file). ~/.ssh is never written. The clients:
 
   csv               any client that imports a CSV (Royal TS, Xshell, SecureCRT's import script, a spreadsheet)
   iterm2            iTerm2 (Dynamic Profiles)
+  mobaxterm         MobaXterm (a .mxtsessions file for Sessions > Import; Termius imports it too)
   putty             PuTTY and KiTTY (a .reg file)
   remmina           Remmina (one .remmina file per host)
+  securecrt         SecureCRT (an XML settings file for File > Import Settings; Termius imports it too)
   windows-terminal  Windows Terminal (a JSON fragment)
 
 windows-terminal and iterm2 run `ssh <alias>`, so your ~/.ssh/config supplies the
