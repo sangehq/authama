@@ -75,6 +75,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   column, so it has no Keys tab; the dialog now says so, with a link to the lists that have one.
 
 
+### Removed
+
+- **`authama tui`, the terminal menu.** The web UI is the interactive surface: a bare `authama` on
+  a terminal opens it, and every menu entry was already a CLI command. `docs/tools/tui.md` lists
+  where each entry went. `authama tui` still answers, but it only prints that pointer and exits
+  with an error. History rows the menu recorded keep their `tui` source.
+- **The `atm-ui` shell alias now runs `authama serve`.** A block installed earlier keeps calling
+  `authama tui`, which prints the pointer; `token shell-aliases --install` rewrites it.
+
 ### Changed
 
 - **The lists' CSV downloads (`/exports/hosts.csv` and the rest) now come from the export
@@ -121,6 +130,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Documentation
 
+- The keepalive workflow calls the reusable workflow at a commit, not at `main`, so an upstream
+  change cannot alter this repository's CI unseen.
 - The migration guide no longer offers Homebrew, Scoop or `go install` as a way to install, nor says
   the installers carry both binaries: releases are on hold, so it points at building from source.
   The README's `export` line names `authama export <list>`. A test fails on a docs page that offers

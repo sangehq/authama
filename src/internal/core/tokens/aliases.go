@@ -26,7 +26,7 @@ type Alias struct{ Name, Value string }
 func DefaultAliases(command string) []Alias {
 	return []Alias{
 		{"atm", command + " token"},
-		{"atm-ui", command + " tui"},
+		{"atm-ui", command + " serve"},
 		{"atm-doctor", command + " token audit"},
 		{"atm-init", command + " token init"},
 	}

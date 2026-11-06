@@ -792,7 +792,7 @@ func newTokenShellAliasesCmd() *cobra.Command {
 			"  eval \"$(" + brand.Command + " token shell-aliases --print)\"",
 		Short: "Show, install or remove the atm shell aliases (atm, atm-ui, atm-doctor, atm-init)",
 		Long: "The aliases auth-token-manager installed, pointed at this tool: atm runs\n" +
-			"`" + brand.Command + " token`, atm-ui the menu, atm-doctor `token audit`,\n" +
+			"`" + brand.Command + " token`, atm-ui the web UI, atm-doctor `token audit`,\n" +
 			"atm-init `token init`. They live in a marked block in your shell's rc file,\n" +
 			"which --install replaces (an auth-token-manager block included) and --uninstall\n" +
 			"removes. Without a flag it reports what the file holds.",

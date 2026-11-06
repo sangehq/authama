@@ -85,10 +85,10 @@ printf '%s\n' "$TOKEN" | authama token set --target netrc --server api.heroku.co
 Rotate a token by setting it again: `token set` replaces the entry for that host
 and keeps every other one. `token show git github.com` confirms what is there.
 
-The menu (`authama tui`, **Auth tokens → Add or replace a token**) asks the same
-questions the auth-token-manager menu did: the tool, the provider (from
-`token providers`), cloud or self-hosted, then the secret. It also offers
-**Replace** for each installed entry, keeping its user name when you press Enter.
+The web UI's **Auth tokens** page (`n t` opens the form) replaces the
+auth-token-manager menu: it asks for the tool, the provider (from
+`token providers`), and the secret, and previews the write. The terminal menu
+that used to ask these questions was removed ([`tui`](tui.md)).
 
 ## The config
 
@@ -272,7 +272,7 @@ eval "$(authama token shell-aliases --print)"
 | Alias | Runs |
 |---|---|
 | `atm` | `authama token` |
-| `atm-ui` | `authama tui` |
+| `atm-ui` | `authama serve` |
 | `atm-doctor` | `authama token audit` |
 | `atm-init` | `authama token init` |
 
@@ -286,7 +286,6 @@ duplicated. The rc file is copied to `<file>.authama.bak` first unless `--no-bac
 ## Also in
 
 - [`doctor`](doctor.md) checks the token files' modes (a warning; `--strict` fails on it), and `doctor --fix` repairs them.
-- [`tui`](tui.md) has an **Auth tokens** group: list, status, audit, copy, add or replace, apply, delete.
 - [`serve`](serve.md) has a **Tokens** page: the list, the status and audit, and previewed `delete` and `apply`.
 
 <!-- nav-footer -->

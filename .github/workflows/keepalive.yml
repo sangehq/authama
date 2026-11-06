@@ -16,4 +16,4 @@ jobs:
   keepalive:
     permissions:
       actions: write
-    uses: laranail/.github/.github/workflows/keepalive.yml@main
+    uses: laranail/.github/.github/workflows/keepalive.yml@027a41b9aa7a700cc8823d1f2c68f70ba43be525
