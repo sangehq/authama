@@ -32,8 +32,8 @@ make -C ~/src/authama install    # builds build/<your-os>/authama, then copies i
 authama doctor
 ```
 
-Updating, shell completion, where per-user state lives, and the binaries published
-for 0.1.0 to 0.1.3 are in [docs/installation.md](docs/installation.md). There is
+Updating, shell completion, where per-user state lives, and what became of the
+binaries published before the history restarted are in [docs/installation.md](docs/installation.md). There is
 no runtime Docker image; the [dev container](docs/installation.md#dev-container) is
 for working on authama itself.
 

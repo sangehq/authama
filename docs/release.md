@@ -71,8 +71,8 @@ GoReleaser publishes the cask and the Scoop manifest with the write deploy keys
 (on `simtabi/scoop-bucket`), each a repository secret that reaches its one
 repository and nothing else. `TAP_GITHUB_TOKEN` is read only for the Winget pull
 request. Every manifest downloads from this repository's release assets, which
-are named `authama_*` from 0.1.2 on. Releases up to 0.1.3 also attached bare
-`sshmgr_*` binaries, the deprecated alias; later ones do not.
+are named `authama_*`. The releases withdrawn when the history restarted at v0.1.0
+also attached bare `sshmgr_*` binaries, the deprecated alias; later ones do not.
 
 - **Homebrew:** the tap requires a pull request on `main`, with deploy keys as its
   one bypass actor, so the cask `Casks/authama.rb` is committed to `main` directly.

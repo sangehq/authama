@@ -9,6 +9,10 @@ auth-token-manager merged in. It has two features, under two groups:
 `doctor`, `init`, `migrate`, `settings`, `history`, `serve`, `tui` and
 `version` stay at the top level, because they cover both.
 
+> The versions 0.1.1 to 0.1.4 named below are builds released before 2026-11-06, when the
+> history was folded into one commit and the version restarted at v0.1.0. Their releases are
+> withdrawn, but installs of them exist, so the steps for upgrading from them stay.
+
 ## Removing the sshmgr alias
 
 The `sshmgr` binary that shipped beside `authama` as a deprecated alias is no longer built, released

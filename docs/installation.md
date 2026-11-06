@@ -2,7 +2,7 @@
 
 How to get `authama` onto a machine, and where it keeps its state once it is there.
 
-`make build` produces `authama`. The `sshmgr` alias that releases up to 0.1.3
+`make build` produces `authama`. The `sshmgr` alias that earlier releases
 installed beside it is gone; the [migration guide](migration.md#removing-the-sshmgr-alias)
 says how to clear one out.
 
@@ -67,7 +67,7 @@ A version is a tag: check one out to build exactly that release.
 
 ```sh
 git -C ~/src/authama fetch --tags
-git -C ~/src/authama checkout v0.1.3
+git -C ~/src/authama checkout v0.1.0
 make -C ~/src/authama build
 ```
 
@@ -83,10 +83,13 @@ is still identifiable.
 
 ### Earlier binary releases
 
-0.1.0 to 0.1.3 were published with binaries, archives, Linux packages, a Homebrew
-cask and a Scoop manifest. Those stay where they are, and an existing install
-keeps working, but none of those channels is updated while releases are on
-hold: build from source to get anything newer. [Migration](migration.md) covers
+Before 2026-11-06, versions 0.1.0 to 0.1.3 were published with binaries, archives,
+Linux packages, a Homebrew cask and a Scoop manifest. The history was then folded
+into one commit and the version restarted at v0.1.0, and those releases were
+withdrawn: an installed binary keeps working, but the cask and the Scoop manifest
+no longer download, and nothing is published while releases are on hold. Build
+from source. Go's module proxy still serves the old `src/v0.1.0` to `src/v0.1.3`
+it cached, which is one more reason this page offers no `go install` path. [Migration](migration.md) covers
 moving an `sshmgr` install to `authama`.
 
 ### Docker
@@ -176,7 +179,7 @@ tests and for running several configurations side by side) unless
 print both resolved homes. `~/.ssh` itself is unchanged - it's the generated
 output.
 
-**Upgrading from 0.1.0 or earlier.** On the first run without an explicit
+**Upgrading from ssh-manager or sshmgr.** On the first run without an explicit
 `$AUTHAMA_CONFIG_DIR`, when `~/.config/authama` does not exist yet, authama copies
 the old home in - `~/.config/ssh-manager` (on Windows also
 `%APPDATA%\ssh-manager`), or an older `~/.config/sshmgr` or `~/.sshmgr` - moves
