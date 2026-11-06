@@ -8,11 +8,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`authama export <list>`**: any list of the home (hosts, keys, profiles, tokens, history,
+  events, snapshots, deployments) filtered (`--profile`, `--key`, `--env`, `--role`, `--tag`,
+  `--status`, …), with the columns chosen (`--columns field=heading`, related fields by path),
+  sorted and limited, in any of the nine formats, to stdout or `--out`. `--selection` takes a
+  selection saved from the Export page, and `--fields` lists a list's fields. With no options it
+  prints exactly what the list's `--csv` prints.
 - **Keyboard shortcuts in the web UI.** `?` opens a sheet listing them all; `/` opens the command
   palette like Ctrl+K; `g` then a letter goes to any page (`g h` Hosts, `g k` Keys, …) and `n` then
   a letter opens the add-a-profile, host or token form. They never fire while typing in a field or
   with a dialog open, and the sheet's switch turns the single-key ones off for that browser.
-
 - **An Export page.** Export, in the menu (`web.menu_export` hides it), makes a file of any list:
   a tab per kind of row (hosts, keys, profiles, auth tokens, history, events, snapshots,
   deployments), filter tables with counts (profiles, keys grouped by profile, environments, roles,
