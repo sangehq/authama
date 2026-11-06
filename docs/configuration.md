@@ -238,31 +238,31 @@ keys, and nothing else - and nothing crosses profiles:
 A server's alias says whose it is, which environment, what it does and which one:
 
 ```
-<owner>-<env>-<role>-<nn>          simbi-prd-web-00   simbi-prd-db-00   dani-prd-web-00
+<code>-<env>-<role>-<nn>          simbi-prd-web-00   simbi-prd-db-00   dani-prd-web-00
 ```
 
 | Part | Meaning | Examples |
 |---|---|---|
-| `owner` | a short code for the organisation or client the server belongs to | `simbi`, `dani` |
+| `code` | the code name of the organisation or client the server belongs to | `simbi` (Simtabi), `dani` (AdelsaIQ) |
 | `env` | the environment | `prd` (production), `stg` (staging), `dev` |
 | `role` | what the server does | `web`, `db`, `cache`, `worker`, `vpn` |
 | `nn` | two digits, from `00`, for the next server of the same role | `00`, `01` |
 
 The parts are lowercase letters and digits joined by `-`, so the alias is also a valid host name.
-The servers of one owner live in a profile of their own, in the category that says what the owner
-is to you (`orgs` for your own organisations, `clients` for clients'), and each host carries its
-role and environment as tags, so the web UI, `list` and the exports can filter by them. The key name
-is left to authama, which derives one per host (`simbi_simbi-prd-web-00-ed25519`):
+The code name is only in the alias: the server goes in the organisation's own profile (`simtabi` for
+`simbi-*`, `adelsaiq` for `dani-*`), in the category that says what the organisation is to you
+(`orgs` for your own, `clients` for clients'). Each host carries its role and environment as tags,
+so the web UI, `list` and the exports can filter by them. The key name is left to authama, which
+derives one per host from the profile and the alias (`simtabi_simbi-prd-web-00-ed25519`):
 
 ```bash
-authama ssh profile add simbi --category orgs
-authama ssh host add simbi simbi-prd-web-00 -H 203.0.113.10 -u ploi --tag web --tag prd
-authama ssh host add simbi simbi-prd-db-00 -H 203.0.113.20 -u ploi --tag db --tag prd
+authama ssh host add simtabi simbi-prd-web-00 -H 203.0.113.10 -u ploi --tag web --tag prd
+authama ssh host add simtabi simbi-prd-db-00 -H 203.0.113.20 -u ploi --tag db --tag prd
 authama ssh reconcile --yes
 ```
 
 ```json
-"simbi": {
+"simtabi": {
   "category": "orgs",
   "hosts": [
     { "alias": "simbi-prd-web-00", "hostname": "203.0.113.10", "user": "ploi", "tags": ["web", "prd"] },

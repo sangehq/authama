@@ -32,7 +32,7 @@ authama ssh host apply work acme-prd-web-00 203.0.113.10 deploy web   # add-or-u
 
 `host apply` takes `<alias> <host>[:port] <user> [role]` and adds the host if
 it is new or updates it if not, so the same line can be re-run. Server aliases
-follow `<owner>-<env>-<role>-<nn>` (`acme-prd-web-00`); see
+follow `<code>-<env>-<role>-<nn>` (`acme-prd-web-00`); see
 [Naming servers](configuration.md#naming-servers). Many at once:
 
 ```sh
