@@ -23,7 +23,10 @@
       {{if and .Authed .ReadOnly}}<span class="badge badge-muted" title="This server only reads: every form that would change something is hidden">{{icon "lock"}}<span class="ms-1">read-only</span></span>{{end}}
       <div class="navbar-nav flex-row order-md-last">
         {{if .Authed}}<div class="nav-item d-none d-md-flex me-3">
-          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#command-palette" data-tour="1" data-tour-title="Search" data-tour-text="Ctrl+K (or ⌘K) jumps to any page, form or download as you type.">{{icon "search"}}<span class="ms-1">Search</span><kbd class="ms-2" data-palette-hint>Ctrl K</kbd></button>
+          <button type="button" class="header-search" data-bs-toggle="modal" data-bs-target="#command-palette" aria-keyshortcuts="Control+K Meta+K /" data-tour="1" data-tour-title="Search" data-tour-text="Ctrl+K (⌘K on a Mac) or / jumps to any page, form or download as you type. ? lists every shortcut.">{{icon "search"}}<span class="header-search-text">Search pages and actions</span><kbd data-palette-hint>Ctrl K</kbd></button>
+        </div>
+        <div class="nav-item d-md-none me-2">
+          <button type="button" class="nav-link px-0" data-bs-toggle="modal" data-bs-target="#command-palette" aria-label="Search pages and actions">{{icon "search"}}</button>
         </div>{{end}}
         <div class="nav-item d-none d-md-flex me-2">
           <a href="?theme=dark" class="nav-link px-0 hide-theme-dark" title="Dark theme" data-bs-toggle="tooltip" data-bs-placement="bottom">{{icon "moon"}}<span class="visually-hidden">Dark theme</span></a>

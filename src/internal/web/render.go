@@ -278,10 +278,12 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		"confirm": func(id, form, title, text, label string) confirmModal {
 			return confirmModal{ID: id, Form: form, Title: title, Text: text, Label: label}
 		},
-		"withPurge":    func(m confirmModal) confirmModal { m.Purge = true; return m },
-		"help":         func(title, text string) helpTip { return helpTip{Title: title, Text: text} },
-		"copy":         func(value, what string) copyTip { return copyTip{Value: value, What: what} },
-		"paletteItems": paletteItems,
+		"withPurge":       func(m confirmModal) confirmModal { m.Purge = true; return m },
+		"help":            func(title, text string) helpTip { return helpTip{Title: title, Text: text} },
+		"copy":            func(value, what string) copyTip { return copyTip{Value: value, What: what} },
+		"paletteItems":    paletteItems,
+		"paletteSections": paletteSections,
+		"shortcutKeys":    shortcutKeys,
 		"stat": func(label string, count int, href, icon, colour string) stat {
 			return stat{Label: label, Count: count, Href: href, Icon: icon, Colour: colour}
 		},
@@ -617,49 +619,84 @@ func (s *Server) serveAsset(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(body)
 }
 
-// paletteItem is one entry of the command palette.
-type paletteItem struct{ ID, Label, Href, Icon, Group, Keywords string }
+// paletteItem is one entry of the command palette. Keys is its keyboard
+// shortcut, a key sequence such as "g h" (press g, then h), or empty.
+type paletteItem struct{ ID, Label, Href, Icon, Group, Keywords, Keys string }
+
+// paletteSection is a titled run of palette entries: the pages, the forms
+// that open in a panel, or the downloads.
+type paletteSection struct {
+	Title string
+	Items []paletteItem
+}
+
+// paletteSections is paletteItems in the order the palette shows them, under
+// a heading each: Pages, Actions, Downloads.
+func paletteSections(readOnly bool) []paletteSection {
+	secs := []paletteSection{{Title: "Pages"}, {Title: "Actions"}, {Title: "Downloads"}}
+	for _, it := range paletteItems(readOnly) {
+		switch {
+		case it.Group == "Action":
+			secs[1].Items = append(secs[1].Items, it)
+		case strings.HasPrefix(it.Href, "/exports/"):
+			secs[2].Items = append(secs[2].Items, it)
+		default:
+			secs[0].Items = append(secs[0].Items, it)
+		}
+	}
+	out := secs[:0]
+	for _, sec := range secs {
+		if len(sec.Items) > 0 {
+			out = append(out, sec)
+		}
+	}
+	return out
+}
+
+// shortcutKeys splits a shortcut such as "g h" into the keys to press, for
+// one <kbd> each.
+func shortcutKeys(keys string) []string { return strings.Fields(keys) }
 
 // paletteItems is what the command palette lists: every page, the forms that
 // open in a panel (not in read-only mode), and the downloads.
 func paletteItems(readOnly bool) []paletteItem {
 	items := []paletteItem{
-		{"overview", "Overview", "/", "layout-dashboard", "Page", "home dashboard state"},
-		{"profiles", "Profiles", "/profiles", "users", "SSH", "profile category key scope"},
-		{"hosts", "Hosts", "/hosts", "server", "SSH", "host alias hostname"},
-		{"keys", "Keys", "/keys", "key", "SSH", "key fingerprint expiry reserve"},
-		{"vms", "VMs", "/vms", "device-desktop", "SSH", "vm hypervisor devbox sync"},
-		{"sshconfig", "SSH config", "/ssh-config", "file-code", "Config & backups", "config render drift check"},
-		{"snapshots", "Snapshots", "/snapshots", "archive", "Config & backups", "snapshot bundle backup restore"},
-		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Security", "token npm composer docker git netrc pypi cargo gem gradle maven yarn helm gh"},
-		{"audit", "Audit", "/audit", "shield-check", "Security", "audit key age"},
-		{"security", "Owner & PIN", "/security", "lock", "Security", "owner pin seal tamper binding fingerprint"},
-		{"history", "History", "/history", "history", "Activity", "history operations changes log"},
-		{"events", "Events", "/events", "activity", "Activity", "events file changes tracking"},
-		{"export", "Export", "/export", "file-export", "Export", "export download csv json yaml php javascript markdown html filter columns"},
-		{"doctor", "Doctor", "/doctor", "stethoscope", "System", "doctor checks fix"},
-		{"repair", "Repair", "/repair", "refresh", "System", "repair fix corrupt permissions factory reset"},
-		{"settings", "Settings", "/settings", "settings", "System", "settings theme appearance env"},
-		{"about", "About", "/about", "info-circle", "System", "about version licences"},
+		{"overview", "Overview", "/", "layout-dashboard", "Page", "home dashboard state", "g o"},
+		{"profiles", "Profiles", "/profiles", "users", "SSH", "profile category key scope", "g p"},
+		{"hosts", "Hosts", "/hosts", "server", "SSH", "host alias hostname", "g h"},
+		{"keys", "Keys", "/keys", "key", "SSH", "key fingerprint expiry reserve", "g k"},
+		{"vms", "VMs", "/vms", "device-desktop", "SSH", "vm hypervisor devbox sync", "g v"},
+		{"sshconfig", "SSH config", "/ssh-config", "file-code", "Config & backups", "config render drift check", "g c"},
+		{"snapshots", "Snapshots", "/snapshots", "archive", "Config & backups", "snapshot bundle backup restore", "g s"},
+		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Security", "token npm composer docker git netrc pypi cargo gem gradle maven yarn helm gh", "g t"},
+		{"audit", "Audit", "/audit", "shield-check", "Security", "audit key age", "g a"},
+		{"security", "Owner & PIN", "/security", "lock", "Security", "owner pin seal tamper binding fingerprint", "g w"},
+		{"history", "History", "/history", "history", "Activity", "history operations changes log", "g y"},
+		{"events", "Events", "/events", "activity", "Activity", "events file changes tracking", "g e"},
+		{"export", "Export", "/export", "file-export", "Export", "export download csv json yaml php javascript markdown html filter columns", "g x"},
+		{"doctor", "Doctor", "/doctor", "stethoscope", "System", "doctor checks fix", "g d"},
+		{"repair", "Repair", "/repair", "refresh", "System", "repair fix corrupt permissions factory reset", "g r"},
+		{"settings", "Settings", "/settings", "settings", "System", "settings theme appearance env", "g ,"},
+		{"about", "About", "/about", "info-circle", "System", "about version licences", "g i"},
 	}
 	if !readOnly {
 		items = append(items,
-			paletteItem{"add-profile", "Add a profile", "/profiles#add-profile", "plus", "Action", "new create profile"},
-			paletteItem{"add-host", "Add a host", "/hosts#add-host", "plus", "Action", "new create host"},
-			paletteItem{"add-token", "Add or replace a token", "/tokens#add-token", "plus", "Action", "new set rotate token secret"},
+			paletteItem{"add-profile", "Add a profile", "/profiles#add-profile", "plus", "Action", "new create profile", "n p"},
+			paletteItem{"add-host", "Add a host", "/hosts#add-host", "plus", "Action", "new create host", "n h"},
+			paletteItem{"add-token", "Add or replace a token", "/tokens#add-token", "plus", "Action", "new set rotate token secret", "n t"},
 		)
 	}
 	return append(items,
-		paletteItem{"export-config", "Download ssh_config, every host inline", "/exports/ssh_config", "download", "Export", "export flat ssh_config"},
-		paletteItem{"export-termius", "Download the Termius CSV", "/exports/termius-hosts.csv", "download", "Export", "export termius csv"},
-		paletteItem{"export-hosts", "Download the hosts as CSV", "/exports/hosts.csv", "download", "Export", "export csv hosts spreadsheet"},
-		paletteItem{"export-keys", "Download the keys as CSV", "/exports/keys.csv", "download", "Export", "export csv keys spreadsheet"},
-		paletteItem{"export-tokens", "Download the installed tokens as CSV", "/exports/tokens.csv", "download", "Export", "export csv tokens spreadsheet"},
-		paletteItem{"export-history", "Download the history as CSV", "/exports/history.csv", "download", "Export", "export csv history operations"},
-		paletteItem{"export-events", "Download the file events as CSV", "/exports/events.csv", "download", "Export", "export csv events audit"},
-		paletteItem{"export-profiles", "Download the profiles as CSV", "/exports/profiles.csv", "download", "Export", "export csv profiles spreadsheet"},
-		paletteItem{"export-snapshots", "Download the snapshots as CSV", "/exports/snapshots.csv", "download", "Export", "export csv snapshots backups"},
-		paletteItem{"export-deployments", "Download the key deployments as CSV", "/exports/deployments.csv", "download", "Export", "export csv deployments audit keys"},
+		paletteItem{"export-config", "Download ssh_config, every host inline", "/exports/ssh_config", "download", "Export", "export flat ssh_config", ""},
+		paletteItem{"export-termius", "Download the Termius CSV", "/exports/termius-hosts.csv", "download", "Export", "export termius csv", ""},
+		paletteItem{"export-hosts", "Download the hosts as CSV", "/exports/hosts.csv", "download", "Export", "export csv hosts spreadsheet", ""},
+		paletteItem{"export-keys", "Download the keys as CSV", "/exports/keys.csv", "download", "Export", "export csv keys spreadsheet", ""},
+		paletteItem{"export-tokens", "Download the installed tokens as CSV", "/exports/tokens.csv", "download", "Export", "export csv tokens spreadsheet", ""},
+		paletteItem{"export-history", "Download the history as CSV", "/exports/history.csv", "download", "Export", "export csv history operations", ""},
+		paletteItem{"export-events", "Download the file events as CSV", "/exports/events.csv", "download", "Export", "export csv events audit", ""},
+		paletteItem{"export-profiles", "Download the profiles as CSV", "/exports/profiles.csv", "download", "Export", "export csv profiles spreadsheet", ""},
+		paletteItem{"export-snapshots", "Download the snapshots as CSV", "/exports/snapshots.csv", "download", "Export", "export csv snapshots backups", ""},
+		paletteItem{"export-deployments", "Download the key deployments as CSV", "/exports/deployments.csv", "download", "Export", "export csv deployments audit keys", ""},
 	)
 }
 

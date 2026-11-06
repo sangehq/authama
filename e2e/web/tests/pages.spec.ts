@@ -117,6 +117,56 @@ test('the command palette opens with Ctrl+K and goes where you type', async ({ p
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Auth tokens');
 });
 
+test('the palette groups what it finds and says when nothing matches', async ({ page }) => {
+  await page.goto('/');
+  await page.keyboard.press('/');
+  const input = page.getByRole('combobox', { name: 'Go to a page or an action' });
+  await expect(input).toBeFocused();
+  const list = page.getByRole('listbox', { name: 'Pages and actions' });
+  await input.fill('csv');
+  await expect(list.getByRole('group', { name: 'Downloads' })).toBeVisible();
+  await expect(list.getByRole('group', { name: 'Actions' })).toBeHidden();
+  await input.fill('no such thing anywhere');
+  await expect(page.locator('[data-palette-empty]')).toBeVisible();
+  await expect(page.locator('[data-palette-empty]')).toContainText('no such thing anywhere');
+  await page.keyboard.press('Escape');
+  await expect(input).toBeHidden();
+});
+
+test('two-key shortcuts go to a page, and never fire while typing', async ({ page }) => {
+  await page.goto('/');
+  await page.keyboard.press('g');
+  await page.keyboard.press('h');
+  await expect(page).toHaveURL(/\/hosts$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hosts');
+
+  // In a field the keys are text, not shortcuts.
+  await page.keyboard.press('Control+k');
+  const input = page.getByRole('combobox', { name: 'Go to a page or an action' });
+  await input.press('g');
+  await input.press('k');
+  await expect(input).toHaveValue('gk');
+  await expect(page).toHaveURL(/\/hosts$/);
+});
+
+test('? lists every shortcut, and its switch turns the single keys off', async ({ page }) => {
+  await page.goto('/');
+  await page.keyboard.press('?');
+  const sheet = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByText('Hosts', { exact: true })).toBeVisible();
+  await sheet.getByRole('checkbox').uncheck();
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
+  await page.keyboard.press('g');
+  await page.keyboard.press('k');
+  await expect(page).not.toHaveURL(/\/keys$/);
+  // Ctrl+K still works with them off.
+  await page.keyboard.press('Control+k');
+  await expect(page.getByRole('combobox', { name: 'Go to a page or an action' })).toBeFocused();
+  await page.evaluate(() => window.localStorage.removeItem('authama.shortcuts'));
+});
+
 test('a link to a form in a panel opens the panel', async ({ page }) => {
   await page.goto('/hosts#add-host');
   await expect(page.locator('form', { has: page.locator('input[name="action"][value="host-add"]') })).toBeVisible();

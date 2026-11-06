@@ -135,6 +135,72 @@ main:focus { outline: none; }
    4.08:1 there in the light theme. */
 .btn kbd { color: #333; background: #e6e6e6; }
 :root[data-bs-theme=dark] .btn kbd { color: #e6e6e6; background: #333; }
+
+/* Keys, wherever a shortcut is shown (search box, palette, shortcuts sheet):
+   a key cap, not Tabler's dark code chip, at 4.5:1 or better in both themes. */
+.header-search kbd, .palette-modal kbd, #keyboard-shortcuts kbd {
+  display: inline-block; min-width: 1.5em; padding: .1rem .35rem; text-align: center;
+  font: 500 .75rem/1.2 var(--tblr-font-sans-serif); color: #3d4450; background: #f1f3f6;
+  border: 1px solid #d5d9e0; border-bottom-width: 2px; border-radius: 4px; box-shadow: none;
+}
+:root[data-bs-theme=dark] :is(.header-search, .palette-modal, #keyboard-shortcuts) kbd {
+  color: #dfe3ea; background: #252b36; border-color: #3a4250;
+}
+
+/* The header's search: an input-shaped button, so it reads as a search box,
+   that opens the palette. */
+.header-search {
+  display: inline-flex; align-items: center; gap: .5rem; width: 17rem; height: 2.25rem;
+  padding: 0 .4rem 0 .65rem; color: var(--tblr-secondary); font-size: .875rem; text-align: start;
+  background: var(--tblr-bg-forms); border: 1px solid var(--tblr-border-color); border-radius: var(--tblr-border-radius);
+  transition: border-color .15s, box-shadow .15s;
+}
+.header-search:hover { border-color: var(--tblr-border-color-dark, #c7ccd4); }
+.header-search:focus-visible { outline: 0; border-color: var(--tblr-primary); box-shadow: 0 0 0 .25rem rgba(var(--tblr-primary-rgb), .25); }
+.header-search .icon { width: 1.1rem; height: 1.1rem; flex: none; }
+.header-search-text { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+@media (max-width: 1199.98px) { .header-search { width: 12rem; } }
+
+/* The command palette: a search field and a grouped list, high on the page
+   like every launcher, its height capped so it never fills the screen. */
+.palette-modal .modal-dialog { margin-top: 12vh; max-width: 40rem; }
+.palette-modal .modal-content { overflow: hidden; border-radius: .75rem; box-shadow: 0 1.5rem 4rem rgba(16, 24, 40, .28); }
+.palette-search { display: flex; align-items: center; gap: .75rem; padding: .9rem 1rem; border-bottom: 1px solid var(--tblr-border-color); }
+.palette-search-icon .icon { width: 1.35rem; height: 1.35rem; color: var(--tblr-secondary); }
+.palette-input { flex: 1; min-width: 0; font-size: 1.05rem; color: var(--tblr-body-color); background: transparent; border: 0; outline: 0; }
+.palette-input::placeholder { color: var(--tblr-secondary); opacity: 1; }
+.palette-esc { padding: 0; background: none; border: 0; }
+.palette-list { max-height: min(26rem, 60vh); overflow-y: auto; padding: .35rem 0 .5rem; overscroll-behavior: contain; }
+.palette-heading { padding: .6rem 1rem .25rem; font-size: .7rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--tblr-secondary); }
+.palette-item {
+  display: flex; align-items: center; gap: .75rem; margin: 0 .5rem; padding: .45rem .5rem;
+  color: var(--tblr-body-color); border-radius: .4rem; text-decoration: none; scroll-margin: 2rem 0;
+}
+.palette-item:hover { color: var(--tblr-body-color); background: var(--tblr-bg-surface-secondary); text-decoration: none; }
+.palette-item.active { color: var(--tblr-body-color); background: rgba(var(--tblr-primary-rgb), .1); box-shadow: inset 3px 0 0 var(--tblr-primary); }
+.palette-icon { display: inline-flex; align-items: center; justify-content: center; width: 1.9rem; height: 1.9rem; flex: none; border-radius: .4rem; background: var(--tblr-bg-surface-secondary); color: var(--tblr-secondary); }
+.palette-item.active .palette-icon { color: var(--tblr-primary); background: rgba(var(--tblr-primary-rgb), .12); }
+.palette-icon .icon { width: 1.1rem; height: 1.1rem; }
+.palette-label { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.palette-group { margin-left: .5rem; font-size: .8rem; color: var(--tblr-secondary); }
+.palette-keys { display: inline-flex; align-items: center; gap: .25rem; flex: none; }
+.palette-then { font-size: .7rem; color: var(--tblr-secondary); }
+.palette-empty { display: flex; gap: .6rem; align-items: flex-start; padding: 1.5rem 1rem; color: var(--tblr-secondary); }
+.palette-empty[hidden], .palette-item[hidden], .palette-section[hidden] { display: none; }
+.palette-footer {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; padding: .55rem 1rem;
+  font-size: .8rem; color: var(--tblr-secondary); background: var(--tblr-bg-surface-secondary); border-top: 1px solid var(--tblr-border-color);
+}
+.palette-footer kbd + kbd { margin-left: .2rem; }
+.palette-footer-link { padding: 0; color: inherit; background: none; border: 0; }
+.palette-footer-link:hover { color: var(--tblr-body-color); }
+@media (max-width: 575.98px) { .palette-modal .modal-dialog { margin: .5rem; } .palette-keys, .palette-footer { display: none; } }
+
+/* The shortcuts sheet: key caps on the left, what they do on the right. */
+.shortcuts-heading { margin-bottom: .5rem; font-size: .75rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--tblr-secondary); }
+.shortcuts-list { display: grid; grid-template-columns: auto 1fr; gap: .45rem 1rem; align-items: center; margin-bottom: 1.25rem; }
+.shortcuts-list dt { display: inline-flex; align-items: center; gap: .25rem; font-weight: normal; white-space: nowrap; }
+.shortcuts-list dd { margin: 0; }
 /* Code blocks keep Tabler's dark pre in both themes, so their tokens use the
    dark palette always. */
 .code-block .tok-key { color: #8cc4ff; }

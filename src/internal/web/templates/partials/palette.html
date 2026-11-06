@@ -1,23 +1,78 @@
-{{/* The command palette (Ctrl+K, ⌘K): a Tabler modal listing every page, the
-     forms that open in a panel, and the downloads. js/components/palette.js
-     filters it as you type; without the script the trigger does nothing. */}}
-{{define "palette_item"}}<a class="list-group-item list-group-item-action d-flex align-items-center gap-2" href="{{u .Href}}" id="pal-{{.ID}}" role="option" aria-selected="false" data-palette-item data-palette-keywords="{{.Keywords}}">{{icon .Icon}}<span class="me-auto">{{.Label}}</span><span class="text-secondary small">{{.Group}}</span></a>{{end}}
-{{define "palette"}}<div class="modal modal-blur fade" id="command-palette" tabindex="-1" aria-labelledby="command-palette-title" aria-hidden="true" data-command-palette>
-  <div class="modal-dialog modal-dialog-scrollable" role="document">
+{{/* The command palette (Ctrl+K, ⌘K or /): a Tabler modal listing every page,
+     the forms that open in a panel, and the downloads, under a heading each,
+     with each entry's keyboard shortcut. js/components/palette.js filters it
+     as you type; without the script the trigger does nothing. The shortcuts
+     sheet (?) lists the same shortcuts, from the same list, so the two cannot
+     disagree. */}}
+{{define "palette_keys"}}{{range $i, $k := shortcutKeys .}}{{if $i}}<span class="palette-then" aria-hidden="true">then</span>{{end}}<kbd>{{$k}}</kbd>{{end}}{{end}}
+{{define "palette_item"}}<a class="palette-item" href="{{u .Href}}" id="pal-{{.ID}}" role="option" aria-selected="false" data-palette-item data-palette-keywords="{{.Keywords}} {{.Group}}"{{if .Keys}} data-palette-keys="{{.Keys}}"{{end}}>
+  <span class="palette-icon" aria-hidden="true">{{icon .Icon}}</span>
+  <span class="palette-label">{{.Label}}{{if and (ne .Group "Page") (ne .Group "Action") (ne .Group "Export")}}<span class="palette-group">{{.Group}}</span>{{end}}</span>
+  {{if .Keys}}<span class="palette-keys" aria-label="Shortcut: {{.Keys}}">{{template "palette_keys" .Keys}}</span>{{end}}
+</a>{{end}}
+{{define "palette"}}<div class="modal fade palette-modal" id="command-palette" tabindex="-1" aria-labelledby="command-palette-title" aria-hidden="true" data-command-palette>
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <h2 class="visually-hidden" id="command-palette-title">Go to</h2>
+      <div class="palette-search">
+        <span class="palette-search-icon" aria-hidden="true">{{icon "search"}}</span>
+        <input type="text" class="palette-input" placeholder="Search pages, actions and downloads…" aria-label="Go to a page or an action" role="combobox" aria-expanded="true" aria-controls="command-palette-list" aria-autocomplete="list" autocomplete="off" spellcheck="false" data-palette-input>
+        <button type="button" class="palette-esc" data-bs-dismiss="modal" aria-label="Close"><kbd>Esc</kbd></button>
+      </div>
+      <div class="palette-list" id="command-palette-list" role="listbox" aria-label="Pages and actions">
+        {{range paletteSections .ReadOnly}}<div class="palette-section" role="group" aria-label="{{.Title}}" data-palette-section>
+          <div class="palette-heading" aria-hidden="true">{{.Title}}</div>
+          {{range .Items}}{{template "palette_item" .}}{{end}}
+        </div>{{end}}
+        <div class="palette-empty" role="status" aria-live="polite" data-palette-empty hidden>{{icon "search"}}<span>Nothing matches <strong data-palette-query></strong>. Try a page name, a file, or a word like <em>csv</em> or <em>token</em>.</span></div>
+      </div>
+      <div class="palette-footer" aria-hidden="true">
+        <span><kbd>↑</kbd><kbd>↓</kbd> move</span>
+        <span><kbd>↵</kbd> open</span>
+        <span><kbd>Esc</kbd> close</span>
+        <button type="button" class="palette-footer-link ms-auto" data-shortcuts-open><kbd>?</kbd> all shortcuts</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="keyboard-shortcuts" tabindex="-1" aria-labelledby="keyboard-shortcuts-title" aria-hidden="true" data-shortcuts>
+  <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title visually-hidden" id="command-palette-title">Go to</h2>
-        <div class="input-icon w-100">
-          <span class="input-icon-addon">{{icon "search"}}</span>
-          <input type="search" class="form-control" placeholder="Go to a page or an action…" aria-label="Go to a page or an action" role="combobox" aria-expanded="true" aria-controls="command-palette-list" autocomplete="off" data-palette-input>
+        <h2 class="modal-title" id="keyboard-shortcuts-title">Keyboard shortcuts</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-4">
+          <div class="col-md-6">
+            <h3 class="shortcuts-heading">Anywhere</h3>
+            <dl class="shortcuts-list">
+              <dt><kbd data-palette-hint>Ctrl K</kbd></dt><dd>Search pages, actions and downloads</dd>
+              <dt><kbd>/</kbd></dt><dd>Search, too</dd>
+              <dt><kbd>?</kbd></dt><dd>This list</dd>
+              <dt><kbd>Esc</kbd></dt><dd>Close a dialog or a panel</dd>
+            </dl>
+            {{range paletteSections .ReadOnly}}{{if eq .Title "Actions"}}
+            <h3 class="shortcuts-heading">Make something</h3>
+            <dl class="shortcuts-list">
+              {{range .Items}}{{if .Keys}}<dt>{{template "palette_keys" .Keys}}</dt><dd>{{.Label}}</dd>{{end}}{{end}}
+            </dl>
+            {{end}}{{end}}
+          </div>
+          <div class="col-md-6">
+            <h3 class="shortcuts-heading">Go to</h3>
+            <dl class="shortcuts-list">
+              {{range paletteSections .ReadOnly}}{{if eq .Title "Pages"}}{{range .Items}}{{if .Keys}}<dt>{{template "palette_keys" .Keys}}</dt><dd>{{.Label}}</dd>{{end}}{{end}}{{end}}{{end}}
+            </dl>
+          </div>
         </div>
-        <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="list-group list-group-flush" id="command-palette-list" role="listbox" aria-label="Pages and actions">
-        {{range paletteItems .ReadOnly}}{{template "palette_item" .}}{{end}}
-      </div>
-      <div class="modal-footer text-secondary small justify-content-start">
-        <kbd>↑</kbd> <kbd>↓</kbd> to move · <kbd>Enter</kbd> to open · <kbd>Esc</kbd> to close
+      <div class="modal-footer justify-content-between">
+        <label class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" checked data-shortcuts-toggle>
+          <span class="form-check-label">Single-key shortcuts (<kbd>/</kbd>, <kbd>?</kbd>, <kbd>g</kbd>, <kbd>n</kbd>)</span>
+        </label>
+        <span class="text-secondary small">Never while you type in a field. <kbd data-palette-hint>Ctrl K</kbd> always works.</span>
       </div>
     </div>
   </div>
