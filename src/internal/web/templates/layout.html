@@ -87,6 +87,7 @@
               {{icon "device-desktop"}}<span>Running as <strong class="text-body">{{if .User}}{{.User}}{{else}}this machine's user{{end}}</strong>{{if .Host}} on <strong class="text-body">{{.Host}}</strong>{{end}}</span>
               {{if .DevRoot}}<span class="badge badge-warn">dev mode</span>{{end}}
               {{if .ReadOnly}}<span class="badge badge-muted">read-only</span>{{end}}
+              {{if .Authed}}{{if .Rebuilt}}<span class="badge badge-warn" title="A newer build is installed; this page is from the build that was running when the server started">{{icon "alert-triangle"}}<span class="ms-1">{{.Build.Version}}, older build</span></span>{{else}}<span class="badge badge-ok" title="Current: this server runs the build now installed, built {{when .Build.Built}}, started {{when .Build.Started}}">{{icon "circle-check"}}<span class="ms-1">{{.Build.Version}}, current</span></span>{{end}}{{end}}
             </div>
           </nav>
         </div>
@@ -102,7 +103,15 @@
     {{end}}
     {{if and .Authed .Rebuilt (not .Panel)}}
     <div class="alert alert-warning rounded-0 mb-0" role="status" data-rebuilt>
-      <div class="container-xl">{{icon "alert-triangle"}}<span class="ms-1"><strong>This page is from an older build.</strong> <code>{{.Rebuilt}}</code> changed after this server started, and a running server keeps the code it started with. Stop it (Ctrl-C where it runs) and run <code>authama serve</code> again to see the new build.</span></div>
+      <div class="container-xl d-flex flex-wrap align-items-center gap-2"><span class="flex-fill">{{icon "alert-triangle"}} <strong>This page is from an older build.</strong> <code>{{.Rebuilt}}</code> changed after this server started, and a running server keeps the code it started with. {{if .CanRestart}}Restart it to load the new build: same address, and you stay signed in.{{else}}Stop it (Ctrl-C where it runs) and run <code>authama serve</code> again to see the new build.{{end}} <code>authama serve --restart</code> does it from a terminal, and stops any other authama web UI too.</span>
+        {{if .CanRestart}}<button type="button" class="btn btn-warning btn-sm" data-restart-server>{{icon "refresh"}}<span class="ms-1">Restart now</span></button>
+        <span class="small" role="status" aria-live="polite" data-restart-status></span>{{end}}
+      </div>
+    </div>
+    {{end}}
+    {{if and .Authed (not .Rebuilt) (not .Panel)}}
+    <div class="alert alert-success rounded-0 mb-0" role="status" data-restarted hidden>
+      <div class="container-xl">{{icon "circle-check"}}<span class="ms-1"><strong>Restarted, and current.</strong> This server now runs authama {{.Build.Version}}, the build installed at {{when .Build.Built}}, started {{when .Build.Started}}; every page shows what is on disk now.</span></div>
     </div>
     {{end}}
     {{if and .Authed .DevRoot}}

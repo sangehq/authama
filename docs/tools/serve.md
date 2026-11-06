@@ -135,9 +135,13 @@ Events) and **System** (Doctor, Settings, About). On a narrow screen it folds be
   pages. Hosts, keys, profiles, auth tokens, snapshots, key deployments (on the Audit page), history
   and events each download as CSV, with the same columns as `--csv` on their command. The History and
   Events downloads keep the page's filters, so the file holds what the page shows.
-- **A page from an older build says so.** When the `authama` binary is rebuilt, reinstalled or
-  removed after `authama serve` started, every page shows a yellow banner naming the file: the
-  server keeps the code it started with, so restart it to see the new build
+- **A page says whether its build is current.** The header shows the running build's version,
+  marked *current* or *older build*. When the `authama` binary is rebuilt, reinstalled or removed
+  after `authama serve` started, every page shows a yellow banner naming the file, with **Restart
+  now**: the server relaunches from the binary now installed, on the same address and with the
+  same sign-in token, stops, and the page signs back in and reloads, then says in a green banner
+  that it runs the current build. `serve --restart` and `serve --stop-all` do the same from a
+  terminal for every authama web UI on the machine
   ([Restart the web UI after updating](../installation.md#updating)).
 - **Any list in any format.** `/exports/run` writes a selection of a home's records as a file.
   A built-in preset is a list as its page shows it (`?preset=hosts`, `keys`, `profiles`, `tokens`,

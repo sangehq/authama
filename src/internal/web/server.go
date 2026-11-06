@@ -73,6 +73,11 @@ type Options struct {
 	// tell a running server it started from another process holding the port
 	// (see cli's serve record). Empty answers with none.
 	Instance string
+	// Restart relaunches this server from the binary now installed at its
+	// path, on the same address and with the same sign-in token, and stops
+	// this one; nil when the server cannot (a test, an embedded use). The
+	// stale-build banner offers it as "Restart now".
+	Restart func() error
 }
 
 // Server is the web UI.

@@ -478,6 +478,11 @@ type view struct {
 	// SealProblem is the owner seal's finding, shown on the overview when the
 	// state was changed outside authama.
 	SealProblem string
+	// Build is the running build, for the header's current-build mark:
+	// its version, when its binary was built, and when the server started.
+	Build buildInfo
+	// CanRestart is a server that can restart itself from the stale banner.
+	CanRestart bool
 	// Rebuilt is the server's own executable when it changed after the
 	// server started: the page is the old build, and the layout says so.
 	Rebuilt string
@@ -494,6 +499,8 @@ func (s *Server) newView(r *http.Request, nav, title string, data any) view {
 		v.CSRF = sess.csrf
 		v.PINNeeded = ownerGate{s}.needsStepUp(sess)
 		v.Rebuilt = s.binary.replaced()
+		v.Build = s.binary.info(s.opts.Version)
+		v.CanRestart = s.opts.Restart != nil
 		if nav == "overview" || nav == "doctor" {
 			if st := owner.Verify(p); !st.Clean() {
 				v.SealProblem = st.Describe()

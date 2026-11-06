@@ -12,12 +12,15 @@ import { Tour } from "./js/components/guide.js";
 import { Inline, SidePanel } from "./js/components/side-panel.js";
 import { CsvExport } from "./js/components/csv-export.js";
 import { JsonField } from "./js/components/json-field.js";
+import { RestartServer, Restarted } from "./js/components/restart.js";
 
 App.create()
   .use(SidePanel)
   .use(Inline)
   .use(CsvExport)
   .use(JsonField)
+  .use(RestartServer)
+  .use(Restarted)
   .use(ThemeChoice)
   .use(Tip)
   .use(DataTable)
