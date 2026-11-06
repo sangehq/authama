@@ -1,12 +1,37 @@
-# `export` — copies of the config for other tools
+# `export` — any list, and copies of the config for other tools
 
-Three commands write a copy of your hosts for another tool: `config export --flat` for anything that reads one
+`authama export` writes any list in any format (below). Three more commands write a copy of your hosts for another tool: `config export --flat` for anything that reads one
 `ssh_config`, `termius export` for the Termius app, and `host export <client>` for Windows Terminal, iTerm2, PuTTY,
 Remmina and any client that imports a CSV.
 
 All are opt-in and read-only towards `~/.ssh`. They write under `~/.config/authama/exports/` (mode 0600, since
 the files list every host and key path), and they refuse any target inside `~/.ssh`, however the path is spelled: containment is
 checked by inode, so another case on APFS or a symlinked directory is caught too. The split config, `~/.ssh/config` and `profiles/<category>/config`, stays exactly as it was.
+
+## `authama export <list>`
+
+Any list of the home, filtered and with the columns you choose, in any of nine formats: the files the web UI's
+Export page makes, at the command line. Nothing in an export holds a secret.
+
+```bash
+authama export hosts --profile simtabi --env prd --format json
+authama export keys --columns ref=key,fingerprint,expires_on --sort expires_on --format markdown
+authama export profiles --key simtabi_simbi-prd-web-00-ed25519 --narrow --format yaml
+authama export hosts --fields                              # every field a host row has
+authama export --selection sel.json --format php -o hosts.php
+```
+
+| Part | What it takes |
+|---|---|
+| list | `hosts`, `keys`, `profiles`, `tokens`, `history`, `events`, `snapshots`, `deployments`; or `--selection` with a selection saved as JSON (the Export page's *Copy link* holds one) |
+| filters | `--profile`, `--key` (a key's name or `profile/name`), `--env`, `--role`, `--tag`, `--status`, `--tool`, `--kind`, `--area`, `--source`, `--command`, `--since`/`--until` (a prefix such as `2026-11`), `--include`/`--exclude` text |
+| columns | `--columns field,field=heading,…` by field, in order; related fields by path (`key.fingerprint`, `profile.code`) |
+| order | `--sort field,-field` (`-` descends), `--limit n` |
+| format | `--format csv` (default), `tsv`, `json`, `jsonl`, `yaml`, `php`, `js`, `markdown`, `html`; `--no-header`, `--compact`, `--shape table` |
+| output | stdout, or `--out <file>` (mode 0600) |
+
+`authama export hosts` and `authama export keys` with no options print exactly what `ssh list --csv` and
+`ssh key list --csv` print: the same pipeline.
 
 ## Why a flat copy
 

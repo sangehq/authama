@@ -21,6 +21,7 @@ Every command also takes the global flag:
 
 - [`authama doctor`](#authama-doctor) - Diagnose deps, perms, agent, known_hosts, drift, dangling keys, and token-file perms
 - [`authama events`](#authama-events) - Every change seen to a file under ~/.ssh, the config home or a token file, newest first
+- [`authama export`](#authama-export) - Write any list as CSV, JSON, YAML, a PHP or JS array, Markdown or HTML, filtered
 - [`authama history`](#authama-history) - List the changes authama has made, newest first
   - [`authama history show`](#authama-history-show) - Show one operation: its events and what it changed in the manifest
 - [`authama init`](#authama-init) - Create/converge the per-user home
@@ -196,6 +197,66 @@ Flags:
       --no-scan          list what is recorded without scanning first
       --since duration   only events newer than this, e.g. 24h
       --verify           check the log's hash chain for edited, removed or inserted lines; exit non-zero if broken
+```
+
+## authama export
+
+Write one of the home's lists, filtered and with the columns chosen, in any format: the
+same files the web UI's Export page makes. Nothing in an export holds a secret.
+
+The list is one of deployments, events, history, hosts, keys, profiles, snapshots, tokens, or --selection names a selection saved as JSON
+(the Export page's Copy link holds one). Filters narrow it: --profile, --key (a key's name or
+profile/name), --env, --role, --tag, --status, --tool, --kind, --area, --source, --command,
+--since and --until (a time or a prefix such as 2026-11), --include and --exclude text.
+--columns chooses the columns, by field (--fields lists them; key.fingerprint follows the
+host's key), each optionally renamed as field=heading. --sort orders the rows (-field
+descends). --format is one of csv, html, js, json, jsonl, markdown, php, tsv, yaml.
+
+The file goes to stdout, or to --out.
+
+```
+authama export [deployments|events|history|hosts|keys|profiles|snapshots|tokens] [flags]
+```
+
+Examples:
+
+```sh
+  authama export hosts --profile simtabi --env prd --format json
+  authama export keys --columns ref=key,fingerprint,expires_on --sort expires_on --format markdown
+  authama export profiles --key simtabi_simbi-prd-web-00-ed25519 --narrow --format yaml
+  authama export hosts --fields
+  authama export --selection sel.json --format php --out hosts.php
+```
+
+Flags:
+
+```
+      --area strings       events: only these areas (ssh, config, auth)
+      --columns strings    the columns, by field, in order; field=heading renames one
+      --command strings    history: only these commands, or their subcommands
+      --compact            json, js, php: no indentation
+      --env strings        only these environments
+      --exclude string     leave out rows containing this text, ignoring case
+      --fields             list every field the list's rows have, and write nothing
+      --format string      csv, tsv, json, jsonl, yaml, php, js, markdown or html (default "csv")
+      --include string     only rows containing this text, ignoring case
+      --key strings        only rows holding or using these keys (name or profile/name)
+      --kind strings       events and tokens: only these kinds
+      --limit int          at most this many rows (0: all)
+      --narrow             profiles: count and list only the keys --key chose
+      --no-header          csv, tsv, markdown, html: leave the heading row out
+  -o, --out string         write to this file (mode 0600) instead of stdout
+      --profile strings    only these profiles
+      --role strings       only these roles
+      --selection string   a selection saved as JSON (the Export page's), instead of a list name
+      --shape string       json, js, php, yaml: "table" writes {columns, rows} instead of one object per row
+      --since string       only rows at or after this time (a prefix such as 2026-11 works)
+      --sort strings       sort by these fields; -field descends
+      --source strings     history: only these sources (cli, web, ...)
+      --status strings     only these statuses (a host's status, a key's state)
+      --tag strings        only rows with one of these tags
+      --tool strings       tokens: only these tools
+      --until string       only rows at or before this time
 ```
 
 ## authama history

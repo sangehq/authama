@@ -99,6 +99,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newOwnerCmd())
 	root.AddCommand(newRepairCmd())
 	root.AddCommand(newResetCmd())
+	root.AddCommand(newExportCmd())
 	// `ui` was serve's alias, one edit from `tui`: still accepted, never shown.
 	ui := newServeCmd()
 	ui.Use, ui.Hidden = "ui", true

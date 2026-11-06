@@ -92,6 +92,7 @@ var v1Dropped = map[string]string{
 // addition without one is a test failure.
 var goOnly = map[string]string{
 	"events":     "D1 - every change seen to a tracked file under ~/.ssh, the config home or a token file",
+	"export":     "exports - any list as CSV, TSV, JSON, YAML, a PHP or JS array, Markdown or HTML, filtered, the web UI's Export page at the command line",
 	"man":        "D1 - the help of every command as section-1 manual pages",
 	"key":        "D1 - key add/list/delete, the dangling-key lifecycle v1 had no verb for",
 	"key add":    "D1",
