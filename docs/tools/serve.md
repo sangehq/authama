@@ -199,8 +199,15 @@ Events) and **System** (Doctor, Settings, About). On a narrow screen it folds be
   `?drop=user,port` leaves columns out, `?exclude=staging` leaves out rows containing that text, and
   `?preview=1` answers with the preview as JSON, including every profile and key with its row count and
   the rows left after each filter.
-- **The command palette**, Ctrl+K (⌘K on a Mac) or *Search* in the header, jumps to any page, opens
-  the add-a-profile, host or token panel, or starts a download, as you type.
+- **The command palette**, Ctrl+K (⌘K on a Mac), `/`, or the search box in the header, jumps to
+  any page, opens the add-a-profile, host or token panel, or starts a download, as you type. It
+  groups what matches under Pages, Actions and Downloads, shows each entry's shortcut, and says so
+  when nothing matches.
+- **Keyboard shortcuts.** `?` lists them all. `g` then a letter goes to a page (`g h` Hosts, `g k`
+  Keys, `g t` Auth tokens, `g ,` Settings, …) and `n` then a letter opens a form (`n p` profile,
+  `n h` host, `n t` token). They never fire while you type in a field or while a dialog or panel is
+  open, and the switch in the `?` sheet turns the single-key ones off for that browser; Ctrl+K
+  always works.
 
 | Page | Shows |
 |---|---|

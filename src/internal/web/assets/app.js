@@ -7,6 +7,7 @@ import { App } from "./js/core/app.js";
 import { DataTable } from "./js/components/data-table.js";
 import { AutoSubmit, ConfirmAction, CopyText, JobStream, ThemeChoice, Tip } from "./js/components/behaviours.js";
 import { CommandPalette, PanelFromHash } from "./js/components/palette.js";
+import { Shortcuts } from "./js/components/shortcuts.js";
 import { PanelOpen, ShowWhen } from "./js/components/forms.js";
 import { Tour } from "./js/components/guide.js";
 import { Inline, SidePanel } from "./js/components/side-panel.js";
@@ -35,5 +36,6 @@ App.create()
   .use(PanelOpen)
   .use(PanelFromHash)
   .use(CommandPalette)
+  .use(Shortcuts)
   .use(Tour)
   .start();

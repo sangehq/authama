@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Keyboard shortcuts in the web UI.** `?` opens a sheet listing them all; `/` opens the command
+  palette like Ctrl+K; `g` then a letter goes to any page (`g h` Hosts, `g k` Keys, …) and `n` then
+  a letter opens the add-a-profile, host or token form. They never fire while typing in a field or
+  with a dialog open, and the sheet's switch turns the single-key ones off for that browser.
+
 - **An Export page.** Export, in the menu (`web.menu_export` hides it), makes a file of any list:
   a tab per kind of row (hosts, keys, profiles, auth tokens, history, events, snapshots,
   deployments), filter tables with counts (profiles, keys grouped by profile, environments, roles,
@@ -60,6 +65,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
 ### Changed
+
+- **The command palette is redesigned.** It sits high on the page at a capped height instead of
+  filling the screen, groups entries under Pages, Actions and Downloads with compact rows, shows
+  each entry's shortcut, follows the pointer, takes Home and End, and says when nothing matches.
+  The header's *Search* button is now a search box that opens it, with a search icon on small
+  screens.
 
 - **The web UI uses Tabler's own components throughout.** Detail pages (a host, a key, an
   operation, a snapshot, a job) carry Tabler's breadcrumb back to their list; every panel form
