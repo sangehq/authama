@@ -77,6 +77,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The lists' CSV downloads (`/exports/hosts.csv` and the rest) now come from the export
+  pipeline**, the same one behind the Export page and `authama export`, for every option their
+  links carry. The files are unchanged byte for byte, which a test checks for every list and option.
+  The download dialog's preview and the history list's host, token, profile and key filters
+  still use the lists' own tables.
 - **The web UI header is two bars, not three.** The strip under the menu that read *Running as
   <user> on <host>* with the build's *current* mark is gone. The user and host now head the account
   menu, and About shows the build's status (*current* or *older build*), when it was built and when
