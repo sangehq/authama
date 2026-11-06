@@ -13,6 +13,7 @@ import (
 type binaryWatch struct {
 	path    string
 	started time.Time
+	built   time.Time // the binary's modification time when the server started
 }
 
 // watchOwnBinary watches the running executable, from now.
@@ -24,7 +25,11 @@ func watchOwnBinary(now time.Time) binaryWatch {
 	if real, err := filepath.EvalSymlinks(exe); err == nil {
 		exe = real
 	}
-	return binaryWatch{path: exe, started: now}
+	w := binaryWatch{path: exe, started: now}
+	if fi, err := os.Stat(exe); err == nil {
+		w.built = fi.ModTime()
+	}
+	return w
 }
 
 // replaced is the file at the executable's path when it changed after the
@@ -38,4 +43,17 @@ func (b binaryWatch) replaced() string {
 		return b.path
 	}
 	return ""
+}
+
+// buildInfo is the running build, as the header shows it.
+type buildInfo struct {
+	Version string
+	Built   time.Time // the binary's time when the server started; zero when unknown
+	Started time.Time
+}
+
+// info is the running build: version, the binary's time at start, and when
+// the server started.
+func (b binaryWatch) info(version string) buildInfo {
+	return buildInfo{Version: version, Built: b.built, Started: b.started}
 }

@@ -598,7 +598,10 @@ without it every page answers 401.
 One server per home: when one is already running for this home, serve opens
 it again instead of starting another, so launching twice - or double-clicking
 the app - never piles servers up. --new starts another anyway; --status says
-whether one is running and where; --stop stops it. When every port from the
+whether one is running and where; --stop stops it. --stop-all stops every
+authama web UI answering on this machine's usual ports, whichever home or build;
+--restart does that and starts a fresh one, which is how to load a new build.
+A page from an older build says so, and can restart its server itself. When every port from the
 default up is taken, any free port is used.
 
 web.addr, web.port and web.base_path in authama.json (or AUTHAMA_WEB_ADDR,
@@ -631,8 +634,10 @@ Flags:
       --no-open                  do not open a browser
       --port int                 port to listen on; when not given and the default is taken, the next free port is used (default 7822)
       --read-only                serve no route that changes anything, and show no form
+      --restart                  stop every authama web UI found, then start a fresh one: how to load a new build
       --status                   say whether a server is running for this home, and its address
       --stop                     stop the server running for this home
+      --stop-all                 stop every authama web UI answering on this machine's usual ports, whichever home or build
       --token-file string        also write the sign-in address to this file, mode 0600, for scripts
 ```
 

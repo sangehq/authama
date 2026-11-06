@@ -54,6 +54,8 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /ssh-config", sp.handleSSHConfig)
 	mux.HandleFunc("GET /events", sp.handleEvents)
 	mux.HandleFunc("GET /about", sp.handleAbout)
+	// Restarting changes nothing in the home, so read-only servers have it too.
+	mux.HandleFunc("POST /server/restart", restartAPI{s}.handleRestart)
 	mux.HandleFunc("GET /exports/run", exportAPI{s}.handleRun)
 	mux.HandleFunc("GET /exports/{name}", h.handleExport)
 	mux.HandleFunc("GET /api/dataset", exportAPI{s}.handleDataset)

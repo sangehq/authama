@@ -45,6 +45,8 @@ func newServeCmd() *cobra.Command {
 		fresh       bool
 		status      bool
 		stopRunning bool
+		stopEvery   bool
+		restart     bool
 	)
 	cmd := &cobra.Command{
 		Use:   "serve",
@@ -63,7 +65,10 @@ func newServeCmd() *cobra.Command {
 			"One server per home: when one is already running for this home, serve opens\n" +
 			"it again instead of starting another, so launching twice - or double-clicking\n" +
 			"the app - never piles servers up. --new starts another anyway; --status says\n" +
-			"whether one is running and where; --stop stops it. When every port from the\n" +
+			"whether one is running and where; --stop stops it. --stop-all stops every\n" +
+			"authama web UI answering on this machine's usual ports, whichever home or build;\n" +
+			"--restart does that and starts a fresh one, which is how to load a new build.\n" +
+			"A page from an older build says so, and can restart its server itself. When every port from the\n" +
 			"default up is taken, any free port is used.\n\n" +
 			"web.addr, web.port and web.base_path in authama.json (or AUTHAMA_WEB_ADDR,\n" +
 			"AUTHAMA_WEB_PORT, AUTHAMA_WEB_BASE_PATH) change the defaults: a configured port\n" +
@@ -116,6 +121,24 @@ func newServeCmd() *cobra.Command {
 			if running != nil && !serveAlive(running) {
 				running = nil // a record left by a server that is gone
 			}
+			// A server replacing one that restarted: wait for the old one to
+			// let go of its port, then take the same port and token.
+			handoff := takeHandoff()
+			if handoff != nil {
+				handoff.waitGone()
+				running = nil
+				pinnedPort = handoff.Port
+			}
+			if stopEvery || restart {
+				if failed := stopAll(out, displayHost(host), serverPorts(port, running), basePath); failed > 0 && stopEvery {
+					return fmt.Errorf("%d web UI(s) could not be stopped", failed)
+				}
+				removeServeRecord(p, recordInstance(running))
+				if stopEvery {
+					return nil
+				}
+				running = nil
+			}
 			if status || stopRunning {
 				if running == nil {
 					_, _ = fmt.Fprintf(out, "no %s web UI is running for %s\n", brand.Command, p.ConfigDir)
@@ -153,14 +176,40 @@ func newServeCmd() *cobra.Command {
 				return nil
 			}
 
-			ln, err := web.Listen(serveListen, host, pinnedPort, pinned, web.DefaultPortAttempts)
+			ln, err := web.Listen(serveListen, host, pinnedPort, pinned || handoff != nil, web.DefaultPortAttempts)
 			if err != nil {
 				return err
 			}
 			bound := ln.Addr().(*net.TCPAddr).Port
 
 			token := web.NewToken()
+			if handoff != nil {
+				token = handoff.Token
+			}
 			instance := web.NewToken()[:16]
+			// Recorded only for the default kind of server, the one a later
+			// `authama serve` would reuse: a pinned or remote one is a choice
+			// the next launch should not inherit. A restarted server keeps the
+			// choice the one it replaced made.
+			record := !pinned && !allowRemote && web.IsLoopback(host)
+			if handoff != nil {
+				record = handoff.Record
+			}
+			var stopServing context.CancelFunc
+			var srvRef *web.Server
+			restartFn := relaunch(serveHandoff{Token: token, Port: bound, Record: record,
+				Addr: net.JoinHostPort(displayHost(host), strconv.Itoa(bound)), BasePath: basePath, Instance: instance},
+				func() []web.SessionState {
+					if srvRef == nil {
+						return nil
+					}
+					return srvRef.Sessions()
+				},
+				func() {
+					if stopServing != nil {
+						stopServing()
+					}
+				})
 			srv, err := web.New(web.Options{
 				Instance:     instance,
 				Engine:       web.AppEngine{P: p, Retain: snapshotRetain()},
@@ -174,17 +223,18 @@ func newServeCmd() *cobra.Command {
 				Version:      version.Version,
 				BindAddr:     ln.Addr().String(),
 				BasePath:     basePath,
+				Restart:      restartFn,
+				AutoRestart:  envnames.Get(nil, envnames.WebAutoRestart) != "false",
+				Sessions:     handoffSessions(handoff),
 			})
 			if err != nil {
 				_ = ln.Close()
 				return err
 			}
+			srvRef = srv
 
 			url := fmt.Sprintf("http://%s%s/?token=%s", net.JoinHostPort(displayHost(host), strconv.Itoa(bound)), basePath, token)
-			// Recorded only for the default kind of server, the one a later
-			// `authama serve` would reuse: a pinned or remote one is a choice
-			// the next launch should not inherit.
-			if !pinned && !allowRemote && web.IsLoopback(host) {
+			if record {
 				if err := writeServeRecord(p, serveRecord{PID: os.Getpid(), Addr: net.JoinHostPort(displayHost(host), strconv.Itoa(bound)),
 					URL: url, Instance: instance, ReadOnly: readOnly, Version: version.Version, Started: time.Now(),
 					BasePath: basePath}); err != nil {
@@ -220,6 +270,7 @@ func newServeCmd() *cobra.Command {
 
 			ctx, stop := serveContext(c.Context())
 			defer stop()
+			stopServing = stop
 			return srv.Serve(ctx, ln)
 		},
 	}
@@ -234,7 +285,9 @@ func newServeCmd() *cobra.Command {
 	f.BoolVar(&fresh, "new", false, "start another server even when one is already running for this home")
 	f.BoolVar(&status, "status", false, "say whether a server is running for this home, and its address")
 	f.BoolVar(&stopRunning, "stop", false, "stop the server running for this home")
-	cmd.MarkFlagsMutuallyExclusive("new", "status", "stop")
+	f.BoolVar(&stopEvery, "stop-all", false, "stop every authama web UI answering on this machine's usual ports, whichever home or build")
+	f.BoolVar(&restart, "restart", false, "stop every authama web UI found, then start a fresh one: how to load a new build")
+	cmd.MarkFlagsMutuallyExclusive("new", "status", "stop", "stop-all", "restart")
 	return cmd
 }
 

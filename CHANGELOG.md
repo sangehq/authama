@@ -12,6 +12,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   settings XML (File > Import Settings) and `host export mobaxterm` a `.mxtsessions` file (Sessions >
   Import), each with a folder per profile and each host's own key. Termius imports both, so every
   import it offers (`~/.ssh`, CSV, SecureCRT, PuTTY, MobaXterm) now has an authama export.
+- **The web UI follows a new build by itself.** `serve` watches its own binary; after `make
+  install`, once the new file holds still, it restarts itself from it on the same address, hands
+  every signed-in session to the new process, and open pages reload into the new build within a
+  few seconds and say so. A page with unsaved input offers **Reload** instead. `web.auto_restart`
+  (on by default) turns it off.
+- **Restart the web UI from the page, or every one from the terminal.** The older-build banner has
+  **Restart now**: the server relaunches from the binary now installed, on the same address with
+  the same sign-in, and the page reloads itself. The header marks the running build *current* or
+  *older*, and a green banner confirms a restart. `authama serve --restart` stops every authama web
+  UI answering on the usual ports and starts the new build; `--stop-all` only stops them. To this
+  machine, `/healthz` now also says the server's pid, version and start time, so any one found can
+  be stopped; an older server that does not say is named with the command that stops it.
 - **Any list exports in nine formats, filtered and with the columns you choose.** `GET /exports/run`
   takes a built-in preset (`?preset=hosts`, one per list) or a selection (`?s=`, base64url JSON):
   rows of profiles, keys, hosts, tokens, history, events, snapshots or deployments; filters on
