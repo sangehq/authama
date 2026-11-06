@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **About shows this computer.** A *This computer* card lists the OS and its version, build and
+  kernel, the architecture and computer name, how long it has been up, and the hardware: model,
+  processor, cores (performance and efficiency on Apple silicon) and memory. It is read on each load
+  from sysctl on macOS, `/proc`, `/sys` and os-release on Linux, and the registry on Windows,
+  without running a command; anything an OS does not expose is left out.
+
 - **`authama export <list>`**: any list of the home (hosts, keys, profiles, tokens, history,
   events, snapshots, deployments) filtered (`--profile`, `--key`, `--env`, `--role`, `--tag`,
   `--status`, …), with the columns chosen (`--columns field=heading`, related fields by path),
