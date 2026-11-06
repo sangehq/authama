@@ -77,6 +77,9 @@ export class ExportPage extends Component {
 
   #format = "csv";
 
+  /** The column whose handle takes the focus after the next render. @type {number | null} */
+  #focusHandle = null;
+
   #timer = 0;
 
   /** @type {AbortController | null} */
@@ -359,7 +362,7 @@ export class ExportPage extends Component {
     values.forEach((v) => {
       if (several && v.profile && v.profile !== group) {
         group = v.profile;
-        list.push(El.create("div").cls("list-group-header sticky-top").text(group).node);
+        list.push(El.create("div").cls("list-group-header").text(group).node);
       }
       const box = El.create("input").cls("form-check-input list-group-selectable-check m-0").prop("type", "checkbox").prop("checked", on(v.value))
         .attr("aria-label", v.value)
@@ -400,42 +403,119 @@ export class ExportPage extends Component {
   #renderColumns(p) {
     const cols = this.#columns();
     this.#part("colcount").textContent = `${cols.length} of ${p.fields.length}`;
-    const set = (/** @type {Column[]} */ next) => this.#update({ columns: next });
-    const move = (/** @type {number} */ i, /** @type {number} */ d) => {
+    /**
+     * Sets the columns; after a move, the moved column's handle keeps the
+     * focus, so the arrow keys can carry on.
+     * @param {Column[]} next @param {number} [_from] @param {number} [landed]
+     */
+    const set = (next, _from, landed) => {
+      this.#focusHandle = landed ?? null;
+      this.#update({ columns: next });
+    };
+    /** Moves the column at from to before index to (to may be cols.length). */
+    const moveTo = (/** @type {number} */ from, /** @type {number} */ to) => {
+      if (to === from || to === from + 1) {
+        return;
+      }
       const next = [...cols];
-      const [c] = next.splice(i, 1);
-      next.splice(Math.max(0, Math.min(next.length, i + d)), 0, c);
-      set(next);
+      const [c] = next.splice(from, 1);
+      next.splice(to > from ? to - 1 : to, 0, c);
+      set(next, from, to > from ? to - 1 : to);
     };
     const iconBtn = (/** @type {string} */ icon, /** @type {string} */ label, /** @type {() => void} */ fn, /** @type {boolean} */ off) =>
       El.create("button").cls("btn btn-icon btn-sm btn-ghost-secondary").prop("type", "button").attr("aria-label", label).attr("title", label)
         .prop("disabled", off).append(ExportPage.icon(icon)).on("click", fn);
-    const rows = cols.map((c, i) =>
-      El.create("tr").append(
+    /** @type {number | null} */
+    let dragging = null;
+    const clearMarks = () => {
+      for (const r of this.el.querySelectorAll(".export-drop-before, .export-drop-after")) {
+        r.classList.remove("export-drop-before", "export-drop-after");
+      }
+    };
+    const rows = cols.map((c, i) => {
+      // The handle: drag the row by it, or, with it focused, move the column
+      // with the arrow keys (Home and End to the ends).
+      const handle = El.create("button").cls("btn btn-icon btn-sm btn-ghost-secondary export-handle").prop("type", "button")
+        .attr("aria-label", `Reorder ${c.field}: drag, or press the up and down arrow keys`).attr("title", "Drag to reorder")
+        .append(ExportPage.icon("grip-vertical"))
+        .on("keydown", (e) => {
+          const k = /** @type {KeyboardEvent} */ (e).key;
+          const to = { ArrowUp: i - 1, ArrowDown: i + 2, Home: 0, End: cols.length }[k];
+          if (to === undefined) {
+            return;
+          }
+          e.preventDefault();
+          moveTo(i, Math.max(0, Math.min(cols.length, to)));
+        });
+      const tr = El.create("tr").attr("draggable", "true").attr("data-index", String(i)).append(
+        El.create("td").cls("w-1 ps-2 pe-0").append(handle),
         El.create("td").cls("text-secondary w-1").text(String(i + 1)),
         El.create("td").append(El.create("code").text(c.field)),
         El.create("td").append(El.create("input").cls("form-control form-control-sm").prop("value", c.as ?? "").attr("placeholder", c.field)
-          .attr("aria-label", `Heading for ${c.field}`)
+          .attr("aria-label", `Heading for ${c.field}`).attr("draggable", "false")
           .on("change", (e) => {
             const v = /** @type {HTMLInputElement} */ (e.target).value.trim();
             set(cols.map((x, j) => (j === i ? (v ? { field: x.field, as: v } : { field: x.field }) : x)));
           })),
-        El.create("td").cls("w-1").append(El.create("div").cls("btn-list flex-nowrap").append(
-          iconBtn("arrow-up", `Move ${c.field} up`, () => move(i, -1), i === 0),
-          iconBtn("arrow-down", `Move ${c.field} down`, () => move(i, 1), i === cols.length - 1),
-          iconBtn("x", `Remove ${c.field}`, () => set(cols.filter((_, j) => j !== i)), cols.length === 1),
-        )),
-      ).node);
+        El.create("td").cls("w-1").append(iconBtn("x", `Remove ${c.field}`, () => set(cols.filter((_, j) => j !== i)), cols.length === 1)),
+      );
+      tr.on("dragstart", (e) => {
+        const ev = /** @type {DragEvent} */ (e);
+        if (ev.target instanceof HTMLInputElement) {
+          ev.preventDefault();
+          return;
+        }
+        dragging = i;
+        tr.node.classList.add("export-dragging");
+        ev.dataTransfer?.setData("text/plain", c.field);
+        if (ev.dataTransfer) {
+          ev.dataTransfer.effectAllowed = "move";
+        }
+      });
+      tr.on("dragend", () => {
+        dragging = null;
+        tr.node.classList.remove("export-dragging");
+        clearMarks();
+      });
+      tr.on("dragover", (e) => {
+        if (dragging === null) {
+          return;
+        }
+        const ev = /** @type {DragEvent} */ (e);
+        ev.preventDefault();
+        const box = tr.node.getBoundingClientRect();
+        const after = ev.clientY > box.top + box.height / 2;
+        clearMarks();
+        tr.node.classList.add(after ? "export-drop-after" : "export-drop-before");
+      });
+      tr.on("drop", (e) => {
+        e.preventDefault();
+        if (dragging === null) {
+          return;
+        }
+        const after = tr.node.classList.contains("export-drop-after");
+        const from = dragging;
+        dragging = null;
+        clearMarks();
+        moveTo(from, after ? i + 1 : i);
+      });
+      return tr.node;
+    });
     const table = El.create("table").cls("table table-vcenter card-table table-sm mb-0").append(
       El.create("thead").append(El.create("tr").append(
+        El.create("th").attr("scope", "col").append(El.create("span").cls("visually-hidden").text("Reorder")),
         El.create("th").attr("scope", "col").text("#"),
         El.create("th").attr("scope", "col").text("Field"),
         El.create("th").attr("scope", "col").text("Heading in the file"),
-        El.create("th").attr("scope", "col").append(El.create("span").cls("visually-hidden").text("Move or remove")),
+        El.create("th").attr("scope", "col").append(El.create("span").cls("visually-hidden").text("Remove")),
       )),
       El.create("tbody").append(...rows),
     );
     this.#part("columns").replaceChildren(table.node);
+    if (this.#focusHandle !== null) {
+      /** @type {HTMLElement | null} */ (this.#part("columns").querySelectorAll(".export-handle")[this.#focusHandle])?.focus();
+      this.#focusHandle = null;
+    }
 
     const used = new Set(cols.map((c) => c.field));
     const rest = p.fields.filter((f) => !used.has(f));

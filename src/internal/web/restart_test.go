@@ -59,7 +59,7 @@ func TestThePageSaysWhetherItsBuildIsCurrent(t *testing.T) {
 
 	s.binary = binaryWatch{path: exe, started: time.Now().Add(time.Hour)}
 	body := c.get("/hosts").Body.String()
-	if !strings.Contains(body, "test, current") || strings.Contains(body, "data-restart-server") {
+	if !strings.Contains(body, "test · current") || strings.Contains(body, "data-restart-server") {
 		t.Error("an unchanged binary is not marked current")
 	}
 	if !strings.Contains(body, "data-restarted hidden") {
@@ -68,7 +68,7 @@ func TestThePageSaysWhetherItsBuildIsCurrent(t *testing.T) {
 
 	s.binary = binaryWatch{path: exe, started: time.Now().Add(-time.Hour)}
 	body = c.get("/hosts").Body.String()
-	if !strings.Contains(body, "test, older build") || !strings.Contains(body, "data-restart-server") ||
+	if !strings.Contains(body, "test · older build") || !strings.Contains(body, "data-restart-server") ||
 		strings.Contains(body, "data-restarted hidden") {
 		t.Error("a rebuilt binary is not marked older with a restart button")
 	}

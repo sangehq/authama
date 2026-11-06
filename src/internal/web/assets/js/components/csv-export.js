@@ -9,11 +9,17 @@ import { Ui } from "../core/ui.js";
  * @typedef {{ name: string, profile?: string, rows: number, hosts?: number }} CsvKey
  * @typedef {{ profiles?: CsvProfile[], keys?: CsvKey[], key_list?: boolean, columns: string[], header: string[], rows: string[][],
  *   total: number, in_profiles: number, in_keys: number, kept: number }} CsvPreview
- * @typedef {{ drop: string[], exclude: string, profiles: string[] | null, keys: string[] | null, tab: string, narrow: boolean }} CsvChoice
+ * @typedef {{ drop: string[], exclude: string, profiles: string[] | null, keys: string[] | null, tab: string, narrow: boolean, format?: string }} CsvChoice
  * @typedef {"profiles" | "keys" | "columns"} CsvList
  * @typedef {{ value: string, rows?: number, sample?: string, group?: string }} PickItem
  * @typedef {{ label: string, always: boolean }} CountColumn
  */
+
+/** The grain each list's preset is, by the list's name. */
+const GRAINS = /** @type {Record<string, string>} */ ({
+  hosts: "host", keys: "key", profiles: "profile", tokens: "token",
+  history: "op", events: "event", snapshots: "snapshot", deployments: "deployment",
+});
 
 /** The heading of each list's name column, and the name of its select-all box. */
 const LABELS = {
@@ -540,9 +546,70 @@ export class CsvExport extends Component {
     box.replaceChildren(table.node);
   }
 
+  /** The built-in preset this list is, or "" for one with none (the Termius CSV). */
+  get preset() {
+    const name = this.name.replace(/\.csv$/, "");
+    return name in GRAINS ? name : "";
+  }
+
+  /**
+   * The URL of the file in the format chosen: the list's own CSV link for
+   * CSV, else /exports/run with its preset and the same options.
+   */
+  #fileURL() {
+    const csv = this.url(false);
+    const format = this.#choice.format ?? "csv";
+    if (format === "csv" || !this.preset) {
+      return csv;
+    }
+    const u = new URL(Ui.path("/exports/run"), location.href);
+    for (const [k, v] of csv.searchParams) {
+      u.searchParams.set(k, v);
+    }
+    u.searchParams.set("preset", this.preset);
+    u.searchParams.set("format", format);
+    return u;
+  }
+
+  /** The Export page with this choice: its rows, profiles, keys and text. */
+  #exportURL() {
+    /** @type {Record<string, unknown>} */
+    const where = {};
+    if (this.#choice.profiles) {
+      where.profile = this.#choice.profiles;
+    }
+    if (this.#choice.keys) {
+      where.key = this.#choice.keys;
+    }
+    if (this.#choice.exclude.trim()) {
+      where.exclude = this.#choice.exclude.trim();
+    }
+    const sel = JSON.stringify({ version: 1, grain: GRAINS[this.preset], where, ...(this.#choice.keys ? { narrow: true } : {}) });
+    const bytes = new TextEncoder().encode(sel);
+    let bin = "";
+    for (const b of bytes) {
+      bin += String.fromCharCode(b);
+    }
+    const s = btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    return `${Ui.path("/export")}#s=${s}&f=${this.#choice.format ?? "csv"}`;
+  }
+
   /** @param {HTMLElement} dialog */
   #renderDownload(dialog) {
     const download = /** @type {HTMLAnchorElement} */ (CsvExport.#part(dialog, "download"));
+    const formats = CsvExport.#part(dialog, "formats");
+    const open = /** @type {HTMLAnchorElement} */ (CsvExport.#part(dialog, "open"));
+    formats.hidden = open.hidden = !this.preset;
+    const select = /** @type {HTMLSelectElement} */ (CsvExport.#part(dialog, "format"));
+    select.value = this.preset ? (this.#choice.format ?? "csv") : "csv";
+    select.onchange = () => {
+      this.#choice = { ...this.#choice, format: select.value };
+      Prefs.set(`csv.${this.name}`, this.#choice);
+      this.#renderDownload(dialog);
+    };
+    if (this.preset) {
+      open.href = this.#exportURL();
+    }
     const why = this.blocked;
     const note = CsvExport.#part(dialog, "blocked");
     note.textContent = why;
@@ -552,7 +619,7 @@ export class CsvExport extends Component {
       download.setAttribute("aria-disabled", "true");
       download.classList.add("disabled");
     } else {
-      download.href = this.url(false).href;
+      download.href = this.#fileURL().href;
       download.setAttribute("download", "");
       download.removeAttribute("aria-disabled");
       download.classList.remove("disabled");
