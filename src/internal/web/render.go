@@ -496,7 +496,7 @@ type view struct {
 	SealProblem string
 	// HideExport leaves Export out of the menu (web.menu_export false).
 	HideExport bool
-	// Build is the running build, for the header's current-build mark:
+	// Build is the running build, for About's current-build status:
 	// its version, when its binary was built, and when the server started.
 	Build buildInfo
 	// Instance is the server's instance id, so a page can tell when a new
