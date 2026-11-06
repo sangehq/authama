@@ -26,7 +26,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (on by default) turns it off.
 - **Restart the web UI from the page, or every one from the terminal.** The older-build banner has
   **Restart now**: the server relaunches from the binary now installed, on the same address with
-  the same sign-in, and the page reloads itself. The header marks the running build *current* or
+  the same sign-in, and the page reloads itself. About marks the running build *current* or
   *older*, and a green banner confirms a restart. `authama serve --restart` stops every authama web
   UI answering on the usual ports and starts the new build; `--stop-all` only stops them. To this
   machine, `/healthz` now also says the server's pid, version and start time, so any one found can
@@ -60,6 +60,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
 ### Changed
+
+- **The web UI header is two bars, not three.** The strip under the menu that read *Running as
+  <user> on <host>* with the build's *current* mark is gone. The user and host now head the account
+  menu, and About shows the build's status (*current* or *older build*), when it was built and when
+  the server started, beside its version and commit. A read-only server shows a *read-only* badge
+  by the name; dev mode keeps its banner, and an older build keeps its banner with **Restart now**.
 
 - **The web UI uses Tabler's own components throughout.** Detail pages (a host, a key, an
   operation, a snapshot, a job) carry Tabler's breadcrumb back to their list; every panel form
