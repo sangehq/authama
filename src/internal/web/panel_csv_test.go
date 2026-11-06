@@ -175,10 +175,74 @@ func TestACSVCanHoldSomeKeysOnly(t *testing.T) {
 	if p.Total != all.Total || p.InProfiles != 2 || p.InKeys != 1 || p.Kept != 1 {
 		t.Errorf("stages: total %d, in profiles %d, in keys %d, kept %d", p.Total, p.InProfiles, p.InKeys, p.Kept)
 	}
-	var tp csvPreview
-	_ = json.Unmarshal(c.get("/exports/profiles.csv?preview=1").Body.Bytes(), &tp)
-	if tp.Keys != nil {
-		t.Errorf("profiles.csv has no key column but listed %v", tp.Keys)
+}
+
+// The profiles CSV lists each profile's keys, so keys can be chosen there
+// too: ticking some keeps the profiles holding one, and narrowing counts each
+// profile's keys and hosts for the ticked keys alone.
+func TestAProfilesCSVKeepsAndNarrowsByKey(t *testing.T) {
+	s, home, _ := newTestServer(t)
+	ed := editor.New(home)
+	if err := ed.AddProfile("acme", "per_service", nil); err != nil {
+		t.Fatal(err)
+	}
+	host, user := "203.0.113.30", "deploy"
+	for _, alias := range []string{"acme-prd-web-00", "acme-prd-db-00"} {
+		if err := ed.AddHost("acme", alias, editor.HostFields{Hostname: &host, User: &user}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	c := signIn(t, s)
+	var all csvPreview
+	if err := json.Unmarshal(c.get("/exports/profiles.csv?preview=1").Body.Bytes(), &all); err != nil {
+		t.Fatal(err)
+	}
+	if !all.KeyList {
+		t.Fatal("profiles.csv is not marked as a list of keys per row")
+	}
+	var acme []csvKey
+	for _, k := range all.Keys {
+		if k.Profile == "acme" {
+			acme = append(acme, k)
+		}
+	}
+	if len(acme) != 2 || acme[0].Hosts == nil || *acme[0].Hosts != 1 {
+		t.Fatalf("acme's keys = %+v; want two, each used by one host", acme)
+	}
+	one := acme[0].Name
+
+	// Kept whole: the acme row, with its counts for the whole profile.
+	rows := readCSV(t, c.get("/exports/profiles.csv?key="+one).Body.String())
+	head := rows[0]
+	col := func(name string) int {
+		for i, h := range head {
+			if h == name {
+				return i
+			}
+		}
+		t.Fatalf("no %s column in %v", name, head)
+		return -1
+	}
+	if len(rows) != 2 || rows[1][col("profile")] != "acme" || rows[1][col("keys")] != "2" || rows[1][col("hosts")] != "2" {
+		t.Fatalf("key=%s: %v", one, rows)
+	}
+	if got := strings.Fields(rows[1][col("key_names")]); len(got) != 2 {
+		t.Errorf("key_names = %v; want both of acme's keys", got)
+	}
+
+	// Narrowed: the same row, counted for the one key.
+	rows = readCSV(t, c.get("/exports/profiles.csv?key="+one+"&narrow=1").Body.String())
+	if len(rows) != 2 || rows[1][col("keys")] != "1" || rows[1][col("hosts")] != "1" || rows[1][col("key_names")] != one {
+		t.Fatalf("key=%s&narrow=1: %v", one, rows)
+	}
+
+	// The preview says which filter left the other profiles out.
+	var p csvPreview
+	if err := json.Unmarshal(c.get("/exports/profiles.csv?preview=1&key="+one).Body.Bytes(), &p); err != nil {
+		t.Fatal(err)
+	}
+	if p.InProfiles != p.Total || p.InKeys != 1 || p.Kept != 1 {
+		t.Errorf("stages: total %d, in profiles %d, in keys %d, kept %d", p.Total, p.InProfiles, p.InKeys, p.Kept)
 	}
 }
 

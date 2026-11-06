@@ -27,7 +27,7 @@ func TestEveryListDownloadsAsCSV(t *testing.T) {
 		"tokens.csv":      "tool,host,kind,description,user,secret_set,file",
 		"history.csv":     "op_id,started_at,finished_at,command,args,result,source,user,machine,snapshot,subjects,events",
 		"events.csv":      "time,seen,kind,area,path,size,mode,detail",
-		"profiles.csv":    "profile,category,key_scope,key_store,hosts,keys,key_comment",
+		"profiles.csv":    "profile,category,key_scope,key_store,hosts,keys,key_comment,key_names",
 		"snapshots.csv":   "snapshot,taken,bytes,holds_private_keys",
 		"deployments.csv": "key_path,fingerprint,status,target,method,verified,date",
 	}

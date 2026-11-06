@@ -180,7 +180,7 @@ main:focus { outline: none; }
 .csv-tab[aria-selected=true] { color: var(--tblr-primary); border-bottom-color: var(--tblr-primary); }
 .csv-tab:focus-visible { outline: 2px solid var(--tblr-primary); outline-offset: -2px; }
 .csv-pick-panel { display: flex; flex-direction: column; min-height: 0; flex: 1; }
-.csv-pick-note { padding: .75rem 1rem; border-top: 1px solid var(--tblr-border-color); }
+.csv-pick-note, .csv-pick-option { padding: .75rem 1rem; border-top: 1px solid var(--tblr-border-color); }
 .csv-pick-scroll { overflow: auto; max-height: 30rem; }
 .csv-pick-table th, .csv-preview thead th { position: sticky; top: 0; z-index: 1; background: var(--tblr-bg-surface-secondary); }
 .csv-pick-table td:first-child, .csv-pick-table th:first-child { width: 2.5rem; }

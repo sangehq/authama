@@ -37,7 +37,14 @@
           {{template "csv_pick" "profiles"}}
           {{template "csv_pick" "keys"}}
           {{template "csv_pick" "columns"}}
-          <p class="csv-pick-note small text-secondary mb-0" data-csv-keys-note hidden>{{icon "info-circle"}}<span class="ms-1">This list has one row per profile, so there are no keys to choose here. Keys are chosen in the CSV of <a href="{{u "/hosts"}}">Hosts</a> or <a href="{{u "/keys"}}">Keys</a>, per profile or across all of them.</span></p>
+          <div class="csv-pick-option" data-csv-narrow-box hidden>
+            <label class="form-check form-switch mb-1">
+              <input class="form-check-input" type="checkbox" data-csv-narrow checked>
+              <span class="form-check-label">Count only the ticked keys</span>
+            </label>
+            <small class="form-hint">On: each profile's <code>keys</code>, <code>hosts</code> and <code>key_names</code> cover the ticked keys alone. Off: a profile holding a ticked key is kept with its whole counts.</small>
+          </div>
+          <p class="csv-pick-note small text-secondary mb-0" data-csv-keys-note hidden>{{icon "info-circle"}}<span class="ms-1">This list has no key column, so there are no keys to choose here. Keys are chosen in the CSV of <a href="{{u "/hosts"}}">Hosts</a>, <a href="{{u "/keys"}}">Keys</a> or <a href="{{u "/profiles"}}">Profiles</a>, per profile or across all of them.</span></p>
         </aside>
         <section class="csv-main" aria-label="Preview">
           <div class="csv-toolbar">

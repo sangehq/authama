@@ -145,8 +145,13 @@ Events) and **System** (Doctor, Settings, About). On a narrow screen it folds be
   - **Keys**, for a list with a key column (hosts, keys): the keys of the profiles ticked, grouped under
     their profile when several are shown. Ticking a profile brings its keys in; unticking it takes them
     out.
-  - A list with a profile column but no key column (the profiles CSV, one row per profile) has no
-    Keys tab, and says so: keys are chosen in the Hosts or Keys CSV.
+  - **Keys in the profiles CSV.** It has one row per profile, with a `key_names` column listing the
+    profile's keys, so it has a Keys tab too, counting the hosts each key is used by. Ticking keys
+    keeps the profiles holding one. *Count only the ticked keys* (on by default) then cuts each
+    profile's `keys`, `hosts` and `key_names` down to the ticked keys; off, a profile is kept with its
+    whole counts. The query is `?key=…&narrow=1`.
+  - A list with a profile column but no key column (the Termius CSV) has no Keys tab, and says so,
+    pointing at the lists that do.
   - **Columns**, each with its value in the first row, so a cryptic name says what it holds.
 
   Everything is ticked to start with, which means everything, including profiles and keys added later.

@@ -359,7 +359,7 @@ func (h pages) handleExport(w http.ResponseWriter, r *http.Request) {
 			h.fail(w, r, err)
 			return
 		}
-		h.writeCSV(w, r, brand.Command+"-"+name, t)
+		h.writeCSV(w, r, brand.Command+"-"+name, t, csvKeyHosts(h.s.opts.Engine, name))
 		return
 	}
 	if name != ExportFlat && name != ExportTermius {
@@ -379,7 +379,7 @@ func (h pages) handleExport(w http.ResponseWriter, r *http.Request) {
 			h.fail(w, r, err)
 			return
 		}
-		h.writeCSV(w, r, name, t)
+		h.writeCSV(w, r, name, t, nil)
 		return
 	}
 	ctype := "text/plain; charset=utf-8"
@@ -442,6 +442,35 @@ func eventsFilter(q url.Values) events.Filter {
 	return f
 }
 
+// profileKeys is each profile's key names, in the keys list's order, and
+// how many hosts use each key: what profiles.csv needs to keep, and narrow,
+// the profiles holding some keys.
+func profileKeys(e Engine) (names map[string][]string, hosts map[string]int, err error) {
+	kv, err := e.Keys()
+	if err != nil {
+		return nil, nil, err
+	}
+	names, hosts = map[string][]string{}, map[string]int{}
+	for _, r := range kv.Rows {
+		names[r.Ref.Profile] = append(names[r.Ref.Profile], r.Ref.KeyName)
+		hosts[r.Ref.KeyName] = len(r.Hosts)
+	}
+	return names, hosts, nil
+}
+
+// csvKeyHosts is how many hosts use each key, for the list that counts them
+// per profile (profiles.csv); nil for every other list.
+func csvKeyHosts(e Engine, name string) map[string]int {
+	if name != "profiles.csv" {
+		return nil
+	}
+	_, hosts, err := profileKeys(e)
+	if err != nil {
+		return nil
+	}
+	return hosts
+}
+
 // listCSV builds one of csvLists, filtered by q as its page is; ok is false
 // for any other name. It is a pages helper, not a handler, so it adds no
 // route of its own.
@@ -465,10 +494,14 @@ func (h pages) listCSV(name string, q url.Values) (t csvout.Table, ok bool, err 
 		return exports.Events(evs), true, err
 	case "profiles.csv":
 		pv, err := e.Profiles()
+		if err != nil {
+			return csvout.Table{}, true, err
+		}
+		names, _, err := profileKeys(e)
 		rows := make([]exports.Profile, 0, len(pv))
 		for _, p := range pv {
 			rows = append(rows, exports.Profile{Name: p.Name, Category: p.Category, KeyScope: p.KeyScope,
-				KeyStore: p.KeyStore, KeyComment: p.KeyComment, Hosts: p.Hosts, Keys: p.Keys})
+				KeyStore: p.KeyStore, KeyComment: p.KeyComment, Hosts: p.Hosts, Keys: p.Keys, KeyNames: names[p.Name]})
 		}
 		return exports.Profiles(rows), true, err
 	case "snapshots.csv":

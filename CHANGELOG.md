@@ -11,9 +11,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **The web UI says when it is older than the installed binary.** A running `authama serve` keeps
   the code it started with, so after `make install` the browser showed the old UI with nothing to
   say why. Every page now shows a banner naming the binary that changed and how to restart.
-- **The profiles CSV says where keys are chosen.** It has one row per profile and no key column,
-  so it has no Keys tab; the dialog now says that keys are chosen in the Hosts or Keys CSV, with a
-  link to each.
+- **Keys can be chosen in the profiles CSV too.** It gains a `key_names` column listing each
+  profile's keys, and its download dialog a Keys tab, grouped by profile, with the hosts each key
+  is used by. Ticking keys keeps the profiles holding one; *Count only the ticked keys* (on by
+  default, `?narrow=1`) cuts each profile's `keys`, `hosts` and `key_names` down to them, and off
+  keeps a profile's whole counts.
+- **A CSV with no key column says where keys are chosen.** The Termius CSV has profiles but no key
+  column, so it has no Keys tab; the dialog now says so, with a link to the lists that have one.
 
 ### Fixed
 

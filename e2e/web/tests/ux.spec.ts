@@ -84,19 +84,49 @@ test('a CSV opens a dialog: profiles, keys, columns and rows are chosen in table
   await expect(panel.getByRole('checkbox', { name: dropped, exact: true })).toBeChecked();
 });
 
-test('a CSV with no key column says where keys are chosen', async ({ page }) => {
+test('the profiles CSV keeps, and narrows to, the profiles holding the keys ticked', async ({ page }) => {
   await page.goto('/profiles');
   await page.getByRole('link', { name: 'CSV' }).first().click();
+  const dialog = page.getByRole('dialog', { name: /Download CSV/ });
+  const panel = dialog.getByRole('tabpanel');
+  const download = dialog.getByRole('link', { name: 'Download' });
+  await dialog.getByRole('tab', { name: /Keys/ }).click();
+  await expect(panel.locator('thead th', { hasText: 'Hosts' })).toBeVisible();
+  const narrow = dialog.getByRole('checkbox', { name: 'Count only the ticked keys' });
+  await expect(narrow).toBeChecked();
+
+  // Untick every key: nothing to download, and it says why.
+  await panel.getByRole('checkbox', { name: 'All keys' }).uncheck();
+  await expect(download).toHaveAttribute('aria-disabled', 'true');
+  await expect(dialog.getByText('Tick at least one key.').first()).toBeVisible();
+
+  // One key: its profile alone, counted for that key.
+  const first = panel.locator('tbody tr[data-csv-value]').first();
+  const key = (await first.getAttribute('data-csv-value')) ?? '';
+  await first.getByRole('checkbox').check();
+  if ((await panel.locator('tbody tr[data-csv-value]').count()) > 1) {
+    await expect(download).toHaveAttribute('href', /narrow=1/);
+    const res = await page.request.get((await download.getAttribute('href')) ?? '');
+    const [header, row] = (await res.text()).trim().split('\n');
+    const cols = header.split(',');
+    expect(row.split(',')[cols.indexOf('key_names')]).toBe(key);
+    expect(row.split(',')[cols.indexOf('keys')]).toBe('1');
+    // Off: the profile is kept whole.
+    await narrow.uncheck();
+    await expect(download).not.toHaveAttribute('href', /narrow=1/);
+  }
+  await dialog.getByRole('button', { name: 'Reset' }).click();
+  await expect(download).not.toHaveAttribute('href', /key=/);
+});
+
+test('a CSV with profiles and no key column says where keys are chosen', async ({ page }) => {
+  await page.goto('/hosts');
+  await page.locator('a[href$="/exports/termius-hosts.csv"]').first().dispatchEvent('click');
   const dialog = page.getByRole('dialog', { name: /Download CSV/ });
   await expect(dialog.getByRole('tab', { name: /Profiles/ })).toBeVisible();
   await expect(dialog.getByRole('tab', { name: /Keys/ })).toHaveCount(0);
   await expect(dialog.getByText('no keys to choose here')).toBeVisible();
-  await expect(dialog.getByRole('link', { name: 'Hosts' })).toHaveAttribute('href', /\/hosts$/);
-  await dialog.getByRole('button', { name: 'Cancel' }).click();
-
-  await page.goto('/hosts');
-  await page.getByRole('link', { name: 'CSV' }).first().click();
-  await expect(dialog.getByText('no keys to choose here')).toBeHidden();
+  await expect(dialog.getByRole('link', { name: 'Profiles', exact: true })).toHaveAttribute('href', /\/profiles$/);
 });
 
 test('tokens.json is checked as it is typed, and cannot be sent while it is not JSON', async ({ page }) => {

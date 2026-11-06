@@ -130,13 +130,18 @@ func Snapshots(list []string) csvout.Table {
 type Profile struct {
 	Name, Category, KeyScope, KeyStore, KeyComment string
 	Hosts, Keys                                    int
+	// KeyNames are the profile's keys, which key_names lists, space-separated
+	// (a key name never holds a space), so a download can keep the profiles
+	// holding some keys.
+	KeyNames []string
 }
 
 // Profiles is the profiles page's list, one row per profile.
 func Profiles(rows []Profile) csvout.Table {
-	t := csvout.Table{Header: []string{"profile", "category", "key_scope", "key_store", "hosts", "keys", "key_comment"}}
+	t := csvout.Table{Header: []string{"profile", "category", "key_scope", "key_store", "hosts", "keys", "key_comment", "key_names"}}
 	for _, r := range rows {
-		t.Rows = append(t.Rows, []string{r.Name, r.Category, r.KeyScope, r.KeyStore, strconv.Itoa(r.Hosts), strconv.Itoa(r.Keys), r.KeyComment})
+		t.Rows = append(t.Rows, []string{r.Name, r.Category, r.KeyScope, r.KeyStore, strconv.Itoa(r.Hosts), strconv.Itoa(r.Keys), r.KeyComment,
+			strings.Join(r.KeyNames, " ")})
 	}
 	return t
 }

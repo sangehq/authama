@@ -6,12 +6,13 @@ import { Ui } from "../core/ui.js";
 
 /**
  * @typedef {{ name: string, rows: number }} CsvProfile
- * @typedef {{ name: string, profile?: string, rows: number }} CsvKey
- * @typedef {{ profiles?: CsvProfile[], keys?: CsvKey[], columns: string[], header: string[], rows: string[][],
+ * @typedef {{ name: string, profile?: string, rows: number, hosts?: number }} CsvKey
+ * @typedef {{ profiles?: CsvProfile[], keys?: CsvKey[], key_list?: boolean, columns: string[], header: string[], rows: string[][],
  *   total: number, in_profiles: number, in_keys: number, kept: number }} CsvPreview
- * @typedef {{ drop: string[], exclude: string, profiles: string[] | null, keys: string[] | null, tab: string }} CsvChoice
+ * @typedef {{ drop: string[], exclude: string, profiles: string[] | null, keys: string[] | null, tab: string, narrow: boolean }} CsvChoice
  * @typedef {"profiles" | "keys" | "columns"} CsvList
  * @typedef {{ value: string, rows?: number, sample?: string, group?: string }} PickItem
+ * @typedef {{ label: string, always: boolean }} CountColumn
  */
 
 /** The heading of each list's name column, and the name of its select-all box. */
@@ -76,7 +77,7 @@ export class CsvExport extends Component {
 
   /** @returns {CsvChoice} */
   static #fresh() {
-    return { drop: [], exclude: "", profiles: null, keys: null, tab: "" };
+    return { drop: [], exclude: "", profiles: null, keys: null, tab: "", narrow: true };
   }
 
   /** The list's name, from the link: the key its choice is kept under. */
@@ -110,9 +111,11 @@ export class CsvExport extends Component {
       tab.onclick = () => this.#select(dialog, list, false);
       tab.onkeydown = (e) => this.#tabKey(dialog, e);
     }
+    const narrow = /** @type {HTMLInputElement} */ (CsvExport.#part(dialog, "narrow"));
+    narrow.onchange = () => this.#update({ narrow: narrow.checked });
     CsvExport.#part(dialog, "reset").onclick = () => {
       exclude.value = "";
-      this.#update({ drop: [], exclude: "", profiles: null, keys: null });
+      this.#update({ drop: [], exclude: "", profiles: null, keys: null, narrow: true });
     };
     const download = CsvExport.#part(dialog, "download");
     download.onclick = (e) => {
@@ -159,7 +162,7 @@ export class CsvExport extends Component {
    */
   url(preview) {
     const u = new URL(this.#link.href);
-    for (const k of ["drop", "exclude", "preview", "profile", "key"]) {
+    for (const k of ["drop", "exclude", "preview", "profile", "key", "narrow"]) {
       u.searchParams.delete(k);
     }
     const { profiles, keys, drop, exclude } = this.#choice;
@@ -168,6 +171,9 @@ export class CsvExport extends Component {
     }
     if (keys?.length) {
       u.searchParams.set("key", keys.join(","));
+      if (this.#preview?.key_list && this.#choice.narrow) {
+        u.searchParams.set("narrow", "1");
+      }
     }
     const all = this.#preview?.columns ?? [];
     if (drop.length && !(all.length && all.every((c) => drop.includes(c)))) {
@@ -248,9 +254,10 @@ export class CsvExport extends Component {
     this.#renderList(
       dialog,
       "keys",
-      keys.map((k) => ({ value: k.name, rows: k.rows, group: several ? k.profile : undefined })),
+      keys.map((k) => ({ value: k.name, rows: k.hosts ?? k.rows, group: several ? k.profile : undefined })),
       this.#choice.keys,
       (keys) => this.#update({ keys }),
+      p.key_list ? { label: "Hosts", always: true } : undefined,
     );
     this.#renderList(
       dialog,
@@ -259,9 +266,9 @@ export class CsvExport extends Component {
       p.columns.filter((c) => !this.#choice.drop.includes(c)),
       (kept) => this.#update({ drop: kept === null ? [] : p.columns.filter((c) => !kept.includes(c)) }),
     );
-    // A list with profiles but no key column (profiles.csv) says where keys
-    // are chosen, rather than leaving the Keys tab silently missing.
-    CsvExport.#part(dialog, "keys-note").hidden = !(profiles.length > 0 && (p.keys ?? []).length === 0);
+    // A list with profiles but no key column (the Termius CSV) says where
+    // keys are chosen, rather than leaving the Keys tab silently missing.
+    CsvExport.#part(dialog, "keys-note").hidden = !(profiles.length > 0 && !p.key_list && (p.keys ?? []).length === 0);
     this.#showTabs(dialog);
     this.#renderSummary(dialog);
     this.#renderPreview(dialog);
@@ -299,8 +306,9 @@ export class CsvExport extends Component {
    * @param {HTMLElement} dialog @param {CsvList} list @param {PickItem[]} items
    * @param {string[] | null} chosen null when everything is ticked
    * @param {(chosen: string[] | null) => void} set
+   * @param {CountColumn} [count] the count column's heading, and whether it shows even when every count is 1
    */
-  #renderList(dialog, list, items, chosen, set) {
+  #renderList(dialog, list, items, chosen, set, count = { label: "Rows", always: false }) {
     const tab = /** @type {HTMLElement} */ (dialog.querySelector(`[data-csv-tab="${list}"]`));
     tab.hidden = items.length === 0;
     if (items.length === 0) {
@@ -311,11 +319,11 @@ export class CsvExport extends Component {
     const ticked = values.filter(on).length;
     /** @param {string[]} next */
     const commit = (next) => set(values.every((v) => next.includes(v)) ? null : next);
-    const count = /** @type {HTMLElement} */ (dialog.querySelector(`[data-csv-count="${list}"]`));
-    count.textContent = ticked === items.length ? String(items.length) : `${ticked}/${items.length}`;
-    count.className = `badge ms-1 ${ticked === 0 ? "bg-danger-lt" : ticked === items.length ? "bg-secondary-lt" : "bg-primary-lt"}`;
+    const badge = /** @type {HTMLElement} */ (dialog.querySelector(`[data-csv-count="${list}"]`));
+    badge.textContent = ticked === items.length ? String(items.length) : `${ticked}/${items.length}`;
+    badge.className = `badge ms-1 ${ticked === 0 ? "bg-danger-lt" : ticked === items.length ? "bg-secondary-lt" : "bg-primary-lt"}`;
 
-    const counts = items.some((it) => (it.rows ?? 0) > 1);
+    const counts = count.always || items.some((it) => (it.rows ?? 0) > 1);
     const samples = items.some((it) => it.sample);
     const all = El.create("input")
       .cls("form-check-input m-0 align-middle")
@@ -333,7 +341,7 @@ export class CsvExport extends Component {
     head.replaceChildren(
       El.create("th").attr("scope", "col").append(all).node,
       El.create("th").attr("scope", "col").text(LABELS[list].col).node,
-      ...(counts ? [El.create("th").attr("scope", "col").cls("csv-num").text("Rows").node] : []),
+      ...(counts ? [El.create("th").attr("scope", "col").cls("csv-num").text(count.label).node] : []),
       ...(samples ? [El.create("th").attr("scope", "col").text("First row").node] : []),
     );
 
@@ -445,6 +453,11 @@ export class CsvExport extends Component {
     for (const panel of /** @type {HTMLElement[]} */ ([...dialog.querySelectorAll("[data-csv-panel]")])) {
       panel.hidden = panel.getAttribute("data-csv-panel") !== list;
     }
+    // Narrowing applies to a list holding several keys per row, so it is
+    // offered beside the keys of such a list only.
+    const narrow = /** @type {HTMLInputElement} */ (CsvExport.#part(dialog, "narrow"));
+    narrow.checked = this.#choice.narrow;
+    CsvExport.#part(dialog, "narrow-box").hidden = !(list === "keys" && this.#preview?.key_list);
     if (remember && this.#choice.tab !== list) {
       this.#choice = { ...this.#choice, tab: list };
       Prefs.set(`csv.${this.name}`, this.#choice);
