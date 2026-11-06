@@ -1,0 +1,2 @@
+devbox: reached through a ProxyCommand, which MobaXterm (a .mxtsessions file for Sessions > Import; Termius imports it too) does not run; use windows-terminal or iterm2, which go through ssh
+In MobaXterm, Sessions > Import sessions from file and choose authama.mxtsessions (Termius: Import > MobaXterm takes the same file). Key paths are this machine's; on Windows, point each session at the key's copy there.

@@ -1,0 +1,2 @@
+devbox: reached through a ProxyCommand, which Remmina (one .remmina file per host) does not run; use windows-terminal or iterm2, which go through ssh
+Copy the .remmina files to ~/.local/share/remmina/ (or import them from Remmina's menu). Remmina also wants the key's .pub beside it, which authama always keeps.

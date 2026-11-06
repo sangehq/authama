@@ -1,0 +1,8 @@
+[remmina]
+name=oribi-web
+group=simtabi
+protocol=SSH
+server=203.0.113.23:22
+username=ploi
+ssh_auth=1
+ssh_privatekey=/home/u/.ssh/profiles/orgs/simtabi/simtabi_oribi-web-ed25519

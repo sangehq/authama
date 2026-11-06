@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VanDyke version="3.0">
+	<key name="Sessions">
+		<key name="legacy">
+			<key name="box">
+				<string name="Protocol Name">SSH2</string>
+				<string name="Hostname">box.example</string>
+				<dword name="[SSH2] Port">2222</dword>
+				<string name="Username">me</string>
+				<string name="SSH2 Authentications V2">publickey,keyboard-interactive,password</string>
+				<dword name="Use Global Public Key">0</dword>
+				<string name="Identity Filename V2">/home/u/.ssh/profiles/legacy/legacy-ed25519</string>
+				<string name="Description">prod, eu,west</string>
+			</key>
+		</key>
+		<key name="personal">
+			<key name="github-imani">
+				<string name="Protocol Name">SSH2</string>
+				<string name="Hostname">github.com</string>
+				<dword name="[SSH2] Port">22</dword>
+				<string name="Username">git</string>
+				<string name="SSH2 Authentications V2">publickey,keyboard-interactive,password</string>
+				<dword name="Use Global Public Key">0</dword>
+				<string name="Identity Filename V2">/home/u/.ssh/profiles/internal/personal/imani_github-ed25519</string>
+			</key>
+		</key>
+		<key name="simtabi">
+			<key name="oribi-web">
+				<string name="Protocol Name">SSH2</string>
+				<string name="Hostname">203.0.113.23</string>
+				<dword name="[SSH2] Port">22</dword>
+				<string name="Username">ploi</string>
+				<string name="SSH2 Authentications V2">publickey,keyboard-interactive,password</string>
+				<dword name="Use Global Public Key">0</dword>
+				<string name="Identity Filename V2">/home/u/.ssh/profiles/orgs/simtabi/simtabi_oribi-web-ed25519</string>
+			</key>
+		</key>
+	</key>
+</VanDyke>

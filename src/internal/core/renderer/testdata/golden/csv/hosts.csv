@@ -1,0 +1,4 @@
+alias,group,hostname,port,user,key_path,tags
+github-imani,personal,github.com,22,git,/home/u/.ssh/profiles/internal/personal/imani_github-ed25519,
+box,legacy,box.example,2222,me,/home/u/.ssh/profiles/legacy/legacy-ed25519,"prod;eu,west"
+oribi-web,simtabi,203.0.113.23,22,ploi,/home/u/.ssh/profiles/orgs/simtabi/simtabi_oribi-web-ed25519,

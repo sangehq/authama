@@ -1,0 +1,18 @@
+[Bookmarks]
+SubRep=
+ImgNum=42
+
+[Bookmarks_1]
+SubRep=legacy
+ImgNum=41
+box=#109#0%box.example%2222%me%%-1%-1%%%22%%0%0%0%/home/u/.ssh/profiles/legacy/legacy-ed25519%%-1%0%0%0%%1080%%0%0%1#MobaFont%10%0%0%-1%15%236,236,236%30,30,30%180,180,192%0%-1%0%%xterm%-1%-1%_Std_Colors_0_%80%24%0%1%-1%<none>%%0%0%-1#0#prod eu,west#-1
+
+[Bookmarks_2]
+SubRep=personal
+ImgNum=41
+github-imani=#109#0%github.com%22%git%%-1%-1%%%22%%0%0%0%/home/u/.ssh/profiles/internal/personal/imani_github-ed25519%%-1%0%0%0%%1080%%0%0%1#MobaFont%10%0%0%-1%15%236,236,236%30,30,30%180,180,192%0%-1%0%%xterm%-1%-1%_Std_Colors_0_%80%24%0%1%-1%<none>%%0%0%-1#0##-1
+
+[Bookmarks_3]
+SubRep=simtabi
+ImgNum=41
+oribi-web=#109#0%203.0.113.23%22%ploi%%-1%-1%%%22%%0%0%0%/home/u/.ssh/profiles/orgs/simtabi/simtabi_oribi-web-ed25519%%-1%0%0%0%%1080%%0%0%1#MobaFont%10%0%0%-1%15%236,236,236%30,30,30%180,180,192%0%-1%0%%xterm%-1%-1%_Std_Colors_0_%80%24%0%1%-1%<none>%%0%0%-1#0##-1
