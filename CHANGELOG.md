@@ -69,8 +69,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `authama ssh host add simtabi --env prd --role web` names the server `simbi-prd-web-00`, or the next
   free number, and tags it. `authama ssh naming show`, `check`, `set` and `key-template` manage the
   rules, and no change to them, or to a profile's code, renames a key already minted.
-- **A CSV export can hold some profiles only.** The download dialog lists the profiles a list's rows
-  belong to, with their row counts; ticking some keeps only theirs (`?profile=` for a script).
+- **A CSV export can hold some profiles, and some keys within them, chosen in tables.** The download
+  dialog has a tab per list (profiles, keys grouped by profile, and columns with their first value),
+  each a table whose header box ticks all, none or some of the rows shown. Everything starts ticked;
+  ticking nothing disables the download and says why. The summary has a badge per reason rows are left
+  out, each one click to undo (`?profile=`, `?key=` for a script).
 - **Host exports for more SSH clients.** `authama ssh host export <client>` writes a Windows Terminal
   JSON fragment, iTerm2 Dynamic Profiles, a PuTTY `.reg` (with the `puttygen` command for each key),
   Remmina profiles, or a generic CSV with the key path (Royal TS, Xshell, SecureCRT, a spreadsheet).

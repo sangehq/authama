@@ -6,20 +6,35 @@ import { Ui } from "../core/ui.js";
 
 /**
  * @typedef {{ name: string, rows: number }} CsvProfile
- * @typedef {{ profiles?: CsvProfile[], columns: string[], header: string[], rows: string[][], total: number, kept: number }} CsvPreview
- * @typedef {{ drop: string[], exclude: string, profiles: string[] }} CsvChoice
+ * @typedef {{ name: string, profile?: string, rows: number }} CsvKey
+ * @typedef {{ profiles?: CsvProfile[], keys?: CsvKey[], columns: string[], header: string[], rows: string[][],
+ *   total: number, in_profiles: number, in_keys: number, kept: number }} CsvPreview
+ * @typedef {{ drop: string[], exclude: string, profiles: string[] | null, keys: string[] | null, tab: string }} CsvChoice
+ * @typedef {"profiles" | "keys" | "columns"} CsvList
+ * @typedef {{ value: string, rows?: number, sample?: string, group?: string }} PickItem
  */
 
+/** The heading of each list's name column, and the name of its select-all box. */
+const LABELS = {
+  profiles: { col: "Profile", all: "All profiles" },
+  keys: { col: "Key", all: "All keys" },
+  columns: { col: "Column", all: "All columns" },
+};
+
 /**
- * CsvExport turns a CSV download link into a dialog: choose the profiles whose
- * rows it holds (for a list that has a profile column), the columns, leave out
- * rows containing some text, see the first rows as they will be, then
- * download. The server does the shaping (?profile=, ?drop=, ?exclude=,
- * ?preview=1), so
- * the file is exactly what the preview showed; the choice is remembered per
- * list in this browser. Without the script the link downloads the whole file.
+ * CsvExport turns a CSV download link into a dialog: a table per list
+ * (profiles, keys, columns) to tick what the file holds, a box to leave out
+ * rows containing some text, and the first rows as they will be. The server
+ * does the shaping (?profile=, ?key=, ?drop=, ?exclude=, ?preview=1), so the
+ * file is exactly what the preview showed. Without the script the link
+ * downloads the whole file.
  *
  *   <a href="/exports/hosts.csv" download data-csv-export>CSV</a>
+ *
+ * Everything is ticked to start with, which means everything, including
+ * profiles and keys added later. Untick to leave something out; ticking
+ * nothing in a list disables the download and says why. The choice is
+ * remembered per list in this browser.
  *
  * The dialog is the layout's one #csv-dialog (data-csv-dialog), shared by
  * every link on the page.
@@ -34,10 +49,10 @@ export class CsvExport extends Component {
   #link = /** @type {any} */ (null);
 
   /** @type {CsvChoice} */
-  #choice = { drop: [], exclude: "", profiles: [] };
+  #choice = CsvExport.#fresh();
 
-  /** @type {string[]} */
-  #columns = [];
+  /** The last preview, for re-rendering the lists without a fetch. @type {CsvPreview | null} */
+  #preview = null;
 
   #timer = 0;
 
@@ -59,6 +74,11 @@ export class CsvExport extends Component {
     return this;
   }
 
+  /** @returns {CsvChoice} */
+  static #fresh() {
+    return { drop: [], exclude: "", profiles: null, keys: null, tab: "" };
+  }
+
   /** The list's name, from the link: the key its choice is kept under. */
   get name() {
     return new URL(this.#link.href).pathname.split("/").pop() ?? "export";
@@ -67,19 +87,38 @@ export class CsvExport extends Component {
   /** Opens the dialog for this link's list. */
   open() {
     const dialog = /** @type {HTMLElement} */ (CsvExport.#dialog());
-    this.#choice = { drop: [], exclude: "", profiles: [], ...Prefs.get(`csv.${this.name}`, {}) };
-    this.#columns = [];
+    const saved = Prefs.get(`csv.${this.name}`, {});
+    this.#choice = { ...CsvExport.#fresh(), ...saved };
+    // An empty list once meant "all"; it now means "none", so an old choice
+    // is read as it was meant.
+    for (const list of /** @type {const} */ (["profiles", "keys"])) {
+      if (Array.isArray(this.#choice[list]) && this.#choice[list].length === 0) {
+        this.#choice[list] = null;
+      }
+    }
+    this.#preview = null;
     CsvExport.#part(dialog, "name").textContent = this.name;
     const exclude = /** @type {HTMLInputElement} */ (CsvExport.#part(dialog, "exclude"));
     exclude.value = this.#choice.exclude;
     // The dialog is shared: rebind its controls to this link each time.
     exclude.oninput = () => this.#update({ exclude: exclude.value }, true);
-    CsvExport.#part(dialog, "all").onclick = () => this.#update({ drop: [] });
-    CsvExport.#part(dialog, "profiles-all").onclick = () => this.#update({ profiles: [] });
-    CsvExport.#part(dialog, "none").onclick = () => this.#update({ drop: [...this.#columns] });
+    for (const list of /** @type {CsvList[]} */ (["profiles", "keys", "columns"])) {
+      const find = /** @type {HTMLInputElement} */ (dialog.querySelector(`[data-csv-find="${list}"]`));
+      find.value = "";
+      find.oninput = () => this.#filter(dialog, list);
+      const tab = /** @type {HTMLElement} */ (dialog.querySelector(`[data-csv-tab="${list}"]`));
+      tab.onclick = () => this.#select(dialog, list, false);
+      tab.onkeydown = (e) => this.#tabKey(dialog, e);
+    }
     CsvExport.#part(dialog, "reset").onclick = () => {
       exclude.value = "";
-      this.#update({ drop: [], exclude: "", profiles: [] });
+      this.#update({ drop: [], exclude: "", profiles: null, keys: null });
+    };
+    const download = CsvExport.#part(dialog, "download");
+    download.onclick = (e) => {
+      if (download.getAttribute("aria-disabled") === "true") {
+        e.preventDefault();
+      }
     };
     Ui.modal(dialog)?.show();
     return this.#refresh();
@@ -98,21 +137,44 @@ export class CsvExport extends Component {
     return this;
   }
 
-  /** The link's URL with the choice applied. @param {boolean} preview */
+  /** Why nothing can be downloaded, or "" when it can. */
+  get blocked() {
+    const p = this.#preview;
+    if (this.#choice.profiles?.length === 0 && (p?.profiles?.length ?? 0) > 0) {
+      return "Tick at least one profile.";
+    }
+    if (this.#choice.keys?.length === 0 && this.#shownKeys().length > 0) {
+      return "Tick at least one key.";
+    }
+    if (p && p.columns.length > 0 && p.columns.every((c) => this.#choice.drop.includes(c))) {
+      return "Tick at least one column.";
+    }
+    return "";
+  }
+
+  /**
+   * The link's URL with the choice applied. An empty list is left off, so a
+   * choice that ticks nothing still previews the lists to tick from.
+   * @param {boolean} preview
+   */
   url(preview) {
     const u = new URL(this.#link.href);
-    u.searchParams.delete("drop");
-    u.searchParams.delete("exclude");
-    u.searchParams.delete("preview");
-    u.searchParams.delete("profile");
-    if (this.#choice.profiles.length) {
-      u.searchParams.set("profile", this.#choice.profiles.join(","));
+    for (const k of ["drop", "exclude", "preview", "profile", "key"]) {
+      u.searchParams.delete(k);
     }
-    if (this.#choice.drop.length) {
-      u.searchParams.set("drop", this.#choice.drop.join(","));
+    const { profiles, keys, drop, exclude } = this.#choice;
+    if (profiles?.length) {
+      u.searchParams.set("profile", profiles.join(","));
     }
-    if (this.#choice.exclude.trim()) {
-      u.searchParams.set("exclude", this.#choice.exclude.trim());
+    if (keys?.length) {
+      u.searchParams.set("key", keys.join(","));
+    }
+    const all = this.#preview?.columns ?? [];
+    if (drop.length && !(all.length && all.every((c) => drop.includes(c)))) {
+      u.searchParams.set("drop", drop.join(","));
+    }
+    if (exclude.trim()) {
+      u.searchParams.set("exclude", exclude.trim());
     }
     if (preview) {
       u.searchParams.set("preview", "1");
@@ -122,9 +184,6 @@ export class CsvExport extends Component {
 
   async #refresh() {
     const dialog = /** @type {HTMLElement} */ (CsvExport.#dialog());
-    const download = /** @type {HTMLAnchorElement} */ (CsvExport.#part(dialog, "download"));
-    download.href = this.url(false).href;
-    download.setAttribute("download", "");
     this.#inflight?.abort();
     this.#inflight = new AbortController();
     try {
@@ -134,93 +193,367 @@ export class CsvExport extends Component {
       }
       /** @type {CsvPreview} */
       const p = await res.json();
-      this.#columns = p.columns;
-      this.#renderProfiles(dialog, p.profiles ?? []);
-      this.#renderColumns(dialog, p.columns);
-      this.#renderPreview(dialog, p);
+      this.#preview = p;
+      this.#prune();
+      this.#render(dialog);
     } catch (err) {
       if (!(err instanceof DOMException && err.name === "AbortError")) {
         CsvExport.#part(dialog, "summary").textContent = `The preview could not be loaded (${err}). The download still works.`;
+        CsvExport.#part(dialog, "reasons").replaceChildren();
+        this.#renderDownload(dialog);
       }
     }
     return this;
   }
 
-  /**
-   * The profiles the list's rows belong to, each with its row count; hidden
-   * for a list with no profile column. A remembered profile that no longer
-   * has rows is dropped from the choice.
-   * @param {HTMLElement} dialog @param {CsvProfile[]} profiles
-   */
-  #renderProfiles(dialog, profiles) {
-    const box = CsvExport.#part(dialog, "profiles-box");
-    box.hidden = profiles.length === 0;
-    const names = profiles.map((p) => p.name);
-    const kept = this.#choice.profiles.filter((n) => names.includes(n));
-    if (kept.length !== this.#choice.profiles.length) {
-      this.#choice = { ...this.#choice, profiles: kept };
+  /** Drops from the choice what the list no longer offers. */
+  #prune() {
+    const p = /** @type {CsvPreview} */ (this.#preview);
+    const names = (p.profiles ?? []).map((x) => x.name);
+    const keys = (p.keys ?? []).map((x) => x.name);
+    /** @param {string[] | null} list @param {string[]} offered */
+    const keep = (list, offered) => (list === null ? null : list.filter((v) => offered.includes(v)));
+    const next = {
+      ...this.#choice,
+      profiles: keep(this.#choice.profiles, names),
+      keys: keep(this.#choice.keys, keys),
+      drop: this.#choice.drop.filter((c) => p.columns.includes(c)),
+    };
+    if (JSON.stringify(next) !== JSON.stringify(this.#choice)) {
+      this.#choice = next;
+      Prefs.set(`csv.${this.name}`, next);
     }
-    CsvExport.#part(dialog, "profiles").replaceChildren(
-      ...profiles.map((p, i) => {
-        const id = `csv-prof-${i}`;
-        const input = El.create("input")
-          .cls("form-check-input")
-          .prop("type", "checkbox")
-          .prop("id", id)
-          .prop("checked", this.#choice.profiles.includes(p.name))
-          .on("change", (e) => {
-            const on = /** @type {HTMLInputElement} */ (e.target).checked;
-            const rest = this.#choice.profiles.filter((n) => n !== p.name);
-            this.#update({ profiles: on ? [...rest, p.name] : rest });
-          });
-        return El.create("div")
-          .cls("form-check")
-          .append(input, El.create("label").cls("form-check-label").attr("for", id).text(`${p.name} (${p.rows})`)).node;
-      }),
-    );
   }
 
-  /** @param {HTMLElement} dialog @param {string[]} columns */
-  #renderColumns(dialog, columns) {
-    const box = CsvExport.#part(dialog, "columns");
-    box.replaceChildren(
-      ...columns.map((col, i) => {
-        const id = `csv-col-${i}`;
-        const input = El.create("input")
-          .cls("form-check-input")
-          .prop("type", "checkbox")
-          .prop("id", id)
-          .prop("checked", !this.#choice.drop.includes(col))
-          .on("change", (e) => {
-            const on = /** @type {HTMLInputElement} */ (e.target).checked;
-            const drop = this.#choice.drop.filter((d) => d !== col);
-            this.#update({ drop: on ? drop : [...drop, col] });
-          });
-        return El.create("div")
-          .cls("form-check")
-          .append(input, El.create("label").cls("form-check-label").attr("for", id).text(col)).node;
-      }),
-    );
+  /** The keys of the profiles ticked: every key when every profile is. */
+  #shownKeys() {
+    const chosen = this.#choice.profiles;
+    return (this.#preview?.keys ?? []).filter((k) => chosen === null || !k.profile || chosen.includes(k.profile));
   }
 
-  /** @param {HTMLElement} dialog @param {CsvPreview} p */
-  #renderPreview(dialog, p) {
-    const left = p.total - p.kept;
-    CsvExport.#part(dialog, "summary").textContent =
-      `${p.kept} of ${p.total} row${p.total === 1 ? "" : "s"}` +
-      (left ? `, ${left} left out` : "") +
-      `, ${p.header.length} of ${p.columns.length} columns.` +
-      (p.kept > p.rows.length ? ` The first ${p.rows.length} are shown.` : "");
-    const table = El.create("table").cls("table table-sm table-vcenter card-table mb-0");
+  /** @param {HTMLElement} dialog */
+  #render(dialog) {
+    const p = /** @type {CsvPreview} */ (this.#preview);
+    const profiles = p.profiles ?? [];
+    const keys = this.#shownKeys();
+    const several = new Set(keys.map((k) => k.profile ?? "")).size > 1;
+    const first = p.rows[0] ?? [];
+    this.#renderList(
+      dialog,
+      "profiles",
+      profiles.map((x) => ({ value: x.name, rows: x.rows })),
+      this.#choice.profiles,
+      (profiles) => this.#update({ profiles, keys: this.#keysFor(profiles) }),
+    );
+    this.#renderList(
+      dialog,
+      "keys",
+      keys.map((k) => ({ value: k.name, rows: k.rows, group: several ? k.profile : undefined })),
+      this.#choice.keys,
+      (keys) => this.#update({ keys }),
+    );
+    this.#renderList(
+      dialog,
+      "columns",
+      p.columns.map((c) => ({ value: c, sample: first[p.header.indexOf(c)] ?? "" })),
+      p.columns.filter((c) => !this.#choice.drop.includes(c)),
+      (kept) => this.#update({ drop: kept === null ? [] : p.columns.filter((c) => !kept.includes(c)) }),
+    );
+    this.#showTabs(dialog);
+    this.#renderSummary(dialog);
+    this.#renderPreview(dialog);
+    this.#renderDownload(dialog);
+  }
+
+  /**
+   * The keys to keep ticked when the profiles ticked change: every key stays
+   * "all" while it is; otherwise a profile ticked brings its keys in and a
+   * profile unticked takes its keys out.
+   * @param {string[] | null} profiles
+   */
+  #keysFor(profiles) {
+    const chosen = this.#choice.keys;
+    if (chosen === null) {
+      return null;
+    }
+    const all = this.#preview?.keys ?? [];
+    const before = this.#choice.profiles;
+    /** @param {string | undefined} prof @param {string[] | null} set */
+    const inSet = (prof, set) => set === null || !prof || set.includes(prof);
+    const added = all.filter((k) => inSet(k.profile, profiles) && !inSet(k.profile, before)).map((k) => k.name);
+    const kept = chosen.filter((name) => {
+      const k = all.find((x) => x.name === name);
+      return !k || inSet(k.profile, profiles);
+    });
+    return [...new Set([...kept, ...added])];
+  }
+
+  /**
+   * Renders one list as a table: a tick box per row, a header box that ticks
+   * all, none or (indeterminate) some of the rows shown, a row count only
+   * when some item has more than one row, and keys grouped under their
+   * profile when several profiles are shown.
+   * @param {HTMLElement} dialog @param {CsvList} list @param {PickItem[]} items
+   * @param {string[] | null} chosen null when everything is ticked
+   * @param {(chosen: string[] | null) => void} set
+   */
+  #renderList(dialog, list, items, chosen, set) {
+    const tab = /** @type {HTMLElement} */ (dialog.querySelector(`[data-csv-tab="${list}"]`));
+    tab.hidden = items.length === 0;
+    if (items.length === 0) {
+      return;
+    }
+    const values = items.map((it) => it.value);
+    const on = (/** @type {string} */ v) => chosen === null || chosen.includes(v);
+    const ticked = values.filter(on).length;
+    /** @param {string[]} next */
+    const commit = (next) => set(values.every((v) => next.includes(v)) ? null : next);
+    const count = /** @type {HTMLElement} */ (dialog.querySelector(`[data-csv-count="${list}"]`));
+    count.textContent = ticked === items.length ? String(items.length) : `${ticked}/${items.length}`;
+    count.className = `badge ms-1 ${ticked === 0 ? "bg-danger-lt" : ticked === items.length ? "bg-secondary-lt" : "bg-primary-lt"}`;
+
+    const counts = items.some((it) => (it.rows ?? 0) > 1);
+    const samples = items.some((it) => it.sample);
+    const all = El.create("input")
+      .cls("form-check-input m-0 align-middle")
+      .prop("type", "checkbox")
+      .attr("aria-label", LABELS[list].all)
+      .on("change", (e) => {
+        const box = /** @type {HTMLInputElement} */ (e.target);
+        const shown = this.#visible(dialog, list);
+        const rest = values.filter(on).filter((v) => !shown.includes(v));
+        commit(box.checked ? [...rest, ...shown] : rest);
+      });
+    all.node.checked = ticked === items.length;
+    all.node.indeterminate = ticked > 0 && ticked < items.length;
+    const head = /** @type {HTMLElement} */ (dialog.querySelector(`[data-csv-head="${list}"]`));
+    head.replaceChildren(
+      El.create("th").attr("scope", "col").append(all).node,
+      El.create("th").attr("scope", "col").text(LABELS[list].col).node,
+      ...(counts ? [El.create("th").attr("scope", "col").cls("csv-num").text("Rows").node] : []),
+      ...(samples ? [El.create("th").attr("scope", "col").text("First row").node] : []),
+    );
+
+    const width = 2 + (counts ? 1 : 0) + (samples ? 1 : 0);
+    /** @type {Node[]} */
+    const rows = [];
+    let group = "";
+    items.forEach((it, i) => {
+      if (it.group && it.group !== group) {
+        group = it.group;
+        rows.push(El.create("tr").cls("csv-group").attr("data-csv-group", "").append(El.create("td").attr("colspan", String(width)).text(group)).node);
+      }
+      const id = `csv-${list}-${i}`;
+      const box = El.create("input")
+        .cls("form-check-input m-0 align-middle")
+        .prop("type", "checkbox")
+        .prop("id", id)
+        .prop("checked", on(it.value))
+        .on("change", (e) => {
+          const checked = /** @type {HTMLInputElement} */ (e.target).checked;
+          const rest = values.filter(on).filter((v) => v !== it.value);
+          commit(checked ? [...rest, it.value] : rest);
+        });
+      const tr = El.create("tr")
+        .attr("data-csv-item", it.value.toLowerCase())
+        .attr("data-csv-value", it.value)
+        .append(
+          El.create("td").append(box),
+          El.create("td").append(El.create("label").cls("d-block text-truncate m-0").attr("for", id).text(it.value)),
+        );
+      if (counts) {
+        tr.append(El.create("td").cls("csv-num").text(String(it.rows ?? 0)));
+      }
+      if (samples) {
+        tr.append(El.create("td").cls("csv-sample").attr("title", it.sample ?? "").text(it.sample || "—"));
+      }
+      rows.push(tr.node);
+    });
+    /** @type {HTMLElement} */ (dialog.querySelector(`[data-csv-list="${list}"]`)).replaceChildren(...rows);
+    this.#filter(dialog, list);
+  }
+
+  /** The values of list's rows the search leaves shown. @param {HTMLElement} dialog @param {CsvList} list */
+  #visible(dialog, list) {
+    return [...dialog.querySelectorAll(`[data-csv-list="${list}"] tr[data-csv-value]`)]
+      .filter((tr) => !(/** @type {HTMLElement} */ (tr).hidden))
+      .map((tr) => tr.getAttribute("data-csv-value") ?? "");
+  }
+
+  /**
+   * Shows only list's rows whose name holds the search text, and only the
+   * group rows with a row still shown under them.
+   * @param {HTMLElement} dialog @param {CsvList} list
+   */
+  #filter(dialog, list) {
+    const want = /** @type {HTMLInputElement} */ (dialog.querySelector(`[data-csv-find="${list}"]`)).value.trim().toLowerCase();
+    const body = /** @type {HTMLElement} */ (dialog.querySelector(`[data-csv-list="${list}"]`));
+    /** @type {HTMLElement | null} */
+    let heading = null;
+    let any = false;
+    const close = () => {
+      if (heading) {
+        heading.hidden = !any;
+      }
+    };
+    for (const tr of /** @type {HTMLElement[]} */ ([...body.children])) {
+      if (tr.hasAttribute("data-csv-group")) {
+        close();
+        heading = tr;
+        any = false;
+        continue;
+      }
+      tr.hidden = want !== "" && !(tr.getAttribute("data-csv-item") ?? "").includes(want);
+      any = any || !tr.hidden;
+    }
+    close();
+    const find = /** @type {HTMLElement} */ (dialog.querySelector(`[data-csv-find="${list}"]`)).closest(".input-icon")?.parentElement;
+    if (find instanceof HTMLElement) {
+      El.of(find).hide(body.querySelectorAll("tr[data-csv-value]").length <= 8 && want === "");
+    }
+  }
+
+  /** The tabs shown, in order. @param {HTMLElement} dialog @returns {HTMLElement[]} */
+  static #tabs(dialog) {
+    return /** @type {HTMLElement[]} */ ([...dialog.querySelectorAll("[data-csv-tab]")]).filter((t) => !t.hidden);
+  }
+
+  /** Selects the remembered tab, or the first one shown. @param {HTMLElement} dialog */
+  #showTabs(dialog) {
+    const tabs = CsvExport.#tabs(dialog);
+    const names = tabs.map((t) => /** @type {CsvList} */ (t.getAttribute("data-csv-tab")));
+    const want = /** @type {CsvList} */ (names.includes(/** @type {CsvList} */ (this.#choice.tab)) ? this.#choice.tab : names[0]);
+    this.#select(dialog, want, false, false);
+  }
+
+  /**
+   * Shows list's panel and marks its tab selected.
+   * @param {HTMLElement} dialog @param {CsvList} list @param {boolean} focus @param {boolean} [remember]
+   */
+  #select(dialog, list, focus, remember = true) {
+    for (const tab of /** @type {HTMLElement[]} */ ([...dialog.querySelectorAll("[data-csv-tab]")])) {
+      const on = tab.getAttribute("data-csv-tab") === list;
+      tab.setAttribute("aria-selected", String(on));
+      tab.tabIndex = on ? 0 : -1;
+      if (on && focus) {
+        tab.focus();
+      }
+    }
+    for (const panel of /** @type {HTMLElement[]} */ ([...dialog.querySelectorAll("[data-csv-panel]")])) {
+      panel.hidden = panel.getAttribute("data-csv-panel") !== list;
+    }
+    if (remember && this.#choice.tab !== list) {
+      this.#choice = { ...this.#choice, tab: list };
+      Prefs.set(`csv.${this.name}`, this.#choice);
+    }
+  }
+
+  /** Arrow keys, Home and End move between the tabs. @param {HTMLElement} dialog @param {KeyboardEvent} e */
+  #tabKey(dialog, e) {
+    const tabs = CsvExport.#tabs(dialog);
+    const at = tabs.indexOf(/** @type {HTMLElement} */ (e.currentTarget));
+    const to = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: tabs.length - 1 }[e.key];
+    if (to === undefined || at < 0) {
+      return;
+    }
+    e.preventDefault();
+    const tab = tabs[(to + tabs.length) % tabs.length];
+    this.#select(dialog, /** @type {CsvList} */ (tab.getAttribute("data-csv-tab")), true);
+  }
+
+  /** The counts, and a badge per reason rows are left out that clears it. @param {HTMLElement} dialog */
+  #renderSummary(dialog) {
+    const p = /** @type {CsvPreview} */ (this.#preview);
+    const blocked = this.blocked;
+    const kept = p.columns.filter((c) => !this.#choice.drop.includes(c)).length;
+    CsvExport.#part(dialog, "summary").textContent = blocked
+      ? "Nothing to download yet."
+      : `${p.kept} of ${p.total} row${p.total === 1 ? "" : "s"} · ${kept} of ${p.columns.length} columns` +
+        (p.kept > p.rows.length ? ` · first ${p.rows.length} shown` : "");
+    /** @type {Node[]} */
+    const reasons = [];
+    /** @param {number} n @param {string} what @param {Partial<CsvChoice>} clear @param {string} label */
+    const reason = (n, what, clear, label) => {
+      if (n <= 0 || blocked) {
+        return;
+      }
+      reasons.push(
+        El.create("span")
+          .cls("badge bg-secondary-lt d-inline-flex align-items-center gap-1")
+          .append(
+            document.createTextNode(`${n} ${what}`),
+            El.create("button")
+              .cls("btn btn-ghost-secondary btn-icon p-0 border-0 csv-clear")
+              .prop("type", "button")
+              .attr("aria-label", label)
+              .attr("title", label)
+              .append(CsvExport.#icon("x"))
+              .on("click", () => {
+                if (clear.exclude === "") {
+                  /** @type {HTMLInputElement} */ (CsvExport.#part(dialog, "exclude")).value = "";
+                }
+                this.#update(clear);
+              }),
+          ).node,
+      );
+    };
+    reason(p.total - p.in_profiles, "in other profiles", { profiles: null, keys: this.#keysFor(null) }, "Tick every profile");
+    reason(p.in_profiles - p.in_keys, "for other keys", { keys: null }, "Tick every key");
+    reason(p.in_keys - p.kept, `containing “${this.#choice.exclude.trim()}”`, { exclude: "" }, "Stop leaving these out");
+    CsvExport.#part(dialog, "reasons").replaceChildren(...reasons);
+  }
+
+  /** @param {HTMLElement} dialog */
+  #renderPreview(dialog) {
+    const p = /** @type {CsvPreview} */ (this.#preview);
+    const blocked = this.blocked;
+    const box = CsvExport.#part(dialog, "preview");
+    if (blocked) {
+      box.replaceChildren(El.create("div").cls("empty py-5").append(El.create("p").cls("empty-title").text(blocked)).node);
+      return;
+    }
+    const table = El.create("table").cls("table table-sm table-striped table-vcenter card-table mb-0");
     table.append(
       El.create("thead").append(El.create("tr").append(...p.header.map((h) => El.create("th").attr("scope", "col").text(h)))),
       El.create("tbody").append(
         ...(p.rows.length
-          ? p.rows.map((r) => El.create("tr").append(...r.map((c) => El.create("td").text(c))))
-          : [El.create("tr").append(El.create("td").attr("colspan", String(Math.max(p.header.length, 1))).cls("text-secondary").text("No rows."))]),
+          ? p.rows.map((r) => El.create("tr").append(...r.map((c) => El.create("td").attr("title", c).text(c))))
+          : [El.create("tr").append(El.create("td").attr("colspan", String(Math.max(p.header.length, 1))).cls("text-secondary text-center py-4").text("No rows match."))]),
       ),
     );
-    CsvExport.#part(dialog, "preview").replaceChildren(table.node);
+    box.replaceChildren(table.node);
+  }
+
+  /** @param {HTMLElement} dialog */
+  #renderDownload(dialog) {
+    const download = /** @type {HTMLAnchorElement} */ (CsvExport.#part(dialog, "download"));
+    const why = this.blocked;
+    const note = CsvExport.#part(dialog, "blocked");
+    note.textContent = why;
+    note.hidden = why === "";
+    if (why) {
+      download.removeAttribute("href");
+      download.setAttribute("aria-disabled", "true");
+      download.classList.add("disabled");
+    } else {
+      download.href = this.url(false).href;
+      download.setAttribute("download", "");
+      download.removeAttribute("aria-disabled");
+      download.classList.remove("disabled");
+    }
+  }
+
+  /** An icon from the page's sprite. @param {string} name */
+  static #icon(name) {
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("class", "icon m-0");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    const use = document.createElementNS(ns, "use");
+    use.setAttribute("href", `#tabler-${name}`);
+    svg.appendChild(use);
+    return svg;
   }
 
   static #dialog() {
