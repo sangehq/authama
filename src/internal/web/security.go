@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -182,6 +183,14 @@ func (s *Server) auth(next http.Handler) http.Handler {
 		if r.URL.Path == "/healthz" && (r.Method == http.MethodGet || r.Method == http.MethodHead) {
 			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("Cache-Control", "no-store")
+			// To a caller on this machine it also says which process it is and
+			// which build, so `authama serve --stop-all` can stop any authama
+			// web UI it finds, not only the one its record names.
+			if isLoopbackRequest(r) {
+				_, _ = fmt.Fprintf(w, `{"app":"authama","instance":%q,"pid":%d,"version":%q,"started":%q}`+"\n",
+					s.opts.Instance, os.Getpid(), s.opts.Version, s.binary.started.UTC().Format(time.RFC3339))
+				return
+			}
 			_, _ = fmt.Fprintf(w, `{"app":"authama","instance":%q}`+"\n", s.opts.Instance)
 			return
 		}

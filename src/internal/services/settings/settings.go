@@ -105,6 +105,8 @@ var Specs = []Spec{
 		Doc: "The port `serve` listens on first. When it is taken the next free one is used, as with the default; only --port makes a taken port an error."},
 	{Section: "web", Name: "base_path", Env: envnames.WebBasePath, Kind: KindString, Default: "/",
 		Doc: "A path the web UI is served under, such as /authama, so it can sit behind a reverse proxy beside other sites. Every link, form and redirect carries it."},
+	{Section: "web", Name: "auto_restart", Env: envnames.WebAutoRestart, Kind: KindBool, Default: "true",
+		Doc: "Restart `serve` by itself when its binary is rebuilt or reinstalled (make install), on the same address with the same sign-in, and reload every open page into the new build; a page with unsaved input offers Reload instead. Off: a page says it is from an older build and offers Restart now."},
 }
 
 // Find returns the spec for a dotted key.

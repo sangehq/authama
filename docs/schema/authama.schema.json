@@ -282,6 +282,11 @@
           "minLength": 1,
           "type": "string"
         },
+        "auto_restart": {
+          "default": true,
+          "description": "Restart `serve` by itself when its binary is rebuilt or reinstalled (make install), on the same address with the same sign-in, and reload every open page into the new build; a page with unsaved input offers Reload instead. Off: a page says it is from an older build and offers Restart now. Sets $AUTHAMA_WEB_AUTO_RESTART. Default: true.",
+          "type": "boolean"
+        },
         "base_path": {
           "description": "A path the web UI is served under, such as /authama, so it can sit behind a reverse proxy beside other sites. Every link, form and redirect carries it. Sets $AUTHAMA_WEB_BASE_PATH. Default: /.",
           "minLength": 1,

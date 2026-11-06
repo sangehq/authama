@@ -84,19 +84,34 @@ make -C ~/src/authama install
 `authama version` reports the commit it was built from, so a build from a branch
 is still identifiable.
 
-**Restart the web UI after updating.** A running `authama serve` keeps the code it
-started with, so after `make install` the browser still shows the old UI. Each page then
-says so in a yellow banner (*This page is from an older build*). Stop the server with
-Ctrl-C where it runs, or, when you no longer know where that is, by the port it listens on
-(7822, or the next free one up to 7841), and start it again:
+**The web UI follows a new build by itself.** A running `authama serve` watches its own
+binary. After `make install` (or any rebuild of the file it runs from), once the new file has
+stopped changing, the server restarts itself from it: same address, same sign-in, and every
+signed-in page stays signed in. Open pages notice the new server within a few seconds and
+reload; a green banner then says the page runs the current build, and the header marks the
+build *current*. A page with unsaved input in a form is not reloaded under you: it shows
+*A new build is running* with a **Reload** button. Owner-only changes ask for the PIN again
+after a restart.
+
+`web.auto_restart` (`AUTHAMA_WEB_AUTO_RESTART`) set to `false` turns this off. A page from an
+older build then says so in a yellow banner, and **Restart now** in it does the same restart
+on request. From a terminal, every authama web UI on this machine at once:
 
 ```sh
-lsof -ti tcp:7822-7841 -sTCP:LISTEN | xargs kill -INT   # stop every authama serve on the usual ports
-authama serve                                           # start the new build; it opens your browser
+authama serve --restart     # stop every authama web UI found, then start the new build
+authama serve --stop-all    # only stop them
 ```
 
-`lsof -nP -iTCP:7822-7841 -sTCP:LISTEN` lists them first, if anything else on your machine
-uses those ports. On Windows, close the console window `authama serve` runs in.
+`--stop-all` asks each of the usual ports (7822 to 7841, plus `web.port` and the recorded
+server's) whether authama answers there, and stops each that does, whichever home or build
+it serves. A server from before this release can neither restart itself nor say which
+process it is; it is named with the command that stops it:
+
+```sh
+lsof -ti tcp:7911 -sTCP:LISTEN | xargs kill -INT
+```
+
+On Windows, close the console window `authama serve` runs in.
 
 ### Uninstalling
 
