@@ -35,7 +35,7 @@ var tips = map[string]string{
 	"ssh-config":    "The config files the manifest renders into ~/.ssh, and whether the ones on disk match.",
 	"bundle":        "An encrypted backup of everything in ~/.ssh, private keys included, to your age recipient.",
 	"prune":         "Deletes snapshots older than the newest ones you keep. You see the list before anything is removed.",
-	"csv":           "Choose the columns and rows, see the first rows, then download.",
+	"csv":           "Choose the profiles, keys, columns and rows, see the first rows, then download.",
 	"download":      "Downloads a file. Nothing in this home changes.",
 	"reconcile":     "Mints the keys the manifest names and renders ~/.ssh/config, previewed first.",
 	"render":        "Writes ~/.ssh/config again from the manifest, keeping everything outside authama's block.",

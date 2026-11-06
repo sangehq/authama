@@ -135,15 +135,28 @@ Events) and **System** (Doctor, Settings, About). On a narrow screen it folds be
   pages. Hosts, keys, profiles, auth tokens, snapshots, key deployments (on the Audit page), history
   and events each download as CSV, with the same columns as `--csv` on their command. The History and
   Events downloads keep the page's filters, so the file holds what the page shows.
-- **A CSV is previewed before it downloads.** Its button opens a dialog: for a list with a profile
-  column (hosts, keys, profiles, the Termius CSV), tick the profiles whose rows it holds, each shown
-  with its row count (none ticked is every profile); tick the columns to keep, leave out the rows
-  that contain some text, and see the first 25 rows as the file will hold them, with how many rows
-  and columns are kept. The choice is remembered for that list in the browser, and *Reset* forgets
-  it. The server does the shaping, so a script can too: `?profile=simtabi,adelsaiq` keeps those
-  profiles' rows (even with the profile column dropped), `?drop=user,port` leaves columns out,
-  `?exclude=staging` leaves out rows containing that text, and `?preview=1` answers with the preview
-  as JSON, including every profile and its row count.
+- **A CSV is previewed before it downloads.** Its button opens a dialog with a tab per list on the left,
+  each a table with a tick box per row:
+  - **Profiles**, for a list with a profile column (hosts, keys, profiles, the Termius CSV).
+  - **Keys**, for a list with a key column (hosts, keys): the keys of the profiles ticked, grouped under
+    their profile when several are shown. Ticking a profile brings its keys in; unticking it takes them
+    out.
+  - **Columns**, each with its value in the first row, so a cryptic name says what it holds.
+
+  Everything is ticked to start with, which means everything, including profiles and keys added later.
+  The box in a table's header ticks all, none or (half-ticked) some of the rows the search shows; each
+  tab counts what is ticked (`1/4`). Ticking nothing in a list disables *Download* and says why. A
+  row count shows only when some row has more than one, and a list longer than eight gets a search box.
+
+  On the right, a box leaves out rows containing some text, and the first 25 rows show as the file will
+  hold them. The summary counts rows and columns (`1 of 9 rows · 7 of 7 columns`), with a badge per
+  reason rows are left out (`4 in other profiles`, `4 for other keys`, `2 containing "staging"`), whose
+  × undoes that choice. The choice is remembered for that list in the browser, and *Reset* forgets it.
+  The server does the shaping, so a script can too: `?profile=simtabi,adelsaiq` and
+  `?key=simtabi_simbi-prd-web-00-ed25519` keep those rows (even with that column dropped),
+  `?drop=user,port` leaves columns out, `?exclude=staging` leaves out rows containing that text, and
+  `?preview=1` answers with the preview as JSON, including every profile and key with its row count and
+  the rows left after each filter.
 - **The command palette**, Ctrl+K (⌘K on a Mac) or *Search* in the header, jumps to any page, opens
   the add-a-profile, host or token panel, or starts a download, as you type.
 

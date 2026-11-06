@@ -134,6 +134,54 @@ func TestACSVCanHoldSomeProfilesOnly(t *testing.T) {
 	}
 }
 
+// Within the profiles chosen, some keys: the file holds only the rows of the
+// keys ticked, the preview lists each key with its profile, and the counts
+// after each filter say which one left rows out.
+func TestACSVCanHoldSomeKeysOnly(t *testing.T) {
+	s, home, _ := newTestServer(t)
+	ed := editor.New(home)
+	if err := ed.AddProfile("acme", "per_service", nil); err != nil {
+		t.Fatal(err)
+	}
+	host, user := "203.0.113.30", "deploy"
+	for _, alias := range []string{"acme-prd-web-00", "acme-prd-db-00"} {
+		if err := ed.AddHost("acme", alias, editor.HostFields{Hostname: &host, User: &user}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	c := signIn(t, s)
+	var all csvPreview
+	if err := json.Unmarshal(c.get("/exports/hosts.csv?preview=1").Body.Bytes(), &all); err != nil {
+		t.Fatal(err)
+	}
+	var acmeKeys []string
+	for _, k := range all.Keys {
+		if k.Profile == "acme" {
+			acmeKeys = append(acmeKeys, k.Name)
+		}
+	}
+	if len(acmeKeys) != 2 {
+		t.Fatalf("keys = %+v; want acme's two", all.Keys)
+	}
+	one := acmeKeys[0]
+	rows := readCSV(t, c.get("/exports/hosts.csv?profile=acme&key="+one).Body.String())
+	if len(rows) != 2 {
+		t.Fatalf("profile=acme&key=%s: %v", one, rows)
+	}
+	var p csvPreview
+	if err := json.Unmarshal(c.get("/exports/hosts.csv?preview=1&profile=acme&key="+one+"&exclude=nothing-matches").Body.Bytes(), &p); err != nil {
+		t.Fatal(err)
+	}
+	if p.Total != all.Total || p.InProfiles != 2 || p.InKeys != 1 || p.Kept != 1 {
+		t.Errorf("stages: total %d, in profiles %d, in keys %d, kept %d", p.Total, p.InProfiles, p.InKeys, p.Kept)
+	}
+	var tp csvPreview
+	_ = json.Unmarshal(c.get("/exports/profiles.csv?preview=1").Body.Bytes(), &tp)
+	if tp.Keys != nil {
+		t.Errorf("profiles.csv has no key column but listed %v", tp.Keys)
+	}
+}
+
 func readCSV(t *testing.T, s string) [][]string {
 	t.Helper()
 	r := csv.NewReader(strings.NewReader(s))

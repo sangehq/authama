@@ -3,7 +3,7 @@
 // it sits on works without it, which pages.spec.ts covers.
 import { test, expect } from '../support/fixtures';
 
-test('a CSV opens a dialog: columns and rows are chosen, previewed, and the download matches', async ({ page }) => {
+test('a CSV opens a dialog: profiles, keys, columns and rows are chosen in tables, previewed, and the download matches', async ({ page }) => {
   await page.goto('/hosts');
   await page.getByRole('link', { name: 'CSV' }).first().click();
   const dialog = page.getByRole('dialog', { name: /Download CSV/ });
@@ -12,48 +12,76 @@ test('a CSV opens a dialog: columns and rows are chosen, previewed, and the down
   await expect(preview.locator('thead th').first()).toBeVisible();
   const columns = await preview.locator('thead th').allTextContents();
   expect(columns.length).toBeGreaterThan(1);
-
-  // Leave a column out: the preview loses it and the download link says so.
-  const dropped = columns[columns.length - 1];
-  await dialog.getByRole('checkbox', { name: dropped, exact: true }).uncheck();
-  await expect(preview.locator('thead th', { hasText: dropped })).toHaveCount(0);
   const download = dialog.getByRole('link', { name: 'Download' });
-  await expect(download).toHaveAttribute('href', new RegExp(`drop=${encodeURIComponent(dropped)}`));
+  const panel = dialog.getByRole('tabpanel');
 
-  // Leave rows out by text: the summary counts them.
+  // Leave a column out: the preview loses it, the tab counts it, and the
+  // download link says so.
+  await dialog.getByRole('tab', { name: /Columns/ }).click();
+  const dropped = columns[columns.length - 1];
+  await panel.getByRole('checkbox', { name: dropped, exact: true }).uncheck();
+  await expect(preview.locator('thead th', { hasText: dropped })).toHaveCount(0);
+  await expect(dialog.getByRole('tab', { name: /Columns/ })).toContainText(`${columns.length - 1}/${columns.length}`);
+  await expect(download).toHaveAttribute('href', new RegExp(`drop=${encodeURIComponent(dropped)}`));
+  // The header box is now partly ticked.
+  await expect(panel.getByRole('checkbox', { name: 'All columns' })).not.toBeChecked();
+
+  // Leave rows out by text: the summary counts them, with a badge to undo it.
   const firstCell = (await preview.locator('tbody tr').first().locator('td').first().textContent()) ?? '';
   await dialog.getByLabel('Leave out rows containing').fill(firstCell);
-  await expect(dialog.getByRole('status')).toContainText('left out');
+  await expect(dialog.getByRole('status')).toContainText('containing');
   await expect(download).toHaveAttribute('href', /exclude=/);
 
   // The file is what the preview showed.
   const res = await page.request.get((await download.getAttribute('href')) ?? '');
   const header = (await res.text()).split('\n')[0];
   expect(header).not.toContain(dropped);
-
-  // Only some profiles: their rows alone, and the choice is in the link.
-  await dialog.getByLabel('Leave out rows containing').fill('');
+  await dialog.getByRole('button', { name: 'Stop leaving these out' }).click();
   await expect(download).not.toHaveAttribute('href', /exclude=/);
-  const profiles = dialog.getByRole('group', { name: 'Profiles' });
-  await expect(profiles).toBeVisible();
-  const firstProfile = profiles.getByRole('checkbox').first();
-  const label = ((await profiles.locator('label').first().textContent()) ?? '').replace(/ \(\d+\)$/, '');
-  await firstProfile.check();
-  await expect(download).toHaveAttribute('href', new RegExp(`profile=${encodeURIComponent(label)}`));
+
+  // Every profile is ticked to start with. Unticking all of them blocks the
+  // download and says why; ticking one gives its rows alone.
+  await dialog.getByRole('tab', { name: /Profiles/ }).click();
+  const all = panel.getByRole('checkbox', { name: 'All profiles' });
+  await expect(all).toBeChecked();
+  await all.uncheck();
+  await expect(download).toHaveAttribute('aria-disabled', 'true');
+  await expect(dialog.getByText('Tick at least one profile.').first()).toBeVisible();
+  const firstProfile = panel.locator('tbody tr[data-csv-value]').first();
+  const name = (await firstProfile.getAttribute('data-csv-value')) ?? '';
+  await firstProfile.getByRole('checkbox').check();
+  await expect(download).toHaveAttribute('href', new RegExp(`profile=${encodeURIComponent(name)}`));
   const only = await page.request.get((await download.getAttribute('href')) ?? '');
-  const rows = (await only.text()).trim().split('\n').slice(1);
-  expect(rows.length).toBeGreaterThan(0);
-  await profiles.getByRole('button', { name: 'All' }).click();
-  await expect(firstProfile).not.toBeChecked();
+  expect((await only.text()).trim().split('\n').slice(1).length).toBeGreaterThan(0);
+
+  // Within it, one key: the Keys table shows that profile's keys. A home
+  // with no keys minted yet has no Keys tab; the Go test covers ?key= then.
+  const keysTab = dialog.getByRole('tab', { name: /Keys/ });
+  if (await keysTab.isVisible()) {
+    await keysTab.click();
+    await panel.getByRole('checkbox', { name: 'All keys' }).uncheck();
+    await expect(download).toHaveAttribute('aria-disabled', 'true');
+    await panel.locator('tbody tr[data-csv-value] input').first().check();
+    await expect(download).not.toHaveAttribute('aria-disabled', 'true');
+    // One key ticked of several keeps its rows; the only key is every key.
+    if ((await panel.locator('tbody tr[data-csv-value]').count()) > 1) {
+      await expect(download).toHaveAttribute('href', /key=/);
+    }
+    await panel.getByRole('checkbox', { name: 'All keys' }).check();
+    await expect(download).not.toHaveAttribute('href', /key=/);
+  }
+  await dialog.getByRole('tab', { name: /Profiles/ }).click();
+  await all.check();
   await expect(download).not.toHaveAttribute('href', /profile=/);
 
   // The choice is remembered for this list.
   await dialog.getByRole('button', { name: 'Cancel' }).click();
   await page.reload();
   await page.getByRole('link', { name: 'CSV' }).first().click();
-  await expect(dialog.getByRole('checkbox', { name: dropped, exact: true })).not.toBeChecked();
+  await dialog.getByRole('tab', { name: /Columns/ }).click();
+  await expect(panel.getByRole('checkbox', { name: dropped, exact: true })).not.toBeChecked();
   await dialog.getByRole('button', { name: 'Reset' }).click();
-  await expect(dialog.getByRole('checkbox', { name: dropped, exact: true })).toBeChecked();
+  await expect(panel.getByRole('checkbox', { name: dropped, exact: true })).toBeChecked();
 });
 
 test('tokens.json is checked as it is typed, and cannot be sent while it is not JSON', async ({ page }) => {
