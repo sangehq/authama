@@ -359,12 +359,11 @@ func (h pages) handleAudit(w http.ResponseWriter, r *http.Request) {
 // it: it is a page in another format.
 func (h pages) handleExport(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if t, ok, err := h.listCSV(name, r.URL.Query()); ok {
-		if err != nil {
-			h.fail(w, r, err)
-			return
-		}
-		h.writeCSV(w, r, brand.Command+"-"+name, t, csvKeyHosts(h.s.opts.Engine, name))
+	if preset, ok := enginePreset(name, r.URL.Query()); ok {
+		exportAPI(h).runPreset(w, r, preset)
+		return
+	}
+	if h.legacyCSV(w, r, name) {
 		return
 	}
 	if name != ExportFlat && name != ExportTermius {
@@ -395,6 +394,24 @@ func (h pages) handleExport(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", `attachment; filename="`+name+`"`)
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = w.Write([]byte(body))
+}
+
+// legacyCSV answers one of csvLists the way it was built before the export
+// pipeline: from the list's own table, shaped by csvShape. It still serves
+// what the pipeline does not take over (a preview for the download dialog,
+// and history's host, token, profile and key filters), and the parity test
+// holds the pipeline to its bytes. It reports whether name was such a list.
+func (h pages) legacyCSV(w http.ResponseWriter, r *http.Request, name string) bool {
+	t, ok, err := h.listCSV(name, r.URL.Query())
+	if !ok {
+		return false
+	}
+	if err != nil {
+		h.fail(w, r, err)
+		return true
+	}
+	h.writeCSV(w, r, brand.Command+"-"+name, t, csvKeyHosts(h.s.opts.Engine, name))
+	return true
 }
 
 type licence struct {

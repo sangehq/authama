@@ -4,6 +4,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -176,5 +178,82 @@ func TestAPresetTakesTheCSVLinksOptions(t *testing.T) {
 	}
 	if _, ok := rows[0]["key"]; !ok {
 		t.Errorf("headings not kept: %v", rows[0])
+	}
+}
+
+// The old CSV URLs answer through the pipeline wherever their options allow,
+// and for every list and option they answer the bytes the list's own table
+// gave before (legacyCSV). An option the pipeline does not match keeps the
+// old path, so this compares both for every one.
+func TestTheOldCSVURLsAreTheirListsBytes(t *testing.T) {
+	s, _, _ := newTestServer(t)
+	c := signIn(t, s)
+	h := pages{s}
+	opts := []string{"", "profile=work", "key=gh", "key=gh&narrow=1", "exclude=gh", "exclude=nothing-matches",
+		"drop=profile", "area=ssh", "kind=added", "since=2000", "since=2999", "until=2000", "since=2026-01-01&until=2999",
+		"command=host", "source=cli"}
+	served := 0
+	for _, file := range csvLists {
+		for _, o := range opts {
+			u := "/exports/" + file
+			if o != "" {
+				u += "?" + o
+			}
+			got := c.get(u)
+			if got.Code != http.StatusOK {
+				t.Fatalf("%s: %d %s", u, got.Code, got.Body.String())
+			}
+			want := httptest.NewRecorder()
+			if !h.legacyCSV(want, httptest.NewRequest(http.MethodGet, u, nil), file) {
+				t.Fatalf("%s is not a list", file)
+			}
+			if got.Body.String() != want.Body.String() {
+				t.Errorf("%s differs:\n--- before\n%s--- now\n%s", u, want.Body.String(), got.Body.String())
+			}
+			if got.Header().Get("Content-Disposition") != want.Header().Get("Content-Disposition") ||
+				got.Header().Get("Content-Type") != want.Header().Get("Content-Type") {
+				t.Errorf("%s headers: %q %q, before %q %q", u, got.Header().Get("Content-Type"), got.Header().Get("Content-Disposition"),
+					want.Header().Get("Content-Type"), want.Header().Get("Content-Disposition"))
+			}
+			if _, ok := enginePreset(file, mustQuery(t, o)); ok {
+				served++
+			}
+		}
+	}
+	if min := len(csvLists) * 6; served < min {
+		t.Errorf("the pipeline served %d of the old URLs, want at least %d", served, min)
+	}
+}
+
+func mustQuery(t *testing.T, raw string) url.Values {
+	t.Helper()
+	q, err := url.ParseQuery(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return q
+}
+
+// Options the pipeline does not match stay on the old path.
+func TestEnginePresetKeepsWhatItCannotMatch(t *testing.T) {
+	for _, c := range []struct {
+		file, query string
+		want        bool
+	}{
+		{"hosts.csv", "", true},
+		{"hosts.csv", "drop=user&exclude=x", true},
+		{"hosts.csv", "preview=1", false},
+		{"hosts.csv", "format=json", false},
+		{"history.csv", "since=2026", true},
+		{"history.csv", "profile=work", false},
+		{"history.csv", "host=web1", false},
+		{"history.csv", "token=npm", false},
+		{"ssh_config", "", false},
+		{"termius-hosts.csv", "", false},
+		{"nope.csv", "", false},
+	} {
+		if _, got := enginePreset(c.file, mustQuery(t, c.query)); got != c.want {
+			t.Errorf("%s?%s: engine %v, want %v", c.file, c.query, got, c.want)
+		}
 	}
 }
