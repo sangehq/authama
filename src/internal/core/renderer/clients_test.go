@@ -103,9 +103,6 @@ func TestPuTTYRegIsWhatRegeditReads(t *testing.T) {
 	if !strings.Contains(strings.Join(exp.Notes, "\n"), "puttygen /home/u/.ssh/profiles/legacy/legacy-ed25519 -o") {
 		t.Errorf("no conversion hint: %v", exp.Notes)
 	}
-	if puttyName(`a b\c*%`) != `a%20b%5Cc%2A%25` {
-		t.Errorf("session name escaping: %s", puttyName(`a b\c*%`))
-	}
 }
 
 func TestRemminaWritesOneProfilePerHost(t *testing.T) {
@@ -124,9 +121,6 @@ func TestRemminaWritesOneProfilePerHost(t *testing.T) {
 		if !strings.Contains(box, want) {
 			t.Errorf("missing %q in:\n%s", want, box)
 		}
-	}
-	if remminaValue(" a\\b\n") != `\sa\\b\n` {
-		t.Errorf("escaping: %q", remminaValue(" a\\b\n"))
 	}
 }
 

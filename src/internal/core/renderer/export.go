@@ -1,16 +1,14 @@
 package renderer
 
 import (
-	"bytes"
-	"encoding/csv"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/util/encode"
 )
 
 // ExportPaths is what an export needs to turn the ~ form paths the managed
@@ -98,11 +96,9 @@ func RenderFlatConfig(m *manifest.Manifest, p ExportPaths, emitUseKeychain bool)
 	return b.String(), nil
 }
 
-// TermiusColumns is the header of Termius's CSV import template, as the
-// third-party exporters written against it reproduce it (Termius 9.x). Termius
-// publishes the template only as a download inside the app, so this is the
-// one place to change if it moves.
-var TermiusColumns = []string{"Groups", "Label", "Tags", "Hostname/IP", "Protocol", "Port", "Username", "Password"}
+// TermiusColumns is the header of Termius's CSV import template
+// (encode.TermiusColumns, where it is written).
+var TermiusColumns = encode.TermiusColumns
 
 // TermiusKey is one key the user attaches in Termius by hand: the CSV carries
 // no keys, and Termius imports them into its own keychain, not by path.
@@ -137,11 +133,7 @@ func RenderTermiusCSV(m *manifest.Manifest, p ExportPaths, opts TermiusOptions) 
 	if err != nil {
 		return nil, err
 	}
-	var buf bytes.Buffer
-	w := csv.NewWriter(&buf)
-	if err := w.Write(TermiusColumns); err != nil {
-		return nil, err
-	}
+	var hosts []encode.Host
 	exp := &TermiusExport{}
 	skip := map[string]bool{}
 	for _, a := range opts.Skip {
@@ -169,19 +161,9 @@ func RenderTermiusCSV(m *manifest.Manifest, p ExportPaths, opts TermiusOptions) 
 		if port == 0 {
 			port = 22
 		}
-		row := []string{
-			cell(rk.Profile), cell(h.Alias), termiusTags(h.Tags),
-			cell(h.Hostname), "ssh", strconv.Itoa(port), cell(h.User), "",
-		}
-		if err := w.Write(row); err != nil {
-			return nil, err
-		}
+		hosts = append(hosts, encode.Host{Group: rk.Profile, Alias: h.Alias, Hostname: h.Hostname, User: h.User, Port: port, Tags: h.Tags})
 		file, agent := identityFor(m, rk.Profile, rk.KeyName)
 		exp.Keys = append(exp.Keys, TermiusKey{Label: h.Alias, KeyFile: p.expand(file), Agent: p.expand(agent)})
-	}
-	w.Flush()
-	if err := w.Error(); err != nil {
-		return nil, err
 	}
 	if len(skip) > 0 {
 		var unknown []string
@@ -191,7 +173,9 @@ func RenderTermiusCSV(m *manifest.Manifest, p ExportPaths, opts TermiusOptions) 
 		sort.Strings(unknown)
 		return nil, fmt.Errorf("--skip names no host: %s", strings.Join(unknown, ", "))
 	}
-	exp.CSV = buf.String()
+	if exp.CSV, err = encode.TermiusCSV(hosts); err != nil {
+		return nil, err
+	}
 	return exp, nil
 }
 
@@ -208,24 +192,4 @@ var gitProviders = map[string]bool{"github": true, "gitlab": true}
 // every forge uses, or a forge provider whatever user it sets.
 func isGitHost(h manifest.Host) bool {
 	return h.User == "git" || (h.Provider != nil && gitProviders[*h.Provider])
-}
-
-// termiusTags joins a host's tags into one field. A comma inside a tag would
-// read back as two tags, so it becomes a space.
-func termiusTags(tags []string) string {
-	out := make([]string, 0, len(tags))
-	for _, t := range tags {
-		out = append(out, cell(strings.ReplaceAll(t, ",", " ")))
-	}
-	return strings.Join(out, ",")
-}
-
-// cell neutralises a value a spreadsheet would evaluate as a formula. The CSV
-// is meant for Termius, but a CSV is opened in a spreadsheet often enough that
-// one free-text field starting with = must not become a live formula there.
-func cell(v string) string {
-	if v != "" && strings.ContainsRune("=+-@\t\r", rune(v[0])) {
-		return "'" + v
-	}
-	return v
 }
