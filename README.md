@@ -48,7 +48,7 @@ mints anything:
 authama init                      # create ~/.config/authama (dirs, perms, seed files)
 authama ssh profile add work
 authama ssh host add work gh -H github.com -u git --provider github   # or edit manifest.json
-authama ssh host apply work web1 203.0.113.10 deploy web   # add-or-update from a compact spec
+authama ssh host apply work acme-prd-web-00 203.0.113.10 deploy web   # add-or-update from a compact spec
 authama ssh import ~/.ssh/config                       # or onboard an existing setup
 ```
 
