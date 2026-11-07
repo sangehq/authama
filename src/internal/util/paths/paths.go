@@ -34,7 +34,8 @@ import (
 // Folder is the directory name under the config and state bases.
 const Folder = "authama"
 
-// LegacyFolder is the config folder name releases before 0.1.1 used.
+// LegacyFolder is the config folder name releases before authama 0.1.1 used,
+// as ssh-manager. Only LegacyHomes uses it, for migration.
 const LegacyFolder = "ssh-manager"
 
 // MigratedMarker is written into a legacy home once its contents have been
@@ -232,11 +233,13 @@ func resolveExisting(path string) string {
 	}
 }
 
-// LegacyHomes are the homes earlier releases used, newest first: the
-// "ssh-manager" sibling of the config home (0.1.0 and the ssh-manager
-// releases), then on Windows %APPDATA%\ssh-manager (their Windows default),
-// then the "sshmgr" sibling and %APPDATA%\sshmgr (before that rename), and the
-// original dot-home ~/.sshmgr.
+// LegacyHomes are the config homes releases before authama 0.1.1 used, newest
+// first: the "ssh-manager" sibling of the config home (authama 0.1.0 and the
+// ssh-manager releases), then on Windows %APPDATA%\ssh-manager (their Windows
+// default), then the "sshmgr" sibling and %APPDATA%\sshmgr (before that
+// rename), and the original dot-home ~/.sshmgr. authama never writes to them;
+// migration reads the first one that exists and copies it into the authama
+// home.
 //
 // A sandbox has none outside its root: ~/.sshmgr is the real user's, and
 // dev-mode `migrate` used to move it into the sandbox.

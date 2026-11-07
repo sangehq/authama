@@ -135,10 +135,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **`authama tui`, the terminal menu.** The web UI is the interactive surface: a bare `authama` on
   a terminal opens it, and every menu entry was already a CLI command. `docs/tools/tui.md` lists
-  where each entry went. `authama tui` still answers, but it only prints that pointer and exits
-  with an error. History rows the menu recorded keep their `tui` source.
+  where each entry went. History rows the menu recorded keep their `tui` source.
 - **The `atm-ui` shell alias now runs `authama serve`.** A block installed earlier keeps calling
-  `authama tui`, which prints the pointer; `token shell-aliases --install` rewrites it.
+  `authama tui`, which is now an unknown command; `token shell-aliases --install` rewrites it.
+- **The deprecated command spellings.** `authama ssh host export <client>` and
+  `authama ssh termius export` are gone: `authama export hosts --format <client>` writes the same
+  files (`hosts-csv` for the generic CSV, `termius` for the Termius CSV). `termius export --open`
+  has no replacement. The hidden `authama tui` stub that pointed at the web UI is gone too.
+- **The top-level SSH verbs.** `authama deploy`, `authama reconcile` and every other SSH verb no
+  longer answer outside `authama ssh`. Two stay, hidden: `vm` and `audit`, because a
+  `~/.ssh/config` rendered before this release runs `authama vm proxy`, and a notifier installed
+  before it runs `authama audit --notify`. Rendering and installing now write `ssh vm proxy` and
+  `ssh audit --notify`; run `authama ssh config render` and `authama ssh notify install` to move
+  over.
+- **The `SSH_MANAGER_*` and `SSHMGR_*` environment variables.** The 14 names releases before 0.1.1
+  read were honoured with a deprecation notice; they are now ignored, and the notice is gone. Rename
+  any you still set (`SSH_MANAGER_HOME` → `AUTHAMA_CONFIG_DIR`, `SSH_MANAGER_<NAME>` →
+  `AUTHAMA_<NAME>`); see `docs/configuration.md`.
+- **The deprecated default-root wrappers** in `internal/` (`GlobProfileTree`, `IsArchivedPath`,
+  `ComputeStates`, `IterManagedPaths`, `LooseKeys` and the rest), which nothing outside their tests
+  called.
 
 ### Changed
 
@@ -172,13 +188,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   shared empty state; a job's question is marked with Tabler's card status bar. CSS no longer used
   by any page (log, editor and finding styles from another project, the hand-made tabs, clear
   buttons and dev banner) is removed, with the rule that forced panel columns to full width.
-### Deprecated
-
-- **`authama ssh host export <client>` and `authama ssh termius export`**, in favour of
-  `authama export hosts --format <client>` (`hosts-csv` for the generic CSV) and `--format termius`,
-  which write the same bytes through the export pipeline. Both keep working unchanged and are not
-  removed before v1.0.0.
-
 ### Fixed
 
 - The web UI's list of terminal-only changes still named pinning host keys, which the web has done

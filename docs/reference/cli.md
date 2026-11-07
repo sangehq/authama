@@ -5,8 +5,7 @@
      UPDATE_CLI_REFERENCE=1 go test ./internal/cli/ -run TestCLIReferenceIsCurrent -->
 
 Every `authama` command, with its flags and examples, exactly as `--help` prints
-them. `sshmgr`, the deprecated former name, accepts the same commands. The feature
-pages under [docs/tools](../tools/) explain what each one is for; this page is the
+them. The feature pages under [docs/tools](../tools/) explain what each one is for; this page is the
 complete list. [Choosing between similar commands](#choosing-between-similar-commands)
 is at the end.
 

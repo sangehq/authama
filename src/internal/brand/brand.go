@@ -10,12 +10,12 @@
 // (~/.config/authama) and the environment variables (AUTHAMA_*) at 0.1.1; the
 // release archives, the Linux packages, the Homebrew cask and the Scoop
 // manifest at 0.1.2. The sshmgr binary that shipped beside authama as a
-// deprecated alias was removed after 0.1.3. What is kept for migration only:
-// the old name (LegacyCommand, recognized in what older releases wrote), the old variable
-// names (SSH_MANAGER_*, SSHMGR_*; honored with a deprecation notice, see
-// envnames), the old home (copied over once, see migratesvc), and the old
-// managed-block markers, known_hosts tag, bundle names and scheduler label,
-// which are still recognized.
+// deprecated alias was removed after 0.1.3, and the old environment variable
+// names stopped being read on 2026-11-07. Nothing writes the old names. What
+// older releases left on disk is still read where losing it would hurt: the
+// old home (copied over once, see migratesvc), and the managed-block markers,
+// known_hosts tag, provider key titles, bundle names and scheduler label (see
+// each one's comment).
 package brand
 
 import "strings"
@@ -26,11 +26,6 @@ const (
 
 	// Command is the binary and the command people type.
 	Command = "authama"
-
-	// LegacyCommand is the name the tool shipped under before. No binary of
-	// that name is built any more; it is kept so what older releases wrote
-	// under it (markers, tags, homes) is still recognized.
-	LegacyCommand = "sshmgr"
 
 	// Summary is the one-line description under the name.
 	Summary = "SSH keys & config, and package-manager / git auth tokens, in one tool"

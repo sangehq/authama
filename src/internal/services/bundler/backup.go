@@ -66,8 +66,11 @@ func Prune(dir string, keep int) []string {
 	return removed
 }
 
-// BundlePrefix starts every bundle file name. Bundles written before 0.1.1 are
-// named with LegacyBundlePrefix and are still listed, pruned and restorable.
+// BundlePrefix starts every bundle file name authama writes.
+// LegacyBundlePrefix starts the names releases before authama 0.1.1 gave
+// their bundles, as ssh-manager; authama never writes it. Such a bundle is
+// still listed, pruned and restorable, since it may be the only backup of a
+// home made before the rename.
 const (
 	BundlePrefix       = "authama-"
 	LegacyBundlePrefix = "ssh-manager-"

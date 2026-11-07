@@ -11,7 +11,10 @@ import (
 )
 
 const (
-	// ManagedHeader/ManagedEnd delimit the block authama owns in ~/.ssh/config.
+	// ManagedHeader and ManagedEnd delimit the block authama owns in
+	// ~/.ssh/config: everything between them is rewritten on each render, and
+	// everything outside them is the user's and is preserved. They are the only
+	// markers authama writes.
 	ManagedHeader = "# Managed by authama - do not edit (run: authama ssh config render)"
 	ManagedEnd    = "# End of authama-managed block - content outside it is preserved"
 	// RootConfig is the top-level config file's relative path under ~/.ssh.
@@ -24,9 +27,12 @@ const (
 	bannerWidth = 69
 )
 
-// Markers written by earlier names (ssh-manager 2.x-3.x and authama 0.1.0, and
-// the "sshmgr" spelling before that), still recognized so a block they wrote is
-// re-owned and rewritten in place on the next render, never duplicated.
+// The markers releases before authama 0.1.1 wrote, when the tool was called
+// ssh-manager and sshmgr. authama never writes them. It reads them so that a
+// block an older release left in ~/.ssh/config is recognized as the managed
+// block and replaced, under ManagedHeader and ManagedEnd, on the next render.
+// Without them that block would be read as user content and kept beside the
+// new one, so every host it held would be defined twice.
 var legacyHeaders = []string{
 	"# Managed by ssh-manager - do not edit (run: sshmgr config render)",
 	"# Managed by sshmgr - do not edit (run: sshmgr config render)",
@@ -40,7 +46,8 @@ func isManagedHeader(s string) bool { return s == ManagedHeader || contains(lega
 func isManagedEnd(s string) bool    { return s == ManagedEnd || contains(legacyEnds, s) }
 
 // IsManagedHeaderLine and IsManagedEndLine report whether a trimmed line opens
-// or closes the managed block (current or legacy markers).
+// or closes the managed block, under the current markers or an older
+// release's.
 func IsManagedHeaderLine(s string) bool { return isManagedHeader(s) }
 func IsManagedEndLine(s string) bool    { return isManagedEnd(s) }
 

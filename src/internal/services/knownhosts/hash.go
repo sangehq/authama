@@ -125,8 +125,11 @@ func hashable(marker, field string) bool {
 // line without a tag - however it got there - is the user's and is left alone.
 const ownerTag = "authama"
 
-// legacyOwnerTag is the tag every release before 0.1.2 wrote. Lines carrying it
-// are still this tool's: they are recognized, never rewritten just to retag.
+// legacyOwnerTag is the tag releases before authama 0.1.2 wrote, as sshmgr.
+// authama never writes it. A line carrying it is still a pin this tool made,
+// so clean can prune it and show labels it; it is not rewritten just to
+// change the tag. Read as untagged, it would count as the user's and stay
+// for ever.
 const legacyOwnerTag = "sshmgr"
 
 // khLine is a parsed known_hosts line. keytype+key identify the host key itself,
@@ -161,7 +164,8 @@ func parseKHLine(raw string) (khLine, bool) {
 	return khLine{marker: marker, field: fields[0], keytype: fields[1], key: fields[2], comment: comment}, true
 }
 
-// tagged reports whether this line carries the owner tag, current or legacy.
+// tagged reports whether this line carries the owner tag, or an older
+// release's.
 func (l khLine) tagged() bool {
 	for _, w := range strings.Fields(l.comment) {
 		if w == ownerTag || w == legacyOwnerTag {

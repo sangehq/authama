@@ -62,15 +62,19 @@ func (r restProvider) ManageURL(Target) string {
 	return r.dashboard
 }
 
-// KeyTitlePrefix starts the title of every key this tool uploads. Titles from
-// earlier names are in legacyTitlePrefixes, so such a key is still recognized as
-// ours and renamed to the current title rather than treated as foreign.
+// KeyTitlePrefix starts the title of every key this tool uploads to a
+// provider. It is the only prefix authama writes.
 const KeyTitlePrefix = "authama "
 
+// legacyTitlePrefixes start the titles releases before authama 0.1.2 gave the
+// keys they uploaded, as ssh-manager and sshmgr. authama never writes them. A
+// key titled with one is still this tool's, so rotate and revoke find and
+// remove it, and a re-deploy renames it to KeyTitlePrefix; read as foreign, it
+// would stay on the account after its replacement went up.
 var legacyTitlePrefixes = []string{"ssh-manager ", "sshmgr "}
 
 // ownedTitle reports whether a remote key's title marks it as uploaded by this
-// tool under any of its names.
+// tool, now or by an older release.
 func ownedTitle(name string) bool {
 	if strings.HasPrefix(name, KeyTitlePrefix) {
 		return true
