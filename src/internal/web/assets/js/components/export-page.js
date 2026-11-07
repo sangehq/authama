@@ -1,4 +1,5 @@
 // @ts-check
+import { Checklist } from "../core/checklist.js";
 import { Component } from "../core/component.js";
 import { El } from "../core/el.js";
 import { Prefs } from "../core/prefs.js";
@@ -538,16 +539,12 @@ export class ExportPage extends Component {
    * @param {string} id @param {boolean} expanded
    */
   #facet(facet, heading, one, values, id, expanded) {
-    const chosen = /** @type {string[] | undefined} */ (this.#sel.where[facet]);
-    const on = (/** @type {string} */ v) => !chosen || chosen.includes(v);
-    const ticked = values.filter((v) => on(v.value)).length;
-    const all = values.map((v) => v.value);
-    /** @param {string[]} next */
-    const commit = (next) => this.#setFacet(facet, all.every((v) => next.includes(v)) ? null : next);
+    const pick = new Checklist(values.map((v) => v.value), /** @type {string[] | undefined} */ (this.#sel.where[facet]));
+    const ticked = pick.ticked;
     const head = El.create("input").cls("form-check-input m-0 me-2").prop("type", "checkbox").attr("aria-label", `All ${heading.toLowerCase()}`)
-      .on("change", (e) => commit(/** @type {HTMLInputElement} */ (e.target).checked ? all : []));
-    head.node.checked = ticked === values.length;
-    head.node.indeterminate = ticked > 0 && ticked < values.length;
+      .on("change", (e) => this.#setFacet(facet, pick.setAll(/** @type {HTMLInputElement} */ (e.target).checked)));
+    head.node.checked = pick.all.checked;
+    head.node.indeterminate = pick.all.indeterminate;
     const several = new Set(values.map((v) => v.profile ?? "")).size > 1;
     /** @type {Node[]} */
     const list = [
@@ -562,12 +559,9 @@ export class ExportPage extends Component {
         group = v.profile;
         list.push(El.create("div").cls("list-group-header").text(group).node);
       }
-      const box = El.create("input").cls("form-check-input list-group-selectable-check m-0").prop("type", "checkbox").prop("checked", on(v.value))
+      const box = El.create("input").cls("form-check-input list-group-selectable-check m-0").prop("type", "checkbox").prop("checked", pick.on(v.value))
         .attr("aria-label", v.value)
-        .on("change", (e) => {
-          const rest = all.filter(on).filter((x) => x !== v.value);
-          commit(/** @type {HTMLInputElement} */ (e.target).checked ? [...rest, v.value] : rest);
-        });
+        .on("change", (e) => this.#setFacet(facet, pick.toggle(v.value, /** @type {HTMLInputElement} */ (e.target).checked)));
       // Tabler's selectable list item: the whole row is the label, and a
       // ticked box gives it the active look.
       list.push(El.create("label").cls("list-group-item").attr("title", v.value).append(
@@ -576,10 +570,10 @@ export class ExportPage extends Component {
         El.create("span").cls("badge badge-muted ms-auto flex-shrink-0").attr("aria-label", `${v.rows} ${one.toLowerCase()} rows`).text(String(v.rows)),
       ).node);
     });
-    const state = ticked === 0 ? "badge-bad" : ticked === values.length ? "badge-muted" : "badge-info";
+    const state = pick.badge.state;
     const button = El.create("button").cls(`accordion-button${expanded ? "" : " collapsed"}`).prop("type", "button")
       .attr("data-bs-toggle", "collapse").attr("data-bs-target", `#${id}`).attr("aria-expanded", String(expanded)).attr("aria-controls", id)
-      .append(El.create("span").text(heading), El.create("span").cls(`badge ${state} ms-2`).text(ticked === values.length ? String(values.length) : `${ticked}/${values.length}`));
+      .append(El.create("span").text(heading), El.create("span").cls(`badge ${state} ms-2`).text(pick.badge.text));
     return El.create("div").cls("accordion-item").append(
       El.create("h4").cls("accordion-header").append(button),
       El.create("div").cls(`accordion-collapse collapse${expanded ? " show" : ""}`).prop("id", id).append(

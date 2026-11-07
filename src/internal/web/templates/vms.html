@@ -80,7 +80,7 @@
           </tbody>
         </table>
       </div>
-      {{else}}<div class="card-body text-secondary">None. Declare one under <code>devboxes</code> in authama.json and a sync adds it; leave out <code>vm</code> to keep its key for a VM you have not made yet.</div>{{end}}
+      {{else}}<div class="card-body">{{template "empty" (empty "device-desktop" "No declared devboxes" "Declare one under `devboxes` in authama.json and a sync adds it; leave out `vm` to keep its key for a VM you have not made yet.")}}</div>{{end}}
       {{if .Reserved}}
       <div class="card-body border-top small">
         <div class="fw-bold mb-1">Reserved keys</div>

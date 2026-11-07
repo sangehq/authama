@@ -1,4 +1,5 @@
 // @ts-check
+import { Checklist } from "../core/checklist.js";
 import { Component } from "../core/component.js";
 import { El } from "../core/el.js";
 import { Prefs } from "../core/prefs.js";
@@ -320,14 +321,10 @@ export class CsvExport extends Component {
     if (items.length === 0) {
       return;
     }
-    const values = items.map((it) => it.value);
-    const on = (/** @type {string} */ v) => chosen === null || chosen.includes(v);
-    const ticked = values.filter(on).length;
-    /** @param {string[]} next */
-    const commit = (next) => set(values.every((v) => next.includes(v)) ? null : next);
+    const pick = new Checklist(items.map((it) => it.value), chosen);
     const badge = /** @type {HTMLElement} */ (dialog.querySelector(`[data-csv-count="${list}"]`));
-    badge.textContent = ticked === items.length ? String(items.length) : `${ticked}/${items.length}`;
-    badge.className = `badge ms-1 ${ticked === 0 ? "badge-bad" : ticked === items.length ? "badge-muted" : "badge-info"}`;
+    badge.textContent = pick.badge.text;
+    badge.className = `badge ms-1 ${pick.badge.state}`;
 
     const counts = count.always || items.some((it) => (it.rows ?? 0) > 1);
     const samples = items.some((it) => it.sample);
@@ -337,12 +334,10 @@ export class CsvExport extends Component {
       .attr("aria-label", LABELS[list].all)
       .on("change", (e) => {
         const box = /** @type {HTMLInputElement} */ (e.target);
-        const shown = this.#visible(dialog, list);
-        const rest = values.filter(on).filter((v) => !shown.includes(v));
-        commit(box.checked ? [...rest, ...shown] : rest);
+        set(pick.setAll(box.checked, this.#visible(dialog, list)));
       });
-    all.node.checked = ticked === items.length;
-    all.node.indeterminate = ticked > 0 && ticked < items.length;
+    all.node.checked = pick.all.checked;
+    all.node.indeterminate = pick.all.indeterminate;
     const head = /** @type {HTMLElement} */ (dialog.querySelector(`[data-csv-head="${list}"]`));
     head.replaceChildren(
       El.create("th").attr("scope", "col").append(all).node,
@@ -365,12 +360,8 @@ export class CsvExport extends Component {
         .cls("form-check-input m-0 align-middle")
         .prop("type", "checkbox")
         .prop("id", id)
-        .prop("checked", on(it.value))
-        .on("change", (e) => {
-          const checked = /** @type {HTMLInputElement} */ (e.target).checked;
-          const rest = values.filter(on).filter((v) => v !== it.value);
-          commit(checked ? [...rest, it.value] : rest);
-        });
+        .prop("checked", pick.on(it.value))
+        .on("change", (e) => set(pick.toggle(it.value, /** @type {HTMLInputElement} */ (e.target).checked)));
       const tr = El.create("tr")
         .attr("data-csv-item", it.value.toLowerCase())
         .attr("data-csv-value", it.value)
