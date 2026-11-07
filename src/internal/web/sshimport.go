@@ -49,16 +49,10 @@ func importSource(p paths.Paths, key string) (ImportSource, bool) {
 	return ImportSource{}, false
 }
 
-// configHome is $XDG_CONFIG_HOME, else ~/.config, on every platform, as the
-// CLI's own help names it.
+// configHome is the base config directory as paths resolves it everywhere
+// else: an absolute $XDG_CONFIG_HOME, else ~/.config.
 func configHome() string {
-	if d := os.Getenv("XDG_CONFIG_HOME"); d != "" {
-		return d
-	}
-	if h, err := os.UserHomeDir(); err == nil {
-		return filepath.Join(h, ".config")
-	}
-	return ""
+	return paths.XDGConfigHome(nil)
 }
 
 func isRegular(path string) bool {

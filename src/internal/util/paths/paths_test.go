@@ -35,6 +35,26 @@ func TestConfigDirDefaults(t *testing.T) {
 	}
 }
 
+// XDGConfigHome is the base directory ConfigDir puts authama's folder in, by
+// the same rules, so the two never disagree about where ~/.config is.
+func TestXDGConfigHomeIsConfigDirsBase(t *testing.T) {
+	h := absPath("tmp", "h")
+	xdg := absPath("tmp", "xdg")
+	for name, m := range map[string]map[string]string{
+		"unset":    {"HOME": h, "USERPROFILE": h},
+		"absolute": {"HOME": h, "USERPROFILE": h, "XDG_CONFIG_HOME": xdg},
+		"relative": {"HOME": h, "USERPROFILE": h, "XDG_CONFIG_HOME": "rel"},
+	} {
+		got := XDGConfigHome(env(m))
+		if want := filepath.Dir(ConfigDir(env(m), absPath("cwd"))); got != want {
+			t.Errorf("%s: XDGConfigHome = %q, ConfigDir's base = %q", name, got, want)
+		}
+	}
+	if got := XDGConfigHome(env(map[string]string{"HOME": h, "USERPROFILE": h, "XDG_CONFIG_HOME": "rel"})); got != filepath.Join(h, ".config") {
+		t.Errorf("relative XDG_CONFIG_HOME = %q, want it ignored", got)
+	}
+}
+
 // The state home is apart from the config home by default, and inside it when
 // the config home is pinned, so a pinned home stays one self-contained tree.
 func TestStateRootFollowsTheDocumentedOrder(t *testing.T) {

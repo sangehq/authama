@@ -45,6 +45,39 @@ func TestImportOffersConfigsByName(t *testing.T) {
 	}
 }
 
+// The config home /import offers is the one the rest of authama resolves: a
+// relative $XDG_CONFIG_HOME is ignored, as the XDG spec says, and the fallback
+// is $HOME/.config. A relative value would otherwise name a folder under
+// whatever directory the server was started from.
+func TestImportConfigHomeFollowsTheXDGRules(t *testing.T) {
+	writeConfig := func(dir string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Join(dir, "ssh"), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "ssh", "config"), []byte("Host other\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+	writeConfig(filepath.Join(cwd, "relative"))
+	t.Setenv("XDG_CONFIG_HOME", "relative")
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
+	s, _, _ := newTestServer(t)
+	c := signIn(t, s)
+	if strings.Contains(c.get("/import").Body.String(), `value="config-home"`) {
+		t.Error("/import offers the ssh/config under a relative XDG_CONFIG_HOME")
+	}
+	writeConfig(filepath.Join(home, ".config"))
+	if !strings.Contains(c.get("/import").Body.String(), `name="source" value="config-home"`) {
+		t.Error("/import does not fall back to $HOME/.config/ssh/config")
+	}
+}
+
 // Previewing an import is `ssh import <config> --force --yes`, for a source
 // this machine has; any other name, or a path, is refused before anything
 // is read.
