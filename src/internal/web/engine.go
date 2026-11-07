@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -328,6 +329,8 @@ type KeysView struct {
 	// only a line that is a public key, so a mislabelled file never reaches
 	// the page.
 	Public map[string]string
+	// Profiles are the profiles that have a key, once each, in manifest order.
+	Profiles []string
 }
 
 // Keys lists every key, as `authama ssh key list` does.
@@ -342,6 +345,9 @@ func (e AppEngine) Keys() (KeysView, error) {
 	}
 	v := KeysView{Rows: rows, Public: map[string]string{}}
 	for _, r := range rows {
+		if !slices.Contains(v.Profiles, r.Ref.Profile) {
+			v.Profiles = append(v.Profiles, r.Ref.Profile)
+		}
 		if pub := publicKeyLine(r.PublicPath); pub != "" {
 			v.Public[r.Ref.String()] = pub
 		}

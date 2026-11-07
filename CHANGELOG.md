@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Rebuild public keys from the web UI.** A key's page, its row's menu, and *Rebuild public keys* on
+  the Keys page (one profile, or every key) run `ssh key regen-pub` as a previewed change. The
+  preview's copy holds no private key, so each public key is derived from the real one, read in
+  place and copied nowhere, and the preview shows the `.pub` it would really write. A key with a
+  passphrase is skipped with the command to run by hand, as in the terminal.
 - **Check connections from the web UI.** The Overview and Hosts pages run `ssh net` on request and
   show each host's status in the command's words, warning when a host that needs a VPN does not
   answer; a host's page checks that host alone. No page probes as it loads, the check takes only
@@ -160,6 +165,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- The web UI's list of terminal-only changes still named pinning host keys, which the web has done
+  since #140.
 - A bare `authama`, which opens the web UI, ran inside a history scope labelled `tui`, the scope
   `serve` was already kept out of because a scope around the server claims whatever it sees
   outside a change. The bare run now gets none: each change made in the web UI is its own

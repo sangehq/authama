@@ -265,6 +265,7 @@ These changes can be made from the pages:
 | Re-render `~/.ssh/config` | Overview, SSH config | `authama ssh config render --yes` |
 | Reconcile: mint missing keys, record keys on disk, render | Overview | `authama ssh reconcile --yes --no-pin` |
 | Mint a profile's or host's missing keys | Keys | `authama ssh keygen <target> --no-pin --yes` |
+| Rebuild one key's `.pub`, a profile's, or every key's | Keys (row menu, or *Rebuild public keys*), a key's page | `authama ssh key regen-pub <profile/key \| profile \| --all> --yes` |
 | Add a key, optionally wired to a host | Keys | `authama ssh key add` |
 | Prune old snapshots | Snapshots | `authama ssh snapshots prune --keep` |
 | Restore a snapshot | the snapshot's page | `authama ssh snapshots restore <id> --yes` |
@@ -378,6 +379,11 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
 - **Restoring a bundle** decrypts with the identity file in `AUTHAMA_AGE_IDENTITY_FILE`, as set
   where `authama serve` runs; the web takes no identity and no passphrase. Only a bundle in the state
   home's `dist/`, named as `authama ssh bundle` names them, can be restored here.
+- **Rebuilding a `.pub` reads the private key where it is.** A preview's copy holds no private
+  key, so the rebuild derives each public key from the real one, as `ssh-keygen -y` does for the
+  command: it reads the key and copies nothing of it. The preview shows the `.pub` it would really
+  write. A key with a passphrase is skipped with the command to derive it by hand, as in the
+  terminal; nothing asks for a passphrase.
 - **Cancel** stops a job at its next step, never inside one. A rotate waiting on you is answered no.
 
 Some changes are terminal-only:
@@ -386,10 +392,6 @@ Some changes are terminal-only:
   passphrases;
 - revoking a key from its targets (`--revoke`), and restoring a bundle from anywhere but `dist/`, or
   with an identity that has a passphrase;
-- pinning host keys (`knownhosts init`, `knownhosts pin`): a scan reaches every host, and trusting
-  a key is a decision made per key;
-- `key regen-pub`: it needs the private keys, which a preview never copies, and may ask for a
-  passphrase;
 - `--no-key-backup`.
 
 `--read-only` serves none of the changes in the table above, and the pages show no forms.

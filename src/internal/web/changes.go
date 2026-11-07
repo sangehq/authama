@@ -15,6 +15,7 @@ import (
 	"github.com/simtabi/authama/src/internal/core/tokens"
 	"github.com/simtabi/authama/src/internal/services/change"
 	"github.com/simtabi/authama/src/internal/services/editor"
+	"github.com/simtabi/authama/src/internal/services/keysvc"
 	"github.com/simtabi/authama/src/internal/services/tokensvc"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
@@ -69,6 +70,7 @@ var actionFields = map[string][]string{
 	"token-import":      {},
 	"token-config-edit": {"body"},
 	"key-lifetime":      {"key", "lifetime"},
+	"key-regen-pub":     {"key", "profile", "all"},
 	"owner-init":        {},
 	"owner-pin-set":     {"pin_current_ref", "pin_new_ref", "pin_confirm_ref"},
 	"owner-pin-remove":  {"pin_current_ref"},
@@ -493,6 +495,26 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 			days = d
 		}
 		ch = change.KeyLifetime(ref, days)
+	case "key-regen-pub":
+		// One key, one profile's keys, or every key: the CLI's selectors, each
+		// a name, never a path.
+		var sel keysvc.Selection
+		key, profile, all := strings.TrimSpace(f.Get("key")), strings.TrimSpace(f.Get("profile")), checked(f, "all")
+		switch {
+		case all && key == "":
+			// The panel's profile choice stays filled in when "every key" is
+			// ticked; every key covers it.
+			sel.All = true
+		case key != "" && profile == "" && !all:
+			ref, err := keyRef(f)
+			errs = append(errs, err)
+			sel.Selectors = []string{ref.String()}
+		case profile != "" && key == "" && !all:
+			sel.Selectors = []string{n("profile")}
+		default:
+			errs = append(errs, badForm("choose one key, one profile, or every key"))
+		}
+		ch = change.KeyRegenPub(h.p, sel)
 	case "token-config-edit":
 		body := f.Get("body")
 		switch {

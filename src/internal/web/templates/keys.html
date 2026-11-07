@@ -1,5 +1,5 @@
 {{define "content"}}
-{{template "page_header" (header "SSH" "Keys" "Every key with its fingerprint and expiry, and the loose keys kept on purpose." (only (not .ReadOnly) (panel "Add a key" "add-key" "plus" | withTip "key-add")) (only (not .ReadOnly) (panel "Mint missing keys" "mint-keys" "key" | withTip "key-mint")))}}
+{{template "page_header" (header "SSH" "Keys" "Every key with its fingerprint and expiry, and the loose keys kept on purpose." (only (not .ReadOnly) (panel "Add a key" "add-key" "plus" | withTip "key-add")) (only (not .ReadOnly) (panel "Mint missing keys" "mint-keys" "key" | withTip "key-mint")) (only (and (not .ReadOnly) (gt (len .Data.Rows) 0)) (panel "Rebuild public keys" "regen-pub" "refresh" | withTip "key-regen-pub-many")))}}
 <div class="card">
   <div class="card-header"><h2 class="card-title">Keys</h2>{{if .Data.Rows}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data.Rows}} in the manifest</span>{{template "csv" "/exports/keys.csv"}}</div>{{end}}</div>
   {{if .Data.Rows}}
@@ -18,13 +18,15 @@
           <td>{{if .Vault}}1Password <span class="text-secondary">({{.Vault}})</span>{{else if .PrivateOnDisk}}<span class="badge badge-ok">yes</span>{{else}}<span class="badge badge-warn">not minted</span>{{end}}</td>
           <td class="text-end">
             {{if and (not $.ReadOnly) .Declared (not .Hosts)}}<form method="post" action="{{basePath}}/changes/preview" data-inline id="f-key-{{.Ref.Profile}}-{{.Ref.KeyName}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="key-delete"><input type="hidden" name="profile" value="{{.Ref.Profile}}"><input type="hidden" name="key" value="{{.Ref.KeyName}}"></form>{{end}}
+            {{if not $.ReadOnly}}<form method="post" action="{{basePath}}/changes/preview" data-inline id="f-regen-{{.Ref.Profile}}-{{.Ref.KeyName}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="key-regen-pub"><input type="hidden" name="key" value="{{.Ref}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for key %s" .Ref)}}
               <a class="dropdown-item" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}" data-inline{{tip "open-row"}}>{{icon "external-link"}}<span class="ms-2">Open</span></a>
               {{with index $.Data.Public .Ref.String}}<button type="button" class="dropdown-item" data-copy="{{.}}"{{tip "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the public key</span></button>{{end}}
               {{if .Fingerprint}}<button type="button" class="dropdown-item" data-copy="{{.Fingerprint}}"{{tip "copy-value"}}>{{icon "fingerprint"}}<span class="ms-2">Copy the fingerprint</span></button>{{end}}
               <button type="button" class="dropdown-item" data-copy="{{.IdentityFile}}"{{tip "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the identity file's path</span></button>
               <a class="dropdown-item" href="{{basePath}}/history?key={{.Ref.KeyName}}&amp;profile={{.Ref.Profile}}" data-inline{{tip "row-history"}}>{{icon "history"}}<span class="ms-2">History</span></a>
-              {{if not $.ReadOnly}}<a class="dropdown-item" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}#lifetime"{{tip "key-lifetime"}}>{{icon "hourglass"}}<span class="ms-2">Set lifetime</span></a>
+              {{if not $.ReadOnly}}<button type="submit" class="dropdown-item" form="f-regen-{{.Ref.Profile}}-{{.Ref.KeyName}}"{{tip "key-regen-pub"}}>{{icon "refresh"}}<span class="ms-2">Rebuild the .pub</span></button>
+              <a class="dropdown-item" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}#lifetime"{{tip "key-lifetime"}}>{{icon "hourglass"}}<span class="ms-2">Set lifetime</span></a>
               {{if not $.DevRoot}}<a class="dropdown-item" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}" data-inline{{tip "key-open-rotate"}}>{{icon "recycle"}}<span class="ms-2">Rotate or roll back</span></a>
               <a class="dropdown-item text-danger" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}#revoke"{{tip "key-revoke"}}>{{icon "ban"}}<span class="ms-2">Revoke</span></a>{{end}}{{end}}
               {{if and (not $.ReadOnly) .Declared (not .Hosts)}}<div class="dropdown-divider"></div>
@@ -84,6 +86,14 @@
           <div class="mb-3"><label class="form-label" for="k-type">Type</label><select class="form-select" id="k-type" name="key_type"><option value="">the manifest's default</option><option>ed25519</option><option>ecdsa</option><option>rsa</option></select></div>
           <div class="mb-3"><label class="form-label" for="k-host">Wire it to host <span class="text-secondary">(optional alias in that profile)</span></label><input class="form-control" id="k-host" name="host" autocomplete="off" spellcheck="false"></div>
           <datalist id="k-profiles">{{range .Data.Rows}}<option value="{{.Ref.Profile}}">{{end}}</datalist>
+          {{template "panel_actions" ""}}
+        </form>
+{{template "panel_close"}}
+{{template "panel_open" (header "regen-pub" "Rebuild public keys" "Each .pub is rebuilt from its private key or 1Password item. No private key changes.")}}
+        {{template "change_open" .}}<input type="hidden" name="action" value="key-regen-pub">
+          <div class="mb-2"><label class="form-label" for="rp-profile">Profile</label><select class="form-select" id="rp-profile" name="profile">{{range .Data.Profiles}}<option value="{{.}}">{{.}}</option>{{end}}</select></div>
+          <label class="form-check mb-2"><input class="form-check-input" type="checkbox" name="all" value="1"><span class="form-check-label">Every key instead</span></label>
+          <div class="form-hint mb-2">The same as <code>authama ssh key regen-pub &lt;profile&gt;</code>, or <code>--all</code>. A key with a passphrase is skipped, with the command to derive it by hand.</div>
           {{template "panel_actions" ""}}
         </form>
 {{template "panel_close"}}

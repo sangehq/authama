@@ -18,6 +18,11 @@ which writes an encrypted backup of `~/.ssh` first and stays in the terminal (th
 copy the command). Deploy, rotate, roll back and revoke reach real servers, so they run as jobs and
 are refused in dev mode.
 
+A broken or missing `.pub` is rebuilt from its private key (or its 1Password item) with
+`authama ssh key regen-pub`, which never changes the private key. The web UI does it from a key's
+page, a row's menu, or *Rebuild public keys* on the Keys page for a profile or every key, previewed
+like any change.
+
 ## Lifetime
 
 A key's lifetime is its `rotate_after_days`. Set on the key, it wins; unset, the key inherits
