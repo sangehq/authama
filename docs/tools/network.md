@@ -35,7 +35,20 @@ authama ssh net
 
 Exit code is non-zero if a `requires_vpn` host is unreachable, so it works as a
 pre-flight gate in scripts. The check is a fast TCP probe; it never changes
-anything.
+anything. Hosts are probed up to eight at a time, so a few unreachable hosts cost one
+timeout (4 seconds), not one each; rows keep the manifest's order.
+
+## In the web UI
+
+**Check connections**, on the Overview and Hosts pages, runs `ssh net` and shows each host's
+status in the command's own words, with a warning when a host that needs a VPN does not answer
+(the case that makes the command exit non-zero). A host's page has **Check connection** for that
+host alone (`ssh net <alias>`). The result opens in the side panel, and **Check again** probes
+the same hosts again.
+
+No page probes as it loads; only the check does, when you ask, so the pages never wait on the
+network. The check takes a host alias or a profile name from the manifest, nothing else, and a
+read-only server offers it too, since it writes nothing.
 
 ## Fail-fast on every network action
 

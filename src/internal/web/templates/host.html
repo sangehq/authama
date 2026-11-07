@@ -7,6 +7,7 @@
     </div>
     <div class="col-auto ms-auto btn-list">
       {{if not $.ReadOnly}}<a href="#host-edit" class="btn btn-primary" data-bs-toggle="offcanvas" role="button" aria-controls="host-edit"{{tip "host-edit"}}>{{icon "pencil"}}<span class="ms-1">Edit</span></a>{{end}}
+      <a href="{{basePath}}/net?host={{.Alias}}" class="btn btn-outline-secondary" data-inline{{tip "net-host"}}>{{icon "activity"}}<span class="ms-1">Check connection</span></a>
       <a href="{{basePath}}/history?host={{.Alias}}" class="btn btn-outline-secondary"{{tip "history"}}>{{icon "history"}}<span class="ms-1">History</span></a>
       <button type="button" class="btn btn-outline-secondary" data-copy="ssh {{.Alias}}"{{tip "copy-ssh"}}>{{icon "copy"}}<span class="ms-1">Copy ssh {{.Alias}}</span></button>
     </div>

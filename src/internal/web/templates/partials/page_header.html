@@ -42,7 +42,7 @@
 
 {{/* The attributes an action's link carries: a slide-in panel opens, a
      download downloads (through the CSV dialog for a CSV). */}}
-{{define "action_attrs"}}{{if .Tip}} data-tip="{{.Tip}}"{{end}}{{if .Panel}} data-bs-toggle="offcanvas" role="button" aria-controls="{{.Panel}}"{{end}}{{if .Modal}} data-bs-toggle="modal" data-bs-target="#{{.Modal}}" role="button"{{end}}{{if .Download}} download{{if .CSV}} data-csv-export{{end}}{{end}}{{end}}
+{{define "action_attrs"}}{{if .Tip}} data-tip="{{.Tip}}"{{end}}{{if .Panel}} data-bs-toggle="offcanvas" role="button" aria-controls="{{.Panel}}"{{end}}{{if .Modal}} data-bs-toggle="modal" data-bs-target="#{{.Modal}}" role="button"{{end}}{{if .Download}} download{{if .CSV}} data-csv-export{{end}}{{end}}{{if .Inline}} data-inline{{end}}{{end}}
 
 {{/* A panel form's footer: Cancel, and the submit button with its label. */}}
 {{define "panel_actions"}}<div class="d-flex align-items-center justify-content-end gap-2 pt-3 mt-3 border-top">

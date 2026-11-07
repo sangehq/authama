@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Check connections from the web UI.** The Overview and Hosts pages run `ssh net` on request and
+  show each host's status in the command's words, warning when a host that needs a VPN does not
+  answer; a host's page checks that host alone. No page probes as it loads, the check takes only
+  manifest names, and read-only servers offer it.
 - **Pin host keys from the web UI.** A host's page scans it, shows each key's fingerprint, and pins
   the keys only once you trust them, as `ssh knownhosts pin` does. **Hosts → Pin host keys** runs
   `ssh knownhosts init` for a profile or every profile (trust on first use). Both run as jobs, with
@@ -117,6 +121,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `ssh net` probes up to eight hosts at a time instead of one after another, so unreachable hosts
+  cost one timeout between them rather than one each. Rows keep the manifest's order.
 - **The lists' CSV downloads (`/exports/hosts.csv` and the rest) now come from the export
   pipeline**, the same one behind the Export page and `authama export`, for every option their
   links carry. The files are unchanged byte for byte, which a test checks for every list and option.

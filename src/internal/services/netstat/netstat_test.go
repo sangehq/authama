@@ -4,9 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/util/netcheck"
 )
 
 // Parity reference: v1's facade (1066-1078)
@@ -210,5 +214,58 @@ func TestUnresolvableManifestIsAnError(t *testing.T) {
 	}
 	if _, err := Status(&m, ""); err == nil {
 		t.Error("an unresolvable manifest should error rather than return a partial list")
+	}
+}
+
+// Hosts are probed a few at a time, never more than probeParallel, and the
+// rows still come back in the manifest's order whichever probe ends first.
+func TestHostsAreProbedInParallelInManifestOrder(t *testing.T) {
+	var raw strings.Builder
+	raw.WriteString(`{"version":1,"defaults":{"key_type":"ed25519"},"profiles":{"work":{"key_scope":"per_service","hosts":[`)
+	for i := 0; i < 20; i++ {
+		if i > 0 {
+			raw.WriteString(",")
+		}
+		fmt.Fprintf(&raw, `{"alias":"h%02d","hostname":"h%02d.example","user":"u"}`, i, i)
+	}
+	raw.WriteString(`]}}}`)
+	var m manifest.Manifest
+	if err := json.Unmarshal([]byte(raw.String()), &m); err != nil {
+		t.Fatal(err)
+	}
+
+	var mu sync.Mutex
+	running, most := 0, 0
+	prev := check
+	check = func(host string, port int, _ bool, _, _ string, _ time.Duration, _ bool) netcheck.NetStatus {
+		mu.Lock()
+		running++
+		most = max(most, running)
+		mu.Unlock()
+		// Later hosts answer first, so the order has to be kept on purpose.
+		var n int
+		_, _ = fmt.Sscanf(host, "h%d.example", &n)
+		time.Sleep(time.Duration(25-n) * time.Millisecond)
+		mu.Lock()
+		running--
+		mu.Unlock()
+		return netcheck.NetStatus{Host: host, Port: port, Reachable: true}
+	}
+	t.Cleanup(func() { check = prev })
+
+	rows, err := Status(&m, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 20 {
+		t.Fatalf("got %d rows, want 20", len(rows))
+	}
+	for i, r := range rows {
+		if want := fmt.Sprintf("h%02d", i); r.Alias != want || r.Status.Host != want+".example" {
+			t.Fatalf("row %d is %s (%s), want %s", i, r.Alias, r.Status.Host, want)
+		}
+	}
+	if most < 2 || most > probeParallel {
+		t.Errorf("%d probes ran at once, want 2..%d", most, probeParallel)
 	}
 }

@@ -1,0 +1,32 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "SSH" $.Title "Whether each host answers on its SSH port now, and whether it needs a VPN. Probed when you asked, not when a page loads.")}}
+{{if .GatedDown}}<div class="alert alert-warning" role="alert">{{icon "alert-triangle"}}<span class="ms-1">{{.GatedDown}} host(s) that need a VPN did not answer. <code>{{.Command}}</code> exits non-zero for this.</span></div>{{end}}
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">{{.Online}} of {{len .Rows}} reachable</h2>
+    <div class="card-actions"><a class="btn btn-sm btn-outline-secondary" href="{{basePath}}/net{{if .Selector}}?{{if .IsProfile}}profile{{else}}host{{end}}={{.Selector}}{{end}}" data-inline{{tip "net-again"}}>{{icon "refresh"}}<span class="ms-1">Check again</span></a></div>
+  </div>
+  {{if .Rows}}
+  <div class="table-responsive" tabindex="0">
+    <table class="table table-vcenter card-table" id="net-table">
+      <caption class="visually-hidden">Each host's reachability, as authama ssh net reports it</caption>
+      <thead><tr><th scope="col">Host</th><th scope="col">Profile</th><th scope="col">Status</th><th scope="col">VPN</th><th scope="col">Detail</th></tr></thead>
+      <tbody>
+        {{range .Rows}}
+        <tr>
+          <th scope="row"><a href="{{basePath}}/hosts/{{.Alias}}"><code>{{.Alias}}</code></a></th>
+          <td><code>{{.Profile}}</code></td>
+          <td>{{if .Online}}<span class="badge badge-ok">online</span>{{else}}<span class="badge badge-warn">offline</span>{{end}}</td>
+          <td>{{if .RequiresVPN}}needed{{with .VPNName}} ({{.}}){{end}}{{else}}<span class="text-secondary">-</span>{{end}}</td>
+          <td class="text-break">{{.Message}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <div class="card-body">{{template "empty" (empty "server" "No hosts to check" "Add a host, then check whether it answers.")}}</div>
+  {{end}}
+  <div class="card-footer text-secondary">The same as <code>{{.Command}}</code>. Reading only: nothing is written.</div>
+</div>
+{{end}}{{end}}
