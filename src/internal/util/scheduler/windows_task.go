@@ -13,6 +13,10 @@ const notifyHour = "09:00"
 // the two never queue on the lock.
 const vmSyncHour = "09:30"
 
+// exportsHour is when the daily scheduled exports run: after the VM sync,
+// so a synced host is in them.
+const exportsHour = "10:00"
+
 // timerUnit is the systemd timer that drives the notifier, built from
 // notifyHour so it cannot drift from the other two platforms.
 func timerUnit() string { return timerUnitFor(Label) }

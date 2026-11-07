@@ -38,6 +38,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   it). The new `export.save_to` setting picks the default store. Both stores are read, and on a
   name in both yours wins. `list`, `show` and `delete` complete the set, and a manifest save or
   delete asks first, like any manifest change.
+
+- **Pivot, saved selections on the Export page, compare, and scheduled exports.** A `pivot` step
+  (`--pivot rows:column`) makes a row per value of one field and a column per value of another,
+  counting by default, with optional totals. The Export page gains a *Saved* card. It opens, saves
+  and deletes saved selections: yours at once, the manifest's through a change preview. Its compare
+  button shows the rows only one of two selections holds, side by side. The *Add column* list
+  groups related fields such as `key.*` and `profile.*`. `authama export schedule add <name> --to
+  <folder>` writes a saved selection to a folder every day once `authama export schedule install`
+  has registered the daily job.
 - **Hosts for ssh and SSH clients in `authama export`.** `authama export hosts --format` takes
   `ssh_config`, `termius` and every `ssh host export` client (`hosts-csv`, `windows-terminal`,
   `iterm2`, `putty`, `remmina`, `securecrt`, `mobaxterm`), filtered like any list. `ssh_config` is

@@ -101,6 +101,7 @@ var tips = map[string]string{
 	"export-columns-reset": "Puts back the list's own columns, names and order.",
 	"export-add-column":    "Adds the chosen field as a column at the end.",
 	"export-add-step":      "Adds the chosen transform as the last step.",
+	"export-save":          "Saves this selection under the name given: in your own store, or in the manifest after a preview.",
 	"export-copy":          "Copies the file, in the chosen format, to the clipboard. Nothing is saved.",
 	"csv-profiles":         "Choose which profiles' rows go in the file.",
 	"csv-keys":             "Choose which keys' rows go in the file.",

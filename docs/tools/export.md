@@ -48,6 +48,7 @@ authama export hosts --template 'ssh=ssh {user}@{hostname} -p {port}' --columns 
 authama export hosts --dedupe profile --columns profile,alias
 authama export hosts --group-by profile --aggregate count,list:env --totals --format markdown
 authama export hosts --transform '{"kind":"map","field":"status","values":{"needs-redeploy":"pending"}}'
+authama export hosts --pivot profile:env --totals
 ```
 
 | Transform | What it does |
@@ -59,11 +60,12 @@ authama export hosts --transform '{"kind":"map","field":"status","values":{"need
 | `join` | makes a list text, joined by `sep` (`, ` by default) |
 | `dedupe` | keeps the first row of each distinct `by` (every field when `by` is empty) |
 | `group` | a row per distinct `by`, with `aggregates` (`count`, and `sum`, `min`, `max`, `list`, `first` of a field); `totals` adds a last row over every group |
+| `pivot` | a row per distinct `by` and a column per distinct value of `field` (sorted; `(none)` for an empty one), each cell the one aggregate given (`count` by default); a list field puts a row in each of its values' columns; `totals` adds a total column and a last row, which count each row once |
 
 `map`, `format`, `split` and `join` rewrite their `field` unless `as` names another. The flags add steps in
 this order: each `--transform` (one step as JSON, the shape a saved selection holds), each
 `--template as=text`, `--dedupe`, then `--group-by` with `--aggregate` (`count`, or `op:field[=as]`) and
-`--totals`. A saved selection lists its steps under `transforms`, and they run in that order. `--fields`
+`--totals`, or `--pivot rows:column` with the first `--aggregate` and `--totals`. A saved selection lists its steps under `transforms`, and they run in that order. `--fields`
 lists the fields after the transforms. A totals row stays last whatever the sort, and `--limit` does not
 count it. A step naming a field that does not exist yet fails, naming the step. The SSH client formats
 below take no transforms, since they write the hosts themselves.
@@ -101,6 +103,34 @@ asks first at a terminal (`--yes` skips that), takes the lock and a snapshot, an
 63 of `a-z`, `0-9`, `.`, `_` and `-`, starting with a letter or digit, and cannot be a built-in list's. A saved
 selection of a version this authama cannot read is listed with the reason and never used. `--selection`
 takes a saved name too, when no file has that name.
+
+On the Export page the **Saved** card lists both stores. Click a name to open it; save the page's
+selection under a name in *Mine* at once, or in the *Manifest* through the usual change preview and
+confirmation. The compare button beside a saved selection compares it with the page's: the rows are
+matched on the columns both have, and the rows only one holds are shown side by side. A read-only
+server lists and opens saved selections and compares them, and saves nothing.
+
+### Scheduled exports
+
+A schedule writes a saved selection to a folder every day, as `<name>.<extension>` (mode 0600, replaced
+each time):
+
+```bash
+authama export schedule add prd-hosts --to ~/Reports              # csv by default
+authama export schedule add prd-hosts --format json --to ~/Reports
+authama export schedule install                                     # one daily job runs them all
+authama export schedule list
+authama export schedule run                                         # write them now
+authama export schedule remove prd-hosts --format json
+authama export schedule uninstall
+```
+
+`install` registers one daily job (10:00) with this system's scheduler, launchd, systemd (else cron) or
+schtasks, running `authama export schedule run --quiet`; it is refused in dev mode. `run` writes every
+schedule and reports any that fails (a deleted selection, say) while the rest still write. Schedules live in
+`<state home>/exports/schedules.json` and are yours alone, since a folder is a path on this machine. A
+folder inside `~/.ssh` is refused, and the SSH client formats are not scheduled. `remove` leaves the files
+already written.
 
 ### Hosts for ssh and SSH clients
 

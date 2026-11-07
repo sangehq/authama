@@ -35,7 +35,7 @@ var Stores = []string{StoreUser, StoreManifest}
 
 // Reserved are names a saved selection cannot take: the built-in lists, and
 // the words `authama export` gives its own meaning.
-var Reserved = []string{"selections"}
+var Reserved = []string{"selections", "schedule"}
 
 // Saved is one saved selection.
 type Saved struct {

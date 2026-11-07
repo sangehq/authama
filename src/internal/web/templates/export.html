@@ -6,7 +6,7 @@
      download. */}}
 {{define "content"}}{{with .Data}}
 {{template "page_header" (header "Export" "Export" "Any list as CSV, TSV, JSON, YAML, a PHP or JavaScript array, Markdown or HTML, and hosts as ssh_config or for an SSH client: filtered, with the columns you choose. Nothing here holds a secret.")}}
-<div class="export-page" data-export-page data-run="{{u "/exports/run"}}" data-command="{{brandCommand}}">
+<div class="export-page" data-export-page data-run="{{u "/exports/run"}}" data-command="{{brandCommand}}" data-saved-url="{{u "/api/export/selections"}}" data-compare-url="{{u "/exports/compare"}}">
   <div class="card">
     <div class="card-header">
       <ul class="nav nav-bordered card-header-tabs" role="tablist" aria-label="What each row is">
@@ -16,7 +16,27 @@
 
     <div class="card-body p-0">
       <div class="row g-0">
-        <aside class="col-lg-4 col-xl-3 border-end" aria-label="Filters">
+        <aside class="col-lg-4 col-xl-3 border-end" aria-label="Saved selections and filters">
+          <div class="card-body border-bottom" role="group" aria-label="Saved selections">
+            <div class="d-flex align-items-center mb-2">
+              <h3 class="card-title mb-0">{{icon "folder"}}<span class="ms-2">Saved</span> <span class="badge badge-info ms-2" data-export-saved-count></span></h3>
+            </div>
+            <div class="list-group list-group-flush export-list export-saved mb-2" data-export-saved></div>
+            <p class="text-secondary small mb-2" data-export-saved-empty>None saved yet.</p>
+            {{- if not $.ReadOnly}}
+            <div class="input-group input-group-sm">
+              <input class="form-control" maxlength="63" autocomplete="off" placeholder="prd-hosts" aria-label="A name to save this selection as" data-export-save-name>
+              <select class="form-select flex-grow-0 w-auto" aria-label="Where to save it" data-export-save-store>
+                <option value="user">Mine</option>
+                <option value="manifest">Manifest</option>
+              </select>
+              <button type="button" class="btn" data-export-save{{tip "export-save"}}>{{icon "plus"}}<span class="ms-1">Save</span></button>
+            </div>
+            <small class="form-hint">Mine stays private to this account. The manifest's travel with it, and saving there is a change you preview first.</small>
+            <form method="post" action="{{basePath}}/changes/preview" hidden data-export-manifest-save><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="export-selection-save"><input type="hidden" name="name" value=""><input type="hidden" name="selection" value=""></form>
+            <form method="post" action="{{basePath}}/changes/preview" hidden data-export-manifest-delete><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="export-selection-delete"><input type="hidden" name="name" value=""></form>
+            {{- end}}
+          </div>
           <div class="card-body border-bottom">
             <div class="d-flex align-items-center mb-3">
               <h3 class="card-title mb-0">{{icon "filter"}}<span class="ms-2">Filter</span></h3>
@@ -75,6 +95,7 @@
             </div>
           </div>
           <div class="table-responsive export-preview" tabindex="0" role="region" aria-label="Preview of the first rows" data-export-preview></div>
+          <div class="card-body border-top" role="region" aria-label="Comparison" hidden data-export-compare></div>
         </section>
       </div>
     </div>

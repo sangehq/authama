@@ -175,7 +175,7 @@ func TestReadOnlyServesNoChangeAndShowsNoForm(t *testing.T) {
 			t.Errorf("read-only %s: %d, want 405", path, rec.Code)
 		}
 	}
-	for _, page := range []string{"/", "/profiles", "/hosts", "/hosts/gh", "/keys", "/snapshots", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config"} {
+	for _, page := range []string{"/", "/profiles", "/hosts", "/hosts/gh", "/keys", "/snapshots", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export"} {
 		if strings.Contains(c.get(page).Body.String(), "/changes/preview") {
 			t.Errorf("read-only %s shows a change form", page)
 		}
@@ -289,7 +289,7 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 		t.Fatal("the changes above took no snapshot to offer a restore of")
 	}
 	for _, page := range []string{"/", "/profiles", "/hosts", "/hosts/gh", "/hosts/devbox", "/keys", "/snapshots",
-		"/snapshots/" + openable, "/keys/" + fixtureKey(t, c), "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config"} {
+		"/snapshots/" + openable, "/keys/" + fixtureKey(t, c), "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export"} {
 		for _, m := range action.FindAllStringSubmatch(c.get(page).Body.String(), -1) {
 			seen[m[1]] = true
 			_, change := actionFields[m[1]]

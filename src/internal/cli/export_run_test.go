@@ -113,6 +113,9 @@ func TestExportTransforms(t *testing.T) {
 	if out := run(t, "export", "hosts", "--transform", `{"kind":"format","field":"alias","format":"upper"}`, "--columns", "alias", "--sort", "alias", "--no-header"); out != "DB1\nNAS\nWEB1\n" {
 		t.Errorf("--transform:\n%s", out)
 	}
+	if out := run(t, "export", "hosts", "--pivot", "profile:user", "--totals", "--sort", "profile"); out != "profile,deploy,me,total\nhome,0,1,1\nwork,2,0,2\ntotal,2,1,3\n" {
+		t.Errorf("pivot:\n%s", out)
+	}
 	if out := run(t, "export", "hosts", "--template", "where={profile}/{alias}", "--fields"); !strings.HasSuffix(out, "\nwhere\n") {
 		t.Errorf("--fields after a transform:\n%s", out)
 	}
@@ -120,7 +123,9 @@ func TestExportTransforms(t *testing.T) {
 		args []string
 		want string
 	}{
-		{[]string{"--aggregate", "count"}, "need --group-by"},
+		{[]string{"--aggregate", "count"}, "need --group-by or --pivot"},
+		{[]string{"--pivot", "profile"}, "give rows:column"},
+		{[]string{"--pivot", "profile:tags", "--group-by", "profile"}, "not both"},
 		{[]string{"--template", "nope"}, "give as=template"},
 		{[]string{"--transform", `{"kind":"map","expr":"x"}`}, "unknown field"},
 		{[]string{"--group-by", "profile", "--aggregate", "avg:port"}, `no aggregate "avg"`},
@@ -198,6 +203,63 @@ func TestExportSelectionsSavedByName(t *testing.T) {
 		{[]string{"export", "selections", "save", "x", "--from", webOnly, "--to", "cloud"}, `no store "cloud"`},
 		{[]string{"export", "selections", "save", "x"}, "give --from"},
 		{[]string{"export", "selections", "delete", "gone"}, "no saved selection"},
+	} {
+		if _, err := runErr(t, c.args...); err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%v: %v, want %q", c.args, err, c.want)
+		}
+	}
+}
+
+// A schedule writes a saved selection to its folder on `schedule run`, and
+// refuses what it cannot write.
+func TestExportSchedules(t *testing.T) {
+	p := editHome(t)
+	run(t, "profile", "add", "work")
+	run(t, "host", "add", "work", "web1", "-H", "web1.example", "-u", "deploy", "--tag", "prd")
+	sel := filepath.Join(t.TempDir(), "sel.json")
+	if err := os.WriteFile(sel, []byte(`{"version":1,"grain":"host","columns":[{"field":"alias"}]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	run(t, "export", "selections", "save", "web", "--from", sel)
+	out := t.TempDir()
+	folder := filepath.Join(out, "reports")
+	if got := run(t, "export", "schedule", "add", "web", "--to", folder); !strings.Contains(got, filepath.Join(folder, "web.csv")) {
+		t.Errorf("add: %s", got)
+	}
+	run(t, "export", "schedule", "add", "web", "--format", "json", "--to", folder)
+	if got := run(t, "export", "schedule", "list"); !strings.Contains(got, "web        csv") || !strings.Contains(got, "web.json") {
+		t.Errorf("list:\n%s", got)
+	}
+	if got := run(t, "export", "schedule", "run"); strings.Count(got, "wrote 1 row(s)") != 2 {
+		t.Errorf("run: %s", got)
+	}
+	b, err := os.ReadFile(filepath.Join(folder, "web.csv"))
+	if err != nil || string(b) != "alias\nweb1\n" {
+		t.Errorf("web.csv = %q, %v", b, err)
+	}
+	if fi, _ := os.Stat(filepath.Join(folder, "web.json")); runtime.GOOS != "windows" && fi.Mode().Perm()&0o077 != 0 {
+		t.Errorf("web.json is %v", fi.Mode())
+	}
+	if got := run(t, "export", "schedule", "run", "--quiet"); got != "" {
+		t.Errorf("--quiet printed %q", got)
+	}
+	// A selection deleted under a schedule fails that schedule, loudly.
+	run(t, "export", "selections", "delete", "web")
+	if _, err := runErr(t, "export", "schedule", "run", "--quiet"); err == nil || !strings.Contains(err.Error(), "2 of 2 scheduled export(s) failed") {
+		t.Errorf("run with the selection gone: %v", err)
+	}
+	if got := run(t, "export", "schedule", "remove", "web", "--format", "json"); !strings.Contains(got, "removed 1") {
+		t.Errorf("remove one: %s", got)
+	}
+	run(t, "export", "schedule", "remove", "web")
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"export", "schedule", "add", "web", "--to", folder}, "no saved selection"},
+		{[]string{"export", "schedule", "add", "x"}, "give --to"},
+		{[]string{"export", "schedule", "add", "x", "--to", filepath.Join(p.SSHDir, "out")}, "inside"},
+		{[]string{"export", "schedule", "remove", "web"}, `no schedule for "web"`},
 	} {
 		if _, err := runErr(t, c.args...); err == nil || !strings.Contains(err.Error(), c.want) {
 			t.Errorf("%v: %v, want %q", c.args, err, c.want)

@@ -75,3 +75,19 @@ func TestVMSyncJobIsItsOwn(t *testing.T) {
 		t.Fatalf("schtasks: %v", a)
 	}
 }
+
+func TestTheExportsJobIsItsOwn(t *testing.T) {
+	if s := buildServiceFor(ExportsLabel, ExportsCommand()); !strings.Contains(s, "Description=authama scheduled exports") ||
+		!strings.Contains(s, "export schedule run --quiet") {
+		t.Fatalf("service: %s", s)
+	}
+	if s := timerUnitFor(ExportsLabel); !strings.Contains(s, "OnCalendar=*-*-* 10:00:00") {
+		t.Fatalf("timer: %s", s)
+	}
+	if p := buildPlist(ExportsLabel, "/x/authama export schedule run"); !strings.Contains(p, "<integer>10</integer><key>Minute</key><integer>0</integer>") {
+		t.Fatalf("plist: %s", p)
+	}
+	if a := schtasksArgs("x", ExportsLabel); a[9] != "10:00" {
+		t.Fatalf("schtasks: %v", a)
+	}
+}
