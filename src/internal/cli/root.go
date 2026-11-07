@@ -170,6 +170,13 @@ func addGroupHelp(c *cobra.Command) {
 	if !c.HasParent() || !c.HasSubCommands() {
 		return
 	}
+	// A group with no action of its own refuses a word it has no verb for.
+	// Cobra would print the group's help and exit 0, so a script still calling
+	// a removed verb (`ssh host export`) succeeded and did nothing.
+	if c.Run == nil && c.RunE == nil {
+		c.Args = rootArgs
+		c.RunE = groupHelp
+	}
 	for _, sub := range c.Commands() {
 		if sub.Name() == "help" {
 			return
@@ -229,7 +236,8 @@ func unknownCommandBeforeFlags(c *cobra.Command, err error) error {
 	return unknownCommand(c, c.Flags().Arg(0))
 }
 
-// rootArgs refuses any word given to the root, as cobra.NoArgs did, but says
+// rootArgs refuses any word given to the root, or to a group with no action
+// of its own (addGroupHelp), as cobra.NoArgs did, but says
 // which commands it may have meant: NoArgs reports an unknown command with no
 // suggestion, so `authama termus` never pointed at `termius`.
 func rootArgs(c *cobra.Command, args []string) error {

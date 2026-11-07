@@ -172,3 +172,57 @@ func TestABareRunServesWithNoHistoryScopeOpen(t *testing.T) {
 		t.Errorf("%d history scope(s) open while a bare run serves, want 0", depth)
 	}
 }
+
+// Every group refuses a word it has no verb for, with a non-zero exit. Cobra
+// printed a group's help and exited 0 instead, so `ssh host export`, removed
+// on 2026-11-07, still "succeeded" in a script and wrote nothing.
+func TestEveryGroupRefusesAnUnknownVerb(t *testing.T) {
+	editHome(t)
+	groups := 0
+	var walk func(path []string)
+	root := newRootCmd()
+	walk = func(path []string) {
+		c, _, err := root.Find(path)
+		if err != nil {
+			t.Fatalf("%v: %v", path, err)
+		}
+		for _, sub := range c.Commands() {
+			if sub.Name() == "help" || !sub.IsAvailableCommand() {
+				continue
+			}
+			if sub.HasSubCommands() {
+				walk(append(append([]string{}, path...), sub.Name()))
+			}
+		}
+		if len(path) == 0 || !c.HasSubCommands() {
+			return
+		}
+		groups++
+		r := newRootCmd()
+		r.SetArgs(append(append([]string{}, path...), "nosuchverb"))
+		var out syncBuffer
+		r.SetOut(&out)
+		r.SetErr(&out)
+		err = r.Execute()
+		// A group with an action of its own (export takes a list's name)
+		// reports the word in its own words; the rest say "unknown command".
+		if err == nil || !strings.Contains(err.Error(), `"nosuchverb"`) {
+			t.Errorf("`%s nosuchverb` was not refused: %v\n%s", c.CommandPath(), err, out.String())
+		}
+	}
+	walk(nil)
+	if groups < 8 {
+		t.Fatalf("only %d groups inspected; the walk is broken", groups)
+	}
+
+	for _, removed := range [][]string{{"ssh", "host", "export", "termius"}, {"ssh", "termius", "export"}} {
+		r := newRootCmd()
+		r.SetArgs(removed)
+		var out syncBuffer
+		r.SetOut(&out)
+		r.SetErr(&out)
+		if err := r.Execute(); err == nil {
+			t.Errorf("%v succeeded; it was removed and must fail", removed)
+		}
+	}
+}

@@ -207,6 +207,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   buttons and dev banner) is removed, with the rule that forced panel columns to full width.
 ### Fixed
 
+- A word a nested group has no verb for (`authama ssh host export`, `ssh termius export`, `ssh profile
+  nosuch`) printed the group's help and exited 0, so a script still calling a removed verb succeeded
+  and did nothing. Every group without an action of its own now refuses it with exit 1 and a
+  suggestion, as `ssh` and `token` already did; the group on its own still prints its help.
 - The web UI's list of terminal-only changes still named pinning host keys, which the web has done
   since #140.
 - A bare `authama`, which opens the web UI, ran inside a history scope labelled `tui`, the scope
