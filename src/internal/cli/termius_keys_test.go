@@ -19,7 +19,7 @@ func termiusKeysHome(t *testing.T) (keyPath string, clip *[]string) {
 	exportHome(t)
 	var got []string
 	t.Cleanup(stubClipboard(func(s string) error { got = append(got, s); return nil }))
-	out := run(t, "termius", "keys")
+	out := run(t, "ssh", "termius", "keys")
 	for _, line := range strings.Split(out, "\n") {
 		if f := strings.Fields(line); len(f) == 3 && f[0] == "oribi-web" {
 			keyPath = f[2]
@@ -39,7 +39,7 @@ func termiusKeysHome(t *testing.T) (keyPath string, clip *[]string) {
 
 func TestTermiusKeysListsLabelsAndPaths(t *testing.T) {
 	keyPath, clip := termiusKeysHome(t)
-	out := run(t, "termius", "keys")
+	out := run(t, "ssh", "termius", "keys")
 	label := filepath.Base(keyPath)
 	if !strings.Contains(out, "TERMIUS LABEL") || !strings.Contains(out, label) || strings.HasSuffix(keyPath, ".pub") {
 		t.Errorf("list should show label %s and the private key path:\n%s", label, out)
@@ -47,7 +47,7 @@ func TestTermiusKeysListsLabelsAndPaths(t *testing.T) {
 	if strings.Contains(out, "github-me") {
 		t.Errorf("git host listed without --include-git:\n%s", out)
 	}
-	if !strings.Contains(run(t, "termius", "keys", "--include-git"), "github-me") {
+	if !strings.Contains(run(t, "ssh", "termius", "keys", "--include-git"), "github-me") {
 		t.Error("--include-git should list the git host")
 	}
 	if strings.Contains(out, "throwaway-test-key") || len(*clip) != 0 {
@@ -57,7 +57,7 @@ func TestTermiusKeysListsLabelsAndPaths(t *testing.T) {
 
 func TestTermiusKeysCopiesWithoutPrinting(t *testing.T) {
 	keyPath, clip := termiusKeysHome(t)
-	out := run(t, "termius", "keys", "oribi-web")
+	out := run(t, "ssh", "termius", "keys", "oribi-web")
 	if len(*clip) != 1 || (*clip)[0] != fakeKey {
 		t.Fatalf("the private key was not copied: %q", *clip)
 	}
@@ -71,11 +71,11 @@ func TestTermiusKeysCopiesWithoutPrinting(t *testing.T) {
 
 func TestTermiusKeysClearAfterAndClear(t *testing.T) {
 	_, clip := termiusKeysHome(t)
-	run(t, "termius", "keys", "oribi-web", "--clear-after", "1s")
+	run(t, "ssh", "termius", "keys", "oribi-web", "--clear-after", "1s")
 	if len(*clip) != 2 || (*clip)[1] != "" {
 		t.Errorf("--clear-after should copy then empty the clipboard: %q", *clip)
 	}
-	run(t, "termius", "keys", "--clear")
+	run(t, "ssh", "termius", "keys", "--clear")
 	if len(*clip) != 3 || (*clip)[2] != "" {
 		t.Errorf("--clear should empty the clipboard: %q", *clip)
 	}
@@ -87,7 +87,7 @@ func TestTermiusKeysPrintWarnsOnStderr(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	root.SetOut(&stdout)
 	root.SetErr(&stderr)
-	root.SetArgs([]string{"termius", "keys", "oribi-web", "--print"})
+	root.SetArgs([]string{"ssh", "termius", "keys", "oribi-web", "--print"})
 	if err := root.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -101,16 +101,16 @@ func TestTermiusKeysPrintWarnsOnStderr(t *testing.T) {
 
 func TestTermiusKeysRefusesUnknownAndNonKeys(t *testing.T) {
 	keyPath, clip := termiusKeysHome(t)
-	if _, err := runErr(t, "termius", "keys", "nope"); err == nil {
+	if _, err := runErr(t, "ssh", "termius", "keys", "nope"); err == nil {
 		t.Error("an unknown alias was accepted")
 	}
-	if _, err := runErr(t, "termius", "keys", "github-me"); err == nil {
+	if _, err := runErr(t, "ssh", "termius", "keys", "github-me"); err == nil {
 		t.Error("a git host was copied without --include-git")
 	}
 	if err := os.WriteFile(keyPath, []byte("not a key"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := runErr(t, "termius", "keys", "oribi-web"); err == nil || len(*clip) != 0 {
+	if _, err := runErr(t, "ssh", "termius", "keys", "oribi-web"); err == nil || len(*clip) != 0 {
 		t.Error("a file that is not a private key was copied")
 	}
 }
@@ -119,10 +119,10 @@ func TestTermiusKeysRefusesUnknownAndNonKeys(t *testing.T) {
 // of the CSV has no Termius entry to attach a key to.
 func TestTermiusKeysSkipsWhatExportSkips(t *testing.T) {
 	termiusKeysHome(t)
-	if out := run(t, "termius", "keys", "--skip", "oribi-web"); strings.Contains(out, "oribi-web") {
+	if out := run(t, "ssh", "termius", "keys", "--skip", "oribi-web"); strings.Contains(out, "oribi-web") {
 		t.Errorf("--skip oribi-web still listed it:\n%s", out)
 	}
-	if _, err := runErr(t, "termius", "keys", "--skip", "nope"); err == nil {
+	if _, err := runErr(t, "ssh", "termius", "keys", "--skip", "nope"); err == nil {
 		t.Error("a --skip naming no host should be an error, as on export")
 	}
 }

@@ -66,7 +66,7 @@ func TestVMHostGetsOwnProxyCommandAndOthersDoNot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out, `    ProxyCommand "/opt/homebrew/bin/authama" vm proxy devbox`+"\n") {
+	if !strings.Contains(out, `    ProxyCommand "/opt/homebrew/bin/authama" ssh vm proxy devbox`+"\n") {
 		t.Errorf("devbox lacks the authama ProxyCommand:\n%s", out)
 	}
 	if n := strings.Count(out, "ProxyCommand"); n != 1 {
@@ -77,14 +77,14 @@ func TestVMHostGetsOwnProxyCommandAndOthersDoNot(t *testing.T) {
 func TestProxyCommandQuoting(t *testing.T) {
 	pinSelf(t, `C:\Program Files\authama\authama.exe`)
 	got := ProxyCommandFor("devbox")
-	if got != `"C:\Program Files\authama\authama.exe" vm proxy devbox` {
+	if got != `"C:\Program Files\authama\authama.exe" ssh vm proxy devbox` {
 		t.Errorf("backslashes must stay single (ssh does not unescape): %s", got)
 	}
 	if ProxyBinary(got) != `C:\Program Files\authama\authama.exe` {
 		t.Errorf("ProxyBinary(%s) = %q", got, ProxyBinary(got))
 	}
 	pinSelf(t, `/weird"dir/authama`)
-	if got := ProxyCommandFor("devbox"); got != `"authama" vm proxy devbox` {
+	if got := ProxyCommandFor("devbox"); got != `"authama" ssh vm proxy devbox` {
 		t.Errorf("a path with a quote must fall back to the bare name: %s", got)
 	}
 	if ProxyBinary("ssh -W %h:%p jump") != "" {
@@ -125,7 +125,7 @@ func TestSSHResolvesGitHubAndTheVMProxy(t *testing.T) {
 	if got := get("github.com", "identityfile"); !strings.HasSuffix(got, "/profiles/imanimanyara/imanimanyara_github-ed25519") {
 		t.Errorf("github.com identityfile = %q", got)
 	}
-	if got := get("devbox", "proxycommand"); !strings.Contains(got, "/usr/local/bin/authama") || !strings.Contains(got, "vm proxy devbox") {
+	if got := get("devbox", "proxycommand"); !strings.Contains(got, "/usr/local/bin/authama") || !strings.Contains(got, "ssh vm proxy devbox") {
 		t.Errorf("devbox proxycommand = %q", got)
 	}
 }

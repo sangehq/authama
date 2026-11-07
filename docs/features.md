@@ -30,7 +30,7 @@ a sandbox). Run all three with `make test e2e feature-check`.
 - **Auth tokens.** `auth.json`, `.npmrc`, Docker `config.json`,
   `.git-credentials` and `.netrc` built from environment variables, owner-only and
   atomic, with `audit` and masked listing.
-- **Three front ends.** The CLI, an interactive `tui`, and a local web UI (`serve`)
+- **Two front ends.** The CLI and a local web UI (`serve`, or a bare `authama`)
   that previews every change; every change lands in `history`.
 
 The mental model: the **manifest** in `~/.config/authama/manifest.json` is the single source
@@ -57,7 +57,7 @@ when the profile has a category.
 | `doctor --strict` | Exit non-zero on any warning, dangling-key states included (for CI); never reports clean when there are warnings. | U |
 | `version` / `--version` | Print the version. | F |
 
-Home resolution: `$AUTHAMA_CONFIG_DIR` (or the pre-0.1.1 `$SSH_MANAGER_HOME`) if
+Home resolution: `$AUTHAMA_CONFIG_DIR` if
 set, else `$XDG_CONFIG_HOME/authama`, else `~/.config/authama` - the same on every
 OS, Windows included. State (logs, history, snapshots, bundles) goes to
 `$AUTHAMA_STATE_DIR`, else `$XDG_STATE_HOME/authama`, else
@@ -77,7 +77,7 @@ project-local mode. See [installation.md](installation.md) for the full layout.
 | `config render [-n\|--dry-run] [-y]` | Re-render config files from the manifest (one renderer, shared with `check`/`reconcile`). | U·E·F |
 | `config show [alias]` | Print resolved config, or `ssh -G` for one alias. | U·F |
 | `config export --flat [--out PATH\|-]` | Write every host inline in one file, absolute paths, no `Include` (for tools that read one `ssh_config`). Never touches `~/.ssh`; refuses any target inside `~/.ssh`. | U·F |
-| `termius export [--out PATH\|-] [--skip ALIAS] [--include-git] [--open]` | Write a Termius CSV import (group = profile, label = alias) and list the key to attach to each host; `--open` opens Termius on macOS. | U·F |
+| `export hosts --format termius [--out PATH] [--include-git] [--exclude TEXT]` | Write a Termius CSV import (group = profile, label = alias) through the export pipeline, with its filters. | U·F |
 | `termius keys [ALIAS] [--clear-after DUR] [--clear] [--print] [--include-git] [--skip ALIAS]` | The CSV carries no keys: list each host's Termius key label and key path, or copy one host's private key to the clipboard (never printed unless `--print`) with the label to paste into Keychain → New Key. `--include-git` widens the list; a named git host is found without it. | U·F |
 | `import [PATH] [--force] [--dry-run] [-y]` | Onboard an existing ssh setup (adopt keys + hosts) into the manifest + inventory. PATH is a config file or any folder, flat or nested: its `config` and what that Includes, a config home's `ssh/config`, or every `config` and `*.conf` up to four levels down. From another machine's copy, `~/.ssh/` identity paths resolve in that copy. Refuses to replace a non-empty manifest without `--force` (which backs it up first). | U·F |
 | `diff` | Preview manifest vs. on-disk reality (config + which keys are missing/present); what `reconcile` would change. `config check` is the exit-code-only version. | U·F |
@@ -161,7 +161,6 @@ bounded SSH-level reachability probe first, so a down or VPN-gated host (includi
 | `vm sync [-n] [-y] [-q] [--no-probe] [--repin] [--install-schedule\|--remove-schedule]` | Keep every VM host matching its VM: pin, re-install a missing guest key, refresh its Docker context; remove the host and context of a VM that is gone (backed up first); leave suspended and stopped VMs alone. | U·F |
 | `vm adopt-key [KEY [PROFILE [ALIAS]]] [--hypervisor] [--vm] [-u] [--move] [--docker-context] [-n] [-y]` | Copy a loose `~/.ssh` key into a profile as a new VM host's key; asks for what is missing at a terminal. | U·F |
 | `notify install\|test [-y]` | Scheduled desktop expiry reminders (launchd / systemd-user-or-cron / schtasks). | U·F |
-| `tui` | A numbered menu over the whole facade, SSH and auth tokens. | U |
 
 Cross-cutting flags: `--yes`/`-y` on destructive verbs (with `--revoke` on deletes);
 `--passphrase` on key generation (a plain flag: leaving it off is the "no" answer; the Python version's

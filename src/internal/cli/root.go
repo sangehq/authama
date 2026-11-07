@@ -1,6 +1,6 @@
 // Package cli is the cobra command surface. The binary is authama
-// (brand.Command). sshmgr (brand.LegacyCommand), the name it shipped under
-// before, is no longer built.
+// (brand.Command). sshmgr, the name it shipped under before 0.1.1, is no
+// longer built.
 //
 // Run on its own, on a terminal, it opens the web UI (as `authama serve`). The
 // tree has two feature groups and a few commands that serve both:
@@ -75,8 +75,7 @@ func newRootCmd() *cobra.Command {
 	// would produce a run that reads the sandbox and writes the real tree.
 	root.SetFlagErrorFunc(unknownCommandBeforeFlags)
 	root.PersistentFlags().String(devRootFlag, "",
-		"run against a sandbox directory instead of ~/.ssh (also $"+paths.DevRootEnv+
-			", or the legacy $"+strings.Join(envnames.Legacy(paths.DevRootEnv), ", $")+")")
+		"run against a sandbox directory instead of ~/.ssh (also $"+paths.DevRootEnv+")")
 	root.PersistentFlags().Bool(noDotenvFlag, false,
 		"do not read <config home>/.env this run (also $"+envnames.NoDotenv+"=1)")
 	// Start-up - first-run migration, .env and authama.json - runs ahead of
@@ -90,7 +89,6 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newDoctorCmd())
 	root.AddCommand(newInitCmd())
 	root.AddCommand(newMigrateCmd())
-	root.AddCommand(newTuiRemovedCmd())
 	root.AddCommand(newHistoryCmd())
 	root.AddCommand(newEventsCmd())
 	root.AddCommand(newManCmd())
@@ -100,29 +98,27 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newRepairCmd())
 	root.AddCommand(newResetCmd())
 	root.AddCommand(newExportCmd())
-	// `ui` was serve's alias, one edit from `tui`: still accepted, never shown.
-	ui := newServeCmd()
-	ui.Use, ui.Hidden = "ui", true
-	ui.Deprecated = "use `" + brand.Command + " serve` (the web UI)"
-	root.AddCommand(ui)
 
 	// The two feature groups.
 	ssh := &cobra.Command{
 		Use:   sshGroup,
 		Short: "SSH keys, profiles, hosts, config and trust",
-		Long: "SSH keys, profiles, hosts, config and trust: everything authama does in ~/.ssh.\n\n" +
-			"Every verb here also answers at the top level, unlisted, as it did before the\n" +
-			"groups existed (" + brand.Command + " deploy is " + brand.Command + " ssh deploy), so older scripts keep working.",
-		Args: cobra.ArbitraryArgs,
-		RunE: groupHelp,
+		Long:  "SSH keys, profiles, hosts, config and trust: everything authama does in ~/.ssh.",
+		Args:  cobra.ArbitraryArgs,
+		RunE:  groupHelp,
 	}
 	ssh.AddCommand(sshCommands()...)
 	root.AddCommand(ssh)
 	root.AddCommand(newTokenCmd())
 
-	// The pre-group spellings, hidden: a second, identical build of each SSH
-	// verb, so `authama deploy` keeps working without listing every verb twice.
-	for _, c := range sshCommands() {
+	// Two pre-group spellings stay, hidden, because files on disk run them:
+	// releases up to 2026-11-07 rendered `"<authama>" vm proxy <alias>` as each
+	// VM host's ProxyCommand in ~/.ssh/config, and `notify install` registered
+	// `<authama> audit --notify` with the system scheduler. Both now write the
+	// `ssh` spelling, but a config not yet re-rendered, or a job not yet
+	// reinstalled, still calls these. Every other top-level SSH verb was removed
+	// on 2026-11-07.
+	for _, c := range []*cobra.Command{newVMCmd(), newAuditCmd()} {
 		c.Hidden = true
 		root.AddCommand(c)
 	}
@@ -133,8 +129,7 @@ func newRootCmd() *cobra.Command {
 	return root
 }
 
-// sshCommands builds the SSH group's verbs. It is called twice: once for
-// `ssh <verb>` and once for the hidden top-level compatibility spellings.
+// sshCommands builds the SSH group's verbs, for `ssh <verb>`.
 func sshCommands() []*cobra.Command {
 	return []*cobra.Command{
 		newConfigCmd(), newValidateCmd(), newProvidersCmd(), newNetCmd(),

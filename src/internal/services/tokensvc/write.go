@@ -60,7 +60,7 @@ func (e Env) WriteAll(set *tokens.Set, targets []string, project string, mode Do
 }
 
 // ResolveConfig finds the token config the way `token apply` does - explicit,
-// then $AUTHAMA_TOKENS_CONFIG (or $SSH_MANAGER_TOKENS_CONFIG), ./authama-tokens.json, tokens.json in the
+// then $AUTHAMA_TOKENS_CONFIG, ./authama-tokens.json, tokens.json in the
 // config home, the legacy locations - and falls back to the built-in default.
 // note says which of the last two it used, for the caller to show.
 func (e Env) ResolveConfig(explicit string) (cfg *tokens.Config, src ConfigSource, err error) {

@@ -620,8 +620,9 @@ func splitRef(s string) (string, bool) {
 	return s, ok && prof != "" && key != "" && !strings.Contains(key, "/")
 }
 
-// Exports a page can download. Each is rendered the way `authama ssh config export
-// --flat` and `authama ssh termius export` render it, and none is written anywhere.
+// Exports a page can download. Each is rendered as `authama ssh config export
+// --flat` and `authama export hosts --format termius` render it, and none is
+// written anywhere.
 const (
 	ExportFlat    = "ssh_config"
 	ExportTermius = "termius-hosts.csv"

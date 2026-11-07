@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/manifest"
 )
 
 // State values.
@@ -54,15 +53,6 @@ func keyName(path string) string {
 		return path[i+1:]
 	}
 	return path
-}
-
-// ComputeStates is ComputeStatesIn under the default key root, profiles.
-//
-// Deprecated: after v0.1.3 the key root is configurable (defaults.key_root);
-// use ComputeStatesIn with manifest.KeyRoot. This stays, delegating.
-// Earliest removal: v1.0.0.
-func ComputeStates(inv *inventory.Inventory, warnBeforeDays []int, today time.Time) []Status {
-	return ComputeStatesIn(inv, warnBeforeDays, today, manifest.DefaultKeyRoot)
 }
 
 // ComputeStatesIn returns per-key expiry status, most-urgent first. today

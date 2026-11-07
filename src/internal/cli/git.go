@@ -14,7 +14,7 @@ import (
 // gitModeEnv overrides defaults.git.mode for one command.
 const gitModeEnv = envnames.GitMode
 
-// resolveGitMode picks the mode: an explicit choice, then AUTHAMA_GIT_MODE (or SSHMGR_GIT_MODE), then
+// resolveGitMode picks the mode: an explicit choice, then AUTHAMA_GIT_MODE, then
 // defaults.git.mode, then profile.
 func resolveGitMode(explicit string, m *manifest.Manifest) (string, error) {
 	mode := explicit

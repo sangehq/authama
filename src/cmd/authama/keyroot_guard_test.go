@@ -23,7 +23,6 @@ var keyRootExempt = map[string]struct {
 }{
 	"internal/core/manifest/keyroot.go":          {1, "DefaultKeyRoot itself: the one place the default is spelled"},
 	"internal/core/manifest/manifest.go":         {2, `the manifest's own JSON key "profiles", not a path`},
-	"internal/util/perms/perms.go":               {1, "deprecated IterManagedPaths delegating to the default; util sits below core and cannot import manifest"},
 	"internal/cli/config.go":                     {1, "legacy per-profile known_hosts migration: those files only ever existed under profiles/, before key_root"},
 	"internal/services/knownhosts/knownhosts.go": {1, "legacy per-profile known_hosts migration, as above"},
 	"internal/services/change/actions.go":        {1, "legacy per-profile known_hosts migration, as above"},

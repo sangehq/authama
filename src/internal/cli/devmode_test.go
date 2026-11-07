@@ -32,8 +32,8 @@ func TestDevModeWritesNothingOutsideItsRoot(t *testing.T) {
 	run(t, "--dev-root", sandbox, "init")
 	// These may legitimately fail on a starter manifest; what matters is where
 	// they wrote while trying.
-	_, _ = runErr(t, "--dev-root", sandbox, "keygen", "--yes")
-	_, _ = runErr(t, "--dev-root", sandbox, "config", "render", "--yes")
+	_, _ = runErr(t, "--dev-root", sandbox, "ssh", "keygen", "--yes")
+	_, _ = runErr(t, "--dev-root", sandbox, "ssh", "config", "render", "--yes")
 
 	got, err := os.ReadFile(canary)
 	if err != nil {
@@ -128,8 +128,8 @@ func TestTheActionsASandboxCannotContainAreRefused(t *testing.T) {
 		name string
 		args []string
 	}{
-		{"deploy uploads to a live account", []string{"deploy", "somekey"}},
-		{"notify install registers a machine-wide job", []string{"notify", "install", "--yes"}},
+		{"deploy uploads to a live account", []string{"ssh", "deploy", "somekey"}},
+		{"notify install registers a machine-wide job", []string{"ssh", "notify", "install", "--yes"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := runErr(t, append([]string{"--dev-root", sandbox}, tc.args...)...)
@@ -220,17 +220,17 @@ func TestDevModeRefusesEveryVerbThatReachesATarget(t *testing.T) {
 	sb := filepath.Join(t.TempDir(), "sandbox")
 	dev := func(args ...string) []string { return append([]string{"--dev-root", sb}, args...) }
 	run(t, dev("init")...)
-	run(t, dev("profile", "add", "work")...)
-	run(t, dev("host", "add", "work", "prod", "-H", "prod.example.com", "-u", "deploy")...)
-	run(t, dev("reconcile", "--yes", "--no-pin")...)
+	run(t, dev("ssh", "profile", "add", "work")...)
+	run(t, dev("ssh", "host", "add", "work", "prod", "-H", "prod.example.com", "-u", "deploy")...)
+	run(t, dev("ssh", "reconcile", "--yes", "--no-pin")...)
 
 	for _, args := range [][]string{
-		{"deploy", "work/work_prod-ed25519", "--yes"},
-		{"rotate", "work/work_prod-ed25519", "--yes", "--no-key-backup"},
-		{"rollback", "work/work_prod-ed25519", "--yes"},
-		{"key", "delete", "work/work_prod-ed25519", "--revoke", "--yes"},
-		{"host", "delete", "work", "prod", "--revoke", "--yes"},
-		{"profile", "delete", "work", "--revoke", "--yes"},
+		{"ssh", "deploy", "work/work_prod-ed25519", "--yes"},
+		{"ssh", "rotate", "work/work_prod-ed25519", "--yes", "--no-key-backup"},
+		{"ssh", "rollback", "work/work_prod-ed25519", "--yes"},
+		{"ssh", "key", "delete", "work/work_prod-ed25519", "--revoke", "--yes"},
+		{"ssh", "host", "delete", "work", "prod", "--revoke", "--yes"},
+		{"ssh", "profile", "delete", "work", "--revoke", "--yes"},
 	} {
 		out, err := runErr(t, dev(args...)...)
 		if err == nil || !strings.Contains(err.Error(), "dev mode") {
@@ -252,12 +252,12 @@ func TestRotateIsRefusedInDevModeBeforeItWritesABackup(t *testing.T) {
 	t.Setenv("AUTHAMA_AUTO_PIN", "0")
 	sandbox := filepath.Join(t.TempDir(), "sandbox")
 	run(t, "--dev-root", sandbox, "init")
-	run(t, "--dev-root", sandbox, "profile", "add", "work")
-	run(t, "--dev-root", sandbox, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
-	run(t, "--dev-root", sandbox, "reconcile", "--yes", "--no-pin")
+	run(t, "--dev-root", sandbox, "ssh", "profile", "add", "work")
+	run(t, "--dev-root", sandbox, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "--dev-root", sandbox, "ssh", "reconcile", "--yes", "--no-pin")
 	for _, args := range [][]string{
-		{"rotate", "work/work_gh-ed25519", "--yes"},
-		{"rotate", "--all", "--yes"},
+		{"ssh", "rotate", "work/work_gh-ed25519", "--yes"},
+		{"ssh", "rotate", "--all", "--yes"},
 	} {
 		_, err := runErr(t, append([]string{"--dev-root", sandbox}, args...)...)
 		if err == nil || !strings.Contains(err.Error(), "refused in dev mode") {

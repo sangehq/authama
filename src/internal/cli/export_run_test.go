@@ -13,9 +13,9 @@ import (
 // columns, byte for byte.
 func TestExportIsTheListsCSV(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "web1", "-H", "web1.example", "-u", "deploy", "--tag", "prd", "--tag", "web")
-	run(t, "host", "add", "work", "db1", "-H", "db1.example", "-u", "deploy")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "web1", "-H", "web1.example", "-u", "deploy", "--tag", "prd", "--tag", "web")
+	run(t, "ssh", "host", "add", "work", "db1", "-H", "db1.example", "-u", "deploy")
 	for _, c := range [][2][]string{
 		{{"export", "hosts"}, {"ssh", "list", "--csv"}},
 		{{"export", "keys"}, {"ssh", "key", "list", "--csv"}},
@@ -28,9 +28,9 @@ func TestExportIsTheListsCSV(t *testing.T) {
 
 func TestExportFiltersChoosesColumnsSortsAndFormats(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "web1", "-H", "web1.example", "-u", "deploy", "--tag", "prd", "--tag", "web")
-	run(t, "host", "add", "work", "db1", "-H", "db1.example", "-u", "deploy")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "web1", "-H", "web1.example", "-u", "deploy", "--tag", "prd", "--tag", "web")
+	run(t, "ssh", "host", "add", "work", "db1", "-H", "db1.example", "-u", "deploy")
 
 	out := run(t, "export", "hosts", "--tag", "web", "--columns", "alias,hostname=host,key.type", "--format", "json")
 	var rows []map[string]any
@@ -57,8 +57,8 @@ func TestExportFiltersChoosesColumnsSortsAndFormats(t *testing.T) {
 // A selection saved as JSON drives it, and --out writes a private file.
 func TestExportTakesASavedSelectionAndWritesAFile(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "web1", "-H", "web1.example", "-u", "deploy")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "web1", "-H", "web1.example", "-u", "deploy")
 	dir := t.TempDir()
 	sel := filepath.Join(dir, "sel.json")
 	if err := os.WriteFile(sel, []byte(`{"version":1,"grain":"host","columns":[{"field":"alias"}]}`), 0o600); err != nil {
@@ -95,11 +95,11 @@ func TestExportSaysWhatIsWrong(t *testing.T) {
 // aggregates and totals, a step as JSON; and --fields lists what they wrote.
 func TestExportTransforms(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "profile", "add", "home")
-	run(t, "host", "add", "work", "web1", "-H", "web1.example", "-u", "deploy", "--tag", "prd")
-	run(t, "host", "add", "work", "db1", "-H", "db1.example", "-u", "deploy")
-	run(t, "host", "add", "home", "nas", "-H", "nas.lan", "-u", "me")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "profile", "add", "home")
+	run(t, "ssh", "host", "add", "work", "web1", "-H", "web1.example", "-u", "deploy", "--tag", "prd")
+	run(t, "ssh", "host", "add", "work", "db1", "-H", "db1.example", "-u", "deploy")
+	run(t, "ssh", "host", "add", "home", "nas", "-H", "nas.lan", "-u", "me")
 
 	if out := run(t, "export", "hosts", "--template", "ssh=ssh {user}@{hostname}", "--columns", "alias,ssh", "--sort", "alias", "--no-header"); out != "db1,ssh deploy@db1.example\nnas,ssh me@nas.lan\nweb1,ssh deploy@web1.example\n" {
 		t.Errorf("template:\n%s", out)
@@ -141,9 +141,9 @@ func TestExportTransforms(t *testing.T) {
 // name or by --selection, the user's own winning, and deleted.
 func TestExportSelectionsSavedByName(t *testing.T) {
 	p := editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "web1", "-H", "web1.example", "-u", "deploy", "--tag", "prd")
-	run(t, "host", "add", "work", "db1", "-H", "db1.example", "-u", "deploy")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "web1", "-H", "web1.example", "-u", "deploy", "--tag", "prd")
+	run(t, "ssh", "host", "add", "work", "db1", "-H", "db1.example", "-u", "deploy")
 	dir := t.TempDir()
 	write := func(name, body string) string {
 		f := filepath.Join(dir, name)
@@ -214,8 +214,8 @@ func TestExportSelectionsSavedByName(t *testing.T) {
 // refuses what it cannot write.
 func TestExportSchedules(t *testing.T) {
 	p := editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "web1", "-H", "web1.example", "-u", "deploy", "--tag", "prd")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "web1", "-H", "web1.example", "-u", "deploy", "--tag", "prd")
 	sel := filepath.Join(t.TempDir(), "sel.json")
 	if err := os.WriteFile(sel, []byte(`{"version":1,"grain":"host","columns":[{"field":"alias"}]}`), 0o600); err != nil {
 		t.Fatal(err)

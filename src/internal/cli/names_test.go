@@ -212,8 +212,7 @@ func TestEveryHiddenTopLevelCommandIsAnSSHVerb(t *testing.T) {
 	ssh := childByName(root, sshGroup)
 	hidden := 0
 	for _, c := range root.Commands() {
-		// tui is the stub left where the removed menu was (v1RemovedVerbs).
-		if !c.Hidden || c.Deprecated != "" || c.Name() == "help" || c.Name() == "completion" || c.Name() == "tui" {
+		if !c.Hidden || c.Deprecated != "" || c.Name() == "help" || c.Name() == "completion" {
 			continue
 		}
 		hidden++
@@ -237,8 +236,11 @@ func TestEveryHiddenTopLevelCommandIsAnSSHVerb(t *testing.T) {
 			t.Errorf("%s: %d commands in the hidden spelling, %d under ssh", c.Name(), len(a), len(b))
 		}
 	}
-	if hidden != len(visible(ssh)) {
-		t.Errorf("%d hidden top-level spellings for %d ssh verbs", hidden, len(visible(ssh)))
+	// Only vm and audit keep a top-level spelling: ~/.ssh/config and the
+	// scheduler run `vm proxy` and `audit --notify` as older releases wrote
+	// them (root.go). Every other one was removed on 2026-11-07.
+	if hidden != 2 || childByName(root, "vm") == nil || childByName(root, "audit") == nil {
+		t.Errorf("%d hidden top-level spellings, want exactly vm and audit", hidden)
 	}
 }
 

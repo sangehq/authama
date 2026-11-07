@@ -11,15 +11,14 @@
 //	             history database and audit log (log/), snapshots, bundles
 //	             (dist/), the lock and caches (.state/).
 //
-// When the config home is set explicitly ($AUTHAMA_CONFIG_DIR or a legacy
-// spelling) and the state home is not, the state lives inside the config home,
+// When the config home is set explicitly ($AUTHAMA_CONFIG_DIR) and the state
+// home is not, the state lives inside the config home,
 // as it did before 0.1.1, so a pinned home stays self-contained. A --dev-root
 // sandbox is likewise one tree.
 //
-// The legacy variables $SSH_MANAGER_HOME and $SSH_MANAGER_CONFIG_DIR are still
-// honored (see envnames); the folders earlier releases used (~/.config/
-// ssh-manager, %APPDATA%\ssh-manager, ~/.config/sshmgr, ~/.sshmgr) are found by
-// LegacyHomes for the one-time migration.
+// The folders releases before 0.1.1 used, under the tool's earlier names, are
+// found by LegacyHomes, so `authama migrate` can copy one into the authama home.
+// Only migration looks there; nothing else reads or writes them.
 package paths
 
 import (
@@ -35,7 +34,8 @@ import (
 // Folder is the directory name under the config and state bases.
 const Folder = "authama"
 
-// LegacyFolder is the config folder name releases before 0.1.1 used.
+// LegacyFolder is the config folder name releases before authama 0.1.1 used,
+// as ssh-manager. Only LegacyHomes uses it, for migration.
 const LegacyFolder = "ssh-manager"
 
 // MigratedMarker is written into a legacy home once its contents have been
@@ -177,8 +177,8 @@ func (p Paths) SnapshotsDir() string { return filepath.Join(p.State(), "snapshot
 func (p Paths) DistDir() string      { return filepath.Join(p.State(), "dist") }
 
 // ExportSelectionsDir holds p's saved export selections, one <name>.json
-// each. A folder of their own: exports/ also holds the files `config export
-// --flat` and `termius export` write. A function, not a method: Paths stays
+// each. A folder of their own: exports/ also holds the file `config export
+// --flat` writes. A function, not a method: Paths stays
 // a list of locations under its method ceiling.
 func ExportSelectionsDir(p Paths) string { return filepath.Join(p.State(), "exports", "selections") }
 func (p Paths) StateDir() string         { return filepath.Join(p.State(), ".state") }
@@ -233,11 +233,13 @@ func resolveExisting(path string) string {
 	}
 }
 
-// LegacyHomes are the homes earlier releases used, newest first: the
-// "ssh-manager" sibling of the config home (0.1.0 and the ssh-manager
-// releases), then on Windows %APPDATA%\ssh-manager (their Windows default),
-// then the "sshmgr" sibling and %APPDATA%\sshmgr (before that rename), and the
-// original dot-home ~/.sshmgr.
+// LegacyHomes are the config homes releases before authama 0.1.1 used, newest
+// first: the "ssh-manager" sibling of the config home (authama 0.1.0 and the
+// ssh-manager releases), then on Windows %APPDATA%\ssh-manager (their Windows
+// default), then the "sshmgr" sibling and %APPDATA%\sshmgr (before that
+// rename), and the original dot-home ~/.sshmgr. authama never writes to them;
+// migration reads the first one that exists and copies it into the authama
+// home.
 //
 // A sandbox has none outside its root: ~/.sshmgr is the real user's, and
 // dev-mode `migrate` used to move it into the sandbox.
@@ -288,8 +290,7 @@ func (p Paths) FirstLegacyHome() string {
 
 // --- dev mode ---------------------------------------------------------------
 
-// DevRootEnv is the environment variable form of --dev-root. Its pre-0.1.1
-// spelling, SSHMGR_DEV_ROOT, is still read (envnames.Legacy).
+// DevRootEnv is the environment variable form of --dev-root.
 const DevRootEnv = envnames.DevRoot
 
 // DevSSHDir and DevConfigDir are the fixed subdirectories a dev root is split
@@ -305,7 +306,7 @@ const (
 // sandbox's ~/.ssh and its config home.
 //
 // It is deliberately ONE root rather than two independent overrides. The config
-// home already had an override ($SSH_MANAGER_HOME) and ~/.ssh had none, so the
+// home already had an override ($AUTHAMA_CONFIG_DIR) and ~/.ssh had none, so the
 // only way to test against a scratch tree was to move $HOME - which also moves
 // the ssh-agent socket, the launchd session and everything else that reads it.
 // Two knobs would allow the worse failure: a run with its config redirected and

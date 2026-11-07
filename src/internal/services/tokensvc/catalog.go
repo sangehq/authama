@@ -8,10 +8,9 @@ import (
 	"github.com/simtabi/authama/src/internal/util/envnames"
 )
 
-// Catalog override variables. auth-token-manager read its catalog from
-// $AUTH_TOKEN_MANAGER_CATALOG when set; authama reads $AUTHAMA_TOKENS_CATALOG
-// first, then its pre-0.1.1 name $SSH_MANAGER_TOKENS_CATALOG, and still
-// honours the oldest one.
+// Catalog override variables. authama reads $AUTHAMA_TOKENS_CATALOG first,
+// then $AUTH_TOKEN_MANAGER_CATALOG: auth-token-manager, a separate tool
+// authama imports from, read its catalog from that name.
 const (
 	CatalogEnv       = envnames.TokensCatalog
 	legacyCatalogEnv = "AUTH_TOKEN_MANAGER_CATALOG"
@@ -37,7 +36,7 @@ type CatalogSource struct {
 // embedded one when it names none.
 func useCatalog(e Env) CatalogSource {
 	var src CatalogSource
-	for _, v := range append(append([]string{CatalogEnv}, envnames.Legacy(CatalogEnv)...), legacyCatalogEnv) {
+	for _, v := range []string{CatalogEnv, legacyCatalogEnv} {
 		if p := e.getenv(v); p != "" {
 			src = CatalogSource{Path: e.abs(p), Var: v, Legacy: v == legacyCatalogEnv}
 			break

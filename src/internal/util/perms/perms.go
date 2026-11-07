@@ -48,15 +48,6 @@ func ModeFor(path string, isDir bool) os.FileMode {
 	}
 }
 
-// IterManagedPaths is IterManagedPathsIn under the default key root, profiles.
-//
-// Deprecated: after v0.1.3 the key root is configurable (defaults.key_root);
-// use IterManagedPathsIn with manifest.KeyRoot. This stays, delegating.
-// Earliest removal: v1.0.0.
-func IterManagedPaths(sshDir string) []ManagedPath {
-	return IterManagedPathsIn(sshDir, "profiles")
-}
-
 // IterManagedPathsIn returns (path, canonical mode) for every tool-managed
 // path under sshDir: ~/.ssh itself, the root config, the trust store, and the
 // whole key-root subtree (~/.ssh/<root>). It deliberately excludes unrelated

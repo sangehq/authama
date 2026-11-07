@@ -10,7 +10,7 @@ import (
 func managed(t *testing.T, ssh string) map[string]os.FileMode {
 	t.Helper()
 	out := map[string]os.FileMode{}
-	for _, mp := range IterManagedPaths(ssh) {
+	for _, mp := range IterManagedPathsIn(ssh, "profiles") {
 		rel, err := filepath.Rel(ssh, mp.Path)
 		if err != nil {
 			t.Fatal(err)
@@ -99,7 +99,7 @@ func TestSymlinksAreNeverManagedAtAnyLevel(t *testing.T) {
 	if err := os.Symlink(ssh, linkedSSH); err != nil {
 		t.Skipf("symlinks unavailable: %v", err)
 	}
-	if mps := IterManagedPaths(linkedSSH); mps != nil {
+	if mps := IterManagedPathsIn(linkedSSH, "profiles"); mps != nil {
 		t.Errorf("a symlinked ~/.ssh should be managed not at all, got %d paths", len(mps))
 	}
 

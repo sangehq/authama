@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/simtabi/authama/src/internal/core/inventory"
+	"github.com/simtabi/authama/src/internal/core/manifest"
 )
 
 func sp(s string) *string { return &s }
@@ -51,7 +52,7 @@ func TestComputeStates(t *testing.T) {
 	})
 
 	today := mustDate(t, "2026-06-16")
-	states := ComputeStates(inv, []int{7, 30}, today)
+	states := ComputeStatesIn(inv, []int{7, 30}, today, manifest.DefaultKeyRoot)
 
 	wantState := map[string]string{
 		"fp-overdue":   Overdue,
@@ -108,7 +109,7 @@ func TestClassificationBoundaries(t *testing.T) {
 		inv.Record("fp", inventory.KeyRecord{
 			Profile: "work", Path: "/h/.ssh/profiles/work/k", ExpiresOn: sp(c.expires),
 		})
-		states := ComputeStates(inv, []int{7, 30}, today)
+		states := ComputeStatesIn(inv, []int{7, 30}, today, manifest.DefaultKeyRoot)
 		if len(states) != 1 {
 			t.Fatalf("%s: got %d states", c.expires, len(states))
 		}
@@ -129,13 +130,13 @@ func TestWarnWindowIsTheLargestThreshold(t *testing.T) {
 		Profile: "work", Path: "/h/.ssh/profiles/work/k", ExpiresOn: sp("2026-07-06"), // 20 days out
 	})
 
-	if got := ComputeStates(inv, []int{1, 7, 30}, today)[0].State; got != DueSoon {
+	if got := ComputeStatesIn(inv, []int{1, 7, 30}, today, manifest.DefaultKeyRoot)[0].State; got != DueSoon {
 		t.Errorf("with a 30-day window, 20 days out should be due_soon, got %q", got)
 	}
-	if got := ComputeStates(inv, []int{1, 7}, today)[0].State; got != OK {
+	if got := ComputeStatesIn(inv, []int{1, 7}, today, manifest.DefaultKeyRoot)[0].State; got != OK {
 		t.Errorf("with a 7-day window, 20 days out should be ok, got %q", got)
 	}
-	if got := ComputeStates(inv, nil, today)[0].State; got != DueSoon {
+	if got := ComputeStatesIn(inv, nil, today, manifest.DefaultKeyRoot)[0].State; got != DueSoon {
 		t.Errorf("with no thresholds the default window is 30 days, got %q", got)
 	}
 }
@@ -148,13 +149,13 @@ func TestCadenceIsWeeklyUntilSomethingIsDue(t *testing.T) {
 	inv.Record("fp-ok", inventory.KeyRecord{
 		Profile: "work", Path: "/h/.ssh/profiles/work/k", ExpiresOn: sp("2027-01-01"),
 	})
-	if got := Cadence(ComputeStates(inv, []int{30}, today)); got != "weekly" {
+	if got := Cadence(ComputeStatesIn(inv, []int{30}, today, manifest.DefaultKeyRoot)); got != "weekly" {
 		t.Errorf("cadence = %q, want weekly when nothing is due", got)
 	}
 	if got := Cadence(nil); got != "weekly" {
 		t.Errorf("cadence of no keys = %q, want weekly", got)
 	}
-	if got := BannerLines(ComputeStates(inv, []int{30}, today)); len(got) != 0 {
+	if got := BannerLines(ComputeStatesIn(inv, []int{30}, today, manifest.DefaultKeyRoot)); len(got) != 0 {
 		t.Errorf("nothing due should produce no banner: %v", got)
 	}
 }
@@ -173,7 +174,7 @@ func TestBannerNamesKeysUnambiguously(t *testing.T) {
 		Profile: "clientco", Path: "/h/.ssh/profiles/clientco/imani_github-ed25519",
 		ExpiresOn: sp("2026-06-20"), // due in 4
 	})
-	lines := BannerLines(ComputeStates(inv, []int{30}, today))
+	lines := BannerLines(ComputeStatesIn(inv, []int{30}, today, manifest.DefaultKeyRoot))
 	if len(lines) != 2 {
 		t.Fatalf("got %d lines, want one per key needing attention: %v", len(lines), lines)
 	}
@@ -199,7 +200,7 @@ func TestStatesSortMostUrgentFirst(t *testing.T) {
 	inv.Record("fp-soon", inventory.KeyRecord{Profile: "w", Path: "/p/soon", ExpiresOn: sp("2026-06-20")})
 	inv.Record("fp-unknown", inventory.KeyRecord{Profile: "w", Path: "/p/unk"})
 
-	states := ComputeStates(inv, []int{30}, today)
+	states := ComputeStatesIn(inv, []int{30}, today, manifest.DefaultKeyRoot)
 	want := []string{"fp-very-overdue", "fp-soon", "fp-far", "fp-unknown"}
 	for i, fp := range want {
 		if states[i].Fingerprint != fp {

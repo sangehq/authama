@@ -47,7 +47,7 @@ func TestUnknownCommandIsReportedBeforeItsFlags(t *testing.T) {
 		}
 	}
 	// A real command's unknown flag is still a flag error.
-	if _, err := runErr(t, "termius", "export", "--nope"); err == nil || !strings.Contains(err.Error(), "unknown flag") {
+	if _, err := runErr(t, "export", "hosts", "--nope"); err == nil || !strings.Contains(err.Error(), "unknown flag") {
 		t.Errorf("a known command's bad flag: %v", err)
 	}
 	// And a near miss still gets cobra's suggestion.

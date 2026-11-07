@@ -185,7 +185,7 @@ Every feature of the original standalone VPS key tool has a home in authama:
 | `KEY_TYPES`, `_split_key_line`, `_looks_like_base64`, `key_body`, `same_key`, `is_valid_public_key`, `count_keys`, `add/remove_key_from_text` | `internal/core/authkeys` (stricter: validates the base64 wire type, and bounds the length prefix in 64-bit arithmetic so a crafted line cannot wrap it) |
 | `Server` read/write `authorized_keys` (backup, atomic, lockout guard) | `internal/core/providers/ssh_generic.go` (`generic-ssh`) |
 | `Server.fix_permissions` | `fixkeys.sh` menu **4. fix permissions** (shipped + emitted by `authama ssh recover`) |
-| Account-keys interactive menu | `deploy` / `rotate` / `remove` / `rename` + `tui` |
+| Account-keys interactive menu | `deploy` / `rotate` / `remove` / `rename`, and the web UI |
 | Server-keys interactive menu | `generic-ssh` deploy/revoke + the `recover` recovery tool |
 | `fixkeys.sh` (paste-into-console recovery) | shipped as package data; `authama ssh recover [key]` |
 | `.env.example` tokens | `.env-example` (DIGITALOCEAN_TOKEN / VULTR_API_KEY / HCLOUD_TOKEN / LINODE_TOKEN / SCW_SECRET_KEY + SCW_PROJECT_ID) |

@@ -12,8 +12,8 @@ make man                              # from a checkout: into build/man
 ```
 
 There is one page per command, named for its path: `authama.1`, `authama-ssh.1`,
-`authama-ssh-deploy.1`, `authama-token-set.1`, and so on. The hidden top-level spellings of the SSH
-verbs get no page of their own; `authama-ssh-deploy` covers the top-level spelling of `ssh deploy` too.
+`authama-ssh-deploy.1`, `authama-token-set.1`, and so on. The hidden top-level `vm` and `audit`,
+kept for older `~/.ssh/config` files and scheduled jobs, get no page of their own.
 
 ## The layout
 

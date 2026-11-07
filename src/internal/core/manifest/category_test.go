@@ -123,10 +123,10 @@ func TestGlobProfileTreeSeesBothLayoutsAndNotArchives(t *testing.T) {
 		}
 		return strings.Join(out, ",")
 	}
-	if got, want := rels(GlobProfileTree(ssh, "*.pub")), "profiles/clients/clientco/b.pub,profiles/work/a.pub"; got != want {
+	if got, want := rels(GlobKeyTree(ssh, DefaultKeyRoot, "*.pub")), "profiles/clients/clientco/b.pub,profiles/work/a.pub"; got != want {
 		t.Errorf("*.pub = %s, want %s", got, want)
 	}
-	if got, want := rels(GlobProfileTree(ssh, "old")), "profiles/clients/clientco/old,profiles/work/old"; got != want {
+	if got, want := rels(GlobKeyTree(ssh, DefaultKeyRoot, "old")), "profiles/clients/clientco/old,profiles/work/old"; got != want {
 		t.Errorf("old = %s, want %s", got, want)
 	}
 }

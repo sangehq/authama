@@ -21,7 +21,7 @@ func freshLock(t *testing.T) {
 func TestSnapshotsPruneTakesTheLock(t *testing.T) {
 	editHome(t)
 	freshLock(t)
-	run(t, "snapshots", "prune")
+	run(t, "ssh", "snapshots", "prune")
 	if !mutation.Held() {
 		t.Error("snapshots prune deleted snapshots without taking the lock")
 	}
@@ -39,7 +39,7 @@ func TestSnapshotsRestoreTakesTheLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	freshLock(t)
-	if out, err := runIn(t, "", "snapshots", "restore", "--yes"); err != nil {
+	if out, err := runIn(t, "", "ssh", "snapshots", "restore", "--yes"); err != nil {
 		t.Fatalf("restore: %v\n%s", err, out)
 	}
 	if !mutation.Held() {

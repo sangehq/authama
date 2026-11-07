@@ -155,12 +155,12 @@ func inventoryShape(t *testing.T, p paths.Paths) string {
 
 func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 	setup := [][]string{
-		{"profile", "add", "work"},
-		{"host", "add", "work", "gh", "-H", "github.com", "-u", "git"},
-		{"host", "add", "work", "db", "-H", "db.example", "-u", "ops", "--tag", "prod"},
-		{"reconcile", "--yes", "--no-pin"},
-		{"key", "add", "work", "spare"},
-		{"host", "add", "work", "new01", "-H", "new01.example", "-u", "ops"},
+		{"ssh", "profile", "add", "work"},
+		{"ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git"},
+		{"ssh", "host", "add", "work", "db", "-H", "db.example", "-u", "ops", "--tag", "prod"},
+		{"ssh", "reconcile", "--yes", "--no-pin"},
+		{"ssh", "key", "add", "work", "spare"},
+		{"ssh", "host", "add", "work", "new01", "-H", "new01.example", "-u", "ops"},
 	}
 	// Changes that act outside the home are compared by what they did there:
 	// each side gets its own stand-in docker and notifier, logging its calls.
@@ -321,29 +321,29 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 		env   func(t *testing.T, side string) // before each side runs
 		check func(t *testing.T)              // after both have
 	}{
-		{"profile add", []string{"profile", "add", "home", "--key-comment", "{profile} laptop"},
+		{"profile add", []string{"ssh", "profile", "add", "home", "--key-comment", "{profile} laptop"},
 			change.ProfileAdd("home", "", "", "{profile} laptop"), nil, nil, nil},
-		{"profile edit", []string{"profile", "edit", "work", "--key-scope", "shared", "--key-name", "work_all"},
+		{"profile edit", []string{"ssh", "profile", "edit", "work", "--key-scope", "shared", "--key-name", "work_all"},
 			change.ProfileEdit("work", ptr("shared"), ptr("work_all")), nil, nil, nil},
-		{"profile delete", []string{"profile", "delete", "work", "--yes"}, change.ProfileDelete("work"), nil, nil, nil},
-		{"host add", []string{"host", "add", "work", "web", "-H", "web.example", "-u", "deploy", "-p", "2222", "--tag", "a", "--tag", "b"},
+		{"profile delete", []string{"ssh", "profile", "delete", "work", "--yes"}, change.ProfileDelete("work"), nil, nil, nil},
+		{"host add", []string{"ssh", "host", "add", "work", "web", "-H", "web.example", "-u", "deploy", "-p", "2222", "--tag", "a", "--tag", "b"},
 			change.HostAdd("work", "web", change.HostInput{Hostname: ptr("web.example"), User: ptr("deploy"), Port: ptr(2222),
 				Tags: &[]string{"a", "b"}}), nil, nil, nil},
-		{"host edit", []string{"host", "edit", "work", "db", "-u", "root", "--tag", ""},
+		{"host edit", []string{"ssh", "host", "edit", "work", "db", "-u", "root", "--tag", ""},
 			change.HostEdit("work", "db", change.HostInput{User: ptr("root"), Tags: &[]string{""}}), nil, nil, nil},
-		{"host delete", []string{"host", "delete", "work", "db", "--yes"}, change.HostDelete("work", "db"), nil, nil, nil},
-		{"key delete", []string{"key", "delete", "work/spare", "--yes"},
+		{"host delete", []string{"ssh", "host", "delete", "work", "db", "--yes"}, change.HostDelete("work", "db"), nil, nil, nil},
+		{"key delete", []string{"ssh", "key", "delete", "work/spare", "--yes"},
 			change.KeyDelete(manifest.KeyRef{Profile: "work", KeyName: "spare"}), nil, nil, nil},
-		{"vm add", []string{"vm", "add", "work", "devbox", "--hypervisor", "parallels", "--vm", "Ubuntu", "-u", "dev", "--yes"},
+		{"vm add", []string{"ssh", "vm", "add", "work", "devbox", "--hypervisor", "parallels", "--vm", "Ubuntu", "-u", "dev", "--yes"},
 			change.VMAdd("work", "devbox", "parallels", "Ubuntu", "dev"), nil, nil, nil},
-		{"config render", []string{"config", "render", "--yes"}, change.ConfigRender(), nil, nil, nil},
-		{"reconcile", []string{"reconcile", "--yes", "--no-pin"}, change.Reconcile(), nil, nil, nil},
-		{"keygen", []string{"keygen", "work", "--no-pin", "--yes"}, change.Keygen("work"), nil, nil, nil},
-		{"key add", []string{"key", "add", "work", "extra", "--type", "ed25519", "--host", "new01"},
+		{"config render", []string{"ssh", "config", "render", "--yes"}, change.ConfigRender(), nil, nil, nil},
+		{"reconcile", []string{"ssh", "reconcile", "--yes", "--no-pin"}, change.Reconcile(), nil, nil, nil},
+		{"keygen", []string{"ssh", "keygen", "work", "--no-pin", "--yes"}, change.Keygen("work"), nil, nil, nil},
+		{"key add", []string{"ssh", "key", "add", "work", "extra", "--type", "ed25519", "--host", "new01"},
 			change.KeyAdd("work", "extra", "ed25519", "new01"), nil, nil, nil},
 		// A missing .pub is rebuilt from its private key; the web derives it from
 		// the real private key, since a preview's copy holds none.
-		{"key regen-pub", []string{"key", "regen-pub", "work", "--yes"},
+		{"key regen-pub", []string{"ssh", "key", "regen-pub", "work", "--yes"},
 			change.KeyRegenPub(paths.Paths{}, keysvc.Selection{Selectors: []string{"work"}}), func(p paths.Paths) {
 				pubs, _ := filepath.Glob(filepath.Join(p.SSHDir, "profiles", "work", "*gh*.pub"))
 				if len(pubs) == 0 {
@@ -357,33 +357,33 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 			}, nil, nil},
 		// The Naming page: the manifest's rules, one profile's, the key
 		// template (which keeps every existing key name) and a profile's code.
-		{"naming set", []string{"naming", "set", "--envs=prd,stg", "--enforce=warn", "--start=1"},
+		{"naming set", []string{"ssh", "naming", "set", "--envs=prd,stg", "--enforce=warn", "--start=1"},
 			change.NamingSet("", change.NamingFields{Envs: &[]string{"prd", "stg"}, Enforce: ptr("warn"), Start: ptr(1)}), nil, nil, nil},
-		{"naming set --profile", []string{"naming", "set", "--profile", "work", "--alias={code}-{role}-{nn}", "--code-fallback=profile"},
+		{"naming set --profile", []string{"ssh", "naming", "set", "--profile", "work", "--alias={code}-{role}-{nn}", "--code-fallback=profile"},
 			change.NamingSet("work", change.NamingFields{Alias: ptr("{code}-{role}-{nn}"), CodeFallback: ptr("profile")}), nil, nil, nil},
-		{"naming key-template", []string{"naming", "key-template", "{profile}_{alias}_k-{algo}", "--yes"},
+		{"naming key-template", []string{"ssh", "naming", "key-template", "{profile}_{alias}_k-{algo}", "--yes"},
 			change.NamingKeyTemplate("", "{profile}_{alias}_k-{algo}"), nil, nil, nil},
-		{"profile code", []string{"profile", "edit", "work", "--code=wk"}, change.ProfileCode("work", "wk"), nil, nil, nil},
-		{"providers export", []string{"providers", "--export"}, change.ProvidersExport(), nil, nil, nil},
+		{"profile code", []string{"ssh", "profile", "edit", "work", "--code=wk"}, change.ProfileCode("work", "wk"), nil, nil, nil},
+		{"providers export", []string{"ssh", "providers", "--export"}, change.ProvidersExport(), nil, nil, nil},
 		{"settings init", []string{"settings", "init"}, change.SettingsInit(false), nil, nil, nil},
 		{"token init", []string{"token", "init", "--target", "npm"}, change.TokenInit([]string{"npm"}), nil, nil, nil},
-		{"profile add in a category", []string{"profile", "add", "lab", "--category", "clients"},
+		{"profile add in a category", []string{"ssh", "profile", "add", "lab", "--category", "clients"},
 			change.ProfileAddIn("lab", "", "", "", "clients"), nil, nil, nil},
-		{"profile key comment", []string{"profile", "edit", "work", "--key-comment", "{profile} {date}"},
+		{"profile key comment", []string{"ssh", "profile", "edit", "work", "--key-comment", "{profile} {date}"},
 			change.ProfileKeyComment("work", "{profile} {date}"), nil, nil, nil},
-		{"snapshots prune", []string{"snapshots", "prune", "--keep", "2"}, change.SnapshotsPrune(2), nil, nil, nil},
+		{"snapshots prune", []string{"ssh", "snapshots", "prune", "--keep", "2"}, change.SnapshotsPrune(2), nil, nil, nil},
 		{"doctor fix", []string{"doctor", "--fix"}, change.DoctorFix(), func(p paths.Paths) {
 			_ = os.Chmod(p.Manifest(), 0o644)
 		}, nil, nil},
-		{"host apply", []string{"host", "apply", "work", "--host", "db db2.example:2200 root db", "--host", "cache cache.example ops", "--yes"},
+		{"host apply", []string{"ssh", "host", "apply", "work", "--host", "db db2.example:2200 root db", "--host", "cache cache.example ops", "--yes"},
 			change.HostApply("work", []editor.HostSpec{{Alias: "db", Hostname: "db2.example", Port: 2200, User: "root", Role: "db"},
 				{Alias: "cache", Hostname: "cache.example", User: "ops"}}, false, ""), nil, nil, nil},
-		{"host apply, new profile", []string{"host", "apply", "lab", "box", "box.example", "me", "--category", "clients", "--yes"},
+		{"host apply, new profile", []string{"ssh", "host", "apply", "lab", "box", "box.example", "me", "--category", "clients", "--yes"},
 			change.HostApply("lab", []editor.HostSpec{{Alias: "box", Hostname: "box.example", User: "me"}}, false, "clients"), nil, nil, nil},
-		{"profile category", []string{"profile", "edit", "work", "--category", "clients"},
+		{"profile category", []string{"ssh", "profile", "edit", "work", "--category", "clients"},
 			change.ProfileCategory("work", "clients"), nil, nil, nil},
-		{"profile purge", []string{"profile", "delete", "work", "--purge", "--yes"}, change.ProfilePurge("work"), nil, needsAge, nil},
-		{"clean", []string{"clean", "--yes"}, change.Clean(false), func(p paths.Paths) {
+		{"profile purge", []string{"ssh", "profile", "delete", "work", "--purge", "--yes"}, change.ProfilePurge("work"), nil, needsAge, nil},
+		{"clean", []string{"ssh", "clean", "--yes"}, change.Clean(false), func(p paths.Paths) {
 			inv, err := inventory.Load(p.Inventory())
 			if err != nil {
 				return
@@ -398,8 +398,8 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 			}
 			_ = inv.Save(p.Inventory())
 		}, nil, nil},
-		{"bundle", []string{"bundle", "--keep", "1"}, change.Bundle(1), nil, needsAge, nil},
-		{"vm docker-context", []string{"vm", "docker-context", "devbox"}, change.VMDockerContext("devbox"), func(p paths.Paths) {
+		{"bundle", []string{"ssh", "bundle", "--keep", "1"}, change.Bundle(1), nil, needsAge, nil},
+		{"vm docker-context", []string{"ssh", "vm", "docker-context", "devbox"}, change.VMDockerContext("devbox"), func(p paths.Paths) {
 			m, _ := manifest.Load(p.Manifest())
 			prof := m.Profiles["work"]
 			prof.Hosts = append(prof.Hosts, manifest.Host{Alias: "devbox", Hostname: "devbox", User: "dev",
@@ -407,24 +407,24 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 			m.SetProfile("work", prof)
 			_ = m.Save(p.Manifest())
 		}, stubs("docker", `[ "$2" != inspect ]`), sameCalls},
-		{"snapshots restore", []string{"snapshots", "restore", "ssh-", "--yes"}, change.SnapshotRestore("", "ssh-", 10), func(p paths.Paths) {
+		{"snapshots restore", []string{"ssh", "snapshots", "restore", "ssh-", "--yes"}, change.SnapshotRestore("", "ssh-", 10), func(p paths.Paths) {
 			f, _ := os.OpenFile(filepath.Join(p.SSHDir, "config"), os.O_APPEND|os.O_WRONLY, 0o600)
 			_, _ = f.WriteString("# edited after the snapshot\n")
 			_ = f.Close()
 		}, nil, nil},
-		{"notify test", []string{"notify", "test"}, change.NotifyTest(), nil, notifier, sameCalls},
-		{"audit notify", []string{"audit", "--notify"}, change.AuditNotify(), nil, notifier, nil},
+		{"notify test", []string{"ssh", "notify", "test"}, change.NotifyTest(), nil, notifier, sameCalls},
+		{"audit notify", []string{"ssh", "audit", "--notify"}, change.AuditNotify(), nil, notifier, nil},
 		{"token delete", []string{"token", "delete", "npm", "npm.example.com"},
 			change.TokenDelete("npm", "npm.example.com"), nil, tokenSide(true), sameTokenFiles(".npmrc", credSecretA, "npm.example.com")},
 		{"token apply", []string{"token", "apply", "--no-env-hint"}, change.TokenApply(), nil, tokenSide(false),
 			sameTokenFiles(filepath.Join("composer", "auth.json"), credSecretParity, "")},
-		{"vm sync", []string{"vm", "sync", "--yes"}, change.VMSync(false), goneVM, limaLists, nil},
-		{"vm adopt-key", []string{"vm", "adopt-key", "loose-vm", "work", "devbox", "--hypervisor", "parallels", "--vm", "Ubuntu", "-u", "dev", "--yes"},
+		{"vm sync", []string{"ssh", "vm", "sync", "--yes"}, change.VMSync(false), goneVM, limaLists, nil},
+		{"vm adopt-key", []string{"ssh", "vm", "adopt-key", "loose-vm", "work", "devbox", "--hypervisor", "parallels", "--vm", "Ubuntu", "-u", "dev", "--yes"},
 			change.VMAdoptKey("loose-vm", "work", "devbox", "parallels", "Ubuntu", "dev"), loose, nil, nil},
-		{"vm schedule", []string{"vm", "sync", "--install-schedule", "--yes"}, change.VMSchedule(true), nil, schedSide, sameSchedule},
-		{"key reserve", []string{"key", "reserve", "loose-vm", "--for", "devbox", "--note", "Docker VM, later", "--yes"},
+		{"vm schedule", []string{"ssh", "vm", "sync", "--install-schedule", "--yes"}, change.VMSchedule(true), nil, schedSide, sameSchedule},
+		{"key reserve", []string{"ssh", "key", "reserve", "loose-vm", "--for", "devbox", "--note", "Docker VM, later", "--yes"},
 			change.KeyReserve("loose-vm", "devbox", "Docker VM, later"), loose, nil, nil},
-		{"key unreserve", []string{"key", "unreserve", "loose-vm", "--yes"}, change.KeyUnreserve("loose-vm"), func(p paths.Paths) {
+		{"key unreserve", []string{"ssh", "key", "unreserve", "loose-vm", "--yes"}, change.KeyUnreserve("loose-vm"), func(p paths.Paths) {
 			loose(p)
 			_ = editor.New(p).ReserveKey("loose-vm", manifest.ReservedKey{For: "devbox"})
 		}, nil, nil},

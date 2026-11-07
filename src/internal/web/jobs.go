@@ -62,7 +62,9 @@ var jobFields = map[string][]string{
 // runs them, as the CLI does.
 var readsOnlyHostKeys = map[string]bool{"knownhosts-init": true, "knownhosts-pin": true}
 
-// bundleRe is what a bundle the web restores is named, as bundler writes it.
+// bundleRe is what a bundle the web restores is named: authama-<stamp>.age as
+// bundler writes it, or ssh-manager-<stamp>.age from a release before 0.1.1
+// (bundler.LegacyBundlePrefix), which is still restorable.
 var bundleRe = regexp.MustCompile(`^(authama|ssh-manager)-[0-9]{8}-[0-9]{6}(-[0-9]+)?\.age$`)
 
 // jobSpec is a job ready to start: what it is, what it will do, and the steps.

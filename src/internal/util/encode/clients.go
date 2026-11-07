@@ -14,9 +14,9 @@ import (
 
 // The SSH clients' import formats. They write hosts, not a table: each client
 // reads a host, port, user and key, and most want files of their own shape.
-// They moved here from core/renderer, which still offers them by their old
-// names and now delegates (RenderClientExport, RenderTermiusCSV), so the export
-// pipeline and `ssh host export` write the same bytes.
+// core/renderer offers them under its own names (RenderClientExport,
+// RenderTermiusCSV) by delegating here, so the export pipeline, the web UI's
+// downloads and the renderer's golden files all see the same bytes.
 
 // Host is one host as an SSH client's import sees it: the profile as its
 // group, the alias as its name, and the key as an absolute path.
@@ -53,7 +53,8 @@ type Client struct {
 	Render func(hosts []Host) (*ClientExport, error)
 }
 
-// Clients are the client formats `ssh host export` names, by name.
+// Clients are the SSH client formats, by their own name ("csv" is hosts-csv
+// in the pipeline).
 var Clients = map[string]Client{
 	"csv":              {Name: "csv", Client: "any client that imports a CSV (Royal TS, Xshell, SecureCRT's import script, a spreadsheet)", Render: renderGenericCSV},
 	"windows-terminal": {Name: "windows-terminal", Client: "Windows Terminal (a JSON fragment)", ViaSSH: true, Render: renderWindowsTerminal},

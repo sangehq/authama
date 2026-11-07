@@ -17,10 +17,10 @@ import (
 // the record must survive keygen's save.
 func TestAMutatingCommandReadsStateOnlyAfterTakingTheLock(t *testing.T) {
 	p := editHome(t)
-	run(t, "profile", "add", "w")
-	run(t, "host", "add", "w", "a", "-H", "a.example", "-u", "u")
-	run(t, "reconcile", "--yes", "--no-pin")
-	run(t, "host", "add", "w", "b", "-H", "b.example", "-u", "u")
+	run(t, "ssh", "profile", "add", "w")
+	run(t, "ssh", "host", "add", "w", "a", "-H", "a.example", "-u", "u")
+	run(t, "ssh", "reconcile", "--yes", "--no-pin")
+	run(t, "ssh", "host", "add", "w", "b", "-H", "b.example", "-u", "u")
 	mutation.Release() // the setup commands took it; release it for the test to hold
 
 	release, err := lock.Acquire(p.LockFile())
@@ -29,7 +29,7 @@ func TestAMutatingCommandReadsStateOnlyAfterTakingTheLock(t *testing.T) {
 	}
 	done := make(chan error, 1)
 	go func() {
-		_, err := runErr(t, "keygen", "w", "--yes", "--no-pin")
+		_, err := runErr(t, "ssh", "keygen", "w", "--yes", "--no-pin")
 		done <- err
 	}()
 	time.Sleep(400 * time.Millisecond) // keygen is now waiting on the lock
@@ -71,17 +71,17 @@ func TestAMutatingCommandReadsStateOnlyAfterTakingTheLock(t *testing.T) {
 // did not complete exited 0, so a script could not tell it had not happened.
 func TestRotateTakesAProfileOrAliasAndRollbackFailsWhenIncomplete(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "w")
-	run(t, "host", "add", "w", "panel", "-H", "panel.example", "-u", "u", "--provider", "ploi")
-	run(t, "reconcile", "--yes", "--no-pin")
+	run(t, "ssh", "profile", "add", "w")
+	run(t, "ssh", "host", "add", "w", "panel", "-H", "panel.example", "-u", "u", "--provider", "ploi")
+	run(t, "ssh", "reconcile", "--yes", "--no-pin")
 	for _, sel := range []string{"w", "panel"} {
-		if out, err := runErr(t, "rotate", sel, "--yes", "--no-key-backup", "--allow-unverified"); err != nil {
+		if out, err := runErr(t, "ssh", "rotate", sel, "--yes", "--no-key-backup", "--allow-unverified"); err != nil {
 			t.Errorf("rotate %s: %v\n%s", sel, err, out)
 		}
 	}
 	// A server the rollback cannot reach: nothing changes, and it must fail.
-	run(t, "host", "add", "w", "box", "-H", "nohost.invalid", "-u", "u", "--key-name", "w_panel-ed25519")
-	if _, err := runErr(t, "rollback", "w/w_panel-ed25519", "--yes"); err == nil {
+	run(t, "ssh", "host", "add", "w", "box", "-H", "nohost.invalid", "-u", "u", "--key-name", "w_panel-ed25519")
+	if _, err := runErr(t, "ssh", "rollback", "w/w_panel-ed25519", "--yes"); err == nil {
 		t.Error("a rollback that reached no server exited 0")
 	}
 }

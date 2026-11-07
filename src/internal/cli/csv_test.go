@@ -9,8 +9,8 @@ import (
 // secret in one.
 func TestListCommandsPrintCSV(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "web1", "-H", "web1.example", "-u", "deploy")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "web1", "-H", "web1.example", "-u", "deploy")
 	out := run(t, "ssh", "list", "--csv")
 	if !strings.HasPrefix(out, "profile,alias,hostname,provider,key,status,tags\n") || !strings.Contains(out, "work,web1,web1.example,") {
 		t.Errorf("ssh list --csv:\n%s", out)

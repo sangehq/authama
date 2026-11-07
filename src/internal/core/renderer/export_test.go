@@ -230,7 +230,8 @@ func TestCloudflaredHostRendersItsProxyCommand(t *testing.T) {
 // must read the cloudflared ProxyCommand as well as the VM one.
 func TestProxyBinaryReadsBothRenderedProxies(t *testing.T) {
 	for value, want := range map[string]string{
-		`"/usr/local/bin/authama" vm proxy devbox`:                 "/usr/local/bin/authama",
+		`"/usr/local/bin/authama" ssh vm proxy devbox`:             "/usr/local/bin/authama",
+		`"/usr/local/bin/authama" vm proxy devbox`:                 "/usr/local/bin/authama", // rendered before 2026-11-07
 		`"/opt/homebrew/bin/cloudflared" access ssh --hostname %h`: "/opt/homebrew/bin/cloudflared",
 		`"cloudflared" access ssh --hostname %h`:                   "cloudflared",
 		`nc %h %p`:                                                 "",

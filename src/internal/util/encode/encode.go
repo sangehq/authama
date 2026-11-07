@@ -29,8 +29,8 @@ type Options struct {
 	Compact  bool   // json, js, php, yaml: no indentation
 	Shape    string // json, js, php, yaml: "objects" (default) or "table" ({columns, rows})
 	Title    string // html: the page title
-	// IncludeGit keeps git hosts in a client format, which leaves them out
-	// as `ssh host export` does unless --include-git.
+	// IncludeGit keeps git hosts (user git, or a github or gitlab provider)
+	// in a host format, which otherwise leaves them out: they are not shells.
 	IncludeGit bool
 }
 
@@ -44,8 +44,9 @@ type Format struct {
 	// Hosts is set on a host format (hosts.go): it writes the hosts a
 	// selection kept, read from a HostSource, and Write refuses a table.
 	Hosts func(src HostSource, aliases []string, o Options) (*ClientExport, error)
-	// Client is the `ssh host export` name of a client format, which the
-	// pipeline may call otherwise (its csv is hosts-csv).
+	// Client is the client format's own name in Clients, which the pipeline
+	// may call otherwise: the generic "csv" client is "hosts-csv" there, since
+	// "csv" is the table format.
 	Client string
 }
 

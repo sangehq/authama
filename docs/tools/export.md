@@ -1,10 +1,10 @@
 # `export` — any list, and copies of the config for other tools
 
 `authama export` writes any list in any format (below), and hosts also as `ssh_config` or as an SSH client imports
-them. Three older commands write the same host files: `config export --flat` for anything that reads one `ssh_config`,
-`termius export` for the Termius app, and `host export <client>` for Windows Terminal, iTerm2, PuTTY, Remmina,
-SecureCRT, MobaXterm and any client that imports a CSV. `termius export` and `host export` are deprecated in favour of
-`export hosts --format <client>`; they keep working and write the same bytes, and are not removed before v1.0.0.
+them, for Termius, Windows Terminal, iTerm2, PuTTY, Remmina, SecureCRT, MobaXterm and any client that imports a
+CSV. `config export --flat` writes the whole config as one `ssh_config`, for anything that reads that format. The
+older `termius export` and `host export <client>` were removed on 2026-11-07; `export hosts --format <client>`
+writes the same files.
 
 All are opt-in and read-only towards `~/.ssh`. They write under `~/.config/authama/exports/` (mode 0600, since
 the files list every host and key path), and they refuse any target inside `~/.ssh`, however the path is spelled: containment is
@@ -134,16 +134,16 @@ already written.
 
 ### Hosts for ssh and SSH clients
 
-| `--format` | Writes | Same bytes as |
-|---|---|---|
-| `ssh_config` | the managed config of the hosts kept: each block as the flat export writes it, under its profile's banner, the git ssh-mode block when its `github.com` host is kept, `Host *` last | `ssh config export --flat`, when every host is kept |
-| `termius` | the Termius CSV import | `ssh termius export` |
-| `hosts-csv` | the generic client CSV (`alias, group, hostname, port, user, key_path, tags`) | `ssh host export csv` |
-| `windows-terminal`, `iterm2`, `putty`, `securecrt`, `mobaxterm` | the client's file, named as the client expects (`authama-putty.reg`, …) | `ssh host export <client>` |
-| `remmina` | a zip holding one `authama-<alias>.remmina` per host | `ssh host export remmina`, zipped |
+| `--format` | Writes |
+|---|---|
+| `ssh_config` | the managed config of the hosts kept: each block as the flat export writes it, under its profile's banner, the git ssh-mode block when its `github.com` host is kept, `Host *` last; byte for byte `ssh config export --flat` when every host is kept |
+| `termius` | the Termius CSV import ([Termius](#termius)) |
+| `hosts-csv` | the generic client CSV (`alias, group, hostname, port, user, key_path, tags`) |
+| `windows-terminal`, `iterm2`, `putty`, `securecrt`, `mobaxterm` | the client's file, named as the client expects (`authama-putty.reg`, …) ([Other SSH clients](#other-ssh-clients)) |
+| `remmina` | a zip holding one `authama-<alias>.remmina` per host |
 
 The filters choose the hosts; `--columns` does not apply, since each client reads its own fields. With no `--sort`,
-hosts come in manifest order, as the old commands list them; with one, in the sort's order. Git hosts are left out
+hosts come in manifest order; with one, in the sort's order. Git hosts are left out
 unless `--include-git`, and every client but `windows-terminal` and `iterm2` leaves out hosts behind a ProxyCommand,
 which it would not run; `ssh_config` keeps both, since ssh itself reads it. What was left out, and what is left to do
 in the client, goes to stderr, so `--out -` or a pipe gets a clean file. The client table below says what each file
@@ -167,7 +167,7 @@ authama ssh config export --flat --out ~/flat.conf   # another file
 authama ssh config export --flat --out -             # stdout
 ```
 
-The flat export is always the whole config: it takes no `--skip` or `--include-git`, because it is a copy for a
+The flat export is always the whole config: it takes no filters or `--include-git`, because it is a copy for a
 reader of ssh's own format, not a host list for another app.
 
 | In the export | Value |
@@ -180,20 +180,20 @@ reader of ssh's own format, not a host list for another app.
 `ssh -G -F <export> <alias>` resolves a host from the copy the same way `ssh -G <alias>` does from the real config. The
 copy goes stale when the manifest changes; export again rather than editing it.
 
-## `authama ssh termius export`
-
-Deprecated: `authama export hosts --format termius` writes the same CSV. This command keeps working.
+## Termius
 
 Termius keeps hosts in its own encrypted vault and has no command line or API to add them, so authama cannot write into
-it. It writes the CSV Termius's importer reads instead:
+it. It writes the CSV Termius's importer reads instead, through the export pipeline:
 
 ```bash
-authama ssh termius export                      # ~/.config/authama/exports/termius-hosts.csv
-authama ssh termius export --open               # macOS: also open Termius and show the file in Finder
-authama ssh termius export --skip uni           # leave a host out (repeatable)
-authama ssh termius export --include-git        # also git hosts
-authama ssh termius export --out - > hosts.csv  # CSV on stdout, the report on stderr
+authama export hosts --format termius --out termius-hosts.csv  # the CSV, mode 0600
+authama export hosts --format termius --include-git            # also git hosts, to stdout
+authama export hosts --format termius --exclude uni            # leave out hosts containing "uni"
+authama export hosts --format termius --profile clients        # any export filter applies
 ```
+
+The Export page in the web UI offers the same file. `ssh termius export`, which wrote it before, was removed on
+2026-11-07; its `--open` (open Termius and show the file in Finder) has no replacement.
 
 | Column | Value |
 |---|---|
@@ -203,18 +203,17 @@ authama ssh termius export --out - > hosts.csv  # CSV on stdout, the report on s
 | `Hostname/IP` · `Port` · `Username` | from the host; `Protocol` is `ssh` |
 | `Password` | always empty |
 
-Left out, and listed under `skipped:`:
+Left out, and reported on stderr:
 
 - **VM hosts** — reached only through authama's ProxyCommand, which Termius ignores;
 - **git hosts** — user `git`, or a `github`/`gitlab` provider: not shells (`--include-git` adds them);
-- **`--skip` aliases** — an alias that names no host is an error, not a silently ignored typo.
 
 A value starting with `=`, `+`, `-` or `@` is prefixed with `'`, so the file cannot run a formula if opened in a
 spreadsheet.
 
 **The CSV carries no keys.** Termius's CSV import takes labels, addresses, ports, groups, tags and credentials but has
 no key column ([Import existing hosts](https://docs.termius.com/getting-started/import-existing-hosts)); keys live in Termius's Keychain and are linked to each host
-([Keychain](https://support.termius.com/hc/en-us/articles/4401872025113-Keychain), [SSH keys and certificates](https://docs.termius.com/keychain/ssh-keys-and-certificates)). The export prints each host's key path, then:
+([Keychain](https://support.termius.com/hc/en-us/articles/4401872025113-Keychain), [SSH keys and certificates](https://docs.termius.com/keychain/ssh-keys-and-certificates)). `ssh termius keys` lists each host's key and copies it:
 
 ## `authama ssh termius keys`
 
@@ -225,8 +224,8 @@ authama ssh termius keys db-01 --clear-after 60s   # ...and empty the clipboard 
 authama ssh termius keys --clear                      # empty the clipboard now
 authama ssh termius keys db-01 --print       # key on stdout instead (warns on stderr; avoid)
 authama ssh termius keys github-me                    # a git host: naming it is enough
-authama ssh termius keys --include-git                # list git hosts too, as with export --include-git
-authama ssh termius keys --skip uni                   # leave a host out, as with export --skip
+authama ssh termius keys --include-git                # list git hosts too, as export --include-git exports them
+authama ssh termius keys --skip uni                   # leave a host out of the list
 ```
 
 The label is the key file's name (`clientco_db-01-ed25519`). The key is copied with `pbcopy` (macOS),
@@ -239,20 +238,22 @@ The column layout is the one third-party exporters reproduce from Termius's impo
 publishes the template only inside the app (Hosts → New Host → Import → CSV → download template); if its header ever
 differs, `TermiusColumns` in `src/internal/util/encode/clients.go` is the one place to change.
 
-## `authama ssh host export <client>`
+## Other SSH clients
 
-Deprecated: `authama export hosts --format <client>` writes the same files (the generic CSV is `hosts-csv` there).
-This command keeps working.
+`authama export hosts --format <client>` writes the hosts as another SSH client imports them. A client that takes one
+file gets that file; one that takes a file per host (`remmina`) gets a zip of them.
 
 ```bash
-authama ssh host export windows-terminal        # ~/.config/authama/exports/windows-terminal/authama.json
-authama ssh host export iterm2
-authama ssh host export putty --skip bastion    # leave a host out (repeatable)
-authama ssh host export remmina --include-git   # also git hosts
-authama ssh host export securecrt               # SecureCRT, and Termius's SecureCRT import
-authama ssh host export mobaxterm               # MobaXterm, and Termius's MobaXterm import
-authama ssh host export csv --out - > hosts.csv # one-file exports can go to stdout
+authama export hosts --format windows-terminal --out authama.json
+authama export hosts --format iterm2 --out authama-hosts.json
+authama export hosts --format putty --exclude bastion --out authama-putty.reg  # leave a host out
+authama export hosts --format remmina --include-git --out remmina.zip         # also git hosts
+authama export hosts --format securecrt --out authama-securecrt.xml           # SecureCRT, and Termius's SecureCRT import
+authama export hosts --format mobaxterm --out authama.mxtsessions             # MobaXterm, and Termius's MobaXterm import
+authama export hosts --format hosts-csv > hosts.csv                           # the generic CSV
 ```
+
+`ssh host export <client>`, which wrote these before, was removed on 2026-11-07. Its `csv` client is `hosts-csv` here.
 
 | Client | Writes | Then | Key |
 |---|---|---|---|
@@ -262,7 +263,7 @@ authama ssh host export csv --out - > hosts.csv # one-file exports can go to std
 | `remmina` | one `authama-<alias>.remmina` per host | copy them to `~/.local/share/remmina/`, or import them from Remmina's menu | `ssh_privatekey`, with `ssh_auth=1`; Remmina also wants the `.pub` beside it |
 | `securecrt` | `authama-securecrt.xml`, SecureCRT's settings XML: a session folder per profile, an SSH2 session per host | SecureCRT: **File → Import Settings**; Termius: **Import → SecureCRT** | each session's own `Identity Filename V2` (SecureCRT 8 and later read OpenSSH keys) |
 | `mobaxterm` | `authama.mxtsessions`: a bookmark folder per profile, an SSH session per host | MobaXterm: **Sessions → Import sessions from file**; Termius: **Import → MobaXterm** | the session's private key field (MobaXterm reads OpenSSH keys) |
-| `csv` | `hosts.csv`: `alias, group, hostname, port, user, key_path, tags` (tags `;`-separated) | import it, mapping the columns | `key_path` |
+| `hosts-csv` | `hosts.csv`: `alias, group, hostname, port, user, key_path, tags` (tags `;`-separated) | import it, mapping the columns | `key_path` |
 
 `windows-terminal` and `iterm2` launch `ssh`, which reads your `~/.ssh/config`, so a host reached through a
 ProxyCommand (a VM, Cloudflare Access) works there as at the terminal, and re-exporting updates the same profiles:
@@ -276,8 +277,8 @@ give them the file `config export --flat` writes. Xshell's own session files are
 in a store of its own.
 
 **Termius imports all five ways it offers**: `~/.ssh` (the config authama renders, or `config export --flat`), CSV
-(`ssh termius export`), SecureCRT (`host export securecrt`), PuTTY (`host export putty`, the `.reg`) and MobaXterm
-(`host export mobaxterm`). Key paths in every file are this machine's: edit them when the client runs elsewhere.
+(`export hosts --format termius`), SecureCRT (`--format securecrt`), PuTTY (`--format putty`, the `.reg`) and
+MobaXterm (`--format mobaxterm`). Key paths in every file are this machine's: edit them when the client runs elsewhere.
 
 ---
 

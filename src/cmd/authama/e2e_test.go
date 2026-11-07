@@ -67,8 +67,8 @@ func TestEndToEnd(t *testing.T) {
 	ssh := filepath.Join(home, ".ssh")
 
 	t.Run("reconcile mints a key for every profile that owns one", func(t *testing.T) {
-		mustRun(t, run, "reconcile", "--dry-run")
-		mustRun(t, run, "reconcile")
+		mustRun(t, run, "ssh", "reconcile", "--dry-run")
+		mustRun(t, run, "ssh", "reconcile")
 		for _, rel := range []string{
 			"profiles/work/work_hpc-ed25519",
 			"profiles/personal/personal_github-ed25519",
@@ -115,12 +115,12 @@ func TestEndToEnd(t *testing.T) {
 	})
 
 	t.Run("the rendered config matches the manifest", func(t *testing.T) {
-		mustRun(t, run, "config", "check")
+		mustRun(t, run, "ssh", "config", "check")
 	})
 
 	t.Run("two profiles on one hostname resolve to different keys", func(t *testing.T) {
-		personal := mustRun(t, run, "config", "show", "github-personal")
-		simtabi := mustRun(t, run, "config", "show", "github-simtabi")
+		personal := mustRun(t, run, "ssh", "config", "show", "github-personal")
+		simtabi := mustRun(t, run, "ssh", "config", "show", "github-simtabi")
 		if !strings.Contains(personal, "personal/personal_github-ed25519") {
 			t.Errorf("github-personal resolved to:\n%s", personal)
 		}
@@ -135,11 +135,11 @@ func TestEndToEnd(t *testing.T) {
 	})
 
 	t.Run("a second reconcile mints nothing and leaves the config in sync", func(t *testing.T) {
-		out := mustRun(t, run, "reconcile")
+		out := mustRun(t, run, "ssh", "reconcile")
 		if strings.Contains(out, "minted") && !strings.Contains(out, "0") {
 			t.Logf("second reconcile said:\n%s", out)
 		}
-		mustRun(t, run, "config", "check")
+		mustRun(t, run, "ssh", "config", "check")
 	})
 
 	t.Run("drift inside the managed block is caught; content outside it is not", func(t *testing.T) {
@@ -151,7 +151,7 @@ func TestEndToEnd(t *testing.T) {
 		if err := os.WriteFile(cfg, []byte(original+"\nHost my-own-thing\n    HostName elsewhere.example\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if _, _, code := run("", "config", "check"); code != 0 {
+		if _, _, code := run("", "ssh", "config", "check"); code != 0 {
 			t.Error("foreign content below the managed block is not drift")
 		}
 
@@ -164,30 +164,30 @@ func TestEndToEnd(t *testing.T) {
 		if err := os.WriteFile(cfg, []byte(edited), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if _, _, code := run("", "config", "check"); code == 0 {
+		if _, _, code := run("", "ssh", "config", "check"); code == 0 {
 			t.Error("a hand-edited managed block should be reported as drift")
 		}
-		mustRun(t, run, "config", "render")
-		mustRun(t, run, "config", "check")
+		mustRun(t, run, "ssh", "config", "render")
+		mustRun(t, run, "ssh", "config", "check")
 	})
 
 	t.Run("the query verbs report the tree they built", func(t *testing.T) {
-		if out := mustRun(t, run, "list", "--type", "vcs"); !strings.Contains(out, "github-simtabi") {
+		if out := mustRun(t, run, "ssh", "list", "--type", "vcs"); !strings.Contains(out, "github-simtabi") {
 			t.Errorf("list --type vcs:\n%s", out)
 		}
-		if out := mustRun(t, run, "list", "--tag", "db"); !strings.Contains(out, "app-db-maria") {
+		if out := mustRun(t, run, "ssh", "list", "--tag", "db"); !strings.Contains(out, "app-db-maria") {
 			t.Errorf("list --tag db:\n%s", out)
 		}
-		if out := mustRun(t, run, "view", "hpc"); !strings.Contains(out, "fingerprint") {
+		if out := mustRun(t, run, "ssh", "view", "hpc"); !strings.Contains(out, "fingerprint") {
 			t.Errorf("view hpc:\n%s", out)
 		}
-		mustRun(t, run, "expiry")
-		mustRun(t, run, "audit")
-		mustRun(t, run, "providers")
+		mustRun(t, run, "ssh", "expiry")
+		mustRun(t, run, "ssh", "audit")
+		mustRun(t, run, "ssh", "providers")
 	})
 
 	t.Run("validate passes, then catches a broken pair", func(t *testing.T) {
-		if out := mustRun(t, run, "validate"); !strings.Contains(out, "OK") {
+		if out := mustRun(t, run, "ssh", "validate"); !strings.Contains(out, "OK") {
 			t.Errorf("validate:\n%s", out)
 		}
 		pub := filepath.Join(ssh, "profiles", "work", "work_hpc-ed25519.pub")
@@ -198,52 +198,52 @@ func TestEndToEnd(t *testing.T) {
 		if err := os.WriteFile(pub, []byte("not a key\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		if _, _, code := run("", "validate", "work_hpc-ed25519"); code == 0 {
+		if _, _, code := run("", "ssh", "validate", "work_hpc-ed25519"); code == 0 {
 			t.Error("a malformed .pub should fail validation")
 		}
 		if err := os.WriteFile(pub, good, 0o644); err != nil {
 			t.Fatal(err)
 		}
-		mustRun(t, run, "validate")
+		mustRun(t, run, "ssh", "validate")
 	})
 
 	t.Run("recover emits a snippet that names authorized_keys", func(t *testing.T) {
-		if out := mustRun(t, run, "recover", "work_hpc-ed25519"); !strings.Contains(out, "authorized_keys") {
+		if out := mustRun(t, run, "ssh", "recover", "work_hpc-ed25519"); !strings.Contains(out, "authorized_keys") {
 			t.Errorf("recover:\n%s", out)
 		}
 	})
 
 	t.Run("keygen skips existing keys and only replaces them when told twice", func(t *testing.T) {
-		if out := mustRun(t, run, "keygen", "work"); !strings.Contains(strings.ToLower(out), "already exist") {
+		if out := mustRun(t, run, "ssh", "keygen", "work"); !strings.Contains(strings.ToLower(out), "already exist") {
 			t.Errorf("keygen should warn rather than silently skip:\n%s", out)
 		}
 		before := readFile(t, filepath.Join(ssh, "profiles", "work", "work_hpc-ed25519"))
 
 		// --force alone is refused: replacing a key destroys material with no way
 		// back unless a backup can be written.
-		if _, _, code := run("", "keygen", "work", "--force", "--yes"); code == 0 {
+		if _, _, code := run("", "ssh", "keygen", "work", "--force", "--yes"); code == 0 {
 			t.Error("--force without a backup path should be refused")
 		}
 		if readFile(t, filepath.Join(ssh, "profiles", "work", "work_hpc-ed25519")) != before {
 			t.Fatal("the refused overwrite replaced the key anyway")
 		}
 
-		mustRun(t, run, "keygen", "work", "--force", "--yes", "--no-key-backup")
+		mustRun(t, run, "ssh", "keygen", "work", "--force", "--yes", "--no-key-backup")
 		if readFile(t, filepath.Join(ssh, "profiles", "work", "work_hpc-ed25519")) == before {
 			t.Error("--force --no-key-backup should have regenerated the key")
 		}
 	})
 
 	t.Run("a mutating command leaves a snapshot that restores the config", func(t *testing.T) {
-		mustRun(t, run, "config", "render")
-		if out := mustRun(t, run, "snapshots", "list"); !strings.Contains(out, "ssh-") {
+		mustRun(t, run, "ssh", "config", "render")
+		if out := mustRun(t, run, "ssh", "snapshots", "list"); !strings.Contains(out, "ssh-") {
 			t.Fatalf("no snapshot was taken:\n%s", out)
 		}
 		cfg := filepath.Join(ssh, "config")
 		if err := os.WriteFile(cfg, []byte("# clobbered\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		mustRun(t, run, "snapshots", "restore", "--yes")
+		mustRun(t, run, "ssh", "snapshots", "restore", "--yes")
 		if body := readFile(t, cfg); strings.Contains(body, "clobbered") {
 			t.Error("restore did not bring the config back")
 		}
@@ -259,7 +259,7 @@ func TestEndToEnd(t *testing.T) {
 		if err := os.Remove(key); err != nil {
 			t.Fatal(err)
 		}
-		mustRun(t, run, "snapshots", "restore", "--yes")
+		mustRun(t, run, "ssh", "snapshots", "restore", "--yes")
 		if _, err := os.Stat(key); err == nil {
 			t.Fatal("a snapshot restored a private key; snapshots must not contain key material")
 		}
@@ -267,7 +267,7 @@ func TestEndToEnd(t *testing.T) {
 		if _, _, code := run("", "doctor"); code == 0 {
 			t.Error("doctor should not call a tree with a missing private key clean")
 		}
-		mustRun(t, run, "reconcile") // mint it back for the bundle round trip
+		mustRun(t, run, "ssh", "reconcile") // mint it back for the bundle round trip
 	})
 
 	// The fixture's hosts are unreachable, so they stay unpinned: that is a
@@ -303,7 +303,7 @@ func TestEndToEnd(t *testing.T) {
 			t.Fatal("could not read the recipient out of the age identity")
 		}
 
-		mustRun(t, run, "bundle", "-r", recipient, "-o", dir)
+		mustRun(t, run, "ssh", "bundle", "-r", recipient, "-o", dir)
 		matches, err := filepath.Glob(filepath.Join(dir, "authama-*.age"))
 		if err != nil || len(matches) == 0 {
 			t.Fatalf("no bundle was written: %v", err)
@@ -317,7 +317,7 @@ func TestEndToEnd(t *testing.T) {
 		if err := os.Remove(key); err != nil {
 			t.Fatal(err)
 		}
-		mustRun(t, run, "restore", matches[0], "-i", identity, "--yes")
+		mustRun(t, run, "ssh", "restore", matches[0], "-i", identity, "--yes")
 		if after := readFile(t, key); after != before {
 			t.Error("restore brought back a different key; a bundle must recover the same identity")
 		}

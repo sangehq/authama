@@ -13,8 +13,8 @@ import (
 func TestHostApply(t *testing.T) {
 	t.Run("one positional spec adds the host and renders its block", func(t *testing.T) {
 		p := editHome(t)
-		run(t, "profile", "add", "clientco")
-		out := run(t, "host", "apply", "clientco", "web-01", "203.0.113.21", "ploi", "web")
+		run(t, "ssh", "profile", "add", "clientco")
+		out := run(t, "ssh", "host", "apply", "clientco", "web-01", "203.0.113.21", "ploi", "web")
 		if !strings.Contains(out, "added     web-01") || !strings.Contains(out, "1 added, 0 updated, 0 unchanged") {
 			t.Fatalf("output:\n%s", out)
 		}
@@ -25,9 +25,9 @@ func TestHostApply(t *testing.T) {
 
 	t.Run("repeated --host upserts, merges tags, then is idempotent", func(t *testing.T) {
 		p := editHome(t)
-		run(t, "profile", "add", "clientco")
-		run(t, "host", "add", "clientco", "web-01", "-H", "1.2.3.4", "-u", "root")
-		args := []string{"host", "apply", "clientco",
+		run(t, "ssh", "profile", "add", "clientco")
+		run(t, "ssh", "host", "add", "clientco", "web-01", "-H", "1.2.3.4", "-u", "root")
+		args := []string{"ssh", "host", "apply", "clientco",
 			"--host", "web-01 203.0.113.21 ploi web",
 			"--host", "db-01  203.0.113.22   ploi db", "--tag", "prd"}
 		out := run(t, args...)
@@ -49,10 +49,10 @@ func TestHostApply(t *testing.T) {
 
 	t.Run("-f reads a file and --dry-run writes nothing", func(t *testing.T) {
 		p := editHome(t)
-		run(t, "profile", "add", "clientco")
+		run(t, "ssh", "profile", "add", "clientco")
 		f := filepath.Join(t.TempDir(), "hosts.txt")
 		_ = os.WriteFile(f, []byte("# prod\na 10.0.0.1 ploi web\nb 10.0.0.2:2222 ploi\n"), 0o600)
-		out := run(t, "host", "apply", "clientco", "-f", f, "--dry-run")
+		out := run(t, "ssh", "host", "apply", "clientco", "-f", f, "--dry-run")
 		if !strings.Contains(out, "(dry-run)") || !strings.Contains(out, "2 added") {
 			t.Fatalf("output:\n%s", out)
 		}
@@ -60,7 +60,7 @@ func TestHostApply(t *testing.T) {
 		if len(m.Profiles["clientco"].Hosts) != 0 {
 			t.Fatal("dry run wrote hosts")
 		}
-		run(t, "host", "apply", "clientco", "-f", f)
+		run(t, "ssh", "host", "apply", "clientco", "-f", f)
 		m, _ = manifest.Load(p.Manifest())
 		if hs := m.Profiles["clientco"].Hosts; len(hs) != 2 || hs[1].Port != 2222 {
 			t.Fatalf("hosts: %+v", hs)
@@ -69,9 +69,9 @@ func TestHostApply(t *testing.T) {
 
 	t.Run("-f - reads JSON from stdin", func(t *testing.T) {
 		p := editHome(t)
-		run(t, "profile", "add", "clientco")
+		run(t, "ssh", "profile", "add", "clientco")
 		js := `[{"alias":"a","host":"10.0.0.1","user":"ploi","role":"web"},"b 10.0.0.2 ploi db"]`
-		if out, err := runIn(t, js, "host", "apply", "clientco", "-f", "-"); err != nil {
+		if out, err := runIn(t, js, "ssh", "host", "apply", "clientco", "-f", "-"); err != nil {
 			t.Fatalf("%v\n%s", err, out)
 		}
 		m, _ := manifest.Load(p.Manifest())
@@ -82,11 +82,11 @@ func TestHostApply(t *testing.T) {
 
 	t.Run("a missing profile is refused unless asked to create it", func(t *testing.T) {
 		p := editHome(t)
-		if _, err := runErr(t, "host", "apply", "newp", "a", "10.0.0.1", "ploi"); err == nil ||
+		if _, err := runErr(t, "ssh", "host", "apply", "newp", "a", "10.0.0.1", "ploi"); err == nil ||
 			!strings.Contains(err.Error(), "--create-profile") {
 			t.Fatalf("want a refusal naming --create-profile, got %v", err)
 		}
-		out := run(t, "host", "apply", "newp", "a", "10.0.0.1", "ploi", "--category", "clients", "-y")
+		out := run(t, "ssh", "host", "apply", "newp", "a", "10.0.0.1", "ploi", "--category", "clients", "-y")
 		if !strings.Contains(out, "profile: created newp") {
 			t.Errorf("output:\n%s", out)
 		}
@@ -98,7 +98,7 @@ func TestHostApply(t *testing.T) {
 
 	t.Run("a refused batch does not leave a created profile behind", func(t *testing.T) {
 		p := editHome(t)
-		if _, err := runErr(t, "host", "apply", "newp", "--host", "a h\"x u", "--category", "clients", "-y"); err == nil {
+		if _, err := runErr(t, "ssh", "host", "apply", "newp", "--host", "a h\"x u", "--category", "clients", "-y"); err == nil {
 			t.Fatal("want the invalid host refused")
 		}
 		m, _ := manifest.Load(p.Manifest())
@@ -109,12 +109,12 @@ func TestHostApply(t *testing.T) {
 
 	t.Run("bad specs are refused and change nothing", func(t *testing.T) {
 		p := editHome(t)
-		run(t, "profile", "add", "clientco")
+		run(t, "ssh", "profile", "add", "clientco")
 		for _, args := range [][]string{
-			{"host", "apply", "clientco"},
-			{"host", "apply", "clientco", "a", "h"},
-			{"host", "apply", "clientco", "--host", "a h:0 u"},
-			{"host", "apply", "clientco", "--host", "a h u", "--host", "a h2 u"},
+			{"ssh", "host", "apply", "clientco"},
+			{"ssh", "host", "apply", "clientco", "a", "h"},
+			{"ssh", "host", "apply", "clientco", "--host", "a h:0 u"},
+			{"ssh", "host", "apply", "clientco", "--host", "a h u", "--host", "a h2 u"},
 		} {
 			if _, err := runErr(t, args...); err == nil {
 				t.Errorf("%v: want an error", args)
@@ -129,8 +129,8 @@ func TestHostApply(t *testing.T) {
 	t.Run("--reconcile mints the new host's key", func(t *testing.T) {
 		needBin(t, "ssh-keygen")
 		p := editHome(t)
-		run(t, "profile", "add", "clientco")
-		out := run(t, "host", "apply", "clientco", "web", "127.0.0.1:1", "ploi", "--reconcile", "-y", "--no-pin")
+		run(t, "ssh", "profile", "add", "clientco")
+		out := run(t, "ssh", "host", "apply", "clientco", "web", "127.0.0.1:1", "ploi", "--reconcile", "-y", "--no-pin")
 		if !strings.Contains(out, "reconcile (applied)") {
 			t.Fatalf("output:\n%s", out)
 		}

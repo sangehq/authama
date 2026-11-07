@@ -33,7 +33,7 @@ func newNotifyCmd() *cobra.Command {
 					"machine-wide and outlives the sandbox"); err != nil {
 				return err
 			}
-			command := schedulerExe() + " audit --notify"
+			command := schedulerExe() + " ssh audit --notify"
 			if err := confirmChange(c,
 				"notify install registers a scheduled job with this system's scheduler:\n  "+
 					command, installYes); err != nil {
@@ -43,8 +43,8 @@ func newNotifyCmd() *cobra.Command {
 			if err := scheduler.Install(command, scheduler.Label); err != nil {
 				return err
 			}
-			// A job a release before 0.1.2 installed under the old label would
-			// fire beside this one.
+			// A notifier a release before 0.1.2 installed under the old label
+			// would fire beside this one.
 			scheduler.Remove(scheduler.LegacyLabel)
 			_, _ = fmt.Fprintf(c.OutOrStdout(), "installed scheduled notifier: %s\n", command)
 			return nil

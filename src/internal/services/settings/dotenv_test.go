@@ -79,8 +79,10 @@ func TestLoadDotenvNeverOverridesAndIgnoresAMissingFile(t *testing.T) {
 	if env["GH_TOKEN"] != "real" || env["NEW"] != "file" {
 		t.Errorf("env after load: %v", env)
 	}
-	if _, ok := env["AUTHAMA_SNAPSHOT_RETAIN"]; ok {
-		t.Error("the file set a setting whose legacy spelling is in the environment")
+	// SSH_MANAGER_SNAPSHOT_RETAIN is no longer read, so it does not stop the
+	// file setting the current name.
+	if env["AUTHAMA_SNAPSHOT_RETAIN"] != "4" {
+		t.Errorf("the file should set AUTHAMA_SNAPSHOT_RETAIN; an old name in the environment is ignored: %v", env)
 	}
 	if _, ok := env["AUTHAMA_CONFIG_DIR"]; ok {
 		t.Error("the file moved the config home")

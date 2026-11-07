@@ -41,8 +41,8 @@ func liveOps(t *testing.T, p paths.Paths) []history.Op {
 // the guard opens the operation, and the audit events it raises land in it.
 func TestAMutatingCommandIsRecordedWithItsEventsAndManifest(t *testing.T) {
 	p := editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
 
 	ops := liveOps(t, p)
 	if len(ops) != 2 {
@@ -68,10 +68,10 @@ func TestAMutatingCommandIsRecordedWithItsEventsAndManifest(t *testing.T) {
 
 func TestAReadOnlyCommandRecordsNothing(t *testing.T) {
 	p := editHome(t)
-	run(t, "profile", "add", "work")
+	run(t, "ssh", "profile", "add", "work")
 	before := len(liveOps(t, p))
-	run(t, "list")
-	run(t, "validate")
+	run(t, "ssh", "list")
+	run(t, "ssh", "validate")
 	run(t, "history")
 	if after := len(liveOps(t, p)); after != before {
 		t.Errorf("read-only commands added %d operation(s)", after-before)
@@ -83,10 +83,10 @@ func TestAReadOnlyCommandRecordsNothing(t *testing.T) {
 // it - is one, and ends aborted.
 func TestADeclineIsRecordedOnlyOnceTheCommandHeldTheLock(t *testing.T) {
 	p := editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
 	before := len(liveOps(t, p))
-	if _, err := runIn(t, "n\n", "host", "delete", "work", "gh"); err == nil {
+	if _, err := runIn(t, "n\n", "ssh", "host", "delete", "work", "gh"); err == nil {
 		t.Skip("host delete did not ask here")
 	}
 	if got := len(liveOps(t, p)); got != before {
@@ -104,8 +104,8 @@ func TestADeclineIsRecordedOnlyOnceTheCommandHeldTheLock(t *testing.T) {
 // Values that are not manifest names are never written to the history.
 func TestArgsKeepNamesAndRedactEverythingElse(t *testing.T) {
 	root := newRootCmd()
-	root.SetArgs([]string{"bundle", "--recipient", "age1abc", "--output", "/secret/place"})
-	c, _, err := root.Find([]string{"bundle"})
+	root.SetArgs([]string{"ssh", "bundle", "--recipient", "age1abc", "--output", "/secret/place"})
+	c, _, err := root.Find([]string{"ssh", "bundle"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,8 +137,8 @@ func TestPositionalArgumentsBecomeSubjects(t *testing.T) {
 
 func TestHistoryListsShowsAndEmitsJSON(t *testing.T) {
 	p := editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
 
 	out := run(t, "history", "--source", "cli")
 	if !strings.Contains(out, "host add") || !strings.Contains(out, "profile add") {
@@ -170,7 +170,7 @@ func TestHistoryListsShowsAndEmitsJSON(t *testing.T) {
 // audit.log is still the record; the store indexes it and must not change it.
 func TestAuditLogIsWrittenAsBefore(t *testing.T) {
 	p := editHome(t)
-	run(t, "profile", "add", "work")
+	run(t, "ssh", "profile", "add", "work")
 	b, err := os.ReadFile(p.AuditLog())
 	if err != nil {
 		t.Fatal(err)
@@ -211,8 +211,8 @@ func TestScopedReleasesTheLockWhenItReturns(t *testing.T) {
 // name `history --host` is asked for, not the line as typed.
 func TestHostApplyRecordsTheAliasNotTheSpec(t *testing.T) {
 	p := editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "apply", "work", "--host", "web1 10.0.0.1 deploy", "--host", "web2 10.0.0.2:2222 deploy", "--yes")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "apply", "work", "--host", "web1 10.0.0.1 deploy", "--host", "web2 10.0.0.2:2222 deploy", "--yes")
 	ops := historyOps(t, p, history.Filter{Host: "web2"})
 	if len(ops) == 0 || ops[0].Command != "host apply" {
 		t.Fatalf("history --host web2 = %+v, want the host apply", ops)

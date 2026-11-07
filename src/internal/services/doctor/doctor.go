@@ -821,7 +821,8 @@ func sortedIntKeys(m map[string]int) []string {
 func jsonIndent(v any) ([]byte, error) { return json.MarshalIndent(v, "", "  ") }
 
 // staleProxies reads the rendered configs (root and every category's) for this tool's VM ProxyCommands
-// and reports each whose binary path is gone. A bare name ("authama", or "sshmgr" from a release before 0.1.2) resolves through PATH.
+// and reports each whose binary path is gone. A bare name resolves through PATH: "authama", or
+// "sshmgr" in a config a release before 0.1.2 rendered and nothing has re-rendered since.
 func staleProxies(ssh string, m *manifest.Manifest) []string {
 	files := []string{filepath.Join(ssh, "config")}
 	for _, c := range m.Categories() {

@@ -21,22 +21,22 @@ func TestKeyReserveLifecycle(t *testing.T) {
 		t.Skip("ssh-keygen: ", err)
 	}
 	before, _ := os.ReadFile(key)
-	run(t, "config", "render", "--yes")
+	run(t, "ssh", "config", "render", "--yes")
 	if out, _ := runErr(t, "doctor"); !strings.Contains(out, "loose:") {
 		t.Fatalf("the key should start loose:\n%s", out)
 	}
-	if _, err := runErr(t, "key", "reserve", filepath.Join(t.TempDir(), "x"), "--yes"); err == nil {
+	if _, err := runErr(t, "ssh", "key", "reserve", filepath.Join(t.TempDir(), "x"), "--yes"); err == nil {
 		t.Error("reserved a file outside ~/.ssh")
 	}
-	if _, err := runErr(t, "key", "reserve", "nope", "--yes"); err == nil {
+	if _, err := runErr(t, "ssh", "key", "reserve", "nope", "--yes"); err == nil {
 		t.Error("reserved a file that does not exist")
 	}
 	manifestBefore, _ := os.ReadFile(p.Manifest())
-	run(t, "key", "reserve", "docker-tunnel", "--for", "devbox", "--note", "Docker VM, later", "--dry-run")
+	run(t, "ssh", "key", "reserve", "docker-tunnel", "--for", "devbox", "--note", "Docker VM, later", "--dry-run")
 	if after, _ := os.ReadFile(p.Manifest()); string(after) != string(manifestBefore) {
 		t.Fatal("--dry-run changed the manifest")
 	}
-	run(t, "key", "reserve", key+".pub", "--for", "devbox", "--note", "Docker VM, later", "--yes")
+	run(t, "ssh", "key", "reserve", key+".pub", "--for", "devbox", "--note", "Docker VM, later", "--yes")
 	out, err := runErr(t, "doctor", "--strict")
 	if err != nil || strings.Contains(out, "loose:") ||
 		!strings.Contains(out, "docker-tunnel - reserved for devbox: Docker VM, later") {
@@ -45,20 +45,20 @@ func TestKeyReserveLifecycle(t *testing.T) {
 	if js := run(t, "doctor", "--json"); !strings.Contains(js, `"reserved_keys": [`) || !strings.Contains(js, `"state": "kept"`) {
 		t.Errorf("doctor --json:\n%s", js)
 	}
-	if out := run(t, "key", "list"); !strings.Contains(out, "docker-tunnel - reserved for devbox") {
+	if out := run(t, "ssh", "key", "list"); !strings.Contains(out, "docker-tunnel - reserved for devbox") {
 		t.Errorf("key list:\n%s", out)
 	}
-	if out := run(t, "show", "docker-tunnel"); !strings.Contains(out, "reserved key docker-tunnel") || !strings.Contains(out, "SHA256:") {
+	if out := run(t, "ssh", "show", "docker-tunnel"); !strings.Contains(out, "reserved key docker-tunnel") || !strings.Contains(out, "SHA256:") {
 		t.Errorf("show:\n%s", out)
 	}
-	run(t, "vm", "adopt-key", "docker-tunnel", "devbox", "docker", "--hypervisor", "parallels", "--vm", "Ubuntu", "-u", "me", "--yes")
+	run(t, "ssh", "vm", "adopt-key", "docker-tunnel", "devbox", "docker", "--hypervisor", "parallels", "--vm", "Ubuntu", "-u", "me", "--yes")
 	if m, _ := os.ReadFile(p.Manifest()); strings.Contains(string(m), "reserved_keys") {
 		t.Errorf("adopting should release the reservation:\n%s", m)
 	}
 	if after, _ := os.ReadFile(key); string(after) != string(before) {
 		t.Error("the key file changed")
 	}
-	if _, err := runErr(t, "key", "unreserve", "docker-tunnel", "--yes"); err == nil {
+	if _, err := runErr(t, "ssh", "key", "unreserve", "docker-tunnel", "--yes"); err == nil {
 		t.Error("unreserved a key that is not reserved")
 	}
 }
@@ -72,8 +72,8 @@ func TestKeyUnreserve(t *testing.T) {
 	if err := exec.Command("ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "old laptop", "-f", key).Run(); err != nil {
 		t.Skip("ssh-keygen: ", err)
 	}
-	run(t, "key", "reserve", "spare-laptop", "--yes")
-	run(t, "key", "unreserve", "spare-laptop", "--yes")
+	run(t, "ssh", "key", "reserve", "spare-laptop", "--yes")
+	run(t, "ssh", "key", "unreserve", "spare-laptop", "--yes")
 	if out, _ := runErr(t, "doctor"); !strings.Contains(out, "loose:") || strings.Contains(out, "reserved keys") {
 		t.Errorf("after unreserve the key is loose again:\n%s", out)
 	}
@@ -93,13 +93,13 @@ func TestPlannedDevboxKeepsItsKey(t *testing.T) {
 	if err := os.WriteFile(p.SettingsFile(), []byte(`{"version": 1, "devboxes": {"docker": {"profile": "devbox", "key": "docker-tunnel"}}}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	run(t, "config", "render", "--yes")
+	run(t, "ssh", "config", "render", "--yes")
 	out, err := runErr(t, "doctor", "--strict")
 	if err != nil || !strings.Contains(out, "docker-tunnel - reserved for devbox docker") || strings.Contains(out, "loose:") {
 		t.Fatalf("doctor (%v):\n%s", err, out)
 	}
 	before, _ := os.ReadFile(p.Manifest())
-	if out := run(t, "vm", "sync", "--yes"); !strings.Contains(out, "has no vm yet") {
+	if out := run(t, "ssh", "vm", "sync", "--yes"); !strings.Contains(out, "has no vm yet") {
 		t.Errorf("sync:\n%s", out)
 	}
 	if after, _ := os.ReadFile(p.Manifest()); string(after) != string(before) {

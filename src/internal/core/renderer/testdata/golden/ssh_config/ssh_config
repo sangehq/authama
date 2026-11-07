@@ -33,7 +33,7 @@ Host devbox
     IdentityFile /home/u/.ssh/profiles/orgs/simtabi/simtabi_devbox-ed25519
     IdentitiesOnly yes
     UserKnownHostsFile /home/u/.ssh/known_hosts
-    ProxyCommand "/usr/local/bin/authama" vm proxy devbox
+    ProxyCommand "/usr/local/bin/authama" ssh vm proxy devbox
 
 # --- git ssh mode: github.com as personal --------------------------
 Host github.com

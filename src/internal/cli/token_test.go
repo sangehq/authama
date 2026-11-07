@@ -860,7 +860,7 @@ func TestTokenCatalogOverride(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, v := range []string{"AUTHAMA_TOKENS_CATALOG", "SSH_MANAGER_TOKENS_CATALOG", "AUTH_TOKEN_MANAGER_CATALOG"} {
+	for _, v := range []string{"AUTHAMA_TOKENS_CATALOG", "AUTH_TOKEN_MANAGER_CATALOG"} {
 		b.env = map[string]string{v: path}
 		out := b.ok(t, "", "providers")
 		if !strings.Contains(out, "acme-forge") {

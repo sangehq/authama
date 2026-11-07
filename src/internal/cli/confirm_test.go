@@ -32,28 +32,28 @@ func runIn(t *testing.T, stdin string, args ...string) (string, error) {
 
 func TestYesMakesHostDeleteNonInteractive(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "tp")
-	run(t, "host", "add", "tp", "web1", "-H", "web1.example.com", "-u", "deploy")
+	run(t, "ssh", "profile", "add", "tp")
+	run(t, "ssh", "host", "add", "tp", "web1", "-H", "web1.example.com", "-u", "deploy")
 
 	// No input at all: every prompt would read EOF and decline.
-	out, err := runIn(t, "", "host", "delete", "tp", "web1", "--yes")
+	out, err := runIn(t, "", "ssh", "host", "delete", "tp", "web1", "--yes")
 	if err != nil {
 		t.Fatalf("--yes should not need an answer: %v\n%s", err, out)
 	}
-	if listing := run(t, "list"); strings.Contains(listing, "web1") {
+	if listing := run(t, "ssh", "list"); strings.Contains(listing, "web1") {
 		t.Errorf("the host survived the delete:\n%s", listing)
 	}
 }
 
 func TestYesMakesProfileDeleteNonInteractive(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "tp2")
+	run(t, "ssh", "profile", "add", "tp2")
 
-	out, err := runIn(t, "", "profile", "delete", "tp2", "--yes")
+	out, err := runIn(t, "", "ssh", "profile", "delete", "tp2", "--yes")
 	if err != nil {
 		t.Fatalf("--yes should not need an answer: %v\n%s", err, out)
 	}
-	if listing := run(t, "list"); strings.Contains(listing, "tp2") {
+	if listing := run(t, "ssh", "list"); strings.Contains(listing, "tp2") {
 		t.Errorf("the profile survived the delete:\n%s", listing)
 	}
 }
@@ -63,9 +63,9 @@ func TestYesMakesProfileDeleteNonInteractive(t *testing.T) {
 // and silently, because the user already knows what they answered.
 func TestDecliningTheConfirmationChangesNothing(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "tp3")
+	run(t, "ssh", "profile", "add", "tp3")
 
-	out, err := runIn(t, "n\n", "profile", "delete", "tp3")
+	out, err := runIn(t, "n\n", "ssh", "profile", "delete", "tp3")
 	if err == nil {
 		t.Fatal("declining the confirmation should not report success")
 	}
@@ -78,7 +78,7 @@ func TestDecliningTheConfirmationChangesNothing(t *testing.T) {
 	if !strings.Contains(out, "[y/N]") {
 		t.Errorf("the prompt should have been shown:\n%s", out)
 	}
-	if listing := run(t, "list"); !strings.Contains(listing, "tp3") {
+	if listing := run(t, "ssh", "list"); !strings.Contains(listing, "tp3") {
 		t.Errorf("declining still deleted the profile:\n%s", listing)
 	}
 }
@@ -86,14 +86,14 @@ func TestDecliningTheConfirmationChangesNothing(t *testing.T) {
 // "y" is an answer too, and it has to reach the same place --yes does.
 func TestAcceptingTheConfirmationProceeds(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "tp4")
+	run(t, "ssh", "profile", "add", "tp4")
 
 	// One "y" per prompt; extra lines are harmless if fewer are asked.
-	out, err := runIn(t, "y\ny\ny\n", "profile", "delete", "tp4")
+	out, err := runIn(t, "y\ny\ny\n", "ssh", "profile", "delete", "tp4")
 	if err != nil {
 		t.Fatalf("answering yes should proceed: %v\n%s", err, out)
 	}
-	if listing := run(t, "list"); strings.Contains(listing, "tp4") {
+	if listing := run(t, "ssh", "list"); strings.Contains(listing, "tp4") {
 		t.Errorf("the profile survived an accepted delete:\n%s", listing)
 	}
 }
@@ -103,16 +103,16 @@ func TestAcceptingTheConfirmationProceeds(t *testing.T) {
 func TestOnlyYesAccepts(t *testing.T) {
 	for _, answer := range []string{"", "n\n", "no\n", "\n", "yy\n", "Y E S\n", "q\n"} {
 		editHome(t)
-		run(t, "profile", "add", "tp5")
-		if _, err := runIn(t, answer, "profile", "delete", "tp5"); err == nil {
+		run(t, "ssh", "profile", "add", "tp5")
+		if _, err := runIn(t, answer, "ssh", "profile", "delete", "tp5"); err == nil {
 			t.Errorf("%q was treated as consent", answer)
 		}
 	}
 	// ...and the two spellings that do accept, either case.
 	for _, answer := range []string{"y\ny\ny\n", "YES\nYES\nYES\n"} {
 		editHome(t)
-		run(t, "profile", "add", "tp6")
-		if _, err := runIn(t, answer, "profile", "delete", "tp6"); err != nil {
+		run(t, "ssh", "profile", "add", "tp6")
+		if _, err := runIn(t, answer, "ssh", "profile", "delete", "tp6"); err != nil {
 			t.Errorf("%q should be accepted: %v", answer, err)
 		}
 	}

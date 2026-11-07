@@ -68,7 +68,7 @@ func init() {
 func notTable(io.Writer, Table, Options) error { return ErrNotHosts }
 
 // clientWriter is a client format as a host format: the source's hosts,
-// rendered by the client's own writer, which `ssh host export` also uses.
+// rendered by the client's own writer in Clients.
 func clientWriter(c Client) func(HostSource, []string, Options) (*ClientExport, error) {
 	return func(src HostSource, aliases []string, o Options) (*ClientExport, error) {
 		hosts, skipped, err := src.ClientHosts(aliases, c.Client, c.ViaSSH, o.IncludeGit)
@@ -98,9 +98,8 @@ func writeSSHConfig(src HostSource, aliases []string, _ Options) (*ClientExport,
 	}, nil
 }
 
-// writeTermius is the Termius CSV import of the chosen hosts, as
-// `ssh termius export` writes it. The CSV carries no keys, so the notes
-// name the key to attach to each host.
+// writeTermius is the Termius CSV import of the chosen hosts. The CSV carries
+// no keys, so the notes name the key to attach to each host.
 func writeTermius(src HostSource, aliases []string, o Options) (*ClientExport, error) {
 	hosts, skipped, err := src.ClientHosts(aliases, "Termius", false, o.IncludeGit)
 	if err != nil {

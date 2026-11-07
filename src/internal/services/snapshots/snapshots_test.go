@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	"github.com/simtabi/authama/src/internal/core/manifest"
 )
 
 func writeTree(t *testing.T, ssh string) {
@@ -109,7 +111,7 @@ func TestCleanTempArtifacts(t *testing.T) {
 	}
 	_ = os.WriteFile(filepath.Join(ssh, "profiles/work/.staging/k"), []byte("x"), 0o600)
 
-	removed := CleanTempArtifacts(ssh)
+	removed := CleanTempArtifactsIn(ssh, manifest.DefaultKeyRoot)
 	if len(removed) != 2 {
 		t.Errorf("removed=%v want 2 (tmp file + staging dir)", removed)
 	}

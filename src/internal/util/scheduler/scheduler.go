@@ -14,9 +14,10 @@ import (
 // Label is the scheduler job label/name.
 const Label = "authama.expiry"
 
-// LegacyLabel is the label releases before 0.1.2 installed the job under.
-// Installing under Label removes a job left under it, so the two never both
-// fire; nothing else reads it.
+// LegacyLabel is the label releases before authama 0.1.2 installed the
+// expiry notifier under, as ssh-manager. authama never installs under it:
+// `ssh notify install` removes a job left under it, so the old job and the
+// new one never both fire. Nothing else reads it.
 const LegacyLabel = "ssh_manager.expiry"
 
 // VMSyncLabel is the job `authama ssh vm sync --install-schedule` installs.

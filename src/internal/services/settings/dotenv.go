@@ -136,35 +136,6 @@ var notFromFiles = map[string]bool{
 	envnames.ConfigDir: true, envnames.DevRoot: true, envnames.NoDotenv: true,
 }
 
-// fileForbidden reports whether a key, under any spelling, is one a settings
-// file may not set.
-func fileForbidden(key string) bool {
-	for name := range notFromFiles {
-		if key == name {
-			return true
-		}
-		for _, l := range envnames.Legacy(name) {
-			if key == l {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// canonical maps a key to the current name of the setting it spells, or
-// returns it unchanged.
-func canonical(key string) string {
-	for _, name := range envnames.Names() {
-		for _, l := range envnames.Legacy(name) {
-			if l == key {
-				return name
-			}
-		}
-	}
-	return key
-}
-
 // Env is the process environment, injectable for tests.
 type Env struct {
 	Lookup func(string) (string, bool)
@@ -229,7 +200,7 @@ func LoadDotenv(path string, env Env) DotenvResult {
 		if p.Value == "" {
 			continue
 		}
-		if fileForbidden(p.Key) {
+		if notFromFiles[p.Key] {
 			res.Warnings = append(res.Warnings, fmt.Sprintf("%s: line %d: %s cannot be set from this file "+
 				"(it decides where the file is or whether it is read); set it in the environment", path, p.Line, p.Key))
 			continue
@@ -238,7 +209,7 @@ func LoadDotenv(path string, env Env) DotenvResult {
 			continue
 		}
 		seen[p.Key] = true
-		if envnames.IsSet(env.Lookup, canonical(p.Key)) || isSet(env.Lookup, p.Key) {
+		if isSet(env.Lookup, p.Key) {
 			res.Kept = append(res.Kept, p.Key)
 			continue
 		}

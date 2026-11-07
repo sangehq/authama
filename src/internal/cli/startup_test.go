@@ -104,9 +104,9 @@ func TestStartupLayersTheSettingsInTheDocumentedOrder(t *testing.T) {
 	}
 }
 
-// A legacy name set in the real environment still beats the files' current
-// name, and earns a deprecation notice.
-func TestStartupHonoursLegacyNamesOverTheFiles(t *testing.T) {
+// An SSH_MANAGER_* name in the real environment is no longer read: it does
+// not stop .env setting the current name, and it earns no notice.
+func TestStartupIgnoresTheRemovedPreAuthamaNames(t *testing.T) {
 	home := withStartup(t)
 	writeFile(t, filepath.Join(home, ".config", "authama", ".env"), "AUTHAMA_SNAPSHOT_RETAIN=7\n", 0o600)
 	t.Setenv("SSH_MANAGER_SNAPSHOT_RETAIN", "5")
@@ -114,11 +114,11 @@ func TestStartupHonoursLegacyNamesOverTheFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v\n%s", err, out)
 	}
-	if os.Getenv("AUTHAMA_SNAPSHOT_RETAIN") != "" {
-		t.Error(".env set the current name while its legacy spelling was in the environment")
+	if got := os.Getenv("AUTHAMA_SNAPSHOT_RETAIN"); got != "7" {
+		t.Errorf("AUTHAMA_SNAPSHOT_RETAIN = %q, want .env's 7", got)
 	}
-	if !strings.Contains(out, "SSH_MANAGER_SNAPSHOT_RETAIN -> AUTHAMA_SNAPSHOT_RETAIN") {
-		t.Errorf("no deprecation notice:\n%s", out)
+	if strings.Contains(out, "SSH_MANAGER_SNAPSHOT_RETAIN") || strings.Contains(out, "deprecated") {
+		t.Errorf("an old name should be ignored silently:\n%s", out)
 	}
 }
 

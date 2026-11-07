@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/util/fs"
 )
 
@@ -147,15 +146,6 @@ func (inv *Inventory) Record(fingerprint string, rec KeyRecord) {
 		inv.Keys = map[string]KeyRecord{}
 	}
 	inv.Keys[fingerprint] = rec
-}
-
-// IsArchivedPath is IsArchivedPathIn under the default key root, profiles.
-//
-// Deprecated: after v0.1.3 the key root is configurable (defaults.key_root);
-// use IsArchivedPathIn with manifest.KeyRoot. This stays, delegating.
-// Earliest removal: v1.0.0.
-func IsArchivedPath(path string) bool {
-	return IsArchivedPathIn(path, manifest.DefaultKeyRoot)
 }
 
 // IsArchivedPathIn reports whether path is a rotation's /old/ predecessor

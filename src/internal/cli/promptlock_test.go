@@ -61,11 +61,11 @@ func asking(t *testing.T, a *answerer, args ...string) (string, error) {
 func promptHome(t *testing.T) paths.Paths {
 	t.Helper()
 	p := editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
-	run(t, "reconcile", "--yes", "--no-pin")
-	run(t, "key", "add", "work", "spare")
-	run(t, "host", "add", "work", "new01", "-H", "new01.example", "-u", "ops")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "reconcile", "--yes", "--no-pin")
+	run(t, "ssh", "key", "add", "work", "spare")
+	run(t, "ssh", "host", "add", "work", "new01", "-H", "new01.example", "-u", "ops")
 	mutation.Release()
 	return p
 }
@@ -75,13 +75,13 @@ func TestNoCommandHoldsTheLockWhileItAsks(t *testing.T) {
 		name string
 		args []string
 	}{
-		{"reconcile", []string{"reconcile", "--no-pin"}},
-		{"keygen", []string{"keygen", "work", "--no-pin"}},
-		{"key delete", []string{"key", "delete", "work/spare"}},
-		{"key regen-pub", []string{"key", "regen-pub", "work/work_gh-ed25519"}},
-		{"host apply", []string{"host", "apply", "work", "web", "web.example", "deploy"}},
-		{"clean", []string{"clean"}},
-		{"import", []string{"import", "--force"}},
+		{"reconcile", []string{"ssh", "reconcile", "--no-pin"}},
+		{"keygen", []string{"ssh", "keygen", "work", "--no-pin"}},
+		{"key delete", []string{"ssh", "key", "delete", "work/spare"}},
+		{"key regen-pub", []string{"ssh", "key", "regen-pub", "work/work_gh-ed25519"}},
+		{"host apply", []string{"ssh", "host", "apply", "work", "web", "web.example", "deploy"}},
+		{"clean", []string{"ssh", "clean"}},
+		{"import", []string{"ssh", "import", "--force"}},
 	}
 	if len(cases) != 7 {
 		t.Fatalf("%d cases; W2 names 8 commands, and deploy is phase 4's", len(cases))
@@ -122,7 +122,7 @@ func TestAChangeWhileDecidingStopsTheCommand(t *testing.T) {
 				t.Fatal(err)
 			}
 		}}
-		_, err := asking(t, a, "reconcile", "--no-pin")
+		_, err := asking(t, a, "ssh", "reconcile", "--no-pin")
 		if !errors.Is(err, errChanged) {
 			t.Fatalf("err = %v, want errChanged", err)
 		}
@@ -139,7 +139,7 @@ func TestAChangeWhileDecidingStopsTheCommand(t *testing.T) {
 				t.Fatal(err)
 			}
 		}}
-		_, err := asking(t, a, "host", "apply", "work", "web", "web.example", "deploy")
+		_, err := asking(t, a, "ssh", "host", "apply", "work", "web", "web.example", "deploy")
 		if !errors.Is(err, errChanged) {
 			t.Fatalf("err = %v, want errChanged", err)
 		}
@@ -155,7 +155,7 @@ func TestHostApplyAsksForAnExistingProfile(t *testing.T) {
 	p := promptHome(t)
 	before, _ := os.ReadFile(p.Manifest())
 	a := &answerer{answer: "n\n"}
-	if _, err := asking(t, a, "host", "apply", "work", "web", "web.example", "deploy"); !errors.Is(err, errAborted) {
+	if _, err := asking(t, a, "ssh", "host", "apply", "work", "web", "web.example", "deploy"); !errors.Is(err, errAborted) {
 		t.Fatalf("err = %v, want errAborted", err)
 	}
 	if len(a.heldAtPrompt) == 0 {
