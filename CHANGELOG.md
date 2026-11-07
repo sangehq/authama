@@ -180,6 +180,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `src/go.mod` retracts v0.1.0 to v0.1.3, which the Go module proxy cached from the deleted
+  pre-restart history. The next release is v0.1.4 (`docs/release.md`).
+
 - **A key that was never deployed now reads `not-deployed`, not `needs-redeploy`.** `list`,
   `view`, `audit`, `export`, the key minting lines and the web UI use the new status for a key with
   no deployment recorded; `needs-redeploy` now means deployments are recorded but none is
