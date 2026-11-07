@@ -441,8 +441,9 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 		}, nil, nil},
 		{"import", []string{"ssh", "import", importSrc, "--force", "--yes"},
 			change.SSHImport(paths.Paths{}, importSrc, true), nil, nil, nil},
+		{"key root", []string{"ssh", "key", "root", "keys", "--yes"}, change.KeyRoot("keys", "keys"), nil, nil, nil},
 	}
-	if len(cases) != 42 {
+	if len(cases) != 43 {
 		t.Fatalf("%d cases; every change the web offers needs one", len(cases))
 	}
 	for _, tc := range cases {
