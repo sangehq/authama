@@ -34,11 +34,20 @@ deployment is recorded as `needs-redeploy` (unverified) and you finish it in the
 web UI. Two accounts on one provider stay separate via per-host `token_env`
 (`GH_TOKEN` vs `GH_TOKEN_ACME`).
 
-## Verified vs needs-redeploy
+## Key status: not-deployed, needs-redeploy, deployed
 
 A deployment is `verified` when the tool confirmed it (ssh-copy-id / API success);
 manual steps are `unverified` until `audit` compares the key against the
 server's `authorized_keys` / the account's key list.
+
+`list`, `audit`, `export` and the web UI show one status per key:
+
+| Status | Meaning |
+|---|---|
+| `not-deployed` | no deployment is recorded: a freshly minted or regenerated key |
+| `needs-redeploy` | deployments are recorded, but none is verified |
+| `deployed` | at least one deployment is verified |
+| `no-key` | (hosts only) the host's key is not in the inventory |
 
 ## Examples
 

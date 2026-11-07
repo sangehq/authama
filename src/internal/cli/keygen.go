@@ -137,7 +137,7 @@ func newKeygenCmd() *cobra.Command {
 				return nil
 			}
 			for _, mk := range minted {
-				_, _ = fmt.Fprintf(out, "minted %s  %s  (needs-redeploy)\n", mk.KeyName, mk.Fingerprint)
+				_, _ = fmt.Fprintf(out, "minted %s  %s  (not-deployed)\n", mk.KeyName, mk.Fingerprint)
 			}
 			return nil
 		},

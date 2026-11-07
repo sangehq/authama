@@ -208,7 +208,7 @@ flowchart LR
 ```mermaid
 flowchart TD
     MAN[manifest] --> PLAN[plan: keys present vs missing]
-    PLAN --> MINT[mint missing keys<br/>flagged needs-redeploy]
+    PLAN --> MINT[mint missing keys<br/>flagged not-deployed]
     MINT --> REN[render config + profiles config<br/>foreign blocks preserved]
     REN --> PER[set perms 700 / 600 / 644]
     PER --> PIN[auto-pin reachable hosts known_hosts]

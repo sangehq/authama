@@ -180,6 +180,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **A key that was never deployed now reads `not-deployed`, not `needs-redeploy`.** `list`,
+  `view`, `audit`, `export`, the key minting lines and the web UI use the new status for a key with
+  no deployment recorded; `needs-redeploy` now means deployments are recorded but none is
+  verified. Scripts that matched `needs-redeploy` for fresh keys should match both values.
+
 - The Audit page's deployments, the reserved keys and the declared devboxes show an empty list the
   way every other page does, with the commands that fill them set as code. The CSV dialog and the
   Export page now count, tick and untick their lists through one shared model, so the two

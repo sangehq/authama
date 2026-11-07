@@ -135,10 +135,10 @@ func TestDetailHostAndStatuses(t *testing.T) {
 		t.Errorf("gh deployments wrong: %+v", hd.Deployments)
 	}
 
-	// Group status reflects the inventory: vps -> needs-redeploy.
+	// Group status reflects the inventory: vps has no deployment -> not-deployed.
 	g, _ := q.Groups("personal", "", "", "")
-	if g[0].Rows[0].Status != NeedsRedeploy {
-		t.Errorf("vps status=%q want needs-redeploy", g[0].Rows[0].Status)
+	if g[0].Rows[0].Status != NotDeployed {
+		t.Errorf("vps status=%q want not-deployed", g[0].Rows[0].Status)
 	}
 
 	// Profile selector -> ProfileSummary.
@@ -203,7 +203,7 @@ func TestDuplicateRecordsForOnePathResolveConsistently(t *testing.T) {
 			t.Fatalf("run %d: fingerprint = %v, want the stable lowest one", i, d.Fingerprint)
 		}
 		// fp-aaa has no deployments, so every field must agree with that record.
-		if d.Status != NeedsRedeploy {
+		if d.Status != NotDeployed {
 			t.Fatalf("run %d: status = %q, but the reported key has no deployments", i, d.Status)
 		}
 		if d.ExpiresOn == nil || *d.ExpiresOn != "2026-06-30" {

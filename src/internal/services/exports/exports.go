@@ -91,10 +91,7 @@ func Deployments(inv *inventory.Inventory) csvout.Table {
 	})
 	for _, fp := range fps {
 		rec := inv.Keys[fp]
-		status := "deployed"
-		if rec.NeedsRedeploy() {
-			status = "needs-redeploy"
-		}
+		status := rec.DeployStatus()
 		if len(rec.Deployments) == 0 {
 			t.Rows = append(t.Rows, []string{rec.Path, fp, status, "", "", "", ""})
 		}

@@ -78,7 +78,7 @@ type Key struct {
 	Store           string   `json:"store"` // disk or 1password
 	OnDisk          bool     `json:"on_disk"`
 	Recorded        bool     `json:"recorded"` // the inventory records it
-	State           string   `json:"state"`    // no-key, needs-redeploy, deployed
+	State           string   `json:"state"`    // no-key, not-deployed, needs-redeploy, deployed
 	Hosts           []string `json:"hosts"`    // aliases using it
 	Deployments     int      `json:"deployments"`
 }

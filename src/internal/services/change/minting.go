@@ -120,7 +120,7 @@ func Keygen(target string) Change {
 				return nil
 			}
 			for _, mk := range minted {
-				_, _ = fmt.Fprintf(out, "minted %s  %s  (needs-redeploy)\n", mk.KeyName, mk.Fingerprint)
+				_, _ = fmt.Fprintf(out, "minted %s  %s  (not-deployed)\n", mk.KeyName, mk.Fingerprint)
 			}
 			return nil
 		},
@@ -183,7 +183,7 @@ func KeyAdd(profile, name, keyType, host string) Change {
 			}
 			switch {
 			case minted != nil:
-				_, _ = fmt.Fprintf(out, "minted %s  %s  (needs-redeploy)\n", ref, minted.Fingerprint)
+				_, _ = fmt.Fprintf(out, "minted %s  %s  (not-deployed)\n", ref, minted.Fingerprint)
 			default:
 				_, _ = fmt.Fprintf(out, "declared %s (a key already exists at that path; left untouched)\n", ref)
 			}

@@ -64,7 +64,7 @@ func (r *ReconcileResult) Format() string {
 		lines = append(lines, "  snapshot: "+*r.Snapshot)
 	}
 	for _, m := range r.Minted {
-		lines = append(lines, fmt.Sprintf("  mint %s: %s  %s  (needs-redeploy)", verb, m.KeyName, m.Fingerprint))
+		lines = append(lines, fmt.Sprintf("  mint %s: %s  %s  (not-deployed)", verb, m.KeyName, m.Fingerprint))
 		if m.Fallback != "" {
 			lines = append(lines, fmt.Sprintf("    no security key answered: this is a software %s key, not a hardware one; "+
 				"insert the key and run `authama ssh rotate %s` to replace it", m.Fallback, m.KeyName))
@@ -603,7 +603,7 @@ func (r *Reconciler) mintOne(pk plannedKey, passphrase string, overwrite bool) (
 		Created:         &created,
 		RotateAfterDays: rotate,
 		ExpiresOn:       &exp,
-		Deployments:     nil, // empty == needs-redeploy
+		Deployments:     nil, // empty == not-deployed
 	})
 	log.Audit(r.p.AuditLog(), "keygen",
 		log.Field{Key: "key", Value: ref.KeyName},

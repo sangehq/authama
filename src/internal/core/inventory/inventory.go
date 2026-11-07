@@ -29,7 +29,7 @@ type Deployment struct {
 	Target   string  `json:"target"`
 	Method   string  `json:"method"` // ssh-copy-id | web-panel | manual | <adapter>
 	Date     *string `json:"date"`
-	Verified bool    `json:"verified"` // false == needs-redeploy
+	Verified bool    `json:"verified"` // all false == needs-redeploy
 }
 
 func (d *Deployment) UnmarshalJSON(b []byte) error {
@@ -77,7 +77,28 @@ func (r KeyRecord) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+// Deployment status values, as list, audit, export and the web show them.
+const (
+	StatusNotDeployed   = "not-deployed"   // no deployment recorded: a fresh or regenerated key
+	StatusNeedsRedeploy = "needs-redeploy" // deployments recorded, none verified
+	StatusDeployed      = "deployed"       // at least one verified deployment
+)
+
+// DeployStatus names the key's state: not-deployed when nothing is recorded,
+// needs-redeploy when deployments are recorded but none is verified, deployed
+// otherwise.
+func (r KeyRecord) DeployStatus() string {
+	if len(r.Deployments) == 0 {
+		return StatusNotDeployed
+	}
+	if r.NeedsRedeploy() {
+		return StatusNeedsRedeploy
+	}
+	return StatusDeployed
+}
+
 // NeedsRedeploy is true when no deployment is verified (e.g. a fresh key).
+// It is true for not-deployed keys too; DeployStatus tells the two apart.
 func (r KeyRecord) NeedsRedeploy() bool {
 	for _, d := range r.Deployments {
 		if d.Verified {

@@ -605,10 +605,7 @@ func (e AppEngine) Audit(now time.Time) (AuditView, error) {
 	})
 	for _, fp := range fps {
 		rec := inv.Keys[fp]
-		status := "deployed"
-		if rec.NeedsRedeploy() {
-			status = "needs-redeploy"
-		}
+		status := rec.DeployStatus()
 		v.Keys = append(v.Keys, AuditKey{Path: rec.Path, Fingerprint: fp, Status: status, Deployments: rec.Deployments})
 	}
 	v.Expiry, _ = notifier.New(e.P, m).States(now)

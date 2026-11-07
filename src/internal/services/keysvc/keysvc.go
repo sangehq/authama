@@ -47,7 +47,7 @@ type Row struct {
 	// disk. When set, PrivatePath is never expected to exist.
 	Vault       string
 	Deployments []inventory.Deployment
-	Status      string // query.NoKey | query.NeedsRedeploy | query.Deployed
+	Status      string // query.NoKey | NotDeployed | NeedsRedeploy | Deployed
 }
 
 // InOnePassword reports whether the private key lives in 1Password.
@@ -183,10 +183,7 @@ func (s *Service) row(ref manifest.KeyRef) (Row, error) {
 		row.Deployments = rec.Deployments
 		row.Created = deref(rec.Created)
 		row.ExpiresOn = deref(rec.ExpiresOn)
-		row.Status = query.NeedsRedeploy
-		if !rec.NeedsRedeploy() {
-			row.Status = query.Deployed
-		}
+		row.Status = rec.DeployStatus()
 	}
 	return row, nil
 }
