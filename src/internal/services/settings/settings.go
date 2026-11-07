@@ -82,6 +82,8 @@ var Specs = []Spec{
 		Doc: "Days an archived predecessor key may stay before doctor flags it; 0 turns the check off."},
 	{Section: "ssh", Name: "auto_pin", Env: envnames.AutoPin, Kind: KindBool, Default: "true",
 		Doc: "Pin a new host's key on first use (trust on first use) when a profile is minted."},
+	{Section: "export", Name: "save_to", Env: envnames.ExportSaveTo, Kind: KindEnum, Enum: []string{"user", "manifest"}, Default: "user",
+		Doc: "Where a saved export selection goes: user keeps it in this account's state (private to you), manifest in the manifest's defaults.export, so it travels with the manifest. Both are read; on a name in both, yours wins."},
 	{Section: "git", Name: "mode", Env: envnames.GitMode, Kind: KindEnum, Enum: []string{"profile", "ssh", "https"},
 		Default: "the manifest's defaults.git.mode, else profile",
 		Doc:     "How `ssh git` rewrites remotes."},

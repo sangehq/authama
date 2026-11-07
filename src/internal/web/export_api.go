@@ -86,6 +86,14 @@ func (x exportAPI) handleDataset(w http.ResponseWriter, r *http.Request) {
 	x.json(w, ds)
 }
 
+// exportSteps names the transforms, the formats a format step takes and the
+// aggregates a group computes, from the engine's own lists.
+type exportSteps struct {
+	Kinds      []string `json:"kinds"`
+	Formats    []string `json:"formats"`
+	Aggregates []string `json:"aggregates"`
+}
+
 // exportPreview is the answer to ?preview=1.
 type exportPreview struct {
 	Grain   string                            `json:"grain"`
@@ -97,9 +105,11 @@ type exportPreview struct {
 	Fields  []string                          `json:"fields"`
 	Facets  map[string][]selection.FacetValue `json:"facets"`
 	Formats []exportFormat                    `json:"formats"`
-	// Defaults are the grain's default columns, field and heading, so a page
-	// can start its column list from them.
+	// Defaults are the columns the file has when none are chosen: the grain's,
+	// then the fields any transforms wrote. A page starts its list from them.
 	Defaults []selection.Column `json:"defaults"`
+	// Steps are the transforms a page can add, and their choices.
+	Steps exportSteps `json:"steps"`
 	// Skipped are the hosts the format asked for (?format=, a host format)
 	// leaves out of the file, each with the reason: the preview shows the
 	// selection's rows, the file only those the client can take.
@@ -216,7 +226,8 @@ func (x exportAPI) run(w http.ResponseWriter, r *http.Request, sel selection.Sel
 		}
 		p := exportPreview{Grain: sel.Grain, Columns: res.Columns, Rows: [][]string{}, Stages: res.Stages,
 			Fields: res.Fields, Facets: facets, Total: res.Stages[0].Rows, Kept: len(res.Rows),
-			Defaults: selection.Defaults[sel.Grain]}
+			Defaults: res.Defaults,
+			Steps:    exportSteps{selection.Transforms, selection.Formats, selection.Aggregates}}
 		for i, row := range res.Rows {
 			if i == PreviewRows {
 				break
@@ -225,12 +236,13 @@ func (x exportAPI) run(w http.ResponseWriter, r *http.Request, sel selection.Sel
 		}
 		for _, n := range append(encode.TableNames(), encode.HostNames()...) {
 			ef, _ := encode.Get(n)
-			if ef.IsHosts() && sel.Grain != selection.GrainHost {
+			// A host format writes the hosts themselves: hosts only, untransformed.
+			if ef.IsHosts() && (sel.Grain != selection.GrainHost || len(sel.Transforms) > 0) {
 				continue
 			}
 			p.Formats = append(p.Formats, exportFormat{Name: ef.Name, Label: ef.Label, Extension: ef.Extension, Hosts: ef.IsHosts()})
 		}
-		if f.IsHosts() && sel.Grain == selection.GrainHost {
+		if f.IsHosts() && sel.Grain == selection.GrainHost && len(sel.Transforms) == 0 {
 			exp, err := x.hostExport(ds, sel, f, q)
 			if err != nil {
 				x.fail(w, http.StatusBadRequest, err)

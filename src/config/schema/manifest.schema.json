@@ -149,6 +149,27 @@
               "description": "GitHub owner -> profile."
             }
           }
+        },
+        "export": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "What `authama export` keeps in the manifest, so it travels with it. See docs/tools/export.md#saved-selections.",
+          "properties": {
+            "selections": {
+              "type": "object",
+              "description": "Saved selections by name (1 to 63 of a-z, 0-9, '.', '_' and '-'), each a selection as the Export page and `authama export --selection` read it. A user's own saved selection of the same name wins.",
+              "propertyNames": {
+                "pattern": "^[a-z0-9][a-z0-9._-]{0,62}$"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "required": [
+                  "version",
+                  "grain"
+                ]
+              }
+            }
+          }
         }
       }
     },

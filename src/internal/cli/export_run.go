@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"github.com/simtabi/authama/src/internal/core/renderer"
 	"github.com/simtabi/authama/src/internal/platform"
 	"github.com/simtabi/authama/src/internal/services/dataset"
+	"github.com/simtabi/authama/src/internal/services/savedsel"
 	"github.com/simtabi/authama/src/internal/services/selection"
 	"github.com/simtabi/authama/src/internal/util/encode"
 	"github.com/simtabi/authama/src/internal/util/fs"
@@ -32,10 +34,12 @@ func newExportCmd() *cobra.Command {
 		profiles, keys, envs, roles, tags   []string
 		statuses, targets, kinds, areas     []string
 		sources, commands                   []string
+		transforms, templates, dedupe       []string
+		groupBy, aggregates                 []string
 		include, exclude, since, until      string
 		limit                               int
 		narrow, noHeader, compact, listFlds bool
-		includeGit                          bool
+		includeGit, totals                  bool
 	)
 	names := make([]string, 0, len(selection.Presets))
 	for n := range selection.Presets {
@@ -43,17 +47,22 @@ func newExportCmd() *cobra.Command {
 	}
 	sort.Strings(names)
 	cmd := &cobra.Command{
-		Use:   "export [" + strings.Join(names, "|") + "]",
+		Use:   "export [" + strings.Join(names, "|") + "|<saved selection>]",
 		Short: "Write any list as CSV, JSON, YAML, a PHP or JS array, Markdown or HTML, or hosts for an SSH client, filtered",
 		Long: "Write one of the home's lists, filtered and with the columns chosen, in any format: the\n" +
 			"same files the web UI's Export page makes. Nothing in an export holds a secret.\n\n" +
-			"The list is one of " + strings.Join(names, ", ") + ", or --selection names a selection saved as JSON\n" +
-			"(the Export page's Copy link holds one). Filters narrow it: --profile, --key (a key's name or\n" +
+			"The list is one of " + strings.Join(names, ", ") + ", or a saved selection's name (`export selections`\n" +
+			"keeps them), or --selection names a selection as a JSON file (the Export page's Copy link holds one). Filters narrow it: --profile, --key (a key's name or\n" +
 			"profile/name), --env, --role, --tag, --status, --tool, --kind, --area, --source, --command,\n" +
 			"--since and --until (a time or a prefix such as 2026-11), --include and --exclude text.\n" +
 			"--columns chooses the columns, by field (--fields lists them; key.fingerprint follows the\n" +
 			"host's key), each optionally renamed as field=heading. --sort orders the rows (-field\n" +
 			"descends). --format is one of " + strings.Join(encode.TableNames(), ", ") + ".\n\n" +
+			"Transforms run after the filters and before the columns, in this order: each --transform\n" +
+			"(a step as JSON, the Export page's shape), each --template (as=text naming fields in\n" +
+			"braces), --dedupe (keep the first row of each), then --group-by with --aggregate\n" +
+			"(count, or op:field for sum, min, max, list or first) and --totals. A column can name\n" +
+			"the fields they write. The SSH client formats below take none.\n\n" +
 			"Hosts also go out as an SSH client imports them: --format " + strings.Join(encode.HostNames(), ", ") + ".\n" +
 			"ssh_config is the managed config of the hosts kept, byte for byte what `ssh config export --flat`\n" +
 			"writes when every host is kept; termius is the Termius CSV; the rest are `ssh host export`'s\n" +
@@ -66,16 +75,19 @@ func newExportCmd() *cobra.Command {
 			"  " + brand.Command + " export keys --columns ref=key,fingerprint,expires_on --sort expires_on --format markdown\n" +
 			"  " + brand.Command + " export profiles --key simtabi_simbi-prd-web-00-ed25519 --narrow --format yaml\n" +
 			"  " + brand.Command + " export hosts --fields\n" +
+			"  " + brand.Command + " export hosts --template 'ssh=ssh {user}@{hostname} -p {port}' --columns alias,ssh\n" +
+			"  " + brand.Command + " export hosts --group-by profile --aggregate count,list:env --totals --format markdown\n" +
 			"  " + brand.Command + " export --selection sel.json --format php --out hosts.php\n" +
+			"  " + brand.Command + " export prd-hosts --format json\n" +
 			"  " + brand.Command + " export hosts --profile simtabi --format ssh_config --out simtabi.ssh_config\n" +
 			"  " + brand.Command + " export hosts --env prd --format putty --out prd.reg",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			sel, err := exportSelection(args, selFile)
+			p, err := resolvePaths(c)
 			if err != nil {
 				return err
 			}
-			p, err := resolvePaths(c)
+			sel, err := exportSelection(p, args, selFile)
 			if err != nil {
 				return err
 			}
@@ -83,8 +95,13 @@ func newExportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			steps, err := exportTransforms(transforms, templates, dedupe, groupBy, aggregates, totals)
+			if err != nil {
+				return err
+			}
+			sel.Transforms = append(sel.Transforms, steps...)
 			if listFlds {
-				res, err := selection.Run(ds, selection.Selection{Version: selection.Version, Grain: sel.Grain})
+				res, err := selection.Run(ds, selection.Selection{Version: selection.Version, Grain: sel.Grain, Transforms: sel.Transforms})
 				if err != nil {
 					return err
 				}
@@ -159,7 +176,7 @@ func newExportCmd() *cobra.Command {
 	f := cmd.Flags()
 	f.StringVar(&format, "format", "csv", "csv, tsv, json, jsonl, yaml, php, js, markdown or html; for hosts also "+strings.Join(encode.HostNames(), ", "))
 	f.StringVarP(&out, "out", "o", "", "write to this file (mode 0600) instead of stdout")
-	f.StringVar(&selFile, "selection", "", "a selection saved as JSON (the Export page's), instead of a list name")
+	f.StringVar(&selFile, "selection", "", "a selection as a JSON file (the Export page's), or a saved selection's name, instead of a list name")
 	f.StringSliceVar(&columns, "columns", nil, "the columns, by field, in order; field=heading renames one")
 	f.StringSliceVar(&sortBy, "sort", nil, "sort by these fields; -field descends")
 	f.IntVar(&limit, "limit", 0, "at most this many rows (0: all)")
@@ -182,31 +199,94 @@ func newExportCmd() *cobra.Command {
 	f.BoolVar(&noHeader, "no-header", false, "csv, tsv, markdown, html: leave the heading row out")
 	f.BoolVar(&compact, "compact", false, "json, js, php: no indentation")
 	f.StringVar(&shape, "shape", "", "json, js, php, yaml: \"table\" writes {columns, rows} instead of one object per row")
-	f.BoolVar(&listFlds, "fields", false, "list every field the list's rows have, and write nothing")
+	f.BoolVar(&listFlds, "fields", false, "list every field the list's rows have, after any transforms, and write nothing")
+	f.StringArrayVar(&transforms, "transform", nil, `a transform step as JSON, e.g. {"kind":"map","field":"status","values":{"needs-redeploy":"pending"}}`)
+	f.StringArrayVar(&templates, "template", nil, "a column from a template: as={profile}/{alias}")
+	f.StringSliceVar(&dedupe, "dedupe", nil, "keep the first row of each distinct value of these fields")
+	f.StringSliceVar(&groupBy, "group-by", nil, "a row per distinct value of these fields")
+	f.StringSliceVar(&aggregates, "aggregate", nil, "with --group-by: count, or op:field[=as] for sum, min, max, list, first")
+	f.BoolVar(&totals, "totals", false, "with --group-by: a last row over every group")
 	f.BoolVar(&includeGit, "include-git", false, "host formats: also export git hosts (user git, or a github or gitlab provider)")
+	cmd.AddCommand(newExportSelectionsCmd())
 	return cmd
 }
 
-// exportSelection is the selection a command line names: a built-in list, or
-// a saved selection file; not both, and one of them.
-func exportSelection(args []string, file string) (selection.Selection, error) {
+// exportTransforms are the transform steps the flags name, in the order the
+// help gives.
+func exportTransforms(raw, templates, dedupe, groupBy, aggregates []string, totals bool) ([]selection.Transform, error) {
+	var out []selection.Transform
+	for _, r := range raw {
+		var t selection.Transform
+		dec := json.NewDecoder(strings.NewReader(r))
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&t); err != nil {
+			return nil, fmt.Errorf("--transform %s: %w", r, err)
+		}
+		out = append(out, t)
+	}
+	for _, tp := range templates {
+		as, text, ok := strings.Cut(tp, "=")
+		if !ok || strings.TrimSpace(as) == "" {
+			return nil, fmt.Errorf("--template %q: give as=template, e.g. where={profile}/{alias}", tp)
+		}
+		out = append(out, selection.Transform{Kind: selection.TransformTemplate, As: strings.TrimSpace(as), Template: text})
+	}
+	if len(dedupe) > 0 {
+		out = append(out, selection.Transform{Kind: selection.TransformDedupe, By: dedupe})
+	}
+	if len(groupBy) == 0 {
+		if len(aggregates) > 0 || totals {
+			return nil, errors.New("--aggregate and --totals need --group-by")
+		}
+		return out, nil
+	}
+	g := selection.Transform{Kind: selection.TransformGroup, By: groupBy, Totals: totals}
+	for _, a := range aggregates {
+		spec, as, _ := strings.Cut(a, "=")
+		op, field, _ := strings.Cut(spec, ":")
+		g.Aggregates = append(g.Aggregates, selection.Aggregate{Op: strings.TrimSpace(op), Field: strings.TrimSpace(field), As: strings.TrimSpace(as)})
+	}
+	return append(out, g), nil
+}
+
+// exportSelection is the selection a command line names: a built-in list, a
+// saved selection by name, or --selection, which is a file or, when no file
+// has that name, a saved selection; not both, and one of them.
+func exportSelection(p paths.Paths, args []string, file string) (selection.Selection, error) {
 	switch {
 	case len(args) == 1 && file != "":
 		return selection.Selection{}, errors.New("give a list name or --selection, not both")
 	case len(args) == 1:
-		s, ok := selection.Presets[args[0]]
-		if !ok {
-			return selection.Selection{}, fmt.Errorf("no list named %q", args[0])
+		if s, ok := selection.Presets[args[0]]; ok {
+			return s, nil
 		}
-		return s, nil
+		if manifest.CheckSelectionName(args[0]) == nil {
+			if s, err := savedSelection(p, args[0]); !errors.Is(err, savedsel.ErrNotFound) {
+				return s, err
+			}
+		}
+		return selection.Selection{}, fmt.Errorf("no list or saved selection named %q (`%s export selections list` lists those saved)", args[0], brand.Command)
 	case file != "":
 		b, err := os.ReadFile(file) //nolint:gosec // a path the user named
+		if errors.Is(err, os.ErrNotExist) && manifest.CheckSelectionName(file) == nil {
+			return savedSelection(p, file)
+		}
 		if err != nil {
 			return selection.Selection{}, err
 		}
 		return selection.Parse(b)
 	}
 	return selection.Selection{}, errors.New("name a list (hosts, keys, ...) or give --selection")
+}
+
+// savedSelection is the selection saved as name, in either store.
+func savedSelection(p paths.Paths, name string) (selection.Selection, error) {
+	m, err := manifest.Load(p.Manifest())
+	if err != nil {
+		m = nil // the user's own store is still read
+	}
+	s, err := savedsel.Get(p, m, name)
+	return s.Selection, err
 }
 
 // runHostExport writes the hosts sel keeps in the host format f: one file to

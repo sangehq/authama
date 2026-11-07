@@ -175,7 +175,13 @@ func (p Paths) AuditLog() string     { return filepath.Join(p.LogDir(), "audit.l
 func (p Paths) HistoryDB() string    { return filepath.Join(p.LogDir(), "history.db") }
 func (p Paths) SnapshotsDir() string { return filepath.Join(p.State(), "snapshots") }
 func (p Paths) DistDir() string      { return filepath.Join(p.State(), "dist") }
-func (p Paths) StateDir() string     { return filepath.Join(p.State(), ".state") }
+
+// ExportSelectionsDir holds p's saved export selections, one <name>.json
+// each. A folder of their own: exports/ also holds the files `config export
+// --flat` and `termius export` write. A function, not a method: Paths stays
+// a list of locations under its method ceiling.
+func ExportSelectionsDir(p Paths) string { return filepath.Join(p.State(), "exports", "selections") }
+func (p Paths) StateDir() string         { return filepath.Join(p.State(), ".state") }
 
 // StateSubdirs are the state home's entries, by name. A config home from
 // before 0.1.1 held them, and the migration moves them to a separate state home.

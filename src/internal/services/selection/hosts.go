@@ -26,6 +26,9 @@ func HostRows(ds *dataset.Dataset, s Selection, src HostSource) ([]string, Resul
 	if s.Grain != GrainHost {
 		return nil, Result{}, fmt.Errorf("a host format writes hosts; this selection's rows are %ss (export hosts instead)", s.Grain)
 	}
+	if len(s.Transforms) > 0 {
+		return nil, Result{}, fmt.Errorf("a host format writes the hosts themselves, so it takes no transforms; use a table format such as csv or json")
+	}
 	res, err := Run(ds, s)
 	if err != nil {
 		return nil, Result{}, err

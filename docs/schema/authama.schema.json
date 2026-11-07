@@ -97,6 +97,20 @@
       },
       "type": "object"
     },
+    "export": {
+      "additionalProperties": false,
+      "properties": {
+        "save_to": {
+          "description": "Where a saved export selection goes: user keeps it in this account's state (private to you), manifest in the manifest's defaults.export, so it travels with the manifest. Both are read; on a name in both, yours wins. Sets $AUTHAMA_EXPORT_SAVE_TO. Default: user.",
+          "enum": [
+            "user",
+            "manifest"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "git": {
       "additionalProperties": false,
       "properties": {

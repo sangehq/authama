@@ -389,6 +389,9 @@ type Defaults struct {
 	// Naming holds the rules servers and keys are named by; nil is the
 	// defaults (see NamingRules).
 	Naming *Naming `json:"naming,omitempty"`
+	// Export holds what `authama export` keeps in the manifest: saved
+	// selections; nil when none are saved.
+	Export *ExportDefaults `json:"export,omitempty"`
 }
 
 func newDefaults() Defaults {
@@ -413,17 +416,18 @@ func (d *Defaults) UnmarshalJSON(b []byte) error {
 // as {} via OrderedOptions, in declaration order.
 func (d Defaults) MarshalJSON() ([]byte, error) {
 	type wire struct {
-		KeyType          string         `json:"key_type"`
-		KeyScope         string         `json:"key_scope"`
-		RotateAfterDays  int            `json:"rotate_after_days"`
-		WarnBeforeDays   []int          `json:"warn_before_days"`
-		ExpiryCheck      ExpiryCheck    `json:"expiry_check"`
-		GlobalOptions    OrderedOptions `json:"global_options"`
-		OnePasswordAgent string         `json:"onepassword_agent,omitempty"`
-		KeyComment       string         `json:"key_comment,omitempty"`
-		Git              *GitDefaults   `json:"git,omitempty"`
-		KeyRoot          string         `json:"key_root,omitempty"`
-		Naming           *Naming        `json:"naming,omitempty"`
+		KeyType          string          `json:"key_type"`
+		KeyScope         string          `json:"key_scope"`
+		RotateAfterDays  int             `json:"rotate_after_days"`
+		WarnBeforeDays   []int           `json:"warn_before_days"`
+		ExpiryCheck      ExpiryCheck     `json:"expiry_check"`
+		GlobalOptions    OrderedOptions  `json:"global_options"`
+		OnePasswordAgent string          `json:"onepassword_agent,omitempty"`
+		KeyComment       string          `json:"key_comment,omitempty"`
+		Git              *GitDefaults    `json:"git,omitempty"`
+		KeyRoot          string          `json:"key_root,omitempty"`
+		Naming           *Naming         `json:"naming,omitempty"`
+		Export           *ExportDefaults `json:"export,omitempty"`
 	}
 	warn := d.WarnBeforeDays
 	if warn == nil {
@@ -433,7 +437,7 @@ func (d Defaults) MarshalJSON() ([]byte, error) {
 		KeyType: d.KeyType, KeyScope: d.KeyScope, RotateAfterDays: d.RotateAfterDays,
 		WarnBeforeDays: warn, ExpiryCheck: d.ExpiryCheck, GlobalOptions: d.GlobalOptions,
 		OnePasswordAgent: d.OnePasswordAgent, KeyComment: d.KeyComment, Git: d.Git,
-		KeyRoot: d.KeyRoot, Naming: d.Naming,
+		KeyRoot: d.KeyRoot, Naming: d.Naming, Export: d.Export,
 	})
 }
 
@@ -1026,6 +1030,9 @@ func (m *Manifest) validate() error {
 		return err
 	}
 	if err := checkNaming(m); err != nil {
+		return err
+	}
+	if err := checkExport(m); err != nil {
 		return err
 	}
 	for name, p := range m.Profiles {

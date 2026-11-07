@@ -52,6 +52,8 @@ const (
 	WebBasePath    = "AUTHAMA_WEB_BASE_PATH"
 	WebAutoRestart = "AUTHAMA_WEB_AUTO_RESTART"
 	WebMenuExport  = "AUTHAMA_WEB_MENU_EXPORT"
+	// ExportSaveTo is where a saved export selection goes: user or manifest.
+	ExportSaveTo = "AUTHAMA_EXPORT_SAVE_TO"
 	// ServeHandoff is set by a restarting `serve` for the one replacing it,
 	// never by a user: the token, port and old instance, as JSON.
 	ServeHandoff = "AUTHAMA_SERVE_HANDOFF"
@@ -89,7 +91,7 @@ func Legacy(name string) []string { return legacy[name] }
 func Names() []string {
 	out := []string{
 		AgeIdentityFile, AgeRecipient, AskpassMode, AskpassSecret, AutoPin, ConfigDir,
-		DevRoot, DockerCredsStore, GitMode, HelloCheck, History, NoDotenv, Notifications,
+		DevRoot, DockerCredsStore, ExportSaveTo, GitMode, HelloCheck, History, NoDotenv, Notifications,
 		OldKeyMaxAgeDays, OwnerStore, ServeHandoff, SnapshotRetain, StateDir, TokensCatalog, TokensConfig,
 		VMHypervisors, VMPruneGone, VMRepin, WebAddr, WebAutoRestart, WebBasePath, WebMenuExport, WebPort,
 	}

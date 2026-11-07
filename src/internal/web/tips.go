@@ -95,6 +95,7 @@ var tips = map[string]string{
 	"export-clear":         "Clears this tab's filters. The preview updates; nothing is downloaded.",
 	"export-columns-reset": "Puts back the list's own columns, names and order.",
 	"export-add-column":    "Adds the chosen field as a column at the end.",
+	"export-add-step":      "Adds the chosen transform as the last step.",
 	"export-copy":          "Copies the file, in the chosen format, to the clipboard. Nothing is saved.",
 	"csv-profiles":         "Choose which profiles' rows go in the file.",
 	"csv-keys":             "Choose which keys' rows go in the file.",

@@ -38,6 +38,70 @@ authama export hosts --env prd --format putty -o prd.reg
 `authama export hosts` and `authama export keys` with no options print exactly what `ssh list --csv` and
 `ssh key list --csv` print: the same pipeline.
 
+### Transforms
+
+Transforms change the rows after the filters and before the columns, so a column can name a field a
+transform wrote. They are declarative: a template names fields and nothing else runs.
+
+```bash
+authama export hosts --template 'ssh=ssh {user}@{hostname} -p {port}' --columns alias,ssh
+authama export hosts --dedupe profile --columns profile,alias
+authama export hosts --group-by profile --aggregate count,list:env --totals --format markdown
+authama export hosts --transform '{"kind":"map","field":"status","values":{"needs-redeploy":"pending"}}'
+```
+
+| Transform | What it does |
+|---|---|
+| `template` | writes `as` from text naming fields in braces, `{profile}/{alias}`; `{{` and `}}` are literal braces |
+| `map` | replaces a field's values listed in `values`; `default` replaces every other value |
+| `format` | `upper`, `lower`, `trim`, `date` (a Go layout, `2006-01-02` by default), `relative` (`3 days ago`), `thousands` (`1,234`) |
+| `split` | makes a field a list, split on `sep` (spaces by default); with `rows`, one row per item |
+| `join` | makes a list text, joined by `sep` (`, ` by default) |
+| `dedupe` | keeps the first row of each distinct `by` (every field when `by` is empty) |
+| `group` | a row per distinct `by`, with `aggregates` (`count`, and `sum`, `min`, `max`, `list`, `first` of a field); `totals` adds a last row over every group |
+
+`map`, `format`, `split` and `join` rewrite their `field` unless `as` names another. The flags add steps in
+this order: each `--transform` (one step as JSON, the shape a saved selection holds), each
+`--template as=text`, `--dedupe`, then `--group-by` with `--aggregate` (`count`, or `op:field[=as]`) and
+`--totals`. A saved selection lists its steps under `transforms`, and they run in that order. `--fields`
+lists the fields after the transforms. A totals row stays last whatever the sort, and `--limit` does not
+count it. A step naming a field that does not exist yet fails, naming the step. The SSH client formats
+below take no transforms, since they write the hosts themselves.
+
+The web UI's Export page has the same steps in its **Transforms** card: add one from the list, fill in its
+fields, and the preview shows the rows it leaves. A step stays unapplied, and says so, until it has what it
+needs. Move a step up or down, or remove it. A group starts the columns afresh, since it replaces the fields,
+and while there are steps the format list leaves out the SSH client formats. *Copy as command* writes each
+step as a `--transform`.
+
+### Saved selections
+
+A selection saved by name is exported by that name, like a built-in list:
+
+```bash
+authama export selections save prd-hosts --from sel.json             # the default store: yours
+authama export selections save prd-hosts --from sel.json --to manifest
+authama export prd-hosts --format json
+authama export selections list
+authama export selections show prd-hosts
+authama export selections delete prd-hosts --from manifest
+```
+
+Two stores hold them, and both are read:
+
+| Store | Where | Who sees it |
+|---|---|---|
+| `user` | `<state home>/exports/selections/<name>.json`, mode 0600 | this account only |
+| `manifest` | `defaults.export.selections` in the manifest | every machine that shares the manifest |
+
+A save goes to the store `--to` names, else the one the `export.save_to` setting names, else `user`. On a
+name in both stores, yours wins: `list` marks the manifest's as hidden, and deleting yours brings it back.
+`delete` asks `--from` when both stores have the name. A manifest save or delete is a manifest change: it
+asks first at a terminal (`--yes` skips that), takes the lock and a snapshot, and is audited. A name is 1 to
+63 of `a-z`, `0-9`, `.`, `_` and `-`, starting with a letter or digit, and cannot be a built-in list's. A saved
+selection of a version this authama cannot read is listed with the reason and never used. `--selection`
+takes a saved name too, when no file has that name.
+
 ### Hosts for ssh and SSH clients
 
 | `--format` | Writes | Same bytes as |

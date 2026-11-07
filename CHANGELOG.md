@@ -14,6 +14,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the same notice and service as the CLI, and both work in dev mode, which reaches no server. The
   web pins manifest hosts only: no free hostname or port goes to `ssh-keyscan` from a form. A host
   with nothing pinned now shows the shared empty state.
+- **Transforms in `authama export`.** A selection can now template a column (`{profile}/{alias}`),
+  map values, format text, dates and numbers, split and join lists, dedupe rows, and group them with
+  counts, sums, minimums, maximums, lists and a totals row. `--template`, `--dedupe`, `--group-by`,
+  `--aggregate`, `--totals` and `--transform` (one step as JSON) add them at the command line, and a
+  saved selection holds them under `transforms`. A column can name a field a transform wrote. The SSH
+  client formats refuse transforms, because they write the hosts themselves.
+- **Transforms on the Export page.** A *Transforms* card adds, edits, reorders and removes the same
+  steps, and shows how many rows each one leaves. The preview, the download, *Copy link* and *Copy as
+  command* all carry them.
+- **Saved export selections.** `authama export selections save <name> --from sel.json` keeps a
+  selection by name, and `authama export <name>` exports it. It goes in your own store (a private
+  file under the state home) or in the manifest (`defaults.export.selections`, so it travels with
+  it). The new `export.save_to` setting picks the default store. Both stores are read, and on a
+  name in both yours wins. `list`, `show` and `delete` complete the set, and a manifest save or
+  delete asks first, like any manifest change.
 - **Hosts for ssh and SSH clients in `authama export`.** `authama export hosts --format` takes
   `ssh_config`, `termius` and every `ssh host export` client (`hosts-csv`, `windows-terminal`,
   `iterm2`, `putty`, `remmina`, `securecrt`, `mobaxterm`), filtered like any list. `ssh_config` is
