@@ -7,6 +7,10 @@ package platform
 // so callers fall back to reading piped input.
 func StdinIsTerminal() bool { return false }
 
+// StderrIsTerminal is false outside the released set, so no progress line is
+// ever drawn there.
+func StderrIsTerminal() bool { return false }
+
 // ReadSecret always fails on unsupported platforms rather than reading with echo
 // left on, so a passphrase can never be silently displayed.
 func ReadSecret(string) (string, error) { return "", ErrNotATerminal }

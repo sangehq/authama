@@ -58,7 +58,8 @@ func newSnapshotsCmd() *cobra.Command {
 			}
 			out := c.OutOrStdout()
 			if len(snaps) == 0 {
-				_, _ = fmt.Fprintln(out, "no snapshots yet")
+				// The same teaching line as the Snapshots page's empty state.
+				_, _ = fmt.Fprintln(out, "no snapshots yet: the first command that changes ~/.ssh takes one")
 				return nil
 			}
 			legacy := 0

@@ -108,8 +108,13 @@ func newKnownHostsCmd() *cobra.Command {
 			// A target that returns no key is a failure, not "pinned 0": a reachable non-SSH port
 			// (a web server on 443) used to report success and leave the host untrusted.
 			var unscanned []string
-			for _, t := range targets {
+			for i, t := range targets {
+				// A scan waits on the network, up to ssh-keyscan's timeout, and
+				// asks nothing; the progress line stops before any key is shown
+				// or any trust question is asked.
+				stop := startProgress(c, fmt.Sprintf("scanning %s (%d of %d)", t.Alias, i+1, len(targets)))
 				keys, scanErr := svc.ScanChecked(t.Hostname, t.Port)
+				stop()
 				if scanErr != nil {
 					_, _ = fmt.Fprintf(c.ErrOrStderr(), "%s: %v\n", t.Alias, scanErr)
 					unscanned = append(unscanned, t.Alias)

@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/services/validate"
 )
@@ -40,7 +41,8 @@ func newValidateCmd() *cobra.Command {
 			}
 			out := c.OutOrStdout()
 			if len(checks) == 0 {
-				_, _ = fmt.Fprintln(out, "no managed keys to validate")
+				// Only reachable with no selector: one that matches no key is an error.
+				_, _ = fmt.Fprintln(out, "no managed keys to validate (add one with `"+brand.Command+" ssh key add`, or add a host and reconcile)")
 				return nil
 			}
 			failed := 0
