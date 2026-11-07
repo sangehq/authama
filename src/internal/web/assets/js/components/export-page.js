@@ -764,8 +764,10 @@ export class ExportPage extends Component {
         headers: { "Content-Type": "application/json", "X-CSRF-Token": ExportPage.csrf() },
         body: JSON.stringify({ name: s.name }),
       });
+      // Read the reply either way: an unread body is cut off, and reported
+      // as a failed request, when the page navigates next.
+      const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? `the server answered ${res.status}`);
       }
       await this.#loadSaved();
