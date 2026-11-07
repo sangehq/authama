@@ -6,6 +6,7 @@
       <h1 class="page-title"><code>{{.Detail.Ref.KeyName}}</code></h1>
     </div>
     {{if not $.ReadOnly}}<div class="col-auto ms-auto btn-list">
+      {{template "change_open" $}}<input type="hidden" name="action" value="key-regen-pub"><input type="hidden" name="key" value="{{.Detail.Ref}}"><button type="submit" class="btn btn-outline-secondary"{{tip "key-regen-pub"}}>{{icon "refresh"}}<span class="ms-1">Rebuild the .pub</span></button></form>
       <a href="#lifetime" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" role="button" aria-controls="lifetime"{{tip "key-lifetime"}}>{{icon "hourglass"}}<span class="ms-1">Set lifetime</span></a>
       {{if not $.DevRoot}}<a href="#revoke" class="btn btn-outline-danger" data-bs-toggle="offcanvas" role="button" aria-controls="revoke"{{tip "key-revoke"}}>{{icon "ban"}}<span class="ms-1">Revoke</span></a>{{end}}
     </div>{{end}}
