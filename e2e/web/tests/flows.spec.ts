@@ -33,8 +33,11 @@ test('a profile is previewed, then added', async ({ page }) => {
   await expect(look.getByRole('rowheader', { name: added, exact: true })).toHaveCount(0);
   await look.close();
 
+  // Clicking focuses the button, which opens its tooltip. The tooltip is drawn
+  // on <body>, so it has to be hidden when the panel swaps the button out.
   await panel.getByRole('button', { name: 'Make this change' }).click();
   await expect(panel.getByRole('heading', { level: 1 })).toHaveText('Done');
+  await expect(page.locator('.tooltip')).toHaveCount(0);
   await expect(panel.getByRole('status')).toContainText(`profile add ${added}`);
 
   // The history opens in the panel too, and Back returns to the result.
