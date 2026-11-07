@@ -36,6 +36,13 @@ authama ssh validate work_hpc-ed25519    # one key
 Example: a corrupted `.pub`, a mismatched pair, or loose perms each surface as a
 red ✗ with the specific issue, and the command exits non-zero.
 
+## In the web UI
+
+The **Validate** page (**System → Validate**, `/validate`) runs `ssh validate`
+for every managed key, alongside `settings validate`, `ssh config check` and the
+manifest's own rules, and shows each result with the command that runs the same
+check. It runs when you open it and writes nothing.
+
 ## `authama ssh key regen-pub [selector ...] [--category <name>] [--all]`
 
 Rebuilds public keys from the key they belong to, when a `.pub` is missing or

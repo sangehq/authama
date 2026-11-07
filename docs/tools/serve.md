@@ -84,8 +84,8 @@ bell listing the newest [file events](events.md), and an account menu named for 
 server runs as. The account menu opens with *Running as <user> on <host>* and holds Settings, Events,
 Doctor, the tour and About. Under it, a menu holds the Overview and five dropdowns: **SSH**
 (Profiles, Naming, Hosts, Keys, VMs), **Config & backups** (SSH config, Snapshots), **Security** (Auth tokens,
-Audit, Owner & PIN), **Activity** (History, Events), Export, and **System** (Doctor, Repair, Settings,
-About). On a narrow screen it folds behind a button. About shows the build (and whether it is
+Audit, Owner & PIN), **Activity** (History, Events), Export, and **System** (Doctor, Validate, Repair,
+Settings, About). On a narrow screen it folds behind a button. About shows the build (and whether it is
 current), this computer, and the third-party licences; following the system's light or dark theme is
 chosen on the Settings page. The footer carries the copyright, the version, and links to About, the
 documentation, the source and the licences.
@@ -232,6 +232,7 @@ documentation, the source and the licences.
 | Auth tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret), each tool's file with its mode and how many entries are installed, configured and resolvable, what `token apply` would skip, and the token audit, as `authama token list`, `token status` and `token audit` print |
 | SSH config | every file the manifest renders into `~/.ssh` and whether the files on disk match it, as `authama ssh config show` and `ssh config check` print |
 | Doctor, Audit | the reports `authama doctor` and `authama ssh audit` print |
+| Validate | every validate check on one page, run when you open it: the manifest loads and passes its rules, `authama settings validate`, `authama ssh validate` (each keypair parses, matches and has safe permissions) and `authama ssh config check`. A manifest that does not load fails the two checks that need it rather than reporting them clean. Reads only |
 | Events | every change seen to a tracked file, with the authama operation that made it, as [`authama events`](events.md) lists them; filtered by area |
 | About | this build (version, commit, Go, platform), the user and machine it runs as, this computer (OS and version, build, kernel, architecture, model, processor, cores, memory, uptime, read from the OS without running a command), where it keeps things, links to the documentation and the source, and the third-party licences of the bundled front-end assets |
 | Owner & PIN | whether the home is [bound to its owner](owner.md), where the sealing key is kept, whether a PIN and fingerprint unlock are on, and whether the sealed files match, naming each one changed outside authama. Changing any of it is done at a terminal, which proves the OS account; the page shows the commands |
