@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -255,5 +256,41 @@ func TestEnginePresetKeepsWhatItCannotMatch(t *testing.T) {
 		if _, got := enginePreset(c.file, mustQuery(t, c.query)); got != c.want {
 			t.Errorf("%s?%s: engine %v, want %v", c.file, c.query, got, c.want)
 		}
+	}
+}
+
+// With transforms, the preview's defaults follow them, it names the steps a
+// page can add, and it leaves the SSH client formats out: they write hosts
+// themselves and take no transforms.
+func TestThePreviewFollowsTransforms(t *testing.T) {
+	s, _, _ := newTestServer(t)
+	c := signIn(t, s)
+	sel := selectionParam(t, `{"version":1,"grain":"host","transforms":[{"kind":"template","as":"where","template":"{profile}/{alias}"}]}`)
+	var p exportPreview
+	if err := json.Unmarshal(c.get("/exports/run?s="+sel+"&preview=1").Body.Bytes(), &p); err != nil {
+		t.Fatal(err)
+	}
+	if last := p.Defaults[len(p.Defaults)-1]; last.Field != "where" || p.Columns[len(p.Columns)-1] != "where" || p.Rows[0][len(p.Rows[0])-1] != "work/gh" {
+		t.Errorf("defaults %v, columns %v, rows %v", p.Defaults, p.Columns, p.Rows)
+	}
+	if len(p.Steps.Kinds) != 7 || len(p.Steps.Formats) == 0 || len(p.Steps.Aggregates) == 0 {
+		t.Errorf("steps = %+v", p.Steps)
+	}
+	if got := p.Stages[len(p.Stages)-1]; got.Name != "transform 1 template" || got.Rows != 1 {
+		t.Errorf("last stage = %+v", got)
+	}
+	for _, f := range p.Formats {
+		if f.Hosts {
+			t.Errorf("%s offered with a transform", f.Name)
+		}
+	}
+	var plain exportPreview
+	_ = json.Unmarshal(c.get("/exports/run?preset=hosts&preview=1").Body.Bytes(), &plain)
+	if hosts := slices.IndexFunc(plain.Formats, func(f exportFormat) bool { return f.Hosts }); hosts < 0 {
+		t.Error("no host format offered without transforms: the check above proves nothing")
+	}
+	// The file itself refuses a host format with a transform, saying why.
+	if rec := c.get("/exports/run?s=" + sel + "&format=ssh_config"); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "takes no transforms") {
+		t.Errorf("ssh_config with a transform: %d %s", rec.Code, rec.Body.String())
 	}
 }

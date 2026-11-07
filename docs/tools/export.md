@@ -68,6 +68,12 @@ lists the fields after the transforms. A totals row stays last whatever the sort
 count it. A step naming a field that does not exist yet fails, naming the step. The SSH client formats
 below take no transforms, since they write the hosts themselves.
 
+The web UI's Export page has the same steps in its **Transforms** card: add one from the list, fill in its
+fields, and the preview shows the rows it leaves. A step stays unapplied, and says so, until it has what it
+needs. Move a step up or down, or remove it. A group starts the columns afresh, since it replaces the fields,
+and while there are steps the format list leaves out the SSH client formats. *Copy as command* writes each
+step as a `--transform`.
+
 ### Hosts for ssh and SSH clients
 
 | `--format` | Writes | Same bytes as |

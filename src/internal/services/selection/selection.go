@@ -111,8 +111,12 @@ type Result struct {
 	Columns []string `json:"columns"`
 	Rows    [][]any  `json:"rows"`
 	Stages  []Stage  `json:"stages"`
-	// Fields is every field the grain offers, for a page to choose columns from.
+	// Fields is every field the grain offers, after any transforms, for a
+	// page to choose columns from.
 	Fields []string `json:"fields"`
+	// Defaults are the columns a selection with none of its own gets: the
+	// grain's, followed by the fields its transforms wrote.
+	Defaults []Column `json:"defaults"`
 }
 
 // Parse reads a selection, refusing another version.
@@ -157,7 +161,7 @@ func Run(ds *dataset.Dataset, s Selection) (Result, error) {
 			return Result{}, err
 		}
 	}
-	res := Result{Fields: fields, Stages: []Stage{{"all", len(rows)}}}
+	res := Result{Fields: fields, Stages: []Stage{{"all", len(rows)}}, Defaults: Defaults[s.Grain]}
 	w := s.Where
 
 	rows = keep(rows, func(r row) bool { return in(w.Profile, str(r.f["profile"])) })
@@ -196,8 +200,9 @@ func Run(ds *dataset.Dataset, s Selection) (Result, error) {
 			return Result{}, err
 		}
 		res.Fields = fields
+		res.Defaults = transformedDefaults(Defaults[s.Grain], before, fields)
 		if len(s.Columns) == 0 {
-			cols = transformedDefaults(cols, before, fields)
+			cols = res.Defaults
 		}
 		if err := checkColumns(s.Grain, cols, fields); err != nil {
 			return Result{}, err

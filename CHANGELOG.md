@@ -15,6 +15,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   saved selection holds them under `transforms`. A column can name a field a transform wrote. The SSH
   client formats refuse transforms, because they write the hosts themselves.
 
+- **Transforms on the Export page.** A *Transforms* card adds, edits, reorders and removes the same
+  steps, and shows how many rows each one leaves. The preview, the download, *Copy link* and *Copy as
+  command* all carry them.
+
 - **Hosts for ssh and SSH clients in `authama export`.** `authama export hosts --format` takes
   `ssh_config`, `termius` and every `ssh host export` client (`hosts-csv`, `windows-terminal`,
   `iterm2`, `putty`, `remmina`, `securecrt`, `mobaxterm`), filtered like any list. `ssh_config` is

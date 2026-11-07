@@ -52,6 +52,19 @@
             </div>
           </div>
 
+          <div class="card-body border-bottom" aria-label="Transforms" role="group">
+            <div class="d-flex align-items-center mb-2">
+              <h3 class="card-title mb-0">{{icon "route"}}<span class="ms-2">Transforms</span> <span class="badge badge-info ms-2" data-export-stepcount></span></h3>
+            </div>
+            <p class="text-secondary small mb-2">Steps run in order after the filters and before the columns, so a column can name a field a step writes.</p>
+            <ol class="list-group list-group-numbered mb-2 export-steps" data-export-steps></ol>
+            <div class="input-group input-group-sm export-add">
+              <select class="form-select" aria-label="A transform to add" data-export-step-add></select>
+              <button type="button" class="btn" data-export-step-add-button{{tip "export-add-step"}}>{{icon "plus"}}<span class="ms-1">Add step</span></button>
+            </div>
+            <datalist id="export-fields" data-export-fieldlist></datalist>
+          </div>
+
           <div class="card-body pb-2">
             <div class="d-flex flex-wrap align-items-center gap-2">
               <h3 class="card-title mb-0">{{icon "table"}}<span class="ms-2">Preview</span></h3>

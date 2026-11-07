@@ -7,12 +7,16 @@ import { Prefs } from "../core/prefs.js";
  * @typedef {{ field: string, as?: string }} Column
  * @typedef {{ field: string, desc?: boolean }} SortKey
  * @typedef {Record<string, string[] | string | undefined>} Where
- * @typedef {{ version: 1, grain: string, where: Where, narrow?: boolean, columns?: Column[], sort?: SortKey[], limit?: number }} Selection
+ * @typedef {{ op: string, field?: string, as?: string }} Aggregate
+ * @typedef {{ kind: string, field?: string, as?: string, template?: string, values?: Record<string, string>, default?: string,
+ *   format?: string, layout?: string, sep?: string, rows?: boolean, by?: string[], aggregates?: Aggregate[], totals?: boolean }} Step
+ * @typedef {{ version: 1, grain: string, where: Where, narrow?: boolean, transforms?: Step[], columns?: Column[], sort?: SortKey[], limit?: number }} Selection
  * @typedef {{ value: string, profile?: string, rows: number }} FacetValue
  * @typedef {{ name: string, rows: number }} Stage
  * @typedef {{ name: string, label: string, extension: string, hosts?: boolean }} Format
  * @typedef {{ grain: string, columns: string[], rows: string[][], total: number, kept: number, stages: Stage[],
- *   fields: string[], facets: Record<string, FacetValue[]>, formats: Format[], defaults: Column[], skipped?: string[] }} Preview
+ *   fields: string[], facets: Record<string, FacetValue[]>, formats: Format[], defaults: Column[], skipped?: string[],
+ *   steps: { kinds: string[], formats: string[], aggregates: string[] } }} Preview
  */
 
 /** The facets the page offers, in its order: heading, and one value's name. */
@@ -28,6 +32,88 @@ const FACETS = [
   ["area", "Areas", "Area"],
   ["source", "Sources", "Source"],
 ];
+
+/** What each transform is called on the page. */
+const STEP_LABELS = {
+  template: "Column from a template",
+  map: "Map values",
+  format: "Format",
+  split: "Split",
+  join: "Join a list",
+  dedupe: "Remove duplicates",
+  group: "Group",
+};
+
+/**
+ * Whether a step has what it needs to run. An unfinished step stays on the
+ * page and is left out of the selection until it is.
+ * @param {Step} t
+ */
+export function stepReady(t) {
+  switch (t.kind) {
+    case "template":
+      return Boolean(t.as && t.template);
+    case "map":
+      return Boolean(t.field && t.values && Object.keys(t.values).length);
+    case "format":
+      return Boolean(t.field && t.format);
+    case "split":
+    case "join":
+      return Boolean(t.field);
+    case "group":
+      return Boolean(t.by?.length);
+    default:
+      return true;
+  }
+}
+
+/** The field a step writes that the grain does not have, or "". @param {Step} t */
+function written(t) {
+  return t.kind === "template" ? (t.as ?? "") : (t.as && t.as !== t.field ? t.as : "");
+}
+
+/** A comma list as values. @param {string} s */
+function commaList(s) {
+  return s.split(",").map((x) => x.trim()).filter(Boolean);
+}
+
+/**
+ * Aggregates as the command line writes them: count, or op:field[=as].
+ * @param {string} s @returns {Aggregate[]}
+ */
+export function parseAggregates(s) {
+  return commaList(s).map((a) => {
+    const [spec, as] = a.split("=", 2);
+    const [op, field] = spec.split(":", 2);
+    /** @type {Aggregate} */
+    const out = { op: op.trim() };
+    if (field?.trim()) {
+      out.field = field.trim();
+    }
+    if (as?.trim()) {
+      out.as = as.trim();
+    }
+    return out;
+  });
+}
+
+/** @param {Aggregate[] | undefined} aggs */
+function aggregatesText(aggs) {
+  return (aggs ?? []).map((a) => `${a.op}${a.field ? `:${a.field}` : ""}${a.as ? `=${a.as}` : ""}`).join(", ");
+}
+
+/** A map step's values, one from=to a line. @param {string} s */
+function parseValues(s) {
+  /** @type {Record<string, string>} */
+  const out = {};
+  for (const line of s.split("\n")) {
+    const i = line.indexOf("=");
+    if (i > 0) {
+      out[line.slice(0, i).trim()] = line.slice(i + 1).trim();
+    }
+  }
+  return out;
+}
 
 /** The grains whose rows have a time, so since/until apply. */
 const TIMED = ["op", "event", "snapshot", "deployment"];
@@ -117,6 +203,9 @@ export class ExportPage extends Component {
 
   #format = "csv";
 
+  /** The step whose first field takes the focus after the next render. @type {number | null} */
+  #focusStep = null;
+
   /** The column whose handle takes the focus after the next render. @type {number | null} */
   #focusHandle = null;
 
@@ -155,7 +244,7 @@ export class ExportPage extends Component {
     }
     s ??= Prefs.get("export.selection", null);
     if (s && s.version === 1 && typeof s.grain === "string") {
-      this.#sel = { version: 1, grain: s.grain, where: s.where ?? {}, narrow: s.narrow, columns: s.columns, sort: s.sort };
+      this.#sel = { version: 1, grain: s.grain, where: s.where ?? {}, narrow: s.narrow, transforms: Array.isArray(s.transforms) ? s.transforms : undefined, columns: s.columns, sort: s.sort };
     }
     const f = /[#&]f=([a-z0-9_-]+)/.exec(location.hash);
     this.#format = f ? f[1] : Prefs.get("export.format", "csv");
@@ -184,6 +273,10 @@ export class ExportPage extends Component {
     const out = { version: 1, grain: this.#sel.grain, where };
     if (this.#sel.grain === "profile" && this.#sel.narrow !== false && where.key) {
       out.narrow = true;
+    }
+    const steps = (this.#sel.transforms ?? []).filter(stepReady);
+    if (steps.length) {
+      out.transforms = steps;
     }
     if (this.#sel.columns?.length) {
       out.columns = this.#sel.columns;
@@ -276,6 +369,23 @@ export class ExportPage extends Component {
       }
       this.#update({ where: {} });
     });
+    const stepAdd = /** @type {HTMLSelectElement} */ (this.#part("step-add"));
+    this.#part("step-add-button").addEventListener("click", () => {
+      if (stepAdd.value) {
+        /** @type {Step} */
+        const step = { kind: stepAdd.value };
+        if (step.kind === "format") {
+          step.format = "upper";
+        }
+        if (step.kind === "group") {
+          step.aggregates = [{ op: "count" }];
+        }
+        this.#focusStep = (this.#sel.transforms ?? []).length;
+        this.#setSteps([...(this.#sel.transforms ?? []), step]);
+        stepAdd.value = "";
+      }
+    });
+    stepAdd.addEventListener("change", () => this.#part("step-add-button").click());
     this.#part("columns-reset").addEventListener("click", () => this.#update({ columns: undefined, sort: undefined }));
     const format = /** @type {HTMLSelectElement} */ (this.#part("format"));
     format.addEventListener("change", () => {
@@ -344,6 +454,7 @@ export class ExportPage extends Component {
     }
     this.#part("time").hidden = !TIMED.includes(this.#sel.grain);
     this.#renderFacets(p);
+    this.#renderSteps(p);
     this.#renderColumns(p);
     this.#renderPreview(p);
     this.#renderOutput();
@@ -440,6 +551,156 @@ export class ExportPage extends Component {
         El.create("div").cls("accordion-body p-0").append(El.create("div").cls("list-group list-group-flush list-group-selectable export-list").append(...list)),
       ),
     ).node;
+  }
+
+  /**
+   * Sets the steps. Chosen columns naming a field no step writes any more are
+   * dropped, and a group, which replaces the fields, starts the columns and
+   * the sort afresh, so the preview never asks for a column that is gone.
+   * @param {Step[]} next
+   */
+  #setSteps(next) {
+    const was = this.#sel.transforms ?? [];
+    /** @type {Partial<Selection>} */
+    const change = { transforms: next.length ? next : undefined };
+    const grouped = (/** @type {Step[]} */ l) => l.some((t) => t.kind === "group" && stepReady(t));
+    if (grouped(was) || grouped(next)) {
+      change.columns = undefined;
+      change.sort = undefined;
+    } else if (this.#sel.columns?.length) {
+      const still = new Set(next.filter(stepReady).map(written));
+      const gone = new Set(was.map(written).filter((f) => f && !still.has(f)));
+      const cols = this.#sel.columns.filter((c) => !gone.has(c.field));
+      change.columns = cols.length ? cols : undefined;
+    }
+    this.#update(change);
+  }
+
+  /**
+   * The transform steps, in order: each with its own fields, its row count
+   * after it ran, and buttons to move or remove it; below, a list of the
+   * transforms to add.
+   * @param {Preview} p
+   */
+  #renderSteps(p) {
+    const steps = this.#sel.transforms ?? [];
+    const kinds = p.steps?.kinds ?? Object.keys(STEP_LABELS);
+    const add = /** @type {HTMLSelectElement} */ (this.#part("step-add"));
+    if (add.options.length !== kinds.length + 1) {
+      add.replaceChildren(
+        El.create("option").prop("value", "").text("Add a step…").node,
+        ...kinds.map((k) => El.create("option").prop("value", k).text(STEP_LABELS[/** @type {keyof typeof STEP_LABELS} */ (k)] ?? k).node),
+      );
+    }
+    this.#part("fieldlist").replaceChildren(...p.fields.map((f) => El.create("option").prop("value", f).node));
+    this.#part("stepcount").textContent = steps.length ? String(steps.length) : "";
+    let ran = 0;
+    const items = steps.map((t, i) => {
+      const ready = stepReady(t);
+      const stage = ready ? p.stages.find((s) => s.name === `transform ${++ran} ${t.kind}`) : undefined;
+      /** @param {Partial<Step>} change */
+      const set = (change) => this.#setSteps(steps.map((x, j) => (j === i ? { ...x, ...change } : x)));
+      const n = i + 1;
+      const label = STEP_LABELS[/** @type {keyof typeof STEP_LABELS} */ (t.kind)] ?? t.kind;
+      /** A labelled input. @param {string} text @param {string} value @param {(v: string) => void} on @param {object} [o] */
+      const input = (text, value, on, o = {}) => {
+        const { list = false, placeholder = "", wide = false } = /** @type {{list?: boolean, placeholder?: string, wide?: boolean}} */ (o);
+        const el = El.create("input").cls("form-control form-control-sm").prop("value", value).attr("placeholder", placeholder)
+          .attr("aria-label", `Step ${n}: ${text}`).on("change", (e) => on(/** @type {HTMLInputElement} */ (e.target).value.trim()));
+        if (list) {
+          el.attr("list", "export-fields");
+        }
+        return El.create("label").cls(wide ? "col-12" : "col-sm-6 col-lg-4").append(El.create("span").cls("form-label small mb-1").text(text), el).node;
+      };
+      /** @param {string} text @param {string[]} options @param {string} value @param {(v: string) => void} on */
+      const select = (text, options, value, on) =>
+        El.create("label").cls("col-sm-6 col-lg-4").append(
+          El.create("span").cls("form-label small mb-1").text(text),
+          El.create("select").cls("form-select form-select-sm").attr("aria-label", `Step ${n}: ${text}`)
+            .append(...options.map((o) => El.create("option").prop("value", o).prop("selected", o === value).text(o)))
+            .on("change", (e) => on(/** @type {HTMLSelectElement} */ (e.target).value)),
+        ).node;
+      /** @param {string} text @param {boolean} value @param {(v: boolean) => void} on */
+      const toggle = (text, value, on) =>
+        El.create("label").cls("col-12 form-check form-switch mb-0 ms-2").append(
+          El.create("input").cls("form-check-input").prop("type", "checkbox").prop("checked", value).attr("aria-label", `Step ${n}: ${text}`)
+            .on("change", (e) => on(/** @type {HTMLInputElement} */ (e.target).checked)),
+          El.create("span").cls("form-check-label").text(text),
+        ).node;
+      const into = (/** @type {string} */ v) => set({ as: v || undefined });
+      /** @type {Node[]} */
+      let body = [];
+      switch (t.kind) {
+        case "template":
+          body = [input("Column name", t.as ?? "", into, { placeholder: "where" }),
+            input("Template", t.template ?? "", (v) => set({ template: v }), { placeholder: "{profile}/{alias}", wide: true })];
+          break;
+        case "map": {
+          const values = El.create("textarea").cls("form-control form-control-sm").attr("aria-label", `Step ${n}: values, one from=to a line`)
+            .attr("placeholder", "needs-redeploy=pending")
+            .prop("value", Object.entries(t.values ?? {}).map(([k, v]) => `${k}=${v}`).join("\n"))
+            .on("change", (e) => set({ values: parseValues(/** @type {HTMLTextAreaElement} */ (e.target).value) }));
+          body = [input("Field", t.field ?? "", (v) => set({ field: v }), { list: true }), input("Write to", t.as ?? "", into, { placeholder: "the same field" }),
+            input("Any other value", t.default ?? "", (v) => set({ default: v || undefined }), { placeholder: "kept as it is" }),
+            El.create("label").cls("col-12").append(El.create("span").cls("form-label small mb-1").text("Values, one from=to a line"), values).node];
+          break;
+        }
+        case "format":
+          body = [input("Field", t.field ?? "", (v) => set({ field: v }), { list: true }),
+            select("Format", p.steps?.formats ?? ["upper"], t.format ?? "upper", (v) => set({ format: v })),
+            input("Write to", t.as ?? "", into, { placeholder: "the same field" })];
+          if (t.format === "date") {
+            body.push(input("Layout", t.layout ?? "", (v) => set({ layout: v || undefined }), { placeholder: "2006-01-02" }));
+          }
+          break;
+        case "split":
+          body = [input("Field", t.field ?? "", (v) => set({ field: v }), { list: true }), input("Separator", t.sep ?? "", (v) => set({ sep: v || undefined }), { placeholder: "spaces" }),
+            input("Write to", t.as ?? "", into, { placeholder: "the same field" }), toggle("One row per item", Boolean(t.rows), (v) => set({ rows: v || undefined }))];
+          break;
+        case "join":
+          body = [input("Field", t.field ?? "", (v) => set({ field: v }), { list: true }), input("Separator", t.sep ?? "", (v) => set({ sep: v || undefined }), { placeholder: ", " }),
+            input("Write to", t.as ?? "", into, { placeholder: "the same field" })];
+          break;
+        case "dedupe":
+          body = [input("By these fields", (t.by ?? []).join(", "), (v) => set({ by: commaList(v) }), { placeholder: "every field", wide: true })];
+          break;
+        case "group":
+          body = [input("Group by", (t.by ?? []).join(", "), (v) => set({ by: commaList(v) }), { placeholder: "profile, env", wide: true }),
+            input("Aggregates", aggregatesText(t.aggregates), (v) => set({ aggregates: parseAggregates(v) }), { placeholder: `count, list:env=envs (${(p.steps?.aggregates ?? []).join(", ")})`, wide: true }),
+            toggle("A totals row", Boolean(t.totals), (v) => set({ totals: v || undefined }))];
+          break;
+      }
+      const iconBtn = (/** @type {string} */ icon, /** @type {string} */ text, /** @type {() => void} */ fn, /** @type {boolean} */ off) =>
+        El.create("button").cls("btn btn-icon btn-sm btn-ghost-secondary").prop("type", "button").attr("aria-label", text).attr("title", text)
+          .prop("disabled", off).append(ExportPage.icon(icon)).on("click", fn);
+      const move = (/** @type {number} */ to) => {
+        const next = [...steps];
+        const [s] = next.splice(i, 1);
+        next.splice(to, 0, s);
+        this.#setSteps(next);
+      };
+      const state = !ready
+        ? El.create("span").cls("badge badge-warning ms-2").text("Not applied until filled in")
+        : El.create("span").cls("badge badge-muted ms-2").attr("aria-label", `${stage?.rows ?? 0} rows after step ${n}`).text(`${stage?.rows ?? 0} rows`);
+      return El.create("li").cls("list-group-item d-flex gap-2").attr("data-step", String(i)).append(
+        El.create("div").cls("flex-fill").append(
+          El.create("div").cls("d-flex align-items-center mb-2").append(
+            El.create("strong").text(label), state,
+            El.create("span").cls("ms-auto btn-list flex-nowrap").append(
+              iconBtn("arrow-up", `Move step ${n} up`, () => move(i - 1), i === 0),
+              iconBtn("arrow-down", `Move step ${n} down`, () => move(i + 1), i === steps.length - 1),
+              iconBtn("x", `Remove step ${n}`, () => this.#setSteps(steps.filter((_, j) => j !== i)), false),
+            ),
+          ),
+          El.create("div").cls("row g-2").append(...body),
+        ),
+      ).node;
+    });
+    this.#part("steps").replaceChildren(...items);
+    if (this.#focusStep !== null) {
+      /** @type {HTMLElement | null} */ (this.#part("steps").querySelectorAll("[data-step]")[this.#focusStep]?.querySelector("input, select, textarea"))?.focus();
+      this.#focusStep = null;
+    }
   }
 
   /** The columns the file has: the chosen ones, or the defaults. */
@@ -734,6 +995,9 @@ export class ExportPage extends Component {
     }
     if (sel.narrow) {
       args.push("--narrow");
+    }
+    for (const t of sel.transforms ?? []) {
+      args.push(`--transform=${JSON.stringify(t)}`);
     }
     for (const c of sel.columns ?? []) {
       args.push(`--columns=${listValue(c.as ? `${c.field}=${c.as}` : c.field)}`);

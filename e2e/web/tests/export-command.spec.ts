@@ -104,3 +104,52 @@ test('Copy as command copies the authama export that writes the previewed rows',
   for (const a of ['app-web', 'app-db-maria', 'app-db-psql']) expect(config).toContain(`Host ${a}\n`);
   expect(config).not.toContain('Host hpc\n');
 });
+
+test('Transforms: a step writes a column, a group replaces the rows, and the command carries both', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-write']);
+  await recordCopies(page);
+  await page.goto('/export');
+  const exp = page.locator('[data-export-page]');
+  const preview = exp.getByRole('region', { name: 'Preview of the first rows' });
+  await expect(preview.locator('tbody tr').first()).toBeVisible();
+  // Every host the file holds, which the preview may show only the first of.
+  const rowsBefore = Number(((await exp.locator('[data-export-summary]').textContent()) ?? '').split(' ')[0]);
+  expect(rowsBefore).toBeGreaterThan(1);
+
+  // A column from a template: unfinished, it is not applied and says so.
+  await exp.getByLabel('A transform to add').selectOption({ label: 'Column from a template' });
+  await expect(exp.getByText('Not applied until filled in')).toBeVisible();
+  await exp.getByLabel('Step 1: Column name').fill('where');
+  await exp.getByLabel('Step 1: Column name').press('Enter');
+  await exp.getByLabel('Step 1: Template').fill('{profile}/{alias}');
+  await exp.getByLabel('Step 1: Template').press('Enter');
+  await expect(preview.locator('thead th').last()).toHaveText('where');
+  await expect(preview.locator('tbody tr').first().locator('td').last()).toHaveText(/^[^/]+\/[^/]+$/);
+  await expect(exp.getByLabel(/rows after step 1$/)).toBeVisible();
+
+  // A group replaces the fields: a row per profile with its count, and the
+  // SSH client formats, which write hosts themselves, are no longer offered.
+  await exp.getByLabel('A transform to add').selectOption({ label: 'Group' });
+  await exp.getByLabel('Step 2: Group by').fill('profile');
+  await exp.getByLabel('Step 2: Group by').press('Enter');
+  await expect(preview.locator('thead th')).toHaveText(['profile', 'count']);
+  await expect(exp.getByLabel('Format').locator('option[value="ssh_config"]')).toHaveCount(0);
+  await exp.getByLabel('Format').selectOption('json');
+
+  const shown = await preview.locator('tbody tr').evaluateAll((trs) =>
+    trs.map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent ?? '')),
+  );
+  const total = shown.reduce((n, r) => n + Number(r[1]), 0);
+  expect(total).toBe(rowsBefore);
+
+  await exp.getByRole('button', { name: 'Copy as command' }).click();
+  const cmd = (await page.evaluate(() => (window as unknown as { copied: string[] }).copied))[0];
+  expect(cmd).toContain('--transform=');
+  const rows = JSON.parse(runCommand(cmd)) as Record<string, unknown>[];
+  expect(rows.map((r) => [text(r.profile), text(r.count)])).toEqual(shown);
+
+  // Removing the group brings the host rows, and their formats, back.
+  await exp.getByRole('button', { name: 'Remove step 2' }).click();
+  await expect(exp.locator('[data-export-summary]')).toHaveText(new RegExp(`^${rowsBefore} of `));
+  await expect(exp.getByLabel('Format').locator('option[value="ssh_config"]')).toHaveCount(1);
+});
