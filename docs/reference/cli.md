@@ -78,7 +78,6 @@ Every command also takes the global flag:
     - [`authama ssh host apply`](#authama-ssh-host-apply) - Add or update hosts from compact specs (one, many, or a file)
     - [`authama ssh host delete`](#authama-ssh-host-delete) - Delete a host, its config block and its pins
     - [`authama ssh host edit`](#authama-ssh-host-edit) - Edit a host
-    - [`authama ssh host export`](#authama-ssh-host-export) - Write your hosts as another SSH client imports them (deprecated: use export hosts --format <client>)
   - [`authama ssh import`](#authama-ssh-import) - Onboard an existing ssh setup - a config file or any folder of them - into the manifest
   - [`authama ssh key`](#authama-ssh-key) - Manage a profile's keys (add/list/delete)
     - [`authama ssh key add`](#authama-ssh-key-add) - Declare a key on a profile and mint it
@@ -121,8 +120,7 @@ Every command also takes the global flag:
     - [`authama ssh snapshots list`](#authama-ssh-snapshots-list) - List local ~/.ssh snapshots (oldest -> newest)
     - [`authama ssh snapshots prune`](#authama-ssh-snapshots-prune) - Prune old snapshots, keeping the most recent N
     - [`authama ssh snapshots restore`](#authama-ssh-snapshots-restore) - Restore ~/.ssh config from a snapshot (private keys are left as they are)
-  - [`authama ssh termius`](#authama-ssh-termius) - Export hosts for the Termius app
-    - [`authama ssh termius export`](#authama-ssh-termius-export) - Write a Termius CSV import of every host, and list the key to attach to each (deprecated: use export hosts --format termius)
+  - [`authama ssh termius`](#authama-ssh-termius) - Termius: the key to attach to each host
     - [`authama ssh termius keys`](#authama-ssh-termius-keys) - List the Termius key label for each host, or copy one host's private key to the clipboard
   - [`authama ssh validate`](#authama-ssh-validate) - Check keypairs parse, match, and have safe perms
   - [`authama ssh view`](#authama-ssh-view) - One host as ssh will use it: resolved config, key and deployment status (the connect view)
@@ -233,8 +231,8 @@ the fields they write. The SSH client formats below take none.
 
 Hosts also go out as an SSH client imports them: --format hosts-csv, iterm2, mobaxterm, putty, remmina, securecrt, ssh_config, termius, windows-terminal.
 ssh_config is the managed config of the hosts kept, byte for byte what `ssh config export --flat`
-writes when every host is kept; termius is the Termius CSV; the rest are `ssh host export`'s
-clients (hosts-csv is its csv). Those formats write hosts in manifest order unless --sort is
+writes when every host is kept; termius is the Termius CSV; hosts-csv is a generic CSV; the rest
+are the clients' own files. Those formats write hosts in manifest order unless --sort is
 given, ignore --columns, leave out git hosts unless --include-git and, except ssh_config,
 windows-terminal and iterm2, hosts behind a ProxyCommand. remmina writes a zip of one file per
 host. What was left out, and what is left to do in the client, goes to stderr.
@@ -1128,7 +1126,7 @@ Subcommands:
 - [`rotate`](#authama-ssh-rotate) - Zero-downtime staged key rotation
 - [`show`](#authama-ssh-show) - Everything about a profile, host or key: files, config blocks, pins (the inventory view)
 - [`snapshots`](#authama-ssh-snapshots) - List/restore/prune local ~/.ssh backups
-- [`termius`](#authama-ssh-termius) - Export hosts for the Termius app
+- [`termius`](#authama-ssh-termius) - Termius: the key to attach to each host
 - [`validate`](#authama-ssh-validate) - Check keypairs parse, match, and have safe perms
 - [`view`](#authama-ssh-view) - One host as ssh will use it: resolved config, key and deployment status (the connect view)
 - [`vm`](#authama-ssh-vm) - Local VMs as SSH hosts: list, add, adopt a key, keep in sync, connect through the hypervisor
@@ -1426,7 +1424,6 @@ Subcommands:
 - [`apply`](#authama-ssh-host-apply) - Add or update hosts from compact specs (one, many, or a file)
 - [`delete`](#authama-ssh-host-delete) - Delete a host, its config block and its pins
 - [`edit`](#authama-ssh-host-edit) - Edit a host
-- [`export`](#authama-ssh-host-export) - Write your hosts as another SSH client imports them (deprecated: use export hosts --format <client>)
 
 ## authama ssh host add
 
@@ -1573,51 +1570,6 @@ Flags:
       --token-env string    env var holding the provider API token (e.g. GH_TOKEN_WORK)
       --untag stringArray   remove this tag (repeatable; applied after --tag; a tag the host lacks is ignored)
   -u, --user string         ssh user
-```
-
-## authama ssh host export
-
-Deprecated: `authama export hosts --format <client>` writes the same files through the export
-pipeline, with its filters, and the Export page offers them too (the generic csv is hosts-csv
-there). This command keeps working and writes the same bytes; it is not removed before v1.0.0.
-
-Write every host as another SSH client imports it, into
-<config home>/exports/<client>/ (or --out DIR, or - for stdout when the export is
-one file). ~/.ssh is never written. The clients:
-
-  csv               any client that imports a CSV (Royal TS, Xshell, SecureCRT's import script, a spreadsheet)
-  iterm2            iTerm2 (Dynamic Profiles)
-  mobaxterm         MobaXterm (a .mxtsessions file for Sessions > Import; Termius imports it too)
-  putty             PuTTY and KiTTY (a .reg file)
-  remmina           Remmina (one .remmina file per host)
-  securecrt         SecureCRT (an XML settings file for File > Import Settings; Termius imports it too)
-  windows-terminal  Windows Terminal (a JSON fragment)
-
-windows-terminal and iterm2 run `ssh <alias>`, so your ~/.ssh/config supplies the
-key and any ProxyCommand. The others are handed a host, port, user and key path,
-so a host reached through a ProxyCommand (a VM, Cloudflare Access) is left out.
-Git hosts are left out unless --include-git. Termius has its own command,
-`ssh termius export`; Tabby, WinSCP and Termius also import the file
-`ssh config export --flat` writes.
-
-```
-authama ssh host export <client> [flags]
-```
-
-Examples:
-
-```sh
-  authama ssh host export windows-terminal
-  authama ssh host export putty --skip bastion
-  authama ssh host export csv --out ./client-imports
-```
-
-Flags:
-
-```
-      --include-git        also export git hosts (user git, or a github or gitlab provider), which are not shells
-  -o, --out string         the directory to write into (default <config home>/exports/<client>/; - for stdout)
-      --skip stringArray   leave out this alias (repeatable)
 ```
 
 ## authama ssh import
@@ -2617,9 +2569,10 @@ Flags:
 
 ## authama ssh termius
 
-Termius keeps its hosts in its own encrypted vault and offers no command line or
-API to add them, and its SSH-config importer does not follow Include, so it cannot
-see the split config. `termius export` writes the CSV its importer reads instead.
+Termius keeps its hosts in its own encrypted vault, offers no command line or API
+to add them, and its SSH-config importer does not follow Include. Write its CSV
+import with `authama export hosts --format termius`; the CSV carries no keys, and
+`termius keys` lists and copies the key to attach to each host.
 
 ```
 authama ssh termius
@@ -2627,36 +2580,7 @@ authama ssh termius
 
 Subcommands:
 
-- [`export`](#authama-ssh-termius-export) - Write a Termius CSV import of every host, and list the key to attach to each (deprecated: use export hosts --format termius)
 - [`keys`](#authama-ssh-termius-keys) - List the Termius key label for each host, or copy one host's private key to the clipboard
-
-## authama ssh termius export
-
-Write a Termius CSV import of every host, and list the key to attach to each.
-
-Deprecated: `authama export hosts --format termius` writes the same CSV through the export
-pipeline, with its filters, and the Export page offers it too. This command keeps working and
-writes the same bytes; it is not removed before v1.0.0.
-
-```
-authama ssh termius export [flags]
-```
-
-Examples:
-
-```sh
-  authama ssh termius export --open
-  authama ssh termius export --include-git --skip bastion --out ./hosts.csv
-```
-
-Flags:
-
-```
-      --include-git        also export git hosts (user git, or a github or gitlab provider), which are not shells
-      --open               macOS: open Termius and show the file in Finder
-  -o, --out string         where to write (default <config home>/exports/termius-hosts.csv; - for stdout)
-      --skip stringArray   leave out this alias (repeatable)
-```
 
 ## authama ssh termius keys
 
@@ -2683,9 +2607,9 @@ Flags:
 ```
       --clear                  empty the clipboard and exit
       --clear-after duration   after copying, wait this long (e.g. 60s) and empty the clipboard
-      --include-git            also list git hosts, as 'termius export --include-git' does (an ALIAS finds a git host without it)
+      --include-git            also list git hosts, as 'export hosts --format termius --include-git' exports them (an ALIAS finds a git host without it)
       --print                  print the private key to stdout instead of copying it (warns on stderr)
-      --skip stringArray       leave out this alias, as 'termius export --skip' does (repeatable)
+      --skip stringArray       leave out this alias (repeatable)
 ```
 
 ## authama ssh validate

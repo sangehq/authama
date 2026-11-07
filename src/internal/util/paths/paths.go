@@ -177,8 +177,8 @@ func (p Paths) SnapshotsDir() string { return filepath.Join(p.State(), "snapshot
 func (p Paths) DistDir() string      { return filepath.Join(p.State(), "dist") }
 
 // ExportSelectionsDir holds p's saved export selections, one <name>.json
-// each. A folder of their own: exports/ also holds the files `config export
-// --flat` and `termius export` write. A function, not a method: Paths stays
+// each. A folder of their own: exports/ also holds the file `config export
+// --flat` writes. A function, not a method: Paths stays
 // a list of locations under its method ceiling.
 func ExportSelectionsDir(p Paths) string { return filepath.Join(p.State(), "exports", "selections") }
 func (p Paths) StateDir() string         { return filepath.Join(p.State(), ".state") }

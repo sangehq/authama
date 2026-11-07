@@ -68,8 +68,8 @@ func newExportCmd() *cobra.Command {
 			"the fields they write. The SSH client formats below take none.\n\n" +
 			"Hosts also go out as an SSH client imports them: --format " + strings.Join(encode.HostNames(), ", ") + ".\n" +
 			"ssh_config is the managed config of the hosts kept, byte for byte what `ssh config export --flat`\n" +
-			"writes when every host is kept; termius is the Termius CSV; the rest are `ssh host export`'s\n" +
-			"clients (hosts-csv is its csv). Those formats write hosts in manifest order unless --sort is\n" +
+			"writes when every host is kept; termius is the Termius CSV; hosts-csv is a generic CSV; the rest\n" +
+			"are the clients' own files. Those formats write hosts in manifest order unless --sort is\n" +
 			"given, ignore --columns, leave out git hosts unless --include-git and, except ssh_config,\n" +
 			"windows-terminal and iterm2, hosts behind a ProxyCommand. remmina writes a zip of one file per\n" +
 			"host. What was left out, and what is left to do in the client, goes to stderr.\n\n" +

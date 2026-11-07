@@ -58,10 +58,12 @@ func filesOf(t *testing.T, path string, f encode.Format) map[string][]byte {
 	return out
 }
 
-// Every `ssh host export` client, through `authama export hosts --format`,
-// writes the bytes the old command writes, with and without git hosts.
-// The old command keeps working: it is the reference here.
-func TestExportHostsInEveryClientFormatIsTheOldCommandsFile(t *testing.T) {
+// Every client format, through `authama export hosts --format`, writes the
+// bytes renderer.RenderClientExport produces for the same hosts, with and
+// without git hosts. That renderer is the one the golden files pin
+// (renderer.TestClientExportsMatchTheirGoldenFiles), so the pipeline cannot
+// drift from them.
+func TestExportHostsInEveryClientFormatIsTheRenderersFile(t *testing.T) {
 	clientsHome(t)
 	checked := 0
 	for _, client := range encode.ClientNames() {
@@ -73,28 +75,24 @@ func TestExportHostsInEveryClientFormatIsTheOldCommandsFile(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, git := range [][]string{nil, {"--include-git"}} {
-			dir := t.TempDir()
-			old := filepath.Join(dir, "old")
-			run(t, append([]string{"ssh", "host", "export", client, "--out", old}, git...)...)
-			target := filepath.Join(dir, "new")
-			run(t, append([]string{"export", "hosts", "--format", name, "--out", target}, git...)...)
-			got := filesOf(t, target, f)
-			entries, err := os.ReadDir(old)
-			if err != nil {
-				t.Fatal(err)
+		for _, git := range []bool{false, true} {
+			args := []string{"export", "hosts", "--format", name, "--out", filepath.Join(t.TempDir(), "new")}
+			if git {
+				args = append(args, "--include-git")
 			}
-			if len(entries) != len(got) {
-				t.Fatalf("%s %v: old wrote %d files, new %d", name, git, len(entries), len(got))
+			run(t, args...)
+			got := filesOf(t, args[5], f)
+			want := renderClients(t, client, git)
+			if len(want.Files) != len(got) {
+				t.Fatalf("%s git=%v: the renderer wrote %d files, export hosts %d", name, git, len(want.Files), len(got))
 			}
-			for _, e := range entries {
-				want, _ := os.ReadFile(filepath.Join(old, e.Name())) //nolint:gosec // test temp path
-				key := e.Name()
+			for _, wf := range want.Files {
+				key := wf.Name
 				if f.Extension != "zip" {
 					key = ""
 				}
-				if !bytes.Equal(got[key], want) {
-					t.Errorf("%s %v: %s differs:\n--- export hosts\n%s\n--- ssh host export\n%s", name, git, e.Name(), got[key], want)
+				if !bytes.Equal(got[key], wf.Data) {
+					t.Errorf("%s git=%v: %s differs:\n--- export hosts\n%s\n--- renderer\n%s", name, git, wf.Name, got[key], wf.Data)
 				}
 				checked++
 			}
@@ -105,26 +103,53 @@ func TestExportHostsInEveryClientFormatIsTheOldCommandsFile(t *testing.T) {
 	}
 }
 
-// The Termius format is `ssh termius export`'s CSV, and ssh_config is
+// renderClients is what renderer.RenderClientExport writes for the home
+// clientsHome built.
+func renderClients(t *testing.T, client string, includeGit bool) *renderer.ClientExport {
+	t.Helper()
+	p, m, _, err := loadExport(newRootCmd())
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp, err := renderer.RenderClientExport(m, exportPaths(p), client, renderer.TermiusOptions{IncludeGit: includeGit})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return exp
+}
+
+// The Termius format is renderer.RenderTermiusCSV's CSV, and ssh_config is
 // `ssh config export --flat`, byte for byte, when every host is kept.
-func TestExportHostsAsTermiusAndSSHConfigIsTheOldCommandsFile(t *testing.T) {
+func TestExportHostsAsTermiusAndSSHConfigIsTheRenderersFile(t *testing.T) {
 	clientsHome(t)
+	p, m, _, err := loadExport(newRootCmd())
+	if err != nil {
+		t.Fatal(err)
+	}
 	dir := t.TempDir()
-	for _, c := range []struct {
-		old, new []string
-	}{
-		{[]string{"ssh", "termius", "export"}, []string{"export", "hosts", "--format", "termius"}},
-		{[]string{"ssh", "termius", "export", "--include-git"}, []string{"export", "hosts", "--format", "termius", "--include-git"}},
-		{[]string{"ssh", "config", "export", "--flat"}, []string{"export", "hosts", "--format", "ssh_config"}},
-	} {
-		oldF, newF := filepath.Join(dir, "old"), filepath.Join(dir, "new")
-		run(t, append(c.old, "--out", oldF)...)
-		run(t, append(c.new, "--out", newF)...)
-		want, _ := os.ReadFile(oldF) //nolint:gosec // test temp path
-		got, _ := os.ReadFile(newF)  //nolint:gosec // test temp path
-		if len(want) == 0 || !bytes.Equal(got, want) {
-			t.Errorf("%v differs from %v:\n--- new\n%s\n--- old\n%s", c.new, c.old, got, want)
+	for _, git := range []bool{false, true} {
+		exp, err := renderer.RenderTermiusCSV(m, exportPaths(p), renderer.TermiusOptions{IncludeGit: git})
+		if err != nil {
+			t.Fatal(err)
 		}
+		newF := filepath.Join(dir, "termius")
+		args := []string{"export", "hosts", "--format", "termius", "--out", newF}
+		if git {
+			args = append(args, "--include-git")
+		}
+		run(t, args...)
+		got, _ := os.ReadFile(newF) //nolint:gosec // test temp path
+		if exp.CSV == "" || string(got) != exp.CSV {
+			t.Errorf("termius git=%v differs:\n--- export hosts\n%s\n--- renderer\n%s", git, got, exp.CSV)
+		}
+	}
+	oldF, newF := filepath.Join(dir, "old"), filepath.Join(dir, "new")
+	run(t, "ssh", "config", "export", "--flat", "--out", oldF)
+	run(t, "export", "hosts", "--format", "ssh_config", "--out", newF)
+	want, _ := os.ReadFile(oldF) //nolint:gosec // test temp path
+	got, _ := os.ReadFile(newF)  //nolint:gosec // test temp path
+	if len(want) == 0 || !bytes.Equal(got, want) {
+		t.Errorf("ssh_config differs from config export --flat:\n--- new\n%s\n--- old\n%s", got, want)
 	}
 }
 

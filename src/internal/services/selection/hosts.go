@@ -20,7 +20,7 @@ const aliasField = "alias"
 
 // HostRows runs s, a host selection, and is the aliases of the rows it kept
 // with the result as the selection itself would write it. With no sort, the
-// aliases come in manifest order, the order `ssh host export` lists hosts in;
+// aliases come in manifest order, the order `config render` writes them in;
 // with one, in the selection's order.
 func HostRows(ds *dataset.Dataset, s Selection, src HostSource) ([]string, Result, error) {
 	if s.Grain != GrainHost {

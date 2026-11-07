@@ -4,11 +4,12 @@ Termius's SSH-config import does not follow `Include`, so a categorized setup sh
 or key. Import the CSV authama writes instead.
 
 ```bash
-authama ssh termius export --open
+authama export hosts --format termius --out ~/Downloads/termius-hosts.csv
 ```
 
-1. In Termius: **Hosts → New Host (arrow) → Import → CSV**, click **Skip download**, and choose `termius-hosts.csv`
-   (Finder shows it with `--open`; it lives in `~/.config/authama/exports/`).
+1. In Termius: **Hosts → New Host (arrow) → Import → CSV**, click **Skip download**, and choose that
+   `termius-hosts.csv`. Git hosts are left out; add `--include-git` to keep them, and `--exclude <text>` to leave a
+   host out.
 2. **The CSV carries no SSH keys.** Termius's CSV template has no key column, so every imported host arrives with no
    key, and connecting stops at **SSH key selection**. For each host, once:
    1. `authama ssh termius keys <HOST>` copies that host's private key to the clipboard (never shown) and prints the

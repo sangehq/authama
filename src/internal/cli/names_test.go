@@ -212,8 +212,7 @@ func TestEveryHiddenTopLevelCommandIsAnSSHVerb(t *testing.T) {
 	ssh := childByName(root, sshGroup)
 	hidden := 0
 	for _, c := range root.Commands() {
-		// tui is the stub left where the removed menu was (v1RemovedVerbs).
-		if !c.Hidden || c.Deprecated != "" || c.Name() == "help" || c.Name() == "completion" || c.Name() == "tui" {
+		if !c.Hidden || c.Deprecated != "" || c.Name() == "help" || c.Name() == "completion" {
 			continue
 		}
 		hidden++

@@ -6,9 +6,9 @@ already a CLI command.
 ## What to run instead
 
 `authama serve`, or a bare `authama` on a terminal, opens the [web UI](serve.md). The `tui` command
-still answers, but it only prints that pointer and exits with an error, so an old script or the
-`atm-ui` alias from an earlier install says where to go. A fresh `token shell-aliases --install`
-points `atm-ui` at `authama serve`.
+is now unknown: the stub that printed this pointer was removed on 2026-11-07. An
+`atm-ui` alias from an install before 2026-11-06 still runs it; run
+`token shell-aliases --install` again and it points `atm-ui` at `authama serve`.
 
 ## Where each menu entry went
 

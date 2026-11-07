@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"bytes"
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -88,8 +86,8 @@ func TestConfigExportRefusesTheRenderedConfigFiles(t *testing.T) {
 			t.Errorf("export over %s was accepted", target)
 		}
 	}
-	if _, err := runErr(t, "termius", "export", "--out", filepath.Join(sshDir, "config")); err == nil {
-		t.Error("termius export over ~/.ssh/config was accepted")
+	if _, err := runErr(t, "export", "hosts", "--format", "termius", "--out", filepath.Join(sshDir, "config")); err == nil {
+		t.Error("a Termius export over ~/.ssh/config was accepted")
 	}
 	// Anything inside ~/.ssh is refused, not only the rendered files: the trust
 	// store and keys live there too. Spelled with other case it is the same
@@ -124,13 +122,16 @@ func TestConfigExportNeedsAFormat(t *testing.T) {
 	}
 }
 
-func TestTermiusExportWritesTheCSVAndListsKeys(t *testing.T) {
+// The Termius format is the CSV Termius's importer reads: its template header,
+// a row per shell host, and git hosts only with --include-git. The file is
+// owner-only, and ~/.ssh is not touched.
+func TestExportHostsAsTermiusWritesTheImporterCSV(t *testing.T) {
 	sshDir, before := exportHome(t)
-	out := run(t, "termius", "export")
-	path := filepath.Join(os.Getenv("AUTHAMA_CONFIG_DIR"), "exports", "termius-hosts.csv")
-	b, err := os.ReadFile(path)
+	path := filepath.Join(t.TempDir(), "termius-hosts.csv")
+	run(t, "export", "hosts", "--format", "termius", "--out", path)
+	b, err := os.ReadFile(path) //nolint:gosec // a test temp path
 	if err != nil {
-		t.Fatalf("%v\n%s", err, out)
+		t.Fatal(err)
 	}
 	if !strings.HasPrefix(string(b), "Groups,Label,Tags,Hostname/IP,Protocol,Port,Username,Password\n") {
 		t.Errorf("not the Termius template header:\n%s", b)
@@ -141,65 +142,11 @@ func TestTermiusExportWritesTheCSVAndListsKeys(t *testing.T) {
 	if strings.Contains(string(b), "github-me") {
 		t.Errorf("a git host was exported without --include-git:\n%s", b)
 	}
-	for _, want := range []string{"oribi-web", sshDir + "/profiles/orgs/simtabi/", "github-me", "Import"} {
-		if !strings.Contains(out, want) {
-			t.Errorf("output should mention %q:\n%s", want, out)
-		}
-	}
 	assertMode(t, path, 0o600, "the export lists every host")
 	assertUntouched(t, sshDir, before)
 
-	if out := run(t, "termius", "export", "--include-git", "--out", "-"); !strings.Contains(out, "github-me") {
+	if out := run(t, "export", "hosts", "--format", "termius", "--include-git", "--out", "-"); !strings.Contains(out, "github-me") {
 		t.Errorf("--include-git should export the git host:\n%s", out)
-	}
-}
-
-// --open hands the file to Termius on macOS and refuses elsewhere; the opener
-// is swapped so the test never launches an app.
-func TestTermiusExportOpen(t *testing.T) {
-	exportHome(t)
-	var calls [][]string
-	restore := stubOpener(func(args ...string) error {
-		calls = append(calls, args)
-		return nil
-	})
-	defer restore()
-
-	if !onMacOS() {
-		if _, err := runErr(t, "termius", "export", "--open"); err == nil {
-			t.Error("--open off macOS should be refused")
-		}
-		return
-	}
-	run(t, "termius", "export", "--open")
-	if len(calls) != 2 || strings.Join(calls[0], " ") != "-a Termius" || calls[1][0] != "-R" {
-		t.Errorf("opener calls = %v", calls)
-	}
-
-	restore2 := stubOpener(func(...string) error { return errors.New("no Termius") })
-	defer restore2()
-	if _, err := runErr(t, "termius", "export", "--open"); err == nil {
-		t.Error("a failed open should be reported")
-	}
-}
-
-// Under --out - the CSV owns stdout and the report goes to stderr, so
-// `authama ssh termius export --out - > hosts.csv` yields a clean file.
-func TestTermiusExportToStdoutKeepsTheReportOnStderr(t *testing.T) {
-	exportHome(t)
-	root := newRootCmd()
-	var stdout, stderr bytes.Buffer
-	root.SetOut(&stdout)
-	root.SetErr(&stderr)
-	root.SetArgs([]string{"termius", "export", "--out", "-", "--skip", "github-me"})
-	if err := root.Execute(); err != nil {
-		t.Fatalf("%v\n%s", err, stderr.String())
-	}
-	if !strings.HasPrefix(stdout.String(), "Groups,") || strings.Contains(stdout.String(), "skipped") {
-		t.Errorf("stdout should be the CSV alone:\n%s", stdout.String())
-	}
-	if !strings.Contains(stderr.String(), "oribi-web") || !strings.Contains(stderr.String(), "github-me: --skip") {
-		t.Errorf("stderr should carry the report:\n%s", stderr.String())
 	}
 }
 
