@@ -12,8 +12,8 @@ import (
 func TestEmptySubtitleSetsCommandsAsCode(t *testing.T) {
 	for text, want := range map[string]string{
 		"Run `authama ssh reconcile`, then `authama ssh deploy`.": "Run <code>authama ssh reconcile</code>, then <code>authama ssh deploy</code>.",
-		"Nothing to do.": "Nothing to do.",
-		"<b>x</b> & `<i>y</i>`": "&lt;b&gt;x&lt;/b&gt; &amp; <code>&lt;i&gt;y&lt;/i&gt;</code>",
+		"Nothing to do.":         "Nothing to do.",
+		"<b>x</b> & `<i>y</i>`":  "&lt;b&gt;x&lt;/b&gt; &amp; <code>&lt;i&gt;y&lt;/i&gt;</code>",
 		"an unclosed ` backtick": "an unclosed ` backtick",
 	} {
 		if got := string(emptyState{Text: text}.Subtitle()); got != want {
