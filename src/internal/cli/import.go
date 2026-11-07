@@ -1,13 +1,13 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
 
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/simtabi/authama/src/internal/services/change"
 	"github.com/simtabi/authama/src/internal/services/importer"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
@@ -69,9 +69,7 @@ func newImportCmd() *cobra.Command {
 			snapshotBeforeMutation(p)
 			if m, err := manifest.Load(p.Manifest()); err == nil && len(m.Profiles) > 0 {
 				if !force {
-					return errors.New("a non-empty manifest already exists - importing replaces it " +
-						"rather than merging; re-run with --force, which backs the current " +
-						"manifest and inventory up to <home>/.state/ first")
+					return change.ErrImportWouldReplace
 				}
 				backupImportTargets(p)
 			}
