@@ -40,6 +40,31 @@ $ authama ssh git status ~/code/acme/*
 .../notes     -  no origin
 ```
 
+`--json` prints the same as one document, for scripts and other tools:
+
+```json
+{
+  "version": 1,
+  "default_mode": "profile",
+  "checkouts": [
+    {"path": ".../app", "state": "managed", "url": "https://github.com/acme/app.git",
+     "mode": "https", "owner": "acme", "repo": "app", "profile": "alice", "profile_from": "owner"},
+    {"path": ".../notes", "state": "no-origin"}
+  ]
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `state` | `managed` (a GitHub origin `git use` can switch), `unmanaged` (another host; `url` says which) or `no-origin` |
+| `mode` | `profile`, `ssh` or `https` |
+| `profile` | the profile whose key the checkout uses; absent when nothing names one |
+| `profile_from` | `remote` (the origin's `github-<profile>` alias names it) or `owner` (`defaults.git.orgs`, then `defaults.git.profile`) |
+| `default_mode` | `defaults.git.mode`, or `profile` when unset |
+
+Fields are only ever added. A change that removes or renames one bumps `version` and is noted in the
+CHANGELOG; `TestGitStatusJSONKeepsItsFields` fails before such a change can land unannounced.
+
 ## `authama ssh git use [MODE] [PATH...]`
 
 ```sh

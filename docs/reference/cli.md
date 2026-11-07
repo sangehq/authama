@@ -1365,10 +1365,13 @@ Subcommands:
 
 ## authama ssh git status
 
-Show each checkout's remote mode, owner and profile.
+Show how each checkout's origin reaches GitHub. With --json, prints
+{"version": 1, "default_mode": ..., "checkouts": [...]}: each checkout's path,
+state (managed, no-origin or unmanaged), url, mode, owner, repo, profile and
+profile_from (remote or owner). Fields are only ever added.
 
 ```
-authama ssh git status [path...]
+authama ssh git status [path...] [flags]
 ```
 
 Examples:
@@ -1376,6 +1379,12 @@ Examples:
 ```sh
   authama ssh git status
   authama ssh git status ~/code/acme ~/code/personal
+```
+
+Flags:
+
+```
+      --json   machine-readable output (scripting); fields are only ever added
 ```
 
 ## authama ssh git use

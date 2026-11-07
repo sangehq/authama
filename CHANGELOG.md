@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`ssh git status --json`.** One document, `{"version": 1, "default_mode": …, "checkouts": […]}`,
+  with each checkout's path, state (`managed`, `unmanaged`, `no-origin`), URL, mode, owner, repo,
+  profile and where the profile came from (`remote` or `owner`). Fields are only ever added; a
+  rename or removal bumps `version` and is noted here. The text output is unchanged.
 - **Move the key root from the web UI.** *Move the key root* on the Keys page runs `ssh key root`
   as a previewed change. It moves every key, so it is made only when the new directory name is
   typed again. The name is one directory under `~/.ssh`, checked as the manifest checks

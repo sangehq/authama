@@ -171,3 +171,56 @@ func (e Exec) SetOrigin(dir, url string) error {
 	_, err := e.run(dir, 10*time.Second, "remote", "set-url", "origin", url)
 	return err
 }
+
+// Checkout states, as `ssh git status` reports them.
+const (
+	StateManaged   = "managed"   // a GitHub origin authama can switch
+	StateNoOrigin  = "no-origin" // not a repository, or one with no origin
+	StateUnmanaged = "unmanaged" // an origin that is not a GitHub remote
+)
+
+// Profile sources: where a managed checkout's profile came from.
+const (
+	ProfileFromRemote = "remote" // the origin names it (profile mode)
+	ProfileFromOwner  = "owner"  // defaults.git.orgs, then defaults.git.profile
+)
+
+// Checkout is one checkout's origin, as `ssh git status` reports it. Its JSON
+// is the shape `ssh git status --json` prints, which other tools read: add
+// fields, never rename or remove one, and say so in the CHANGELOG.
+type Checkout struct {
+	Path  string `json:"path"`
+	State string `json:"state"`
+	URL   string `json:"url,omitempty"`
+	Mode  string `json:"mode,omitempty"`
+	Owner string `json:"owner,omitempty"`
+	Repo  string `json:"repo,omitempty"`
+	// Profile is empty when neither the origin nor the manifest names one.
+	Profile     string `json:"profile,omitempty"`
+	ProfileFrom string `json:"profile_from,omitempty"`
+}
+
+// Status reads each directory's origin and says how it reaches GitHub.
+func Status(g Git, m *manifest.Manifest, dirs []string) []Checkout {
+	out := make([]Checkout, 0, len(dirs))
+	for _, dir := range dirs {
+		url, err := g.Origin(dir)
+		if err != nil {
+			out = append(out, Checkout{Path: dir, State: StateNoOrigin})
+			continue
+		}
+		r, ok := Parse(m, url)
+		if !ok {
+			out = append(out, Checkout{Path: dir, State: StateUnmanaged, URL: url})
+			continue
+		}
+		c := Checkout{Path: dir, State: StateManaged, URL: url, Mode: r.Mode, Owner: r.Owner, Repo: r.Repo}
+		if r.Profile != "" {
+			c.Profile, c.ProfileFrom = r.Profile, ProfileFromRemote
+		} else if p, err := manifest.ProfileForOwner(m, r.Owner); err == nil {
+			c.Profile, c.ProfileFrom = p, ProfileFromOwner
+		}
+		out = append(out, c)
+	}
+	return out
+}

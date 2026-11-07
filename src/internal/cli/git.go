@@ -52,9 +52,14 @@ func newGitCmd() *cobra.Command {
 			"The owner picks the profile through defaults.git.orgs, then defaults.git.profile.",
 	}
 
+	var asJSON bool
 	status := &cobra.Command{
 		Use:   "status [path...]",
 		Short: "Show each checkout's remote mode, owner and profile",
+		Long: "Show how each checkout's origin reaches GitHub. With --json, prints\n" +
+			"{\"version\": 1, \"default_mode\": ..., \"checkouts\": [...]}: each checkout's path,\n" +
+			"state (managed, no-origin or unmanaged), url, mode, owner, repo, profile and\n" +
+			"profile_from (remote or owner). Fields are only ever added.",
 		RunE: func(c *cobra.Command, args []string) error {
 			m, err := loadManifestFor(c)
 			if err != nil {
@@ -63,31 +68,32 @@ func newGitCmd() *cobra.Command {
 			if len(args) == 0 {
 				args = []string{"."}
 			}
+			rows := gitremote.Status(gitremote.Exec{}, m, args)
 			out := c.OutOrStdout()
-			for _, dir := range args {
-				url, err := gitremote.Exec{}.Origin(dir)
-				if err != nil {
-					_, _ = fmt.Fprintf(out, "%s  -  no origin\n", dir)
-					continue
-				}
-				r, ok := gitremote.Parse(m, url)
-				if !ok {
-					_, _ = fmt.Fprintf(out, "%s  -  not a managed GitHub remote (%s)\n", dir, url)
-					continue
-				}
-				who := r.Profile
-				if who == "" {
-					if p, err := manifest.ProfileForOwner(m, r.Owner); err == nil {
-						who = p + " (by owner)"
-					} else {
+			if asJSON {
+				return writeJSONTo(out, gitStatusDoc{Version: 1, DefaultMode: m.Defaults.Git.EffectiveMode(), Checkouts: rows})
+			}
+			for _, r := range rows {
+				switch r.State {
+				case gitremote.StateNoOrigin:
+					_, _ = fmt.Fprintf(out, "%s  -  no origin\n", r.Path)
+				case gitremote.StateUnmanaged:
+					_, _ = fmt.Fprintf(out, "%s  -  not a managed GitHub remote (%s)\n", r.Path, r.URL)
+				default:
+					who := r.Profile
+					switch {
+					case who == "":
 						who = "?"
+					case r.ProfileFrom == gitremote.ProfileFromOwner:
+						who += " (by owner)"
 					}
+					_, _ = fmt.Fprintf(out, "%s  %s  %s/%s  profile=%s\n", r.Path, r.Mode, r.Owner, r.Repo, who)
 				}
-				_, _ = fmt.Fprintf(out, "%s  %s  %s/%s  profile=%s\n", dir, r.Mode, r.Owner, r.Repo, who)
 			}
 			return nil
 		},
 	}
+	status.Flags().BoolVar(&asJSON, "json", false, "machine-readable output (scripting); fields are only ever added")
 	cmd.AddCommand(status)
 
 	var modeFlag, profileFlag string
@@ -152,6 +158,14 @@ func newGitCmd() *cobra.Command {
 	use.Flags().BoolVarP(&yes, "yes", "y", false, "rewrite without confirming (implied when there is no terminal)")
 	cmd.AddCommand(use)
 	return cmd
+}
+
+// gitStatusDoc is `ssh git status --json`. Other tools read it: add fields,
+// never rename or remove one, and bump Version only for a change that breaks.
+type gitStatusDoc struct {
+	Version     int                  `json:"version"`
+	DefaultMode string               `json:"default_mode"`
+	Checkouts   []gitremote.Checkout `json:"checkouts"`
 }
 
 // loadManifestFor loads the manifest the command's paths point at.
