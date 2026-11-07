@@ -89,6 +89,10 @@ authama ssh knownhosts pin --all              # pin every host in the manifest
 authama ssh knownhosts pin --all --yes        # trust scanned keys without prompting (scripted)
 ```
 
+On a terminal, a host that takes more than a second to answer shows a progress line on stderr,
+`| scanning gh (1 of 5) (3s)`, redrawn in place and cleared before its keys are shown. Nothing
+is drawn on a pipe, in a log or under `TERM=dumb`, so scripted output is unchanged.
+
 You're shown the fingerprint for **each** scanned key and asked to trust it -
 compare it against the host's published value before saying yes. `--yes`/`-y`
 trusts all scanned keys without prompting (for automation).

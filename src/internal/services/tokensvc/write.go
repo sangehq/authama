@@ -8,7 +8,7 @@ import (
 )
 
 // DockerModeFunc settles the credential-store mode for docker's file at dest.
-// The CLI asks a person; the web and the TUI's callers pass a fixed answer.
+// The CLI asks a person; the web passes a fixed answer.
 type DockerModeFunc func(dest string) (string, error)
 
 // FixedDockerMode always answers m, refusing when m is empty.
@@ -23,7 +23,7 @@ func FixedDockerMode(m string) DockerModeFunc {
 
 // WriteAll writes each target's entries into its file, saying where on out and
 // warning on errw. Every front end writes through here, so `token set`,
-// `token apply`, the TUI and the web report a write the same way.
+// `token apply` and the web report a write the same way.
 func (e Env) WriteAll(set *tokens.Set, targets []string, project string, mode DockerModeFunc, out, errw io.Writer) error {
 	for _, t := range targets {
 		dest := e.TargetPath(t, project)

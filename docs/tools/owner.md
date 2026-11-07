@@ -80,7 +80,7 @@ With a PIN set:
 - **The command line** asks for it before `token list --reveal`, `token show --reveal`,
   `token copy` and `ssh termius keys <alias>`, and before a destructive command: `delete`, `revoke`,
   `rotate`, `rollback`, `restore`, `prune`, `clean`, `recover`, `deploy`, and `keygen --force`.
-  A `--dry-run` is not asked. The TUI asks once per session.
+  A `--dry-run` is not asked. A command that guards more than one step asks once.
 - **Without a terminal** those commands refuse, rather than run unguarded.
 
 Five wrong PINs in a row start a wait of 30 seconds, doubling with each further wrong one up to 15

@@ -31,8 +31,9 @@ is now unknown: the stub that printed this pointer was removed on 2026-11-07. An
 | Apply the token config | `token apply` | Auth tokens (previewed) |
 | Delete a token | `token delete` | Auth tokens (previewed) |
 
-The banner the menu opened with is the Overview's first table. Both read `overview.Rows`, so
-the problems, and the command that fixes each one, are the same.
+The banner the menu opened with is the Overview's first table, read from the same
+`overview.Rows`: each problem with the command that fixes it, and beside the command a button
+that previews the fix or opens the page that makes it. `init` and `migrate` stay CLI-only.
 
 ## Why it went
 
@@ -41,6 +42,11 @@ display. That was deliberate, so the binary keeps one third-party dependency. Th
 same jobs with previews, explainers on every control, a command palette and keyboard shortcuts.
 Keeping both meant every change had to be built and tested twice. Operations the menu recorded
 keep the `tui` source in [`history`](history.md).
+
+The menu's redesign, which never shipped, asked for pressable fixes, progress on slow steps and
+empty lists that teach. Those went to the surfaces that remain: the Overview's fix buttons, a
+one-line spinner on a terminal's stderr while `knownhosts pin` scans and `reconcile` mints, and
+empty `snapshots list`, `validate` and `vm sync` output that names the first step.
 
 ---
 

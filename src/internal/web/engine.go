@@ -218,8 +218,8 @@ func (e AppEngine) inventory() *inventory.Inventory {
 	return inv
 }
 
-// Overview reads the banner's rows through overview.Rows, the same function
-// the TUI prints, so the two never disagree.
+// Overview reads the state rows through overview.Rows, the one place that
+// decides what needs attention and the command that fixes it.
 func (e AppEngine) Overview(now time.Time) (Overview, error) {
 	m, _ := manifest.Load(e.P.Manifest())
 	ov := Overview{Rows: overview.Rows(e.P, m, now), DevRoot: e.P.DevRoot}

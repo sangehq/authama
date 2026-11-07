@@ -38,7 +38,7 @@ func newExpiryCmd() *cobra.Command {
 	}
 }
 
-// writeExpiryTable renders the per-key expiry table (shared with the TUI).
+// writeExpiryTable renders the per-key expiry table.
 //
 // Rows are keyed by profile/key. A bare key name is ambiguous - the same name
 // legitimately exists in several profiles - so a table of bare names showed two

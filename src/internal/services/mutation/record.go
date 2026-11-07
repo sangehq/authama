@@ -61,8 +61,9 @@ var (
 // off reports whether recording is turned off.
 func off() bool { return Disabled || envnames.Get(nil, envnames.History) == "0" }
 
-// Begin starts a scope. Scopes nest: the TUI is one scope, and every action
-// chosen from its menu is its own scope inside it, recorded separately.
+// Begin starts a scope. Scopes nest: an outer scope may hold several actions,
+// each its own scope inside it, recorded separately. (The removed terminal
+// menu was the outer scope that needed this.)
 func Begin(s Scope) {
 	recMu.Lock()
 	defer recMu.Unlock()

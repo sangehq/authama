@@ -222,7 +222,7 @@ documentation, the source and the licences.
 
 | Page | Shows |
 |---|---|
-| Overview | the state rows (`overview.Rows`), each problem with the command that fixes it; counts; key health, auth tokens and snapshots; quick actions; hosts by profile; the newest file events; keys due for rotation; recent changes |
+| Overview | the state rows (`overview.Rows`), each problem with the command that fixes it and a button that previews the fix or opens the page that makes it (`init` and `migrate` stay CLI-only); counts; key health, auth tokens and snapshots; quick actions; hosts by profile; the newest file events; keys due for rotation; recent changes |
 | Profiles | each profile's category, key scope, key store, and host and key counts |
 | Hosts | every host by profile. A host's page shows its manifest entry, its deployments, the block rendered into `~/.ssh/config`, and the host keys pinned for it |
 | Keys | every key with its fingerprint and expiry, and the reserved keys (loose keys kept on purpose). A key's page shows its public key and fingerprint, each with a copy button, where the key is deployed and every operation that touched it. A `.pub` that is not a single public key line is not shown |

@@ -310,8 +310,8 @@ func readTokenSecret(c *cobra.Command, label string) (string, error) {
 }
 
 // tokenIO is where a token write reports, and who answers its one question
-// (whether to hand credential-store registries to docker login). The CLI and
-// the TUI each build one, so the write itself is shared.
+// (whether to hand credential-store registries to docker login). Each token
+// command builds one, so the write itself is shared.
 type tokenIO struct {
 	out, errw io.Writer
 	// ask is nil when nobody can answer: the docker question then refuses.

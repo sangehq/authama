@@ -138,7 +138,7 @@ func buildTokenStatus(env tokensvc.Env, config, project string) (tokenStatus, er
 	return tokensvc.StatusOf(env, config, project)
 }
 
-// printTokenStatus is `token status` for a person; the TUI shows the same.
+// printTokenStatus is `token status` for a person.
 func printTokenStatus(w io.Writer, st tokenStatus) error {
 	line := func(format string, a ...any) { _, _ = fmt.Fprintf(w, format+"\n", a...) }
 	switch {

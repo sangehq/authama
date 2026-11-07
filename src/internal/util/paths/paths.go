@@ -418,7 +418,7 @@ func (p Paths) IsDev() bool { return p.DevRoot != "" }
 // server or account. Dev mode sandboxes files; it cannot sandbox a key
 // installed on a real host or removed from one. It lives on Paths, and the
 // services that reach targets (deploy, rotate, rollback, revoke) call it
-// themselves, so no caller - a verb, the TUI, a future one - can skip it.
+// themselves, so no caller - a verb, the web UI, a future one - can skip it.
 func (p Paths) RefuseOutsideSandbox(action string) error {
 	if !p.IsDev() {
 		return nil

@@ -1,6 +1,6 @@
 // Package overview is the state of an authama home at a glance: where it
 // operates, what it holds, and what needs attention, each problem paired with
-// the command that fixes it. The TUI's banner and the web overview both read it.
+// the command that fixes it. The web overview reads it, and offers each fix.
 package overview
 
 import (
@@ -24,8 +24,8 @@ type Row struct {
 	Fix   string // empty when the row is just a fact
 }
 
-// Rows assembles the state block the TUI banner prints and the web overview
-// shows, so the two can never disagree about what needs attention. Every lookup is best-effort: a banner
+// Rows assembles the state block the web overview shows: one place decides
+// what needs attention. Every lookup is best-effort: a banner
 // that fails to render because one probe errored would make the tool unusable
 // for the exact person most likely to need it - someone whose ~/.ssh is broken.
 func Rows(p paths.Paths, m *manifest.Manifest, now time.Time) []Row {

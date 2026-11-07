@@ -16,6 +16,13 @@ func StdinIsTerminal() bool {
 	return ioctlTermios(os.Stdin.Fd(), ioctlReadTermios, &t) == nil
 }
 
+// StderrIsTerminal reports whether standard error is a terminal: where a
+// progress line may be drawn without ending up in a log or a pipe.
+func StderrIsTerminal() bool {
+	var t syscall.Termios
+	return ioctlTermios(os.Stderr.Fd(), ioctlReadTermios, &t) == nil
+}
+
 func ioctlTermios(fd, req uintptr, t *syscall.Termios) error {
 	if _, _, errno := syscall.Syscall6(syscall.SYS_IOCTL, fd, req,
 		uintptr(unsafe.Pointer(t)), 0, 0, 0); errno != 0 {

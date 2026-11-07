@@ -7,7 +7,7 @@
 //
 //	authama ssh <verb>          SSH keys, profiles, hosts and config
 //	authama token|auth <verb>   package-manager and git auth tokens
-//	authama doctor|init|migrate|tui|history|serve|settings|version
+//	authama doctor|init|migrate|history|serve|settings|version
 //
 // Every group answers `help [verb]`, as the root does.
 //
@@ -54,8 +54,8 @@ func newRootCmd() *cobra.Command {
 		SilenceErrors: true,
 		Args:          rootArgs,
 		// Bare `authama` on a terminal opens the web UI, exactly as `authama serve`
-		// with its defaults; `authama <command>` is the CLI. (`authama tui`, the
-		// menu, is deprecated and kept working.) Someone who runs the binary by double-clicking it, or by typing its
+		// with its defaults; `authama <command>` is the CLI. (The terminal menu,
+		// `authama tui`, was removed: see docs/tools/tui.md.) Someone who runs the binary by double-clicking it, or by typing its
 		// name to see what it does, gets something they can use rather than a wall
 		// of help.
 		//

@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/core/hypervisor"
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/services/change"
@@ -41,7 +42,7 @@ var newSyncer = func(p paths.Paths, cfg settings.VMConfig, opt vmsync.Options) *
 func printPlan(c *cobra.Command, plan vmsync.Plan) {
 	out := c.OutOrStdout()
 	if len(plan.Hosts) == 0 {
-		_, _ = fmt.Fprintln(out, "no VM hosts in the manifest")
+		_, _ = fmt.Fprintln(out, "no VM hosts in the manifest (add one with `"+brand.Command+" ssh vm add <profile> <alias>`)")
 	}
 	for _, h := range plan.Hosts {
 		note := ""

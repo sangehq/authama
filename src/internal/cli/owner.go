@@ -367,7 +367,7 @@ func readNewPIN() (string, error) {
 }
 
 // unlockedHomes remembers, for this process, the homes whose PIN was given, so
-// the TUI asks once per session rather than once per action.
+// a command that guards more than one step asks once rather than once per step.
 var unlockedHomes = map[string]bool{}
 
 // requireOwner asks for the owner's PIN, or a fingerprint, before why. A home

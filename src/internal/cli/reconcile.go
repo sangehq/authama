@@ -115,7 +115,11 @@ func reconcileApply(c *cobra.Command, p paths.Paths, yes, passphrase, noPin bool
 		}
 	}
 	snap := snapshotBeforeMutation(p)
+	// Every question has been asked by now (the passphrase is read above), so
+	// a progress line cannot sit over a prompt while keys are minted.
+	stop := startProgress(c, "minting keys and rendering ~/.ssh/config")
 	res, err := r.Reconcile(false, pw)
+	stop()
 	if err != nil {
 		return err
 	}

@@ -39,6 +39,13 @@ func StdinIsTerminal() bool {
 	return err == nil
 }
 
+// StderrIsTerminal reports whether standard error is a console: where a
+// progress line may be drawn without ending up in a log or a pipe.
+func StderrIsTerminal() bool {
+	_, err := consoleMode(os.Stderr.Fd())
+	return err == nil
+}
+
 // ReadSecret prompts on stderr and reads one line with console echo disabled,
 // restoring the previous console mode before returning.
 func ReadSecret(prompt string) (string, error) {
