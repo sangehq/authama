@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Transforms in `authama export`.** A selection can now template a column (`{profile}/{alias}`),
+  map values, format text, dates and numbers, split and join lists, dedupe rows, and group them with
+  counts, sums, minimums, maximums, lists and a totals row. `--template`, `--dedupe`, `--group-by`,
+  `--aggregate`, `--totals` and `--transform` (one step as JSON) add them at the command line, and a
+  saved selection holds them under `transforms`. A column can name a field a transform wrote. The SSH
+  client formats refuse transforms, because they write the hosts themselves.
+
 - **Hosts for ssh and SSH clients in `authama export`.** `authama export hosts --format` takes
   `ssh_config`, `termius` and every `ssh host export` client (`hosts-csv`, `windows-terminal`,
   `iterm2`, `putty`, `remmina`, `securecrt`, `mobaxterm`), filtered like any list. `ssh_config` is

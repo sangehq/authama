@@ -38,6 +38,36 @@ authama export hosts --env prd --format putty -o prd.reg
 `authama export hosts` and `authama export keys` with no options print exactly what `ssh list --csv` and
 `ssh key list --csv` print: the same pipeline.
 
+### Transforms
+
+Transforms change the rows after the filters and before the columns, so a column can name a field a
+transform wrote. They are declarative: a template names fields and nothing else runs.
+
+```bash
+authama export hosts --template 'ssh=ssh {user}@{hostname} -p {port}' --columns alias,ssh
+authama export hosts --dedupe profile --columns profile,alias
+authama export hosts --group-by profile --aggregate count,list:env --totals --format markdown
+authama export hosts --transform '{"kind":"map","field":"status","values":{"needs-redeploy":"pending"}}'
+```
+
+| Transform | What it does |
+|---|---|
+| `template` | writes `as` from text naming fields in braces, `{profile}/{alias}`; `{{` and `}}` are literal braces |
+| `map` | replaces a field's values listed in `values`; `default` replaces every other value |
+| `format` | `upper`, `lower`, `trim`, `date` (a Go layout, `2006-01-02` by default), `relative` (`3 days ago`), `thousands` (`1,234`) |
+| `split` | makes a field a list, split on `sep` (spaces by default); with `rows`, one row per item |
+| `join` | makes a list text, joined by `sep` (`, ` by default) |
+| `dedupe` | keeps the first row of each distinct `by` (every field when `by` is empty) |
+| `group` | a row per distinct `by`, with `aggregates` (`count`, and `sum`, `min`, `max`, `list`, `first` of a field); `totals` adds a last row over every group |
+
+`map`, `format`, `split` and `join` rewrite their `field` unless `as` names another. The flags add steps in
+this order: each `--transform` (one step as JSON, the shape a saved selection holds), each
+`--template as=text`, `--dedupe`, then `--group-by` with `--aggregate` (`count`, or `op:field[=as]`) and
+`--totals`. A saved selection lists its steps under `transforms`, and they run in that order. `--fields`
+lists the fields after the transforms. A totals row stays last whatever the sort, and `--limit` does not
+count it. A step naming a field that does not exist yet fails, naming the step. The SSH client formats
+below take no transforms, since they write the hosts themselves.
+
 ### Hosts for ssh and SSH clients
 
 | `--format` | Writes | Same bytes as |

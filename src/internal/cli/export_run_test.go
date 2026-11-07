@@ -90,3 +90,44 @@ func TestExportSaysWhatIsWrong(t *testing.T) {
 		}
 	}
 }
+
+// Transforms from the flags: a template column, a dedupe, a group with
+// aggregates and totals, a step as JSON; and --fields lists what they wrote.
+func TestExportTransforms(t *testing.T) {
+	editHome(t)
+	run(t, "profile", "add", "work")
+	run(t, "profile", "add", "home")
+	run(t, "host", "add", "work", "web1", "-H", "web1.example", "-u", "deploy", "--tag", "prd")
+	run(t, "host", "add", "work", "db1", "-H", "db1.example", "-u", "deploy")
+	run(t, "host", "add", "home", "nas", "-H", "nas.lan", "-u", "me")
+
+	if out := run(t, "export", "hosts", "--template", "ssh=ssh {user}@{hostname}", "--columns", "alias,ssh", "--sort", "alias", "--no-header"); out != "db1,ssh deploy@db1.example\nnas,ssh me@nas.lan\nweb1,ssh deploy@web1.example\n" {
+		t.Errorf("template:\n%s", out)
+	}
+	if out := run(t, "export", "hosts", "--dedupe", "profile", "--columns", "profile", "--sort", "profile", "--no-header"); out != "home\nwork\n" {
+		t.Errorf("dedupe:\n%s", out)
+	}
+	if out := run(t, "export", "hosts", "--group-by", "profile", "--aggregate", "count,list:alias=aliases", "--totals", "--sort", "profile"); out != "profile,count,aliases\nhome,1,nas\nwork,2,web1 db1\ntotal,3,web1 db1 nas\n" {
+		t.Errorf("group:\n%s", out)
+	}
+	if out := run(t, "export", "hosts", "--transform", `{"kind":"format","field":"alias","format":"upper"}`, "--columns", "alias", "--sort", "alias", "--no-header"); out != "DB1\nNAS\nWEB1\n" {
+		t.Errorf("--transform:\n%s", out)
+	}
+	if out := run(t, "export", "hosts", "--template", "where={profile}/{alias}", "--fields"); !strings.HasSuffix(out, "\nwhere\n") {
+		t.Errorf("--fields after a transform:\n%s", out)
+	}
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--aggregate", "count"}, "need --group-by"},
+		{[]string{"--template", "nope"}, "give as=template"},
+		{[]string{"--transform", `{"kind":"map","expr":"x"}`}, "unknown field"},
+		{[]string{"--group-by", "profile", "--aggregate", "avg:port"}, `no aggregate "avg"`},
+		{[]string{"--dedupe", "profile", "--format", "ssh_config"}, "takes no transforms"},
+	} {
+		if _, err := runErr(t, append([]string{"export", "hosts"}, c.args...)...); err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%v: %v, want %q", c.args, err, c.want)
+		}
+	}
+}

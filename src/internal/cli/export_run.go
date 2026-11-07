@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -32,10 +33,12 @@ func newExportCmd() *cobra.Command {
 		profiles, keys, envs, roles, tags   []string
 		statuses, targets, kinds, areas     []string
 		sources, commands                   []string
+		transforms, templates, dedupe       []string
+		groupBy, aggregates                 []string
 		include, exclude, since, until      string
 		limit                               int
 		narrow, noHeader, compact, listFlds bool
-		includeGit                          bool
+		includeGit, totals                  bool
 	)
 	names := make([]string, 0, len(selection.Presets))
 	for n := range selection.Presets {
@@ -54,6 +57,11 @@ func newExportCmd() *cobra.Command {
 			"--columns chooses the columns, by field (--fields lists them; key.fingerprint follows the\n" +
 			"host's key), each optionally renamed as field=heading. --sort orders the rows (-field\n" +
 			"descends). --format is one of " + strings.Join(encode.TableNames(), ", ") + ".\n\n" +
+			"Transforms run after the filters and before the columns, in this order: each --transform\n" +
+			"(a step as JSON, the Export page's shape), each --template (as=text naming fields in\n" +
+			"braces), --dedupe (keep the first row of each), then --group-by with --aggregate\n" +
+			"(count, or op:field for sum, min, max, list or first) and --totals. A column can name\n" +
+			"the fields they write. The SSH client formats below take none.\n\n" +
 			"Hosts also go out as an SSH client imports them: --format " + strings.Join(encode.HostNames(), ", ") + ".\n" +
 			"ssh_config is the managed config of the hosts kept, byte for byte what `ssh config export --flat`\n" +
 			"writes when every host is kept; termius is the Termius CSV; the rest are `ssh host export`'s\n" +
@@ -66,6 +74,8 @@ func newExportCmd() *cobra.Command {
 			"  " + brand.Command + " export keys --columns ref=key,fingerprint,expires_on --sort expires_on --format markdown\n" +
 			"  " + brand.Command + " export profiles --key simtabi_simbi-prd-web-00-ed25519 --narrow --format yaml\n" +
 			"  " + brand.Command + " export hosts --fields\n" +
+			"  " + brand.Command + " export hosts --template 'ssh=ssh {user}@{hostname} -p {port}' --columns alias,ssh\n" +
+			"  " + brand.Command + " export hosts --group-by profile --aggregate count,list:env --totals --format markdown\n" +
 			"  " + brand.Command + " export --selection sel.json --format php --out hosts.php\n" +
 			"  " + brand.Command + " export hosts --profile simtabi --format ssh_config --out simtabi.ssh_config\n" +
 			"  " + brand.Command + " export hosts --env prd --format putty --out prd.reg",
@@ -83,8 +93,13 @@ func newExportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			steps, err := exportTransforms(transforms, templates, dedupe, groupBy, aggregates, totals)
+			if err != nil {
+				return err
+			}
+			sel.Transforms = append(sel.Transforms, steps...)
 			if listFlds {
-				res, err := selection.Run(ds, selection.Selection{Version: selection.Version, Grain: sel.Grain})
+				res, err := selection.Run(ds, selection.Selection{Version: selection.Version, Grain: sel.Grain, Transforms: sel.Transforms})
 				if err != nil {
 					return err
 				}
@@ -182,9 +197,53 @@ func newExportCmd() *cobra.Command {
 	f.BoolVar(&noHeader, "no-header", false, "csv, tsv, markdown, html: leave the heading row out")
 	f.BoolVar(&compact, "compact", false, "json, js, php: no indentation")
 	f.StringVar(&shape, "shape", "", "json, js, php, yaml: \"table\" writes {columns, rows} instead of one object per row")
-	f.BoolVar(&listFlds, "fields", false, "list every field the list's rows have, and write nothing")
+	f.BoolVar(&listFlds, "fields", false, "list every field the list's rows have, after any transforms, and write nothing")
+	f.StringArrayVar(&transforms, "transform", nil, `a transform step as JSON, e.g. {"kind":"map","field":"status","values":{"needs-redeploy":"pending"}}`)
+	f.StringArrayVar(&templates, "template", nil, "a column from a template: as={profile}/{alias}")
+	f.StringSliceVar(&dedupe, "dedupe", nil, "keep the first row of each distinct value of these fields")
+	f.StringSliceVar(&groupBy, "group-by", nil, "a row per distinct value of these fields")
+	f.StringSliceVar(&aggregates, "aggregate", nil, "with --group-by: count, or op:field[=as] for sum, min, max, list, first")
+	f.BoolVar(&totals, "totals", false, "with --group-by: a last row over every group")
 	f.BoolVar(&includeGit, "include-git", false, "host formats: also export git hosts (user git, or a github or gitlab provider)")
 	return cmd
+}
+
+// exportTransforms are the transform steps the flags name, in the order the
+// help gives.
+func exportTransforms(raw, templates, dedupe, groupBy, aggregates []string, totals bool) ([]selection.Transform, error) {
+	var out []selection.Transform
+	for _, r := range raw {
+		var t selection.Transform
+		dec := json.NewDecoder(strings.NewReader(r))
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&t); err != nil {
+			return nil, fmt.Errorf("--transform %s: %w", r, err)
+		}
+		out = append(out, t)
+	}
+	for _, tp := range templates {
+		as, text, ok := strings.Cut(tp, "=")
+		if !ok || strings.TrimSpace(as) == "" {
+			return nil, fmt.Errorf("--template %q: give as=template, e.g. where={profile}/{alias}", tp)
+		}
+		out = append(out, selection.Transform{Kind: selection.TransformTemplate, As: strings.TrimSpace(as), Template: text})
+	}
+	if len(dedupe) > 0 {
+		out = append(out, selection.Transform{Kind: selection.TransformDedupe, By: dedupe})
+	}
+	if len(groupBy) == 0 {
+		if len(aggregates) > 0 || totals {
+			return nil, errors.New("--aggregate and --totals need --group-by")
+		}
+		return out, nil
+	}
+	g := selection.Transform{Kind: selection.TransformGroup, By: groupBy, Totals: totals}
+	for _, a := range aggregates {
+		spec, as, _ := strings.Cut(a, "=")
+		op, field, _ := strings.Cut(spec, ":")
+		g.Aggregates = append(g.Aggregates, selection.Aggregate{Op: strings.TrimSpace(op), Field: strings.TrimSpace(field), As: strings.TrimSpace(as)})
+	}
+	return append(out, g), nil
 }
 
 // exportSelection is the selection a command line names: a built-in list, or

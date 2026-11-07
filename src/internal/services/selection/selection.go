@@ -44,10 +44,13 @@ type Selection struct {
 	Where   Where  `json:"where"`
 	// Narrow makes a row's lists and counts cover only what passed the
 	// facets: a profile kept for a key lists that key alone.
-	Narrow  bool     `json:"narrow,omitempty"`
-	Columns []Column `json:"columns,omitempty"` // empty: the grain's default columns
-	Sort    []Sort   `json:"sort,omitempty"`
-	Limit   int      `json:"limit,omitempty"` // 0: every row
+	Narrow bool `json:"narrow,omitempty"`
+	// Transforms run in order after the filters, before the columns: a
+	// column can name a field a transform wrote.
+	Transforms []Transform `json:"transforms,omitempty"`
+	Columns    []Column    `json:"columns,omitempty"` // empty: the grain's default columns
+	Sort       []Sort      `json:"sort,omitempty"`
+	Limit      int         `json:"limit,omitempty"` // 0: every row
 }
 
 // Where holds the facets. An empty list is no filter; a value in a list is
@@ -132,6 +135,8 @@ type row struct {
 	// keys are the keys the row holds or uses, by name and by ref; narrowing
 	// keeps the ones a key facet chose.
 	keys []dataset.Key
+	// total marks a group's totals row, which sorting and the limit leave last.
+	total bool
 }
 
 // Run runs s over ds.
@@ -147,9 +152,9 @@ func Run(ds *dataset.Dataset, s Selection) (Result, error) {
 	if len(cols) == 0 {
 		cols = Defaults[s.Grain]
 	}
-	for _, c := range cols {
-		if !slices.Contains(fields, c.Field) {
-			return Result{}, fmt.Errorf("selection: %s rows have no field %q", s.Grain, c.Field)
+	if len(s.Transforms) == 0 {
+		if err := checkColumns(s.Grain, cols, fields); err != nil {
+			return Result{}, err
 		}
 	}
 	res := Result{Fields: fields, Stages: []Stage{{"all", len(rows)}}}
@@ -182,8 +187,28 @@ func Run(ds *dataset.Dataset, s Selection) (Result, error) {
 	})
 	res.Stages = append(res.Stages, Stage{"text", len(rows)})
 
+	if len(s.Transforms) > 0 {
+		before := fields
+		rows, fields, err = apply(s.Transforms, rows, fields, func(name string, n int) {
+			res.Stages = append(res.Stages, Stage{name, n})
+		})
+		if err != nil {
+			return Result{}, err
+		}
+		res.Fields = fields
+		if len(s.Columns) == 0 {
+			cols = transformedDefaults(cols, before, fields)
+		}
+		if err := checkColumns(s.Grain, cols, fields); err != nil {
+			return Result{}, err
+		}
+	}
+
 	if len(s.Sort) > 0 {
 		sort.SliceStable(rows, func(i, j int) bool {
+			if rows[i].total != rows[j].total {
+				return rows[j].total
+			}
 			for _, k := range s.Sort {
 				c := compare(rows[i].f[k.Field], rows[j].f[k.Field])
 				if c != 0 {
@@ -193,8 +218,8 @@ func Run(ds *dataset.Dataset, s Selection) (Result, error) {
 			return false
 		})
 	}
-	if s.Limit > 0 && len(rows) > s.Limit {
-		rows = rows[:s.Limit]
+	if s.Limit > 0 {
+		rows = limit(rows, s.Limit)
 	}
 	for _, c := range cols {
 		res.Columns = append(res.Columns, c.Heading())
@@ -208,6 +233,49 @@ func Run(ds *dataset.Dataset, s Selection) (Result, error) {
 		res.Rows = append(res.Rows, out)
 	}
 	return res, nil
+}
+
+// limit keeps the first n rows, and a totals row after them.
+func limit(rows []row, n int) []row {
+	var total []row
+	if len(rows) > 0 && rows[len(rows)-1].total {
+		total, rows = rows[len(rows)-1:], rows[:len(rows)-1]
+	}
+	if len(rows) > n {
+		rows = rows[:n]
+	}
+	return append(rows, total...)
+}
+
+func checkColumns(grain string, cols []Column, fields []string) error {
+	for _, c := range cols {
+		if !slices.Contains(fields, c.Field) {
+			return fmt.Errorf("selection: %s rows have no field %q", grain, c.Field)
+		}
+	}
+	return nil
+}
+
+// transformedDefaults are the columns a selection with transforms and no
+// columns of its own gets: the grain's defaults, then each field the
+// transforms wrote. After a group, the group's fields alone.
+func transformedDefaults(defaults []Column, before, after []string) []Column {
+	var out []Column
+	for _, f := range before {
+		if !slices.Contains(after, f) { // a group replaced the fields
+			for _, g := range after {
+				out = append(out, Column{Field: g})
+			}
+			return out
+		}
+	}
+	out = append(out, defaults...)
+	for _, f := range after {
+		if !slices.Contains(before, f) {
+			out = append(out, Column{Field: f})
+		}
+	}
+	return out
 }
 
 // byKey keeps the rows holding or using a chosen key; with narrow, a row's

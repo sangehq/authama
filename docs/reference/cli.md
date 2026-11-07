@@ -211,6 +211,12 @@ profile/name), --env, --role, --tag, --status, --tool, --kind, --area, --source,
 host's key), each optionally renamed as field=heading. --sort orders the rows (-field
 descends). --format is one of csv, html, js, json, jsonl, markdown, php, tsv, yaml.
 
+Transforms run after the filters and before the columns, in this order: each --transform
+(a step as JSON, the Export page's shape), each --template (as=text naming fields in
+braces), --dedupe (keep the first row of each), then --group-by with --aggregate
+(count, or op:field for sum, min, max, list or first) and --totals. A column can name
+the fields they write. The SSH client formats below take none.
+
 Hosts also go out as an SSH client imports them: --format hosts-csv, iterm2, mobaxterm, putty, remmina, securecrt, ssh_config, termius, windows-terminal.
 ssh_config is the managed config of the hosts kept, byte for byte what `ssh config export --flat`
 writes when every host is kept; termius is the Termius CSV; the rest are `ssh host export`'s
@@ -232,6 +238,8 @@ Examples:
   authama export keys --columns ref=key,fingerprint,expires_on --sort expires_on --format markdown
   authama export profiles --key simtabi_simbi-prd-web-00-ed25519 --narrow --format yaml
   authama export hosts --fields
+  authama export hosts --template 'ssh=ssh {user}@{hostname} -p {port}' --columns alias,ssh
+  authama export hosts --group-by profile --aggregate count,list:env --totals --format markdown
   authama export --selection sel.json --format php --out hosts.php
   authama export hosts --profile simtabi --format ssh_config --out simtabi.ssh_config
   authama export hosts --env prd --format putty --out prd.reg
@@ -240,33 +248,39 @@ Examples:
 Flags:
 
 ```
-      --area strings       events: only these areas (ssh, config, auth)
-      --columns strings    the columns, by field, in order; field=heading renames one
-      --command strings    history: only these commands, or their subcommands
-      --compact            json, js, php: no indentation
-      --env strings        only these environments
-      --exclude string     leave out rows containing this text, ignoring case
-      --fields             list every field the list's rows have, and write nothing
-      --format string      csv, tsv, json, jsonl, yaml, php, js, markdown or html; for hosts also hosts-csv, iterm2, mobaxterm, putty, remmina, securecrt, ssh_config, termius, windows-terminal (default "csv")
-      --include string     only rows containing this text, ignoring case
-      --include-git        host formats: also export git hosts (user git, or a github or gitlab provider)
-      --key strings        only rows holding or using these keys (name or profile/name)
-      --kind strings       events and tokens: only these kinds
-      --limit int          at most this many rows (0: all)
-      --narrow             profiles: count and list only the keys --key chose
-      --no-header          csv, tsv, markdown, html: leave the heading row out
-  -o, --out string         write to this file (mode 0600) instead of stdout
-      --profile strings    only these profiles
-      --role strings       only these roles
-      --selection string   a selection saved as JSON (the Export page's), instead of a list name
-      --shape string       json, js, php, yaml: "table" writes {columns, rows} instead of one object per row
-      --since string       only rows at or after this time (a prefix such as 2026-11 works)
-      --sort strings       sort by these fields; -field descends
-      --source strings     history: only these sources (cli, web, ...)
-      --status strings     only these statuses (a host's status, a key's state)
-      --tag strings        only rows with one of these tags
-      --tool strings       tokens: only these tools
-      --until string       only rows at or before this time
+      --aggregate strings       with --group-by: count, or op:field[=as] for sum, min, max, list, first
+      --area strings            events: only these areas (ssh, config, auth)
+      --columns strings         the columns, by field, in order; field=heading renames one
+      --command strings         history: only these commands, or their subcommands
+      --compact                 json, js, php: no indentation
+      --dedupe strings          keep the first row of each distinct value of these fields
+      --env strings             only these environments
+      --exclude string          leave out rows containing this text, ignoring case
+      --fields                  list every field the list's rows have, after any transforms, and write nothing
+      --format string           csv, tsv, json, jsonl, yaml, php, js, markdown or html; for hosts also hosts-csv, iterm2, mobaxterm, putty, remmina, securecrt, ssh_config, termius, windows-terminal (default "csv")
+      --group-by strings        a row per distinct value of these fields
+      --include string          only rows containing this text, ignoring case
+      --include-git             host formats: also export git hosts (user git, or a github or gitlab provider)
+      --key strings             only rows holding or using these keys (name or profile/name)
+      --kind strings            events and tokens: only these kinds
+      --limit int               at most this many rows (0: all)
+      --narrow                  profiles: count and list only the keys --key chose
+      --no-header               csv, tsv, markdown, html: leave the heading row out
+  -o, --out string              write to this file (mode 0600) instead of stdout
+      --profile strings         only these profiles
+      --role strings            only these roles
+      --selection string        a selection saved as JSON (the Export page's), instead of a list name
+      --shape string            json, js, php, yaml: "table" writes {columns, rows} instead of one object per row
+      --since string            only rows at or after this time (a prefix such as 2026-11 works)
+      --sort strings            sort by these fields; -field descends
+      --source strings          history: only these sources (cli, web, ...)
+      --status strings          only these statuses (a host's status, a key's state)
+      --tag strings             only rows with one of these tags
+      --template stringArray    a column from a template: as={profile}/{alias}
+      --tool strings            tokens: only these tools
+      --totals                  with --group-by: a last row over every group
+      --transform stringArray   a transform step as JSON, e.g. {"kind":"map","field":"status","values":{"needs-redeploy":"pending"}}
+      --until string            only rows at or before this time
 ```
 
 ## authama history
