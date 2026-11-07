@@ -1,0 +1,23 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "SSH" $.Title "Read an ssh config into the manifest and inventory. Import replaces them; it does not merge.")}}
+{{if .Profiles}}<div class="alert alert-warning" role="alert">{{icon "alert-triangle"}}<span class="ms-1">The manifest has {{.Profiles}} profile(s). Importing replaces them, so it needs you to say so, and it backs the manifest and inventory up first.</span></div>{{end}}
+{{if .Sources}}
+{{range .Sources}}
+<div class="card mb-3">
+  <div class="card-header"><h2 class="card-title">{{.Label}}</h2></div>
+  <div class="card-body">
+    <p class="mb-2"><code class="text-break">{{.Path}}</code></p>
+    {{if not $.ReadOnly}}
+    {{template "change_open" $}}<input type="hidden" name="action" value="ssh-import"><input type="hidden" name="source" value="{{.Key}}">
+      {{if $.Data.Profiles}}<label class="form-check mb-2"><input class="form-check-input" type="checkbox" name="replace" value="1"><span class="form-check-label">Replace the profiles in the manifest</span></label>{{end}}
+      <button type="submit" class="btn btn-primary"{{tip "ssh-import-preview"}}>Preview the import</button>
+    </form>
+    {{end}}
+  </div>
+  <div class="card-footer text-secondary">The same as <code>authama ssh import {{.Path}}{{if $.Data.Profiles}} --force{{end}}</code>. The preview lists each key it would copy in from outside the managed tree, without copying any.</div>
+</div>
+{{end}}
+{{else}}
+<div class="card"><div class="card-body">{{template "empty" (empty "download" "No ssh config to import" "There is no ssh config in this home's ~/.ssh, and none in the config home. To read another machine's copy, use authama ssh import <folder> in a terminal.")}}</div></div>
+{{end}}
+{{end}}{{end}}

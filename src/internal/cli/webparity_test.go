@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -313,6 +314,16 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 			t.Errorf("no installed file runs the sync: %v", a)
 		}
 	}
+	// Another machine's ~/.ssh, whose config names a key beside it that
+	// import adopts by copying it in.
+	importSrc := filepath.Join(t.TempDir(), "other-ssh")
+	_ = os.MkdirAll(importSrc, 0o700)
+	_ = os.WriteFile(filepath.Join(importSrc, "config"),
+		[]byte("Host legacy\n  HostName legacy.example\n  User ops\n  IdentityFile ~/.ssh/legacy_key\n"), 0o600)
+	importKey := make([]byte, 48)
+	_, _ = rand.Read(importKey)
+	_ = os.WriteFile(filepath.Join(importSrc, "legacy_key"), importKey, 0o600)
+
 	cases := []struct {
 		name  string
 		cli   []string
@@ -428,8 +439,11 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 			loose(p)
 			_ = editor.New(p).ReserveKey("loose-vm", manifest.ReservedKey{For: "devbox"})
 		}, nil, nil},
+		{"import", []string{"ssh", "import", importSrc, "--force", "--yes"},
+			change.SSHImport(paths.Paths{}, importSrc, true), nil, nil, nil},
+		{"key root", []string{"ssh", "key", "root", "keys", "--yes"}, change.KeyRoot("keys", "keys"), nil, nil, nil},
 	}
-	if len(cases) != 41 {
+	if len(cases) != 43 {
 		t.Fatalf("%d cases; every change the web offers needs one", len(cases))
 	}
 	for _, tc := range cases {
@@ -444,6 +458,10 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 			// regen-pub derives from the private keys of the home it is built for.
 			if ch.Command == "key regen-pub" {
 				ch = change.KeyRegenPub(webHome, keysvc.Selection{Selectors: []string{"work"}})
+			}
+			// import stands in for keys only in a copy of the home it is built for.
+			if ch.Command == "import" {
+				ch = change.SSHImport(webHome, importSrc, true)
 			}
 			if tc.pre != nil {
 				tc.pre(cliHome)
