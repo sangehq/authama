@@ -75,8 +75,7 @@ func newRootCmd() *cobra.Command {
 	// would produce a run that reads the sandbox and writes the real tree.
 	root.SetFlagErrorFunc(unknownCommandBeforeFlags)
 	root.PersistentFlags().String(devRootFlag, "",
-		"run against a sandbox directory instead of ~/.ssh (also $"+paths.DevRootEnv+
-			", or the legacy $"+strings.Join(envnames.Legacy(paths.DevRootEnv), ", $")+")")
+		"run against a sandbox directory instead of ~/.ssh (also $"+paths.DevRootEnv+")")
 	root.PersistentFlags().Bool(noDotenvFlag, false,
 		"do not read <config home>/.env this run (also $"+envnames.NoDotenv+"=1)")
 	// Start-up - first-run migration, .env and authama.json - runs ahead of

@@ -13,7 +13,7 @@ is at the end.
 Every command also takes the global flag:
 
 ```
-      --dev-root string   run against a sandbox directory instead of ~/.ssh (also $AUTHAMA_DEV_ROOT, or the legacy $SSHMGR_DEV_ROOT)
+      --dev-root string   run against a sandbox directory instead of ~/.ssh (also $AUTHAMA_DEV_ROOT)
       --no-dotenv         do not read <config home>/.env this run (also $AUTHAMA_NO_DOTENV=1)
 ```
 

@@ -691,12 +691,12 @@ authama settings init              # write a starter authama.json
 
 ### Old variable names
 
-Most `AUTHAMA_*` names above replaced an earlier one, which is still read with a
-one-line deprecation notice on stderr: `SSH_MANAGER_HOME` and
-`SSH_MANAGER_CONFIG_DIR` (now `AUTHAMA_CONFIG_DIR`), `SSHMGR_DEV_ROOT`,
-`SSHMGR_GIT_MODE`, and `SSH_MANAGER_<NAME>` for the rest (for example
-`SSH_MANAGER_AGE_RECIPIENT` → `AUTHAMA_AGE_RECIPIENT`). When both spellings are
-set, the `AUTHAMA_*` one wins. See [Migration](migration.md).
+Releases before 0.1.1 read `SSH_MANAGER_*` and `SSHMGR_*` names. authama read
+them too, with a deprecation notice, until 2026-11-07; it ignores them now, so a
+value set only under an old name has no effect. Rename it: `SSH_MANAGER_HOME`
+and `SSH_MANAGER_CONFIG_DIR` → `AUTHAMA_CONFIG_DIR`, `SSHMGR_DEV_ROOT` →
+`AUTHAMA_DEV_ROOT`, `SSHMGR_GIT_MODE` → `AUTHAMA_GIT_MODE`, and
+`SSH_MANAGER_<NAME>` → `AUTHAMA_<NAME>` for the rest. See [Migration](migration.md).
 
 ### Token values
 

@@ -342,9 +342,6 @@ func settingsSummary(p paths.Paths) (lines []string, failed bool) {
 	if l := p.FirstLegacyHome(); l != "" && exists(p.ConfigDir) {
 		lines = append(lines, "legacy home not migrated: "+l+" (`"+brand.Command+" migrate --force` copies it over the current one)")
 	}
-	if st != nil && len(st.Deprecated) > 0 {
-		lines = append(lines, "deprecated variable names in use: "+strings.Join(st.Deprecated, ", "))
-	}
 	return lines, failed
 }
 

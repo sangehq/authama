@@ -49,7 +49,7 @@ func TestStateRootFollowsTheDocumentedOrder(t *testing.T) {
 		{"xdg", map[string]string{"HOME": h, "USERPROFILE": h, "XDG_STATE_HOME": absPath("st")}, filepath.Join(absPath("st"), "authama")},
 		{"explicit", map[string]string{"HOME": h, "USERPROFILE": h, "AUTHAMA_STATE_DIR": absPath("s2")}, absPath("s2")},
 		{"pinned config home", map[string]string{"HOME": h, "USERPROFILE": h, "AUTHAMA_CONFIG_DIR": absPath("c")}, absPath("c")},
-		{"legacy pinned home", map[string]string{"HOME": h, "USERPROFILE": h, "SSH_MANAGER_HOME": absPath("c")}, absPath("c")},
+		{"removed SSH_MANAGER_HOME is ignored", map[string]string{"HOME": h, "USERPROFILE": h, "SSH_MANAGER_HOME": absPath("c")}, filepath.Join(h, ".local", "state", "authama")},
 		{"explicit wins over pinned", map[string]string{"HOME": h, "USERPROFILE": h, "AUTHAMA_CONFIG_DIR": absPath("c"), "AUTHAMA_STATE_DIR": absPath("s")}, absPath("s")},
 	}
 	for _, c := range cases {
@@ -82,9 +82,7 @@ func TestConfigDirOverride(t *testing.T) {
 		want string
 	}{
 		{map[string]string{"AUTHAMA_CONFIG_DIR": abs}, abs},
-		{map[string]string{"SSH_MANAGER_HOME": abs}, abs},
-		{map[string]string{"SSH_MANAGER_CONFIG_DIR": abs}, abs},                   // alias
-		{map[string]string{"SSH_MANAGER_HOME": "rel"}, filepath.Join(cwd, "rel")}, // relative absolutized
+		{map[string]string{"AUTHAMA_CONFIG_DIR": "rel"}, filepath.Join(cwd, "rel")}, // relative absolutized
 	}
 	for _, c := range cases {
 		if got := ConfigDir(env(c.env), cwd); got != c.want {
@@ -92,7 +90,7 @@ func TestConfigDirOverride(t *testing.T) {
 		}
 	}
 	// An empty override falls through to the OS default (not treated as set).
-	got := ConfigDir(env(map[string]string{"SSH_MANAGER_HOME": "", "HOME": "/tmp/h", "APPDATA": `C:\A`}), cwd)
+	got := ConfigDir(env(map[string]string{"AUTHAMA_CONFIG_DIR": "", "HOME": "/tmp/h", "APPDATA": `C:\A`}), cwd)
 	if filepath.Base(got) != "authama" {
 		t.Errorf("empty override should fall through to default, got %q", got)
 	}
@@ -101,7 +99,7 @@ func TestConfigDirOverride(t *testing.T) {
 func TestPathsLayout(t *testing.T) {
 	h := absPath("home", "x")
 	ssh := absPath("ssh")
-	p := Resolve(env(map[string]string{"SSH_MANAGER_HOME": h}), absPath("cwd"), ssh)
+	p := Resolve(env(map[string]string{"AUTHAMA_CONFIG_DIR": h}), absPath("cwd"), ssh)
 	checks := map[string]string{
 		"home":        p.Home(),
 		"manifest":    p.Manifest(),
@@ -201,8 +199,8 @@ func TestFirstLegacyHomeSkipsWhatItMustNotMigrate(t *testing.T) {
 	}
 }
 
-// A home override is something a user types, and both `~/sshmgr-home` and
-// `~\sshmgr-home` are things they type. Honouring only the forward-slash form
+// A home override is something a user types, and both `~/authama-home` and
+// `~\authama-home` are things they type. Honouring only the forward-slash form
 // leaves a literal tilde in the path, so every file lands in a directory called
 // "~" beside wherever the process happened to be started.
 func TestATildeOverrideExpandsWithEitherSeparator(t *testing.T) {
@@ -210,10 +208,10 @@ func TestATildeOverrideExpandsWithEitherSeparator(t *testing.T) {
 	e := env(map[string]string{"HOME": h, "USERPROFILE": h})
 	cwd := absPath("cwd")
 
-	for _, in := range []string{"~/sshmgr-home", `~\sshmgr-home`} {
-		want := filepath.Join(h, "sshmgr-home")
+	for _, in := range []string{"~/authama-home", `~\authama-home`} {
+		want := filepath.Join(h, "authama-home")
 		got := ConfigDir(env(map[string]string{
-			"HOME": h, "USERPROFILE": h, "SSH_MANAGER_HOME": in,
+			"HOME": h, "USERPROFILE": h, "AUTHAMA_CONFIG_DIR": in,
 		}), cwd)
 		if got != want {
 			t.Errorf("ConfigDir(%q) = %q, want %q", in, got, want)
@@ -236,7 +234,7 @@ func TestATildeOverrideExpandsWithEitherSeparator(t *testing.T) {
 func TestResolveDefaultsSSHDirToTheHomeItWasGiven(t *testing.T) {
 	h := absPath("users", "me")
 	p := Resolve(env(map[string]string{
-		"HOME": h, "USERPROFILE": h, "SSH_MANAGER_HOME": absPath("cfg"),
+		"HOME": h, "USERPROFILE": h, "AUTHAMA_CONFIG_DIR": absPath("cfg"),
 	}), absPath("cwd"), "")
 	if want := filepath.Join(h, ".ssh"); p.SSHDir != want {
 		t.Errorf("SSHDir = %q, want %q", p.SSHDir, want)
@@ -246,27 +244,20 @@ func TestResolveDefaultsSSHDirToTheHomeItWasGiven(t *testing.T) {
 // X1 - the public environment variables, as one table.
 //
 // These are the tool's configuration API: a user sets them in a shell profile or
-// a CI job, and a rename is a silent break for everyone who did. The current
-// names are AUTHAMA_*; the SSH_MANAGER_* / SSHMGR_* names of earlier releases
-// are still read, and the current one wins when both are set.
+// a CI job, and a rename is a silent break for everyone who did. The names are
+// AUTHAMA_*. The SSH_MANAGER_* names releases before 0.1.1 read were removed on
+// 2026-11-07 and are ignored: set alone, one leaves the default in place.
 func TestThePublicEnvironmentVariablesResolveAsDocumented(t *testing.T) {
 	abs := absPath("elsewhere")
 	cwd := absPath("cwd")
-	for _, name := range []string{"AUTHAMA_CONFIG_DIR", "SSH_MANAGER_HOME", "SSH_MANAGER_CONFIG_DIR"} {
-		if got := ConfigDir(env(map[string]string{name: abs}), cwd); got != abs {
-			t.Errorf("%s = %q, want %q", name, got, abs)
+	if got := ConfigDir(env(map[string]string{"AUTHAMA_CONFIG_DIR": abs}), cwd); got != abs {
+		t.Errorf("AUTHAMA_CONFIG_DIR = %q, want %q", got, abs)
+	}
+	def := ConfigDir(env(map[string]string{}), cwd)
+	for _, name := range []string{"SSH_MANAGER_HOME", "SSH_MANAGER_CONFIG_DIR"} {
+		if got := ConfigDir(env(map[string]string{name: abs}), cwd); got != def {
+			t.Errorf("the removed %s moved the config home to %q; want the default %q", name, got, def)
 		}
-	}
-	other := absPath("second")
-	if got := ConfigDir(env(map[string]string{
-		"AUTHAMA_CONFIG_DIR": abs, "SSH_MANAGER_HOME": other, "SSH_MANAGER_CONFIG_DIR": other,
-	}), cwd); got != abs {
-		t.Errorf("with all set the result was %q; AUTHAMA_CONFIG_DIR is the primary", got)
-	}
-	if got := ConfigDir(env(map[string]string{
-		"SSH_MANAGER_HOME": abs, "SSH_MANAGER_CONFIG_DIR": other,
-	}), cwd); got != abs {
-		t.Errorf("legacy pair gave %q; SSH_MANAGER_HOME came first", got)
 	}
 }
 
@@ -304,24 +295,9 @@ func TestTheEnvironmentVariableNamesAreTheDocumentedOnes(t *testing.T) {
 		"AUTHAMA_HELLO_CHECK":          "internal: asks the Windows Hello script for availability only",
 		"AUTHAMA_WEB_AUTO_RESTART":     "web.auto_restart: restart serve by itself when its binary is rebuilt",
 		"AUTHAMA_SERVE_HANDOFF":        "internal: a restarting serve's token, port and instance, for the server replacing it",
-		// Earlier names, still read.
-		"SSH_MANAGER_HOME":                 "legacy AUTHAMA_CONFIG_DIR",
-		"SSH_MANAGER_CONFIG_DIR":           "legacy alias of SSH_MANAGER_HOME",
-		"SSHMGR_DEV_ROOT":                  "legacy AUTHAMA_DEV_ROOT",
-		"SSH_MANAGER_AUTO_PIN":             "legacy",
-		"SSH_MANAGER_AGE_RECIPIENT":        "legacy",
-		"SSH_MANAGER_AGE_IDENTITY_FILE":    "legacy",
-		"SSH_MANAGER_SNAPSHOT_RETAIN":      "legacy",
-		"SSH_MANAGER_OLD_KEY_MAX_AGE_DAYS": "legacy",
-		"SSH_MANAGER_HISTORY":              "legacy",
-		"SSHMGR_GIT_MODE":                  "legacy",
-		"SSH_MANAGER_TOKENS_CONFIG":        "legacy",
-		"SSH_MANAGER_TOKENS_CATALOG":       "legacy",
-		"SSHMGR_ASKPASS_MODE":              "legacy internal",
-		"SSHMGR_ASKPASS_SECRET":            "legacy internal",
 	}
 	table := map[string]bool{}
-	for _, n := range envnames.AllNames() {
+	for _, n := range envnames.Names() {
 		table[n] = true
 		if _, ok := documented[n]; !ok {
 			t.Errorf("%s is in envnames but not documented here", n)

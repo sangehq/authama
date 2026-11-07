@@ -65,10 +65,8 @@ func tokenEnv(c *cobra.Command) (tokensvc.Env, error) {
 }
 
 // useTokenCatalog runs before every token command: it installs the catalog
-// $AUTHAMA_TOKENS_CATALOG (or its older names $SSH_MANAGER_TOKENS_CATALOG and
-// auth-token-manager's
-// $AUTH_TOKEN_MANAGER_CATALOG) names, says so when the variable is the old one
-// or names no file, and refuses to go on with a catalog that does not load.
+// $AUTHAMA_TOKENS_CATALOG (or auth-token-manager's $AUTH_TOKEN_MANAGER_CATALOG)
+// names, says so when the variable is auth-token-manager's or names no file, and refuses to go on with a catalog that does not load.
 func useTokenCatalog(c *cobra.Command, _ []string) error {
 	env, err := tokenEnv(c)
 	if err != nil {

@@ -140,7 +140,7 @@ built-in defaults.
 
 ```mermaid
 flowchart TD
-    S[command starts] --> O{AUTHAMA_CONFIG_DIR set?<br/>legacy SSH_MANAGER_HOME too}
+    S[command starts] --> O{AUTHAMA_CONFIG_DIR set?}
     O -- yes --> OV[home = override, absolutized]
     O -- no --> X{XDG_CONFIG_HOME set<br/>and absolute?}
     X -- yes --> XH[home = XDG_CONFIG_HOME/authama]

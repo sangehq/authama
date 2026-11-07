@@ -85,7 +85,7 @@ writes to the same server, since the old and new remote lock names do not exclud
 | State | inside the config home | `~/.local/state/authama` (`$AUTHAMA_STATE_DIR`, else `$XDG_STATE_HOME/authama`): `log/`, `snapshots/`, `dist/` |
 | `.env` | read only if your shell exported it (`set -a; . .env; set +a`) | loaded at startup; the environment still wins; `--no-dotenv` / `AUTHAMA_NO_DOTENV=1` skips it |
 | Settings file | none | optional `authama.json`, schema-validated (see [Configuration](configuration.md#settings-env-and-authamajson)) |
-| Variables | `SSH_MANAGER_*`, `SSHMGR_DEV_ROOT`, `SSHMGR_GIT_MODE` | `AUTHAMA_*`; the old names still work, with a deprecation notice |
+| Variables | `SSH_MANAGER_*`, `SSHMGR_DEV_ROOT`, `SSHMGR_GIT_MODE` | `AUTHAMA_*`. The old names were read with a deprecation notice until 2026-11-07, and are ignored now |
 | Managed block in `~/.ssh/config` | `# Managed by ssh-manager …` | `# Managed by authama …`; the old markers are recognised and rewritten on the next render |
 | Bundles | `ssh-manager-<stamp>.age` | `authama-<stamp>.age`; `ssh restore` still reads the old names |
 | Provider key titles | `ssh-manager <file>` | `authama <file>`; a re-deploy renames the old title |
@@ -100,9 +100,9 @@ into the state home, writes `MIGRATED-TO-AUTHAMA.txt` into the old directory and
 says so once on stderr. The old directory is kept, so 0.1.0 still runs against
 it if you go back. A directory carrying the marker is never migrated again.
 
-If you set `SSH_MANAGER_HOME` yourself, nothing is copied: authama uses that
-directory (and keeps state in it), with a notice to rename the variable to
-`AUTHAMA_CONFIG_DIR`. `authama migrate` does the copy on demand, and
+If you set `SSH_MANAGER_HOME` yourself, rename it to `AUTHAMA_CONFIG_DIR` first:
+authama no longer reads the old name, and would otherwise use (and fill) the
+default home instead. `authama migrate` does the copy on demand, and
 `authama migrate --force` replaces a home that already exists (it is backed up
 aside first).
 
@@ -116,7 +116,8 @@ authama doctor
 
 Then rename `SSH_MANAGER_*` / `SSHMGR_*` in your shell profile and `.env`
 (`SSH_MANAGER_HOME` → `AUTHAMA_CONFIG_DIR`, `SSHMGR_DEV_ROOT` →
-`AUTHAMA_DEV_ROOT`, `SSH_MANAGER_<NAME>` → `AUTHAMA_<NAME>`), and drop any
+`AUTHAMA_DEV_ROOT`, `SSH_MANAGER_<NAME>` → `AUTHAMA_<NAME>`): the old names are
+ignored, so a value left under one has no effect. Drop any
 `set -a; . ~/.config/ssh-manager/.env; set +a` line - the file is loaded for you.
 
 ## From sshmgr v3
@@ -130,7 +131,7 @@ Nothing you have stops working.
 | Shared verbs | `sshmgr doctor`, `sshmgr serve` | `authama doctor`, `authama serve` |
 | `ui` | alias of `serve` | still works, deprecated: use `serve` |
 | Config home | `~/.config/ssh-manager` | `~/.config/authama` from 0.1.1, copied in on the first run ([above](#to-011-the-authama-config-home-and-authama_-names)) |
-| Variables | `SSH_MANAGER_*`, `SSHMGR_DEV_ROOT` | `AUTHAMA_*` from 0.1.1; the old names still work, with a notice |
+| Variables | `SSH_MANAGER_*`, `SSHMGR_DEV_ROOT` | `AUTHAMA_*` from 0.1.1; the old names are ignored since 2026-11-07 |
 | `~/.ssh` | managed-block markers, `known_hosts` tags | the managed block's markers are rewritten under the authama name on the next render, with no other diff; new `known_hosts` pins are tagged `authama` from 0.1.2, and `sshmgr`-tagged ones are still recognized |
 | `vm` ProxyCommand | `sshmgr vm proxy …` | `authama ssh config render` points it at `authama`; run it before removing an old `sshmgr` |
 | Repository and Go module | `github.com/simtabi/ssh-manager`, module `github.com/simtabi/ssh-manager/src/v3` | `github.com/simtabi/authama`, module `github.com/simtabi/authama/src` (v3.6.1 alone was published as `.../authama/src/v3`). GitHub redirects the old repository URLs, so old clones and the old `install.sh`/`install.ps1` URLs keep working |

@@ -11,15 +11,14 @@
 //	             history database and audit log (log/), snapshots, bundles
 //	             (dist/), the lock and caches (.state/).
 //
-// When the config home is set explicitly ($AUTHAMA_CONFIG_DIR or a legacy
-// spelling) and the state home is not, the state lives inside the config home,
+// When the config home is set explicitly ($AUTHAMA_CONFIG_DIR) and the state
+// home is not, the state lives inside the config home,
 // as it did before 0.1.1, so a pinned home stays self-contained. A --dev-root
 // sandbox is likewise one tree.
 //
-// The legacy variables $SSH_MANAGER_HOME and $SSH_MANAGER_CONFIG_DIR are still
-// honored (see envnames); the folders earlier releases used (~/.config/
-// ssh-manager, %APPDATA%\ssh-manager, ~/.config/sshmgr, ~/.sshmgr) are found by
-// LegacyHomes for the one-time migration.
+// The folders releases before 0.1.1 used, under the tool's earlier names, are
+// found by LegacyHomes, so `authama migrate` can copy one into the authama home.
+// Only migration looks there; nothing else reads or writes them.
 package paths
 
 import (
@@ -288,8 +287,7 @@ func (p Paths) FirstLegacyHome() string {
 
 // --- dev mode ---------------------------------------------------------------
 
-// DevRootEnv is the environment variable form of --dev-root. Its pre-0.1.1
-// spelling, SSHMGR_DEV_ROOT, is still read (envnames.Legacy).
+// DevRootEnv is the environment variable form of --dev-root.
 const DevRootEnv = envnames.DevRoot
 
 // DevSSHDir and DevConfigDir are the fixed subdirectories a dev root is split
@@ -305,7 +303,7 @@ const (
 // sandbox's ~/.ssh and its config home.
 //
 // It is deliberately ONE root rather than two independent overrides. The config
-// home already had an override ($SSH_MANAGER_HOME) and ~/.ssh had none, so the
+// home already had an override ($AUTHAMA_CONFIG_DIR) and ~/.ssh had none, so the
 // only way to test against a scratch tree was to move $HOME - which also moves
 // the ssh-agent socket, the launchd session and everything else that reads it.
 // Two knobs would allow the worse failure: a run with its config redirected and

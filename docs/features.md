@@ -57,7 +57,7 @@ when the profile has a category.
 | `doctor --strict` | Exit non-zero on any warning, dangling-key states included (for CI); never reports clean when there are warnings. | U |
 | `version` / `--version` | Print the version. | F |
 
-Home resolution: `$AUTHAMA_CONFIG_DIR` (or the pre-0.1.1 `$SSH_MANAGER_HOME`) if
+Home resolution: `$AUTHAMA_CONFIG_DIR` if
 set, else `$XDG_CONFIG_HOME/authama`, else `~/.config/authama` - the same on every
 OS, Windows included. State (logs, history, snapshots, bundles) goes to
 `$AUTHAMA_STATE_DIR`, else `$XDG_STATE_HOME/authama`, else

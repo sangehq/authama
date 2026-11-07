@@ -39,7 +39,6 @@ type startupState struct {
 	Settings    *settings.File
 	SettingsErr error
 	Applied     settings.ApplyResult
-	Deprecated  []string
 }
 
 var (
@@ -65,7 +64,7 @@ func startup(c *cobra.Command, _ []string) error {
 		return nil
 	}
 	st := &startupState{Preset: map[string]bool{}}
-	for _, n := range envnames.AllNames() {
+	for _, n := range envnames.Names() {
 		if _, ok := os.LookupEnv(n); ok {
 			st.Preset[n] = true
 		}
@@ -114,10 +113,6 @@ func startup(c *cobra.Command, _ []string) error {
 		for _, c := range conflicts {
 			notice(errw, "warning: %s was left in place: the state home already has one (compare and remove the older)", c)
 		}
-	}
-	if st.Deprecated = envnames.Deprecated(nil); len(st.Deprecated) > 0 {
-		notice(errw, "deprecated variable names, still honored: %s - rename them (docs/configuration.md)",
-			strings.Join(st.Deprecated, ", "))
 	}
 	startupMu.Lock()
 	lastStart = st

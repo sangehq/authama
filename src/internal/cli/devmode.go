@@ -13,7 +13,7 @@ import (
 // Dev mode: run the whole tool against a scratch directory instead of ~/.ssh.
 //
 // Before this there was no way to do it. The config home had an override
-// ($SSH_MANAGER_HOME) but ~/.ssh had none - every call site asked for
+// ($AUTHAMA_CONFIG_DIR) but ~/.ssh had none - every call site asked for
 // paths.Resolve(nil, "", ""), whose empty third argument means $HOME/.ssh - so
 // exercising anything that mints, renders or pins wrote into the tree you
 // actually use. The alternative, moving $HOME, also moves the ssh-agent socket
@@ -22,7 +22,7 @@ import (
 const devRootFlag = "dev-root"
 
 // devRootOf returns the sandbox root for this invocation: the flag if given,
-// else $AUTHAMA_DEV_ROOT (or the legacy $SSHMGR_DEV_ROOT), else "".
+// else $AUTHAMA_DEV_ROOT, else "".
 //
 // The flag is read off the root command rather than a package-level variable so
 // that a test building its own command tree gets its own value - a global here
