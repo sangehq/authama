@@ -148,8 +148,11 @@ test('Transforms: a step writes a column, a group replaces the rows, and the com
   const rows = JSON.parse(runCommand(cmd)) as Record<string, unknown>[];
   expect(rows.map((r) => [text(r.profile), text(r.count)])).toEqual(shown);
 
-  // Removing the group brings the host rows, and their formats, back.
+  // Removing the group brings the host rows back; the template step still
+  // keeps the SSH client formats out, until it goes too.
   await exp.getByRole('button', { name: 'Remove step 2' }).click();
   await expect(exp.locator('[data-export-summary]')).toHaveText(new RegExp(`^${rowsBefore} of `));
+  await expect(exp.getByLabel('Format').locator('option[value="ssh_config"]')).toHaveCount(0);
+  await exp.getByRole('button', { name: 'Remove step 1' }).click();
   await expect(exp.getByLabel('Format').locator('option[value="ssh_config"]')).toHaveCount(1);
 });
