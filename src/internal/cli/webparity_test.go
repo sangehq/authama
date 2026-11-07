@@ -18,6 +18,7 @@ import (
 	"github.com/simtabi/authama/src/internal/services/change"
 	"github.com/simtabi/authama/src/internal/services/editor"
 	"github.com/simtabi/authama/src/internal/services/history"
+	"github.com/simtabi/authama/src/internal/services/keysvc"
 	"github.com/simtabi/authama/src/internal/services/mutation"
 	"github.com/simtabi/authama/src/internal/services/snapshots"
 	"github.com/simtabi/authama/src/internal/util/paths"
@@ -340,6 +341,20 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 		{"keygen", []string{"keygen", "work", "--no-pin", "--yes"}, change.Keygen("work"), nil, nil, nil},
 		{"key add", []string{"key", "add", "work", "extra", "--type", "ed25519", "--host", "new01"},
 			change.KeyAdd("work", "extra", "ed25519", "new01"), nil, nil, nil},
+		// A missing .pub is rebuilt from its private key; the web derives it from
+		// the real private key, since a preview's copy holds none.
+		{"key regen-pub", []string{"key", "regen-pub", "work", "--yes"},
+			change.KeyRegenPub(paths.Paths{}, keysvc.Selection{Selectors: []string{"work"}}), func(p paths.Paths) {
+				pubs, _ := filepath.Glob(filepath.Join(p.SSHDir, "profiles", "work", "*gh*.pub"))
+				if len(pubs) == 0 {
+					panic("no .pub for work's gh key to remove")
+				}
+				for _, f := range pubs {
+					if err := os.Remove(f); err != nil {
+						panic(err)
+					}
+				}
+			}, nil, nil},
 		{"providers export", []string{"providers", "--export"}, change.ProvidersExport(), nil, nil, nil},
 		{"settings init", []string{"settings", "init"}, change.SettingsInit(false), nil, nil, nil},
 		{"token init", []string{"token", "init", "--target", "npm"}, change.TokenInit([]string{"npm"}), nil, nil, nil},
@@ -405,7 +420,7 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 			_ = editor.New(p).ReserveKey("loose-vm", manifest.ReservedKey{For: "devbox"})
 		}, nil, nil},
 	}
-	if len(cases) != 36 {
+	if len(cases) != 37 {
 		t.Fatalf("%d cases; every change the web offers needs one", len(cases))
 	}
 	for _, tc := range cases {
@@ -416,6 +431,10 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 			// exists only now.
 			if ch.Command == "snapshots restore" {
 				ch = change.SnapshotRestore(webHome.SnapshotsDir(), "ssh-", 10)
+			}
+			// regen-pub derives from the private keys of the home it is built for.
+			if ch.Command == "key regen-pub" {
+				ch = change.KeyRegenPub(webHome, keysvc.Selection{Selectors: []string{"work"}})
 			}
 			if tc.pre != nil {
 				tc.pre(cliHome)
