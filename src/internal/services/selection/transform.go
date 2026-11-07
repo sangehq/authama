@@ -3,6 +3,7 @@ package selection
 import (
 	"fmt"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -33,10 +34,14 @@ const (
 	// TransformGroup makes a row per distinct By, with Aggregates; with
 	// Totals, a last row over every group.
 	TransformGroup = "group"
+	// TransformPivot makes a row per distinct By and a column per distinct
+	// value of Field, each cell the first of Aggregates (count by default)
+	// over the rows with both; with Totals, a total column and a last row.
+	TransformPivot = "pivot"
 )
 
 // Transforms lists them, in the order a page offers them.
-var Transforms = []string{TransformTemplate, TransformMap, TransformFormat, TransformSplit, TransformJoin, TransformDedupe, TransformGroup}
+var Transforms = []string{TransformTemplate, TransformMap, TransformFormat, TransformSplit, TransformJoin, TransformDedupe, TransformGroup, TransformPivot}
 
 // The formats TransformFormat knows.
 var Formats = []string{"upper", "lower", "trim", "date", "relative", "thousands"}
@@ -242,6 +247,8 @@ func (t Transform) apply(rows []row, fields []string) ([]row, []string, error) {
 		}), fields, nil
 	case TransformGroup:
 		return t.group(rows, fields, has)
+	case TransformPivot:
+		return t.pivot(rows, has)
 	case "":
 		return nil, nil, fmt.Errorf("a transform needs a kind, one of %s", strings.Join(Transforms, ", "))
 	default:
@@ -300,6 +307,122 @@ func (t Transform) group(rows []row, fields []string, has func(string) error) ([
 		for _, a := range t.Aggregates {
 			f[a.Name()] = aggregate(a, rows)
 		}
+		res = append(res, row{f: f, total: true})
+	}
+	return res, out, nil
+}
+
+// PivotEmpty is the column a pivot gives rows whose Field is empty.
+const PivotEmpty = "(none)"
+
+// pivot makes a row per distinct By, in the order each first appears, and
+// a column per distinct value of Field, sorted.
+func (t Transform) pivot(rows []row, has func(string) error) ([]row, []string, error) {
+	if len(t.By) == 0 {
+		return nil, nil, fmt.Errorf("a pivot needs the fields its rows are by (by)")
+	}
+	if err := has(t.Field); err != nil {
+		return nil, nil, fmt.Errorf("its columns: %w", err)
+	}
+	for _, f := range t.By {
+		if err := has(f); err != nil {
+			return nil, nil, err
+		}
+		if f == t.Field {
+			return nil, nil, fmt.Errorf("%q cannot be both its rows and its columns", f)
+		}
+	}
+	agg := Aggregate{Op: "count"}
+	switch len(t.Aggregates) {
+	case 0:
+	case 1:
+		agg = t.Aggregates[0]
+	default:
+		return nil, nil, fmt.Errorf("a pivot's cells are one aggregate, not %d", len(t.Aggregates))
+	}
+	if !slices.Contains(Aggregates, agg.Op) {
+		return nil, nil, fmt.Errorf("no aggregate %q, one of %s", agg.Op, strings.Join(Aggregates, ", "))
+	}
+	if agg.Op != "count" {
+		if err := has(agg.Field); err != nil {
+			return nil, nil, fmt.Errorf("%s: %w", agg.Op, err)
+		}
+	}
+	colOf := func(r row) []string {
+		vs, ok := r.f[t.Field].([]string)
+		if !ok {
+			vs = []string{Cell(r.f[t.Field])}
+		}
+		out := make([]string, 0, len(vs))
+		for _, v := range vs {
+			if v == "" {
+				v = PivotEmpty
+			}
+			out = append(out, v)
+		}
+		if len(out) == 0 {
+			out = []string{PivotEmpty}
+		}
+		return out
+	}
+	var cols, order []string
+	members := map[string][]row{}          // a row key's rows
+	cells := map[string]map[string][]row{} // a row key's rows in each column
+	for _, r := range rows {
+		k := keyOf(r.f, t.By)
+		if _, ok := cells[k]; !ok {
+			cells[k] = map[string][]row{}
+			order = append(order, k)
+		}
+		members[k] = append(members[k], r)
+		for _, c := range colOf(r) {
+			if !slices.Contains(cols, c) {
+				cols = append(cols, c)
+			}
+			cells[k][c] = append(cells[k][c], r)
+		}
+	}
+	sort.Strings(cols)
+	out := slices.Clone(t.By)
+	for _, c := range cols {
+		if slices.Contains(out, c) {
+			return nil, nil, fmt.Errorf("the value %q of %s is also the name of a field it is by", c, t.Field)
+		}
+		out = append(out, c)
+	}
+	if t.Totals {
+		out = append(out, TotalLabel)
+	}
+	cell := func(rs []row) any {
+		if len(rs) == 0 && agg.Op != "count" && agg.Op != "sum" {
+			return nil
+		}
+		return aggregate(agg, rs)
+	}
+	res := make([]row, 0, len(order)+1)
+	for _, k := range order {
+		f := map[string]any{}
+		for _, b := range t.By {
+			f[b] = members[k][0].f[b]
+		}
+		for _, c := range cols {
+			f[c] = cell(cells[k][c])
+		}
+		if t.Totals {
+			f[TotalLabel] = cell(members[k])
+		}
+		res = append(res, row{f: f})
+	}
+	if t.Totals {
+		f := map[string]any{t.By[0]: TotalLabel}
+		for _, c := range cols {
+			var rs []row
+			for _, k := range order {
+				rs = append(rs, cells[k][c]...)
+			}
+			f[c] = cell(rs)
+		}
+		f[TotalLabel] = cell(rows)
 		res = append(res, row{f: f, total: true})
 	}
 	return res, out, nil

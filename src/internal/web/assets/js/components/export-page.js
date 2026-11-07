@@ -11,6 +11,8 @@ import { Prefs } from "../core/prefs.js";
  * @typedef {{ kind: string, field?: string, as?: string, template?: string, values?: Record<string, string>, default?: string,
  *   format?: string, layout?: string, sep?: string, rows?: boolean, by?: string[], aggregates?: Aggregate[], totals?: boolean }} Step
  * @typedef {{ version: 1, grain: string, where: Where, narrow?: boolean, transforms?: Step[], columns?: Column[], sort?: SortKey[], limit?: number }} Selection
+ * @typedef {{ name: string, store: string, selection: Selection, shadowed?: boolean, error?: string }} Saved
+ * @typedef {{ selections: Saved[], save_to: string, read_only: boolean }} SavedList
  * @typedef {{ value: string, profile?: string, rows: number }} FacetValue
  * @typedef {{ name: string, rows: number }} Stage
  * @typedef {{ name: string, label: string, extension: string, hosts?: boolean }} Format
@@ -42,6 +44,7 @@ const STEP_LABELS = {
   join: "Join a list",
   dedupe: "Remove duplicates",
   group: "Group",
+  pivot: "Pivot",
 };
 
 /**
@@ -62,6 +65,8 @@ export function stepReady(t) {
       return Boolean(t.field);
     case "group":
       return Boolean(t.by?.length);
+    case "pivot":
+      return Boolean(t.by?.length && t.field);
     default:
       return true;
   }
@@ -113,6 +118,22 @@ function parseValues(s) {
     }
   }
   return out;
+}
+
+/**
+ * Fields grouped by the relation they follow: the row's own first, then one
+ * group per prefix (key.fingerprint is under key), in the order they come.
+ * @param {string[]} fields @returns {[string, string[]][]}
+ */
+export function fieldGroups(fields) {
+  /** @type {Map<string, string[]>} */
+  const groups = new Map([["", []]]);
+  for (const f of fields) {
+    const dot = f.indexOf(".");
+    const g = dot > 0 ? f.slice(0, dot) : "";
+    groups.set(g, [...(groups.get(g) ?? []), f]);
+  }
+  return [...groups].filter(([, fs]) => fs.length > 0);
 }
 
 /** The grains whose rows have a time, so since/until apply. */
@@ -203,6 +224,9 @@ export class ExportPage extends Component {
 
   #format = "csv";
 
+  /** The saved selections, once loaded. @type {SavedList | null} */
+  #saved = null;
+
   /** The step whose first field takes the focus after the next render. @type {number | null} */
   #focusStep = null;
 
@@ -218,6 +242,7 @@ export class ExportPage extends Component {
     this.#read();
     this.#bind();
     this.#refresh();
+    void this.#loadSaved();
     window.addEventListener("hashchange", () => {
       this.#read();
       this.#refresh();
@@ -386,6 +411,16 @@ export class ExportPage extends Component {
       }
     });
     stepAdd.addEventListener("change", () => this.#part("step-add-button").click());
+    this.#part("save")?.addEventListener("click", () => void this.#saveCurrent());
+    this.#part("save-store")?.addEventListener("change", (e) => {
+      /** @type {HTMLElement} */ (e.target).dataset.touched = "1";
+    });
+    this.#part("save-name")?.addEventListener("keydown", (e) => {
+      if (/** @type {KeyboardEvent} */ (e).key === "Enter") {
+        e.preventDefault();
+        void this.#saveCurrent();
+      }
+    });
     this.#part("columns-reset").addEventListener("click", () => this.#update({ columns: undefined, sort: undefined }));
     const format = /** @type {HTMLSelectElement} */ (this.#part("format"));
     format.addEventListener("change", () => {
@@ -553,6 +588,194 @@ export class ExportPage extends Component {
     ).node;
   }
 
+  /** The CSRF token the page carries for its POSTs. */
+  static csrf() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ?? "";
+  }
+
+  /** Loads the saved selections, both stores. */
+  async #loadSaved() {
+    const url = this.el.dataset.savedUrl;
+    if (!url) {
+      return;
+    }
+    try {
+      const res = await fetch(url, { credentials: "same-origin" });
+      if (!res.ok) {
+        throw new Error(`the server answered ${res.status}`);
+      }
+      this.#saved = /** @type {SavedList} */ (await res.json());
+      const store = /** @type {HTMLSelectElement | null} */ (this.#part("save-store"));
+      if (store && !store.dataset.touched) {
+        store.value = this.#saved.save_to;
+      }
+      this.#renderSaved();
+    } catch (err) {
+      this.#part("saved-empty").textContent = `The saved selections could not be loaded: ${err instanceof Error ? err.message : err}`;
+    }
+  }
+
+  /**
+   * The saved selections as a list: a button that opens each, its store,
+   * what its rows are, and a button to delete it.
+   */
+  #renderSaved() {
+    const list = this.#saved?.selections ?? [];
+    this.#part("saved-count").textContent = list.length ? String(list.length) : "";
+    this.#part("saved-empty").hidden = list.length > 0;
+    const ro = this.#saved?.read_only ?? true;
+    this.#part("saved").replaceChildren(...list.map((s) => {
+      const where = s.store === "manifest" ? "manifest" : "mine";
+      const note = s.error ? `Cannot be read: ${s.error}` : s.shadowed ? "Hidden by your own of the same name" : "";
+      const open = El.create("button").cls("btn btn-link p-0 text-start text-truncate flex-fill").prop("type", "button")
+        .prop("disabled", Boolean(s.error) || Boolean(s.shadowed)).attr("title", note || `Open ${s.name}`)
+        .text(s.name).on("click", () => this.#openSaved(s));
+      const item = El.create("div").cls("list-group-item").attr("data-saved", s.name).append(
+        open,
+        El.create("span").cls(`badge ${s.store === "manifest" ? "badge-info" : "badge-muted"}`).text(where),
+        El.create("span").cls("text-secondary small").text(s.selection?.grain ?? ""),
+      );
+      if (note) {
+        item.append(El.create("span").cls("badge badge-warning").attr("title", note).text(s.error ? "unreadable" : "hidden"));
+      } else {
+        item.append(El.create("button").cls("btn btn-icon btn-sm btn-ghost-secondary").prop("type", "button")
+          .attr("aria-label", `Compare with ${s.name}`).attr("title", `Compare with ${s.name}`)
+          .append(ExportPage.icon("git-compare")).on("click", () => void this.#compare(s)));
+      }
+      if (!ro) {
+        item.append(El.create("button").cls("btn btn-icon btn-sm btn-ghost-secondary").prop("type", "button")
+          .attr("aria-label", `Delete ${s.name} (${where})`).attr("title", `Delete ${s.name} (${where})`)
+          .append(ExportPage.icon("x")).on("click", () => void this.#deleteSaved(s)));
+      }
+      return item.node;
+    }));
+  }
+
+  /**
+   * Compares the page's selection with a saved one: rows matched on the
+   * columns both have, and the rows only one holds, side by side.
+   * @param {Saved} s
+   */
+  async #compare(s) {
+    const box = this.#part("compare");
+    const u = new URL(this.el.dataset.compareUrl ?? "/exports/compare", location.href);
+    u.searchParams.set("a", this.#encoded());
+    u.searchParams.set("b", b64url(JSON.stringify(s.selection)));
+    box.hidden = false;
+    try {
+      const res = await fetch(u, { credentials: "same-origin" });
+      const c = await res.json();
+      if (!res.ok) {
+        throw new Error(c.error ?? `the server answered ${res.status}`);
+      }
+      /** @param {string} title @param {string[][]} rows @param {number} count */
+      const side = (title, rows, count) => El.create("div").cls("col-md-6").append(
+        El.create("h4").cls("mb-2").text(`${title} (${count})`),
+        El.create("div").cls("table-responsive border rounded export-compare-side").append(
+          El.create("table").cls("table table-sm card-table mb-0").append(
+            El.create("thead").append(El.create("tr").append(...c.on.map((/** @type {string} */ h) => El.create("th").attr("scope", "col").text(h)))),
+            El.create("tbody").append(...(rows.length
+              ? rows.map((r) => El.create("tr").append(...r.map((x) => El.create("td").text(x))))
+              : [El.create("tr").append(El.create("td").attr("colspan", String(c.on.length)).cls("text-secondary").text("None."))])),
+          ),
+        ),
+        count > rows.length ? El.create("small").cls("text-secondary").text(`First ${rows.length} shown.`) : El.create("span"),
+      );
+      box.replaceChildren(
+        El.create("div").cls("d-flex align-items-center mb-2").append(
+          El.create("h3").cls("card-title mb-0").append(ExportPage.icon("git-compare"), El.create("span").cls("ms-2").text(`Compared with ${s.name}`)),
+          El.create("button").cls("btn-close ms-auto").prop("type", "button").attr("aria-label", "Close the comparison").on("click", () => {
+            box.hidden = true;
+            box.replaceChildren();
+          }),
+        ).node,
+        El.create("p").cls("text-secondary small").text(
+          `Matched on ${c.on.join(", ")}: ${c.both} in both, ${c.only_a_count} only here, ${c.only_b_count} only in ${s.name}.`).node,
+        El.create("div").cls("row g-3").append(side("Only here", c.only_a, c.only_a_count), side(`Only in ${s.name}`, c.only_b, c.only_b_count)).node,
+      );
+    } catch (err) {
+      box.replaceChildren(El.create("div").cls("alert alert-warning mb-0").attr("role", "alert")
+        .text(`Not compared: ${err instanceof Error ? err.message : err}`).node);
+    }
+  }
+
+  /** Opens a saved selection: the page shows and offers it. @param {Saved} s */
+  #openSaved(s) {
+    const x = s.selection;
+    this.#sel = { version: 1, grain: x.grain, where: x.where ?? {}, narrow: x.narrow, transforms: x.transforms, columns: x.columns, sort: x.sort };
+    const name = /** @type {HTMLInputElement | null} */ (this.#part("save-name"));
+    if (name) {
+      name.value = s.name;
+    }
+    this.#refresh();
+    this.#flash(this.#part("saved-count"), `Opened ${s.name}`);
+  }
+
+  /**
+   * Saves the selection under the name given. Mine is a POST; the manifest's
+   * goes through the change preview, which the hidden form opens.
+   */
+  async #saveCurrent() {
+    const nameBox = /** @type {HTMLInputElement} */ (this.#part("save-name"));
+    const store = /** @type {HTMLSelectElement} */ (this.#part("save-store")).value;
+    const name = nameBox.value.trim();
+    const btn = this.#part("save");
+    if (!/^[a-z0-9][a-z0-9._-]{0,62}$/.test(name)) {
+      this.#flash(btn, "Name it with a-z, 0-9, '.', '_' and '-'");
+      nameBox.focus();
+      return;
+    }
+    const selection = this.#clean();
+    if (store === "manifest") {
+      const form = /** @type {HTMLFormElement} */ (this.#part("manifest-save"));
+      /** @type {HTMLInputElement} */ (form.elements.namedItem("name")).value = name;
+      /** @type {HTMLInputElement} */ (form.elements.namedItem("selection")).value = JSON.stringify(selection);
+      form.submit();
+      return;
+    }
+    try {
+      const res = await fetch(this.el.dataset.savedUrl ?? "", {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": ExportPage.csrf() },
+        body: JSON.stringify({ name, selection }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        throw new Error(body.error ?? `the server answered ${res.status}`);
+      }
+      this.#flash(btn, `Saved ${name}`);
+      await this.#loadSaved();
+    } catch (err) {
+      this.#flash(btn, `Not saved: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
+  /** Deletes a saved selection from its store. @param {Saved} s */
+  async #deleteSaved(s) {
+    if (s.store === "manifest") {
+      const form = /** @type {HTMLFormElement} */ (this.#part("manifest-delete"));
+      /** @type {HTMLInputElement} */ (form.elements.namedItem("name")).value = s.name;
+      form.submit();
+      return;
+    }
+    try {
+      const res = await fetch(`${this.el.dataset.savedUrl ?? ""}/delete`, {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": ExportPage.csrf() },
+        body: JSON.stringify({ name: s.name }),
+      });
+      // Read the reply either way: an unread body is cut off, and reported
+      // as a failed request, when the page navigates next.
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body.error ?? `the server answered ${res.status}`);
+      }
+      await this.#loadSaved();
+    } catch (err) {
+      this.#flash(this.#part("saved-count"), `Not deleted: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
   /**
    * Sets the steps. Chosen columns naming a field no step writes any more are
    * dropped, and a group, which replaces the fields, starts the columns and
@@ -563,7 +786,8 @@ export class ExportPage extends Component {
     const was = this.#sel.transforms ?? [];
     /** @type {Partial<Selection>} */
     const change = { transforms: next.length ? next : undefined };
-    const grouped = (/** @type {Step[]} */ l) => l.some((t) => t.kind === "group" && stepReady(t));
+    // A group or a pivot replaces the fields.
+    const grouped = (/** @type {Step[]} */ l) => l.some((t) => (t.kind === "group" || t.kind === "pivot") && stepReady(t));
     if (grouped(was) || grouped(next)) {
       change.columns = undefined;
       change.sort = undefined;
@@ -668,6 +892,12 @@ export class ExportPage extends Component {
           body = [input("Group by", (t.by ?? []).join(", "), (v) => set({ by: commaList(v) }), { placeholder: "profile, env", wide: true }),
             input("Aggregates", aggregatesText(t.aggregates), (v) => set({ aggregates: parseAggregates(v) }), { placeholder: `count, list:env=envs (${(p.steps?.aggregates ?? []).join(", ")})`, wide: true }),
             toggle("A totals row", Boolean(t.totals), (v) => set({ totals: v || undefined }))];
+          break;
+        case "pivot":
+          body = [input("Rows by", (t.by ?? []).join(", "), (v) => set({ by: commaList(v) }), { placeholder: "profile" }),
+            input("Columns from", t.field ?? "", (v) => set({ field: v }), { list: true, placeholder: "env" }),
+            input("Cells", aggregatesText(t.aggregates), (v) => set({ aggregates: v ? parseAggregates(v).slice(0, 1) : undefined }), { placeholder: "count, or sum:port" }),
+            toggle("A total column and row", Boolean(t.totals), (v) => set({ totals: v || undefined }))];
           break;
       }
       const iconBtn = (/** @type {string} */ icon, /** @type {string} */ text, /** @type {() => void} */ fn, /** @type {boolean} */ off) =>
@@ -835,7 +1065,10 @@ export class ExportPage extends Component {
     const add = /** @type {HTMLSelectElement} */ (this.#part("add"));
     add.replaceChildren(
       El.create("option").prop("value", "").text(rest.length ? `Add one of ${rest.length} more fields…` : "Every field is a column").node,
-      ...rest.map((f) => El.create("option").prop("value", f).text(f).node),
+      ...fieldGroups(rest).map(([group, fields]) =>
+        El.create("optgroup").attr("label", group ? `${group} (related)` : "This row").append(
+          ...fields.map((f) => El.create("option").prop("value", f).text(group ? f.slice(group.length + 1) : f)),
+        ).node),
     );
     add.disabled = rest.length === 0;
     const button = /** @type {HTMLButtonElement} */ (this.#part("add-button"));

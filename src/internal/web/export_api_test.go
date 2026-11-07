@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/simtabi/authama/src/internal/services/selection"
 )
 
 // Every built-in preset, as CSV, is byte for byte what the list's own CSV
@@ -273,7 +275,7 @@ func TestThePreviewFollowsTransforms(t *testing.T) {
 	if last := p.Defaults[len(p.Defaults)-1]; last.Field != "where" || p.Columns[len(p.Columns)-1] != "where" || p.Rows[0][len(p.Rows[0])-1] != "work/gh" {
 		t.Errorf("defaults %v, columns %v, rows %v", p.Defaults, p.Columns, p.Rows)
 	}
-	if len(p.Steps.Kinds) != 7 || len(p.Steps.Formats) == 0 || len(p.Steps.Aggregates) == 0 {
+	if len(p.Steps.Kinds) != len(selection.Transforms) || len(p.Steps.Kinds) < 8 || len(p.Steps.Formats) == 0 || len(p.Steps.Aggregates) == 0 {
 		t.Errorf("steps = %+v", p.Steps)
 	}
 	if got := p.Stages[len(p.Stages)-1]; got.Name != "transform 1 template" || got.Rows != 1 {
