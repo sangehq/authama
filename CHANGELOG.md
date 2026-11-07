@@ -8,6 +8,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Fix buttons on the Overview.** Each row that needs attention keeps its command and, where the
+  web UI can make the fix, adds a button: *Preview the fix* for `ssh reconcile` and
+  `doctor --fix`, which previews the change in place, and a link to Doctor, Keys or the Hosts
+  page's *Pin host keys* panel for the fixes that need a choice. `init` and `migrate` stay on
+  the CLI. A test holds every fix in `overview.go` to this list.
+- **Progress on slow CLI steps.** On a terminal, `ssh knownhosts pin` and `ssh reconcile` show
+  a one-line spinner with the elapsed time on stderr when a scan or the minting takes more than a
+  second, cleared before anything else is printed or asked. Nothing is drawn on a pipe, in a log
+  or under `TERM=dumb`, and no escape codes are written.
+- **Empty lists say how to start.** `ssh snapshots list`, `ssh validate` and `ssh vm sync` with
+  nothing to show now name the first step, as the web UI's empty states do. Each line still
+  starts with the words it printed before.
+
 - **`ssh git status --json`.** One document, `{"version": 1, "default_mode": …, "checkouts": […]}`,
   with each checkout's path, state (`managed`, `unmanaged`, `no-origin`), URL, mode, owner, repo,
   profile and where the profile came from (`remote` or `owner`). Fields are only ever added; a

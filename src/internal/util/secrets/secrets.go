@@ -21,7 +21,8 @@ const (
 // every provider call would be unusable. Failures are not cached: the usual
 // reason one fails is a locked store, and caching that would mean the user
 // unlocks it, retries, and gets the same empty token for the life of the
-// process. That is invisible in a one-shot CLI run and permanent in the TUI.
+// process. That is invisible in a one-shot CLI run and permanent in a
+// long-running one such as the web server.
 var cache sync.Map // command -> resolved secret (successes only)
 
 // Resolve returns the secret for a token value: cmd:<command> runs the command

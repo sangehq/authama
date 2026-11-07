@@ -1,7 +1,7 @@
 // Package query is the read-only view layer over the manifest + inventory that
 // backs list/view (and feeds audit).
 // It returns structured data only; rendering lives with the caller, so the CLI and
-// the future TUI format it however they like. Provider category powers --type; the
+// the web UI format it however they like. Provider category powers --type; the
 // host's free-form tags power --tag.
 package query
 

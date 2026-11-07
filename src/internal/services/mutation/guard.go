@@ -34,8 +34,9 @@ var heldLock func()
 // descriptor, and Acquire blocks until it is free, so a second call in the same
 // process waits forever on a lock that same process is holding - a deadlock with
 // no output at all. One CLI command mutates once and exits, which is why this
-// went unnoticed; the TUI is one process that mutates repeatedly (reconcile,
-// then pin, then rotate) and hangs on the second action. Nothing is given up by
+// went unnoticed; the terminal menu (since removed) was one process that
+// mutated repeatedly (reconcile, then pin, then rotate) and hung on the second
+// action. Nothing is given up by
 // holding it: the lock exists to serialize separate processes, and within one
 // process these run in sequence anyway.
 func SnapshotBeforeMutation(p paths.Paths, retain int) string {

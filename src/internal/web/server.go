@@ -1,10 +1,10 @@
 // Package web is the `authama serve` command's localhost web UI.
 //
-// Server-rendered html/template pages over the same services the CLI and the
-// TUI call, with a little vanilla JavaScript and Tabler's CSS, all embedded in
+// Server-rendered html/template pages over the same services the CLI calls,
+// with a little vanilla JavaScript and Tabler's CSS, all embedded in
 // the binary: the page makes no network request beyond this server. It never
-// imports internal/cli, which holds the TUI and process-wide state a
-// long-lived server cannot share (imports_test.go holds it to that).
+// imports internal/cli, which holds process-wide state a long-lived server
+// cannot share (imports_test.go holds it to that).
 //
 // Reading takes no lock. A change takes it only while it is checked and made
 // (see services/change), never while a person reads its preview, so a running

@@ -224,8 +224,7 @@ func newKeyListCmd() *cobra.Command {
 	return cmd
 }
 
-// writeKeyTable renders the key table (shared with the TUI once it reaches CLI
-// parity).
+// writeKeyTable renders the key table.
 func writeKeyTable(out io.Writer, rows []keysvc.Row) {
 	if len(rows) == 0 {
 		_, _ = fmt.Fprintln(out, "no keys in the manifest (add one with `authama ssh key add`)")

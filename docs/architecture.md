@@ -48,8 +48,8 @@ src/                # THE GO MODULE. go.mod is here, so every `go` command runs
                     #   web UI's previewable changes), history, jobs, settings,
                     #   cleaner (stale pins and records), dockerctx (VM Docker
                     #   contexts), gitremote (a checkout's origin transport),
-                    #   opstore (keys kept in 1Password), overview (the TUI
-                    #   banner and web overview), pubkeys (regenerate .pub)
+                    #   opstore (keys kept in 1Password), overview (the web
+                    #   overview's state rows and fixes), pubkeys (regenerate .pub)
     platform/       # build-tagged OS predicates and terminal handling
                     #   (*_darwin.go, *_linux.go, *_windows.go, *_other.go)
     web/            # serve: routes, templates, the preview/confirm engine
@@ -103,8 +103,8 @@ The token feature follows the same layering as the SSH side:
   is built once per command; in dev mode it maps every path into the sandbox
   and hides the tools' own path variables, so a test or a `--dev-root` run
   cannot reach the real files.
-- `internal/cli/token.go`, `token_more.go` and `tui_tokens.go` are the `token`
-  group and the TUI's Auth tokens menu; `internal/services/change/tokens.go` and
+- `internal/cli/token.go` and `token_more.go` are the `token` group;
+  `internal/services/change/tokens.go` and
   the web Tokens page make delete and apply previewable like every other web change.
 - `doctor` reads token-file modes through `tokensvc`, warns on a loose one (fails
   under `--strict`) and repairs them with `--fix`.
@@ -382,13 +382,21 @@ command byte for byte. The copy holds no private key, so a preview cannot leak o
 cannot show - private keys, Docker contexts, notifications, other machines - is listed instead, or
 runs as a job, where nothing is previewed and the output is shown as it happens.
 
-### Why is the TUI a plain menu?
+### Why is the CLI plain text, and where did the terminal menu go?
 
 The Python version used `rich` and `questionary`. The Go binary has one third-party dependency,
 `cobra`, and no presentation library — so output is plain text that a pipe can
-read and the TUI is a numbered stdin menu rather than a full-screen application.
-That is a real loss of polish and a real gain in portability: nothing to render,
-nothing to detect, and every command's output is machine-readable by default.
+read, with no colour or escape codes (`TestNoSourceEmitsTerminalEscapes`). That is a real
+loss of polish and a real gain in portability: nothing to render, nothing to detect, and every
+command's output is machine-readable by default.
+
+The terminal menu that once sat on top (the removed `tui` command) was a numbered stdin menu for
+the same reason. It was [removed](tools/tui.md) in favour of the web UI, which covers every menu entry,
+and the CLI, which every entry already called. What the menu's planned redesign asked for went
+to those two instead: the overview's fixes are buttons (a change previewed in place, or the page
+that makes it), a slow scan or reconcile shows a one-line progress spinner on a terminal's stderr
+(drawn with a carriage return, never on a pipe), and an empty list says how its first item
+comes to be.
 
 ### Why does a `key_name` repeat across profiles?
 
