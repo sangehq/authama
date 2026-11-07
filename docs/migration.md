@@ -42,8 +42,8 @@ and the Scoop manifest - to `authama`. Your config, keys and `~/.ssh` need nothi
 |---|---|---|
 | `sshmgr` binary | the same program | still installed, still runs every command, but prints a one-line deprecation notice on stderr (not for `vm proxy` or completion); since [removed](#removing-the-sshmgr-alias) |
 | Release assets | `sshmgr_<os>_<arch>.tar.gz`/`.zip`, `sshmgr_linux_<arch>.{deb,rpm,apk}` | `authama_*` (the bare `sshmgr_<os>_<arch>` binaries are still attached) |
-| Homebrew | `brew install --cask simtabi/tap/sshmgr` | `brew install --cask simtabi/tap/authama`; the tap renames `sshmgr` to `authama` |
-| Scoop | `simtabi/sshmgr` | `simtabi/authama`; `simtabi/sshmgr` is still published, deprecated |
+| Homebrew | `brew install --cask simtabi/tap/sshmgr` | `brew install --cask simtabi/tap/authama`; the tap renamed `sshmgr` to `authama` (both since withdrawn, see [installation](installation.md)) |
+| Scoop | `simtabi/sshmgr` | `simtabi/authama`; `simtabi/sshmgr` was published, deprecated (both since withdrawn) |
 | deb / rpm / apk | package `sshmgr` | package `authama`, which replaces `sshmgr` |
 | `known_hosts` tag | `sshmgr` | `authama`; old `sshmgr` tags are still recognized |
 | Expiry reminder job | `ssh_manager.expiry` | `authama.expiry`; `notify install` removes the old job |
