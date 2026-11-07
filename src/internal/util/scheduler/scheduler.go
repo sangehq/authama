@@ -22,13 +22,18 @@ const LegacyLabel = "ssh_manager.expiry"
 // VMSyncLabel is the job `authama ssh vm sync --install-schedule` installs.
 const VMSyncLabel = "authama.vmsync"
 
+// ExportsLabel is the job `authama export schedule install` installs: it
+// writes every scheduled export to its folder.
+const ExportsLabel = "authama.exports"
+
 // job is what each label's job is called, and when it runs.
 type job struct{ description, at string }
 
 var jobs = map[string]job{
-	Label:       {"authama key-expiry notifier", notifyHour},
-	LegacyLabel: {"authama key-expiry notifier", notifyHour},
-	VMSyncLabel: {"authama VM host sync", vmSyncHour},
+	Label:        {"authama key-expiry notifier", notifyHour},
+	LegacyLabel:  {"authama key-expiry notifier", notifyHour},
+	VMSyncLabel:  {"authama VM host sync", vmSyncHour},
+	ExportsLabel: {"authama scheduled exports", exportsHour},
 }
 
 func jobFor(label string) job {

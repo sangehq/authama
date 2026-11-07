@@ -61,8 +61,12 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /exports/run", exportAPI{s}.handleRun)
 	mux.HandleFunc("GET /exports/{name}", h.handleExport)
 	mux.HandleFunc("GET /api/dataset", exportAPI{s}.handleDataset)
+	mux.HandleFunc("GET /api/export/selections", exportSelectionsAPI{s}.handleList)
+	mux.HandleFunc("GET /exports/compare", exportSelectionsAPI{s}.handleCompare)
 	mux.HandleFunc("GET /about/licenses", h.handleLicences)
 	if !s.opts.ReadOnly {
+		mux.HandleFunc("POST /api/export/selections", exportSelectionsAPI{s}.handleSave)
+		mux.HandleFunc("POST /api/export/selections/delete", exportSelectionsAPI{s}.handleDelete)
 		mux.HandleFunc("POST /changes/preview", h.handlePreview)
 		mux.HandleFunc("POST /changes/apply", h.handleApply)
 		mux.HandleFunc("POST /jobs/review", jh.handleJobReview)

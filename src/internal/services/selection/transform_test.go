@@ -220,3 +220,60 @@ func TestTransformsParse(t *testing.T) {
 		t.Error("an unknown transform field was accepted")
 	}
 }
+
+// A pivot: a row per profile, a column per tag (a list field puts a host in
+// each of its tags' columns), cells counting hosts, and totals both ways
+// that count each host once.
+func TestAPivotCountsRowsByTwoFields(t *testing.T) {
+	ds, _, _ := build(t)
+	res, err := Run(ds, Selection{Version: Version, Grain: GrainHost,
+		Transforms: []Transform{{Kind: TransformPivot, By: []string{"profile"}, Field: "tags", Totals: true}},
+		Sort:       []Sort{{Field: "profile"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"profile", PivotEmpty, "db", "prd", "stg", "web", TotalLabel}; !reflect.DeepEqual(res.Columns, want) {
+		t.Fatalf("columns = %q, want %q", res.Columns, want)
+	}
+	var got []string
+	for _, r := range res.Rows {
+		got = append(got, strings.Join(Cells(r), ","))
+	}
+	want := []string{
+		"adelsaiq,0,0,0,1,1,1",
+		"simtabi,1,1,2,0,1,3",
+		"work,1,0,0,0,0,1",
+		"total,2,1,2,1,2,5",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("rows:\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	// Another aggregate: the cells sum the ports.
+	res, err = Run(ds, Selection{Version: Version, Grain: GrainHost,
+		Transforms: []Transform{{Kind: TransformPivot, By: []string{"profile"}, Field: "user", Aggregates: []Aggregate{{Op: "sum", Field: "port"}}}},
+		Sort:       []Sort{{Field: "profile"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := Cells(res.Rows[1]); strings.Join(res.Columns, ",") != "profile,git,ploi" || strings.Join(got, ",") != "simtabi,0,66" {
+		t.Errorf("sum: %q %q", res.Columns, got)
+	}
+	for want, tr := range map[string]Transform{
+		"a pivot needs the fields":     {Kind: TransformPivot, Field: "tags"},
+		`its columns: no field "nope"`: {Kind: TransformPivot, By: []string{"profile"}, Field: "nope"},
+		"cannot be both its rows":      {Kind: TransformPivot, By: []string{"profile"}, Field: "profile"},
+		"one aggregate, not 2":         {Kind: TransformPivot, By: []string{"profile"}, Field: "user", Aggregates: []Aggregate{{Op: "count"}, {Op: "count"}}},
+		`no aggregate "avg"`:           {Kind: TransformPivot, By: []string{"profile"}, Field: "user", Aggregates: []Aggregate{{Op: "avg"}}},
+	} {
+		_, err := Run(ds, Selection{Version: Version, Grain: GrainHost, Transforms: []Transform{tr}})
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%+v: %v, want %q", tr, err, want)
+		}
+	}
+	// A column named like a field the rows are by: every host's x is "user".
+	_, err = Run(ds, Selection{Version: Version, Grain: GrainHost, Transforms: []Transform{
+		{Kind: TransformTemplate, As: "x", Template: "user"}, {Kind: TransformPivot, By: []string{"user"}, Field: "x"}}})
+	if err == nil || !strings.Contains(err.Error(), "also the name of a field it is by") {
+		t.Errorf("clash: %v", err)
+	}
+}

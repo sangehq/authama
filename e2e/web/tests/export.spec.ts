@@ -72,3 +72,53 @@ test('Export is in the menu and the palette', async ({ page }) => {
   await expect(page).toHaveURL(/\/export/);
   await expect(page.getByRole('heading', { name: 'Export', level: 1 })).toBeVisible();
 });
+
+test('Saved selections: save, open, compare, and delete; the manifest goes through a preview', async ({ page }) => {
+  await page.goto('/export');
+  const exp = page.locator('[data-export-page]');
+  const preview = exp.getByRole('region', { name: 'Preview of the first rows' });
+  await expect(preview.locator('tbody tr').first()).toBeVisible();
+  const saved = exp.getByRole('group', { name: 'Saved selections' });
+
+  // Save every host as mine: it is listed at once.
+  await saved.getByLabel('A name to save this selection as').fill('e2e-all');
+  await saved.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(saved.getByRole('button', { name: 'e2e-all', exact: true })).toBeVisible();
+
+  // Narrow the page, then compare it with the saved one: the hosts it left
+  // out are only in e2e-all.
+  await exp.getByLabel('Keep rows containing').fill('app');
+  await expect(preview.locator('tbody tr')).toHaveCount(3);
+  await saved.getByRole('button', { name: 'Compare with e2e-all' }).click();
+  const cmp = exp.getByRole('region', { name: 'Comparison' });
+  await expect(cmp).toBeVisible();
+  await expect(cmp.getByText(/3 in both, 0 only here, \d+ only in e2e-all\./)).toBeVisible();
+  await expect(cmp.getByRole('heading', { name: /^Only in e2e-all/ })).toBeVisible();
+  await cmp.getByRole('button', { name: 'Close the comparison' }).click();
+  await expect(cmp).toBeHidden();
+
+  // Opening it brings every host back.
+  await saved.getByRole('button', { name: 'e2e-all', exact: true }).click();
+  await expect(exp.getByLabel('Keep rows containing')).toHaveValue('');
+  await expect(preview.locator('tbody tr').nth(3)).toBeVisible();
+
+  // Deleting it takes it off the list.
+  await saved.getByRole('button', { name: 'Delete e2e-all (mine)' }).click();
+  await expect(saved.getByRole('button', { name: 'e2e-all', exact: true })).toHaveCount(0);
+
+  // The manifest's store is a change, previewed before anything is written.
+  await saved.getByLabel('A name to save this selection as').fill('e2e-shared');
+  await saved.getByLabel('Where to save it').selectOption('manifest');
+  await saved.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page).toHaveURL(/\/changes\/preview/);
+  await expect(page.getByText('export selections save e2e-shared').first()).toBeVisible();
+});
+
+test('Add column groups related fields', async ({ page }) => {
+  await page.goto('/export');
+  const exp = page.locator('[data-export-page]');
+  await expect(exp.getByRole('region', { name: 'Preview of the first rows' }).locator('tbody tr').first()).toBeVisible();
+  const add = exp.getByLabel('A field to add as a column');
+  await expect(add.locator('optgroup[label="This row"]')).toHaveCount(1);
+  await expect(add.locator('optgroup[label="key (related)"] option').first()).toBeAttached();
+});

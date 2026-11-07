@@ -36,6 +36,7 @@ func newExportCmd() *cobra.Command {
 		sources, commands                   []string
 		transforms, templates, dedupe       []string
 		groupBy, aggregates                 []string
+		pivot                               string
 		include, exclude, since, until      string
 		limit                               int
 		narrow, noHeader, compact, listFlds bool
@@ -61,7 +62,9 @@ func newExportCmd() *cobra.Command {
 			"Transforms run after the filters and before the columns, in this order: each --transform\n" +
 			"(a step as JSON, the Export page's shape), each --template (as=text naming fields in\n" +
 			"braces), --dedupe (keep the first row of each), then --group-by with --aggregate\n" +
-			"(count, or op:field for sum, min, max, list or first) and --totals. A column can name\n" +
+			"(count, or op:field for sum, min, max, list or first) and --totals, or --pivot rows:column\n" +
+			"(a row per value of rows, a column per value of column, cells by the first --aggregate,\n" +
+			"count by default) with --totals. A column can name\n" +
 			"the fields they write. The SSH client formats below take none.\n\n" +
 			"Hosts also go out as an SSH client imports them: --format " + strings.Join(encode.HostNames(), ", ") + ".\n" +
 			"ssh_config is the managed config of the hosts kept, byte for byte what `ssh config export --flat`\n" +
@@ -77,6 +80,7 @@ func newExportCmd() *cobra.Command {
 			"  " + brand.Command + " export hosts --fields\n" +
 			"  " + brand.Command + " export hosts --template 'ssh=ssh {user}@{hostname} -p {port}' --columns alias,ssh\n" +
 			"  " + brand.Command + " export hosts --group-by profile --aggregate count,list:env --totals --format markdown\n" +
+			"  " + brand.Command + " export hosts --pivot profile:env --totals\n" +
 			"  " + brand.Command + " export --selection sel.json --format php --out hosts.php\n" +
 			"  " + brand.Command + " export prd-hosts --format json\n" +
 			"  " + brand.Command + " export hosts --profile simtabi --format ssh_config --out simtabi.ssh_config\n" +
@@ -95,7 +99,7 @@ func newExportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			steps, err := exportTransforms(transforms, templates, dedupe, groupBy, aggregates, totals)
+			steps, err := exportTransforms(transforms, templates, dedupe, groupBy, aggregates, pivot, totals)
 			if err != nil {
 				return err
 			}
@@ -204,16 +208,17 @@ func newExportCmd() *cobra.Command {
 	f.StringArrayVar(&templates, "template", nil, "a column from a template: as={profile}/{alias}")
 	f.StringSliceVar(&dedupe, "dedupe", nil, "keep the first row of each distinct value of these fields")
 	f.StringSliceVar(&groupBy, "group-by", nil, "a row per distinct value of these fields")
-	f.StringSliceVar(&aggregates, "aggregate", nil, "with --group-by: count, or op:field[=as] for sum, min, max, list, first")
-	f.BoolVar(&totals, "totals", false, "with --group-by: a last row over every group")
+	f.StringSliceVar(&aggregates, "aggregate", nil, "with --group-by or --pivot: count, or op:field[=as] for sum, min, max, list, first")
+	f.BoolVar(&totals, "totals", false, "with --group-by: a last row over every group; with --pivot, also a total column")
+	f.StringVar(&pivot, "pivot", "", "rows:column - a row per value of the rows fields (comma-separated), a column per value of column")
 	f.BoolVar(&includeGit, "include-git", false, "host formats: also export git hosts (user git, or a github or gitlab provider)")
-	cmd.AddCommand(newExportSelectionsCmd())
+	cmd.AddCommand(newExportSelectionsCmd(), newExportScheduleCmd())
 	return cmd
 }
 
 // exportTransforms are the transform steps the flags name, in the order the
 // help gives.
-func exportTransforms(raw, templates, dedupe, groupBy, aggregates []string, totals bool) ([]selection.Transform, error) {
+func exportTransforms(raw, templates, dedupe, groupBy, aggregates []string, pivot string, totals bool) ([]selection.Transform, error) {
 	var out []selection.Transform
 	for _, r := range raw {
 		var t selection.Transform
@@ -234,13 +239,27 @@ func exportTransforms(raw, templates, dedupe, groupBy, aggregates []string, tota
 	if len(dedupe) > 0 {
 		out = append(out, selection.Transform{Kind: selection.TransformDedupe, By: dedupe})
 	}
-	if len(groupBy) == 0 {
+	var g selection.Transform
+	switch {
+	case len(groupBy) > 0 && pivot != "":
+		return nil, errors.New("give --group-by or --pivot, not both")
+	case len(groupBy) > 0:
+		g = selection.Transform{Kind: selection.TransformGroup, By: groupBy, Totals: totals}
+	case pivot != "":
+		rows, column, ok := strings.Cut(pivot, ":")
+		if !ok || strings.TrimSpace(rows) == "" || strings.TrimSpace(column) == "" {
+			return nil, fmt.Errorf("--pivot %q: give rows:column, e.g. profile:env", pivot)
+		}
+		g = selection.Transform{Kind: selection.TransformPivot, Field: strings.TrimSpace(column), Totals: totals}
+		for _, r := range strings.Split(rows, ",") {
+			g.By = append(g.By, strings.TrimSpace(r))
+		}
+	default:
 		if len(aggregates) > 0 || totals {
-			return nil, errors.New("--aggregate and --totals need --group-by")
+			return nil, errors.New("--aggregate and --totals need --group-by or --pivot")
 		}
 		return out, nil
 	}
-	g := selection.Transform{Kind: selection.TransformGroup, By: groupBy, Totals: totals}
 	for _, a := range aggregates {
 		spec, as, _ := strings.Cut(a, "=")
 		op, field, _ := strings.Cut(spec, ":")

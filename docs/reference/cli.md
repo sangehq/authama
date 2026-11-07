@@ -22,6 +22,13 @@ Every command also takes the global flag:
 - [`authama doctor`](#authama-doctor) - Diagnose deps, perms, agent, known_hosts, drift, dangling keys, and token-file perms
 - [`authama events`](#authama-events) - Every change seen to a file under ~/.ssh, the config home or a token file, newest first
 - [`authama export`](#authama-export) - Write any list as CSV, JSON, YAML, a PHP or JS array, Markdown or HTML, or hosts for an SSH client, filtered
+  - [`authama export schedule`](#authama-export-schedule) - Write saved selections to a folder every day
+    - [`authama export schedule add`](#authama-export-schedule-add) - Schedule a saved selection to be written to a folder every day
+    - [`authama export schedule install`](#authama-export-schedule-install) - Register a daily job that writes the scheduled exports
+    - [`authama export schedule list`](#authama-export-schedule-list) - List the export schedules
+    - [`authama export schedule remove`](#authama-export-schedule-remove) - Stop writing a saved selection to its folder
+    - [`authama export schedule run`](#authama-export-schedule-run) - Write every scheduled export now
+    - [`authama export schedule uninstall`](#authama-export-schedule-uninstall) - Remove the daily job that writes the scheduled exports
   - [`authama export selections`](#authama-export-selections) - List, show, save and delete export selections saved by name
     - [`authama export selections delete`](#authama-export-selections-delete) - Delete a saved selection
     - [`authama export selections list`](#authama-export-selections-list) - List the saved selections, both stores
@@ -219,7 +226,9 @@ descends). --format is one of csv, html, js, json, jsonl, markdown, php, tsv, ya
 Transforms run after the filters and before the columns, in this order: each --transform
 (a step as JSON, the Export page's shape), each --template (as=text naming fields in
 braces), --dedupe (keep the first row of each), then --group-by with --aggregate
-(count, or op:field for sum, min, max, list or first) and --totals. A column can name
+(count, or op:field for sum, min, max, list or first) and --totals, or --pivot rows:column
+(a row per value of rows, a column per value of column, cells by the first --aggregate,
+count by default) with --totals. A column can name
 the fields they write. The SSH client formats below take none.
 
 Hosts also go out as an SSH client imports them: --format hosts-csv, iterm2, mobaxterm, putty, remmina, securecrt, ssh_config, termius, windows-terminal.
@@ -238,6 +247,7 @@ authama export [deployments|events|history|hosts|keys|profiles|snapshots|tokens|
 
 Subcommands:
 
+- [`schedule`](#authama-export-schedule) - Write saved selections to a folder every day
 - [`selections`](#authama-export-selections) - List, show, save and delete export selections saved by name
 
 Examples:
@@ -249,6 +259,7 @@ Examples:
   authama export hosts --fields
   authama export hosts --template 'ssh=ssh {user}@{hostname} -p {port}' --columns alias,ssh
   authama export hosts --group-by profile --aggregate count,list:env --totals --format markdown
+  authama export hosts --pivot profile:env --totals
   authama export --selection sel.json --format php --out hosts.php
   authama export prd-hosts --format json
   authama export hosts --profile simtabi --format ssh_config --out simtabi.ssh_config
@@ -258,7 +269,7 @@ Examples:
 Flags:
 
 ```
-      --aggregate strings       with --group-by: count, or op:field[=as] for sum, min, max, list, first
+      --aggregate strings       with --group-by or --pivot: count, or op:field[=as] for sum, min, max, list, first
       --area strings            events: only these areas (ssh, config, auth)
       --columns strings         the columns, by field, in order; field=heading renames one
       --command strings         history: only these commands, or their subcommands
@@ -277,6 +288,7 @@ Flags:
       --narrow                  profiles: count and list only the keys --key chose
       --no-header               csv, tsv, markdown, html: leave the heading row out
   -o, --out string              write to this file (mode 0600) instead of stdout
+      --pivot string            rows:column - a row per value of the rows fields (comma-separated), a column per value of column
       --profile strings         only these profiles
       --role strings            only these roles
       --selection string        a selection as a JSON file (the Export page's), or a saved selection's name, instead of a list name
@@ -288,9 +300,141 @@ Flags:
       --tag strings             only rows with one of these tags
       --template stringArray    a column from a template: as={profile}/{alias}
       --tool strings            tokens: only these tools
-      --totals                  with --group-by: a last row over every group
+      --totals                  with --group-by: a last row over every group; with --pivot, also a total column
       --transform stringArray   a transform step as JSON, e.g. {"kind":"map","field":"status","values":{"needs-redeploy":"pending"}}
       --until string            only rows at or before this time
+```
+
+## authama export schedule
+
+A schedule writes a saved selection to a folder, in one format, as <name>.<extension>,
+replacing the file each time. `schedule install` registers one daily job with this
+system's scheduler (launchd, systemd or cron, schtasks) that runs `schedule run`, which
+writes every schedule; `schedule run` can be run by hand too. Schedules are yours
+alone, kept under the state home: a folder is a path on this machine.
+
+```
+authama export schedule
+```
+
+Subcommands:
+
+- [`add`](#authama-export-schedule-add) - Schedule a saved selection to be written to a folder every day
+- [`install`](#authama-export-schedule-install) - Register a daily job that writes the scheduled exports
+- [`list`](#authama-export-schedule-list) - List the export schedules
+- [`remove`](#authama-export-schedule-remove) - Stop writing a saved selection to its folder
+- [`run`](#authama-export-schedule-run) - Write every scheduled export now
+- [`uninstall`](#authama-export-schedule-uninstall) - Remove the daily job that writes the scheduled exports
+
+## authama export schedule add
+
+Schedule the saved selection <selection> to be written to --to every day, in --format
+(csv by default; the SSH client formats are not scheduled). Adding the same selection
+and format again replaces the folder.
+
+```
+authama export schedule add <selection> [flags]
+```
+
+Examples:
+
+```sh
+  authama export schedule add prd-hosts --to ~/Reports
+  authama export schedule add prd-hosts --format json --to ~/Reports
+```
+
+Flags:
+
+```
+      --format string   one of csv, html, js, json, jsonl, markdown, php, tsv, yaml (default "csv")
+      --to string       the folder to write to (made, mode 0700, if it is not there)
+```
+
+## authama export schedule install
+
+Register a daily job that writes the scheduled exports.
+
+```
+authama export schedule install
+```
+
+Examples:
+
+```sh
+  authama export schedule install
+```
+
+## authama export schedule list
+
+List the export schedules.
+
+```
+authama export schedule list
+```
+
+Aliases: `ls`
+
+Examples:
+
+```sh
+  authama export schedule list
+```
+
+## authama export schedule remove
+
+Remove the schedules of <selection>: every format, or only --format. The files already
+written stay where they are.
+
+```
+authama export schedule remove <selection> [flags]
+```
+
+Examples:
+
+```sh
+  authama export schedule remove prd-hosts
+  authama export schedule remove prd-hosts --format json
+```
+
+Flags:
+
+```
+      --format string   only the schedule in this format
+```
+
+## authama export schedule run
+
+Write every schedule's file now, as the daily job does. A schedule that fails is
+reported and the rest still run; the command fails if any did.
+
+```
+authama export schedule run [flags]
+```
+
+Examples:
+
+```sh
+  authama export schedule run
+```
+
+Flags:
+
+```
+      --quiet   print nothing unless one fails
+```
+
+## authama export schedule uninstall
+
+Remove the daily job that writes the scheduled exports.
+
+```
+authama export schedule uninstall
+```
+
+Examples:
+
+```sh
+  authama export schedule uninstall
 ```
 
 ## authama export selections

@@ -146,3 +146,41 @@ func TestDefaultStoreReadsTheSetting(t *testing.T) {
 		}
 	}
 }
+
+func TestSchedulesAreCheckedAndReplaced(t *testing.T) {
+	p := home(t)
+	dir := t.TempDir()
+	for _, c := range []struct {
+		s    Schedule
+		want string
+	}{
+		{Schedule{Selection: "hosts", Format: "csv", Folder: dir}, "built-in list"},
+		{Schedule{Selection: "x", Format: "xlsx", Folder: dir}, "unknown format"},
+		{Schedule{Selection: "x", Format: "ssh_config", Folder: dir}, "writes hosts for an SSH client"},
+		{Schedule{Selection: "x", Format: "csv", Folder: "reports"}, "not an absolute path"},
+	} {
+		if err := AddSchedule(p, c.s); err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%+v: %v, want %q", c.s, err, c.want)
+		}
+	}
+	if err := AddSchedule(p, Schedule{Selection: "x", Format: "csv", Folder: dir}); err != nil {
+		t.Fatal(err)
+	}
+	other := filepath.Join(dir, "other")
+	if err := AddSchedule(p, Schedule{Selection: "x", Format: "csv", Folder: other}); err != nil {
+		t.Fatal(err)
+	}
+	all, err := Schedules(p)
+	if err != nil || len(all) != 1 || all[0].Folder != other {
+		t.Errorf("adding again should replace: %+v %v", all, err)
+	}
+	if f, _ := all[0].File(); f != filepath.Join(other, "x.csv") {
+		t.Errorf("file = %s", f)
+	}
+	if err := os.WriteFile(SchedulesFile(p), []byte(`{"version":2,"schedules":[]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Schedules(p); err == nil || !strings.Contains(err.Error(), "version 2") {
+		t.Errorf("a newer file: %v", err)
+	}
+}

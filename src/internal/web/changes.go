@@ -15,6 +15,7 @@ import (
 	"github.com/simtabi/authama/src/internal/core/tokens"
 	"github.com/simtabi/authama/src/internal/services/change"
 	"github.com/simtabi/authama/src/internal/services/editor"
+	"github.com/simtabi/authama/src/internal/services/savedsel"
 	"github.com/simtabi/authama/src/internal/services/tokensvc"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
@@ -32,51 +33,53 @@ import (
 // actionFields are the form fields each action reads, in the order the
 // confirmation carries them.
 var actionFields = map[string][]string{
-	"profile-add":       {"name", "key_scope", "key_name", "key_comment", "category"},
-	"profile-comment":   {"name", "key_comment"},
-	"profile-edit":      {"name", "key_scope", "key_name"},
-	"profile-delete":    {"name", "purge"},
-	"profile-category":  {"name", "category"},
-	"host-add":          {"profile", "alias", "hostname", "user", "port", "tags"},
-	"host-edit":         {"profile", "alias", "hostname", "user", "port", "tags"},
-	"host-delete":       {"profile", "alias"},
-	"key-delete":        {"profile", "key"},
-	"key-reserve":       {"key", "for", "note"},
-	"key-unreserve":     {"key"},
-	"vm-add":            {"profile", "alias", "hypervisor", "vm", "user"},
-	"config-render":     {},
-	"reconcile":         {},
-	"keygen":            {"target"},
-	"key-add":           {"profile", "key", "key_type", "host"},
-	"providers-export":  {},
-	"snapshots-prune":   {"keep"},
-	"doctor-fix":        {},
-	"host-apply":        {"profile", "specs", "create", "category"},
-	"clean":             {"adopt"},
-	"bundle":            {"keep"},
-	"vm-docker-context": {"alias"},
-	"snapshots-restore": {"id"},
-	"notify-test":       {},
-	"audit-notify":      {},
-	"token-delete":      {"target", "host"},
-	"token-apply":       {},
-	"vm-sync":           {"repin"},
-	"vm-adopt-key":      {"key", "profile", "alias", "hypervisor", "vm", "user"},
-	"vm-schedule":       {"install"},
-	"settings-init":     {},
-	"token-set":         {"target", "service", "server", "username", "scope", "docker_mode", "secret_ref"},
-	"token-init":        {"t_composer", "t_npm", "t_docker", "t_git", "t_netrc", "t_pypi", "t_cargo", "t_gem", "t_gradle", "t_maven", "t_yarn", "t_helm", "t_helm-oci", "t_gh"},
-	"token-import":      {},
-	"token-config-edit": {"body"},
-	"key-lifetime":      {"key", "lifetime"},
-	"owner-init":        {},
-	"owner-pin-set":     {"pin_current_ref", "pin_new_ref", "pin_confirm_ref"},
-	"owner-pin-remove":  {"pin_current_ref"},
-	"owner-reseal":      {},
-	"owner-forget":      {"confirm"},
-	"owner-fingerprint": {"on"},
-	"repair":            {},
-	"factory-reset":     {"confirm"},
+	"profile-add":             {"name", "key_scope", "key_name", "key_comment", "category"},
+	"profile-comment":         {"name", "key_comment"},
+	"profile-edit":            {"name", "key_scope", "key_name"},
+	"profile-delete":          {"name", "purge"},
+	"profile-category":        {"name", "category"},
+	"host-add":                {"profile", "alias", "hostname", "user", "port", "tags"},
+	"host-edit":               {"profile", "alias", "hostname", "user", "port", "tags"},
+	"host-delete":             {"profile", "alias"},
+	"key-delete":              {"profile", "key"},
+	"key-reserve":             {"key", "for", "note"},
+	"key-unreserve":           {"key"},
+	"vm-add":                  {"profile", "alias", "hypervisor", "vm", "user"},
+	"config-render":           {},
+	"reconcile":               {},
+	"keygen":                  {"target"},
+	"key-add":                 {"profile", "key", "key_type", "host"},
+	"providers-export":        {},
+	"snapshots-prune":         {"keep"},
+	"doctor-fix":              {},
+	"host-apply":              {"profile", "specs", "create", "category"},
+	"clean":                   {"adopt"},
+	"bundle":                  {"keep"},
+	"vm-docker-context":       {"alias"},
+	"snapshots-restore":       {"id"},
+	"notify-test":             {},
+	"audit-notify":            {},
+	"token-delete":            {"target", "host"},
+	"token-apply":             {},
+	"vm-sync":                 {"repin"},
+	"vm-adopt-key":            {"key", "profile", "alias", "hypervisor", "vm", "user"},
+	"vm-schedule":             {"install"},
+	"settings-init":           {},
+	"export-selection-save":   {"name", "selection"},
+	"export-selection-delete": {"name"},
+	"token-set":               {"target", "service", "server", "username", "scope", "docker_mode", "secret_ref"},
+	"token-init":              {"t_composer", "t_npm", "t_docker", "t_git", "t_netrc", "t_pypi", "t_cargo", "t_gem", "t_gradle", "t_maven", "t_yarn", "t_helm", "t_helm-oci", "t_gh"},
+	"token-import":            {},
+	"token-config-edit":       {"body"},
+	"key-lifetime":            {"key", "lifetime"},
+	"owner-init":              {},
+	"owner-pin-set":           {"pin_current_ref", "pin_new_ref", "pin_confirm_ref"},
+	"owner-pin-remove":        {"pin_current_ref"},
+	"owner-reseal":            {},
+	"owner-forget":            {"confirm"},
+	"owner-fingerprint":       {"on"},
+	"repair":                  {},
+	"factory-reset":           {"confirm"},
 }
 
 // secretFields are the typed secrets each action takes. Each goes into the
@@ -367,6 +370,14 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch = change.ProvidersExport()
 	case "settings-init":
 		ch = change.SettingsInit(false)
+	case "export-selection-save":
+		name, sel, err := savedSelectionForm(f)
+		errs = append(errs, err)
+		ch = change.ExportSelectionSave(name, sel)
+	case "export-selection-delete":
+		name := strings.TrimSpace(f.Get("name"))
+		errs = append(errs, savedsel.CheckName(name))
+		ch = change.ExportSelectionDelete(name)
 	case "snapshots-prune":
 		keep, err := strconv.Atoi(strings.TrimSpace(f.Get("keep")))
 		if err != nil || keep < 0 || keep > 1000 {

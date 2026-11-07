@@ -42,3 +42,6 @@ func ShellQuote(s string) string {
 
 // VMSyncCommand is the command the scheduled VM sync runs.
 func VMSyncCommand() string { return Exe() + " ssh vm sync --quiet --yes" }
+
+// ExportsCommand is the command the scheduled exports job runs.
+func ExportsCommand() string { return Exe() + " export schedule run --quiet" }
