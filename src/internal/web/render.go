@@ -335,6 +335,8 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		},
 		// tip is ` data-tip="…"` from the catalogue in tips.go, for any element.
 		"tip": tipAttr,
+		// fixFor is the web UI's way of doing an overview row's fix, or nil.
+		"fixFor": fixFor,
 		// withTip gives a header action its explainer:
 		// (panel "Add a host" "add-host" "plus" | withTip "host-add").
 		"withTip": func(id string, a headerAction) (headerAction, error) {

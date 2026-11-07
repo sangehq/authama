@@ -86,6 +86,8 @@ var tips = map[string]string{
 	"key-unreserve":        "Previews removing the reservation, so doctor reports this loose key again. The key files stay.",
 	"docker-context":       "Previews creating a Docker context that reaches this host's Docker over ssh. Nothing is written until you confirm.",
 	"doctor-fix":           "Previews what doctor --fix repairs (permissions, missing files and folders). Nothing is written until you confirm.",
+	"overview-fix-preview": "Previews the command beside it as a change: you see what it would do, and nothing is written until you confirm.",
+	"overview-fix-open":    "Opens the page where this fix is made, since it needs a choice this row cannot make for you.",
 	"providers-export":     "Previews writing providers.json: the built-in providers as a file you can edit. Nothing is written until you confirm.",
 	"clean":                "Asks first, then previews removing stale known_hosts pins, stale records and leftover files. Nothing is removed until you confirm.",
 	"settings-init":        "Previews writing a starter authama.json with every setting at its default. Nothing is written until you confirm.",
