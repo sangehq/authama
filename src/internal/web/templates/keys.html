@@ -1,5 +1,5 @@
 {{define "content"}}
-{{template "page_header" (header "SSH" "Keys" "Every key with its fingerprint and expiry, and the loose keys kept on purpose." (only (not .ReadOnly) (panel "Add a key" "add-key" "plus" | withTip "key-add")) (only (not .ReadOnly) (panel "Mint missing keys" "mint-keys" "key" | withTip "key-mint")) (only (and (not .ReadOnly) (gt (len .Data.Rows) 0)) (panel "Rebuild public keys" "regen-pub" "refresh" | withTip "key-regen-pub-many")))}}
+{{template "page_header" (header "SSH" "Keys" "Every key with its fingerprint and expiry, and the loose keys kept on purpose." (only (not .ReadOnly) (panel "Add a key" "add-key" "plus" | withTip "key-add")) (only (not .ReadOnly) (panel "Mint missing keys" "mint-keys" "key" | withTip "key-mint")) (only (and (not .ReadOnly) (gt (len .Data.Rows) 0)) (panel "Rebuild public keys" "regen-pub" "refresh" | withTip "key-regen-pub-many")) (only (not .ReadOnly) (panel "Move the key root" "key-root" "folder" | withTip "key-root")))}}
 <div class="card">
   <div class="card-header"><h2 class="card-title">Keys</h2>{{if .Data.Rows}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data.Rows}} in the manifest</span>{{template "csv" "/exports/keys.csv"}}</div>{{end}}</div>
   {{if .Data.Rows}}
@@ -86,6 +86,15 @@
           <div class="mb-3"><label class="form-label" for="k-type">Type</label><select class="form-select" id="k-type" name="key_type"><option value="">the manifest's default</option><option>ed25519</option><option>ecdsa</option><option>rsa</option></select></div>
           <div class="mb-3"><label class="form-label" for="k-host">Wire it to host <span class="text-secondary">(optional alias in that profile)</span></label><input class="form-control" id="k-host" name="host" autocomplete="off" spellcheck="false"></div>
           <datalist id="k-profiles">{{range .Data.Rows}}<option value="{{.Ref.Profile}}">{{end}}</datalist>
+          {{template "panel_actions" ""}}
+        </form>
+{{template "panel_close"}}
+{{template "panel_open" (header "key-root" "Move the key root" "Every profile's keys live under one directory in ~/.ssh. This moves it, keys and all, in one rename.")}}
+        {{template "change_open" .}}<input type="hidden" name="action" value="key-root">
+          <p class="mb-2">Now <code>~/.ssh/{{.Data.KeyRoot}}/</code>.</p>
+          <div class="mb-2"><label class="form-label" for="kr-root">New directory</label><input class="form-control" id="kr-root" name="root" required autocomplete="off" spellcheck="false" placeholder="keys" pattern="[A-Za-z0-9_][A-Za-z0-9._\-]*"></div>
+          <div class="mb-2"><label class="form-label" for="kr-confirm">Type it again to confirm</label><input class="form-control" id="kr-confirm" name="confirm" required autocomplete="off" spellcheck="false"></div>
+          <div class="form-hint mb-2">The same as <code>authama ssh key root &lt;dir&gt;</code>. One name directly under <code>~/.ssh</code>; <code>profiles</code> returns to the default. Keys adopted where they are stay put, and <code>~/.ssh/config</code> is rendered again.</div>
           {{template "panel_actions" ""}}
         </form>
 {{template "panel_close"}}

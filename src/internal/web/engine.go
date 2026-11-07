@@ -331,6 +331,8 @@ type KeysView struct {
 	Public map[string]string
 	// Profiles are the profiles that have a key, once each, in manifest order.
 	Profiles []string
+	// KeyRoot is the directory under ~/.ssh that holds the profile directories.
+	KeyRoot string
 }
 
 // Keys lists every key, as `authama ssh key list` does.
@@ -343,7 +345,7 @@ func (e AppEngine) Keys() (KeysView, error) {
 	if err != nil {
 		return KeysView{}, err
 	}
-	v := KeysView{Rows: rows, Public: map[string]string{}}
+	v := KeysView{Rows: rows, Public: map[string]string{}, KeyRoot: manifest.KeyRoot(m)}
 	for _, r := range rows {
 		if !slices.Contains(v.Profiles, r.Ref.Profile) {
 			v.Profiles = append(v.Profiles, r.Ref.Profile)

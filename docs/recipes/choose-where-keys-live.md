@@ -23,6 +23,9 @@ Host gh
 Keys you adopted where they already were (`authama ssh key adopt`) stay put. To go back, run
 `authama ssh key root profiles`.
 
+In the web UI, *Move the key root* on the Keys page does the same. You type the new name twice, and
+the preview lists every key the rename would move before anything does.
+
 If you set `defaults.key_root` by editing the manifest instead, the keys stay behind in
 `~/.ssh/profiles/`. `authama doctor` reports them and names the two commands that bring them over.
 

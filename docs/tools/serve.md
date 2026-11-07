@@ -271,6 +271,7 @@ These changes can be made from the pages:
 | Mint a profile's or host's missing keys | Keys | `authama ssh keygen <target> --no-pin --yes` |
 | Rebuild one key's `.pub`, a profile's, or every key's | Keys (row menu, or *Rebuild public keys*), a key's page | `authama ssh key regen-pub <profile/key \| profile \| --all> --yes` |
 | Import this machine's ssh config, or the config home's | Profiles → *Import an ssh config* | `authama ssh import <config> [--force] --yes` |
+| Move the key root | Keys → *Move the key root* (the new name typed twice) | `authama ssh key root <dir> --yes` |
 | Add a key, optionally wired to a host | Keys | `authama ssh key add` |
 | Prune old snapshots | Snapshots | `authama ssh snapshots prune --keep` |
 | Restore a snapshot | the snapshot's page | `authama ssh snapshots restore <id> --yes` |
