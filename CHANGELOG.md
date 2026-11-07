@@ -139,6 +139,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A bare `authama`, which opens the web UI, ran inside a history scope labelled `tui`, the scope
+  `serve` was already kept out of because a scope around the server claims whatever it sees
+  outside a change. The bare run now gets none: each change made in the web UI is its own
+  operation with `web` as its source, as under `serve`.
+- After answering a job's question in the side panel, the clicked button's tooltip stayed on
+  screen once the panel reloaded without the button. The panel now hides any open tooltip before it
+  swaps its content.
+
 - Tabs on the Export page and in the CSV dialog used Bootstrap's `nav-underline`, which picked up
   Tabler's grey hover box; they are Tabler's own `nav-bordered` tabs now. Three controls showed two
   tooltips at once (a `title` beside the explainer); a revoked key's disabled Deploy button showed

@@ -19,7 +19,7 @@ Each operation holds:
 | Field | What it is |
 |---|---|
 | `command`, `args` | the command and its arguments. String flags keep their value only when it is a name from the manifest (`--profile`, `--host`, `--key-name`, `--category`, …); any other value is recorded as `<set>`. |
-| `source` | `cli`, `tui` (one operation per change chosen from the menu), `web`, or `backfill` |
+| `source` | `cli`, `web` (the web UI, whether opened with `serve` or a bare `authama`), `tui` (the removed terminal menu: one operation per change chosen from it), or `backfill` |
 | `result` | `ok`, `error` (with the message), `aborted` (declined after the lock was taken), or `dry-run` |
 | `snapshot` | the `~/.ssh` snapshot the command took, or a `snapshot.failed` event saying why there is none |
 | `events` | every `audit.log` event the command raised |
@@ -52,7 +52,7 @@ imported, and the next run tries again.
 authama history                          # the last 50, newest first
 authama history --host gh --since 7d     # one host, the past week
 authama history --command host           # every host add, edit, delete and apply
-authama history --source tui --limit 0   # everything done from the menu
+authama history --source tui --limit 0   # everything done from the removed menu
 authama history --json | jq .            # one object per operation, events nested
 ```
 

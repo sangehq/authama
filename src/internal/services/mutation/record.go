@@ -23,7 +23,7 @@ import (
 type Scope struct {
 	Command  string   // "host add"
 	Args     []string // already redacted
-	Source   string   // history.SourceCLI, SourceTUI, SourceWeb
+	Source   string   // history.SourceCLI or SourceWeb (SourceTUI: operations the removed menu recorded)
 	DryRun   bool
 	Subjects []history.Subject
 	OpID     string // optional: the id to record under, so a caller can link to it
@@ -119,6 +119,13 @@ func opening(p paths.Paths) {
 		return
 	}
 	openLocked(f, p)
+}
+
+// Depth is how many scopes are open: 0 outside any command or change.
+func Depth() int {
+	recMu.Lock()
+	defer recMu.Unlock()
+	return len(stack)
 }
 
 func top() *frame {

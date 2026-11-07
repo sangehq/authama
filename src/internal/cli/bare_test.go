@@ -4,7 +4,12 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/simtabi/authama/src/internal/services/mutation"
 )
+
+// whileBareServes, when set, runs while a bare run is serving.
+var whileBareServes func()
 
 // runBareRoot runs the root with no command until serve says it is listening,
 // then stops it. It returns what was printed.
@@ -35,6 +40,9 @@ func runBareRoot(t *testing.T, interactive bool, args ...string) string {
 			t.Fatalf("the bare run neither served nor exited:\n%s", out.String())
 		case <-time.After(10 * time.Millisecond):
 			if strings.Contains(out.String(), "press Ctrl-C to stop") {
+				if whileBareServes != nil {
+					whileBareServes()
+				}
 				stop()
 				if err := <-done; err != nil {
 					t.Fatalf("%v\n%s", err, out.String())
@@ -147,5 +155,20 @@ func TestEveryGroupAnswersHelp(t *testing.T) {
 	err := root.Execute()
 	if err == nil || !strings.Contains(err.Error(), `unknown command "deplyo" for "ssh"`) || !strings.Contains(err.Error(), "deploy") {
 		t.Errorf("an unknown verb after help should be reported with a suggestion, got %v", err)
+	}
+}
+
+// A bare run is the web UI, which records each change a browser confirms as
+// its own operation with the web as its source. No scope may sit around the
+// server: it was once a "tui" scope, which labelled the web UI as the menu and
+// would claim any event the server saw outside a change.
+func TestABareRunServesWithNoHistoryScopeOpen(t *testing.T) {
+	editHome(t)
+	depth := -1
+	whileBareServes = func() { depth = mutation.Depth() }
+	t.Cleanup(func() { whileBareServes = nil })
+	runBareRoot(t, true)
+	if depth != 0 {
+		t.Errorf("%d history scope(s) open while a bare run serves, want 0", depth)
 	}
 }
