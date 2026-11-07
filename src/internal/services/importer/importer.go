@@ -434,6 +434,24 @@ type Importer struct {
 	// root is the folder being imported when it is not this machine's
 	// ~/.ssh: an IdentityFile under ~/.ssh/ is looked for in it instead.
 	root string
+	// home is the ~/.ssh the import stands for, when p is a copy of it
+	// (see InPlaceOf); empty, it is p's own.
+	home string
+	// standIn adopts a key as an empty file at its new path instead of a
+	// copy of it, so a preview's copy never holds a private key.
+	standIn bool
+}
+
+// InPlaceOf makes the import read as it would for real, a home p is a
+// preview's copy of. The source is compared with real's ~/.ssh, not the
+// copy's, so an IdentityFile resolves where it will on apply; and a key it
+// would adopt is stood in for by an empty file, which says the key would be
+// created without copying it.
+func (im *Importer) InPlaceOf(real paths.Paths) *Importer {
+	if real.SSHDir != "" && real.SSHDir != im.p.SSHDir {
+		im.home, im.standIn = real.SSHDir, true
+	}
+	return im
 }
 
 // Source is what an import reads: the config files, in order, and the folder
@@ -559,7 +577,11 @@ func (im *Importer) Run(configPath string, dryRun bool) (ImportResult, error) {
 		}
 	}
 	im.root = ""
-	if real, err := filepath.Abs(im.p.SSHDir); err == nil {
+	home := im.p.SSHDir
+	if im.home != "" {
+		home = im.home
+	}
+	if real, err := filepath.Abs(home); err == nil {
 		if r, err := filepath.Abs(src.Root); err == nil && filepath.Clean(r) != filepath.Clean(real) && filepath.Base(r) != "ssh" {
 			im.root = r
 		}
@@ -741,7 +763,11 @@ func (im *Importer) adoptKey(m *manifest.Manifest, srcPriv, profile, keyName str
 		return false
 	}
 	_ = perms.SetPerms(filepath.Dir(dstPriv), perms.DirMode)
-	if !copyFile(srcPriv, dstPriv) {
+	if im.standIn {
+		if os.WriteFile(dstPriv, nil, 0o600) != nil {
+			return false
+		}
+	} else if !copyFile(srcPriv, dstPriv) {
 		return false
 	}
 	_ = perms.SetPerms(dstPriv, perms.PrivateKeyMode)

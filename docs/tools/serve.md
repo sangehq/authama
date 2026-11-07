@@ -270,6 +270,7 @@ These changes can be made from the pages:
 | Reconcile: mint missing keys, record keys on disk, render | Overview | `authama ssh reconcile --yes --no-pin` |
 | Mint a profile's or host's missing keys | Keys | `authama ssh keygen <target> --no-pin --yes` |
 | Rebuild one key's `.pub`, a profile's, or every key's | Keys (row menu, or *Rebuild public keys*), a key's page | `authama ssh key regen-pub <profile/key \| profile \| --all> --yes` |
+| Import this machine's ssh config, or the config home's | Profiles → *Import an ssh config* | `authama ssh import <config> [--force] --yes` |
 | Add a key, optionally wired to a host | Keys | `authama ssh key add` |
 | Prune old snapshots | Snapshots | `authama ssh snapshots prune --keep` |
 | Restore a snapshot | the snapshot's page | `authama ssh snapshots restore <id> --yes` |
@@ -388,6 +389,11 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
   command: it reads the key and copies nothing of it. The preview shows the `.pub` it would really
   write. A key with a passphrase is skipped with the command to derive it by hand, as in the
   terminal; nothing asks for a passphrase.
+- **Import** reads only the configs this machine has: the managed `~/.ssh/config`, and a config
+  home's `ssh/config`. The form names one; it never takes a path, so another machine's copy is
+  imported from the terminal. A manifest with profiles is replaced only when you tick *Replace*,
+  as the terminal needs `--force`, and it is backed up first. A key the import would copy in from
+  outside the managed tree is listed in the preview, which copies none.
 - **Cancel** stops a job at its next step, never inside one. A rotate waiting on you is answered no.
 
 Some changes are terminal-only:
@@ -396,7 +402,8 @@ Some changes are terminal-only:
   passphrases;
 - revoking a key from its targets (`--revoke`), and restoring a bundle from anywhere but `dist/`, or
   with an identity that has a passphrase;
-- `--no-key-backup`.
+- `--no-key-backup`;
+- importing from any folder but `~/.ssh` and the config home.
 
 `--read-only` serves none of the changes in the table above, and the pages show no forms.
 

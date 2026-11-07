@@ -74,6 +74,7 @@ var actionFields = map[string][]string{
 	"token-config-edit":       {"body"},
 	"key-lifetime":            {"key", "lifetime"},
 	"key-regen-pub":           {"key", "profile", "all"},
+	"ssh-import":              {"source", "replace"},
 	"naming-set":              {"profile", "alias", "envs", "roles", "enforce", "start", "code_fallback"},
 	"naming-key-template":     {"profile", "key_name"},
 	"profile-code":            {"name", "code"},
@@ -529,6 +530,13 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 			errs = append(errs, badForm("choose one key, one profile, or every key"))
 		}
 		ch = change.KeyRegenPub(h.p, sel)
+	case "ssh-import":
+		// The source is a name for a config this machine has, never a path.
+		src, ok := importSource(h.p, f.Get("source"))
+		if !ok {
+			errs = append(errs, badForm("choose an ssh config this machine has"))
+		}
+		ch = change.SSHImport(h.p, src.Path, checked(f, "replace"))
 	case "naming-set", "naming-key-template", "profile-code":
 		var err error
 		ch, err = namingChange(action, f, h)
