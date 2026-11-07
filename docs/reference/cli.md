@@ -22,6 +22,11 @@ Every command also takes the global flag:
 - [`authama doctor`](#authama-doctor) - Diagnose deps, perms, agent, known_hosts, drift, dangling keys, and token-file perms
 - [`authama events`](#authama-events) - Every change seen to a file under ~/.ssh, the config home or a token file, newest first
 - [`authama export`](#authama-export) - Write any list as CSV, JSON, YAML, a PHP or JS array, Markdown or HTML, or hosts for an SSH client, filtered
+  - [`authama export selections`](#authama-export-selections) - List, show, save and delete export selections saved by name
+    - [`authama export selections delete`](#authama-export-selections-delete) - Delete a saved selection
+    - [`authama export selections list`](#authama-export-selections-list) - List the saved selections, both stores
+    - [`authama export selections save`](#authama-export-selections-save) - Save a selection by name, from a JSON file
+    - [`authama export selections show`](#authama-export-selections-show) - Print a saved selection as JSON
 - [`authama history`](#authama-history) - List the changes authama has made, newest first
   - [`authama history show`](#authama-history-show) - Show one operation: its events and what it changed in the manifest
 - [`authama init`](#authama-init) - Create/converge the per-user home
@@ -203,8 +208,8 @@ Flags:
 Write one of the home's lists, filtered and with the columns chosen, in any format: the
 same files the web UI's Export page makes. Nothing in an export holds a secret.
 
-The list is one of deployments, events, history, hosts, keys, profiles, snapshots, tokens, or --selection names a selection saved as JSON
-(the Export page's Copy link holds one). Filters narrow it: --profile, --key (a key's name or
+The list is one of deployments, events, history, hosts, keys, profiles, snapshots, tokens, or a saved selection's name (`export selections`
+keeps them), or --selection names a selection as a JSON file (the Export page's Copy link holds one). Filters narrow it: --profile, --key (a key's name or
 profile/name), --env, --role, --tag, --status, --tool, --kind, --area, --source, --command,
 --since and --until (a time or a prefix such as 2026-11), --include and --exclude text.
 --columns chooses the columns, by field (--fields lists them; key.fingerprint follows the
@@ -228,8 +233,12 @@ host. What was left out, and what is left to do in the client, goes to stderr.
 The file goes to stdout, or to --out.
 
 ```
-authama export [deployments|events|history|hosts|keys|profiles|snapshots|tokens] [flags]
+authama export [deployments|events|history|hosts|keys|profiles|snapshots|tokens|<saved selection>] [flags]
 ```
+
+Subcommands:
+
+- [`selections`](#authama-export-selections) - List, show, save and delete export selections saved by name
 
 Examples:
 
@@ -241,6 +250,7 @@ Examples:
   authama export hosts --template 'ssh=ssh {user}@{hostname} -p {port}' --columns alias,ssh
   authama export hosts --group-by profile --aggregate count,list:env --totals --format markdown
   authama export --selection sel.json --format php --out hosts.php
+  authama export prd-hosts --format json
   authama export hosts --profile simtabi --format ssh_config --out simtabi.ssh_config
   authama export hosts --env prd --format putty --out prd.reg
 ```
@@ -269,7 +279,7 @@ Flags:
   -o, --out string              write to this file (mode 0600) instead of stdout
       --profile strings         only these profiles
       --role strings            only these roles
-      --selection string        a selection saved as JSON (the Export page's), instead of a list name
+      --selection string        a selection as a JSON file (the Export page's), or a saved selection's name, instead of a list name
       --shape string            json, js, php, yaml: "table" writes {columns, rows} instead of one object per row
       --since string            only rows at or after this time (a prefix such as 2026-11 works)
       --sort strings            sort by these fields; -field descends
@@ -281,6 +291,113 @@ Flags:
       --totals                  with --group-by: a last row over every group
       --transform stringArray   a transform step as JSON, e.g. {"kind":"map","field":"status","values":{"needs-redeploy":"pending"}}
       --until string            only rows at or before this time
+```
+
+## authama export selections
+
+A selection saved by name is exported with `authama export <name>`. It lives in one of two
+stores: user (a file of its own under the state home, private to this account; the default)
+or manifest (defaults.export.selections, so it travels with the manifest). The setting
+export.save_to changes where a save goes. Both stores are read; on a name in both, the
+user's wins.
+
+```
+authama export selections
+```
+
+Subcommands:
+
+- [`delete`](#authama-export-selections-delete) - Delete a saved selection
+- [`list`](#authama-export-selections-list) - List the saved selections, both stores
+- [`save`](#authama-export-selections-save) - Save a selection by name, from a JSON file
+- [`show`](#authama-export-selections-show) - Print a saved selection as JSON
+
+## authama export selections delete
+
+Delete the saved selection <name> from the store that has it. When both stores have it,
+--from says which; the other one stays.
+
+```
+authama export selections delete <name> [flags]
+```
+
+Aliases: `rm`
+
+Examples:
+
+```sh
+  authama export selections delete prd-hosts
+  authama export selections delete prd-hosts --from manifest
+```
+
+Flags:
+
+```
+      --from string   the store to delete it from, when both have it: user or manifest
+  -y, --yes           delete from the manifest without confirming (implied when there is no terminal)
+```
+
+## authama export selections list
+
+List the saved selections, both stores.
+
+```
+authama export selections list [flags]
+```
+
+Aliases: `ls`
+
+Examples:
+
+```sh
+  authama export selections list
+  authama export selections list --json
+```
+
+Flags:
+
+```
+      --json   print the selections as JSON
+```
+
+## authama export selections save
+
+Save the selection in --from (a JSON file, such as the Export page's Copy link holds) as
+<name>. --to chooses the store: user (yours alone) or manifest (travels with it); without
+it, the export.save_to setting does, and that is user unless set. Saving under a name the
+store already has replaces it. Export it with `authama export <name>`.
+
+```
+authama export selections save <name> [flags]
+```
+
+Examples:
+
+```sh
+  authama export selections save prd-hosts --from sel.json
+  authama export selections save prd-hosts --from sel.json --to manifest
+```
+
+Flags:
+
+```
+      --from string   the selection, as a JSON file
+      --to string     the store: user or manifest (default: the export.save_to setting, else user)
+  -y, --yes           save to the manifest without confirming (implied when there is no terminal)
+```
+
+## authama export selections show
+
+Print a saved selection as JSON.
+
+```
+authama export selections show <name>
+```
+
+Examples:
+
+```sh
+  authama export selections show prd-hosts
 ```
 
 ## authama history

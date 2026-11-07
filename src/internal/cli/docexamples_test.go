@@ -141,7 +141,9 @@ func checkDocCommand(t *testing.T, rel string, n int, line string, inline bool) 
 		t.Errorf("%s: %q: %v", where, strings.TrimSpace(line), err)
 		return
 	}
-	if pos := cmd.Flags().Args(); len(cmd.Commands()) > 0 && len(pos) > 0 {
+	// A group that runs on its own (export: a list's name, or a subcommand)
+	// takes positional arguments; its Args rule below checks them.
+	if pos := cmd.Flags().Args(); len(cmd.Commands()) > 0 && !cmd.Runnable() && len(pos) > 0 {
 		t.Errorf("%s: %q: %s has no subcommand %q", where, strings.TrimSpace(line), cmd.CommandPath(), pos[0])
 		return
 	}

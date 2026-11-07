@@ -292,6 +292,7 @@ func TestTheEnvironmentVariableNamesAreTheDocumentedOnes(t *testing.T) {
 		"AUTHAMA_OLD_KEY_MAX_AGE_DAYS": "when an archived predecessor is called stale",
 		"AUTHAMA_HISTORY":              "0 stops recording operations in log/history.db",
 		"AUTHAMA_GIT_MODE":             "overrides defaults.git.mode for one command",
+		"AUTHAMA_EXPORT_SAVE_TO":       "export.save_to: where a saved export selection goes, user or manifest",
 		"AUTHAMA_TOKENS_CONFIG":        "the token config file, ahead of ./authama-tokens.json and <home>/tokens.json",
 		"AUTHAMA_TOKENS_CATALOG":       "a catalog.json replacing the built-in token services and providers",
 		"AUTHAMA_DOCKER_CREDS_STORE":   "login or refuse, for registries in a Docker credential store",

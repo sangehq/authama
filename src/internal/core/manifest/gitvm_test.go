@@ -163,12 +163,13 @@ func TestSchemaListsEveryManifestField(t *testing.T) {
 	}{
 		{"defaults", props("properties", "defaults"), tags(Defaults{})},
 		{"defaults.git", props("properties", "defaults", "properties", "git"), tags(GitDefaults{})},
+		{"defaults.export", props("properties", "defaults", "properties", "export"), tags(ExportDefaults{})},
 		{"profile", props("properties", "profiles", "additionalProperties"), tags(Profile{})},
 		{"profile.keys[]", props("properties", "profiles", "additionalProperties", "properties", "keys", "items"), tags(KeySpec{})},
 		{"host", props("properties", "profiles", "additionalProperties", "properties", "hosts", "items"), tags(Host{})},
 		{"host.vm", props("properties", "profiles", "additionalProperties", "properties", "hosts", "items", "properties", "vm"), tags(VMSpec{})},
 	}
-	if len(checks) < 6 {
+	if len(checks) < 7 {
 		t.Fatal("inspected fewer types than exist")
 	}
 	for _, c := range checks {

@@ -74,6 +74,34 @@ needs. Move a step up or down, or remove it. A group starts the columns afresh, 
 and while there are steps the format list leaves out the SSH client formats. *Copy as command* writes each
 step as a `--transform`.
 
+### Saved selections
+
+A selection saved by name is exported by that name, like a built-in list:
+
+```bash
+authama export selections save prd-hosts --from sel.json             # the default store: yours
+authama export selections save prd-hosts --from sel.json --to manifest
+authama export prd-hosts --format json
+authama export selections list
+authama export selections show prd-hosts
+authama export selections delete prd-hosts --from manifest
+```
+
+Two stores hold them, and both are read:
+
+| Store | Where | Who sees it |
+|---|---|---|
+| `user` | `<state home>/exports/selections/<name>.json`, mode 0600 | this account only |
+| `manifest` | `defaults.export.selections` in the manifest | every machine that shares the manifest |
+
+A save goes to the store `--to` names, else the one the `export.save_to` setting names, else `user`. On a
+name in both stores, yours wins: `list` marks the manifest's as hidden, and deleting yours brings it back.
+`delete` asks `--from` when both stores have the name. A manifest save or delete is a manifest change: it
+asks first at a terminal (`--yes` skips that), takes the lock and a snapshot, and is audited. A name is 1 to
+63 of `a-z`, `0-9`, `.`, `_` and `-`, starting with a letter or digit, and cannot be a built-in list's. A saved
+selection of a version this authama cannot read is listed with the reason and never used. `--selection`
+takes a saved name too, when no file has that name.
+
 ### Hosts for ssh and SSH clients
 
 | `--format` | Writes | Same bytes as |

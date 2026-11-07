@@ -19,6 +19,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   steps, and shows how many rows each one leaves. The preview, the download, *Copy link* and *Copy as
   command* all carry them.
 
+- **Saved export selections.** `authama export selections save <name> --from sel.json` keeps a
+  selection by name, and `authama export <name>` exports it. It goes in your own store (a private
+  file under the state home) or in the manifest (`defaults.export.selections`, so it travels with
+  it). The new `export.save_to` setting picks the default store. Both stores are read, and on a
+  name in both yours wins. `list`, `show` and `delete` complete the set, and a manifest save or
+  delete asks first, like any manifest change.
+
 - **Hosts for ssh and SSH clients in `authama export`.** `authama export hosts --format` takes
   `ssh_config`, `termius` and every `ssh host export` client (`hosts-csv`, `windows-terminal`,
   `iterm2`, `putty`, `remmina`, `securecrt`, `mobaxterm`), filtered like any list. `ssh_config` is

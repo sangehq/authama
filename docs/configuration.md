@@ -171,6 +171,7 @@ reservations is unchanged. Older authama versions (0.1.3 and earlier) refuse a m
 | `git.mode` | `profile` | default GitHub remote mode for `authama ssh git use`: `profile`, `ssh` or `https` |
 | `git.profile` | unset | the default identity: its GitHub key is bound to a rendered `Host github.com` (ssh mode), and it is used for owners `git.orgs` does not list. Unset, no `Host github.com` is rendered. The block is rendered once: in the profile's category file (`profiles/<category>/config`) when it has a category, otherwise in the root block; skipped if a host is already aliased `github.com` |
 | `git.orgs` | `{}` | GitHub owner → profile, for `authama ssh git` (see [tools/git.md](tools/git.md)) |
+| `export.selections` | unset | export selections saved by name in the manifest, so they travel with it (see [tools/export.md](tools/export.md#saved-selections)); omitted when there are none |
 
 All three `git` fields are optional and the key is omitted when unset, so a manifest without them renders
 and saves exactly as before. `ssh` mode needs `git.profile`, and no host may use the alias `github.com`
@@ -650,6 +651,7 @@ every setting stays at its default until you add it.
 | `ssh.auto_pin` | `AUTHAMA_AUTO_PIN` | `true` |
 | `history.enabled` | `AUTHAMA_HISTORY` | `true` |
 | `git.mode` | `AUTHAMA_GIT_MODE` | the manifest's `defaults.git.mode`, else `profile` |
+| `export.save_to` | `AUTHAMA_EXPORT_SAVE_TO` | `user` (where a saved export selection goes: `user` or `manifest`; see [tools/export.md](tools/export.md#saved-selections)) |
 | `tokens.docker_creds_store` | `AUTHAMA_DOCKER_CREDS_STORE` | ask at a terminal, else refuse |
 | `notifications.desktop` | `AUTHAMA_NOTIFICATIONS` | `true` |
 | `vm.hypervisors` | `AUTHAMA_VM_HYPERVISORS` | every built-in driver and every custom one |
