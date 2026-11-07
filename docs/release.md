@@ -76,13 +76,15 @@ also attached bare `sshmgr_*` binaries, the deprecated alias; later ones do not.
 
 - **Homebrew:** the tap requires a pull request on `main`, with deploy keys as its
   one bypass actor, so the cask `Casks/authama.rb` is committed to `main` directly.
-  A release without `HOMEBREW_TAP_DEPLOY_KEY` skips it. The old `sshmgr` cask is
-  gone: the tap's `cask_renames.json` maps `sshmgr` to `authama`, so `brew upgrade`
-  moves an existing install over by itself.
+  A release without `HOMEBREW_TAP_DEPLOY_KEY` skips it. While binary releases are on
+  hold the tap carries no authama cask: the cask and the `sshmgr` → `authama`
+  rename were withdrawn (simtabi/homebrew-tap d9969e2) because they named v0.1.3
+  downloads that no longer exist. The next release writes the cask again.
 - **Scoop:** the bucket requires a pull request on `master` and has no bypass actor,
   so GoReleaser pushes the manifest to its own branch instead: `authama-X.Y.Z`
-  for `bucket/authama.json`. The deprecated `bucket/sshmgr.json` is no longer
-  updated; the alias it installed was removed. The
+  for `bucket/authama.json`. Both `bucket/authama.json` and the deprecated
+  `bucket/sshmgr.json` were withdrawn with the cask (simtabi/scoop-bucket f253f9c);
+  the next release writes `authama.json` again, and `sshmgr.json` does not return. The
   bucket's own workflow, `.github/workflows/auto-merge-manifest.yml`, runs on every
   push to an `sshmgr-*` or `authama-*` branch: it opens the pull request with its
   `GITHUB_TOKEN`, waits for the checks, and merges it, deleting the branch. Nothing

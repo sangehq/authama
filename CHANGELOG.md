@@ -244,6 +244,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Documentation
 
+- `docs/release.md` and `docs/migration.md` no longer say the Homebrew tap renames `sshmgr` to
+  `authama` or that the Scoop `sshmgr` manifest is published: the cask, the rename and both
+  manifests were withdrawn while binary releases are on hold.
+
 - The keepalive workflow calls the reusable workflow at a commit, not at `main`, so an upstream
   change cannot alter this repository's CI unseen.
 - The migration guide no longer offers Homebrew, Scoop or `go install` as a way to install, nor says
