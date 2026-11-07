@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Import from the web UI.** *Import an ssh config* on the Profiles page runs `ssh import` as a
+  previewed change, from this machine's `~/.ssh/config` or the config home's `ssh/config`, chosen
+  by name; the web never takes a path. Replacing a manifest that has profiles needs *Replace*, as
+  the terminal needs `--force`, and is backed up first. A preview's copy holds no private key, so
+  each key the import would copy in is listed and stood in for by an empty file, and apply copies
+  the real one.
 - **Naming from the web UI.** A new *Naming* page under **SSH** shows what `ssh naming show` and
   `ssh naming check` print: the rules in effect, each profile's code and own rules, and the servers
   whose alias breaks them. It changes the rules for every profile or one profile (`naming set`), the

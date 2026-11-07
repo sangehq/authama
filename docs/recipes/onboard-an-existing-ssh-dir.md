@@ -45,6 +45,10 @@ authama ssh list
 authama ssh profile edit imported --key-scope per_service
 ```
 
+In the web UI, *Import an ssh config* on the Profiles page offers this machine's `~/.ssh/config`
+and the config home's `ssh/config`, and previews the import first. The preview lists every key it
+would copy in, without copying one. Another machine's copy is imported from the terminal.
+
 A second `import` replaces the manifest, so it is safe to re-run after editing
 the source config. It will not overwrite keys it adopted the first time.
 
