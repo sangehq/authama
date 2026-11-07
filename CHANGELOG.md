@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Move the key root from the web UI.** *Move the key root* on the Keys page runs `ssh key root`
+  as a previewed change. It moves every key, so it is made only when the new directory name is
+  typed again. The name is one directory under `~/.ssh`, checked as the manifest checks
+  `defaults.key_root`, and the preview lists every key the rename would move.
 - **Import from the web UI.** *Import an ssh config* on the Profiles page runs `ssh import` as a
   previewed change, from this machine's `~/.ssh/config` or the config home's `ssh/config`, chosen
   by name; the web never takes a path. Replacing a manifest that has profiles needs *Replace*, as

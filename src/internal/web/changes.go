@@ -75,6 +75,7 @@ var actionFields = map[string][]string{
 	"key-lifetime":            {"key", "lifetime"},
 	"key-regen-pub":           {"key", "profile", "all"},
 	"ssh-import":              {"source", "replace"},
+	"key-root":                {"root", "confirm"},
 	"naming-set":              {"profile", "alias", "envs", "roles", "enforce", "start", "code_fallback"},
 	"naming-key-template":     {"profile", "key_name"},
 	"profile-code":            {"name", "code"},
@@ -530,6 +531,16 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 			errs = append(errs, badForm("choose one key, one profile, or every key"))
 		}
 		ch = change.KeyRegenPub(h.p, sel)
+	case "key-root":
+		// One directory name under ~/.ssh, never a path; the manifest's own
+		// check refuses a slash, a dot, a hidden name and ssh's files.
+		root := strings.TrimSpace(f.Get("root"))
+		if root == "" {
+			errs = append(errs, badForm("name the directory the keys move to"))
+		} else if err := manifest.CheckKeyRoot(root); err != nil {
+			errs = append(errs, badForm("%s", err.Error()))
+		}
+		ch = change.KeyRoot(root, strings.TrimSpace(f.Get("confirm")))
 	case "ssh-import":
 		// The source is a name for a config this machine has, never a path.
 		src, ok := importSource(h.p, f.Get("source"))
