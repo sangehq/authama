@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/simtabi/authama/src/internal/core/manifest"
 )
 
 // TestRecordSerializationMatchesV1 locks in the byte-for-byte serialization
@@ -87,7 +89,7 @@ func TestIsArchivedPath(t *testing.T) {
 		"profiles/dev/old/k":                        true,
 	}
 	for p, want := range cases {
-		if got := IsArchivedPath(p); got != want {
+		if got := IsArchivedPathIn(p, manifest.DefaultKeyRoot); got != want {
 			t.Errorf("IsArchivedPath(%q) = %v, want %v", p, got, want)
 		}
 	}
@@ -304,7 +306,7 @@ func TestIsArchivedPathInACategory(t *testing.T) {
 		"~/.ssh/profiles/internal/personal/k":    false,
 	}
 	for p, want := range cases {
-		if got := IsArchivedPath(p); got != want {
+		if got := IsArchivedPathIn(p, manifest.DefaultKeyRoot); got != want {
 			t.Errorf("IsArchivedPath(%q) = %v, want %v", p, got, want)
 		}
 	}

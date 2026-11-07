@@ -76,7 +76,7 @@ func TestPlannedDevboxKeyIsReserved(t *testing.T) {
 	if !rep.OK() || len(rep.Reserved) != 1 || rep.Reserved[0].Source != "devbox docker" {
 		t.Fatalf("planned: %+v %+v", rep.Findings, rep.Reserved)
 	}
-	keys := MarkReserved(LooseKeys(f.ssh), map[string]manifest.ReservedKey{"docker-tunnel": {For: "devbox"}})
+	keys := MarkReserved(LooseKeysIn(f.ssh, manifest.DefaultKeyRoot), map[string]manifest.ReservedKey{"docker-tunnel": {For: "devbox"}})
 	if len(keys) != 1 || !keys[0].Reserved || keys[0].ReservedFor != "devbox" {
 		t.Errorf("marked: %+v", keys)
 	}

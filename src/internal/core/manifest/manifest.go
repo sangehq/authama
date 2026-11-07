@@ -1191,31 +1191,6 @@ func ArchiveDir(m *Manifest, sshDir string, ref KeyRef) string {
 	return filepath.Join(m.ProfileDir(sshDir, ref.Profile), "old")
 }
 
-// GlobProfileTree is GlobKeyTree under the default root, ~/.ssh/profiles.
-//
-// Deprecated: after v0.1.3 the root is configurable (defaults.key_root); use
-// GlobKeyTree with KeyRoot or KeyRootAt. This stays, delegating, so a caller
-// not yet moved keeps today's behaviour. Earliest removal: v1.0.0.
-func GlobProfileTree(sshDir string, tail ...string) []string {
-	return GlobKeyTree(sshDir, DefaultKeyRoot, tail...)
-}
-
-// CategoryConfigRel is CategoryConfigRelIn under the default root.
-//
-// Deprecated: after v0.1.3 the root is configurable; use CategoryConfigRelIn
-// with KeyRoot. This stays, delegating. Earliest removal: v1.0.0.
-func CategoryConfigRel(category string) string {
-	return CategoryConfigRelIn(DefaultKeyRoot, category)
-}
-
-// CategoryConfigFile is CategoryConfigFileIn under the default root.
-//
-// Deprecated: after v0.1.3 the root is configurable; use CategoryConfigFileIn
-// with KeyRoot. This stays, delegating. Earliest removal: v1.0.0.
-func CategoryConfigFile(category string) string {
-	return CategoryConfigFileIn(DefaultKeyRoot, category)
-}
-
 // Categories returns the distinct categories in use, in first-seen manifest
 // (file) order, so the root config Includes them in a stable order.
 func (m *Manifest) Categories() []string {

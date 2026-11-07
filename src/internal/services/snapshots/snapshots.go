@@ -80,15 +80,6 @@ func HoldsKeyMaterial(tarball string) bool {
 	}
 }
 
-// FindTempArtifacts is FindTempArtifactsIn under the default key root.
-//
-// Deprecated: after v0.1.3 the key root is configurable (defaults.key_root);
-// use FindTempArtifactsIn with manifest.KeyRoot. This stays, delegating.
-// Earliest removal: v1.0.0.
-func FindTempArtifacts(sshDir string) []string {
-	return FindTempArtifactsIn(sshDir, manifest.DefaultKeyRoot)
-}
-
 // FindTempArtifactsIn lists crash residue without removing it: leftover
 // .<name>.*.tmp files anywhere under sshDir, plus any stray
 // <root>/<p>/.staging or <root>/<p>/.mint-* dir. Paths are absolute and in
@@ -122,15 +113,6 @@ func FindTempArtifactsIn(sshDir, root string) []string {
 		}
 	}
 	return found
-}
-
-// CleanTempArtifacts is CleanTempArtifactsIn under the default key root.
-//
-// Deprecated: after v0.1.3 the key root is configurable (defaults.key_root);
-// use CleanTempArtifactsIn with manifest.KeyRoot. This stays, delegating.
-// Earliest removal: v1.0.0.
-func CleanTempArtifacts(sshDir string) []string {
-	return CleanTempArtifactsIn(sshDir, manifest.DefaultKeyRoot)
 }
 
 // CleanTempArtifactsIn sweeps the crash residue FindTempArtifactsIn reports.

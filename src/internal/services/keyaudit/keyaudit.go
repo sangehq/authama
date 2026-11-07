@@ -454,15 +454,6 @@ func LooksLikeDevbox(name, comment string) string {
 	return check("comment", comment)
 }
 
-// LooseKeys is LooseKeysIn under the default key root, profiles.
-//
-// Deprecated: after v0.1.3 the key root is configurable (defaults.key_root);
-// use LooseKeysIn with manifest.KeyRoot. This stays, delegating.
-// Earliest removal: v1.0.0.
-func LooseKeys(sshDir string) []LooseKey {
-	return LooseKeysIn(sshDir, manifest.DefaultKeyRoot)
-}
-
 // LooseKeysIn finds key-shaped files sitting directly in ~/.ssh: the
 // pre-authama keys a user already had. Detection is by pairing (a file with a
 // .pub sibling) or by a .pub that parses as a public key - never by reading
