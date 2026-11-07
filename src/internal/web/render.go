@@ -444,6 +444,26 @@ type headerAction struct {
 // emptyState is a list with nothing in it yet.
 type emptyState struct{ Icon, Title, Text string }
 
+// Subtitle is Text with each `backticked` span set as code, so an empty state
+// can name the command that fills it. Everything is escaped first; only the
+// <code> tags this adds are markup.
+func (e emptyState) Subtitle() template.HTML {
+	parts := strings.Split(e.Text, "`")
+	if len(parts)%2 == 0 { // an unclosed backtick is text, not code
+		return template.HTML(template.HTMLEscapeString(e.Text)) //nolint:gosec // escaped
+	}
+	var b strings.Builder
+	for i, part := range parts {
+		esc := template.HTMLEscapeString(part)
+		if i%2 == 1 {
+			b.WriteString("<code>" + esc + "</code>")
+		} else {
+			b.WriteString(esc)
+		}
+	}
+	return template.HTML(b.String()) //nolint:gosec // every part escaped above
+}
+
 // confirmModal asks before a destructive action is previewed.
 type confirmModal struct {
 	ID, Form, Title, Text, Label string

@@ -18,7 +18,7 @@
       </tbody>
     </table>
   </div>
-  {{else}}<div class="card-body text-secondary">The inventory is empty. Run <code>authama ssh reconcile</code>, then <code>authama ssh deploy</code>.</div>{{end}}
+  {{else}}<div class="card-body">{{template "empty" (empty "shield-check" "No deployments recorded" "The inventory is empty: run `authama ssh reconcile`, then `authama ssh deploy`.")}}</div>{{end}}
 </div>
 <div class="row row-cards">
   <div class="col-lg-6">

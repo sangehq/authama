@@ -63,7 +63,7 @@
       </tbody>
     </table>
   </div>
-  {{else}}<div class="card-body text-secondary">None. A loose key in <code>~/.ssh</code> you keep on purpose (say, for a devbox you have not made yet) can be reserved so doctor stops calling it loose.</div>{{end}}
+  {{else}}<div class="card-body">{{template "empty" (empty "key" "No reserved keys" "A loose key in `~/.ssh` you keep on purpose (say, for a devbox you have not made yet) can be reserved so doctor stops calling it loose.")}}</div>{{end}}
   {{if and (not .ReadOnly) .Data.Loose}}
   <div class="card-body border-top">
     {{template "change_open" .}}<input type="hidden" name="action" value="key-reserve">
