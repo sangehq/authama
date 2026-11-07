@@ -98,11 +98,6 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newRepairCmd())
 	root.AddCommand(newResetCmd())
 	root.AddCommand(newExportCmd())
-	// `ui` was serve's alias, one edit from `tui`: still accepted, never shown.
-	ui := newServeCmd()
-	ui.Use, ui.Hidden = "ui", true
-	ui.Deprecated = "use `" + brand.Command + " serve` (the web UI)"
-	root.AddCommand(ui)
 
 	// The two feature groups.
 	ssh := &cobra.Command{

@@ -141,7 +141,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **The deprecated command spellings.** `authama ssh host export <client>` and
   `authama ssh termius export` are gone: `authama export hosts --format <client>` writes the same
   files (`hosts-csv` for the generic CSV, `termius` for the Termius CSV). `termius export --open`
-  has no replacement. The hidden `authama tui` stub that pointed at the web UI is gone too.
+  has no replacement. The hidden `authama tui` stub that pointed at the web UI is gone too, and so
+  is `authama ui`, the deprecated alias of `serve`: run `authama serve`, or a bare `authama`.
 - **The top-level SSH verbs.** `authama deploy`, `authama reconcile` and every other SSH verb no
   longer answer outside `authama ssh`. Two stay, hidden: `vm` and `audit`, because a
   `~/.ssh/config` rendered before this release runs `authama vm proxy`, and a notifier installed

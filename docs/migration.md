@@ -129,7 +129,7 @@ Nothing you have stops working.
 | Binary | `sshmgr` | `authama`; `sshmgr` shipped beside it as a deprecated alias from [0.1.2](#to-012-authama-everywhere-sshmgr-deprecated) until it was [removed](#removing-the-sshmgr-alias) |
 | SSH verbs | at the top level: `reconcile`, `host add …` | `authama ssh reconcile`, `authama ssh host add …`. The top-level spellings were removed on 2026-11-07, except the hidden `vm` and `audit`, which older `~/.ssh/config` files and scheduled jobs run |
 | Shared verbs | `sshmgr doctor`, `sshmgr serve` | `authama doctor`, `authama serve` |
-| `ui` | alias of `serve` | still works, deprecated: use `serve` |
+| `ui` | alias of `serve` | removed on 2026-11-07: use `serve`, or a bare `authama` |
 | Config home | `~/.config/ssh-manager` | `~/.config/authama` from 0.1.1, copied in on the first run ([above](#to-011-the-authama-config-home-and-authama_-names)) |
 | Variables | `SSH_MANAGER_*`, `SSHMGR_DEV_ROOT` | `AUTHAMA_*` from 0.1.1; the old names are ignored since 2026-11-07 |
 | `~/.ssh` | managed-block markers, `known_hosts` tags | the managed block's markers are rewritten under the authama name on the next render, with no other diff; new `known_hosts` pins are tagged `authama` from 0.1.2, and `sshmgr`-tagged ones are still recognized |
