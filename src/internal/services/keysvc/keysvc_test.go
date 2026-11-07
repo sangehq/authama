@@ -299,7 +299,7 @@ func TestTwoRecordsAtOnePathResolveTheSameWayEveryTime(t *testing.T) {
 		if len(row.Deployments) != 0 {
 			t.Fatalf("run %d: deployments = %+v, taken from a different record than the fingerprint", i, row.Deployments)
 		}
-		if row.Status != query.NeedsRedeploy {
+		if row.Status != query.NotDeployed {
 			t.Fatalf("run %d: status = %q, but the reported record has no deployments", i, row.Status)
 		}
 	}

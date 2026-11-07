@@ -16,8 +16,9 @@ import (
 // Deployment status values.
 const (
 	NoKey         = "no-key"
-	NeedsRedeploy = "needs-redeploy"
-	Deployed      = "deployed"
+	NotDeployed   = inventory.StatusNotDeployed
+	NeedsRedeploy = inventory.StatusNeedsRedeploy
+	Deployed      = inventory.StatusDeployed
 )
 
 // HostRow is one host in a list view.
@@ -26,7 +27,7 @@ type HostRow struct {
 	Hostname      string
 	ProviderLabel string // e.g. "github/vcs" or "server"
 	KeyName       string
-	Status        string // no-key | needs-redeploy | deployed
+	Status        string // no-key | not-deployed | needs-redeploy | deployed
 	Tags          []string
 }
 
@@ -234,10 +235,7 @@ func status(rec inventory.KeyRecord, found bool) string {
 	if !found {
 		return NoKey
 	}
-	if rec.NeedsRedeploy() {
-		return NeedsRedeploy
-	}
-	return Deployed
+	return rec.DeployStatus()
 }
 
 func deref(s *string) string {

@@ -56,7 +56,7 @@ type Snapshot struct {
 type Deployment struct {
 	KeyPath     string `json:"key_path"`
 	Fingerprint string `json:"fingerprint"`
-	Status      string `json:"status"` // deployed or needs-redeploy
+	Status      string `json:"status"` // not-deployed, needs-redeploy or deployed
 	Target      string `json:"target"`
 	Method      string `json:"method"`
 	Verified    bool   `json:"verified"`
@@ -157,10 +157,7 @@ func deploymentsOf(inv *inventory.Inventory) []Deployment {
 	})
 	for _, fp := range fps {
 		rec := inv.Keys[fp]
-		status := "deployed"
-		if rec.NeedsRedeploy() {
-			status = "needs-redeploy"
-		}
+		status := rec.DeployStatus()
 		if len(rec.Deployments) == 0 {
 			out = append(out, Deployment{KeyPath: rec.Path, Fingerprint: fp, Status: status})
 		}

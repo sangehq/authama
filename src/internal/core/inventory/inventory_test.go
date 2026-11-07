@@ -311,3 +311,20 @@ func TestIsArchivedPathInACategory(t *testing.T) {
 		}
 	}
 }
+
+func TestDeployStatusTellsANeverDeployedKeyFromAStaleOne(t *testing.T) {
+	cases := []struct {
+		name string
+		deps []Deployment
+		want string
+	}{
+		{"never deployed", nil, StatusNotDeployed},
+		{"deployed, none verified", []Deployment{{Target: "a", Method: "manual"}}, StatusNeedsRedeploy},
+		{"one verified", []Deployment{{Target: "a"}, {Target: "b", Verified: true}}, StatusDeployed},
+	}
+	for _, c := range cases {
+		if got := (KeyRecord{Deployments: c.deps}).DeployStatus(); got != c.want {
+			t.Errorf("%s: DeployStatus() = %q, want %q", c.name, got, c.want)
+		}
+	}
+}

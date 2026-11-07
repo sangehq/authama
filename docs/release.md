@@ -6,6 +6,13 @@ builds a static binary per OS/arch and attaches them, with checksums, to a GitHu
 Release. Until binary releases resume, users build from source
 ([installation](installation.md#install)).
 
+## The next version is v0.1.4
+
+v0.1.0 to v0.1.3 are retracted in `src/go.mod`: the Go module proxy cached them
+from history that was deleted when the versions restarted, and a cached version
+cannot be replaced. Those numbers are never tagged again, so the next release is
+v0.1.4. The retraction takes effect when v0.1.4 is published.
+
 ## Two tags per release
 
 Each release is tagged twice on the same commit, and they are not

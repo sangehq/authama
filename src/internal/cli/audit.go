@@ -72,10 +72,7 @@ func auditReport(p paths.Paths, m *manifest.Manifest, now time.Time, notify bool
 	}
 	for _, fp := range sortedByPath(inv) {
 		rec := inv.Keys[fp]
-		status := "deployed"
-		if rec.NeedsRedeploy() {
-			status = "needs-redeploy"
-		}
+		status := rec.DeployStatus()
 		lines = append(lines, fmt.Sprintf("%s  [%s]", rec.Path, status), "    "+fp)
 		for _, d := range rec.Deployments {
 			flag := "unverified"
