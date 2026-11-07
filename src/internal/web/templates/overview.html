@@ -1,8 +1,8 @@
 {{define "content"}}{{with .Data}}
 {{if $.ReadOnly}}
-{{template "page_header" (header "Home" "Overview" "What this home holds, and what needs attention.")}}
+{{template "page_header" (header "Home" "Overview" "What this home holds, and what needs attention." (only (gt .Hosts 0) (inline "Check connections" "/net" "activity" | withTip "net")))}}
 {{else}}
-{{template "page_header" (header "Home" "Overview" "What this home holds, and what needs attention." (action "Add a host" "/hosts#add-host" "plus" | withTip "host-add") (action "Add a token" "/tokens#add-token" "cloud-lock" | withTip "token-add"))}}
+{{template "page_header" (header "Home" "Overview" "What this home holds, and what needs attention." (action "Add a host" "/hosts#add-host" "plus" | withTip "host-add") (action "Add a token" "/tokens#add-token" "cloud-lock" | withTip "token-add") (only (gt .Hosts 0) (inline "Check connections" "/net" "activity" | withTip "net")))}}
 {{end}}
 
 <div class="row row-cards mb-3" data-tour="7" data-tour-title="At a glance" data-tour-text="Each count opens its list; Needs attention lists what to fix and the command that fixes it.">

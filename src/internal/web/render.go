@@ -324,6 +324,10 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		"action": func(label, href, icon string) headerAction {
 			return headerAction{Label: label, Href: href, Icon: icon}
 		},
+		// inline is an action whose page opens in the side panel.
+		"inline": func(label, href, icon string) headerAction {
+			return headerAction{Label: label, Href: href, Icon: icon, Inline: true}
+		},
 		// download is an action that downloads a file; a CSV opens the CSV dialog first.
 		"download": func(label, href string) headerAction {
 			return headerAction{Label: label, Href: href, Icon: "download", Download: true,
@@ -432,6 +436,7 @@ type pageHeader struct {
 type headerAction struct {
 	Label, Href, Icon, Panel, Modal string
 	Download, CSV                   bool
+	Inline                          bool // opens in the side panel (data-inline)
 	// Tip is the explainer the action shows on hover and focus (see tips.go).
 	Tip string
 }

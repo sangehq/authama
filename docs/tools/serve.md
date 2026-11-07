@@ -118,6 +118,9 @@ documentation, the source and the licences.
 - **Each row's actions are one menu** (the ⋮ button at the row's end): open it, copy what it names,
   see its history, and the row's destructive action last, set apart. A token's menu also opens the
   add-a-token panel filled in for it, which is how a token is replaced or rotated.
+- **Connection status is checked on request.** *Check connections* on the Overview and Hosts pages
+  (and *Check connection* on a host's page) runs `ssh net` and shows the result in the side panel.
+  No page probes the network as it loads. See [network](network.md#in-the-web-ui).
 - **Copying** puts public values on the clipboard: a public key, a fingerprint, a path, a hostname,
   `ssh <alias>`. A toast says it worked. Nothing secret can be copied from a page: a private key
   is copied only from the terminal (`authama ssh termius keys`), and a token's secret only with
