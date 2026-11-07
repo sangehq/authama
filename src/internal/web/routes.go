@@ -40,6 +40,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /hosts/{alias}", h.handleHost)
 	mux.HandleFunc("GET /net", netPage{s}.handleNet)
 	mux.HandleFunc("GET /import", importPage{s}.handleImport)
+	mux.HandleFunc("GET /validate", validatePage{s}.handleValidate)
 	mux.HandleFunc("GET /keys", h.handleKeys)
 	mux.HandleFunc("GET /keys/{profile}/{key}", h.handleKey)
 	mux.HandleFunc("GET /snapshots", h.handleSnapshots)

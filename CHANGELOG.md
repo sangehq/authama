@@ -18,6 +18,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the terminal needs `--force`, and is backed up first. A preview's copy holds no private key, so
   each key the import would copy in is listed and stood in for by an empty file, and apply copies
   the real one.
+- **Validate from the web UI.** A new *Validate* page under **System** runs every validate check on
+  one page when you open it: the manifest loads and passes its rules, `settings validate` (authama.json
+  against its schema, `.env`'s syntax and permissions), `ssh validate` (each keypair parses, its public
+  key matches and its permissions are safe) and `ssh config check`. Each result names the command that
+  runs the same check. A manifest that does not load fails the key and config checks too, rather than
+  reporting them clean. It writes nothing, so read-only servers offer it.
 - **Naming from the web UI.** A new *Naming* page under **SSH** shows what `ssh naming show` and
   `ssh naming check` print: the rules in effect, each profile's code and own rules, and the servers
   whose alias breaks them. It changes the rules for every profile or one profile (`naming set`), the

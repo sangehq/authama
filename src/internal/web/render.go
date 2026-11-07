@@ -706,6 +706,7 @@ func paletteItems(readOnly bool) []paletteItem {
 		{"events", "Events", "/events", "activity", "Activity", "events file changes tracking", "g e", ""},
 		{"export", "Export", "/export", "file-export", "Export", "export download csv json yaml php javascript markdown html filter columns", "g x", ""},
 		{"doctor", "Doctor", "/doctor", "stethoscope", "System", "doctor checks fix", "g d", ""},
+		{"validate", "Validate", "/validate", "circle-check", "System", "validate check manifest settings keys keypair config schema", "g l", ""},
 		{"repair", "Repair", "/repair", "refresh", "System", "repair fix corrupt permissions factory reset", "g r", ""},
 		{"settings", "Settings", "/settings", "settings", "System", "settings theme appearance env", "g ,", ""},
 		{"about", "About", "/about", "info-circle", "System", "about version licences", "g i", ""},
