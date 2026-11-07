@@ -72,7 +72,7 @@ func TestThePreviewOffersFieldsFacetsAndFormats(t *testing.T) {
 	if p.Grain != "host" || p.Total != 1 || p.Kept != 1 || len(p.Rows) != 1 || len(p.Stages) != 5 {
 		t.Errorf("preview = %+v", p)
 	}
-	if len(p.Formats) != 9 || len(p.Fields) < 20 {
+	if len(p.Formats) != 18 || len(p.Fields) < 20 {
 		t.Errorf("%d formats, %d fields", len(p.Formats), len(p.Fields))
 	}
 	if prof := p.Facets["profile"]; len(prof) != 1 || prof[0].Value != "work" || prof[0].Rows != 1 {

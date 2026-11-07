@@ -8,3 +8,5 @@
 # icons.txt and TABLER_VERSION are edited by hand and keep their diffs.
 src/internal/web/assets/vendor/tabler/** -text -diff linguist-vendored
 src/internal/web/assets/vendor/tabler-icons.svg -text linguist-vendored
+# Golden files are compared byte for byte, CRLF and UTF-16 included.
+**/testdata/golden/** -text

@@ -10,9 +10,9 @@ import { Prefs } from "../core/prefs.js";
  * @typedef {{ version: 1, grain: string, where: Where, narrow?: boolean, columns?: Column[], sort?: SortKey[], limit?: number }} Selection
  * @typedef {{ value: string, profile?: string, rows: number }} FacetValue
  * @typedef {{ name: string, rows: number }} Stage
- * @typedef {{ name: string, label: string, extension: string }} Format
+ * @typedef {{ name: string, label: string, extension: string, hosts?: boolean }} Format
  * @typedef {{ grain: string, columns: string[], rows: string[][], total: number, kept: number, stages: Stage[],
- *   fields: string[], facets: Record<string, FacetValue[]>, formats: Format[], defaults: Column[] }} Preview
+ *   fields: string[], facets: Record<string, FacetValue[]>, formats: Format[], defaults: Column[], skipped?: string[] }} Preview
  */
 
 /** The facets the page offers, in its order: heading, and one value's name. */
@@ -32,12 +32,52 @@ const FACETS = [
 /** The grains whose rows have a time, so since/until apply. */
 const TIMED = ["op", "event", "snapshot", "deployment"];
 
-/** The formats each option applies to. */
+/** The formats each option applies to; "git" applies to every host format. */
 const APPLIES = {
   header: ["csv", "tsv", "markdown", "html"],
   compact: ["json", "js", "php"],
   table: ["json", "js", "php", "yaml"],
 };
+
+/** The command-line flag of each filter, as `authama export` names it. */
+const FLAGS = {
+  profile: "--profile",
+  key: "--key",
+  env: "--env",
+  role: "--role",
+  tag: "--tag",
+  status: "--status",
+  target: "--tool",
+  kind: "--kind",
+  area: "--area",
+  source: "--source",
+  command: "--command",
+  include: "--include",
+  exclude: "--exclude",
+  since: "--since",
+  until: "--until",
+};
+
+/** The filters whose flag takes a list, which the command line reads as CSV. */
+const LISTS = ["profile", "key", "env", "role", "tag", "status", "target", "kind", "area", "source", "command"];
+
+/**
+ * A word for a POSIX shell: as it is when nothing in it is special, else in
+ * single quotes, with a quote inside written '\''.
+ * @param {string} s
+ */
+export function shellWord(s) {
+  return /^[A-Za-z0-9_@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, "'\\''")}'`;
+}
+
+/**
+ * One value of a list flag. The command line splits a list flag's value as
+ * CSV, so a value holding a comma or a quote goes in double quotes.
+ * @param {string} s
+ */
+function listValue(s) {
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
 
 /** base64url of a string, UTF-8 safe. @param {string} s */
 function b64url(s) {
@@ -117,7 +157,7 @@ export class ExportPage extends Component {
     if (s && s.version === 1 && typeof s.grain === "string") {
       this.#sel = { version: 1, grain: s.grain, where: s.where ?? {}, narrow: s.narrow, columns: s.columns, sort: s.sort };
     }
-    const f = /[#&]f=([a-z]+)/.exec(location.hash);
+    const f = /[#&]f=([a-z0-9_-]+)/.exec(location.hash);
     this.#format = f ? f[1] : Prefs.get("export.format", "csv");
   }
 
@@ -163,12 +203,15 @@ export class ExportPage extends Component {
     const run = this.el.dataset.run ?? "/exports/run";
     const u = new URL(run, location.href);
     u.searchParams.set("s", this.#encoded());
+    u.searchParams.set("format", this.#format);
+    const opt = (/** @type {string} */ n) => /** @type {HTMLInputElement} */ (this.el.querySelector(`[data-export-opt="${n}"]`));
+    if (this.#isHosts() && opt("git").checked) {
+      u.searchParams.set("include_git", "1");
+    }
     if (preview) {
       u.searchParams.set("preview", "1");
       return u;
     }
-    u.searchParams.set("format", this.#format);
-    const opt = (/** @type {string} */ n) => /** @type {HTMLInputElement} */ (this.el.querySelector(`[data-export-opt="${n}"]`));
     if (APPLIES.header.includes(this.#format) && !opt("header").checked) {
       u.searchParams.set("header", "0");
     }
@@ -236,13 +279,21 @@ export class ExportPage extends Component {
     this.#part("columns-reset").addEventListener("click", () => this.#update({ columns: undefined, sort: undefined }));
     const format = /** @type {HTMLSelectElement} */ (this.#part("format"));
     format.addEventListener("change", () => {
+      const was = this.#isHosts();
       this.#format = format.value;
-      this.#renderOutput();
+      // A host format can leave hosts out, which the preview says: ask again.
+      if (was || this.#isHosts()) {
+        this.#refresh();
+      } else {
+        this.#renderOutput();
+      }
     });
     for (const o of /** @type {HTMLInputElement[]} */ ([...this.el.querySelectorAll("[data-export-opt]")])) {
       o.addEventListener("change", () => {
         if (o.dataset.exportOpt === "narrow") {
           this.#update({ narrow: o.checked });
+        } else if (o.dataset.exportOpt === "git") {
+          this.#refresh();
         } else {
           this.#renderOutput();
         }
@@ -250,6 +301,7 @@ export class ExportPage extends Component {
     }
     this.#part("copy").addEventListener("click", () => this.#copy());
     this.#part("share").addEventListener("click", () => this.#share());
+    this.#part("command").addEventListener("click", () => this.#copyCommand());
     const download = this.#part("download");
     download.addEventListener("click", (e) => {
       if (download.getAttribute("aria-disabled") === "true") {
@@ -564,6 +616,13 @@ export class ExportPage extends Component {
     reason(stage("profile") - stage("key"), "for other keys", ["key"]);
     reason(stage("key") - stage("facets"), "left out by filters", ["env", "role", "tag", "status", "target", "kind", "area", "source", "command", "since", "until"]);
     reason(stage("facets") - stage("text"), "matching the text", ["include", "exclude"]);
+    if (p.skipped?.length) {
+      // Left out by the format, not the filters: nothing to undo here but the
+      // format, so the tag only says why, one host a line.
+      const label = this.#p?.formats.find((f) => f.name === this.#format)?.label ?? this.#format;
+      reasons.push(El.create("span").cls("tag").attr("title", p.skipped.join("\n"))
+        .text(`${p.skipped.length} left out of the ${label} file`).node);
+    }
     this.#part("reasons").replaceChildren(...reasons);
 
     const cols = this.#columns();
@@ -609,9 +668,10 @@ export class ExportPage extends Component {
     }
     select.value = this.#format;
     for (const o of /** @type {HTMLInputElement[]} */ ([...this.el.querySelectorAll("[data-export-opt]")])) {
-      const name = /** @type {keyof typeof APPLIES | "narrow"} */ (o.dataset.exportOpt);
+      const name = /** @type {keyof typeof APPLIES | "narrow" | "git"} */ (o.dataset.exportOpt);
       const label = /** @type {HTMLElement} */ (o.closest("label"));
-      label.hidden = name === "narrow" ? this.#sel.grain !== "profile" : !APPLIES[name].includes(this.#format);
+      label.hidden =
+        name === "narrow" ? this.#sel.grain !== "profile" : name === "git" ? !this.#isHosts() : !APPLIES[name].includes(this.#format);
       if (name === "narrow") {
         o.checked = this.#sel.narrow !== false;
       }
@@ -621,7 +681,7 @@ export class ExportPage extends Component {
     const note = this.#part("blocked");
     note.textContent = why;
     this.#part("blocked-row").hidden = why === "";
-    for (const b of [this.#part("copy"), this.#part("share")]) {
+    for (const b of [this.#part("copy"), this.#part("share"), this.#part("command")]) {
       /** @type {HTMLButtonElement} */ (b).disabled = why !== "";
     }
     if (why) {
@@ -647,6 +707,66 @@ export class ExportPage extends Component {
       this.#flash(btn, "Copied");
     } catch (err) {
       this.#flash(btn, `Could not copy: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
+  /** Whether the chosen format writes hosts for an SSH client, not a table. */
+  #isHosts() {
+    return this.#p?.formats.find((f) => f.name === this.#format)?.hosts === true;
+  }
+
+  /**
+   * The `authama export` command that writes the file this page would
+   * download: the list, its filters, columns, sort, format and options.
+   */
+  command() {
+    const sel = this.#clean();
+    const tab = /** @type {HTMLElement | null} */ (this.el.querySelector(`[data-export-grain="${sel.grain}"]`));
+    const args = [this.el.dataset.command ?? "authama", "export", tab?.dataset.preset || `${sel.grain}s`];
+    for (const [k, v] of Object.entries(sel.where)) {
+      const flag = FLAGS[/** @type {keyof typeof FLAGS} */ (k)];
+      if (!flag || v === undefined) {
+        continue;
+      }
+      for (const x of Array.isArray(v) ? v : [v]) {
+        args.push(`${flag}=${LISTS.includes(k) ? listValue(x) : x}`);
+      }
+    }
+    if (sel.narrow) {
+      args.push("--narrow");
+    }
+    for (const c of sel.columns ?? []) {
+      args.push(`--columns=${listValue(c.as ? `${c.field}=${c.as}` : c.field)}`);
+    }
+    for (const k of sel.sort ?? []) {
+      args.push(`--sort=${listValue(`${k.desc ? "-" : ""}${k.field}`)}`);
+    }
+    if (this.#format !== "csv") {
+      args.push(`--format=${this.#format}`);
+    }
+    const opt = (/** @type {string} */ n) => /** @type {HTMLInputElement} */ (this.el.querySelector(`[data-export-opt="${n}"]`)).checked;
+    if (APPLIES.header.includes(this.#format) && !opt("header")) {
+      args.push("--no-header");
+    }
+    if (APPLIES.compact.includes(this.#format) && opt("compact")) {
+      args.push("--compact");
+    }
+    if (APPLIES.table.includes(this.#format) && opt("table")) {
+      args.push("--shape=table");
+    }
+    if (this.#isHosts() && opt("git")) {
+      args.push("--include-git");
+    }
+    return args.map(shellWord).join(" ");
+  }
+
+  async #copyCommand() {
+    const btn = this.#part("command");
+    try {
+      await navigator.clipboard.writeText(this.command());
+      this.#flash(btn, "Command copied");
+    } catch {
+      this.#flash(btn, "Could not copy the command");
     }
   }
 

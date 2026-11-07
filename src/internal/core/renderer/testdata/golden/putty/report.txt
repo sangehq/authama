@@ -1,0 +1,6 @@
+devbox: reached through a ProxyCommand, which PuTTY and KiTTY (a .reg file) does not run; use windows-terminal or iterm2, which go through ssh
+Double-click authama-putty.reg (or `reg import authama-putty.reg`) on the Windows machine. Key paths are this machine's; edit them if PuTTY runs elsewhere. KiTTY also reads each session's Folder.
+PuTTY reads only .ppk keys; convert each once:
+puttygen /home/u/.ssh/profiles/internal/personal/imani_github-ed25519 -o /home/u/.ssh/profiles/internal/personal/imani_github-ed25519.ppk
+puttygen /home/u/.ssh/profiles/legacy/legacy-ed25519 -o /home/u/.ssh/profiles/legacy/legacy-ed25519.ppk
+puttygen /home/u/.ssh/profiles/orgs/simtabi/simtabi_oribi-web-ed25519 -o /home/u/.ssh/profiles/orgs/simtabi/simtabi_oribi-web-ed25519.ppk

@@ -5,8 +5,8 @@
      through /exports/run?preview=1. Without it, the page lists each list's
      download. */}}
 {{define "content"}}{{with .Data}}
-{{template "page_header" (header "Export" "Export" "Any list as CSV, TSV, JSON, YAML, a PHP or JavaScript array, Markdown or HTML: filtered, with the columns you choose. Nothing here holds a secret.")}}
-<div class="export-page" data-export-page data-run="{{u "/exports/run"}}">
+{{template "page_header" (header "Export" "Export" "Any list as CSV, TSV, JSON, YAML, a PHP or JavaScript array, Markdown or HTML, and hosts as ssh_config or for an SSH client: filtered, with the columns you choose. Nothing here holds a secret.")}}
+<div class="export-page" data-export-page data-run="{{u "/exports/run"}}" data-command="{{brandCommand}}">
   <div class="card">
     <div class="card-header">
       <ul class="nav nav-bordered card-header-tabs" role="tablist" aria-label="What each row is">
@@ -79,11 +79,13 @@
           <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" data-export-opt="compact"><span class="form-check-label">Compact</span></label>
           <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" data-export-opt="table"><span class="form-check-label">As {columns, rows}</span></label>
           <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" data-export-opt="narrow" checked><span class="form-check-label">Count only the keys ticked</span></label>
+          <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" data-export-opt="git"><span class="form-check-label">Include git hosts</span></label>
         </div>
         <div class="col-auto ms-auto">
           <div class="btn-list">
             <button type="button" class="btn" data-export-copy{{tip "export-copy"}}>{{icon "copy"}}<span class="ms-1">Copy</span></button>
             <button type="button" class="btn" data-export-share{{tip "export-share"}}>{{icon "link"}}<span class="ms-1">Copy link</span></button>
+            <button type="button" class="btn" data-export-command{{tip "export-command"}}>{{icon "terminal-2"}}<span class="ms-1">Copy as command</span></button>
             <a class="btn btn-primary" role="link" href="{{u "/exports/run?preset=hosts"}}" download data-export-download{{tip "download"}}>{{icon "download"}}<span class="ms-1">Download</span></a>
           </div>
         </div>

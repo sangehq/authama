@@ -1,0 +1,42 @@
+{
+  "Profiles": [
+    {
+      "Name": "github-imani",
+      "Guid": "authama-github-imani",
+      "Custom Command": "Yes",
+      "Command": "ssh github-imani",
+      "Tags": [
+        "personal"
+      ]
+    },
+    {
+      "Name": "box",
+      "Guid": "authama-box",
+      "Custom Command": "Yes",
+      "Command": "ssh box",
+      "Tags": [
+        "legacy",
+        "prod",
+        "eu,west"
+      ]
+    },
+    {
+      "Name": "oribi-web",
+      "Guid": "authama-oribi-web",
+      "Custom Command": "Yes",
+      "Command": "ssh oribi-web",
+      "Tags": [
+        "simtabi"
+      ]
+    },
+    {
+      "Name": "devbox",
+      "Guid": "authama-devbox",
+      "Custom Command": "Yes",
+      "Command": "ssh devbox",
+      "Tags": [
+        "simtabi"
+      ]
+    }
+  ]
+}

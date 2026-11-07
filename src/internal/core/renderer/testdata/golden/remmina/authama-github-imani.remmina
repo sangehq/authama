@@ -1,0 +1,8 @@
+[remmina]
+name=github-imani
+group=personal
+protocol=SSH
+server=github.com:22
+username=git
+ssh_auth=1
+ssh_privatekey=/home/u/.ssh/profiles/internal/personal/imani_github-ed25519

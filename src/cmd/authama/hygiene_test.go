@@ -76,9 +76,13 @@ func trackedFiles(t *testing.T) (root string, files []string) {
 	return root, files
 }
 
-// isBinary follows .gitattributes: those extensions are the only ones exempt
-// from the text rules below.
+// isBinary follows .gitattributes: those extensions, and golden files (which
+// are compared byte for byte, CRLF and UTF-16 included, so git keeps them
+// -text), are the only ones exempt from the text rules below.
 func isBinary(name string) bool {
+	if strings.Contains(filepath.ToSlash(name), "/testdata/golden/") {
+		return true
+	}
 	switch strings.ToLower(filepath.Ext(name)) {
 	case ".png", ".age", ".gz", ".zip", ".ico":
 		return true

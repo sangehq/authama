@@ -1,0 +1,4 @@
+Groups,Label,Tags,Hostname/IP,Protocol,Port,Username,Password
+personal,github-imani,,github.com,ssh,22,git,
+legacy,box,"prod,eu west",box.example,ssh,2222,me,
+simtabi,oribi-web,,203.0.113.23,ssh,22,ploi,

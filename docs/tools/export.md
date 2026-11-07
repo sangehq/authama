@@ -1,8 +1,10 @@
 # `export` — any list, and copies of the config for other tools
 
-`authama export` writes any list in any format (below). Three more commands write a copy of your hosts for another tool: `config export --flat` for anything that reads one
-`ssh_config`, `termius export` for the Termius app, and `host export <client>` for Windows Terminal, iTerm2, PuTTY,
-Remmina and any client that imports a CSV.
+`authama export` writes any list in any format (below), and hosts also as `ssh_config` or as an SSH client imports
+them. Three older commands write the same host files: `config export --flat` for anything that reads one `ssh_config`,
+`termius export` for the Termius app, and `host export <client>` for Windows Terminal, iTerm2, PuTTY, Remmina,
+SecureCRT, MobaXterm and any client that imports a CSV. `termius export` and `host export` are deprecated in favour of
+`export hosts --format <client>`; they keep working and write the same bytes, and are not removed before v1.0.0.
 
 All are opt-in and read-only towards `~/.ssh`. They write under `~/.config/authama/exports/` (mode 0600, since
 the files list every host and key path), and they refuse any target inside `~/.ssh`, however the path is spelled: containment is
@@ -10,8 +12,9 @@ checked by inode, so another case on APFS or a symlinked directory is caught too
 
 ## `authama export <list>`
 
-Any list of the home, filtered and with the columns you choose, in any of nine formats: the files the web UI's
-Export page makes, at the command line. Nothing in an export holds a secret.
+Any list of the home, filtered and with the columns you choose, in any of nine table formats, and hosts in nine more
+for ssh and SSH clients: the files the web UI's Export page makes, at the command line. Nothing in an export holds a
+secret.
 
 ```bash
 authama export hosts --profile simtabi --env prd --format json
@@ -19,6 +22,8 @@ authama export keys --columns ref=key,fingerprint,expires_on --sort expires_on -
 authama export profiles --key simtabi_simbi-prd-web-00-ed25519 --narrow --format yaml
 authama export hosts --fields                              # every field a host row has
 authama export --selection sel.json --format php -o hosts.php
+authama export hosts --profile simtabi --format ssh_config -o simtabi.ssh_config
+authama export hosts --env prd --format putty -o prd.reg
 ```
 
 | Part | What it takes |
@@ -27,11 +32,32 @@ authama export --selection sel.json --format php -o hosts.php
 | filters | `--profile`, `--key` (a key's name or `profile/name`), `--env`, `--role`, `--tag`, `--status`, `--tool`, `--kind`, `--area`, `--source`, `--command`, `--since`/`--until` (a prefix such as `2026-11`), `--include`/`--exclude` text |
 | columns | `--columns field,field=heading,…` by field, in order; related fields by path (`key.fingerprint`, `profile.code`) |
 | order | `--sort field,-field` (`-` descends), `--limit n` |
-| format | `--format csv` (default), `tsv`, `json`, `jsonl`, `yaml`, `php`, `js`, `markdown`, `html`; `--no-header`, `--compact`, `--shape table` |
+| format | `--format csv` (default), `tsv`, `json`, `jsonl`, `yaml`, `php`, `js`, `markdown`, `html`; `--no-header`, `--compact`, `--shape table`. For hosts also `ssh_config`, `termius` and the clients below; `--include-git` |
 | output | stdout, or `--out <file>` (mode 0600) |
 
 `authama export hosts` and `authama export keys` with no options print exactly what `ssh list --csv` and
 `ssh key list --csv` print: the same pipeline.
+
+### Hosts for ssh and SSH clients
+
+| `--format` | Writes | Same bytes as |
+|---|---|---|
+| `ssh_config` | the managed config of the hosts kept: each block as the flat export writes it, under its profile's banner, the git ssh-mode block when its `github.com` host is kept, `Host *` last | `ssh config export --flat`, when every host is kept |
+| `termius` | the Termius CSV import | `ssh termius export` |
+| `hosts-csv` | the generic client CSV (`alias, group, hostname, port, user, key_path, tags`) | `ssh host export csv` |
+| `windows-terminal`, `iterm2`, `putty`, `securecrt`, `mobaxterm` | the client's file, named as the client expects (`authama-putty.reg`, …) | `ssh host export <client>` |
+| `remmina` | a zip holding one `authama-<alias>.remmina` per host | `ssh host export remmina`, zipped |
+
+The filters choose the hosts; `--columns` does not apply, since each client reads its own fields. With no `--sort`,
+hosts come in manifest order, as the old commands list them; with one, in the sort's order. Git hosts are left out
+unless `--include-git`, and every client but `windows-terminal` and `iterm2` leaves out hosts behind a ProxyCommand,
+which it would not run; `ssh_config` keeps both, since ssh itself reads it. What was left out, and what is left to do
+in the client, goes to stderr, so `--out -` or a pipe gets a clean file. The client table below says what each file
+holds and where it goes.
+
+The Export page offers the same formats on its Hosts tab, with an *Include git hosts* switch, and says how many hosts
+the chosen format leaves out. *Copy as command* copies the `authama export` command that writes the file the page
+previews, with its list, filters, columns, sort, format and options.
 
 ## Why a flat copy
 
@@ -61,6 +87,8 @@ reader of ssh's own format, not a host list for another app.
 copy goes stale when the manifest changes; export again rather than editing it.
 
 ## `authama ssh termius export`
+
+Deprecated: `authama export hosts --format termius` writes the same CSV. This command keeps working.
 
 Termius keeps hosts in its own encrypted vault and has no command line or API to add them, so authama cannot write into
 it. It writes the CSV Termius's importer reads instead:
@@ -115,9 +143,12 @@ add from 1Password instead. Full walk-through: [Import your hosts into Termius](
 
 The column layout is the one third-party exporters reproduce from Termius's import template (Termius 9.x). Termius
 publishes the template only inside the app (Hosts → New Host → Import → CSV → download template); if its header ever
-differs, `TermiusColumns` in `src/internal/core/renderer/export.go` is the one place to change.
+differs, `TermiusColumns` in `src/internal/util/encode/clients.go` is the one place to change.
 
 ## `authama ssh host export <client>`
+
+Deprecated: `authama export hosts --format <client>` writes the same files (the generic CSV is `hosts-csv` there).
+This command keeps working.
 
 ```bash
 authama ssh host export windows-terminal        # ~/.config/authama/exports/windows-terminal/authama.json

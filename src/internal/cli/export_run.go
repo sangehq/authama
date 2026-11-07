@@ -11,10 +11,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/core/renderer"
+	"github.com/simtabi/authama/src/internal/platform"
 	"github.com/simtabi/authama/src/internal/services/dataset"
 	"github.com/simtabi/authama/src/internal/services/selection"
 	"github.com/simtabi/authama/src/internal/util/encode"
 	"github.com/simtabi/authama/src/internal/util/fs"
+	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
 // newExportCmd is `export`: any list of the home, filtered, with the columns
@@ -31,6 +35,7 @@ func newExportCmd() *cobra.Command {
 		include, exclude, since, until      string
 		limit                               int
 		narrow, noHeader, compact, listFlds bool
+		includeGit                          bool
 	)
 	names := make([]string, 0, len(selection.Presets))
 	for n := range selection.Presets {
@@ -39,7 +44,7 @@ func newExportCmd() *cobra.Command {
 	sort.Strings(names)
 	cmd := &cobra.Command{
 		Use:   "export [" + strings.Join(names, "|") + "]",
-		Short: "Write any list as CSV, JSON, YAML, a PHP or JS array, Markdown or HTML, filtered",
+		Short: "Write any list as CSV, JSON, YAML, a PHP or JS array, Markdown or HTML, or hosts for an SSH client, filtered",
 		Long: "Write one of the home's lists, filtered and with the columns chosen, in any format: the\n" +
 			"same files the web UI's Export page makes. Nothing in an export holds a secret.\n\n" +
 			"The list is one of " + strings.Join(names, ", ") + ", or --selection names a selection saved as JSON\n" +
@@ -48,13 +53,22 @@ func newExportCmd() *cobra.Command {
 			"--since and --until (a time or a prefix such as 2026-11), --include and --exclude text.\n" +
 			"--columns chooses the columns, by field (--fields lists them; key.fingerprint follows the\n" +
 			"host's key), each optionally renamed as field=heading. --sort orders the rows (-field\n" +
-			"descends). --format is one of " + strings.Join(encode.Names(), ", ") + ".\n\n" +
+			"descends). --format is one of " + strings.Join(encode.TableNames(), ", ") + ".\n\n" +
+			"Hosts also go out as an SSH client imports them: --format " + strings.Join(encode.HostNames(), ", ") + ".\n" +
+			"ssh_config is the managed config of the hosts kept, byte for byte what `ssh config export --flat`\n" +
+			"writes when every host is kept; termius is the Termius CSV; the rest are `ssh host export`'s\n" +
+			"clients (hosts-csv is its csv). Those formats write hosts in manifest order unless --sort is\n" +
+			"given, ignore --columns, leave out git hosts unless --include-git and, except ssh_config,\n" +
+			"windows-terminal and iterm2, hosts behind a ProxyCommand. remmina writes a zip of one file per\n" +
+			"host. What was left out, and what is left to do in the client, goes to stderr.\n\n" +
 			"The file goes to stdout, or to --out.",
 		Example: "  " + brand.Command + " export hosts --profile simtabi --env prd --format json\n" +
 			"  " + brand.Command + " export keys --columns ref=key,fingerprint,expires_on --sort expires_on --format markdown\n" +
 			"  " + brand.Command + " export profiles --key simtabi_simbi-prd-web-00-ed25519 --narrow --format yaml\n" +
 			"  " + brand.Command + " export hosts --fields\n" +
-			"  " + brand.Command + " export --selection sel.json --format php --out hosts.php",
+			"  " + brand.Command + " export --selection sel.json --format php --out hosts.php\n" +
+			"  " + brand.Command + " export hosts --profile simtabi --format ssh_config --out simtabi.ssh_config\n" +
+			"  " + brand.Command + " export hosts --env prd --format putty --out prd.reg",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			sel, err := exportSelection(args, selFile)
@@ -115,11 +129,14 @@ func newExportCmd() *cobra.Command {
 			if c.Flags().Changed("limit") {
 				sel.Limit = limit
 			}
-			res, err := selection.Run(ds, sel)
+			f, err := encode.Get(format)
 			if err != nil {
 				return err
 			}
-			f, err := encode.Get(format)
+			if f.IsHosts() {
+				return runHostExport(c, p, ds, sel, f, out, encode.Options{IncludeGit: includeGit})
+			}
+			res, err := selection.Run(ds, sel)
 			if err != nil {
 				return err
 			}
@@ -140,7 +157,7 @@ func newExportCmd() *cobra.Command {
 		},
 	}
 	f := cmd.Flags()
-	f.StringVar(&format, "format", "csv", "csv, tsv, json, jsonl, yaml, php, js, markdown or html")
+	f.StringVar(&format, "format", "csv", "csv, tsv, json, jsonl, yaml, php, js, markdown or html; for hosts also "+strings.Join(encode.HostNames(), ", "))
 	f.StringVarP(&out, "out", "o", "", "write to this file (mode 0600) instead of stdout")
 	f.StringVar(&selFile, "selection", "", "a selection saved as JSON (the Export page's), instead of a list name")
 	f.StringSliceVar(&columns, "columns", nil, "the columns, by field, in order; field=heading renames one")
@@ -166,6 +183,7 @@ func newExportCmd() *cobra.Command {
 	f.BoolVar(&compact, "compact", false, "json, js, php: no indentation")
 	f.StringVar(&shape, "shape", "", "json, js, php, yaml: \"table\" writes {columns, rows} instead of one object per row")
 	f.BoolVar(&listFlds, "fields", false, "list every field the list's rows have, and write nothing")
+	f.BoolVar(&includeGit, "include-git", false, "host formats: also export git hosts (user git, or a github or gitlab provider)")
 	return cmd
 }
 
@@ -189,4 +207,38 @@ func exportSelection(args []string, file string) (selection.Selection, error) {
 		return selection.Parse(b)
 	}
 	return selection.Selection{}, errors.New("name a list (hosts, keys, ...) or give --selection")
+}
+
+// runHostExport writes the hosts sel keeps in the host format f: one file to
+// stdout or --out (remmina's is a zip), with what was left out and what is
+// left to do in the client on stderr, so a pipe gets a clean file.
+func runHostExport(c *cobra.Command, p paths.Paths, ds *dataset.Dataset, sel selection.Selection, f encode.Format, out string, o encode.Options) error {
+	m, err := manifest.Load(p.Manifest())
+	if err != nil {
+		return err
+	}
+	src := renderer.Source{M: m, P: exportPaths(p), EmitUseKeychain: platform.EmitUseKeychain()}
+	exp, res, err := selection.HostExport(ds, sel, f, src, o)
+	if err != nil {
+		return err
+	}
+	data, err := encode.Bundle(f, exp)
+	if err != nil {
+		return err
+	}
+	if out == "" || out == stdoutTarget {
+		if _, err := c.OutOrStdout().Write(data); err != nil {
+			return err
+		}
+	} else {
+		if out, err = exportTarget(p, out, ""); err != nil {
+			return err
+		}
+		if err := fs.WriteTextAtomic(out, string(data), 0o600); err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintf(c.ErrOrStderr(), "wrote %d of %d host(s) to %s\n", len(res.Rows)-len(exp.Skipped), len(res.Rows), out)
+	}
+	_, _ = fmt.Fprint(c.ErrOrStderr(), selection.Report(exp))
+	return nil
 }
