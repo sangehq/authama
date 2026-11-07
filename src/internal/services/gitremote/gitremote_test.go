@@ -17,7 +17,7 @@ const fixture = `{
   "profiles": {
     "imanimanyara": {"hosts": [{"alias": "github-imanimanyara", "hostname": "github.com", "user": "git", "key_name": "imanimanyara_github-ed25519"}]},
     "example-user": {"hosts": [{"alias": "github-example-user", "hostname": "github.com", "user": "git", "key_name": "example-user_github-ed25519"}]},
-    "unc": {"hosts": [{"alias": "unc", "hostname": "sc.its.unc.edu", "user": "git", "key_name": "unc_git-ed25519"}]}
+    "corp": {"hosts": [{"alias": "corp", "hostname": "git.example.org", "user": "git", "key_name": "corp_git-ed25519"}]}
   }
 }`
 
@@ -49,7 +49,7 @@ func TestParse(t *testing.T) {
 		{"git@github-imanimanyara:simtabi/pheg.git", true, "profile", "simtabi", "pheg", "imanimanyara"},
 		{"git@github-example-user:clientco/app.git", true, "profile", "clientco", "app", "example-user"},
 		// Not GitHub: an alias for another host, an unknown alias, GitLab.
-		{"git@unc:group/project.git", false, "", "", "", ""},
+		{"git@corp:group/project.git", false, "", "", "", ""},
 		{"git@github-nobody:simtabi/x.git", false, "", "", "", ""},
 		{"https://gitlab.com/group/project.git", false, "", "", "", ""},
 	}
@@ -72,7 +72,7 @@ func TestURLFor(t *testing.T) {
 			t.Errorf("%s: %q, %v", mode, got, err)
 		}
 	}
-	if _, err := URLFor(m, "profile", "simtabi", "pheg", "unc"); err == nil {
+	if _, err := URLFor(m, "profile", "simtabi", "pheg", "corp"); err == nil {
 		t.Error("a profile with no github.com host has no alias to use")
 	}
 	noGit := load(t, strings.Replace(fixture, `"defaults": {"git": {"profile": "imanimanyara", "orgs": {"clientco": "example-user"}}},`, "", 1))
@@ -123,7 +123,7 @@ func TestUseDryRunAndNoOps(t *testing.T) {
 	if ch, _ := Use(g, m, "/r", "ssh", "", false); ch.Skipped != "already ssh" || g.lsCalls != 0 {
 		t.Errorf("same mode: %+v", ch)
 	}
-	g = &fakeGit{origin: "git@unc:group/project.git"}
+	g = &fakeGit{origin: "git@corp:group/project.git"}
 	if ch, _ := Use(g, m, "/r", "https", "", false); !strings.Contains(ch.Skipped, "not a GitHub remote") {
 		t.Errorf("non-GitHub origin: %+v", ch)
 	}
