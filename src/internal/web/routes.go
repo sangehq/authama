@@ -35,6 +35,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /unlock", ownerGate{s}.handleUnlock)
 	mux.HandleFunc("GET /{$}", h.handleOverview)
 	mux.HandleFunc("GET /profiles", h.handleProfiles)
+	mux.HandleFunc("GET /naming", namingPage{s}.handleNaming)
 	mux.HandleFunc("GET /hosts", h.handleHosts)
 	mux.HandleFunc("GET /hosts/{alias}", h.handleHost)
 	mux.HandleFunc("GET /net", netPage{s}.handleNet)

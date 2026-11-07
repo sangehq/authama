@@ -693,6 +693,7 @@ func paletteItems(readOnly bool) []paletteItem {
 	items := []paletteItem{
 		{"overview", "Overview", "/", "layout-dashboard", "Page", "home dashboard state", "g o", ""},
 		{"profiles", "Profiles", "/profiles", "users", "SSH", "profile category key scope", "g p", ""},
+		{"naming", "Naming", "/naming", "license", "SSH", "naming rules alias template key name code env role check", "g n", ""},
 		{"hosts", "Hosts", "/hosts", "server", "SSH", "host alias hostname", "g h", ""},
 		{"keys", "Keys", "/keys", "key", "SSH", "key fingerprint expiry reserve", "g k", ""},
 		{"vms", "VMs", "/vms", "device-desktop", "SSH", "vm hypervisor devbox sync", "g v", ""},

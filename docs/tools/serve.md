@@ -83,7 +83,7 @@ server only reads), a search box that opens the command palette, a theme toggle 
 bell listing the newest [file events](events.md), and an account menu named for the system user the
 server runs as. The account menu opens with *Running as <user> on <host>* and holds Settings, Events,
 Doctor, the tour and About. Under it, a menu holds the Overview and five dropdowns: **SSH**
-(Profiles, Hosts, Keys, VMs), **Config & backups** (SSH config, Snapshots), **Security** (Auth tokens,
+(Profiles, Naming, Hosts, Keys, VMs), **Config & backups** (SSH config, Snapshots), **Security** (Auth tokens,
 Audit, Owner & PIN), **Activity** (History, Events), Export, and **System** (Doctor, Repair, Settings,
 About). On a narrow screen it folds behind a button. About shows the build (and whether it is
 current), this computer, and the third-party licences; following the system's light or dark theme is
@@ -251,6 +251,9 @@ These changes can be made from the pages:
 | Delete a profile | Profiles | `authama ssh profile delete --yes` |
 | Delete a profile and its key files | Profiles, ticking *and its key files* | `authama ssh profile delete --purge --yes` |
 | Move a profile to a category | Profiles | `authama ssh profile edit --category` |
+| Change the naming rules, for every profile or one | Naming | `authama ssh naming set [--profile] …` (only the fields changed) |
+| Change how new keys are named | Naming | `authama ssh naming key-template <template> --yes` |
+| Set or clear a profile's code | Naming (a profile's menu) | `authama ssh profile edit <name> --code` |
 | Add a host, or a VM host | Hosts | `authama ssh host add`, `authama ssh vm add` |
 | Add or update hosts from specs | Hosts | `authama ssh host apply --host … --yes` |
 | Create a VM host's Docker context | the host's page | `authama ssh vm docker-context` |

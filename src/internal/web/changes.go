@@ -74,6 +74,9 @@ var actionFields = map[string][]string{
 	"token-config-edit":       {"body"},
 	"key-lifetime":            {"key", "lifetime"},
 	"key-regen-pub":           {"key", "profile", "all"},
+	"naming-set":              {"profile", "alias", "envs", "roles", "enforce", "start", "code_fallback"},
+	"naming-key-template":     {"profile", "key_name"},
+	"profile-code":            {"name", "code"},
 	"owner-init":              {},
 	"owner-pin-set":           {"pin_current_ref", "pin_new_ref", "pin_confirm_ref"},
 	"owner-pin-remove":        {"pin_current_ref"},
@@ -526,6 +529,10 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 			errs = append(errs, badForm("choose one key, one profile, or every key"))
 		}
 		ch = change.KeyRegenPub(h.p, sel)
+	case "naming-set", "naming-key-template", "profile-code":
+		var err error
+		ch, err = namingChange(action, f, h)
+		errs = append(errs, err)
 	case "token-config-edit":
 		body := f.Get("body")
 		switch {
