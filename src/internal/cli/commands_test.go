@@ -149,18 +149,18 @@ func TestCommandSurfaceC07Import(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		out := run(t, "import", cfg)
+		out := run(t, "ssh", "import", cfg)
 		if !strings.Contains(out, "import") {
 			t.Errorf("import printed no summary:\n%s", out)
 		}
-		if listing := run(t, "list"); !strings.Contains(listing, "demo") {
+		if listing := run(t, "ssh", "list"); !strings.Contains(listing, "demo") {
 			t.Errorf("the imported host is not in the manifest:\n%s", listing)
 		}
 	})
 
 	t.Run("C07/a config that is not there is an error, not an empty import", func(t *testing.T) {
 		editHome(t)
-		if _, err := runErr(t, "import", filepath.Join(t.TempDir(), "nope")); err == nil {
+		if _, err := runErr(t, "ssh", "import", filepath.Join(t.TempDir(), "nope")); err == nil {
 			t.Error("importing a missing config should fail")
 		}
 	})
@@ -171,7 +171,7 @@ func TestCommandSurfaceC14Load(t *testing.T) {
 	t.Run("C14/an unknown profile is refused before the agent is touched", func(t *testing.T) {
 		editHome(t)
 		t.Setenv("PATH", t.TempDir()) // no ssh-add reachable
-		if _, err := runErr(t, "load", "no-such-profile"); err == nil {
+		if _, err := runErr(t, "ssh", "load", "no-such-profile"); err == nil {
 			t.Error("loading an unknown profile should fail")
 		}
 	})
@@ -181,17 +181,17 @@ func TestCommandSurfaceC14Load(t *testing.T) {
 func TestCommandSurfaceC29KnownHosts(t *testing.T) {
 	t.Run("C29/init creates the single trust store owner-only", func(t *testing.T) {
 		p := editHome(t)
-		run(t, "profile", "add", "work")
+		run(t, "ssh", "profile", "add", "work")
 		// A closed loopback port, not a real host: pinning reaches for
 		// ssh-keyscan, and a suite that makes outbound connections hangs on an
 		// offline runner and flakes on a slow one.
-		run(t, "host", "add", "work", "gh", "-H", "127.0.0.1", "-u", "git", "-p", "1")
+		run(t, "ssh", "host", "add", "work", "gh", "-H", "127.0.0.1", "-u", "git", "-p", "1")
 		// It takes a profile or --all; there is no "everything by default", so a
 		// bare invocation cannot silently pin a tree the user did not name.
-		if _, err := runErr(t, "knownhosts", "init"); err == nil {
+		if _, err := runErr(t, "ssh", "knownhosts", "init"); err == nil {
 			t.Error("knownhosts init with no target should say what it needs")
 		}
-		run(t, "knownhosts", "init", "--all")
+		run(t, "ssh", "knownhosts", "init", "--all")
 
 		store := filepath.Join(p.SSHDir, "known_hosts")
 		if _, err := os.Stat(store); err != nil {
@@ -211,9 +211,9 @@ func TestCommandSurfaceC29KnownHosts(t *testing.T) {
 	t.Run("C29/pin fails when no host key comes back", func(t *testing.T) {
 		needBin(t, "ssh-keyscan")
 		editHome(t)
-		run(t, "profile", "add", "work")
-		run(t, "host", "add", "work", "gh", "-H", "127.0.0.1", "-u", "git", "-p", "1")
-		out, err := runErr(t, "knownhosts", "pin", "gh", "--yes")
+		run(t, "ssh", "profile", "add", "work")
+		run(t, "ssh", "host", "add", "work", "gh", "-H", "127.0.0.1", "-u", "git", "-p", "1")
+		out, err := runErr(t, "ssh", "knownhosts", "pin", "gh", "--yes")
 		if err == nil {
 			t.Fatalf("pin of a closed port succeeded:\n%s", out)
 		}
@@ -227,7 +227,7 @@ func TestCommandSurfaceC29KnownHosts(t *testing.T) {
 func TestCommandSurfaceC15RotateC16Rollback(t *testing.T) {
 	t.Run("C15/rotating a key that does not exist is refused", func(t *testing.T) {
 		editHome(t)
-		if _, err := runErr(t, "rotate", "no/such-key", "--yes"); err == nil {
+		if _, err := runErr(t, "ssh", "rotate", "no/such-key", "--yes"); err == nil {
 			t.Error("rotating an unknown key should fail")
 		}
 	})
@@ -235,11 +235,11 @@ func TestCommandSurfaceC15RotateC16Rollback(t *testing.T) {
 	t.Run("C16/rolling back with no archived predecessor is refused", func(t *testing.T) {
 		needBin(t, "ssh-keygen")
 		editHome(t)
-		run(t, "profile", "add", "work")
-		run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
-		run(t, "reconcile")
+		run(t, "ssh", "profile", "add", "work")
+		run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+		run(t, "ssh", "reconcile")
 		// Nothing has been rotated, so there is no old/ copy to return to.
-		if _, err := runErr(t, "rollback", "work/work_gh-ed25519", "--yes"); err == nil {
+		if _, err := runErr(t, "ssh", "rollback", "work/work_gh-ed25519", "--yes"); err == nil {
 			t.Error("rollback with no predecessor should fail rather than no-op silently")
 		}
 	})
@@ -250,7 +250,7 @@ func TestCommandSurfaceC15RotateC16Rollback(t *testing.T) {
 func TestCommandSurfaceC31Show(t *testing.T) {
 	t.Run("C31/an unknown selector names what it could not find", func(t *testing.T) {
 		editHome(t)
-		out, err := runErr(t, "show", "nothing-by-this-name")
+		out, err := runErr(t, "ssh", "show", "nothing-by-this-name")
 		if err == nil {
 			t.Fatal("show should fail on an unknown selector")
 		}
@@ -266,9 +266,9 @@ func TestVerbsRejectExtraArguments(t *testing.T) {
 	editHome(t)
 	for _, args := range [][]string{
 		{"version", "extra"},
-		{"expiry", "extra"},
-		{"providers", "extra"},
-		{"diff", "extra"},
+		{"ssh", "expiry", "extra"},
+		{"ssh", "providers", "extra"},
+		{"ssh", "diff", "extra"},
 		{"migrate", "extra"},
 	} {
 		if _, err := runErr(t, args...); err == nil {

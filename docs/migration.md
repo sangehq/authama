@@ -71,8 +71,8 @@ authama ssh notify install       # only if you use expiry reminders: moves the j
 authama doctor
 ```
 
-Then replace `sshmgr` with `authama` in scripts and aliases (top-level SSH verbs become
-`authama ssh <verb>`; the old spellings keep working). Deploy from 0.1.2 on every machine that
+Then replace `sshmgr` with `authama` in scripts and aliases, and put `ssh` before an SSH verb
+(`authama ssh <verb>`): the top-level spellings were removed on 2026-11-07. Deploy from 0.1.2 on every machine that
 writes to the same server, since the old and new remote lock names do not exclude each other.
 
 ## To 0.1.1: the authama config home and AUTHAMA_* names
@@ -127,7 +127,7 @@ Nothing you have stops working.
 | What | Before | Now |
 |---|---|---|
 | Binary | `sshmgr` | `authama`; `sshmgr` shipped beside it as a deprecated alias from [0.1.2](#to-012-authama-everywhere-sshmgr-deprecated) until it was [removed](#removing-the-sshmgr-alias) |
-| SSH verbs | `sshmgr reconcile`, `sshmgr host add …` | `authama ssh reconcile`, `authama ssh host add …`. The top-level spellings (`authama reconcile`, `sshmgr reconcile`) still work; they are hidden from help |
+| SSH verbs | at the top level: `reconcile`, `host add …` | `authama ssh reconcile`, `authama ssh host add …`. The top-level spellings were removed on 2026-11-07, except the hidden `vm` and `audit`, which older `~/.ssh/config` files and scheduled jobs run |
 | Shared verbs | `sshmgr doctor`, `sshmgr serve` | `authama doctor`, `authama serve` |
 | `ui` | alias of `serve` | still works, deprecated: use `serve` |
 | Config home | `~/.config/ssh-manager` | `~/.config/authama` from 0.1.1, copied in on the first run ([above](#to-011-the-authama-config-home-and-authama_-names)) |
@@ -367,8 +367,7 @@ way went unnoticed. (November 2026, on `main` after v3.6.1.)
 | `$AUTH_TOKEN_MANAGER_CATALOG` (use a replacement catalog) | lost in the Go port, which embedded the catalog | `$AUTHAMA_TOKENS_CATALOG`, and the old name with a notice (`TestTokenCatalogOverride`) |
 
 **Confirmed present:** every other command, alias and flag of every Go tag (as
-`authama ssh …` or the hidden top-level spelling), every v1 Python command and
-flag, every `SSH_MANAGER_*`/`SSHMGR_*` variable, every config key, all 25
+`authama ssh …`), every v1 Python command and flag, every config key, all 25
 providers, the installers' old `SSHMGR_*` variables, and every
 auth-token-manager flag, alias, service, provider and template in the tables
 above.

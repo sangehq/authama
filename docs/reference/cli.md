@@ -1090,9 +1090,6 @@ Examples:
 
 SSH keys, profiles, hosts, config and trust: everything authama does in ~/.ssh.
 
-Every verb here also answers at the top level, unlisted, as it did before the
-groups existed (authama deploy is authama ssh deploy), so older scripts keep working.
-
 ```
 authama ssh
 ```

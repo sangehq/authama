@@ -33,7 +33,7 @@ func newNotifyCmd() *cobra.Command {
 					"machine-wide and outlives the sandbox"); err != nil {
 				return err
 			}
-			command := schedulerExe() + " audit --notify"
+			command := schedulerExe() + " ssh audit --notify"
 			if err := confirmChange(c,
 				"notify install registers a scheduled job with this system's scheduler:\n  "+
 					command, installYes); err != nil {

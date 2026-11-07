@@ -26,8 +26,8 @@ func stubBin(t *testing.T, dir, name, script string) {
 
 func TestVMAddRendersTheProxyCommandAndRefusesOwnKeyHypervisors(t *testing.T) {
 	p := editHome(t)
-	run(t, "profile", "add", "devbox")
-	run(t, "vm", "add", "devbox", "devbox", "--hypervisor", "vmpal", "--vm", "Ubuntu 24.04", "-u", "imani")
+	run(t, "ssh", "profile", "add", "devbox")
+	run(t, "ssh", "vm", "add", "devbox", "devbox", "--hypervisor", "vmpal", "--vm", "Ubuntu 24.04", "-u", "imani")
 	cfg, err := os.ReadFile(filepath.Join(p.SSHDir, "config"))
 	if err != nil {
 		t.Fatal(err)
@@ -35,23 +35,23 @@ func TestVMAddRendersTheProxyCommandAndRefusesOwnKeyHypervisors(t *testing.T) {
 	if !strings.Contains(string(cfg), "Host devbox\n") || !strings.Contains(string(cfg), " vm proxy devbox\n") {
 		t.Errorf("rendered config lacks the VM host's ProxyCommand:\n%s", cfg)
 	}
-	if _, err := runErr(t, "vm", "add", "devbox", "orb", "--hypervisor", "orbstack", "--vm", "ubuntu", "-u", "me"); err == nil ||
+	if _, err := runErr(t, "ssh", "vm", "add", "devbox", "orb", "--hypervisor", "orbstack", "--vm", "ubuntu", "-u", "me"); err == nil ||
 		!strings.Contains(err.Error(), "own SSH") {
 		t.Errorf("orbstack host: %v", err)
 	}
-	if _, err := runErr(t, "vm", "add", "devbox", "vb", "--hypervisor", "virtualbox", "--vm", "x", "-u", "me"); err == nil {
+	if _, err := runErr(t, "ssh", "vm", "add", "devbox", "vb", "--hypervisor", "virtualbox", "--vm", "x", "-u", "me"); err == nil {
 		t.Error("an unknown hypervisor was accepted")
 	}
 }
 
 func TestVMListShowsHostsAndMissingHypervisors(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "devbox")
-	run(t, "vm", "add", "devbox", "devbox", "--hypervisor", "vmpal", "--vm", "Ubuntu 24.04", "-u", "imani")
+	run(t, "ssh", "profile", "add", "devbox")
+	run(t, "ssh", "vm", "add", "devbox", "devbox", "--hypervisor", "vmpal", "--vm", "Ubuntu 24.04", "-u", "imani")
 	bin := t.TempDir()
 	stubBin(t, bin, "vmpal", `printf '%s' '{"vms":[{"name":"Ubuntu 24.04","id":"A","state":"stopped","localAddress":""}]}'`)
 	t.Setenv("PATH", bin)
-	out := run(t, "vm", "list")
+	out := run(t, "ssh", "vm", "list")
 	if !strings.Contains(out, "vmpal") || !strings.Contains(out, "Ubuntu 24.04") || !strings.Contains(out, "host devbox/devbox") {
 		t.Errorf("vm list:\n%s", out)
 	}
@@ -79,10 +79,10 @@ func TestVMProxyStartsAStoppedVMAndRelays(t *testing.T) {
 	port := ln.Addr().(*net.TCPAddr).Port
 
 	editHome(t)
-	run(t, "profile", "add", "devbox")
-	run(t, "vm", "add", "devbox", "devbox", "--hypervisor", "vmpal", "--vm", "box", "-u", "imani")
+	run(t, "ssh", "profile", "add", "devbox")
+	run(t, "ssh", "vm", "add", "devbox", "devbox", "--hypervisor", "vmpal", "--vm", "box", "-u", "imani")
 	// Pin the port in the manifest so the relay reaches the test listener, not 22.
-	run(t, "host", "edit", "devbox", "devbox", "-p", strconv.Itoa(port))
+	run(t, "ssh", "host", "edit", "devbox", "devbox", "-p", strconv.Itoa(port))
 
 	bin := t.TempDir()
 	started := filepath.Join(bin, "started")
@@ -104,7 +104,7 @@ esac`)
 	root.SetIn(strings.NewReader("ping"))
 	root.SetOut(&out)
 	root.SetErr(&errOut)
-	root.SetArgs([]string{"vm", "proxy", "devbox"})
+	root.SetArgs([]string{"ssh", "vm", "proxy", "devbox"})
 	if err := root.Execute(); err != nil {
 		t.Fatalf("vm proxy: %v\n%s", err, errOut.String())
 	}
@@ -118,8 +118,8 @@ esac`)
 
 func TestVMDockerContextCreatesThenUpdates(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "devbox")
-	run(t, "vm", "add", "devbox", "devbox", "--hypervisor", "lima", "--vm", "default", "-u", "imani")
+	run(t, "ssh", "profile", "add", "devbox")
+	run(t, "ssh", "vm", "add", "devbox", "devbox", "--hypervisor", "lima", "--vm", "default", "-u", "imani")
 	bin := t.TempDir()
 	log := filepath.Join(bin, "docker.log")
 	exists := filepath.Join(bin, "exists")
@@ -129,17 +129,17 @@ case "$2" in
   create) : > "`+exists+`" ;;
 esac`)
 	t.Setenv("PATH", bin)
-	if out := run(t, "vm", "docker-context", "devbox"); !strings.Contains(out, "created devbox -> ssh://devbox") {
+	if out := run(t, "ssh", "vm", "docker-context", "devbox"); !strings.Contains(out, "created devbox -> ssh://devbox") {
 		t.Errorf("first run: %s", out)
 	}
-	if out := run(t, "vm", "docker-context", "devbox"); !strings.Contains(out, "updated devbox") {
+	if out := run(t, "ssh", "vm", "docker-context", "devbox"); !strings.Contains(out, "updated devbox") {
 		t.Errorf("second run: %s", out)
 	}
 	b, _ := os.ReadFile(log)
 	if !strings.Contains(string(b), "context create devbox --description managed by authama --docker host=ssh://devbox") {
 		t.Errorf("docker calls:\n%s", b)
 	}
-	if _, err := runErr(t, "vm", "docker-context", "nope"); err == nil {
+	if _, err := runErr(t, "ssh", "vm", "docker-context", "nope"); err == nil {
 		t.Error("an unknown alias was accepted")
 	}
 }

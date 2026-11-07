@@ -113,7 +113,7 @@ func TestFailuresExitOneAndExplainThemselvesOnStderr(t *testing.T) {
 		want string
 	}{
 		{[]string{"nosuchcommand"}, "unknown command"},
-		{[]string{"view", "nope"}, "manifest not found"}, // no home yet
+		{[]string{"ssh", "view", "nope"}, "manifest not found"}, // no home yet
 	} {
 		stdout, stderr, code := run("", tc.args...)
 		if code != 1 {
@@ -142,9 +142,9 @@ func TestInitReconcileDoctorRunEndToEnd(t *testing.T) {
 
 	for _, args := range [][]string{
 		{"init"},
-		{"profile", "add", "work"},
-		{"host", "add", "work", "gh", "-H", "github.com", "-u", "git"},
-		{"reconcile"},
+		{"ssh", "profile", "add", "work"},
+		{"ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git"},
+		{"ssh", "reconcile"},
 	} {
 		out, errOut, code := run("", args...)
 		if code != 0 {
@@ -186,11 +186,11 @@ func TestADeclinedConfirmationExitsOneAndSaysNothingExtra(t *testing.T) {
 	if _, errOut, code := run("", "init"); code != 0 {
 		t.Fatalf("init exited %d: %s", code, errOut)
 	}
-	if _, errOut, code := run("", "profile", "add", "tp"); code != 0 {
+	if _, errOut, code := run("", "ssh", "profile", "add", "tp"); code != 0 {
 		t.Fatalf("profile add exited %d: %s", code, errOut)
 	}
 
-	stdout, stderr, code := run("n\n", "profile", "delete", "tp")
+	stdout, stderr, code := run("n\n", "ssh", "profile", "delete", "tp")
 	if code != 1 {
 		t.Errorf("declining exited %d, want 1", code)
 	}
@@ -201,7 +201,7 @@ func TestADeclinedConfirmationExitsOneAndSaysNothingExtra(t *testing.T) {
 		t.Errorf("the prompt was not shown:\n%s", stdout)
 	}
 	// Nothing was deleted.
-	list, _, _ := run("", "list")
+	list, _, _ := run("", "ssh", "list")
 	if !strings.Contains(list, "tp") {
 		t.Errorf("the declined profile is gone:\n%s", list)
 	}

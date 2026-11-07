@@ -14,17 +14,17 @@ func TestNoPassphraseIsAcceptedAndExclusive(t *testing.T) {
 		t.Skip("ssh-keygen not on PATH")
 	}
 	editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
 
-	if out, err := runErr(t, "reconcile", "--no-passphrase", "--no-pin", "-y"); err != nil {
+	if out, err := runErr(t, "ssh", "reconcile", "--no-passphrase", "--no-pin", "-y"); err != nil {
 		t.Fatalf("reconcile --no-passphrase: %v\n%s", err, out)
 	}
-	if out, err := runErr(t, "keygen", "work", "--no-passphrase"); err != nil {
+	if out, err := runErr(t, "ssh", "keygen", "work", "--no-passphrase"); err != nil {
 		t.Fatalf("keygen --no-passphrase: %v\n%s", err, out)
 	}
 	for _, verb := range []string{"keygen", "reconcile", "rotate"} {
-		args := []string{verb, "--passphrase", "--no-passphrase"}
+		args := []string{"ssh", verb, "--passphrase", "--no-passphrase"}
 		if verb != "reconcile" {
 			args = append(args, "work")
 		}
@@ -37,7 +37,7 @@ func TestNoPassphraseIsAcceptedAndExclusive(t *testing.T) {
 
 func TestNoPassphraseStaysOutOfHelp(t *testing.T) {
 	for _, verb := range []string{"keygen", "reconcile", "rotate"} {
-		out := run(t, verb, "--help")
+		out := run(t, "ssh", verb, "--help")
 		if strings.Contains(out, "no-passphrase") {
 			t.Errorf("%s --help shows the compatibility flag:\n%s", verb, out)
 		}

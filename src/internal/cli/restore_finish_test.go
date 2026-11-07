@@ -12,8 +12,8 @@ import (
 // before, the error was dropped and ~/.ssh was left without its category files.
 func TestFinishRestoreReportsAConfigItCouldNotRender(t *testing.T) {
 	p := editHome(t)
-	run(t, "profile", "add", "web", "--category", "orgs")
-	run(t, "host", "add", "web", "a", "-H", "192.0.2.1", "-u", "u")
+	run(t, "ssh", "profile", "add", "web", "--category", "orgs")
+	run(t, "ssh", "host", "add", "web", "a", "-H", "192.0.2.1", "-u", "u")
 	if err := finishRestore(p); err != nil {
 		t.Fatalf("a valid manifest did not re-render: %v", err)
 	}

@@ -21,12 +21,12 @@ func clientsHome(t *testing.T) {
 	prev := renderer.SelfPath
 	renderer.SelfPath = func() string { return "/usr/local/bin/authama" }
 	t.Cleanup(func() { renderer.SelfPath = prev })
-	run(t, "profile", "add", "work")
-	run(t, "profile", "add", "simtabi")
-	run(t, "host", "add", "work", "web1", "-H", "web1.example", "-u", "deploy", "-p", "2222", "--tag", "prd", "--tag", "a,b")
-	run(t, "host", "add", "work", "db1", "-H", "db1.example", "-u", "deploy")
-	run(t, "host", "add", "simtabi", "oribi-web", "-H", "ssh-web-00.simtabi.com", "-u", "adm-imani", "--proxy", "cloudflared")
-	run(t, "host", "add", "simtabi", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "profile", "add", "simtabi")
+	run(t, "ssh", "host", "add", "work", "web1", "-H", "web1.example", "-u", "deploy", "-p", "2222", "--tag", "prd", "--tag", "a,b")
+	run(t, "ssh", "host", "add", "work", "db1", "-H", "db1.example", "-u", "deploy")
+	run(t, "ssh", "host", "add", "simtabi", "oribi-web", "-H", "ssh-web-00.simtabi.com", "-u", "adm-imani", "--proxy", "cloudflared")
+	run(t, "ssh", "host", "add", "simtabi", "gh", "-H", "github.com", "-u", "git")
 }
 
 // filesOf reads a file the pipeline wrote as the files it holds: a zip's

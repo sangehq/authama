@@ -72,13 +72,13 @@ func configText(t *testing.T, p paths.Paths) string {
 func TestManifestEditsRenderTheConfig(t *testing.T) {
 	p := editHome(t)
 
-	run(t, "profile", "add", "work")
+	run(t, "ssh", "profile", "add", "work")
 	// A profile with no hosts renders no Host block, but the managed file exists.
 	if txt := configText(t, p); !strings.Contains(txt, "Host *") {
 		t.Errorf("expected a managed config after profile add:\n%s", txt)
 	}
 
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
 	txt := configText(t, p)
 	for _, want := range []string{"Host gh", "HostName github.com", "IdentityFile ~/.ssh/profiles/work/work_gh-ed25519"} {
 		t.Run("host add renders "+want, func(t *testing.T) {
@@ -88,12 +88,12 @@ func TestManifestEditsRenderTheConfig(t *testing.T) {
 		})
 	}
 
-	run(t, "host", "edit", "work", "gh", "-H", "gitlab.com")
+	run(t, "ssh", "host", "edit", "work", "gh", "-H", "gitlab.com")
 	if txt := configText(t, p); !strings.Contains(txt, "HostName gitlab.com") {
 		t.Errorf("an edit should reach the config:\n%s", txt)
 	}
 
-	out := run(t, "host", "delete", "work", "gh", "-y")
+	out := run(t, "ssh", "host", "delete", "work", "gh", "-y")
 	if txt := configText(t, p); strings.Contains(txt, "Host gh\n") {
 		t.Errorf("a deleted host should leave the config:\n%s", txt)
 	}
@@ -109,9 +109,9 @@ func TestKeyAddWiresTheConfigNotJustTheManifest(t *testing.T) {
 		t.Skip("ssh-keygen not on PATH")
 	}
 	p := editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
-	run(t, "key", "add", "work", "work_second-ed25519", "--host", "gh")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "key", "add", "work", "work_second-ed25519", "--host", "gh")
 
 	txt := configText(t, p)
 	if !strings.Contains(txt, "IdentityFile ~/.ssh/profiles/work/work_second-ed25519") {
@@ -136,8 +136,8 @@ func TestRenderingPreservesForeignConfig(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(p.SSHDir, "config"), []byte(foreign), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
 
 	txt := configText(t, p)
 	if !strings.Contains(txt, "Host orbstack") || !strings.Contains(txt, "198.19.249.2") {
@@ -152,12 +152,12 @@ func TestRenderingPreservesForeignConfig(t *testing.T) {
 // invariant does not turn every command into noise.
 func TestRenderIsQuietWhenNothingChanges(t *testing.T) {
 	p := editHome(t)
-	run(t, "profile", "add", "work")
+	run(t, "ssh", "profile", "add", "work")
 	before, err := os.ReadFile(filepath.Join(p.SSHDir, "config"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	out := run(t, "profile", "edit", "work", "--key-scope", "per_service")
+	out := run(t, "ssh", "profile", "edit", "work", "--key-scope", "per_service")
 	if strings.Contains(out, "re-rendered") {
 		t.Errorf("an edit that changes nothing should not claim a re-render: %s", out)
 	}
@@ -177,11 +177,11 @@ func TestReconcileWarnsAboutBlockingDanglingKeys(t *testing.T) {
 		t.Skip("ssh-keygen not on PATH")
 	}
 	editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
-	run(t, "key", "add", "work", "work_spare-ed25519") // declared, wired to nothing
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "key", "add", "work", "work_spare-ed25519") // declared, wired to nothing
 
-	out := run(t, "reconcile")
+	out := run(t, "ssh", "reconcile")
 	if !strings.Contains(out, "WARNING") || !strings.Contains(out, keyaudit.Unwired) {
 		t.Errorf("reconcile should warn about the unwired key:\n%s", out)
 	}
@@ -191,14 +191,14 @@ func TestReconcileWarnsAboutBlockingDanglingKeys(t *testing.T) {
 
 	// Wiring it clears that warning - and strands the key gh used to name, which
 	// is reported by the edit itself rather than discovered later.
-	edited := run(t, "host", "edit", "work", "gh", "--key-name", "work_spare-ed25519")
+	edited := run(t, "ssh", "host", "edit", "work", "gh", "--key-name", "work_spare-ed25519")
 	if !strings.Contains(edited, "WARNING") || !strings.Contains(edited, keyaudit.Untracked) {
 		t.Errorf("re-pointing a host should report the key it stranded:\n%s", edited)
 	}
 	if !strings.Contains(edited, "work_gh-ed25519") {
 		t.Errorf("the stranded key should be named:\n%s", edited)
 	}
-	out = run(t, "reconcile")
+	out = run(t, "ssh", "reconcile")
 	if strings.Contains(out, keyaudit.Unwired) {
 		t.Errorf("the newly wired key should no longer be unwired:\n%s", out)
 	}
@@ -208,8 +208,8 @@ func TestReconcileWarnsAboutBlockingDanglingKeys(t *testing.T) {
 // must not shout - it warns only in doctor, and fails only under --strict.
 func TestReconcileDoesNotWarnAboutAnUnmintedKey(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "work")
-	out := run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "profile", "add", "work")
+	out := run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
 	if strings.Contains(out, "WARNING") {
 		t.Errorf("adding a host should not warn about the key it has yet to mint:\n%s", out)
 	}
@@ -223,9 +223,9 @@ func TestCleanDropsStaleRecordsAndNamesWhatItLeaves(t *testing.T) {
 		t.Skip("ssh-keygen not on PATH")
 	}
 	p := editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
-	run(t, "reconcile")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "reconcile")
 
 	inv, err := inventory.Load(p.Inventory())
 	if err != nil {
@@ -246,7 +246,7 @@ func TestCleanDropsStaleRecordsAndNamesWhatItLeaves(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dry := run(t, "clean", "--dry-run")
+	dry := run(t, "ssh", "clean", "--dry-run")
 	if !strings.Contains(dry, "would drop") || !strings.Contains(dry, "SHA256:ghost") {
 		t.Errorf("--dry-run should name the record it would drop:\n%s", dry)
 	}
@@ -258,7 +258,7 @@ func TestCleanDropsStaleRecordsAndNamesWhatItLeaves(t *testing.T) {
 		t.Error("--dry-run dropped the record for real")
 	}
 
-	out := run(t, "clean")
+	out := run(t, "ssh", "clean")
 	if !strings.Contains(out, "dropped 1 stale inventory record") {
 		t.Errorf("clean should drop the stale record:\n%s", out)
 	}
@@ -287,12 +287,12 @@ func TestKeygenAcceptsAKeySelector(t *testing.T) {
 		t.Skip("ssh-keygen not on PATH")
 	}
 	editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
-	run(t, "reconcile")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "reconcile")
 
 	for _, selector := range []string{"work_gh-ed25519", "work/work_gh-ed25519"} {
-		out := run(t, "keygen", selector)
+		out := run(t, "ssh", "keygen", selector)
 		if strings.Contains(out, "unknown") {
 			t.Errorf("keygen rejected %q: %s", selector, out)
 		}
@@ -340,11 +340,11 @@ func runErr(t *testing.T, args ...string) (string, error) {
 // diff is read-only: it reports what reconcile would do and changes nothing.
 func TestDiffReportsDriftWithoutTouchingAnything(t *testing.T) {
 	p := editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
 
 	// The key is not minted yet, so diff should say it would be.
-	out := run(t, "diff")
+	out := run(t, "ssh", "diff")
 	if !strings.Contains(out, "MINT") || !strings.Contains(out, "work/work_gh-ed25519") {
 		t.Errorf("diff should name the key it would mint:\n%s", out)
 	}
@@ -355,8 +355,8 @@ func TestDiffReportsDriftWithoutTouchingAnything(t *testing.T) {
 	if _, err := exec.LookPath("ssh-keygen"); err != nil {
 		return
 	}
-	run(t, "reconcile")
-	out = run(t, "diff")
+	run(t, "ssh", "reconcile")
+	out = run(t, "ssh", "diff")
 	if strings.Contains(out, "MINT") {
 		t.Errorf("nothing should be pending after a reconcile:\n%s", out)
 	}
@@ -369,11 +369,11 @@ func TestDiffReportsDriftWithoutTouchingAnything(t *testing.T) {
 // host before, so a shared key read as several outstanding mints.
 func TestDiffCountsAKeyOnceNotOncePerHost(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "team", "--shared", "--key-name", "team_all-ed25519")
-	run(t, "host", "add", "team", "a", "-H", "a.example", "-u", "x")
-	run(t, "host", "add", "team", "b", "-H", "b.example", "-u", "x")
+	run(t, "ssh", "profile", "add", "team", "--shared", "--key-name", "team_all-ed25519")
+	run(t, "ssh", "host", "add", "team", "a", "-H", "a.example", "-u", "x")
+	run(t, "ssh", "host", "add", "team", "b", "-H", "b.example", "-u", "x")
 
-	out := run(t, "diff")
+	out := run(t, "ssh", "diff")
 	if n := strings.Count(out, "team_all-ed25519"); n != 1 {
 		t.Errorf("the shared key appears %d times, want 1:\n%s", n, out)
 	}
@@ -382,7 +382,7 @@ func TestDiffCountsAKeyOnceNotOncePerHost(t *testing.T) {
 // net probes every host and reports each one.
 func TestNetReportsEveryHost(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "work")
+	run(t, "ssh", "profile", "add", "work")
 	// A closed loopback port refuses instantly rather than timing out.
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -392,14 +392,14 @@ func TestNetReportsEveryHost(t *testing.T) {
 	if err := ln.Close(); err != nil {
 		t.Fatal(err)
 	}
-	run(t, "host", "add", "work", "box", "-H", "127.0.0.1", "-u", "x", "-p", strconv.Itoa(port))
+	run(t, "ssh", "host", "add", "work", "box", "-H", "127.0.0.1", "-u", "x", "-p", strconv.Itoa(port))
 
-	out := run(t, "net")
+	out := run(t, "ssh", "net")
 	if !strings.Contains(out, "box") {
 		t.Errorf("net should list the host:\n%s", out)
 	}
 	// Selector narrows it.
-	if out := run(t, "net", "box"); !strings.Contains(out, "box") {
+	if out := run(t, "ssh", "net", "box"); !strings.Contains(out, "box") {
 		t.Errorf("net <alias> should report that host:\n%s", out)
 	}
 }
@@ -409,7 +409,7 @@ func TestNetReportsEveryHost(t *testing.T) {
 // unreachable host is reported but does not fail the command.
 func TestNetFailsOnlyWhenAGatedHostIsDown(t *testing.T) {
 	p := editHome(t)
-	run(t, "profile", "add", "work")
+	run(t, "ssh", "profile", "add", "work")
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -419,10 +419,10 @@ func TestNetFailsOnlyWhenAGatedHostIsDown(t *testing.T) {
 	if err := ln.Close(); err != nil {
 		t.Fatal(err)
 	}
-	run(t, "host", "add", "work", "box", "-H", "127.0.0.1", "-u", "x", "-p", strconv.Itoa(port))
+	run(t, "ssh", "host", "add", "work", "box", "-H", "127.0.0.1", "-u", "x", "-p", strconv.Itoa(port))
 
 	// Not gated: down is reported, but the command succeeds.
-	if _, err := runErr(t, "net"); err != nil {
+	if _, err := runErr(t, "ssh", "net"); err != nil {
 		t.Errorf("an ordinary unreachable host should not fail the command: %v", err)
 	}
 
@@ -439,7 +439,7 @@ func TestNetFailsOnlyWhenAGatedHostIsDown(t *testing.T) {
 	if err := os.WriteFile(p.Manifest(), []byte(gated), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := runErr(t, "net"); err == nil {
+	if _, err := runErr(t, "ssh", "net"); err == nil {
 		t.Error("a gated host that is down should fail the command")
 	}
 }
@@ -448,10 +448,10 @@ func TestNetFailsOnlyWhenAGatedHostIsDown(t *testing.T) {
 // rather than failing on a bare stat.
 func TestDeployRefusesAnUnmintedKey(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
 
-	out, err := runErr(t, "deploy", "work_gh-ed25519")
+	out, err := runErr(t, "ssh", "deploy", "work_gh-ed25519")
 	if err == nil {
 		t.Fatalf("deploying an unminted key should fail:\n%s", out)
 	}
@@ -464,14 +464,14 @@ func TestDeployRefusesAnUnmintedKey(t *testing.T) {
 // message names what was not found.
 func TestVerbsRejectUnknownSelectors(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
 
 	for _, args := range [][]string{
-		{"deploy", "no-such-key"},
-		{"view", "no-such-thing"},
-		{"show", "no-such-thing"},
-		{"key", "list", "no-such-thing"},
+		{"ssh", "deploy", "no-such-key"},
+		{"ssh", "view", "no-such-thing"},
+		{"ssh", "show", "no-such-thing"},
+		{"ssh", "key", "list", "no-such-thing"},
 	} {
 		_, err := runErr(t, args...)
 		if err == nil {
@@ -489,10 +489,10 @@ func TestVerbsRejectUnknownSelectors(t *testing.T) {
 // rendered config move.
 func TestProfileEditCategoryRendersTheCategoryFile(t *testing.T) {
 	p := editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
 
-	out := run(t, "profile", "edit", "work", "--category", "others")
+	out := run(t, "ssh", "profile", "edit", "work", "--category", "others")
 	if !strings.Contains(out, "profiles/others/work") {
 		t.Errorf("the edit should say where the keys now live: %s", out)
 	}
@@ -508,7 +508,7 @@ func TestProfileEditCategoryRendersTheCategoryFile(t *testing.T) {
 		t.Errorf("the root config should Include the category, not inline its host:\n%s", root)
 	}
 
-	run(t, "profile", "add", "acme", "--category", "clients")
+	run(t, "ssh", "profile", "add", "acme", "--category", "clients")
 	m, err := manifest.Load(p.Manifest())
 	if err != nil {
 		t.Fatal(err)
@@ -526,11 +526,11 @@ func TestRotateAllRotatesEveryWiredKey(t *testing.T) {
 	}
 	p := editHome(t)
 	t.Setenv("AUTHAMA_AGE_RECIPIENT", "")
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "panel-a", "-H", "ploi-a.example", "-u", "x", "--provider", "ploi")
-	run(t, "host", "add", "work", "panel-b", "-H", "ploi-b.example", "-u", "x", "--provider", "ploi")
-	run(t, "key", "add", "work", "work_spare-ed25519") // declared, wired to nothing
-	run(t, "reconcile", "--yes")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "panel-a", "-H", "ploi-a.example", "-u", "x", "--provider", "ploi")
+	run(t, "ssh", "host", "add", "work", "panel-b", "-H", "ploi-b.example", "-u", "x", "--provider", "ploi")
+	run(t, "ssh", "key", "add", "work", "work_spare-ed25519") // declared, wired to nothing
+	run(t, "ssh", "reconcile", "--yes")
 
 	pubOf := func(name string) string {
 		b, _ := os.ReadFile(filepath.Join(p.SSHDir, "profiles", "work", name+".pub"))
@@ -538,7 +538,7 @@ func TestRotateAllRotatesEveryWiredKey(t *testing.T) {
 	}
 	before := pubOf("work_panel-a-ed25519") + pubOf("work_panel-b-ed25519")
 
-	dry := run(t, "rotate", "--all", "--dry-run")
+	dry := run(t, "ssh", "rotate", "--all", "--dry-run")
 	if !strings.Contains(dry, "2 key(s) would rotate") || !strings.Contains(dry, "work_spare-ed25519 - no host uses it") {
 		t.Fatalf("dry run output:\n%s", dry)
 	}
@@ -546,7 +546,7 @@ func TestRotateAllRotatesEveryWiredKey(t *testing.T) {
 		t.Fatal("--dry-run changed a key")
 	}
 
-	out := run(t, "rotate", "--all", "--allow-unverified", "--yes", "--no-key-backup")
+	out := run(t, "ssh", "rotate", "--all", "--allow-unverified", "--yes", "--no-key-backup")
 	if !strings.Contains(out, "2 of 2 key(s) rotated") {
 		t.Fatalf("rotate --all output:\n%s", out)
 	}
@@ -561,15 +561,15 @@ func TestKeyRegenPubRestoresAMissingPublicKey(t *testing.T) {
 		t.Skip("ssh-keygen not on PATH")
 	}
 	p := editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
-	run(t, "reconcile", "--yes")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "reconcile", "--yes")
 	pub := filepath.Join(p.SSHDir, "profiles", "work", "work_gh-ed25519.pub")
 	want, _ := os.ReadFile(pub)
 	if err := os.Remove(pub); err != nil {
 		t.Fatal(err)
 	}
-	out := run(t, "key", "regen-pub", "work", "--yes")
+	out := run(t, "ssh", "key", "regen-pub", "work", "--yes")
 	if !strings.Contains(out, "created   work/work_gh-ed25519") {
 		t.Fatalf("output:\n%s", out)
 	}

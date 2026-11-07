@@ -24,15 +24,15 @@ func gitRepo(t *testing.T, origin string) string {
 
 func TestGitStatusAndDryRunUse(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "imanimanyara")
-	run(t, "host", "add", "imanimanyara", "github-imanimanyara", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "profile", "add", "imanimanyara")
+	run(t, "ssh", "host", "add", "imanimanyara", "github-imanimanyara", "-H", "github.com", "-u", "git")
 	repo := gitRepo(t, "https://github.com/simtabi/pheg.git")
 
-	out := run(t, "git", "status", repo)
+	out := run(t, "ssh", "git", "status", repo)
 	if !strings.Contains(out, "https  simtabi/pheg  profile=imanimanyara (by owner)") {
 		t.Errorf("status:\n%s", out)
 	}
-	out = run(t, "git", "use", "profile", repo, "--dry-run")
+	out = run(t, "ssh", "git", "use", "profile", repo, "--dry-run")
 	if !strings.Contains(out, "would change  https://github.com/simtabi/pheg.git -> git@github-imanimanyara:simtabi/pheg.git") {
 		t.Errorf("dry run:\n%s", out)
 	}
@@ -40,10 +40,10 @@ func TestGitStatusAndDryRunUse(t *testing.T) {
 		t.Errorf("dry run changed origin to %s", got)
 	}
 	// ssh mode with no defaults.git.profile has no key bound to Host github.com: refused, not guessed.
-	if _, err := runErr(t, "git", "use", "ssh", repo, "--dry-run"); err == nil {
+	if _, err := runErr(t, "ssh", "git", "use", "ssh", repo, "--dry-run"); err == nil {
 		t.Error("ssh mode without defaults.git.profile should fail")
 	}
-	if out, _ := runErr(t, "git", "use", "https", t.TempDir(), "--dry-run"); !strings.Contains(out, "no origin") {
+	if out, _ := runErr(t, "ssh", "git", "use", "https", t.TempDir(), "--dry-run"); !strings.Contains(out, "no origin") {
 		t.Errorf("a directory with no repository is skipped and said so:\n%s", out)
 	}
 }

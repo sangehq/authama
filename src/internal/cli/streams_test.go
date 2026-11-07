@@ -85,7 +85,7 @@ func TestNotifyTestReportsAMissingBackendOnStderr(t *testing.T) {
 	var out, errOut bytes.Buffer
 	root.SetOut(&out)
 	root.SetErr(&errOut)
-	root.SetArgs([]string{"notify", "test"})
+	root.SetArgs([]string{"ssh", "notify", "test"})
 	if err := root.Execute(); err != nil {
 		t.Fatalf("notify test should not fail when no backend exists: %v", err)
 	}
@@ -102,13 +102,13 @@ func TestNotifyTestReportsAMissingBackendOnStderr(t *testing.T) {
 // means the output went to the process's streams rather than the command's.
 func TestCommandsWriteToTheirOwnStreams(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
 	for _, args := range [][]string{
 		{"version"},
-		{"list"},
-		{"view", "gh"},
-		{"providers"},
+		{"ssh", "list"},
+		{"ssh", "view", "gh"},
+		{"ssh", "providers"},
 	} {
 		root := newRootCmd()
 		var out, errOut bytes.Buffer

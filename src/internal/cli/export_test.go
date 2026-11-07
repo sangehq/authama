@@ -12,10 +12,10 @@ import (
 func exportHome(t *testing.T) (dir string, before map[string]string) {
 	t.Helper()
 	p := editHome(t)
-	run(t, "profile", "add", "simtabi", "--category", "orgs")
-	run(t, "host", "add", "simtabi", "oribi-web", "-H", "203.0.113.23", "-u", "ploi")
-	run(t, "profile", "add", "me")
-	run(t, "host", "add", "me", "github-me", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "profile", "add", "simtabi", "--category", "orgs")
+	run(t, "ssh", "host", "add", "simtabi", "oribi-web", "-H", "203.0.113.23", "-u", "ploi")
+	run(t, "ssh", "profile", "add", "me")
+	run(t, "ssh", "host", "add", "me", "github-me", "-H", "github.com", "-u", "git")
 	before = map[string]string{}
 	for _, rel := range []string{"config", "profiles/orgs/config"} {
 		b, err := os.ReadFile(filepath.Join(p.SSHDir, rel))
@@ -41,7 +41,7 @@ func assertUntouched(t *testing.T, sshDir string, before map[string]string) {
 
 func TestConfigExportFlatWritesOneFileAndLeavesTheSplitConfigAlone(t *testing.T) {
 	sshDir, before := exportHome(t)
-	out := run(t, "config", "export", "--flat")
+	out := run(t, "ssh", "config", "export", "--flat")
 	path := filepath.Join(os.Getenv("AUTHAMA_CONFIG_DIR"), "exports", "ssh_config")
 	if !strings.Contains(out, path) {
 		t.Errorf("the command should say where it wrote:\n%s", out)
@@ -63,7 +63,7 @@ func TestConfigExportFlatWritesOneFileAndLeavesTheSplitConfigAlone(t *testing.T)
 
 func TestConfigExportFlatToStdout(t *testing.T) {
 	sshDir, before := exportHome(t)
-	out := run(t, "config", "export", "--flat", "--out", "-")
+	out := run(t, "ssh", "config", "export", "--flat", "--out", "-")
 	if !strings.Contains(out, "Host oribi-web\n") {
 		t.Errorf("--out - should print the export:\n%s", out)
 	}
@@ -82,7 +82,7 @@ func TestConfigExportRefusesTheRenderedConfigFiles(t *testing.T) {
 		filepath.Join(sshDir, "profiles", "orgs", "config"),
 		filepath.Join(sshDir, "profiles", "orgs", "..", "..", "config"),
 	} {
-		if _, err := runErr(t, "config", "export", "--flat", "--out", target); err == nil {
+		if _, err := runErr(t, "ssh", "config", "export", "--flat", "--out", target); err == nil {
 			t.Errorf("export over %s was accepted", target)
 		}
 	}
@@ -108,7 +108,7 @@ func TestConfigExportRefusesTheRenderedConfigFiles(t *testing.T) {
 			filepath.Join(filepath.Dir(sshDir), ".SSH", "config"))
 	}
 	for _, target := range targets {
-		if _, err := runErr(t, "config", "export", "--flat", "--out", target); err == nil {
+		if _, err := runErr(t, "ssh", "config", "export", "--flat", "--out", target); err == nil {
 			t.Errorf("export into ~/.ssh via %s was accepted", target)
 		}
 	}
@@ -117,7 +117,7 @@ func TestConfigExportRefusesTheRenderedConfigFiles(t *testing.T) {
 
 func TestConfigExportNeedsAFormat(t *testing.T) {
 	exportHome(t)
-	if _, err := runErr(t, "config", "export"); err == nil || !strings.Contains(err.Error(), "--flat") {
+	if _, err := runErr(t, "ssh", "config", "export"); err == nil || !strings.Contains(err.Error(), "--flat") {
 		t.Errorf("export without a format should name the one it supports: %v", err)
 	}
 }
@@ -162,16 +162,16 @@ func caseInsensitiveFS(t *testing.T, dir string) bool {
 // runs cloudflared, ssh -G resolves it, and --proxy none takes it back off.
 func TestHostProxyCloudflared(t *testing.T) {
 	p := editHome(t)
-	run(t, "profile", "add", "simtabi")
-	run(t, "host", "add", "simtabi", "oribi-web", "-H", "ssh-web-00.simtabi.com", "-u", "adm-imani", "--proxy", "cloudflared")
+	run(t, "ssh", "profile", "add", "simtabi")
+	run(t, "ssh", "host", "add", "simtabi", "oribi-web", "-H", "ssh-web-00.simtabi.com", "-u", "adm-imani", "--proxy", "cloudflared")
 	cfg := configText(t, p)
 	if !strings.Contains(cfg, `access ssh --hostname %h`) {
 		t.Fatalf("no cloudflared ProxyCommand:\n%s", cfg)
 	}
-	if _, err := runErr(t, "host", "add", "simtabi", "x", "-H", "x.example", "-u", "u", "--proxy", "socks"); err == nil {
+	if _, err := runErr(t, "ssh", "host", "add", "simtabi", "x", "-H", "x.example", "-u", "u", "--proxy", "socks"); err == nil {
 		t.Error("an unknown proxy kind was accepted")
 	}
-	run(t, "host", "edit", "simtabi", "oribi-web", "--proxy", "none")
+	run(t, "ssh", "host", "edit", "simtabi", "oribi-web", "--proxy", "none")
 	if strings.Contains(configText(t, p), "access ssh") {
 		t.Error("--proxy none should remove the ProxyCommand")
 	}

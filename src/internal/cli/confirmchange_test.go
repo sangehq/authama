@@ -26,17 +26,17 @@ func TestMutatingVerbsStillRunWithoutATerminal(t *testing.T) {
 		t.Skip("needs a filesystem")
 	}
 	p := editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "127.0.0.1", "-u", "git", "-p", "1")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "127.0.0.1", "-u", "git", "-p", "1")
 
 	// reconcile is the one that matters most: it is what a CI job runs.
-	run(t, "reconcile", "--no-pin")
+	run(t, "ssh", "reconcile", "--no-pin")
 	if _, err := os.Stat(filepath.Join(p.SSHDir, "config")); err != nil {
 		t.Fatalf("reconcile did not write the config: %v", err)
 	}
 	// And the rest, each of which now goes through the guard.
-	run(t, "config", "render")
-	run(t, "clean", "--dry-run")
+	run(t, "ssh", "config", "render")
+	run(t, "ssh", "clean", "--dry-run")
 	run(t, "migrate")
 }
 
@@ -44,13 +44,13 @@ func TestMutatingVerbsStillRunWithoutATerminal(t *testing.T) {
 // a script should not have to rely on the absence of one.
 func TestYesIsAcceptedByEveryMutatingVerb(t *testing.T) {
 	editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "127.0.0.1", "-u", "git", "-p", "1")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "127.0.0.1", "-u", "git", "-p", "1")
 
 	for _, args := range [][]string{
-		{"reconcile", "--no-pin", "--yes"},
-		{"config", "render", "--yes"},
-		{"clean", "--yes"},
+		{"ssh", "reconcile", "--no-pin", "--yes"},
+		{"ssh", "config", "render", "--yes"},
+		{"ssh", "clean", "--yes"},
 		{"migrate", "--yes"},
 	} {
 		if out, err := runErr(t, args...); err != nil {

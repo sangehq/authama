@@ -17,11 +17,11 @@ import (
 func TestMovingTheKeyRootTakesTheKeysAndTheConfigWithIt(t *testing.T) {
 	needBin(t, "ssh-keygen")
 	p := editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
-	run(t, "profile", "add", "acme", "--category", "clients")
-	run(t, "host", "add", "acme", "box", "-H", "10.0.0.9", "-u", "deploy")
-	run(t, "reconcile", "--no-passphrase", "--no-pin", "-y")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "profile", "add", "acme", "--category", "clients")
+	run(t, "ssh", "host", "add", "acme", "box", "-H", "10.0.0.9", "-u", "deploy")
+	run(t, "ssh", "reconcile", "--no-passphrase", "--no-pin", "-y")
 
 	if got := strings.TrimSpace(run(t, "ssh", "key", "root")); got != "~/.ssh/profiles/" {
 		t.Fatalf("key root before any move = %q", got)
@@ -74,8 +74,8 @@ func TestMovingTheKeyRootTakesTheKeysAndTheConfigWithIt(t *testing.T) {
 	}
 
 	// A key minted now goes under the new root.
-	run(t, "host", "add", "work", "ci", "-H", "ci.example.com", "-u", "git")
-	run(t, "reconcile", "--no-passphrase", "--no-pin", "-y")
+	run(t, "ssh", "host", "add", "work", "ci", "-H", "ci.example.com", "-u", "git")
+	run(t, "ssh", "reconcile", "--no-passphrase", "--no-pin", "-y")
 	if _, err := os.Stat(filepath.Join(p.SSHDir, "keys", "work", "work_ci-ed25519")); err != nil {
 		t.Fatalf("a new key was not minted under keys/: %v", err)
 	}
@@ -95,9 +95,9 @@ func TestMovingTheKeyRootTakesTheKeysAndTheConfigWithIt(t *testing.T) {
 func TestTheKeyRootRefusesWhatWouldClobberOrConfuse(t *testing.T) {
 	needBin(t, "ssh-keygen")
 	p := editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
-	run(t, "reconcile", "--no-passphrase", "--no-pin", "-y")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "reconcile", "--no-passphrase", "--no-pin", "-y")
 
 	for _, bad := range []string{".", "a/b", "..", ".keys", "config", "known_hosts2", "authorized_keys2", "id_rsa", "k.pub"} {
 		if _, err := runErr(t, "ssh", "key", "root", bad, "--yes"); err == nil {
@@ -124,9 +124,9 @@ func TestTheKeyRootRefusesWhatWouldClobberOrConfuse(t *testing.T) {
 func TestTheDoctorFindsKeysLeftBehindByAHandEdit(t *testing.T) {
 	needBin(t, "ssh-keygen")
 	p := editHome(t)
-	run(t, "profile", "add", "work")
-	run(t, "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
-	run(t, "reconcile", "--no-passphrase", "--no-pin", "-y")
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "reconcile", "--no-passphrase", "--no-pin", "-y")
 
 	m, err := os.ReadFile(p.Manifest())
 	if err != nil {

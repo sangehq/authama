@@ -108,19 +108,22 @@ func newRootCmd() *cobra.Command {
 	ssh := &cobra.Command{
 		Use:   sshGroup,
 		Short: "SSH keys, profiles, hosts, config and trust",
-		Long: "SSH keys, profiles, hosts, config and trust: everything authama does in ~/.ssh.\n\n" +
-			"Every verb here also answers at the top level, unlisted, as it did before the\n" +
-			"groups existed (" + brand.Command + " deploy is " + brand.Command + " ssh deploy), so older scripts keep working.",
-		Args: cobra.ArbitraryArgs,
-		RunE: groupHelp,
+		Long:  "SSH keys, profiles, hosts, config and trust: everything authama does in ~/.ssh.",
+		Args:  cobra.ArbitraryArgs,
+		RunE:  groupHelp,
 	}
 	ssh.AddCommand(sshCommands()...)
 	root.AddCommand(ssh)
 	root.AddCommand(newTokenCmd())
 
-	// The pre-group spellings, hidden: a second, identical build of each SSH
-	// verb, so `authama deploy` keeps working without listing every verb twice.
-	for _, c := range sshCommands() {
+	// Two pre-group spellings stay, hidden, because files on disk run them:
+	// releases up to 2026-11-07 rendered `"<authama>" vm proxy <alias>` as each
+	// VM host's ProxyCommand in ~/.ssh/config, and `notify install` registered
+	// `<authama> audit --notify` with the system scheduler. Both now write the
+	// `ssh` spelling, but a config not yet re-rendered, or a job not yet
+	// reinstalled, still calls these. Every other top-level SSH verb was removed
+	// on 2026-11-07.
+	for _, c := range []*cobra.Command{newVMCmd(), newAuditCmd()} {
 		c.Hidden = true
 		root.AddCommand(c)
 	}
@@ -131,8 +134,7 @@ func newRootCmd() *cobra.Command {
 	return root
 }
 
-// sshCommands builds the SSH group's verbs. It is called twice: once for
-// `ssh <verb>` and once for the hidden top-level compatibility spellings.
+// sshCommands builds the SSH group's verbs, for `ssh <verb>`.
 func sshCommands() []*cobra.Command {
 	return []*cobra.Command{
 		newConfigCmd(), newValidateCmd(), newProvidersCmd(), newNetCmd(),

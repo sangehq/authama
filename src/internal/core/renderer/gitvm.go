@@ -43,7 +43,7 @@ func ProxyCommandFor(alias string) string {
 	if strings.Contains(self, `"`) {
 		self = brand.Command
 	}
-	return `"` + self + `" vm proxy ` + alias
+	return `"` + self + `" ssh vm proxy ` + alias
 }
 
 func proxyFor(h manifest.Host) string {
@@ -86,11 +86,15 @@ func CloudflaredProxyCommand() string {
 // ProxyBinary extracts the binary path from a ProxyCommand value authama rendered - a VM host's
 // authama or a Cloudflare Access host's cloudflared - and "" for any other value. doctor uses it to
 // find a recorded path that no longer exists, or a cloudflared that was never installed.
+//
+// A VM host's ProxyCommand is `"<authama>" ssh vm proxy <alias>`; releases up to 2026-11-07
+// rendered `"<authama>" vm proxy <alias>`, and a config not yet re-rendered still holds that, so
+// both are read.
 func ProxyBinary(value string) string {
 	if !strings.HasPrefix(value, `"`) {
 		return ""
 	}
-	for _, tail := range []string{`" vm proxy `, `" access ssh --hostname `} {
+	for _, tail := range []string{`" ssh vm proxy `, `" vm proxy `, `" access ssh --hostname `} {
 		if i := strings.Index(value, tail); i > 0 {
 			return value[1:i]
 		}
