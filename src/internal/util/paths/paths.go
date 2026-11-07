@@ -90,6 +90,13 @@ func configDir(get Getenv, cwd string) (string, bool) {
 	return filepath.Join(xdgBase(get, "XDG_CONFIG_HOME", ".config"), Folder), false
 }
 
+// XDGConfigHome is the user's base config directory, not authama's own folder
+// in it: $XDG_CONFIG_HOME when it is absolute, else ~/.config, on every OS. It
+// is where `ssh import ~/.config` looks for ssh/config.
+func XDGConfigHome(get Getenv) string {
+	return xdgBase(resolve(get), "XDG_CONFIG_HOME", ".config")
+}
+
 // xdgBase is $<variable> when it is set to an absolute path (the XDG spec
 // says a relative one is to be ignored), else ~/<fallback>. It is the same on
 // every OS, Windows included.
