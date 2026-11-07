@@ -46,7 +46,7 @@
 {{end}}</pre>{{else}}<p class="text-secondary mb-0">This host renders no block of its own.</p>{{end}}</div>
     </div>
     <div class="card mt-3">
-      <div class="card-header"><h2 class="card-title">Pinned host keys</h2></div>
+      <div class="card-header"><h2 class="card-title">Pinned host keys</h2>{{if not $.ReadOnly}}<div class="card-actions">{{template "job_open" $}}<input type="hidden" name="action" value="knownhosts-pin"><input type="hidden" name="host" value="{{.Detail.Alias}}"><button type="submit" class="btn btn-sm btn-outline-primary"{{tip "host-pin"}}>{{icon "fingerprint"}}<span class="ms-1">{{if .Pins}}Pin again{{else}}Pin its keys{{end}}</span></button></form></div>{{end}}</div>
       {{if .Pins}}
       <div class="table-responsive" tabindex="0">
         <table class="table table-vcenter card-table">
@@ -55,7 +55,7 @@
           <tbody>{{range .Pins}}<tr><td>{{if .Marker}}{{.Marker}} {{end}}{{.Keytype}}</td><td class="text-break"><code>{{.Fingerprint}}</code></td><td>{{if .Hashed}}hashed{{else}}plaintext{{end}}</td><td>{{if .Tagged}}authama{{else}}user-owned{{end}}</td></tr>{{end}}</tbody>
         </table>
       </div>
-      {{else}}<div class="card-body text-secondary">Not pinned. Run <code>authama ssh knownhosts pin {{.Detail.Alias}}</code> in a terminal.</div>{{end}}
+      {{else}}{{template "empty" (empty "fingerprint" "Not pinned" (printf "Pin its keys, or run authama ssh knownhosts pin %s in a terminal." .Detail.Alias))}}{{end}}
     </div>
     {{if not $.ReadOnly}}{{with .Detail}}
 {{template "panel_open" (header "host-edit" (printf "Edit %s" .Alias) "")}}

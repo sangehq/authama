@@ -91,15 +91,17 @@ func positionalSubjects(command string, args []string) []history.Subject {
 // records nothing unless the command mutates - the guard opens the operation
 // when the command takes the lock - so read-only commands pass through.
 //
-// The TUI is a scope of its own, and each action chosen from its menu opens a
-// scope inside it, so a session of five changes is five operations.
+// serve, and the bare root that runs it, get no scope: the server opens one
+// per change a browser confirms, each recorded with the web as its source.
 func recordCommands(root *cobra.Command) {
 	mutation.InstallSink()
 	var walk func(c *cobra.Command)
 	walk = func(c *cobra.Command) {
 		// serve hosts scopes of its own, one per change a browser confirms; a
 		// scope around the whole server would claim every event it ever sees.
-		if run := c.RunE; run != nil && c.Name() != "serve" {
+		// A bare `authama` on a terminal is serve too (runBare), so the root
+		// is left alone for the same reason.
+		if run := c.RunE; run != nil && c.Name() != "serve" && c != root {
 			c.RunE = func(c *cobra.Command, args []string) error {
 				if err := gateDestructive(c); err != nil {
 					return err
@@ -123,11 +125,7 @@ func scopeFor(c *cobra.Command, args []string) mutation.Scope {
 	// history, its --command filter and every operation recorded before the
 	// group existed all spell it without the group.
 	name = strings.TrimPrefix(name, sshGroup+" ")
-	source := history.SourceCLI
-	if name == "" || name == "tui" {
-		name, source = "tui", history.SourceTUI
-	}
-	s := mutation.Scope{Command: name, Source: source, Args: append([]string{}, args...),
+	s := mutation.Scope{Command: name, Source: history.SourceCLI, Args: append([]string{}, args...),
 		Subjects: positionalSubjects(name, args)}
 	c.Flags().Visit(func(f *pflag.Flag) {
 		if f.Name == devRootFlag {

@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Pin host keys from the web UI.** A host's page scans it, shows each key's fingerprint, and pins
+  the keys only once you trust them, as `ssh knownhosts pin` does. **Hosts → Pin host keys** runs
+  `ssh knownhosts init` for a profile or every profile (trust on first use). Both run as jobs, with
+  the same notice and service as the CLI, and both work in dev mode, which reaches no server. The
+  web pins manifest hosts only: no free hostname or port goes to `ssh-keyscan` from a form. A host
+  with nothing pinned now shows the shared empty state.
 - **Hosts for ssh and SSH clients in `authama export`.** `authama export hosts --format` takes
   `ssh_config`, `termius` and every `ssh host export` client (`hosts-csv`, `windows-terminal`,
   `iterm2`, `putty`, `remmina`, `securecrt`, `mobaxterm`), filtered like any list. `ssh_config` is
@@ -132,6 +138,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   removed before v1.0.0.
 
 ### Fixed
+
+- A bare `authama`, which opens the web UI, ran inside a history scope labelled `tui`, the scope
+  `serve` was already kept out of because a scope around the server claims whatever it sees
+  outside a change. The bare run now gets none: each change made in the web UI is its own
+  operation with `web` as its source, as under `serve`.
+- After answering a job's question in the side panel, the clicked button's tooltip stayed on
+  screen once the panel reloaded without the button. The panel now hides any open tooltip before it
+  swaps its content.
 
 - Tabs on the Export page and in the CSV dialog used Bootstrap's `nav-underline`, which picked up
   Tabler's grey hover box; they are Tabler's own `nav-bordered` tabs now. Three controls showed two
