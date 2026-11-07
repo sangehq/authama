@@ -1,0 +1,36 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "System" $.Title "Every check the validate commands run, on one page: the manifest, your settings files, each managed keypair and the files in ~/.ssh. Run when you asked, and reading only.")}}
+<div class="alert {{if .Failed}}alert-warning{{else}}alert-success{{end}}" role="status" data-validate-summary>{{if .Failed}}{{icon "alert-triangle"}}<span class="ms-1">{{.Failed}} of {{len .Sections}} checks found a problem.</span>{{else}}{{icon "circle-check"}}<span class="ms-1">All {{len .Sections}} checks passed.</span>{{end}}
+  <a class="btn btn-sm btn-outline-secondary ms-2" href="{{basePath}}/validate"{{tip "validate-again"}}>{{icon "refresh"}}<span class="ms-1">Check again</span></a></div>
+{{range .Sections}}
+<div class="card mb-3" id="validate-{{.ID}}" data-validate-section="{{.ID}}" data-ok="{{.OK}}">
+  <div class="card-header">
+    <h2 class="card-title">{{.Title}} {{if .OK}}<span class="badge badge-ok ms-2">ok</span>{{else}}<span class="badge badge-warn ms-2">problem</span>{{end}}</h2>
+    {{if .Link}}<div class="card-actions"><a class="btn btn-sm btn-ghost-secondary" href="{{basePath}}{{.Link}}"{{tip "validate-open"}}><span class="me-1">{{.LinkLabel}}</span>{{icon "external-link"}}</a></div>{{end}}
+  </div>
+  <div class="card-body">
+    <p class="text-secondary mb-2">{{.What}}</p>
+    {{if .Problems}}<ul class="mb-2">{{range .Problems}}<li class="text-break">{{.}}</li>{{end}}</ul>{{end}}
+    {{with .Detail}}<pre class="mb-2 text-break" tabindex="0">{{.}}</pre>{{end}}
+    {{if .Keys}}
+    <div class="table-responsive" tabindex="0">
+      <table class="table table-vcenter table-sm">
+        <caption class="visually-hidden">Each managed keypair, as ssh validate reports it</caption>
+        <thead><tr><th scope="col">Key</th><th scope="col">Profile</th><th scope="col">Status</th><th scope="col">Fingerprint</th><th scope="col">Detail</th></tr></thead>
+        <tbody>{{range .Keys}}
+          <tr>
+            <th scope="row"><a href="{{basePath}}/keys/{{.Profile}}/{{.Name}}"><code>{{.Name}}</code></a></th>
+            <td><code>{{.Profile}}</code></td>
+            <td>{{if .OK}}<span class="badge badge-ok">ok</span>{{else}}<span class="badge badge-warn">fail</span>{{end}}</td>
+            <td><code class="text-break">{{.Fingerprint}}</code></td>
+            <td class="text-break">{{range .Issues}}<div>{{.}}</div>{{end}}{{range .Notes}}<div class="text-secondary">{{.}}</div>{{end}}</td>
+          </tr>{{end}}
+        </tbody>
+      </table>
+    </div>
+    {{else if eq .ID "keys"}}{{if .OK}}<p class="mb-0 text-secondary">No managed keys to check.</p>{{end}}{{end}}
+  </div>
+  <div class="card-footer text-secondary">The same as <code>{{.Command}}</code>.</div>
+</div>
+{{end}}
+{{end}}{{end}}

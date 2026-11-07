@@ -93,6 +93,15 @@ test('doctor shows the report authama doctor prints', async ({ page }) => {
   await expect(report).toContainText('host keys NOT pinned');
 });
 
+test('validate runs every check, and the seeded home passes them all', async ({ page }) => {
+  await page.goto('/validate');
+  for (const id of ['manifest', 'settings', 'keys', 'sshconfig']) {
+    await expect(page.locator(`[data-validate-section="${id}"]`)).toHaveAttribute('data-ok', 'true');
+  }
+  await expect(page.locator('[data-validate-summary]')).toContainText('All 4 checks passed');
+  await expect(page.getByRole('cell', { name: /SHA256:/ }).first()).toBeVisible();
+});
+
 test('history records the seeding commands', async ({ page }) => {
   await page.goto('/history');
   for (const command of ['init', 'reconcile', 'bundle']) {

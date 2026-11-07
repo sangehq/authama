@@ -33,6 +33,8 @@ var tips = map[string]string{
 	"net":                "Probes every host's SSH port now and says which answer and which need a VPN. Reads only; the same as ssh net.",
 	"net-host":           "Probes this host's SSH port now and says whether it answers or needs a VPN. Reads only; the same as ssh net.",
 	"net-again":          "Probes the same hosts again. Reads only.",
+	"validate-again":     "Runs every check again. Reads only.",
+	"validate-open":      "Opens the page that shows what this check reads.",
 	"host-pin":           "Asks this host for its keys and shows their fingerprints. Nothing is trusted until you confirm.",
 	"host-edit":          "Changes this host's hostname, user, port or tags, previewed first.",
 	"key-add":            "Declares a key in a profile and mints it.",
@@ -158,6 +160,7 @@ var pageTips = map[string]string{
 	"events":    "Every file change in ~/.ssh, the config home and the token files.",
 	"export":    "Make a file of any list, filtered, in any of nine formats.",
 	"doctor":    "Checks this home and offers fixes.",
+	"validate":  "Checks the manifest, the settings files, every keypair and ~/.ssh, and says what is wrong.",
 	"repair":    "Fixes a damaged home, or starts it again.",
 	"settings":  "Theme, defaults, and where authama keeps things.",
 	"about":     "This build, this computer, and the licences.",
@@ -169,7 +172,7 @@ var groupTips = map[string]string{
 	"files":    "The rendered ssh config, and the snapshots and bundles of ~/.ssh.",
 	"auth":     "Auth tokens, the key audit, and the PIN and seal.",
 	"activity": "What changed: History of authama's changes, and Events for every file change.",
-	"system":   "Doctor, Repair, Settings and About.",
+	"system":   "Doctor, Validate, Repair, Settings and About.",
 }
 
 // tipText is the explainer for id. An unknown id is an error, so a template

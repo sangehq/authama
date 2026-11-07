@@ -20,6 +20,7 @@ export const pages: { path: string; heading: string }[] = [
   { path: '/history', heading: 'History' },
   { path: '/events', heading: 'Events' },
   { path: '/doctor', heading: 'Doctor' },
+  { path: '/validate', heading: 'Validate' },
   { path: '/audit', heading: 'Audit' },
   { path: '/tokens', heading: 'Auth tokens' },
   { path: '/security', heading: 'Owner & PIN' },
