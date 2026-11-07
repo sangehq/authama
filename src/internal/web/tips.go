@@ -27,6 +27,9 @@ var tips = map[string]string{
 	"knownhosts-init":    "Scans hosts and pins the keys of each that answers into known_hosts (trust on first use).",
 	"key-regen-pub":      "Rebuilds this key's .pub from its private key or 1Password item. Previewed first; the private key is never changed.",
 	"key-regen-pub-many": "Rebuilds the .pub of one profile's keys, or every key. Previewed first; no private key changes.",
+	"naming-set":         "Changes how new servers are named: the alias template, the envs and roles it allows, and how strictly. Existing hosts keep their names and key names.",
+	"naming-key":         "Changes how new keys are named. Every existing host keeps the key name it has now.",
+	"profile-code":       "The code a profile's servers are named by, the {code} in the alias. Existing hosts keep their key names.",
 	"net":                "Probes every host's SSH port now and says which answer and which need a VPN. Reads only; the same as ssh net.",
 	"net-host":           "Probes this host's SSH port now and says whether it answers or needs a VPN. Reads only; the same as ssh net.",
 	"net-again":          "Probes the same hosts again. Reads only.",
@@ -142,6 +145,7 @@ var tips = map[string]string{
 var pageTips = map[string]string{
 	"overview":  "What needs attention, counts of everything, and quick actions.",
 	"profiles":  "Groups of hosts that share a key policy, and their keys' folders.",
+	"naming":    "How new servers and their keys are named, each profile's code, and which servers break the rules.",
 	"hosts":     "Every host by profile, as it is rendered into ~/.ssh/config.",
 	"keys":      "Every key with its fingerprint and expiry, and the loose keys kept on purpose.",
 	"vms":       "Hosts whose address a hypervisor gives each time, and their daily sync.",

@@ -241,6 +241,7 @@ test("a key's page shows its public key with a copy button", async ({ page, cont
 // row of a short table, where a clipped menu was cut off at the card's edge.
 for (const { path, table, label } of [
   { path: '/profiles', table: '#profiles-table', label: /^Actions for profile / },
+  { path: '/naming', table: '#naming-profiles-table', label: /^Actions for profile / },
   { path: '/keys', table: '#keys-table', label: /^Actions for key / },
   { path: '/hosts', table: '#hosts-table', label: /^Actions for host / },
 ]) {

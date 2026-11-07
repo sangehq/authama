@@ -355,6 +355,15 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 					}
 				}
 			}, nil, nil},
+		// The Naming page: the manifest's rules, one profile's, the key
+		// template (which keeps every existing key name) and a profile's code.
+		{"naming set", []string{"naming", "set", "--envs=prd,stg", "--enforce=warn", "--start=1"},
+			change.NamingSet("", change.NamingFields{Envs: &[]string{"prd", "stg"}, Enforce: ptr("warn"), Start: ptr(1)}), nil, nil, nil},
+		{"naming set --profile", []string{"naming", "set", "--profile", "work", "--alias={code}-{role}-{nn}", "--code-fallback=profile"},
+			change.NamingSet("work", change.NamingFields{Alias: ptr("{code}-{role}-{nn}"), CodeFallback: ptr("profile")}), nil, nil, nil},
+		{"naming key-template", []string{"naming", "key-template", "{profile}_{alias}_k-{algo}", "--yes"},
+			change.NamingKeyTemplate("", "{profile}_{alias}_k-{algo}"), nil, nil, nil},
+		{"profile code", []string{"profile", "edit", "work", "--code=wk"}, change.ProfileCode("work", "wk"), nil, nil, nil},
 		{"providers export", []string{"providers", "--export"}, change.ProvidersExport(), nil, nil, nil},
 		{"settings init", []string{"settings", "init"}, change.SettingsInit(false), nil, nil, nil},
 		{"token init", []string{"token", "init", "--target", "npm"}, change.TokenInit([]string{"npm"}), nil, nil, nil},
@@ -420,7 +429,7 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 			_ = editor.New(p).ReserveKey("loose-vm", manifest.ReservedKey{For: "devbox"})
 		}, nil, nil},
 	}
-	if len(cases) != 37 {
+	if len(cases) != 41 {
 		t.Fatalf("%d cases; every change the web offers needs one", len(cases))
 	}
 	for _, tc := range cases {

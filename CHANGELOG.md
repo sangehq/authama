@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Naming from the web UI.** A new *Naming* page under **SSH** shows what `ssh naming show` and
+  `ssh naming check` print: the rules in effect, each profile's code and own rules, and the servers
+  whose alias breaks them. It changes the rules for every profile or one profile (`naming set`), the
+  key template (`naming key-template`) and a profile's code (`profile edit --code`), each previewed
+  first. A rules form posts every field but turns only the ones you changed into flags, so the
+  preview reads as the command you would type and a field you left alone is never written. Every
+  existing host keeps its name and key name, as in the terminal.
 - **Rebuild public keys from the web UI.** A key's page, its row's menu, and *Rebuild public keys* on
   the Keys page (one profile, or every key) run `ssh key regen-pub` as a previewed change. The
   preview's copy holds no private key, so each public key is derived from the real one, read in

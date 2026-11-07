@@ -1,0 +1,113 @@
+{{define "content"}}{{with .Data}}
+{{if $.ReadOnly}}
+{{template "page_header" (header "SSH" "Naming" "How new servers and their keys are named, each profile's code, and the servers whose names break the rules.")}}
+{{else}}
+{{template "page_header" (header "SSH" "Naming" "How new servers and their keys are named, each profile's code, and the servers whose names break the rules." (panel "Change the rules" "naming-rules" "pencil" | withTip "naming-set") (panel "Change the key template" "naming-key" "key" | withTip "naming-key"))}}
+{{end}}
+<div class="row row-cards">
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Rules in effect</h2></div>
+      <div class="card-body">
+        <dl class="row mb-0" id="naming-rules-table">
+          <dt class="col-5">Alias</dt><dd class="col-7"><code>{{.Rules.Alias}}</code>{{if not .Own.Alias}} <span class="text-secondary small">default</span>{{end}}</dd>
+          <dt class="col-5">Key name</dt><dd class="col-7"><code>{{.Rules.KeyName}}</code>{{if not .Own.KeyName}} <span class="text-secondary small">default</span>{{end}}</dd>
+          <dt class="col-5">Environments</dt><dd class="col-7">{{if .Rules.Envs}}{{.Rules.Envs}}{{else}}<span class="text-secondary">any</span>{{end}}</dd>
+          <dt class="col-5">Roles</dt><dd class="col-7">{{if .Rules.Roles}}{{.Rules.Roles}}{{else}}<span class="text-secondary">any</span>{{end}}</dd>
+          <dt class="col-5">When a host breaks them</dt><dd class="col-7">{{.Rules.Enforce}}</dd>
+          <dt class="col-5">First number</dt><dd class="col-7">{{if .Rules.Start}}01{{else}}00{{end}}</dd>
+          <dt class="col-5">Profile with no code</dt><dd class="col-7">{{if eq .Rules.CodeFallback "profile"}}uses its name{{else}}has none{{end}}</dd>
+        </dl>
+      </div>
+      <div class="card-footer text-secondary">The same as <code>authama ssh naming show</code>. A profile can override any of these.</div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Check</h2><div class="card-actions text-secondary small">{{.Servers}} server(s) checked</div></div>
+      {{if .Violations}}
+      <div class="table-responsive" tabindex="0">
+        <table class="table table-vcenter card-table" id="naming-check-table">
+          <caption class="visually-hidden">Servers whose alias breaks the naming rules</caption>
+          <thead><tr><th scope="col">Profile</th><th scope="col">What is wrong</th></tr></thead>
+          <tbody>
+            {{range .Violations}}<tr><td><code>{{.Profile}}</code></td><td class="text-break">{{.Message}}</td></tr>{{end}}
+          </tbody>
+        </table>
+      </div>
+      {{else}}
+      <div class="card-body">{{template "empty" (empty "circle-check" "Every server follows the naming rules" "Hosts named before the rules keep their names; they are listed here, never renamed.")}}</div>
+      {{end}}
+      <div class="card-footer text-secondary">The same as <code>authama ssh naming check</code>. VM hosts are devboxes and are not checked. Reading only.</div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-3">
+  <div class="card-header"><h2 class="card-title">Profiles</h2>{{if .Profiles}}<div class="card-actions text-secondary small">{{len .Profiles}} in the manifest</div>{{end}}</div>
+  {{if .Profiles}}
+  <div class="table-responsive" tabindex="0">
+    <table class="table table-vcenter card-table table-hover" id="naming-profiles-table">
+      <caption class="visually-hidden">Each profile's code and the naming rules its servers follow</caption>
+      <thead><tr><th scope="col">Profile</th><th scope="col">Code</th><th scope="col">Alias</th><th scope="col">Key name</th><th scope="col">Rules</th>{{if not $.ReadOnly}}<th scope="col" class="w-1"><span class="visually-hidden">Actions</span></th>{{end}}</tr></thead>
+      <tbody>
+        {{range $i, $p := .Profiles}}
+        <tr>
+          <th scope="row"><code>{{.Name}}</code></th>
+          <td>{{if .Code}}<code>{{.Code}}</code>{{if not .CodeOwn}} <span class="text-secondary small">its name</span>{{end}}{{else}}<span class="text-secondary">none</span>{{end}}</td>
+          <td><code>{{.Rules.Alias}}</code></td>
+          <td><code>{{.Rules.KeyName}}</code></td>
+          <td>{{if .HasOwn}}<span class="badge badge-info">its own</span>{{else}}<span class="text-secondary">the manifest's</span>{{end}}</td>
+          {{if not $.ReadOnly}}<td class="text-end">
+            {{template "menu_open" (printf "Actions for profile %s" .Name)}}
+              <a class="dropdown-item" href="#{{.Form.ID}}" data-bs-toggle="offcanvas" role="button" aria-controls="{{.Form.ID}}"{{tip "naming-set"}}>{{icon "pencil"}}<span class="ms-2">Change its rules</span></a>
+              <a class="dropdown-item" href="#code-p{{$i}}" data-bs-toggle="offcanvas" role="button" aria-controls="code-p{{$i}}"{{tip "profile-code"}}>{{icon "pencil"}}<span class="ms-2">Set its code</span></a>
+            {{template "menu_close"}}
+          </td>{{end}}
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}{{template "empty" (empty "users" "No profiles yet" "Add one on the Profiles page, then give it a code to name its servers by.")}}{{end}}
+</div>
+
+{{if not $.ReadOnly}}
+{{template "naming_form" .Form}}
+{{template "panel_open" (header "naming-key" "Change the key template" "How the key of a new host is named. Every host keeps the key name it has now.")}}
+        {{template "change_open" $}}<input type="hidden" name="action" value="naming-key-template">
+          <div class="mb-2"><label class="form-label" for="nk-profile">For</label><select class="form-select" id="nk-profile" name="profile"><option value="">every profile</option>{{range .Profiles}}<option value="{{.Name}}">{{.Name}} only</option>{{end}}</select></div>
+          <div class="mb-2"><label class="form-label required" for="nk-template">Template</label><input class="form-control" id="nk-template" name="key_name" required autocomplete="off" spellcheck="false" value="{{.Rules.KeyName}}"></div>
+          <div class="form-hint mb-2">From <code>{profile}</code>, <code>{alias}</code>, <code>{code}</code>, <code>{env}</code>, <code>{role}</code>, <code>{nn}</code> and <code>{algo}</code>. It starts with <code>{profile}_</code> and ends with <code>-{algo}</code>. The same as <code>authama ssh naming key-template</code>.</div>
+          {{template "panel_actions" ""}}
+        </form>
+{{template "panel_close"}}
+{{range $i, $p := .Profiles}}
+{{template "naming_form" .Form}}
+{{template "panel_open" (header (printf "code-p%d" $i) (printf "Code for %s" .Name) "The {code} in the alias of this profile's new servers. Existing hosts keep their key names.")}}
+        {{template "change_open" $}}<input type="hidden" name="action" value="profile-code"><input type="hidden" name="name" value="{{.Name}}">
+          <div class="mb-2"><label class="form-label" for="pc-{{$i}}">Code <span class="text-secondary">(empty clears it)</span></label><input class="form-control" id="pc-{{$i}}" name="code" pattern="[a-z0-9]*" autocomplete="off" spellcheck="false" value="{{.CodeOwn}}"></div>
+          <div class="form-hint mb-2">Lowercase letters and digits. The same as <code>authama ssh profile edit {{.Name}} --code</code>.</div>
+          {{template "panel_actions" ""}}
+        </form>
+{{template "panel_close"}}
+{{end}}
+{{end}}
+{{end}}{{end}}
+
+{{/* One rules form, for the manifest or one profile: each field holds what
+     the scope stores now, and its placeholder what an empty field means. */}}
+{{define "naming_form"}}
+{{template "panel_open" (header .ID .Title (printf "Only the fields you change are written. An empty field uses %s." .Inherit))}}
+        <form method="post" action="{{basePath}}/changes/preview" data-inline><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="action" value="naming-set">{{if .Profile}}<input type="hidden" name="profile" value="{{.Profile}}">{{end}}
+          <div class="mb-2"><label class="form-label" for="{{.ID}}-alias">Alias template</label><input class="form-control" id="{{.ID}}-alias" name="alias" autocomplete="off" spellcheck="false" value="{{.Own.Alias}}" placeholder="{{.Effective.Alias}}"><small class="form-hint">From <code>{code}</code>, <code>{env}</code>, <code>{role}</code> and a number such as <code>{nn}</code>; <code>{env?}</code> is optional.</small></div>
+          <div class="mb-2"><label class="form-label" for="{{.ID}}-envs">Environments</label><input class="form-control" id="{{.ID}}-envs" name="envs" autocomplete="off" spellcheck="false" value="{{.Own.Envs}}" placeholder="{{if .Effective.Envs}}{{.Effective.Envs}}{{else}}any{{end}}"><small class="form-hint">Comma-separated; empty allows any.</small></div>
+          <div class="mb-2"><label class="form-label" for="{{.ID}}-roles">Roles</label><input class="form-control" id="{{.ID}}-roles" name="roles" autocomplete="off" spellcheck="false" value="{{.Own.Roles}}" placeholder="{{if .Effective.Roles}}{{.Effective.Roles}}{{else}}any{{end}}"><small class="form-hint">Comma-separated; empty allows any.</small></div>
+          <div class="mb-2"><label class="form-label" for="{{.ID}}-enforce">When a new host breaks them</label><select class="form-select" id="{{.ID}}-enforce" name="enforce"><option value=""{{if not .Own.Enforce}} selected{{end}}>as {{.Inherit}} ({{.Effective.Enforce}})</option><option value="off"{{if eq .Own.Enforce "off"}} selected{{end}}>off: add it</option><option value="warn"{{if eq .Own.Enforce "warn"}} selected{{end}}>warn: add it and say so</option><option value="error"{{if eq .Own.Enforce "error"}} selected{{end}}>error: refuse it</option></select></div>
+          <div class="mb-2"><label class="form-label" for="{{.ID}}-start">First number</label><select class="form-select" id="{{.ID}}-start" name="start"><option value="0"{{if not .Own.Start}} selected{{end}}>00{{if .Profile}} (or as {{.Inherit}}){{end}}</option><option value="1"{{if .Own.Start}} selected{{end}}>01</option></select></div>
+          <div class="mb-2"><label class="form-label" for="{{.ID}}-fallback">A profile with no code</label><select class="form-select" id="{{.ID}}-fallback" name="code_fallback"><option value=""{{if not .Own.CodeFallback}} selected{{end}}>as {{.Inherit}} ({{.Effective.CodeFallback}})</option><option value="none"{{if eq .Own.CodeFallback "none"}} selected{{end}}>none: it has no code</option><option value="profile"{{if eq .Own.CodeFallback "profile"}} selected{{end}}>profile: use its name</option></select></div>
+          <div class="form-hint mb-2">The same as <code>authama ssh naming set{{if .Profile}} --profile {{.Profile}}{{end}}</code> with the fields you changed. Every host keeps its name and key name.</div>
+          {{template "panel_actions" ""}}
+        </form>
+{{template "panel_close"}}
+{{end}}

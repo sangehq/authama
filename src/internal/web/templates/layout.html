@@ -84,7 +84,7 @@
           <nav class="d-flex flex-wrap align-items-center w-100" aria-label="Main">
             <ul class="navbar-nav">
               {{template "navlink" (navItem . "overview" "/" "layout-dashboard" "Overview")}}
-              {{template "navgroup" (navGroup . "ssh" "key" "SSH" (navItem . "profiles" "/profiles" "users" "Profiles") (navItem . "hosts" "/hosts" "server" "Hosts") (navItem . "keys" "/keys" "key" "Keys") (navItem . "vms" "/vms" "device-desktop" "VMs"))}}
+              {{template "navgroup" (navGroup . "ssh" "key" "SSH" (navItem . "profiles" "/profiles" "users" "Profiles") (navItem . "naming" "/naming" "license" "Naming") (navItem . "hosts" "/hosts" "server" "Hosts") (navItem . "keys" "/keys" "key" "Keys") (navItem . "vms" "/vms" "device-desktop" "VMs"))}}
               {{template "navgroup" (navGroup . "files" "file-code" "Config & backups" (navItem . "sshconfig" "/ssh-config" "file-code" "SSH config") (navItem . "snapshots" "/snapshots" "archive" "Snapshots"))}}
               {{template "navgroup" (navGroup . "auth" "lock" "Security" (navItem . "tokens" "/tokens" "cloud-lock" "Auth tokens") (navItem . "audit" "/audit" "shield-check" "Audit") (navItem . "security" "/security" "lock" "Owner & PIN"))}}
               {{template "navgroup" (navGroup . "activity" "activity" "Activity" (navItem . "history" "/history" "history" "History") (navItem . "events" "/events" "activity" "Events"))}}

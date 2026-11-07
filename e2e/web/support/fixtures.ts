@@ -10,6 +10,7 @@ export const bundle = (): string => process.env.AUTHAMA_E2E_BUNDLE ?? '';
 export const pages: { path: string; heading: string }[] = [
   { path: '/', heading: 'Overview' },
   { path: '/profiles', heading: 'Profiles' },
+  { path: '/naming', heading: 'Naming' },
   { path: '/hosts', heading: 'Hosts' },
   { path: '/hosts/hpc', heading: 'hpc' },
   { path: '/ssh-config', heading: 'SSH config' },

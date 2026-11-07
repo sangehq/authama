@@ -325,6 +325,11 @@ authama ssh naming key-template '{profile}_{code}_{env}_{role}_{nn}-{algo}'
 `~/.ssh/config`, in shell history and in other tools' imports, and renaming one is a change of its
 own. VM hosts are devboxes, not servers, and are never held to the rules.
 
+The web UI's **Naming** page (under **SSH**) shows the same: the rules in effect, each profile's code
+and own rules, and what `naming check` reports. Its forms change the rules for every profile or for
+one, the key template, and a profile's code, each previewed first. A rules form writes only the
+fields you change, so its preview reads as the `naming set` you would type.
+
 ### Every setup
 
 | Setup | How |
