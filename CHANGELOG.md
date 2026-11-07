@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`ssh git status --json`.** One document, `{"version": 1, "default_mode": …, "checkouts": […]}`,
+  with each checkout's path, state (`managed`, `unmanaged`, `no-origin`), URL, mode, owner, repo,
+  profile and where the profile came from (`remote` or `owner`). Fields are only ever added; a
+  rename or removal bumps `version` and is noted here. The text output is unchanged.
 - **Validate from the web UI.** A new *Validate* page under **System** runs every validate check on
   one page when you open it: the manifest loads and passes its rules, `settings validate` (authama.json
   against its schema, `.env`'s syntax and permissions), `ssh validate` (each keypair parses, its public

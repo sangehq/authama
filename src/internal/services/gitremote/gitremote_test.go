@@ -164,3 +164,47 @@ func TestExecReadsAndWritesOrigin(t *testing.T) {
 		t.Error("a directory that is not a repository has no origin")
 	}
 }
+
+// dirGit is a Git whose origin depends on the directory, for Status.
+type dirGit map[string]string
+
+func (d dirGit) Origin(dir string) (string, error) {
+	if u, ok := d[dir]; ok {
+		return u, nil
+	}
+	return "", errors.New("no origin")
+}
+func (dirGit) LsRemote(string, string) error  { return nil }
+func (dirGit) SetOrigin(string, string) error { return nil }
+
+func TestStatusSaysWhereEachProfileCameFrom(t *testing.T) {
+	m := load(t, fixture)
+	g := dirGit{
+		"/mapped": "https://github.com/clientco/app.git",
+		"/alias":  "git@github-imanimanyara:simtabi/authama.git",
+		"/other":  "https://gitlab.com/x/y.git",
+	}
+	got := Status(g, m, []string{"/mapped", "/alias", "/other", "/none"})
+	want := []Checkout{
+		{Path: "/mapped", State: StateManaged, URL: g["/mapped"], Mode: "https", Owner: "clientco", Repo: "app", Profile: "example-user", ProfileFrom: ProfileFromOwner},
+		{Path: "/alias", State: StateManaged, URL: g["/alias"], Mode: "profile", Owner: "simtabi", Repo: "authama", Profile: "imanimanyara", ProfileFrom: ProfileFromRemote},
+		{Path: "/other", State: StateUnmanaged, URL: g["/other"]},
+		{Path: "/none", State: StateNoOrigin},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("%d rows, want %d: %+v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("row %d:\n got %+v\nwant %+v", i, got[i], want[i])
+		}
+	}
+
+	// With no defaults.git and several profiles, an unmapped owner names none.
+	bare := load(t, `{"version":1,"profiles":{
+	  "a":{"hosts":[{"alias":"github-a","hostname":"github.com","user":"git"}]},
+	  "b":{"hosts":[{"alias":"github-b","hostname":"github.com","user":"git"}]}}}`)
+	if r := Status(dirGit{"/r": "https://github.com/someone/x.git"}, bare, []string{"/r"})[0]; r.Profile != "" || r.ProfileFrom != "" {
+		t.Errorf("an owner nothing maps resolved to %q (%s)", r.Profile, r.ProfileFrom)
+	}
+}

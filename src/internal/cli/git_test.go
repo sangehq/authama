@@ -1,12 +1,15 @@
 package cli
 
 import (
+	"encoding/json"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/services/gitremote"
 )
 
 func gitRepo(t *testing.T, origin string) string {
@@ -67,5 +70,97 @@ func TestGitModePrecedence(t *testing.T) {
 	}
 	if _, err := resolveGitMode("ftp", m); err == nil {
 		t.Error("unknown mode accepted")
+	}
+}
+
+// The text `ssh git status` prints, one line per checkout in each of its
+// states, is what people read and scripts already grep: it stays as it is.
+func TestGitStatusTextIsUnchanged(t *testing.T) {
+	editHome(t)
+	run(t, "ssh", "profile", "add", "imanimanyara")
+	run(t, "ssh", "host", "add", "imanimanyara", "github-imanimanyara", "-H", "github.com", "-u", "git")
+	byOwner := gitRepo(t, "https://github.com/simtabi/pheg.git")
+	byRemote := gitRepo(t, "git@github-imanimanyara:simtabi/authama.git")
+	other := gitRepo(t, "https://gitlab.com/simtabi/x.git")
+	none := t.TempDir()
+
+	out := run(t, "ssh", "git", "status", byOwner, byRemote, other, none)
+	want := []string{
+		byOwner + "  https  simtabi/pheg  profile=imanimanyara (by owner)",
+		byRemote + "  profile  simtabi/authama  profile=imanimanyara",
+		other + "  -  not a managed GitHub remote (https://gitlab.com/simtabi/x.git)",
+		none + "  -  no origin",
+	}
+	if got := strings.TrimSpace(out); got != strings.Join(want, "\n") {
+		t.Errorf("status:\n%s\nwant:\n%s", got, strings.Join(want, "\n"))
+	}
+}
+
+// `ssh git status --json` is read by other tools (sange's contract tests), so
+// its shape is pinned here, field by field.
+func TestGitStatusJSON(t *testing.T) {
+	editHome(t)
+	run(t, "ssh", "profile", "add", "imanimanyara")
+	run(t, "ssh", "host", "add", "imanimanyara", "github-imanimanyara", "-H", "github.com", "-u", "git")
+	byOwner := gitRepo(t, "https://github.com/simtabi/pheg.git")
+	byRemote := gitRepo(t, "git@github-imanimanyara:simtabi/authama.git")
+	other := gitRepo(t, "https://gitlab.com/simtabi/x.git")
+	none := t.TempDir()
+
+	out := run(t, "ssh", "git", "status", "--json", byOwner, byRemote, other, none)
+	var got map[string]any
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("not JSON: %v\n%s", err, out)
+	}
+	want := map[string]any{
+		"version":      1.0,
+		"default_mode": "profile",
+		"checkouts": []any{
+			map[string]any{"path": byOwner, "state": "managed", "url": "https://github.com/simtabi/pheg.git",
+				"mode": "https", "owner": "simtabi", "repo": "pheg", "profile": "imanimanyara", "profile_from": "owner"},
+			map[string]any{"path": byRemote, "state": "managed", "url": "git@github-imanimanyara:simtabi/authama.git",
+				"mode": "profile", "owner": "simtabi", "repo": "authama", "profile": "imanimanyara", "profile_from": "remote"},
+			map[string]any{"path": other, "state": "unmanaged", "url": "https://gitlab.com/simtabi/x.git"},
+			map[string]any{"path": none, "state": "no-origin"},
+		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		g, _ := json.MarshalIndent(got, "", "  ")
+		w, _ := json.MarshalIndent(want, "", "  ")
+		t.Errorf("ssh git status --json:\n%s\nwant:\n%s", g, w)
+	}
+}
+
+// Fields of `ssh git status --json` are only ever added: each one other
+// tools may read is still there under its name. Removing or renaming one
+// fails here; bump the document's version instead, and say so in the
+// CHANGELOG.
+func TestGitStatusJSONKeepsItsFields(t *testing.T) {
+	names := func(v any) map[string]bool {
+		out := map[string]bool{}
+		ty := reflect.TypeOf(v)
+		for i := 0; i < ty.NumField(); i++ {
+			if tag := strings.Split(ty.Field(i).Tag.Get("json"), ",")[0]; tag != "" {
+				out[tag] = true
+			}
+		}
+		return out
+	}
+	for _, tc := range []struct {
+		v    any
+		want []string
+	}{
+		{gitStatusDoc{}, []string{"version", "default_mode", "checkouts"}},
+		{gitremote.Checkout{}, []string{"path", "state", "url", "mode", "owner", "repo", "profile", "profile_from"}},
+	} {
+		have := names(tc.v)
+		if len(have) < len(tc.want) {
+			t.Errorf("%T has %d fields, fewer than the %d it published", tc.v, len(have), len(tc.want))
+		}
+		for _, n := range tc.want {
+			if !have[n] {
+				t.Errorf("%T no longer has %q, which other tools read", tc.v, n)
+			}
+		}
 	}
 }
