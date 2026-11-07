@@ -237,6 +237,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   buttons and dev banner) is removed, with the rule that forced panel columns to full width.
 ### Fixed
 
+- On the Export page, committing a transform step's second field before the preview had answered
+  the first wrote the step back as it was, so a template step lost its column name and stayed
+  unapplied. The column headings, and moving or removing a step, had the same flaw. Each now
+  reads the selection as it is when the change happens.
 - A word a nested group has no verb for (`authama ssh host export`, `ssh termius export`, `ssh profile
   nosuch`) printed the group's help and exited 0, so a script still calling a removed verb succeeded
   and did nothing. Every group without an action of its own now refuses it with exit 1 and a

@@ -817,7 +817,11 @@ export class ExportPage extends Component {
       const ready = stepReady(t);
       const stage = ready ? p.stages.find((s) => s.name === `transform ${++ran} ${t.kind}`) : undefined;
       /** @param {Partial<Step>} change */
-      const set = (change) => this.#setSteps(steps.map((x, j) => (j === i ? { ...x, ...change } : x)));
+      // Read the steps when the change happens, not when this step was drawn:
+      // the inputs are redrawn only after the preview answers, so a second
+      // field committed before then would otherwise write back the steps as
+      // they were and undo the first.
+      const set = (change) => this.#setSteps((this.#sel.transforms ?? []).map((x, j) => (j === i ? { ...x, ...change } : x)));
       const n = i + 1;
       const label = STEP_LABELS[/** @type {keyof typeof STEP_LABELS} */ (t.kind)] ?? t.kind;
       /** A labelled input. @param {string} text @param {string} value @param {(v: string) => void} on @param {object} [o] */
@@ -898,7 +902,7 @@ export class ExportPage extends Component {
         El.create("button").cls("btn btn-icon btn-sm btn-ghost-secondary").prop("type", "button").attr("aria-label", text).attr("title", text)
           .prop("disabled", off).append(ExportPage.icon(icon)).on("click", fn);
       const move = (/** @type {number} */ to) => {
-        const next = [...steps];
+        const next = [...(this.#sel.transforms ?? [])];
         const [s] = next.splice(i, 1);
         next.splice(to, 0, s);
         this.#setSteps(next);
@@ -913,7 +917,7 @@ export class ExportPage extends Component {
             El.create("span").cls("ms-auto btn-list flex-nowrap").append(
               iconBtn("arrow-up", `Move step ${n} up`, () => move(i - 1), i === 0),
               iconBtn("arrow-down", `Move step ${n} down`, () => move(i + 1), i === steps.length - 1),
-              iconBtn("x", `Remove step ${n}`, () => this.#setSteps(steps.filter((_, j) => j !== i)), false),
+              iconBtn("x", `Remove step ${n}`, () => this.#setSteps((this.#sel.transforms ?? []).filter((_, j) => j !== i)), false),
             ),
           ),
           El.create("div").cls("row g-2").append(...body),
@@ -992,7 +996,8 @@ export class ExportPage extends Component {
           .attr("aria-label", `Heading for ${c.field}`).attr("draggable", "false")
           .on("change", (e) => {
             const v = /** @type {HTMLInputElement} */ (e.target).value.trim();
-            set(cols.map((x, j) => (j === i ? (v ? { field: x.field, as: v } : { field: x.field }) : x)));
+            // The columns as they are now, not as drawn: see the steps' set.
+            set(this.#columns().map((x, j) => (j === i ? (v ? { field: x.field, as: v } : { field: x.field }) : x)));
           })),
         El.create("td").cls("w-1").append(iconBtn("x", `Remove ${c.field}`, () => set(cols.filter((_, j) => j !== i)), cols.length === 1)),
       );
