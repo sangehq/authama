@@ -180,6 +180,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The Audit page's deployments, the reserved keys and the declared devboxes show an empty list the
+  way every other page does, with the commands that fill them set as code. The CSV dialog and the
+  Export page now count, tick and untick their lists through one shared model, so the two
+  pickers cannot drift apart.
 - `ssh net` probes up to eight hosts at a time instead of one after another, so unreachable hosts
   cost one timeout between them rather than one each. Rows keep the manifest's order.
 - **The lists' CSV downloads (`/exports/hosts.csv` and the rest) now come from the export
