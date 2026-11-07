@@ -25,9 +25,7 @@ func newKnownHostsCmd() *cobra.Command {
 			"file: every host is pinned into the one ~/.ssh/known_hosts store.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			if err := confirmChange(c,
-				"knownhosts init scans the hosts it can reach and pins their keys "+
-					"into ~/.ssh/known_hosts (trust on first use).", initYes); err != nil {
+			if err := confirmChange(c, knownhosts.InitNotice, initYes); err != nil {
 				return err
 			}
 			profile := ""

@@ -165,6 +165,7 @@ export class SidePanel extends Component {
   /** @param {PanelPage} page */
   #show(page) {
     const body = this.#body();
+    Ui.hideTips(body);
     body.replaceChildren(page.node);
     const title = this.#part("title");
     if (title) {
@@ -189,6 +190,7 @@ export class SidePanel extends Component {
   #closed() {
     this.#inflight?.abort();
     this.#stack = [];
+    Ui.hideTips(this.#body());
     this.#body().replaceChildren();
     if (this.#changed) {
       this.#changed = false;

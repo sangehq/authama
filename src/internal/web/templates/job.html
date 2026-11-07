@@ -19,8 +19,8 @@
     <p>{{.Prompt}}</p>
     {{if .Text}}<pre class="code-block" tabindex="0">{{.Text}}</pre>{{end}}
     <div class="d-flex gap-2">
-      <form method="post" action="{{basePath}}/jobs/{{$.Data.ID}}/answer"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="answer" value="yes"><button type="submit" class="btn btn-primary"{{tip "job-yes"}}>Done, carry on</button></form>
-      <form method="post" action="{{basePath}}/jobs/{{$.Data.ID}}/answer"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="answer" value="no"><button type="submit" class="btn btn-outline-secondary"{{tip "job-no"}}>Not done, stop here</button></form>
+      <form method="post" action="{{basePath}}/jobs/{{$.Data.ID}}/answer"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="answer" value="yes"><button type="submit" class="btn btn-primary"{{tip "job-yes"}}>{{with $.Data.Question.Yes}}{{.}}{{else}}Done, carry on{{end}}</button></form>
+      <form method="post" action="{{basePath}}/jobs/{{$.Data.ID}}/answer"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="answer" value="no"><button type="submit" class="btn btn-outline-secondary"{{tip "job-no"}}>{{with $.Data.Question.No}}{{.}}{{else}}Not done, stop here{{end}}</button></form>
     </div>
   </div>
 </div>

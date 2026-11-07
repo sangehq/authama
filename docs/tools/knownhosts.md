@@ -112,6 +112,13 @@ Two identities reaching the same hostname (two GitHub accounts through host
 aliases) share the one pin for that host; what keeps them apart is each alias's
 `IdentityFile` with `IdentitiesOnly yes`, not the trust store.
 
+## In the web UI
+
+A host's page has **Pin its keys**: a job that scans the host, lists each fingerprint, and waits for
+you to trust them before writing, like `knownhosts pin <alias>`. **Hosts → Pin host keys** is
+`knownhosts init` for one profile or every profile, with the same trust-on-first-use notice. The web
+pins manifest hosts only. See [serve › Jobs](serve.md#jobs).
+
 ---
 
 [← Docs index](../../README.md#documentation)

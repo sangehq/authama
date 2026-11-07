@@ -49,7 +49,18 @@ var jobFields = map[string][]string{
 	"rotate-keys": {"profile", "all", "allow_unverified"},
 	// bundle-restore lays a bundle from the state home's dist/ back.
 	"bundle-restore": {"bundle"},
+	// knownhosts-init scans a profile's hosts, or every host, and pins what
+	// answers (trust on first use), as `ssh knownhosts init` does.
+	"knownhosts-init": {"profile", "all", "force"},
+	// knownhosts-pin scans one manifest host and pins its keys once the
+	// person has seen their fingerprints, as `ssh knownhosts pin` does.
+	"knownhosts-pin": {"host"},
 }
+
+// readsOnlyHostKeys is the jobs that only ask a host for its public keys and
+// write the local known_hosts. Nothing on a server changes, so a dev sandbox
+// runs them, as the CLI does.
+var readsOnlyHostKeys = map[string]bool{"knownhosts-init": true, "knownhosts-pin": true}
 
 // bundleRe is what a bundle the web restores is named, as bundler writes it.
 var bundleRe = regexp.MustCompile(`^(authama|ssh-manager)-[0-9]{8}-[0-9]{6}(-[0-9]+)?\.age$`)
@@ -78,7 +89,7 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 	}
 	// Everything but a bundle restore reaches real servers, which a sandbox
 	// cannot contain: refused here, as the CLI refuses it.
-	if action != "bundle-restore" {
+	if action != "bundle-restore" && !readsOnlyHostKeys[action] {
 		verb := action
 		if verb == "rotate-keys" {
 			verb = "rotate"
@@ -96,6 +107,10 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 		return rotateKeysSpec(f, h, retain)
 	case "bundle-restore":
 		return bundleRestoreSpec(f, h, retain)
+	case "knownhosts-init":
+		return knownhostsInitSpec(f, h, retain)
+	case "knownhosts-pin":
+		return knownhostsPinSpec(f, h, retain)
 	}
 	ref, err := keyRef(f)
 	if err != nil {

@@ -44,6 +44,10 @@ var ErrCancelled = fmt.Errorf("cancelled: the steps before this one finished, an
 type Question struct {
 	Prompt string
 	Text   string
+	// Yes and No label the two answers when the question is not "is the
+	// step done?" (pinning asks whether to trust keys). Empty keeps the
+	// default wording.
+	Yes, No string
 }
 
 // View is a job as a page shows it.
@@ -89,12 +93,17 @@ func (j *Job) Write(b []byte) (int, error) {
 // Ask pauses the job until the person answers, and reports their answer. A
 // cancel answers no.
 func (j *Job) Ask(prompt, text string) bool {
+	return j.AskWith(Question{Prompt: prompt, Text: text})
+}
+
+// AskWith is Ask with the question's own answer labels.
+func (j *Job) AskWith(q Question) bool {
 	j.mu.Lock()
 	if j.cancel {
 		j.mu.Unlock()
 		return false
 	}
-	j.question = &Question{Prompt: prompt, Text: text}
+	j.question = &q
 	j.state = Waiting
 	j.notify()
 	j.mu.Unlock()

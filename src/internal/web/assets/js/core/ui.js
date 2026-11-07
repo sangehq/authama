@@ -54,6 +54,26 @@ export class Ui {
   }
 
   /**
+   * Hides the tooltips and popovers open on anything under root. They are
+   * drawn on <body>, not inside root, so content swapped out from under an
+   * open one would leave it on screen: the job answer button that was just
+   * clicked, once the panel reloads without it. Hiding keeps each instance,
+   * so a page the panel goes back to still has its tips.
+   * @param {ParentNode} root
+   */
+  static hideTips(root) {
+    const lib = Ui.#lib;
+    if (!lib) {
+      return;
+    }
+    const els = root instanceof Element ? [root, ...root.querySelectorAll("*")] : [...root.querySelectorAll("*")];
+    for (const el of els) {
+      lib.Tooltip?.getInstance(el)?.hide();
+      lib.Popover?.getInstance(el)?.hide();
+    }
+  }
+
+  /**
    * Hides every open modal and slide-in panel but the side panel: a form
    * submitted from one (a confirmation, a "Set lifetime" panel) continues in
    * the side panel, which should not open behind it.
