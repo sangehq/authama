@@ -157,7 +157,7 @@ the `docker` group; authama never changes the guest's groups or services, it say
 | Where | What it checks |
 |---|---|
 | `ssh vm sync` | connects once as the guest user and runs `docker version`, the session `docker` itself will use. A guest with Docker gets its context even when the engine does not answer yet, and the host's note names the cause and the fix: `sudo usermod -aG docker <user>` for a refused socket, `sudo systemctl enable --now docker` for a stopped engine, `DOCKER_HOST` in `~/.bashrc` for rootless Docker |
-| `doctor` | every Docker context authama made, and any named after a VM host: a host that is gone, a context pointing somewhere else, and, for each running VM, `docker --context <alias> version` (bounded, never starting a VM). A context whose engine does not answer is a warning with its fix; `--strict` fails on it. `--json`: `docker_contexts` |
+| `doctor` | every Docker context authama made, and any named after a VM host: a host that is gone, a context pointing somewhere else, and, for each running VM, `docker --context <alias> version` (bounded, never starting a VM). Through an `ssh://` context docker hides the guest's reason behind a generic "Cannot connect ... at http://docker.example.com", so doctor then asks the guest itself, as sync does, and reports the real cause. A context whose engine does not answer is a warning with its fix; `--strict` fails on it. `--json`: `docker_contexts` |
 | web UI, VMs page | the same list, with **Check the engines** to run the check on demand; the page connects to no guest otherwise |
 
 ### Shared connections

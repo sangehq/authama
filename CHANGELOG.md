@@ -17,7 +17,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Docker contexts in `doctor` and on the VMs page.** `doctor` lists the Docker contexts of VM
   hosts and runs `docker --context <alias> version` for each running VM (never starting one): a
   gone host, a context pointing elsewhere, or an engine that does not answer is a warning with
-  its fix, and `--strict` fails on it. `--json` gains `docker_contexts`. The web UI's VMs page
+  its fix, and `--strict` fails on it. When docker hides the guest's reason behind its generic
+  `http://docker.example.com` error, doctor asks the guest itself, so a refused socket reads as
+  "denied" with the `usermod` fix rather than as a stopped engine. `--json` gains `docker_contexts`. The web UI's VMs page
   shows the same list, with *Check the engines* to run the check on demand.
 - **Shared SSH connections for VM hosts (`vm.multiplex`, on by default).** A VM host's block
   renders `ControlMaster auto`, `ControlPath ~/.ssh/authama-cm/%C` and `ControlPersist 10m`, so a

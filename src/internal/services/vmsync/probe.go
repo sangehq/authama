@@ -35,12 +35,9 @@ type ProbeResult struct {
 }
 
 // dockerProbe asks the guest, as the guest user over a non-interactive ssh
-// session (the session `docker system dial-stdio` will run in), whether it
-// has docker and whether the engine answers. Wrapped in sh -c so the guest's
-// login shell (bash, zsh, fish) does not matter.
-const dockerProbe = `sh -c 'if ! command -v docker >/dev/null 2>&1; then echo authama-docker=absent; ` +
-	`elif v=$(docker version --format "{{.Server.Version}}" 2>&1); then echo "authama-docker=ok $v"; ` +
-	`else echo authama-docker=failed; printf "%s\n" "$v" | tail -n 3; fi'`
+// session, whether it has docker and whether the engine answers
+// (dockerctx.GuestProbe, which doctor uses too).
+const dockerProbe = dockerctx.GuestProbe
 
 // probeTimeout bounds one probe.
 var probeTimeout = 30 * time.Second
@@ -107,32 +104,9 @@ func classify(err error, stdout, stderr string) ProbeResult {
 	return pr
 }
 
-// readDockerProbe reads dockerProbe's output: the marker line, and after a
-// failure the last lines of docker's error.
+// readDockerProbe reads dockerProbe's output (dockerctx.ReadGuestProbe).
 func readDockerProbe(stdout string) (bool, dockerctx.Diagnosis) {
-	lines := strings.Split(stdout, "\n")
-	for i, l := range lines {
-		l = strings.TrimSpace(l)
-		state, rest, _ := strings.Cut(strings.TrimPrefix(l, "authama-docker="), " ")
-		if !strings.HasPrefix(l, "authama-docker=") {
-			continue
-		}
-		switch state {
-		case "absent":
-			return false, dockerctx.Diagnosis{State: dockerctx.DaemonAbsent}
-		case "ok":
-			return true, dockerctx.Diagnosis{State: dockerctx.DaemonOK, Version: strings.TrimSpace(rest)}
-		case "yes": // an older probe: the command exists, the engine was not asked
-			return true, dockerctx.Diagnosis{}
-		default:
-			d := dockerctx.Classify(strings.Join(lines[i+1:], "\n"), "")
-			if d.State == dockerctx.DaemonAbsent || d.State == dockerctx.DaemonUnreachable {
-				d.State = dockerctx.DaemonFailed // the command ran, over a working connection
-			}
-			return true, d
-		}
-	}
-	return false, dockerctx.Diagnosis{}
+	return dockerctx.ReadGuestProbe(stdout)
 }
 
 func lastLine(s string) string {

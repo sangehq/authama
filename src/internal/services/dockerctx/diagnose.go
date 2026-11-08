@@ -84,6 +84,48 @@ func lastLines(s string, n int) string {
 	return strings.Join(lines, " / ")
 }
 
+// GuestProbe asks a guest, as the guest user over a non-interactive ssh
+// session (the session `docker system dial-stdio` runs in), whether it has
+// docker and whether the engine answers. Wrapped in sh -c so the guest's login
+// shell (bash, zsh, fish) does not matter. ReadGuestProbe reads its output.
+const GuestProbe = `sh -c 'if ! command -v docker >/dev/null 2>&1; then echo authama-docker=absent; ` +
+	`elif v=$(docker version --format "{{.Server.Version}}" 2>&1); then echo "authama-docker=ok $v"; ` +
+	`else echo authama-docker=failed; printf "%s\n" "$v" | tail -n 3; fi'`
+
+// ReadGuestProbe reads GuestProbe's output: the marker line, and after a
+// failure the last lines of docker's error. It reports whether the guest has
+// docker, and the engine's state ("" when no marker came back).
+func ReadGuestProbe(stdout string) (bool, Diagnosis) {
+	lines := strings.Split(stdout, "\n")
+	for i, l := range lines {
+		l = strings.TrimSpace(l)
+		if !strings.HasPrefix(l, "authama-docker=") {
+			continue
+		}
+		state, rest, _ := strings.Cut(strings.TrimPrefix(l, "authama-docker="), " ")
+		switch state {
+		case "absent":
+			return false, Diagnosis{State: DaemonAbsent}
+		case "ok":
+			return true, Diagnosis{State: DaemonOK, Version: strings.TrimSpace(rest)}
+		case "yes": // an older probe: the command exists, the engine was not asked
+			return true, Diagnosis{}
+		default:
+			d := Classify(strings.Join(lines[i+1:], "\n"), "")
+			if d.State == DaemonAbsent || d.State == DaemonUnreachable {
+				d.State = DaemonFailed // the command ran, over a working connection
+			}
+			return true, d
+		}
+	}
+	return false, Diagnosis{}
+}
+
+// connhelperHost is the placeholder the docker CLI names for an ssh://
+// context. An error naming it says only that the guest's `docker system
+// dial-stdio` failed; the guest's own reason is not passed on.
+const connhelperHost = "docker.example.com"
+
 // checkTimeout bounds one Check: an unreachable guest must not hang doctor.
 var checkTimeout = 20 * time.Second
 
@@ -94,7 +136,7 @@ var checkTimeout = 20 * time.Second
 func Check(name, user string) Diagnosis {
 	ctx, cancel := context.WithTimeout(context.Background(), checkTimeout)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "docker", "--context", name, "version", "--format", "{{.Server.Version}}").CombinedOutput()
+	out, err := dockerVersion(ctx, name)
 	if ctx.Err() == context.DeadlineExceeded {
 		return Diagnosis{State: DaemonUnreachable, Detail: "no answer in " + checkTimeout.String(),
 			Fix: "check the host first: ssh " + name + " true"}
@@ -102,7 +144,50 @@ func Check(name, user string) Diagnosis {
 	if err == nil {
 		return Diagnosis{State: DaemonOK, Version: strings.TrimSpace(string(out))}
 	}
+	if strings.Contains(string(out), connhelperHost) {
+		// Through an ssh context the guest's error is hidden behind a generic
+		// "Cannot connect ... at http://docker.example.com", which would read as
+		// a stopped engine when the socket refused the user. Ask the guest.
+		if d, ok := askGuest(name, user); ok {
+			return d
+		}
+	}
 	d := Classify(string(out), user)
 	d.Fix = strings.ReplaceAll(d.Fix, "<alias>", name)
 	return d
+}
+
+// dockerVersion runs `docker --context name version`; tests swap it.
+var dockerVersion = func(ctx context.Context, name string) ([]byte, error) {
+	return exec.CommandContext(ctx, "docker", "--context", name, "version", "--format", "{{.Server.Version}}").CombinedOutput()
+}
+
+// askGuest runs GuestProbe on host name over ssh (the user's config, the
+// pinned key, BatchMode) and reads the guest's own answer. ok is false when no
+// answer came back, so the caller keeps what docker said.
+var askGuest = func(name, user string) (Diagnosis, bool) {
+	ctx, cancel := context.WithTimeout(context.Background(), checkTimeout)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
+		"--", name, GuestProbe).Output()
+	if err != nil && len(out) == 0 {
+		return Diagnosis{}, false
+	}
+	has, d := ReadGuestProbe(string(out))
+	if d.State == "" {
+		return Diagnosis{}, false
+	}
+	if !has && d.State == DaemonAbsent {
+		d.Fix = "install Docker Engine in the guest (https://docs.docker.com/engine/install/)"
+	}
+	if d.State == DaemonOK {
+		// The guest's engine answers its user, so the context path itself failed.
+		return Diagnosis{State: DaemonFailed, Version: d.Version,
+			Detail: "the guest's engine answers over ssh, but not through the context",
+			Fix:    "recreate the context: authama ssh vm docker-context " + name}, true
+	}
+	if user != "" {
+		d.Fix = strings.ReplaceAll(d.Fix, "<user>", user)
+	}
+	return d, true
 }
