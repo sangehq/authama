@@ -59,9 +59,10 @@ func TestClientExportsMatchTheirGoldenFiles(t *testing.T) {
 }
 
 func TestTermiusAndFlatConfigMatchTheirGoldenFiles(t *testing.T) {
-	prev := SelfPath
+	prev, prevMux := SelfPath, Multiplex
 	SelfPath = func() string { return "/usr/local/bin/authama" }
-	t.Cleanup(func() { SelfPath = prev })
+	Multiplex = func() bool { return true } // the default everywhere but Windows
+	t.Cleanup(func() { SelfPath, Multiplex = prev, prevMux })
 	m := mustManifest(t, exportJSON)
 	exp, err := RenderTermiusCSV(m, testExportPaths, TermiusOptions{IncludeGit: true})
 	if err != nil {

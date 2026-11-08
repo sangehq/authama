@@ -292,6 +292,7 @@ func TestTheEnvironmentVariableNamesAreTheDocumentedOnes(t *testing.T) {
 		"AUTHAMA_NO_DOTENV":            "1 skips <config home>/.env",
 		"AUTHAMA_AUTO_PIN":             "0 disables auto-pinning reachable hosts on reconcile",
 		"AUTHAMA_VM_HYPERVISORS":       "the hypervisors vm list/sync/add use (comma-separated)",
+		"AUTHAMA_VM_MULTIPLEX":         "0 stops VM hosts sharing one SSH connection (vm.multiplex)",
 		"AUTHAMA_VM_PRUNE_GONE":        "0 keeps a VM host whose VM is gone on vm sync",
 		"AUTHAMA_VM_REPIN":             "1 lets vm sync replace a changed guest host key pin",
 		"AUTHAMA_WEB_ADDR":             "the address serve listens on (web.addr)",

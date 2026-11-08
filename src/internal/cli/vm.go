@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -15,8 +16,10 @@ import (
 	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/core/hypervisor"
 	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/core/renderer"
 	"github.com/simtabi/authama/src/internal/services/dockerctx"
 	"github.com/simtabi/authama/src/internal/services/editor"
+	"github.com/simtabi/authama/src/internal/util/fs"
 )
 
 func newVMCmd() *cobra.Command {
@@ -26,7 +29,10 @@ func newVMCmd() *cobra.Command {
 		Long: "A VM's IP changes, so a VM host renders ProxyCommand \"<authama>\" vm proxy <alias>:\n" +
 			"each connection asks the hypervisor for the VM's current address. Built in:\n" +
 			strings.Join(manifest.Hypervisors, ", ") + ". OrbStack and Podman run their own SSH and keys;\n" +
-			"they are listed, and get a Docker context, but authama does not take their keys over.\n\n" +
+			"they are listed, but authama does not take their keys over or make them hosts (each has\n" +
+			"its own Docker: OrbStack's context is orbstack). A VM host whose guest runs Docker gets a\n" +
+			"Docker context ssh://<alias> from `vm sync`, shared-connection SSH (vm.multiplex), and an\n" +
+			"engine check in doctor.\n\n" +
 			"Which hypervisors you use is vm.hypervisors (AUTHAMA_VM_HYPERVISORS); any other tool can be\n" +
 			"added as a command driver in authama.json's \"hypervisors\" section, and the VMs you work\n" +
 			"in declared in its \"devboxes\" section (docs/tools/vm.md). `vm sync` keeps the hosts in\n" +
@@ -109,7 +115,7 @@ func newVMAddCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(2),
 		RunE: func(c *cobra.Command, args []string) error {
 			if hv == manifest.HypervisorOrbStack || hv == manifest.HypervisorPodman {
-				return fmt.Errorf("%s manages its own SSH access and keys; use `authama ssh vm docker-context` instead of a host", hv)
+				return errors.New(manifest.OwnSSHRefusal(hv))
 			}
 			if !hypervisor.IsEnabled(hv) {
 				_, _ = fmt.Fprintf(c.ErrOrStderr(), "warning: %s is not in vm.hypervisors; `vm sync` will leave this host alone until it is\n", hv)
@@ -179,6 +185,12 @@ func newVMProxyCmd() *cobra.Command {
 			}
 			if !hypervisor.Available(d) {
 				return fmt.Errorf("%s: %s is not installed", args[0], d.Name())
+			}
+			if p, err := resolvePaths(c); err == nil {
+				// ssh makes a shared-connection master (vm.multiplex) only in a
+				// directory that exists; a config rendered before the setting
+				// existed, or a cleaned ~/.ssh, would otherwise lose it.
+				_ = fs.EnsureDir(filepath.Join(p.SSHDir, renderer.ControlDir), 0o700)
 			}
 			ep, err := d.Address(h.VM.Name)
 			if err != nil && !errors.Is(err, hypervisor.ErrOwnKeys) {

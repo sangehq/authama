@@ -5,6 +5,7 @@ import (
 
 	"github.com/simtabi/authama/src/internal/core/hypervisor"
 	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/services/dockerctx"
 	"github.com/simtabi/authama/src/internal/services/keyaudit"
 	"github.com/simtabi/authama/src/internal/services/settings"
 	"github.com/simtabi/authama/src/internal/services/vmsync"
@@ -27,6 +28,12 @@ type VMsView struct {
 	Profiles []string
 	// Schedule is the command the daily schedule runs.
 	Schedule string
+	// Docker is false when the docker CLI is not installed.
+	Docker bool
+	// Contexts are the Docker contexts of VM hosts; Checked says the engines
+	// behind the running ones were asked (the page's "Check the engines").
+	Contexts []vmsync.ContextStatus
+	Checked  bool
 }
 
 // DriverView is one hypervisor driver and the VMs it lists.
@@ -37,6 +44,13 @@ type DriverView struct {
 	Err             string
 }
 
+// dockerList and dockerCheck are the docker CLI; tests swap them.
+var (
+	dockerAvailable                = func() bool { return dockerctx.Available() == nil }
+	dockerList                     = dockerctx.List
+	dockerCheck     vmsync.Checker = dockerctx.Check
+)
+
 // DevboxView is one devbox authama.json declares.
 type DevboxView struct {
 	Alias string
@@ -44,15 +58,28 @@ type DevboxView struct {
 }
 
 // VMs builds the /vms page. It asks the hypervisors but connects to no guest.
-func (e AppEngine) VMs() (VMsView, error) {
+func (e AppEngine) VMs(checkDocker bool) (VMsView, error) {
 	var v VMsView
 	cfg, _ := settings.LoadVMConfig(e.P.SettingsFile())
 	opt := vmsync.DefaultOptions(nil)
 	opt.Probe = false
-	if plan, err := vmsync.New(e.P, cfg, opt).Plan(); err != nil {
+	plan, err := vmsync.New(e.P, cfg, opt).Plan()
+	if err != nil {
 		v.Notes = append(v.Notes, "could not plan a sync: "+err.Error())
 	} else {
 		v.Hosts, v.Pending, v.Notes = plan.Hosts, plan.Lines(), plan.Notes
+	}
+	v.Docker = dockerAvailable()
+	if v.Docker {
+		if cs, err := dockerList(); err != nil {
+			v.Notes = append(v.Notes, "docker: "+err.Error())
+		} else {
+			var check vmsync.Checker
+			if checkDocker {
+				check, v.Checked = dockerCheck, true
+			}
+			v.Contexts = vmsync.ContextStatuses(plan, cs, check)
+		}
 	}
 	for _, d := range hypervisor.All() {
 		dv := DriverView{Name: d.Name(), Kind: hypervisor.Describe(d), CLI: d.CLI(), Enabled: hypervisor.IsEnabled(d.Name())}

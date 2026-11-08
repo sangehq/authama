@@ -318,7 +318,9 @@ func (h pages) handleDoctor(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h pages) handleVMs(w http.ResponseWriter, r *http.Request) {
-	v, err := h.s.opts.Engine.VMs()
+	// ?check=docker asks the engine behind each running VM's Docker context;
+	// without it the page connects to no guest.
+	v, err := h.s.opts.Engine.VMs(r.URL.Query().Get("check") == "docker")
 	if err != nil {
 		h.fail(w, r, err)
 		return

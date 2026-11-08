@@ -45,6 +45,7 @@ func (p ExportPaths) expandHost(h RenderHost) RenderHost {
 	h.IdentityFile = p.expand(h.IdentityFile)
 	h.IdentityAgent = p.expand(h.IdentityAgent)
 	h.KnownHosts = p.expand(h.KnownHosts)
+	h.ControlPath = p.expand(h.ControlPath)
 	if h.RawOptions.Len() > 0 {
 		pairs := make([][2]string, 0, h.RawOptions.Len())
 		for _, k := range h.RawOptions.Keys() {

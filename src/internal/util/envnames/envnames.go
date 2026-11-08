@@ -40,6 +40,7 @@ const (
 	// authama for the powershell.exe it runs, never by a user.
 	HelloCheck     = "AUTHAMA_HELLO_CHECK"
 	VMHypervisors  = "AUTHAMA_VM_HYPERVISORS"
+	VMMultiplex    = "AUTHAMA_VM_MULTIPLEX"
 	VMPruneGone    = "AUTHAMA_VM_PRUNE_GONE"
 	VMRepin        = "AUTHAMA_VM_REPIN"
 	WebAddr        = "AUTHAMA_WEB_ADDR"
@@ -63,7 +64,7 @@ func Names() []string {
 		AgeIdentityFile, AgeRecipient, AskpassMode, AskpassSecret, AutoPin, ConfigDir,
 		DevRoot, DockerCredsStore, ExportSaveTo, GitMode, HelloCheck, History, NoDotenv, Notifications,
 		OldKeyMaxAgeDays, OwnerStore, ServeHandoff, SnapshotRetain, StateDir, TokensCatalog, TokensConfig,
-		VMHypervisors, VMPruneGone, VMRepin, WebAddr, WebAutoRestart, WebBasePath, WebMenuExport, WebPort,
+		VMHypervisors, VMMultiplex, VMPruneGone, VMRepin, WebAddr, WebAutoRestart, WebBasePath, WebMenuExport, WebPort,
 	}
 	sort.Strings(out)
 	return out

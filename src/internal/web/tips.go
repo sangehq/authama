@@ -99,6 +99,7 @@ var tips = map[string]string{
 	"unlock":               "Checks the PIN and opens this session. Nothing else changes.",
 	"token-init":           "Previews writing a starter tokens.json that names the environment variable each tool reads. Nothing is written until you confirm.",
 	"token-import":         "Previews importing the older token file into tokens.json. Nothing is written until you confirm.",
+	"vm-docker-check":      "Asks the Docker engine behind each running VM's context for its version, as docker itself would. It never starts a VM and changes nothing.",
 	"vm-sync":              "Previews refreshing the VM hosts from the hypervisor: names and addresses. Nothing is written until you confirm.",
 	"vm-schedule-on":       "Previews installing a daily 09:30 sync (launchd, systemd, cron or Task Scheduler). Nothing is written until you confirm.",
 	"vm-schedule-off":      "Previews removing the daily sync. The VM hosts stay as they are.",

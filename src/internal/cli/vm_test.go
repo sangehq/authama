@@ -35,9 +35,16 @@ func TestVMAddRendersTheProxyCommandAndRefusesOwnKeyHypervisors(t *testing.T) {
 	if !strings.Contains(string(cfg), "Host devbox\n") || !strings.Contains(string(cfg), " vm proxy devbox\n") {
 		t.Errorf("rendered config lacks the VM host's ProxyCommand:\n%s", cfg)
 	}
+	// The refusal names where Docker is instead, never `vm docker-context`,
+	// which needs a VM host these machines can never be.
 	if _, err := runErr(t, "ssh", "vm", "add", "devbox", "orb", "--hypervisor", "orbstack", "--vm", "ubuntu", "-u", "me"); err == nil ||
-		!strings.Contains(err.Error(), "own SSH") {
+		!strings.Contains(err.Error(), "own SSH") || !strings.Contains(err.Error(), "docker context use orbstack") ||
+		strings.Contains(err.Error(), "docker-context") {
 		t.Errorf("orbstack host: %v", err)
+	}
+	if _, err := runErr(t, "ssh", "vm", "add", "devbox", "pod", "--hypervisor", "podman", "--vm", "m", "-u", "me"); err == nil ||
+		!strings.Contains(err.Error(), "DOCKER_HOST") || strings.Contains(err.Error(), "docker-context") {
+		t.Errorf("podman host: %v", err)
 	}
 	if _, err := runErr(t, "ssh", "vm", "add", "devbox", "vb", "--hypervisor", "virtualbox", "--vm", "x", "-u", "me"); err == nil {
 		t.Error("an unknown hypervisor was accepted")

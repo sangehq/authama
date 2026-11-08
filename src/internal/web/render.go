@@ -177,7 +177,7 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 				return "badge-ok"
 			case "not-deployed", "needs-redeploy", "due_soon", "stopped", "suspended", "paused", "declared":
 				return "badge-warn"
-			case "no-key", "overdue", "gone":
+			case "no-key", "overdue", "gone", "denied", "down", "unreachable", "failed":
 				return "badge-bad"
 			}
 			return "badge-muted"
