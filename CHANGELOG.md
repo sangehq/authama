@@ -8,6 +8,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Notifications say authama, with its logo, and stay quiet in tests.** Desktop notifications now go
+  through go-notifykit: on macOS a banner shows `authama` and the web UI's logo mark instead of
+  "Script Editor", Linux's `notify-send` gets the same icon, and nothing is shown under `go test`
+  or in CI. `AUTHAMA_NOTIFICATIONS=off` still turns them off. New verbs `ssh notify send`,
+  `ssh notify ping` and `ssh notify doctor` show one, hand one to the running web UI, and say why
+  notifications do or do not work; `authama serve` listens for pings on a socket only the user can
+  open.
+
 - **Docker devboxes say whether Docker works, not only whether it is installed.** `ssh vm sync`
   now asks a running guest's Docker engine for its version as the guest user, over the session
   `docker` itself uses. A guest with Docker still gets its context when the engine does not

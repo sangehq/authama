@@ -14,6 +14,7 @@ import (
 
 func stubBackend(t *testing.T, name string) string {
 	t.Helper()
+	forceBackend(t, name)
 	dir := t.TempDir()
 	log := filepath.Join(dir, "argv.txt")
 	script := "#!/bin/sh\nfor a in \"$@\"; do printf '[%s]\\n' \"$a\" >> " + log + "; done\n"
@@ -26,7 +27,55 @@ func stubBackend(t *testing.T, name string) string {
 
 // The contract every caller relies on: false means nothing was delivered, so
 // the notifier can decline to spend its cadence on a message nobody saw.
+// forceBackend turns delivery on under go test (notifykit keeps it off by
+// default) and names the backend, so the macOS helper app is never assembled
+// in a test, and keeps notifykit's state in the test's own directory.
+func forceBackend(t *testing.T, name string) {
+	t.Helper()
+	t.Setenv("NOTIFYKIT_DESKTOP", "1")
+	t.Setenv("NOTIFYKIT_BACKEND", name)
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
+}
+
+func platformBackend(t *testing.T) string {
+	t.Helper()
+	switch runtime.GOOS {
+	case "darwin":
+		return "terminal-notifier"
+	case "linux":
+		return "notify-send"
+	}
+	t.Skip("no scriptable backend on " + runtime.GOOS)
+	return ""
+}
+
+// Under go test, with nothing set, notifykit delivers nothing: no test can put
+// a banner on a developer's screen.
+func TestNotifyIsSilentUnderGoTest(t *testing.T) {
+	log := stubBackend(t, platformBackend(t))
+	t.Setenv("NOTIFYKIT_DESKTOP", "")
+	if Notify("title", "message") {
+		t.Error("Notify delivered under go test")
+	}
+	if _, err := os.Stat(log); err == nil {
+		t.Error("the backend ran under go test")
+	}
+}
+
+// AUTHAMA_NOTIFICATIONS=off still turns notifications off.
+func TestNotificationsOffIsHonoured(t *testing.T) {
+	log := stubBackend(t, platformBackend(t))
+	t.Setenv("AUTHAMA_NOTIFICATIONS", "off")
+	if Notify("title", "message") {
+		t.Error("Notify delivered with AUTHAMA_NOTIFICATIONS=off")
+	}
+	if _, err := os.Stat(log); err == nil {
+		t.Error("the backend ran with AUTHAMA_NOTIFICATIONS=off")
+	}
+}
+
 func TestNotifyReportsFalseWhenNoBackendExists(t *testing.T) {
+	forceBackend(t, platformBackend(t))
 	t.Setenv("PATH", t.TempDir())
 	if Notify("title", "message") {
 		t.Error("with nothing on PATH, Notify must report that it delivered nothing")
@@ -34,16 +83,7 @@ func TestNotifyReportsFalseWhenNoBackendExists(t *testing.T) {
 }
 
 func TestNotifyUsesThePlatformsBackend(t *testing.T) {
-	var name string
-	switch runtime.GOOS {
-	case "darwin":
-		name = "terminal-notifier"
-	case "linux":
-		name = "notify-send"
-	default:
-		t.Skip("no scriptable backend on " + runtime.GOOS)
-	}
-	log := stubBackend(t, name)
+	log := stubBackend(t, platformBackend(t))
 
 	if !Notify("authama", "a key is due") {
 		t.Fatal("Notify should report success when a backend handled it")

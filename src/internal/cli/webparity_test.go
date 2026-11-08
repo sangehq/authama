@@ -237,9 +237,20 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 			}
 		}
 	}
-	notifier := stubs("terminal-notifier", "")
+	// go-notifykit is off under go test; turn it on and name the stubbed
+	// backend, so neither side assembles the macOS helper app.
+	notifierStub := func(name string) func(t *testing.T, side string) {
+		stub := stubs(name, "")
+		return func(t *testing.T, side string) {
+			t.Setenv("NOTIFYKIT_DESKTOP", "1")
+			t.Setenv("NOTIFYKIT_BACKEND", name)
+			t.Setenv("XDG_STATE_HOME", t.TempDir())
+			stub(t, side)
+		}
+	}
+	notifier := notifierStub("terminal-notifier")
 	if runtime.GOOS != "darwin" {
-		notifier = stubs("notify-send", "")
+		notifier = notifierStub("notify-send")
 	}
 	// A VM host whose VM the (stubbed) hypervisor no longer lists.
 	goneVM := func(p paths.Paths) {

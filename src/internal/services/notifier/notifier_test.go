@@ -157,6 +157,9 @@ func stubBackend(t *testing.T) string {
 	default:
 		t.Skip("no scriptable backend to stand in for on " + runtime.GOOS)
 	}
+	t.Setenv("NOTIFYKIT_DESKTOP", "1")
+	t.Setenv("NOTIFYKIT_BACKEND", name)
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
 	dir := t.TempDir()
 	record := filepath.Join(dir, "calls.txt")
 	// Builtins only: PATH is rewritten below, so nothing external is reachable.
@@ -171,6 +174,17 @@ func stubBackend(t *testing.T) string {
 // noBackend makes every lookup fail, which is the state on a headless box.
 func noBackend(t *testing.T) {
 	t.Helper()
+	t.Setenv("NOTIFYKIT_DESKTOP", "1")
+	// Name a PATH-looked-up backend so the macOS helper app is never assembled.
+	backend := "notify-send"
+	switch runtime.GOOS {
+	case "darwin":
+		backend = "terminal-notifier"
+	case "windows":
+		backend = "powershell"
+	}
+	t.Setenv("NOTIFYKIT_BACKEND", backend)
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
 	t.Setenv("PATH", t.TempDir())
 }
 

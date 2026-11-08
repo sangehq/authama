@@ -44,6 +44,33 @@ authama ssh notify install         # set up the scheduled notifier
 authama ssh notify test            # confirm desktop notifications work
 ```
 
+## How a notification is shown
+
+Notifications go through [go-notifykit](https://github.com/simtabi/go-notifykit),
+so on macOS a banner says **authama** with authama's logo mark rather than
+"Script Editor". The first notification builds a small helper app in
+`~/.local/state/authama/notifykit/`, and macOS asks once whether to allow it; it
+is listed under System Settings › Notifications as `authama`. Linux uses
+`notify-send` with the same icon, Windows a PowerShell toast.
+
+| Switch | Effect |
+|---|---|
+| `AUTHAMA_NOTIFICATIONS=off` | no desktop notifications from authama (as before) |
+| `AUTHAMA_NOTIFY_DESKTOP=0` / `NOTIFYKIT_DESKTOP=0` | the same, through go-notifykit's own switch (the second covers every program using it) |
+| `AUTHAMA_NOTIFY_BACKEND=osascript` | force a backend: `helper`, `terminal-notifier`, `osascript`, `notify-send`, `powershell` |
+
+Nothing is shown under `go test` or when `CI` is set.
+
+```sh
+authama ssh notify doctor                                # is it on, which backend, which socket
+authama ssh notify send -title Backup -body "42 files"   # show one now
+authama ssh notify ping -title "Deploy finished"         # show one through the running web UI
+```
+
+While `authama serve` runs, other programs and scripts can ping it: it listens on
+a socket only you can open, in its state directory, and each message needs the
+token it writes there on every start.
+
 ---
 
 [← Docs index](../../README.md#documentation)

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -50,7 +51,8 @@ func fakeServe(t *testing.T, taken ...int) (*[]string, context.CancelFunc) {
 		busy[p] = true
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	prevListen, prevBrowser, prevCtx := serveListen, serveBrowser, serveContext
+	prevListen, prevBrowser, prevCtx, prevNotify := serveListen, serveBrowser, serveContext, serveNotifications
+	serveNotifications = func(context.Context, io.Writer) {}
 	serveListen = func(_, address string) (net.Listener, error) {
 		tried = append(tried, address)
 		host, port, _ := net.SplitHostPort(address)
@@ -63,7 +65,10 @@ func fakeServe(t *testing.T, taken ...int) (*[]string, context.CancelFunc) {
 	}
 	serveBrowser = func(string) error { return errors.New("no browser in tests") }
 	serveContext = func(context.Context) (context.Context, context.CancelFunc) { return ctx, cancel }
-	t.Cleanup(func() { serveListen, serveBrowser, serveContext = prevListen, prevBrowser, prevCtx; cancel() })
+	t.Cleanup(func() {
+		serveListen, serveBrowser, serveContext, serveNotifications = prevListen, prevBrowser, prevCtx, prevNotify
+		cancel()
+	})
 	return &tried, cancel
 }
 

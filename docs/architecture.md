@@ -435,7 +435,8 @@ runtime switch, so each platform's code only exists where it can run.
 line. **macOS, Linux, and Windows are all
 first-class.** Each is validated on its own CI runner: Linux (systemd-user timer /
 cron scheduler, `notify-send`), and Windows (`icacls` owner-only ACLs, `schtasks`,
-PowerShell toast). The Windows leg matters: it is the only place the tagged code
+PowerShell toast). Desktop notifications on every platform go through
+`internal/util/desktop`, which delegates to go-notifykit. The Windows leg matters: it is the only place the tagged code
 runs at all, and the first time it did it found four defects nothing else could
 see - a test home that was never isolated there, an advisory lock that leaked its
 descriptor, and two mode assertions with no ACL guard.
