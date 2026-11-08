@@ -111,6 +111,20 @@ if (-not $Version) {
     } catch { $location = $null }
     if ($location -match '/releases/tag/([^/?#]+)$') { $Version = $Matches[1] }
   }
+  # No release at all - binary releases are on hold, so the repository may
+  # publish none - leaves the highest version tag: vX.Y.Z only, so neither the
+  # Go module's src/vX.Y.Z alias nor a pre-release is picked.
+  if (-not $Version) {
+    try {
+      $refs = Invoke-Retried { Invoke-RestMethod -Headers @{ 'Accept' = 'application/vnd.github+json' } `
+        "https://api.github.com/repos/$owner/$repo/git/matching-refs/tags/v" }
+      $Version = @($refs | ForEach-Object { $_.ref } |
+        Where-Object { $_ -match '^refs/tags/v\d+\.\d+\.\d+$' } |
+        ForEach-Object { [version]($_ -replace '^refs/tags/v', '') } |
+        Sort-Object -Descending) | Select-Object -First 1
+      if ($Version) { $Version = "v$Version" }
+    } catch { $Version = $null }
+  }
   if (-not $Version) { throw 'could not determine the version to install.' }
 }
 if ($Version -notlike 'v*') { $Version = "v$Version" }

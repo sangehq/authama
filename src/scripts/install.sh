@@ -91,6 +91,18 @@ if [ -z "$VERSION" ]; then
     latest="$(curl -fsSLI "${CURL_RETRY[@]}" -o /dev/null -w '%{url_effective}' "https://github.com/${OWNER}/${REPO}/releases/latest" || true)"
     case "$latest" in */tag/*) VERSION="${latest##*/tag/}" ;; esac
   fi
+  # No release at all - binary releases are on hold, so the repository may
+  # publish none - leaves the highest version tag: vX.Y.Z only, so neither the
+  # Go module's src/vX.Y.Z alias nor a pre-release is picked.
+  if [ -z "$VERSION" ]; then
+    tags="https://api.github.com/repos/${OWNER}/${REPO}/git/matching-refs/tags/v"
+    refs="$(curl -fsSL "${CURL_RETRY[@]}" ${auth[@]+"${auth[@]}"} -H 'Accept: application/vnd.github+json' "$tags" || true)"
+    # One object per line whatever the JSON's layout, then each "ref": "...".
+    VERSION="$(tr ',{}' '\n\n\n' <<<"$refs" \
+      | awk -F'"' '$2 == "ref" && $4 ~ /^refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+$/ {sub("refs/tags/v", "", $4); print $4}' \
+      | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)"
+    if [ -n "$VERSION" ]; then VERSION="v$VERSION"; fi
+  fi
 fi
 [ -n "$VERSION" ] || err "could not determine the version to install."
 case "$VERSION" in v*) ;; *) VERSION="v$VERSION" ;; esac

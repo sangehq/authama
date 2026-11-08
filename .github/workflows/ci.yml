@@ -131,20 +131,25 @@ jobs:
           old="$(mktemp -d)/bin"
           SSHMGR_INSTALL_DIR="$old" bash src/scripts/install.sh v0.1.0
           test -x "$old/authama"
-          # The version lookup, with no version named: the API's tag_name, and,
-          # when the API has no answer, the tag the releases/latest redirect
-          # lands on. A copy of the installer reads both from file:// stand-ins.
+          # The version lookup, with no version named: the API's tag_name; when
+          # the API has no answer, the tag the releases/latest redirect lands on;
+          # and with no release at all, the highest vX.Y.Z tag, skipping the Go
+          # module's src/ alias and pre-releases. A copy of the installer reads
+          # each from file:// stand-ins.
           printf '{"tag_name": "v9.8.7"}\n' > "$rel/latest.json"
           mkdir -p "$rel/releases/tag" && : > "$rel/releases/tag/v6.5.4"
-          lookup() { # api stand-in, web stand-in, name -> the version installed
-            s="$rel/install-$3.sh"
+          printf '[%s]\n' '{"ref": "refs/tags/src/v9.9.9"}, {"ref": "refs/tags/v1.9.0"}, {"ref": "refs/tags/v1.10.0"}, {"ref": "refs/tags/v2.0.0-rc.1"}, {"ref": "refs/tags/v1.2.3"}' > "$rel/tags.json"
+          lookup() { # api, web and tags stand-ins, name -> the version installed
+            s="$rel/install-$4.sh"
             sed -e "s|https://api.github.com/repos/\${OWNER}/\${REPO}/releases/latest|$1|" \
-                -e "s|https://github.com/\${OWNER}/\${REPO}/releases/latest|$2|" src/scripts/install.sh > "$s"
-            grep -qF "$1" "$s" && grep -qF "$2" "$s" || { echo "could not point the $3 lookup at its stand-in" >&2; exit 1; }
+                -e "s|https://github.com/\${OWNER}/\${REPO}/releases/latest|$2|" \
+                -e "s|https://api.github.com/repos/\${OWNER}/\${REPO}/git/matching-refs/tags/v|$3|" src/scripts/install.sh > "$s"
+            grep -qF "$1" "$s" && grep -qF "$2" "$s" && grep -qF "$3" "$s" || { echo "could not point the $4 lookup at its stand-ins" >&2; exit 1; }
             AUTHAMA_INSTALL_DIR="$(mktemp -d)/bin" bash "$s" 2>&1 | sed -n 's/^Downloading .* (\(v[^)]*\)).*/\1/p'
           }
-          test "$(lookup "file://$rel/latest.json" "file://$rel/missing" api)" = v9.8.7
-          test "$(lookup "file://$rel/missing.json" "file://$rel/releases/tag/v6.5.4" redirect)" = v6.5.4
+          test "$(lookup "file://$rel/latest.json" "file://$rel/missing" "file://$rel/missing.json" api)" = v9.8.7
+          test "$(lookup "file://$rel/missing.json" "file://$rel/releases/tag/v6.5.4" "file://$rel/missing.json" redirect)" = v6.5.4
+          test "$(lookup "file://$rel/missing.json" "file://$rel/missing" "file://$rel/tags.json" tags)" = v1.10.0
 
       # The Windows installer is an `irm | iex` entry point and was only ever
       # parsed, never run. Run it, then run it again with the API URL broken so

@@ -197,3 +197,34 @@ func TestCIInstallsNameTheirVersion(t *testing.T) {
 		t.Error("ci.yml no longer tests the version lookup against its stand-ins")
 	}
 }
+
+// With no GitHub release at all (binary releases are on hold, and on
+// 2026-11-08 every old release was deleted) both installers fall back to the
+// highest vX.Y.Z tag. install.sh's fallback is run in ci.yml against a
+// stand-in holding a src/ alias, a pre-release and a 1.10 that only a numeric
+// sort puts above 1.9; install.ps1 cannot read file:// stand-ins, so its
+// filter is pinned here and its Windows CI run meets the real, release-less
+// repository.
+func TestBothInstallersFallBackToTheHighestTag(t *testing.T) {
+	read := func(parts ...string) string {
+		b, err := os.ReadFile(filepath.Join(append([]string{repoRoot(t)}, parts...)...)) //nolint:gosec // the repository's own files
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	sh, ps, ci := read("scripts", "install.sh"), read("scripts", "install.ps1"), read("..", ".github", "workflows", "ci.yml")
+	for name, s := range map[string]string{"install.sh": sh, "install.ps1": ps} {
+		if !strings.Contains(s, "/git/matching-refs/tags/v") {
+			t.Errorf("%s no longer reads the version tags when there is no release", name)
+		}
+	}
+	for _, want := range []string{`'^refs/tags/v\d+\.\d+\.\d+$'`, "[version]", "Sort-Object -Descending"} {
+		if !strings.Contains(ps, want) {
+			t.Errorf("install.ps1's tag fallback lost %s: it would pick a src/ alias or a pre-release, or sort 1.10 below 1.9", want)
+		}
+	}
+	if !strings.Contains(ci, `tags)" = v1.10.0`) {
+		t.Error("ci.yml no longer runs install.sh's tag fallback against its stand-in")
+	}
+}
