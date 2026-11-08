@@ -213,6 +213,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The web UI's tab icon and header share one logo mark.** The favicon is authama's key,
+  drawn in white on the primary rounded square. The header shows that mark followed by the
+  product name, Authentication Access Manager, on wide screens and `authama` on narrower
+  ones. The About page uses the same mark. A test checks that every page links the
+  embedded SVG favicon, that it is served as `image/svg+xml` and that it is the logo mark.
 - `src/go.mod` retracts v0.1.0 to v0.1.3, which the Go module proxy cached from the deleted
   pre-restart history. The next release is v0.1.4 (`docs/release.md`).
 
