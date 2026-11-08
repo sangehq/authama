@@ -10,12 +10,15 @@
       <h1 class="page-title">{{.Title}}</h1>
       {{if .Subtitle}}<p class="text-secondary mb-0 mt-1">{{.Subtitle}}</p>{{end}}
     </div>
-    {{if .Actions}}<div class="col-auto ms-auto d-print-none">
+    {{/* Below md the actions take their own row under the title, so the
+         subtitle keeps the full width instead of a narrow column beside them. */}}
+    {{if .Actions}}<div class="col-12 col-md-auto ms-md-auto d-print-none">
       <div class="btn-list">
-        {{range $i, $a := .Actions}}{{if lt $i 2}}<a href="{{u $a.Href}}" class="btn {{if eq $i 0}}btn-primary{{else}}btn-outline-secondary{{end}}"{{template "action_attrs" $a}}>{{icon $a.Icon}}<span class="ms-1">{{$a.Label}}</span></a>
+        {{range $i, $a := .Actions}}{{if lt $i 2}}{{/* On a phone the second action shows its icon alone, so the
+             actions keep one row; its name stays for screen readers and in its tip. */}}<a href="{{u $a.Href}}" class="btn {{if eq $i 0}}btn-primary{{else}}btn-outline-secondary{{end}}"{{if eq $i 1}} aria-label="{{$a.Label}}"{{end}}{{template "action_attrs" $a}}>{{icon $a.Icon}}<span class="ms-1{{if eq $i 1}} d-none d-sm-inline{{end}}">{{$a.Label}}</span></a>
         {{end}}{{end}}
         {{if gt (len .Actions) 2}}<div class="dropdown">
-          <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"{{tip "more"}}>{{icon "dots-vertical"}}<span class="ms-1">More</span></button>
+          <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More"{{desc "more"}}>{{icon "dots-vertical"}}<span class="ms-1 d-none d-sm-inline">More</span></button>
           <div class="dropdown-menu dropdown-menu-end">
             {{range $i, $a := .Actions}}{{if ge $i 2}}<a href="{{u $a.Href}}" class="dropdown-item"{{template "action_attrs" $a}}>{{icon $a.Icon}}<span class="ms-2">{{$a.Label}}</span></a>
             {{end}}{{end}}
@@ -42,12 +45,12 @@
 
 {{/* The attributes an action's link carries: a slide-in panel opens, a
      download downloads (through the CSV dialog for a CSV). */}}
-{{define "action_attrs"}}{{if .Tip}} data-tip="{{.Tip}}"{{end}}{{if .Panel}} data-bs-toggle="offcanvas" role="button" aria-controls="{{.Panel}}"{{end}}{{if .Modal}} data-bs-toggle="modal" data-bs-target="#{{.Modal}}" role="button"{{end}}{{if .Download}} download{{if .CSV}} data-csv-export{{end}}{{end}}{{if .Inline}} data-inline{{end}}{{end}}
+{{define "action_attrs"}}{{if .Tip}} aria-description="{{.Tip}}"{{end}}{{if .Panel}} data-bs-toggle="offcanvas" role="button" aria-controls="{{.Panel}}"{{end}}{{if .Modal}} data-bs-toggle="modal" data-bs-target="#{{.Modal}}" role="button"{{end}}{{if .Download}} download{{if .CSV}} data-csv-export{{end}}{{end}}{{if .Inline}} data-inline{{end}}{{end}}
 
 {{/* A panel form's footer: Cancel, and the submit button with its label. */}}
 {{define "panel_actions"}}<div class="d-flex align-items-center justify-content-end gap-2 pt-3 mt-3 border-top">
   <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
-  <button type="submit" class="btn {{if .}}{{.}}{{else}}btn-primary{{end}}"{{if eq . "btn-outline-danger"}}{{tip "review"}}{{else}}{{tip "preview"}}{{end}}>{{if eq . "btn-outline-danger"}}Review{{else}}Preview{{end}}</button>
+  <button type="submit" class="btn {{if .}}{{.}}{{else}}btn-primary{{end}}"{{if eq . "btn-outline-danger"}}{{desc "review"}}{{else}}{{desc "preview"}}{{end}}>{{if eq . "btn-outline-danger"}}Review{{else}}Preview{{end}}</button>
 </div>{{end}}
 
 
@@ -66,5 +69,5 @@
 {{define "panel_footer"}}<div class="d-flex align-items-center gap-2 pt-3 border-top">
   <span class="text-secondary small me-auto">The same as <code>{{.Command}}</code>.</span>
   <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
-  <button type="submit" class="btn {{.Style}}"{{tip "panel-submit"}}>{{if .Icon}}{{icon .Icon}}<span class="ms-1">{{.Label}}</span>{{else}}{{.Label}}{{end}}</button>
+  <button type="submit" class="btn {{.Style}}"{{desc "panel-submit"}}>{{if .Icon}}{{icon .Icon}}<span class="ms-1">{{.Label}}</span>{{else}}{{.Label}}{{end}}</button>
 </div>{{end}}

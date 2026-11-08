@@ -10,7 +10,7 @@
         <th scope="row"><a href="{{basePath}}/history/{{.OpID}}" data-inline>{{.Command}}</a></th>
         <td><span class="badge {{resultClass .Result}}">{{if .Result}}{{.Result}}{{else}}unfinished{{end}}</span></td>
         <td>{{.Source}}</td>
-        <td class="text-secondary"><span class="d-inline-block text-truncate op-about"{{if .Subjects}} title="{{subjects .Subjects}}"{{end}}>{{orDash (subjectsShort .Subjects)}}</span></td>
+        <td class="text-secondary"><span class="op-about">{{orDash (subjectsShort .Subjects)}}</span></td>
       </tr>
       {{end}}
     </tbody>

@@ -10,7 +10,7 @@
       <tbody>
         {{range .Data.Rows}}
         <tr>
-          <th scope="row"><a href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}"><code>{{.Ref}}</code></a></th>
+          <th scope="row"><a href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}" data-inline><code>{{.Ref}}</code></a></th>
           <td>{{.Type}}</td>
           <td class="text-break"><code>{{orDash .Fingerprint}}</code></td>
           <td class="text-nowrap">{{orDash .ExpiresOn}}</td>
@@ -20,17 +20,17 @@
             {{if and (not $.ReadOnly) .Declared (not .Hosts)}}<form method="post" action="{{basePath}}/changes/preview" data-inline id="f-key-{{.Ref.Profile}}-{{.Ref.KeyName}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="key-delete"><input type="hidden" name="profile" value="{{.Ref.Profile}}"><input type="hidden" name="key" value="{{.Ref.KeyName}}"></form>{{end}}
             {{if not $.ReadOnly}}<form method="post" action="{{basePath}}/changes/preview" data-inline id="f-regen-{{.Ref.Profile}}-{{.Ref.KeyName}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="key-regen-pub"><input type="hidden" name="key" value="{{.Ref}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for key %s" .Ref)}}
-              <a class="dropdown-item" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}" data-inline{{tip "open-row"}}>{{icon "external-link"}}<span class="ms-2">Open</span></a>
-              {{with index $.Data.Public .Ref.String}}<button type="button" class="dropdown-item" data-copy="{{.}}"{{tip "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the public key</span></button>{{end}}
-              {{if .Fingerprint}}<button type="button" class="dropdown-item" data-copy="{{.Fingerprint}}"{{tip "copy-value"}}>{{icon "fingerprint"}}<span class="ms-2">Copy the fingerprint</span></button>{{end}}
-              <button type="button" class="dropdown-item" data-copy="{{.IdentityFile}}"{{tip "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the identity file's path</span></button>
-              <a class="dropdown-item" href="{{basePath}}/history?key={{.Ref.KeyName}}&amp;profile={{.Ref.Profile}}" data-inline{{tip "row-history"}}>{{icon "history"}}<span class="ms-2">History</span></a>
-              {{if not $.ReadOnly}}<button type="submit" class="dropdown-item" form="f-regen-{{.Ref.Profile}}-{{.Ref.KeyName}}"{{tip "key-regen-pub"}}>{{icon "refresh"}}<span class="ms-2">Rebuild the .pub</span></button>
-              <a class="dropdown-item" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}#lifetime"{{tip "key-lifetime"}}>{{icon "hourglass"}}<span class="ms-2">Set lifetime</span></a>
-              {{if not $.DevRoot}}<a class="dropdown-item" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}" data-inline{{tip "key-open-rotate"}}>{{icon "recycle"}}<span class="ms-2">Rotate or roll back</span></a>
-              <a class="dropdown-item text-danger" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}#revoke"{{tip "key-revoke"}}>{{icon "ban"}}<span class="ms-2">Revoke</span></a>{{end}}{{end}}
+              <a class="dropdown-item" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}" data-inline{{desc "open-row"}}>{{icon "external-link"}}<span class="ms-2">Open</span></a>
+              {{with index $.Data.Public .Ref.String}}<button type="button" class="dropdown-item" data-copy="{{.}}"{{desc "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the public key</span></button>{{end}}
+              {{if .Fingerprint}}<button type="button" class="dropdown-item" data-copy="{{.Fingerprint}}"{{desc "copy-value"}}>{{icon "fingerprint"}}<span class="ms-2">Copy the fingerprint</span></button>{{end}}
+              <button type="button" class="dropdown-item" data-copy="{{.IdentityFile}}"{{desc "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the identity file's path</span></button>
+              <a class="dropdown-item" href="{{basePath}}/history?key={{.Ref.KeyName}}&amp;profile={{.Ref.Profile}}" data-inline{{desc "row-history"}}>{{icon "history"}}<span class="ms-2">History</span></a>
+              {{if not $.ReadOnly}}<button type="submit" class="dropdown-item" form="f-regen-{{.Ref.Profile}}-{{.Ref.KeyName}}"{{desc "key-regen-pub"}}>{{icon "refresh"}}<span class="ms-2">Rebuild the .pub</span></button>
+              <a class="dropdown-item" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}#lifetime"{{desc "key-lifetime"}}>{{icon "hourglass"}}<span class="ms-2">Set lifetime</span></a>
+              {{if not $.DevRoot}}<a class="dropdown-item" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}" data-inline{{desc "key-open-rotate"}}>{{icon "recycle"}}<span class="ms-2">Rotate or roll back</span></a>
+              <a class="dropdown-item text-danger" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}#revoke"{{desc "key-revoke"}}>{{icon "ban"}}<span class="ms-2">Revoke</span></a>{{end}}{{end}}
               {{if and (not $.ReadOnly) .Declared (not .Hosts)}}<div class="dropdown-divider"></div>
-              <button type="submit" class="dropdown-item text-danger" form="f-key-{{.Ref.Profile}}-{{.Ref.KeyName}}" data-confirm="m-key-{{.Ref.Profile}}-{{.Ref.KeyName}}"{{tip "delete"}}>{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
+              <button type="submit" class="dropdown-item text-danger" form="f-key-{{.Ref.Profile}}-{{.Ref.KeyName}}" data-confirm="m-key-{{.Ref.Profile}}-{{.Ref.KeyName}}"{{desc "delete"}}>{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
             {{template "menu_close"}}
           </td>
         </tr>
@@ -57,7 +57,7 @@
           <td>{{orDash .Note}}</td>
           <td>{{orDash .Since}}</td>
           <td>{{if .Problem}}<span class="badge badge-warn">{{.State}}</span> <span class="text-secondary">{{.Detail}}</span>{{else}}<span class="badge badge-ok">kept</span>{{end}}{{if ne .Source "manifest"}} <span class="text-secondary">({{.Source}} in authama.json)</span>{{end}}</td>
-          {{if not $.ReadOnly}}<td class="text-end">{{if eq .Source "manifest"}}{{template "change_open" $}}<input type="hidden" name="action" value="key-unreserve"><input type="hidden" name="key" value="{{.Name}}"><button class="btn btn-sm btn-outline-secondary" type="submit"{{tip "key-unreserve"}}>Unreserve {{.Name}}</button></form>{{end}}</td>{{end}}
+          {{if not $.ReadOnly}}<td class="text-end">{{if eq .Source "manifest"}}{{template "change_open" $}}<input type="hidden" name="action" value="key-unreserve"><input type="hidden" name="key" value="{{.Name}}"><button class="btn btn-sm btn-outline-secondary" type="submit"{{desc "key-unreserve"}}>Unreserve {{.Name}}</button></form>{{end}}</td>{{end}}
         </tr>
         {{end}}
       </tbody>
@@ -73,7 +73,7 @@
         <div class="col-sm-4"><label class="form-label" for="r-note">Note <span class="text-secondary">(optional)</span></label><input class="form-control" id="r-note" name="note" maxlength="200" autocomplete="off"></div>
       </div>
       <p class="text-secondary small mt-2 mb-2">Records the key as reserved in manifest.json; the key file is not touched. Adopting it onto a VM later releases the reservation.</p>
-      <button type="submit" class="btn btn-primary"{{tip "preview"}}>Preview</button>
+      <button type="submit" class="btn btn-primary"{{desc "preview"}}>Preview</button>
     </form>
   </div>
   {{end}}

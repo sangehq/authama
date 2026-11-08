@@ -1,5 +1,6 @@
 // @ts-check
 import { Component } from "../core/component.js";
+import { Ui } from "../core/ui.js";
 import { SidePanel } from "./side-panel.js";
 
 /**
@@ -159,16 +160,9 @@ export class CopyText extends Component {
       CopyText.#live = live;
     }
     CopyText.#live.textContent = message;
-    const Tooltip = /** @type {any} */ (window).tabler?.Tooltip;
-    // A menu closes as its entry is chosen, taking the entry's tooltip with
-    // it, so a copy from a menu says so in a toast the person can see.
-    const tip = this.el.closest(".dropdown-menu") ? null : Tooltip?.getInstance(this.el);
-    if (tip) {
-      const was = this.el.getAttribute("data-bs-original-title") ?? this.el.title;
-      tip.setContent({ ".tooltip-inner": message });
-      tip.show();
-      setTimeout(() => tip.setContent({ ".tooltip-inner": was }), 1500);
-    } else {
+    // An icon-only copy button says it in its tooltip; a menu entry (the menu
+    // closes as it is chosen) or a labelled button says it in a toast.
+    if (!Ui.flashTip(this.el, message)) {
       CopyText.toast(message);
     }
     return this;
@@ -232,39 +226,27 @@ export class ThemeChoice extends Component {
 }
 
 /**
- * Tip explains what a control does before it is used: a tooltip from the
- * element's data-tip, shown on hover and on keyboard focus. It works on an
- * element whose data-bs-toggle already opens a panel, a menu or a dialog,
- * which Bootstrap's own data-bs-toggle="tooltip" cannot share. The text is
- * also the element's accessible description, so a screen reader hears it.
+ * Tip marks an icon-only control's tooltip: data-tip holds what it does. The
+ * tooltip itself is made by Ui.startTooltips, on hover or focus and only while
+ * the control shows no text; this component starts those rules and makes sure
+ * the control has an accessible name, which an icon alone does not give it.
  *
- *   <a class="btn" data-bs-toggle="offcanvas" href="#add-host" data-tip="Opens a form; nothing is written until you confirm the preview">
+ *   <button class="btn btn-icon" data-tip="Copy the fingerprint">{{icon "copy"}}</button>
  *
- * @extends {Component<{ placement: string }>}
+ * A control with a visible label uses aria-description (the desc template
+ * function) instead, and never gets a tooltip.
+ *
+ * @extends {Component<{}>}
  */
 export class Tip extends Component {
   static attribute = "tip";
-  static defaults = { placement: "top" };
 
   init() {
-    const text = this.el.dataset.tip ?? "";
-    if (!text) {
-      return this;
+    Ui.startTooltips();
+    const text = this.el.getAttribute("data-tip") ?? "";
+    if (text && !this.el.hasAttribute("aria-label") && !this.el.hasAttribute("aria-labelledby")) {
+      this.el.setAttribute("aria-label", text);
     }
-    if (!this.el.hasAttribute("aria-describedby") && !this.el.getAttribute("aria-description")) {
-      this.el.setAttribute("aria-description", text);
-    }
-    const lib = /** @type {any} */ (window).tabler ?? /** @type {any} */ (window).bootstrap;
-    // Bootstrap holds one component per element. A dropdown toggle already
-    // holds its Dropdown, so its tooltip goes on the wrapper around it, which
-    // is hovered and focused (focusin bubbles) along with it.
-    const host = this.el.matches('[data-bs-toggle="dropdown"]') && this.el.parentElement ? this.el.parentElement : this.el;
-    lib?.Tooltip?.getOrCreateInstance(host, {
-      title: text,
-      placement: String(this.options.placement),
-      trigger: "hover focus",
-      container: "body",
-    });
     return this;
   }
 }

@@ -564,16 +564,18 @@ export class ExportPage extends Component {
         .on("change", (e) => this.#setFacet(facet, pick.toggle(v.value, /** @type {HTMLInputElement} */ (e.target).checked)));
       // Tabler's selectable list item: the whole row is the label, and a
       // ticked box gives it the active look.
-      list.push(El.create("label").cls("list-group-item").attr("title", v.value).append(
+      list.push(El.create("label").cls("list-group-item").append(
         El.create("span").cls("list-group-item-media").append(box),
-        El.create("span").cls("list-group-item-content text-truncate").append(El.create("span").cls("list-group-item-title text-truncate").text(v.value)),
+        El.create("span").cls("list-group-item-content text-break").append(El.create("span").cls("list-group-item-title").text(v.value)),
         El.create("span").cls("badge badge-muted ms-auto flex-shrink-0").attr("aria-label", `${v.rows} ${one.toLowerCase()} rows`).text(String(v.rows)),
       ).node);
     });
     const state = pick.badge.state;
     const button = El.create("button").cls(`accordion-button${expanded ? "" : " collapsed"}`).prop("type", "button")
       .attr("data-bs-toggle", "collapse").attr("data-bs-target", `#${id}`).attr("aria-expanded", String(expanded)).attr("aria-controls", id)
-      .append(El.create("span").text(heading), El.create("span").cls(`badge ${state} ms-2`).text(pick.badge.text));
+      .append(El.create("span").text(heading), El.create("span").cls(`badge ${state} ms-2`).text(pick.badge.text),
+        // Tabler draws an accordion's chevron only in this element.
+        El.create("span").cls("accordion-button-toggle").attr("aria-hidden", "true"));
     return El.create("div").cls("accordion-item").append(
       El.create("h4").cls("accordion-header").append(button),
       El.create("div").cls(`accordion-collapse collapse${expanded ? " show" : ""}`).prop("id", id).append(
@@ -622,7 +624,7 @@ export class ExportPage extends Component {
       const where = s.store === "manifest" ? "manifest" : "mine";
       const note = s.error ? `Cannot be read: ${s.error}` : s.shadowed ? "Hidden by your own of the same name" : "";
       const open = El.create("button").cls("btn btn-link p-0 text-start text-truncate flex-fill").prop("type", "button")
-        .prop("disabled", Boolean(s.error) || Boolean(s.shadowed)).attr("title", note || `Open ${s.name}`)
+        .prop("disabled", Boolean(s.error) || Boolean(s.shadowed)).attr("aria-description", note || `Open ${s.name}`)
         .text(s.name).on("click", () => this.#openSaved(s));
       const item = El.create("div").cls("list-group-item").attr("data-saved", s.name).append(
         open,
@@ -630,15 +632,15 @@ export class ExportPage extends Component {
         El.create("span").cls("text-secondary small").text(s.selection?.grain ?? ""),
       );
       if (note) {
-        item.append(El.create("span").cls("badge badge-warning").attr("title", note).text(s.error ? "unreadable" : "hidden"));
+        item.append(El.create("span").cls("badge badge-warning").attr("aria-description", note).text(s.error ? "unreadable" : "hidden"));
       } else {
         item.append(El.create("button").cls("btn btn-icon btn-sm btn-ghost-secondary").prop("type", "button")
-          .attr("aria-label", `Compare with ${s.name}`).attr("title", `Compare with ${s.name}`)
+          .attr("aria-label", `Compare with ${s.name}`).attr("data-tip", `Compare with ${s.name}`)
           .append(ExportPage.icon("git-compare")).on("click", () => void this.#compare(s)));
       }
       if (!ro) {
         item.append(El.create("button").cls("btn btn-icon btn-sm btn-ghost-secondary").prop("type", "button")
-          .attr("aria-label", `Delete ${s.name} (${where})`).attr("title", `Delete ${s.name} (${where})`)
+          .attr("aria-label", `Delete ${s.name} (${where})`).attr("data-tip", `Delete ${s.name} (${where})`)
           .append(ExportPage.icon("x")).on("click", () => void this.#deleteSaved(s)));
       }
       return item.node;
@@ -828,7 +830,27 @@ export class ExportPage extends Component {
       const input = (text, value, on, o = {}) => {
         const { list = false, placeholder = "", wide = false } = /** @type {{list?: boolean, placeholder?: string, wide?: boolean}} */ (o);
         const el = El.create("input").cls("form-control form-control-sm").prop("value", value).attr("placeholder", placeholder)
-          .attr("aria-label", `Step ${n}: ${text}`).on("change", (e) => on(/** @type {HTMLInputElement} */ (e.target).value.trim()));
+          .attr("aria-label", `Step ${n}: ${text}`);
+        // Typed text is "dirty" until committed, on change, Enter or leaving
+        // the field. Enter and blur commit it themselves, because a value a
+        // redraw carried over (see #renderSteps) was set by script, and the
+        // browser fires no change event for that.
+        const field = /** @type {HTMLInputElement} */ (el.node);
+        const commit = () => {
+          if (field.dataset.dirty === "1") {
+            delete field.dataset.dirty;
+            on(field.value.trim());
+          }
+        };
+        el.on("input", () => { field.dataset.dirty = "1"; })
+          .on("change", commit)
+          .on("blur", commit)
+          .on("keydown", (e) => {
+            if (/** @type {KeyboardEvent} */ (e).key === "Enter" && field.dataset.dirty === "1") {
+              e.preventDefault();
+              commit();
+            }
+          });
         if (list) {
           el.attr("list", "export-fields");
         }
@@ -861,7 +883,11 @@ export class ExportPage extends Component {
           const values = El.create("textarea").cls("form-control form-control-sm").attr("aria-label", `Step ${n}: values, one from=to a line`)
             .attr("placeholder", "needs-redeploy=pending")
             .prop("value", Object.entries(t.values ?? {}).map(([k, v]) => `${k}=${v}`).join("\n"))
-            .on("change", (e) => set({ values: parseValues(/** @type {HTMLTextAreaElement} */ (e.target).value) }));
+            .on("input", (e) => { /** @type {HTMLTextAreaElement} */ (e.target).dataset.dirty = "1"; })
+            .on("change", (e) => {
+              delete /** @type {HTMLTextAreaElement} */ (e.target).dataset.dirty;
+              set({ values: parseValues(/** @type {HTMLTextAreaElement} */ (e.target).value) });
+            });
           body = [input("Field", t.field ?? "", (v) => set({ field: v }), { list: true }), input("Write to", t.as ?? "", into, { placeholder: "the same field" }),
             input("Any other value", t.default ?? "", (v) => set({ default: v || undefined }), { placeholder: "kept as it is" }),
             El.create("label").cls("col-12").append(El.create("span").cls("form-label small mb-1").text("Values, one from=to a line"), values).node];
@@ -899,7 +925,7 @@ export class ExportPage extends Component {
           break;
       }
       const iconBtn = (/** @type {string} */ icon, /** @type {string} */ text, /** @type {() => void} */ fn, /** @type {boolean} */ off) =>
-        El.create("button").cls("btn btn-icon btn-sm btn-ghost-secondary").prop("type", "button").attr("aria-label", text).attr("title", text)
+        El.create("button").cls("btn btn-icon btn-sm btn-ghost-secondary").prop("type", "button").attr("aria-label", text).attr("data-tip", text)
           .prop("disabled", off).append(ExportPage.icon(icon)).on("click", fn);
       const move = (/** @type {number} */ to) => {
         const next = [...(this.#sel.transforms ?? [])];
@@ -924,7 +950,42 @@ export class ExportPage extends Component {
         ),
       ).node;
     });
-    this.#part("steps").replaceChildren(...items);
+    // The steps are redrawn when a preview answers, which can be while a
+    // field is being typed in: a value not yet committed (no change event
+    // yet), and the focus and caret with it, carry over to the new field of
+    // the same name, so typing is never wiped by the answer to the last edit.
+    const box = this.#part("steps");
+    const typing = new Map();
+    for (const el of box.querySelectorAll("input[aria-label], textarea[aria-label]")) {
+      const f = /** @type {HTMLInputElement | HTMLTextAreaElement} */ (el);
+      if (f.dataset.dirty === "1" || f === document.activeElement) {
+        typing.set(f.getAttribute("aria-label"), { old: f, value: f.value, focused: f === document.activeElement, start: f.selectionStart, end: f.selectionEnd });
+      }
+    }
+    box.replaceChildren(...items);
+    for (const [label, t] of typing) {
+      // Removing a focused field can blur it, which commits it; then its text
+      // is in the selection and the new field starts clean. Carrying it over
+      // as uncommitted again would commit it again on the next redraw, and
+      // the next, without end.
+      const dirty = t.old.dataset.dirty === "1";
+      const f = /** @type {HTMLInputElement | HTMLTextAreaElement | null} */ (box.querySelector(`[aria-label="${CSS.escape(label ?? "")}"]`));
+      if (!f) {
+        continue;
+      }
+      if (dirty) {
+        f.value = t.value;
+        f.dataset.dirty = "1";
+      }
+      if (t.focused) {
+        f.focus({ preventScroll: true });
+        try {
+          f.setSelectionRange(t.start, t.end);
+        } catch {
+          // a field type without a caret
+        }
+      }
+    }
     if (this.#focusStep !== null) {
       /** @type {HTMLElement | null} */ (this.#part("steps").querySelectorAll("[data-step]")[this.#focusStep]?.querySelector("input, select, textarea"))?.focus();
       this.#focusStep = null;
@@ -964,7 +1025,7 @@ export class ExportPage extends Component {
       set(next, from, to > from ? to - 1 : to);
     };
     const iconBtn = (/** @type {string} */ icon, /** @type {string} */ label, /** @type {() => void} */ fn, /** @type {boolean} */ off) =>
-      El.create("button").cls("btn btn-icon btn-sm btn-ghost-secondary").prop("type", "button").attr("aria-label", label).attr("title", label)
+      El.create("button").cls("btn btn-icon btn-sm btn-ghost-secondary").prop("type", "button").attr("aria-label", label).attr("data-tip", label)
         .prop("disabled", off).append(ExportPage.icon(icon)).on("click", fn);
     /** @type {number | null} */
     let dragging = null;
@@ -977,7 +1038,7 @@ export class ExportPage extends Component {
       // The handle: drag the row by it, or, with it focused, move the column
       // with the arrow keys (Home and End to the ends).
       const handle = El.create("button").cls("btn btn-icon btn-sm btn-ghost-secondary export-handle").prop("type", "button")
-        .attr("aria-label", `Reorder ${c.field}: drag, or press the up and down arrow keys`).attr("title", "Drag to reorder")
+        .attr("aria-label", `Reorder ${c.field}: drag, or press the up and down arrow keys`).attr("data-tip", "Drag to reorder")
         .append(ExportPage.icon("grip-vertical"))
         .on("keydown", (e) => {
           const k = /** @type {KeyboardEvent} */ (e).key;
@@ -1096,7 +1157,7 @@ export class ExportPage extends Component {
       reasons.push(El.create("span").cls("tag").append(
         document.createTextNode(`${n} ${what}`),
         El.create("button").cls("btn-close").prop("type", "button").attr("aria-label", `Stop leaving out rows ${what}`)
-          .attr("title", `Stop leaving out rows ${what}`).on("click", () => {
+          .attr("data-tip", `Stop leaving out rows ${what}`).on("click", () => {
             const where = { ...this.#sel.where };
             for (const f of facets) {
               delete where[f];
@@ -1113,7 +1174,7 @@ export class ExportPage extends Component {
       // Left out by the format, not the filters: nothing to undo here but the
       // format, so the tag only says why, one host a line.
       const label = this.#p?.formats.find((f) => f.name === this.#format)?.label ?? this.#format;
-      reasons.push(El.create("span").cls("tag").attr("title", p.skipped.join("\n"))
+      reasons.push(El.create("span").cls("tag").attr("aria-description", p.skipped.join(", "))
         .text(`${p.skipped.length} left out of the ${label} file`).node);
     }
     this.#part("reasons").replaceChildren(...reasons);
@@ -1133,7 +1194,7 @@ export class ExportPage extends Component {
         );
       }))),
       El.create("tbody").append(...(p.rows.length
-        ? p.rows.map((r) => El.create("tr").append(...r.map((c) => El.create("td").attr("title", c).text(c))))
+        ? p.rows.map((r) => El.create("tr").append(...r.map((c) => El.create("td").text(c))))
         : [El.create("tr").append(El.create("td").attr("colspan", String(Math.max(p.columns.length, 1))).cls("text-secondary text-center py-4").text("No rows match."))])),
     );
     this.#part("preview").replaceChildren(table.node);

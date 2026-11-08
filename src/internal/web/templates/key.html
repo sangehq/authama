@@ -6,9 +6,9 @@
       <h1 class="page-title"><code>{{.Detail.Ref.KeyName}}</code></h1>
     </div>
     {{if not $.ReadOnly}}<div class="col-auto ms-auto btn-list">
-      {{template "change_open" $}}<input type="hidden" name="action" value="key-regen-pub"><input type="hidden" name="key" value="{{.Detail.Ref}}"><button type="submit" class="btn btn-outline-secondary"{{tip "key-regen-pub"}}>{{icon "refresh"}}<span class="ms-1">Rebuild the .pub</span></button></form>
-      <a href="#lifetime" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" role="button" aria-controls="lifetime"{{tip "key-lifetime"}}>{{icon "hourglass"}}<span class="ms-1">Set lifetime</span></a>
-      {{if not $.DevRoot}}<a href="#revoke" class="btn btn-outline-danger" data-bs-toggle="offcanvas" role="button" aria-controls="revoke"{{tip "key-revoke"}}>{{icon "ban"}}<span class="ms-1">Revoke</span></a>{{end}}
+      {{template "change_open" $}}<input type="hidden" name="action" value="key-regen-pub"><input type="hidden" name="key" value="{{.Detail.Ref}}"><button type="submit" class="btn btn-outline-secondary"{{desc "key-regen-pub"}}>{{icon "refresh"}}<span class="ms-1">Rebuild the .pub</span></button></form>
+      <a href="#lifetime" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" role="button" aria-controls="lifetime"{{desc "key-lifetime"}}>{{icon "hourglass"}}<span class="ms-1">Set lifetime</span></a>
+      {{if not $.DevRoot}}<a href="#revoke" class="btn btn-outline-danger" data-bs-toggle="offcanvas" role="button" aria-controls="revoke"{{desc "key-revoke"}}>{{icon "ban"}}<span class="ms-1">Revoke</span></a>{{end}}
     </div>{{end}}
   </div>
 </div>
@@ -27,7 +27,7 @@
           <dt class="col-5">Expires</dt><dd class="col-7">{{orDash .Detail.ExpiresOn}}{{with .Expiry}} <span class="badge {{statusClass .State}}">{{.State}}</span> <span class="text-secondary">{{expiryDays .}}</span>{{end}}</dd>
           <dt class="col-5">Store</dt><dd class="col-7">{{if .Detail.Vault}}1Password vault <code>{{.Detail.Vault}}</code>{{else}}disk{{end}}</dd>
           <dt class="col-5">Identity file</dt><dd class="col-7 text-break"><code>{{.Detail.IdentityFile}}</code> {{template "copy" (copy .Detail.IdentityFile "the identity file's path")}}</dd>
-          <dt class="col-5">Used by</dt><dd class="col-7">{{range $i, $h := .Detail.Hosts}}{{if $i}}, {{end}}<a href="{{basePath}}/hosts/{{$h}}"><code>{{$h}}</code></a>{{else}}–{{end}}</dd>
+          <dt class="col-5">Used by</dt><dd class="col-7">{{range $i, $h := .Detail.Hosts}}{{if $i}}, {{end}}<a href="{{basePath}}/hosts/{{$h}}" data-inline><code>{{$h}}</code></a>{{else}}–{{end}}</dd>
         </dl>
       </div>
       {{if .PublicKey}}<div class="card-footer">
@@ -60,9 +60,9 @@
   <div class="card-body">
     <p class="text-secondary">These reach the hosts that use the key. Each runs as a job: you review what it will do, then watch its output.</p>
     <div class="btn-list">
-      {{template "job_open" $}}<input type="hidden" name="action" value="deploy"><input type="hidden" name="key" value="{{.Detail.Ref}}">{{if .Revoked}}<span class="d-inline-block" tabindex="0"{{tip "key-deploy-revoked"}}><button type="submit" class="btn btn-primary" disabled>{{icon "refresh"}}<span class="ms-1">Deploy</span></button></span>{{else}}<button type="submit" class="btn btn-primary"{{tip "key-deploy"}}>{{icon "refresh"}}<span class="ms-1">Deploy</span></button>{{end}}</form>
-      {{template "job_open" $}}<input type="hidden" name="action" value="rotate"><input type="hidden" name="key" value="{{.Detail.Ref}}"><button type="submit" class="btn btn-outline-primary" data-bs-toggle="tooltip" title="Recycle: mint a successor, deploy and verify it everywhere, then retire this key">{{icon "recycle"}}<span class="ms-1">Rotate</span></button></form>
-      {{template "job_open" $}}<input type="hidden" name="action" value="rollback"><input type="hidden" name="key" value="{{.Detail.Ref}}"><button type="submit" class="btn btn-outline-secondary"{{tip "key-rollback"}}>{{icon "arrow-back-up"}}<span class="ms-1">Roll back</span></button></form>
+      {{template "job_open" $}}<input type="hidden" name="action" value="deploy"><input type="hidden" name="key" value="{{.Detail.Ref}}">{{if .Revoked}}<span class="d-inline-block" tabindex="0"{{desc "key-deploy-revoked"}}><button type="submit" class="btn btn-primary" disabled>{{icon "refresh"}}<span class="ms-1">Deploy</span></button></span>{{else}}<button type="submit" class="btn btn-primary"{{desc "key-deploy"}}>{{icon "refresh"}}<span class="ms-1">Deploy</span></button>{{end}}</form>
+      {{template "job_open" $}}<input type="hidden" name="action" value="rotate"><input type="hidden" name="key" value="{{.Detail.Ref}}"><button type="submit" class="btn btn-outline-primary" aria-description="Recycle: mint a successor, deploy and verify it everywhere, then retire this key">{{icon "recycle"}}<span class="ms-1">Rotate</span></button></form>
+      {{template "job_open" $}}<input type="hidden" name="action" value="rollback"><input type="hidden" name="key" value="{{.Detail.Ref}}"><button type="submit" class="btn btn-outline-secondary"{{desc "key-rollback"}}>{{icon "arrow-back-up"}}<span class="ms-1">Roll back</span></button></form>
     </div>
     <p class="text-secondary small mt-3 mb-0">To regenerate it now, without the staged deploy, run <code>authama ssh keygen {{.Detail.Ref}} --force</code> in a terminal {{template "copy" (copy (printf "authama ssh keygen %s --force" .Detail.Ref) "the command")}}: it writes an encrypted backup first, and the old pair moves to <code>old/</code>.</p>
   </div>

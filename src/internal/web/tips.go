@@ -109,6 +109,7 @@ var tips = map[string]string{
 	"snapshot-compare-now": "Shows what changed in ~/.ssh since this snapshot. Nothing changes.",
 	"filter-clear":         "Removes every filter and shows the whole list again.",
 	"export-clear":         "Clears this tab's filters. The preview updates; nothing is downloaded.",
+	"export-filters":       "Opens the saved selections and the filters in a panel; the file below follows them as you change them.",
 	"export-columns-reset": "Puts back the list's own columns, names and order.",
 	"export-add-column":    "Adds the chosen field as a column at the end.",
 	"export-add-step":      "Adds the chosen transform as the last step.",
@@ -191,8 +192,21 @@ func tipText(id string) (string, error) {
 	return t, nil
 }
 
-// tipAttr is ` data-tip="…"` for an element, escaped by html/template's
-// attribute context like any other value.
+// descAttr is ` aria-description="…"`: the explainer for a control that
+// already shows its name. Such a control gets no tooltip, which would cover
+// the very thing being pointed at and repeat what its label says; a screen
+// reader still hears the explainer. Icon-only controls use tipAttr.
+func descAttr(id string) (template.HTMLAttr, error) {
+	t, err := tipText(id)
+	if err != nil {
+		return "", err
+	}
+	return template.HTMLAttr(` aria-description="` + template.HTMLEscapeString(t) + `"`), nil //nolint:gosec // escaped above; the text comes from the catalogue
+}
+
+// tipAttr is ` data-tip="…"` for an icon-only control: a tooltip on hover
+// and keyboard focus, escaped by html/template's attribute context like any
+// other value.
 func tipAttr(id string) (template.HTMLAttr, error) {
 	t, err := tipText(id)
 	if err != nil {

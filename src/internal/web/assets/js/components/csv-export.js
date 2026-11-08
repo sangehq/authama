@@ -373,7 +373,7 @@ export class CsvExport extends Component {
         tr.append(El.create("td").cls("csv-num").text(String(it.rows ?? 0)));
       }
       if (samples) {
-        tr.append(El.create("td").cls("csv-sample").attr("title", it.sample ?? "").text(it.sample || "—"));
+        tr.append(El.create("td").cls("csv-sample").text(it.sample || "—"));
       }
       rows.push(tr.node);
     });
@@ -500,7 +500,7 @@ export class CsvExport extends Component {
               .cls("btn-close")
               .prop("type", "button")
               .attr("aria-label", label)
-              .attr("title", label)
+              .attr("data-tip", label)
               .on("click", () => {
                 if (clear.exclude === "") {
                   /** @type {HTMLInputElement} */ (CsvExport.#part(dialog, "exclude")).value = "";
@@ -530,7 +530,7 @@ export class CsvExport extends Component {
       El.create("thead").append(El.create("tr").append(...p.header.map((h) => El.create("th").attr("scope", "col").text(h)))),
       El.create("tbody").append(
         ...(p.rows.length
-          ? p.rows.map((r) => El.create("tr").append(...r.map((c) => El.create("td").attr("title", c).text(c))))
+          ? p.rows.map((r) => El.create("tr").append(...r.map((c) => El.create("td").text(c))))
           : [El.create("tr").append(El.create("td").attr("colspan", String(Math.max(p.header.length, 1))).cls("text-secondary text-center py-4").text("No rows match."))]),
       ),
     );

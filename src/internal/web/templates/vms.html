@@ -26,7 +26,7 @@
 </div>
 <div class="card mb-3" id="docker-contexts">
   <div class="card-header"><h2 class="card-title">Docker contexts</h2>
-    {{if and .Docker .Contexts}}<div class="card-actions">{{if .Checked}}<span class="text-secondary small me-2">engines checked just now</span>{{end}}<a class="btn btn-sm" href="{{basePath}}/vms?check=docker#docker-contexts"{{tip "vm-docker-check"}}>{{icon "refresh"}}<span class="ms-1">Check the engines</span></a></div>{{end}}
+    {{if and .Docker .Contexts}}<div class="card-actions">{{if .Checked}}<span class="text-secondary small me-2">engines checked just now</span>{{end}}<a class="btn btn-sm" href="{{basePath}}/vms?check=docker#docker-contexts"{{desc "vm-docker-check"}}>{{icon "refresh"}}<span class="ms-1">Check the engines</span></a></div>{{end}}
   </div>
   {{if not .Docker}}
   <div class="card-body text-secondary">The docker CLI is not installed, so authama manages no Docker contexts.</div>
@@ -60,7 +60,7 @@
     {{if not $.ReadOnly}}
     {{template "change_open" $}}<input type="hidden" name="action" value="vm-sync">
       <label class="form-check"><input class="form-check-input" type="checkbox" name="repin" value="1"><span class="form-check-label">replace the pin of a guest whose host key changed (<code>--repin</code>)</span></label>
-      <button type="submit" class="btn btn-primary"{{tip "vm-sync"}}>Preview sync</button>
+      <button type="submit" class="btn btn-primary"{{desc "vm-sync"}}>Preview sync</button>
     </form>
     {{end}}
     <p class="text-secondary small mt-2 mb-0">A sync backs the manifest up first and takes a snapshot of <code>~/.ssh</code>; a Docker context it removes is exported first.</p>
@@ -137,8 +137,8 @@
       <div class="card-body">
         <p class="text-secondary">Runs <code>{{.Schedule}}</code> every day at 09:30 (launchd, a systemd timer or cron, or Task Scheduler).</p>
         <div class="d-flex flex-wrap gap-2">
-          {{template "change_open" $}}<input type="hidden" name="action" value="vm-schedule"><input type="hidden" name="install" value="1"><button type="submit" class="btn btn-outline-primary"{{tip "vm-schedule-on"}}>Preview installing</button></form>
-          {{template "change_open" $}}<input type="hidden" name="action" value="vm-schedule"><input type="hidden" name="install" value=""><button type="submit" class="btn btn-outline-secondary"{{tip "vm-schedule-off"}}>Preview removing</button></form>
+          {{template "change_open" $}}<input type="hidden" name="action" value="vm-schedule"><input type="hidden" name="install" value="1"><button type="submit" class="btn btn-outline-primary"{{desc "vm-schedule-on"}}>Preview installing</button></form>
+          {{template "change_open" $}}<input type="hidden" name="action" value="vm-schedule"><input type="hidden" name="install" value=""><button type="submit" class="btn btn-outline-secondary"{{desc "vm-schedule-off"}}>Preview removing</button></form>
         </div>
       </div>
 </div>
