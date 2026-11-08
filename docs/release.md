@@ -45,7 +45,7 @@ matching native one per OS. The binary version comes from the tag via ldflags
    Pushing a tag publishes nothing: binary releases are on hold, and authama is
    built from source until the owner decides otherwise.
 3. Only when a binary release has been approved for this version, dispatch it
-   on the tag: `gh workflow run release.yml --ref vX.Y.Z -f confirm=release-go`.
+   on the tag: `gh workflow run release.yml --repo simtabi/authama --ref vX.Y.Z -f confirm=release-go`.
    The workflow refuses to run without that confirmation or on anything but a
    `v[0-9]*` tag. A tag with a pre-release suffix (`-rc.1`, `-beta`) is
    published as a GitHub pre-release, and the workflow adds the second tag

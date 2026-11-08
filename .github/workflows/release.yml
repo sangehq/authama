@@ -12,7 +12,7 @@ name: Release
 # publishes nothing. A release is dispatched by hand against the tag, with an
 # explicit confirmation, and refuses to run without both:
 #
-#   gh workflow run release.yml --ref vX.Y.Z -f confirm=release-go
+#   gh workflow run release.yml --repo simtabi/authama --ref vX.Y.Z -f confirm=release-go
 #
 # It stays tag-driven: GoReleaser reads the version from the ref it is run
 # against, and the first step refuses a ref that is not a v[0-9]* tag.
