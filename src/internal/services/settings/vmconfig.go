@@ -148,7 +148,7 @@ func (c VMConfig) crossCheck() []string {
 		case d.Hypervisor == "":
 			probs = append(probs, at+".hypervisor: required")
 		case d.Hypervisor == manifest.HypervisorOrbStack || d.Hypervisor == manifest.HypervisorPodman:
-			probs = append(probs, at+".hypervisor: "+d.Hypervisor+" runs its own SSH keys, so it cannot be a devbox host (use `authama ssh vm docker-context`)")
+			probs = append(probs, at+".hypervisor: "+manifest.OwnSSHRefusal(d.Hypervisor)+", so it cannot be a devbox")
 		case !manifest.IsBuiltinHypervisor(d.Hypervisor) && c.Hypervisors[d.Hypervisor].List == nil:
 			probs = append(probs, fmt.Sprintf("%s.hypervisor: %q is neither built in (%s) nor declared in the hypervisors section",
 				at, d.Hypervisor, strings.Join(manifest.Hypervisors, ", ")))

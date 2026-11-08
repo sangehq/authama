@@ -264,7 +264,7 @@ func VMAdd(profile, alias, hypervisor, vmName, user string) Change {
 		Subjects: []history.Subject{{Kind: history.KindProfile, Name: profile}, {Kind: history.KindHost, Name: alias}},
 		Run: func(p paths.Paths, out io.Writer) error {
 			if hypervisor == manifest.HypervisorOrbStack || hypervisor == manifest.HypervisorPodman {
-				return fmt.Errorf("%s manages its own SSH access and keys; use `authama ssh vm docker-context` instead of a host", hypervisor)
+				return fmt.Errorf("%s", manifest.OwnSSHRefusal(hypervisor))
 			}
 			name := alias
 			f := editor.HostFields{Hostname: &name, User: &user,
