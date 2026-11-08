@@ -269,6 +269,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Documentation
 
+- The release command in `docs/release.md` and `release.yml`'s header names the repository
+  (`gh workflow run release.yml --repo simtabi/authama --ref vX.Y.Z -f confirm=release-go`), so it
+  works from any directory, not only inside a checkout.
+
 - `docs/release.md` and `docs/migration.md` no longer say the Homebrew tap renames `sshmgr` to
   `authama` or that the Scoop `sshmgr` manifest is published: the cask, the rename and both
   manifests were withdrawn while binary releases are on hold.
