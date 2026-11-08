@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/simtabi/authama/src/internal/util/desktop"
 	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/version"
 	"github.com/simtabi/authama/src/internal/web"
@@ -31,7 +33,28 @@ var (
 	serveContext                = func(parent context.Context) (context.Context, context.CancelFunc) {
 		return signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
 	}
+	serveNotifications = listenForNotifications
 )
+
+// listenForNotifications lets other programs and scripts show a notification
+// as authama while the web UI runs (`authama notify ping`, or go-notifykit's
+// Ping). It listens only when notifications can be shown at all, so it stays
+// off under go test, in CI and with AUTHAMA_NOTIFICATIONS=off, and a failure
+// to listen never stops the web UI.
+func listenForNotifications(ctx context.Context, errOut io.Writer) {
+	n, err := desktop.NewNotifier()
+	if err != nil {
+		return
+	}
+	if ok, _ := n.Enabled(); !ok {
+		return
+	}
+	go func() {
+		if err := n.Listen(ctx); err != nil {
+			_, _ = fmt.Fprintf(errOut, "notifications: not listening for pings: %v\n", err)
+		}
+	}()
+}
 
 func newServeCmd() *cobra.Command {
 	var (
@@ -272,6 +295,7 @@ func newServeCmd() *cobra.Command {
 			ctx, stop := serveContext(c.Context())
 			defer stop()
 			stopServing = stop
+			serveNotifications(ctx, c.ErrOrStderr())
 			return srv.Serve(ctx, ln)
 		},
 	}

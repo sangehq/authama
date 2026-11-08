@@ -1,16 +1,72 @@
-// Package desktop posts a best-effort desktop notification, ported from the
-// platforms/*.notify methods: terminal-notifier/osascript on macOS, notify-send on
-// Linux, a PowerShell balloon on Windows. Returns false when no backend is found.
+// Package desktop posts a best-effort desktop notification through
+// github.com/simtabi/go-notifykit, so a banner says "authama" with authama's
+// icon instead of "Script Editor", and nothing reaches the screen under
+// `go test` or in CI. Notify keeps its old contract: false means nothing was
+// delivered.
 package desktop
 
 import (
+	"context"
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
+
+	notifykit "github.com/simtabi/go-notifykit/src"
+
+	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/util/envnames"
 )
 
-// Notify posts a desktop notification. Returns true if a backend handled it.
+// AppID is the identifier macOS lists authama's notifications under
+// (System Settings > Notifications), with ".notifier" appended by notifykit.
+const AppID = "com.simtabi.authama"
+
+// NewNotifier returns the notifier every authama surface shares: the one-shot
+// alert, `authama notify send|ping|doctor`, and the listener `authama serve`
+// runs. AUTHAMA_NOTIFICATIONS=off turns it off, as it always has. go-notifykit
+// reads its own switches too (the EnvPrefix below, then NOTIFYKIT_DESKTOP); they
+// are documented in docs/tools/expiry.md rather than in envnames, which lists
+// only what authama itself reads.
+func NewNotifier() (*notifykit.Notifier, error) {
+	return notifykit.New(notifykit.Config{
+		AppName:     brand.Command,
+		AppID:       AppID,
+		Icon:        IconPNG(),
+		EnvPrefix:   "AUTHAMA",
+		Disabled:    off(envnames.Get(nil, envnames.Notifications)),
+		MinInterval: 30 * time.Second,
+	})
+}
+
+func off(v string) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "0", "false", "no", "off":
+		return true
+	}
+	return false
+}
+
+// Notify posts a desktop notification. Returns true if it was delivered, or
+// will be once the user answers macOS's first-run permission prompt.
 func Notify(title, message string) bool {
+	n, err := NewNotifier()
+	if err != nil {
+		return legacyNotify(title, message)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	res, err := n.Send(ctx, notifykit.Notification{Title: title, Body: message})
+	return err == nil && res.Backend != ""
+}
+
+// legacyNotify is the notifier authama shipped before go-notifykit, kept as the
+// fallback for a notifier that cannot be configured. Its banners on macOS say
+// "Script Editor".
+//
+// Deprecated: superseded by NewNotifier. Removable once a release has shipped
+// with go-notifykit and no fallback has been reported, no earlier than 0.2.0.
+func legacyNotify(title, message string) bool {
 	switch runtime.GOOS {
 	case "darwin":
 		if has("terminal-notifier") {

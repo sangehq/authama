@@ -99,6 +99,9 @@ var v1RemovedVerbs = map[string]string{
 // deviation that authorises it. An entry here is a decision someone made; an
 // addition without one is a test failure.
 var goOnly = map[string]string{
+	"notify send":               "go-notifykit - the notify verbs every Simtabi Go program shares",
+	"notify ping":               "go-notifykit - hand a notification to the running web UI",
+	"notify doctor":             "go-notifykit - whether desktop notifications work here, and why not",
 	"events":                    "D1 - every change seen to a tracked file under ~/.ssh, the config home or a token file",
 	"export":                    "exports - any list as CSV, TSV, JSON, YAML, a PHP or JS array, Markdown or HTML, filtered, the web UI's Export page at the command line",
 	"export selections":         "exports - selections saved by name, in the user's store or the manifest's",

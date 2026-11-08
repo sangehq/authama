@@ -101,8 +101,11 @@ Every command also takes the global flag:
     - [`authama ssh naming set`](#authama-ssh-naming-set) - Set the naming rules, for every profile or for one
     - [`authama ssh naming show`](#authama-ssh-naming-show) - Show the naming rules in effect, and each profile's code and own rules
   - [`authama ssh net`](#authama-ssh-net) - Per-host connection status + VPN indicator
-  - [`authama ssh notify`](#authama-ssh-notify) - Manage the scheduled expiry notifier
+  - [`authama ssh notify`](#authama-ssh-notify) - Manage the scheduled expiry notifier and desktop notifications
+    - [`authama ssh notify doctor`](#authama-ssh-notify-doctor) - Say whether desktop notifications work here, and why not
     - [`authama ssh notify install`](#authama-ssh-notify-install) - Install the scheduled expiry notifier
+    - [`authama ssh notify ping`](#authama-ssh-notify-ping) - Hand a notification to the running web UI (authama serve), which shows it
+    - [`authama ssh notify send`](#authama-ssh-notify-send) - Show a desktop notification from this process
     - [`authama ssh notify test`](#authama-ssh-notify-test) - Fire a test notification
   - [`authama ssh profile`](#authama-ssh-profile) - Manage a profile (add/edit/delete)
     - [`authama ssh profile add`](#authama-ssh-profile-add) - Add a profile
@@ -1112,7 +1115,7 @@ Subcommands:
 - [`load`](#authama-ssh-load) - Add a profile's keys to the agent
 - [`naming`](#authama-ssh-naming) - Show, check and set how servers and their keys are named
 - [`net`](#authama-ssh-net) - Per-host connection status + VPN indicator
-- [`notify`](#authama-ssh-notify) - Manage the scheduled expiry notifier
+- [`notify`](#authama-ssh-notify) - Manage the scheduled expiry notifier and desktop notifications
 - [`profile`](#authama-ssh-profile) - Manage a profile (add/edit/delete)
 - [`providers`](#authama-ssh-providers) - List the active provider catalog + credential state
 - [`reconcile`](#authama-ssh-reconcile) - Build ~/.ssh from the manifest
@@ -2191,7 +2194,7 @@ Examples:
 
 ## authama ssh notify
 
-Manage the scheduled expiry notifier.
+Manage the scheduled expiry notifier and desktop notifications.
 
 ```
 authama ssh notify
@@ -2199,8 +2202,25 @@ authama ssh notify
 
 Subcommands:
 
+- [`doctor`](#authama-ssh-notify-doctor) - Say whether desktop notifications work here, and why not
 - [`install`](#authama-ssh-notify-install) - Install the scheduled expiry notifier
+- [`ping`](#authama-ssh-notify-ping) - Hand a notification to the running web UI (authama serve), which shows it
+- [`send`](#authama-ssh-notify-send) - Show a desktop notification from this process
 - [`test`](#authama-ssh-notify-test) - Fire a test notification
+
+## authama ssh notify doctor
+
+Say whether desktop notifications work here, and why not.
+
+```
+authama ssh notify doctor [-title T] [-subtitle S] [-body B] [-group G] [-level info|warn|alert] [-sound] [-json]
+```
+
+Examples:
+
+```sh
+  authama ssh notify doctor
+```
 
 ## authama ssh notify install
 
@@ -2220,6 +2240,35 @@ Flags:
 
 ```
   -y, --yes   install without confirming (implied when there is no terminal)
+```
+
+## authama ssh notify ping
+
+Hand a notification to the running web UI (authama serve), which shows it.
+
+```
+authama ssh notify ping [-title T] [-subtitle S] [-body B] [-group G] [-level info|warn|alert] [-sound] [-json]
+```
+
+Examples:
+
+```sh
+  authama ssh notify ping -title "Deploy finished" -body "billing-api is on v1.4.0" -group deploy
+```
+
+## authama ssh notify send
+
+Show a desktop notification from this process.
+
+```
+authama ssh notify send [-title T] [-subtitle S] [-body B] [-group G] [-level info|warn|alert] [-sound] [-json]
+```
+
+Examples:
+
+```sh
+  authama ssh notify send -title Backup -body "42 files"
+  authama ssh notify send -json < notification.json
 ```
 
 ## authama ssh notify test

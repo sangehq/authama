@@ -205,6 +205,10 @@ func TestTheBinaryLinksOnlyItsTwoChosenDependencies(t *testing.T) {
 		// owner's decision of 2026-11-05: the YAML org's maintained fork of
 		// yaml.v3, whose node tree keeps key order and comments.
 		"go.yaml.in/yaml/v3": true,
+		// Desktop notifications under authama's own name and icon, the
+		// owner's decision of 2026-11-08: the shared notifier every Simtabi
+		// Go program uses. It links nothing outside the standard library.
+		"github.com/simtabi/go-notifykit/src": true,
 	}
 	var linked []string
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {

@@ -3,19 +3,46 @@ package cli
 import (
 	"fmt"
 
+	notifykit "github.com/simtabi/go-notifykit/src"
 	"github.com/spf13/cobra"
 
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/services/notifier"
+	"github.com/simtabi/authama/src/internal/util/desktop"
 	"github.com/simtabi/authama/src/internal/util/scheduler"
 )
 
 // newNotifyCmd is the native notify verb group: install the scheduled expiry
-// notifier, or fire a test desktop notification.
+// notifier, fire a test desktop notification, and the send, ping and doctor
+// verbs every Simtabi Go program shares through go-notifykit.
 func newNotifyCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "notify",
-		Short: "Manage the scheduled expiry notifier",
+		Short: "Manage the scheduled expiry notifier and desktop notifications",
+	}
+	for _, v := range []struct{ verb, short string }{
+		{"send", "Show a desktop notification from this process"},
+		{"ping", "Hand a notification to the running web UI (authama serve), which shows it"},
+		{"doctor", "Say whether desktop notifications work here, and why not"},
+	} {
+		verb := v.verb
+		cmd.AddCommand(&cobra.Command{
+			Use:                verb + " [-title T] [-subtitle S] [-body B] [-group G] [-level info|warn|alert] [-sound] [-json]",
+			Short:              v.short,
+			DisableFlagParsing: true,
+			RunE: func(c *cobra.Command, args []string) error {
+				n, err := desktop.NewNotifier()
+				if err != nil {
+					return err
+				}
+				// RunCLI has already said what went wrong; authama's exit
+				// contract is 0 or 1, so any failure is the silent errNotClean.
+				if notifykit.RunCLI(c.Context(), n, append([]string{verb}, args...), c.InOrStdin(), c.OutOrStdout(), c.ErrOrStderr()) != 0 {
+					return errNotClean
+				}
+				return nil
+			},
+		})
 	}
 
 	var installYes bool
