@@ -272,3 +272,7 @@ main:focus { outline: none; }
 .export-saved .list-group-item { display: flex; align-items: center; gap: .5rem; }
 .export-steps .list-group-item::before { align-self: flex-start; padding-top: .25rem; }
 .export-steps textarea { min-height: 4.5rem; }
+
+/* Header logo mark: the favicon itself, so the tab and the header read as one product. */
+.navbar-brand-mark { width: 2rem; height: 2rem; flex: none; }
+.navbar-brand-text { margin-left: .625rem; font-weight: 600; white-space: nowrap; }
