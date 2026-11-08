@@ -4,7 +4,7 @@
 <div class="card">
   <div class="card-header">
     <h2 class="card-title">{{.Online}} of {{len .Rows}} reachable</h2>
-    <div class="card-actions"><a class="btn btn-sm btn-outline-secondary" href="{{basePath}}/net{{if .Selector}}?{{if .IsProfile}}profile{{else}}host{{end}}={{.Selector}}{{end}}" data-inline{{tip "net-again"}}>{{icon "refresh"}}<span class="ms-1">Check again</span></a></div>
+    <div class="card-actions"><a class="btn btn-sm btn-outline-secondary" href="{{basePath}}/net{{if .Selector}}?{{if .IsProfile}}profile{{else}}host{{end}}={{.Selector}}{{end}}" data-inline{{desc "net-again"}}>{{icon "refresh"}}<span class="ms-1">Check again</span></a></div>
   </div>
   {{if .Rows}}
   <div class="table-responsive" tabindex="0">

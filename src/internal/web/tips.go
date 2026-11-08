@@ -192,8 +192,21 @@ func tipText(id string) (string, error) {
 	return t, nil
 }
 
-// tipAttr is ` data-tip="…"` for an element, escaped by html/template's
-// attribute context like any other value.
+// descAttr is ` aria-description="…"`: the explainer for a control that
+// already shows its name. Such a control gets no tooltip, which would cover
+// the very thing being pointed at and repeat what its label says; a screen
+// reader still hears the explainer. Icon-only controls use tipAttr.
+func descAttr(id string) (template.HTMLAttr, error) {
+	t, err := tipText(id)
+	if err != nil {
+		return "", err
+	}
+	return template.HTMLAttr(` aria-description="` + template.HTMLEscapeString(t) + `"`), nil //nolint:gosec // escaped above; the text comes from the catalogue
+}
+
+// tipAttr is ` data-tip="…"` for an icon-only control: a tooltip on hover
+// and keyboard focus, escaped by html/template's attribute context like any
+// other value.
 func tipAttr(id string) (template.HTMLAttr, error) {
 	t, err := tipText(id)
 	if err != nil {

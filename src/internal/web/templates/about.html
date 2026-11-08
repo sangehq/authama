@@ -13,10 +13,10 @@
         </div>
         <p><code>{{.Command}}</code> manages SSH keys, profiles, hosts and config, and the auth tokens package managers and git read, from one manifest. It has three front ends over the same services: the command line, the menu (<code>{{.Command}} tui</code>) and this web UI (<code>{{.Command}}</code> on its own, or <code>{{.Command}} serve</code>). Every change here is previewed against a private copy of the home before it is made.</p>
         <div class="btn-list">
-          <a class="btn btn-outline-primary" href="{{.Docs}}" rel="noopener"{{tip "docs"}}>{{icon "external-link"}}<span class="ms-1">Documentation</span></a>
-          <a class="btn btn-outline-secondary" href="{{.Repository}}" rel="noopener"{{tip "source"}}>{{icon "brand-github"}}<span class="ms-1">Source</span></a>
-          <a class="btn btn-outline-secondary" href="{{.Issues}}" rel="noopener"{{tip "report-issue"}}>{{icon "alert-circle"}}<span class="ms-1">Report an issue</span></a>
-          <a class="btn btn-outline-secondary" href="#licences"{{tip "licences"}}>{{icon "license"}}<span class="ms-1">Third-party licences</span></a>
+          <a class="btn btn-outline-primary" href="{{.Docs}}" rel="noopener"{{desc "docs"}}>{{icon "external-link"}}<span class="ms-1">Documentation</span></a>
+          <a class="btn btn-outline-secondary" href="{{.Repository}}" rel="noopener"{{desc "source"}}>{{icon "brand-github"}}<span class="ms-1">Source</span></a>
+          <a class="btn btn-outline-secondary" href="{{.Issues}}" rel="noopener"{{desc "report-issue"}}>{{icon "alert-circle"}}<span class="ms-1">Report an issue</span></a>
+          <a class="btn btn-outline-secondary" href="#licences"{{desc "licences"}}>{{icon "license"}}<span class="ms-1">Third-party licences</span></a>
         </div>
       </div>
     </div>
@@ -27,7 +27,7 @@
       <div class="card-body">
         <dl class="row mb-0">
           <dt class="col-5">Version</dt><dd class="col-7"><code>{{.Version}}</code></dd>
-          <dt class="col-5">Status</dt><dd class="col-7" data-build-status>{{if $.Rebuilt}}<span class="badge badge-warn" title="A newer build is installed; this page is from the build that was running when the server started">{{icon "alert-triangle"}}<span class="ms-1">{{$.Build.Version}} · older build</span></span>{{else}}<span class="badge badge-ok" title="This server runs the build now installed">{{icon "circle-check"}}<span class="ms-1">{{$.Build.Version}} · current</span></span>{{end}}</dd>
+          <dt class="col-5">Status</dt><dd class="col-7" data-build-status>{{if $.Rebuilt}}<span class="badge badge-warn">{{icon "alert-triangle"}}<span class="ms-1">{{$.Build.Version}} · older build</span></span><div class="text-secondary small mt-1">A newer build is installed; this page is from the build that was running when the server started.</div>{{else}}<span class="badge badge-ok" aria-description="This server runs the build now installed">{{icon "circle-check"}}<span class="ms-1">{{$.Build.Version}} · current</span></span>{{end}}</dd>
           {{if not $.Build.Built.IsZero}}<dt class="col-5">Built</dt><dd class="col-7">{{when $.Build.Built}}</dd>{{end}}
           {{if not $.Build.Started.IsZero}}<dt class="col-5">Server started</dt><dd class="col-7">{{when $.Build.Started}}</dd>{{end}}
           {{if .Revision}}<dt class="col-5">Commit</dt><dd class="col-7"><code>{{short .Revision}}</code>{{if .Modified}} <span class="badge badge-warn">modified</span>{{end}}</dd>{{end}}
@@ -36,9 +36,9 @@
           <dt class="col-5">Platform</dt><dd class="col-7">{{.OS}}/{{.Arch}}</dd>
           <dt class="col-5">Running as</dt><dd class="col-7">{{if .User}}{{.User}}{{else}}this machine's user{{end}}</dd>
           {{if .Host}}<dt class="col-5">Host</dt><dd class="col-7">{{.Host}}</dd>{{end}}
-          <dt class="col-5">Config home</dt><dd class="col-7 text-break"><code title="{{.ConfigHome}}">{{tilde .ConfigHome}}</code></dd>
-          <dt class="col-5">State home</dt><dd class="col-7 text-break"><code title="{{.StateHome}}">{{tilde .StateHome}}</code></dd>
-          <dt class="col-5">SSH directory</dt><dd class="col-7 text-break"><code title="{{.SSHDir}}">{{tilde .SSHDir}}</code></dd>
+          <dt class="col-5">Config home</dt><dd class="col-7 text-break"><code>{{tilde .ConfigHome}}</code> {{template "copy" (copy .ConfigHome "the config home")}}</dd>
+          <dt class="col-5">State home</dt><dd class="col-7 text-break"><code>{{tilde .StateHome}}</code> {{template "copy" (copy .StateHome "the state home")}}</dd>
+          <dt class="col-5">SSH directory</dt><dd class="col-7 text-break"><code>{{tilde .SSHDir}}</code> {{template "copy" (copy .SSHDir "the SSH directory")}}</dd>
           {{if .DevRoot}}<dt class="col-5">Dev root</dt><dd class="col-7 text-break mb-0"><code>{{.DevRoot}}</code></dd>{{end}}
         </dl>
       </div>

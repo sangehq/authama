@@ -7,7 +7,7 @@
     <div class="d-flex align-items-center gap-2 mb-2">
       <p class="mb-0 text-secondary me-auto">The same as running</p>
       {{template "copy" (copy .Command "the command")}}
-      {{if .Runnable}}<button type="submit" form="{{.Form}}" class="btn btn-sm {{if .Destroy}}btn-danger{{else}}btn-primary{{end}}"{{tip "run"}}>{{icon "player-play"}}<span class="ms-1">Run</span></button>{{end}}
+      {{if .Runnable}}<button type="submit" form="{{.Form}}" class="btn btn-sm {{if .Destroy}}btn-danger{{else}}btn-primary{{end}}"{{desc "run"}}>{{icon "player-play"}}<span class="ms-1">Run</span></button>{{end}}
     </div>
     <pre class="code-block mb-0" tabindex="0"><span class="code-prompt" aria-hidden="true">$ </span>{{hl "sh" .Command}}</pre>
   </div>

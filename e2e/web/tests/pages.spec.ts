@@ -200,19 +200,11 @@ test('the tour walks the header step by step, and Escape ends it', async ({ page
   const pop = page.locator('.popover.tour-popover');
   await expect(pop).toBeVisible();
   await expect(pop.locator('.popover-header')).toHaveText(/^Search \(1 of \d+\)$/);
-  // Closing the account menu can leave the pointer on a header action, whose
-  // explainer then shows beside the tour. The tour stays on top of it, so
-  // its Next is never covered.
+  // Closing the account menu can leave the pointer on a header action. A
+  // labelled action shows no tooltip, so nothing can cover the tour's Next.
   await page.getByText('Add a token', { exact: true }).hover();
-  // Every control has an explainer now, so pick this action's own: the
-  // account menu's may still be showing for the toggle the tour left focused.
-  const tip = page.locator('.tooltip', { hasText: 'token' });
-  await expect(tip).toBeVisible();
-  // Where they overlap depends on fonts and layout, so compare the stacking
-  // order itself: on CI the tooltip's edge once covered Next and swallowed
-  // the click.
-  const z = (sel: string) => page.locator(sel).first().evaluate((el) => Number(getComputedStyle(el).zIndex));
-  expect(await z('.popover.tour-popover')).toBeGreaterThan(await tip.first().evaluate((el) => Number(getComputedStyle(el).zIndex)));
+  await page.waitForTimeout(800);
+  await expect(page.locator('.tooltip')).toHaveCount(0);
   await pop.getByRole('button', { name: 'Next' }).click();
   await expect(pop.locator('.popover-header')).toHaveText(/\(2 of \d+\)$/);
   await pop.getByRole('button', { name: 'Back' }).click();

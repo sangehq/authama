@@ -228,19 +228,19 @@ main:focus { outline: none; }
 .csv-pick-table th, .csv-preview thead th { position: sticky; top: 0; z-index: 1; background: var(--tblr-bg-surface-secondary); }
 .csv-pick-table td:first-child, .csv-pick-table th:first-child { width: 2.5rem; }
 .csv-pick-table .csv-num { text-align: right; color: var(--tblr-secondary); width: 3.5rem; }
-.csv-pick-table .csv-sample { color: var(--tblr-secondary); max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.csv-pick-table .csv-sample { color: var(--tblr-secondary); max-width: 9rem; overflow-wrap: anywhere; }
 .csv-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .csv-toolbar { display: flex; gap: .5rem; padding: 1rem 1rem .25rem; }
 .csv-summary { padding: .5rem 1rem; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 .csv-preview { flex: 1; overflow: auto; max-height: 30rem; margin: 0 1rem 1rem; border: 1px solid var(--tblr-border-color); border-radius: var(--tblr-border-radius); }
-.csv-preview td { white-space: nowrap; max-width: 16rem; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.csv-preview td { max-width: 16rem; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 @media (max-width: 767.98px) {
   .csv-body { flex-direction: column; }
   .csv-pick { width: auto; border-right: 0; border-bottom: 1px solid var(--tblr-border-color); }
   .csv-pick-scroll { max-height: 16rem; }
 }
 /* A slide-in panel is narrow: a form's two-column grid becomes one column. */
-.op-about { max-width: min(16rem, 30vw); vertical-align: bottom; }
+.op-about { display: inline-block; max-width: 24rem; overflow-wrap: anywhere; }
 /* A name in a table stays whole; the table scrolls sideways instead of
    breaking github-personal at its hyphen into a tall row. */
 .table code, .table .font-monospace { white-space: nowrap; }
@@ -261,7 +261,7 @@ main:focus { outline: none; }
 .export-columns thead th, .export-preview thead th { position: sticky; top: 0; z-index: 1; background: var(--tblr-bg-surface); box-shadow: inset 0 -1px 0 var(--tblr-border-color); }
 .export-preview .table-sort { background: transparent; }
 .export-preview { max-height: 28rem; }
-.export-preview td { white-space: nowrap; max-width: 18rem; overflow: hidden; text-overflow: ellipsis; }
+.export-preview td { max-width: 18rem; overflow-wrap: anywhere; }
 .export-columns tr[draggable=true] .export-handle { cursor: grab; }
 .export-columns tr.export-dragging { opacity: .5; }
 .export-columns tr.export-drop-before td { box-shadow: inset 0 2px 0 var(--tblr-primary); }
@@ -302,3 +302,9 @@ main:focus { outline: none; }
 .token-audit-item.is-problem { font-weight: var(--tblr-font-weight-medium, 500); }
 .token-audit-item.is-problem .icon { color: var(--tblr-danger); }
 .token-audit-item:not(.is-problem):not(.text-secondary) .icon { color: var(--tblr-success); }
+
+/* Navigation menus: each entry's description sits under its name, so the menu
+   is read without hovering; the width keeps lines short. */
+.nav-menu-item { align-items: flex-start; white-space: normal; min-width: 16rem; max-width: 22rem; }
+.nav-menu-item > .icon { margin-top: .125rem; flex: none; }
+.nav-menu-desc { line-height: 1.35; }

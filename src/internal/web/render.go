@@ -340,7 +340,8 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 				CSV: strings.HasSuffix(strings.SplitN(href, "?", 2)[0], ".csv")}
 		},
 		// tip is ` data-tip="…"` from the catalogue in tips.go, for any element.
-		"tip": tipAttr,
+		"tip":  tipAttr,
+		"desc": descAttr,
 		// fixFor is the web UI's way of doing an overview row's fix, or nil.
 		"fixFor": fixFor,
 		// withTip gives a header action its explainer:

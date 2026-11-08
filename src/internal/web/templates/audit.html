@@ -29,8 +29,8 @@
       {{else}}{{template "empty" (empty "shield-check" "Nothing tracked" "")}}{{end}}
       {{if not $.ReadOnly}}<div class="card-footer d-flex flex-wrap align-items-center gap-2">
         <span class="text-secondary small me-auto">Desktop alerts, as the scheduled reminder sends them.</span>
-        {{template "change_open" $}}<input type="hidden" name="action" value="audit-notify"><button type="submit" class="btn btn-sm btn-outline-secondary"{{tip "audit-notify"}}>{{icon "bell"}}<span class="ms-1">Alert if one is due</span></button></form>
-        {{template "change_open" $}}<input type="hidden" name="action" value="notify-test"><button type="submit" class="btn btn-sm btn-outline-secondary"{{tip "notify-test"}}>Send a test</button></form>
+        {{template "change_open" $}}<input type="hidden" name="action" value="audit-notify"><button type="submit" class="btn btn-sm btn-outline-secondary"{{desc "audit-notify"}}>{{icon "bell"}}<span class="ms-1">Alert if one is due</span></button></form>
+        {{template "change_open" $}}<input type="hidden" name="action" value="notify-test"><button type="submit" class="btn btn-sm btn-outline-secondary"{{desc "notify-test"}}>Send a test</button></form>
       </div>{{end}}
     </div>
   </div>

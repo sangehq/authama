@@ -60,8 +60,8 @@
           <td>{{if .HasOwn}}<span class="badge badge-info">its own</span>{{else}}<span class="text-secondary">the manifest's</span>{{end}}</td>
           {{if not $.ReadOnly}}<td class="text-end">
             {{template "menu_open" (printf "Actions for profile %s" .Name)}}
-              <a class="dropdown-item" href="#{{.Form.ID}}" data-bs-toggle="offcanvas" role="button" aria-controls="{{.Form.ID}}"{{tip "naming-set"}}>{{icon "pencil"}}<span class="ms-2">Change its rules</span></a>
-              <a class="dropdown-item" href="#code-p{{$i}}" data-bs-toggle="offcanvas" role="button" aria-controls="code-p{{$i}}"{{tip "profile-code"}}>{{icon "pencil"}}<span class="ms-2">Set its code</span></a>
+              <a class="dropdown-item" href="#{{.Form.ID}}" data-bs-toggle="offcanvas" role="button" aria-controls="{{.Form.ID}}"{{desc "naming-set"}}>{{icon "pencil"}}<span class="ms-2">Change its rules</span></a>
+              <a class="dropdown-item" href="#code-p{{$i}}" data-bs-toggle="offcanvas" role="button" aria-controls="code-p{{$i}}"{{desc "profile-code"}}>{{icon "pencil"}}<span class="ms-2">Set its code</span></a>
             {{template "menu_close"}}
           </td>{{end}}
         </tr>

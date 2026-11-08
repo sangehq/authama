@@ -10,10 +10,10 @@
   <div class="card">
     <div class="card-header export-header">
       <ul class="nav nav-bordered card-header-tabs export-grains" role="tablist" aria-label="What each row is">
-        {{range .Grains}}<li class="nav-item" role="presentation"><a class="nav-link" href="#" role="tab" aria-selected="false" data-export-grain="{{.Name}}" data-preset="{{.Preset}}"{{tip "export-grain"}}>{{icon .Icon}}<span class="ms-2">{{.Label}}</span></a></li>{{end}}
+        {{range .Grains}}<li class="nav-item" role="presentation"><a class="nav-link" href="#" role="tab" aria-selected="false" data-export-grain="{{.Name}}" data-preset="{{.Preset}}"{{desc "export-grain"}}>{{icon .Icon}}<span class="ms-2">{{.Label}}</span></a></li>{{end}}
       </ul>
       {{/* Below lg the saved selections and filters slide in from the left. */}}
-      <button type="button" class="btn btn-sm btn-outline-secondary d-lg-none export-filters-open" data-bs-toggle="offcanvas" data-bs-target="#export-filters" aria-controls="export-filters"{{tip "export-filters"}}>{{icon "filter"}}<span class="ms-1">Filters</span></button>
+      <button type="button" class="btn btn-sm btn-outline-secondary d-lg-none export-filters-open" data-bs-toggle="offcanvas" data-bs-target="#export-filters" aria-controls="export-filters"{{desc "export-filters"}}>{{icon "filter"}}<span class="ms-1">Filters</span></button>
     </div>
 
     <div class="card-body p-0">
@@ -37,7 +37,7 @@
                 <option value="user">Mine</option>
                 <option value="manifest">Manifest</option>
               </select>
-              <button type="button" class="btn" data-export-save{{tip "export-save"}}>{{icon "plus"}}<span class="ms-1">Save</span></button>
+              <button type="button" class="btn" data-export-save{{desc "export-save"}}>{{icon "plus"}}<span class="ms-1">Save</span></button>
             </div>
             <small class="form-hint">Mine stays private to this account. The manifest's travel with it, and saving there is a change you preview first.</small>
             <form method="post" action="{{basePath}}/changes/preview" hidden data-export-manifest-save><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="export-selection-save"><input type="hidden" name="name" value=""><input type="hidden" name="selection" value=""></form>
@@ -47,7 +47,7 @@
           <div class="card-body border-bottom">
             <div class="d-flex align-items-center mb-3">
               <h3 class="card-title mb-0">{{icon "filter"}}<span class="ms-2">Filter</span></h3>
-              <button type="button" class="btn btn-sm btn-ghost-secondary ms-auto" data-export-clear{{tip "export-clear"}}>{{icon "x"}}<span class="ms-1">Clear</span></button>
+              <button type="button" class="btn btn-sm btn-ghost-secondary ms-auto" data-export-clear{{desc "export-clear"}}>{{icon "x"}}<span class="ms-1">Clear</span></button>
             </div>
             <div class="mb-2">
               <label class="form-label" for="export-include">Keep rows containing</label>
@@ -71,12 +71,12 @@
           <div class="card-body border-bottom">
             <div class="d-flex align-items-center mb-3">
               <h3 class="card-title mb-0">{{icon "columns"}}<span class="ms-2">Columns</span> <span class="badge badge-info ms-2" data-export-colcount></span></h3>
-              <button type="button" class="btn btn-sm btn-ghost-secondary ms-auto" data-export-columns-reset{{tip "export-columns-reset"}}>{{icon "refresh"}}<span class="ms-1">Default columns</span></button>
+              <button type="button" class="btn btn-sm btn-ghost-secondary ms-auto" data-export-columns-reset{{desc "export-columns-reset"}}>{{icon "refresh"}}<span class="ms-1">Default columns</span></button>
             </div>
             <div class="table-responsive border rounded export-columns" data-export-columns></div>
             <div class="input-group input-group-sm mt-2 export-add">
               <select class="form-select" aria-label="A field to add as a column" data-export-add></select>
-              <button type="button" class="btn" data-export-add-button{{tip "export-add-column"}}>{{icon "plus"}}<span class="ms-1">Add column</span></button>
+              <button type="button" class="btn" data-export-add-button{{desc "export-add-column"}}>{{icon "plus"}}<span class="ms-1">Add column</span></button>
             </div>
           </div>
 
@@ -88,7 +88,7 @@
             <ol class="list-group list-group-numbered mb-2 export-steps" data-export-steps></ol>
             <div class="input-group input-group-sm export-add">
               <select class="form-select" aria-label="A transform to add" data-export-step-add></select>
-              <button type="button" class="btn" data-export-step-add-button{{tip "export-add-step"}}>{{icon "plus"}}<span class="ms-1">Add step</span></button>
+              <button type="button" class="btn" data-export-step-add-button{{desc "export-add-step"}}>{{icon "plus"}}<span class="ms-1">Add step</span></button>
             </div>
             <datalist id="export-fields" data-export-fieldlist></datalist>
           </div>
@@ -125,10 +125,10 @@
         </div>
         <div class="col-auto ms-auto">
           <div class="btn-list">
-            <button type="button" class="btn" data-export-copy{{tip "export-copy"}}>{{icon "copy"}}<span class="ms-1">Copy</span></button>
-            <button type="button" class="btn" data-export-share{{tip "export-share"}}>{{icon "link"}}<span class="ms-1">Copy link</span></button>
-            <button type="button" class="btn" data-export-command{{tip "export-command"}}>{{icon "terminal-2"}}<span class="ms-1">Copy as command</span></button>
-            <a class="btn btn-primary" role="link" href="{{u "/exports/run?preset=hosts"}}" download data-export-download{{tip "download"}}>{{icon "download"}}<span class="ms-1">Download</span></a>
+            <button type="button" class="btn" data-export-copy{{desc "export-copy"}}>{{icon "copy"}}<span class="ms-1">Copy</span></button>
+            <button type="button" class="btn" data-export-share{{desc "export-share"}}>{{icon "link"}}<span class="ms-1">Copy link</span></button>
+            <button type="button" class="btn" data-export-command{{desc "export-command"}}>{{icon "terminal-2"}}<span class="ms-1">Copy as command</span></button>
+            <a class="btn btn-primary" role="link" href="{{u "/exports/run?preset=hosts"}}" download data-export-download{{desc "download"}}>{{icon "download"}}<span class="ms-1">Download</span></a>
           </div>
         </div>
         <div class="col-12" data-export-blocked-row hidden>

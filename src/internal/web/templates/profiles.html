@@ -24,16 +24,16 @@
           <td class="text-end">
             {{if not $.ReadOnly}}<form method="post" action="{{basePath}}/changes/preview" data-inline id="f-profile-{{.Name}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="profile-delete"><input type="hidden" name="name" value="{{.Name}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for profile %s" .Name)}}
-              <a class="dropdown-item" href="{{basePath}}/hosts?q={{.Name}}"{{tip "profile-hosts"}}>{{icon "server"}}<span class="ms-2">Its hosts</span></a>
-              <a class="dropdown-item" href="{{basePath}}/history?profile={{.Name}}"{{tip "row-history"}}>{{icon "history"}}<span class="ms-2">History</span></a>
-              <button type="button" class="dropdown-item" data-copy="{{.Name}}"{{tip "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
+              <a class="dropdown-item" href="{{basePath}}/hosts?q={{.Name}}"{{desc "profile-hosts"}}>{{icon "server"}}<span class="ms-2">Its hosts</span></a>
+              <a class="dropdown-item" href="{{basePath}}/history?profile={{.Name}}"{{desc "row-history"}}>{{icon "history"}}<span class="ms-2">History</span></a>
+              <button type="button" class="dropdown-item" data-copy="{{.Name}}"{{desc "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
               {{if not $.ReadOnly}}<div class="dropdown-divider"></div>
-              <a class="dropdown-item" href="#profile-scope" data-panel-open="profile-scope" data-panel-fill-name="{{.Name}}"{{tip "profile-scope"}}>{{icon "key"}}<span class="ms-2">Change key scope</span></a>
-              <a class="dropdown-item" href="#profile-comment" data-panel-open="profile-comment" data-panel-fill-name="{{.Name}}"{{tip "profile-comment"}}>{{icon "pencil"}}<span class="ms-2">Change key comment</span></a>
-              <a class="dropdown-item" href="#profile-category" data-panel-open="profile-category" data-panel-fill-name="{{.Name}}"{{tip "profile-category"}}>{{icon "folder"}}<span class="ms-2">Move to a category</span></a>
-              {{if not $.DevRoot}}<a class="dropdown-item" href="#profile-rotate" data-panel-open="profile-rotate" data-panel-fill-profile="{{.Name}}"{{tip "profile-rotate"}}>{{icon "recycle"}}<span class="ms-2">Rotate its keys</span></a>{{end}}
+              <a class="dropdown-item" href="#profile-scope" data-panel-open="profile-scope" data-panel-fill-name="{{.Name}}"{{desc "profile-scope"}}>{{icon "key"}}<span class="ms-2">Change key scope</span></a>
+              <a class="dropdown-item" href="#profile-comment" data-panel-open="profile-comment" data-panel-fill-name="{{.Name}}"{{desc "profile-comment"}}>{{icon "pencil"}}<span class="ms-2">Change key comment</span></a>
+              <a class="dropdown-item" href="#profile-category" data-panel-open="profile-category" data-panel-fill-name="{{.Name}}"{{desc "profile-category"}}>{{icon "folder"}}<span class="ms-2">Move to a category</span></a>
+              {{if not $.DevRoot}}<a class="dropdown-item" href="#profile-rotate" data-panel-open="profile-rotate" data-panel-fill-profile="{{.Name}}"{{desc "profile-rotate"}}>{{icon "recycle"}}<span class="ms-2">Rotate its keys</span></a>{{end}}
               <div class="dropdown-divider"></div>
-              <button type="submit" class="dropdown-item text-danger" form="f-profile-{{.Name}}" data-confirm="m-profile-{{.Name}}"{{tip "delete"}}>{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
+              <button type="submit" class="dropdown-item text-danger" form="f-profile-{{.Name}}" data-confirm="m-profile-{{.Name}}"{{desc "delete"}}>{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
             {{template "menu_close"}}
           </td>
         </tr>

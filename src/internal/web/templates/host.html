@@ -6,10 +6,10 @@
       <h1 class="page-title font-monospace">{{.Alias}}</h1>
     </div>
     <div class="col-auto ms-auto btn-list">
-      {{if not $.ReadOnly}}<a href="#host-edit" class="btn btn-primary" data-bs-toggle="offcanvas" role="button" aria-controls="host-edit"{{tip "host-edit"}}>{{icon "pencil"}}<span class="ms-1">Edit</span></a>{{end}}
-      <a href="{{basePath}}/net?host={{.Alias}}" class="btn btn-outline-secondary" data-inline{{tip "net-host"}}>{{icon "activity"}}<span class="ms-1">Check connection</span></a>
-      <a href="{{basePath}}/history?host={{.Alias}}" class="btn btn-outline-secondary"{{tip "history"}}>{{icon "history"}}<span class="ms-1">History</span></a>
-      <button type="button" class="btn btn-outline-secondary" data-copy="ssh {{.Alias}}"{{tip "copy-ssh"}}>{{icon "copy"}}<span class="ms-1">Copy ssh {{.Alias}}</span></button>
+      {{if not $.ReadOnly}}<a href="#host-edit" class="btn btn-primary" data-bs-toggle="offcanvas" role="button" aria-controls="host-edit"{{desc "host-edit"}}>{{icon "pencil"}}<span class="ms-1">Edit</span></a>{{end}}
+      <a href="{{basePath}}/net?host={{.Alias}}" class="btn btn-outline-secondary" data-inline{{desc "net-host"}}>{{icon "activity"}}<span class="ms-1">Check connection</span></a>
+      <a href="{{basePath}}/history?host={{.Alias}}" class="btn btn-outline-secondary"{{desc "history"}}>{{icon "history"}}<span class="ms-1">History</span></a>
+      <button type="button" class="btn btn-outline-secondary" data-copy="ssh {{.Alias}}"{{desc "copy-ssh"}}>{{icon "copy"}}<span class="ms-1">Copy ssh {{.Alias}}</span></button>
     </div>
   </div>
 </div>
@@ -47,7 +47,7 @@
 {{end}}</pre>{{else}}<p class="text-secondary mb-0">This host renders no block of its own.</p>{{end}}</div>
     </div>
     <div class="card mt-3">
-      <div class="card-header"><h2 class="card-title">Pinned host keys</h2>{{if not $.ReadOnly}}<div class="card-actions">{{template "job_open" $}}<input type="hidden" name="action" value="knownhosts-pin"><input type="hidden" name="host" value="{{.Detail.Alias}}"><button type="submit" class="btn btn-sm btn-outline-primary"{{tip "host-pin"}}>{{icon "fingerprint"}}<span class="ms-1">{{if .Pins}}Pin again{{else}}Pin its keys{{end}}</span></button></form></div>{{end}}</div>
+      <div class="card-header"><h2 class="card-title">Pinned host keys</h2>{{if not $.ReadOnly}}<div class="card-actions">{{template "job_open" $}}<input type="hidden" name="action" value="knownhosts-pin"><input type="hidden" name="host" value="{{.Detail.Alias}}"><button type="submit" class="btn btn-sm btn-outline-primary"{{desc "host-pin"}}>{{icon "fingerprint"}}<span class="ms-1">{{if .Pins}}Pin again{{else}}Pin its keys{{end}}</span></button></form></div>{{end}}</div>
       {{if .Pins}}
       <div class="table-responsive" tabindex="0">
         <table class="table table-vcenter card-table">
@@ -72,14 +72,14 @@
         {{if $.Data.VM}}<div class="mt-4 pt-3 border-top">
           <h3 class="h4">Docker</h3>
           {{template "change_open" $}}<input type="hidden" name="action" value="vm-docker-context"><input type="hidden" name="alias" value="{{.Alias}}">
-            <button type="submit" class="btn btn-outline-secondary"{{tip "docker-context"}}>Create a Docker context for {{.Alias}}</button>
+            <button type="submit" class="btn btn-outline-secondary"{{desc "docker-context"}}>Create a Docker context for {{.Alias}}</button>
           </form>
         </div>{{end}}
         <div class="mt-4 pt-3 border-top">
           <h3 class="h4 text-danger">Delete</h3>
           <p class="text-secondary small">Its manifest entry, its block in <code>~/.ssh/config</code> and its pinned host keys go. Its key files stay on disk.</p>
           <form method="post" action="{{basePath}}/changes/preview" data-inline id="f-host-delete"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="host-delete"><input type="hidden" name="profile" value="{{.Profile}}"><input type="hidden" name="alias" value="{{.Alias}}">
-            <button type="submit" class="btn btn-outline-danger"{{tip "delete"}}>{{icon "trash"}}<span class="ms-1">Preview deleting {{.Alias}}</span></button>
+            <button type="submit" class="btn btn-outline-danger"{{desc "delete"}}>{{icon "trash"}}<span class="ms-1">Preview deleting {{.Alias}}</span></button>
           </form>
         </div>
 {{template "panel_close"}}
