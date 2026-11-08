@@ -14,7 +14,9 @@ A VM's address comes from its hypervisor and changes, so a VM host does not carr
 | Podman machine | `podman` | `machine list --format json` (forwarded port) | not needed | Podman |
 
 OrbStack and Podman run their own SSH access and keys: `vm list` shows their machines, and they are
-refused as hosts so authama never takes their keys over. VMware's VM name is the path of its `.vmx`.
+refused as hosts so authama never takes their keys over. Each has its own Docker: OrbStack makes the
+context `orbstack` (`docker context use orbstack`), and Podman serves the Docker API on the socket
+`podman machine inspect` names (point `DOCKER_HOST` at it). `vm docker-context` is for VM hosts only. VMware's VM name is the path of its `.vmx`.
 
 ## Choosing your hypervisors
 
@@ -142,7 +144,41 @@ and `authama ssh config render` rewrites it.
 ## `authama ssh vm docker-context <alias>`
 
 Creates (or updates) a Docker context `ssh://<alias>`, so `docker --context devbox ps` runs against the
-VM's daemon through the same ProxyCommand. OrbStack and Podman provide their own contexts.
+VM's daemon through the same ProxyCommand. It takes a VM host only; OrbStack and Podman provide their
+own Docker (see above).
+
+## Docker in a devbox
+
+A VM host whose guest runs Docker is reached from the Mac with `docker --context <alias> ...`, or by
+default after `docker context use <alias>`. authama keeps four things in step for it: the host, its
+key, the host-key pin, and the context. The guest needs Docker Engine, `sshd`, and the guest user in
+the `docker` group; authama never changes the guest's groups or services, it says what to run.
+
+| Where | What it checks |
+|---|---|
+| `ssh vm sync` | connects once as the guest user and runs `docker version`, the session `docker` itself will use. A guest with Docker gets its context even when the engine does not answer yet, and the host's note names the cause and the fix: `sudo usermod -aG docker <user>` for a refused socket, `sudo systemctl enable --now docker` for a stopped engine, `DOCKER_HOST` in `~/.bashrc` for rootless Docker |
+| `doctor` | every Docker context authama made, and any named after a VM host: a host that is gone, a context pointing somewhere else, and, for each running VM, `docker --context <alias> version` (bounded, never starting a VM). A context whose engine does not answer is a warning with its fix; `--strict` fails on it. `--json`: `docker_contexts` |
+| web UI, VMs page | the same list, with **Check the engines** to run the check on demand; the page connects to no guest otherwise |
+
+### Shared connections
+
+Each `docker` command starts `ssh <alias> docker system dial-stdio`, and each ssh connection to a VM
+host asks the hypervisor where the VM is. With `vm.multiplex` (`AUTHAMA_VM_MULTIPLEX`, default `true`) a
+VM host's block also renders:
+
+```text
+    ControlMaster auto
+    ControlPath ~/.ssh/authama-cm/%C
+    ControlPersist 10m
+```
+
+so a run of commands shares one connection, and one hypervisor lookup, for ten minutes after the
+last. `config render` and `vm proxy` create `~/.ssh/authama-cm` owner-only. A `ControlMaster`,
+`ControlPath` or `ControlPersist` in the host's `raw_options` wins over authama's. Before `vm sync`
+replaces a pin (`--repin`) or removes a gone VM's host, it ends that host's shared connection, so no
+connection keeps talking to the old guest; the sync probe always opens a fresh one, so the host-key
+check it makes is real. Windows' OpenSSH has no `ControlMaster`, so nothing is rendered there. Set
+`vm.multiplex` to `false` to turn it off, then `authama ssh config render`.
 
 ## `authama ssh vm sync`
 
@@ -150,7 +186,7 @@ Keeps every VM host matching its VM. For each host it asks the hypervisor what b
 
 | VM is | sync does |
 |---|---|
-| running | pins the guest's host key if nothing is pinned; re-installs the host's public key in the guest when the guest refuses it (with the hypervisor's exec); creates or refreshes Docker context `ssh://<alias>` |
+| running | pins the guest's host key if nothing is pinned; re-installs the host's public key in the guest when the guest refuses it (with the hypervisor's exec); asks the guest's Docker engine for its version as the guest user, and creates or refreshes Docker context `ssh://<alias>` when the guest has Docker (a note names the fix when the engine does not answer) |
 | gone | backs up the manifest, removes the host entry (never its key files), and removes the Docker context authama made for it (exported first) |
 | suspended, paused or stopped | reported and left alone: sync never starts, stops or deletes a VM |
 
@@ -175,8 +211,9 @@ authama ssh vm sync --yes       # no confirmation (implied with no terminal)
 | `--repin` | replace a pin when the guest's host key changed (a rebuilt VM); otherwise reported (`vm.repin_changed`) |
 | `--install-schedule` / `--remove-schedule` | run `sync --quiet --yes` daily at 09:30 with launchd (macOS), systemd or cron (Linux), or Task Scheduler (Windows) |
 
-Settings: `vm.prune_gone` (`AUTHAMA_VM_PRUNE_GONE`, default `true`; off, a gone VM is only reported) and
-`vm.repin_changed` (`AUTHAMA_VM_REPIN`, default `false`).
+Settings: `vm.prune_gone` (`AUTHAMA_VM_PRUNE_GONE`, default `true`; off, a gone VM is only reported),
+`vm.repin_changed` (`AUTHAMA_VM_REPIN`, default `false`) and `vm.multiplex` (`AUTHAMA_VM_MULTIPLEX`,
+default `true`; see [Shared connections](#shared-connections)).
 
 Backups: before any change, sync snapshots `~/.ssh` and copies the manifest to
 `<state home>/backups/vmsync/`; an exported Docker context goes there too. Private keys are never read,
@@ -226,7 +263,8 @@ releases the reservation.
 
 ## The web UI
 
-`authama serve` has a **VMs** page (`/vms`): the VM hosts and their state, the pending sync plan with a
+`authama serve` has a **VMs** page (`/vms`): the VM hosts and their state, the Docker contexts of VM
+hosts with **Check the engines**, the pending sync plan with a
 Preview/Apply of `ssh vm sync` (optionally `--repin`), the hypervisors with their CLI and VMs, the
 declared devboxes (a planned one shows "no VM yet"), the reserved keys, an adopt-key form, and buttons to install or remove the daily sync. Every change shows
 the exact CLI command and a preview first, as on the other pages.

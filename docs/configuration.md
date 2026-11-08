@@ -660,6 +660,7 @@ every setting stays at its default until you add it.
 | `tokens.docker_creds_store` | `AUTHAMA_DOCKER_CREDS_STORE` | ask at a terminal, else refuse |
 | `notifications.desktop` | `AUTHAMA_NOTIFICATIONS` | `true` |
 | `vm.hypervisors` | `AUTHAMA_VM_HYPERVISORS` | every built-in driver and every custom one |
+| `vm.multiplex` | `AUTHAMA_VM_MULTIPLEX` | `true` (a VM host shares one SSH connection for 10 minutes; ignored on Windows; see [tools/vm.md](tools/vm.md#shared-connections)) |
 | `vm.prune_gone` | `AUTHAMA_VM_PRUNE_GONE` | `true` (`ssh vm sync` removes the host of a VM that is gone) |
 | `vm.repin_changed` | `AUTHAMA_VM_REPIN` | `false` (`ssh vm sync` reports a changed guest host key) |
 | `web.addr` | `AUTHAMA_WEB_ADDR` | `127.0.0.1` (a non-loopback address still needs `--allow-remote`) |

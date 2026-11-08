@@ -2651,7 +2651,10 @@ Examples:
 A VM's IP changes, so a VM host renders ProxyCommand "<authama>" vm proxy <alias>:
 each connection asks the hypervisor for the VM's current address. Built in:
 parallels, vmpal, vmware, utm, lima, orbstack, podman. OrbStack and Podman run their own SSH and keys;
-they are listed, and get a Docker context, but authama does not take their keys over.
+they are listed, but authama does not take their keys over or make them hosts (each has
+its own Docker: OrbStack's context is orbstack). A VM host whose guest runs Docker gets a
+Docker context ssh://<alias> from `vm sync`, shared-connection SSH (vm.multiplex), and an
+engine check in doctor.
 
 Which hypervisors you use is vm.hypervisors (AUTHAMA_VM_HYPERVISORS); any other tool can be
 added as a command driver in authama.json's "hypervisors" section, and the VMs you work
