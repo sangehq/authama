@@ -24,6 +24,7 @@
               {{with index $.Data.Public .Ref.String}}<button type="button" class="dropdown-item" data-copy="{{.}}"{{desc "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the public key</span></button>{{end}}
               {{if .Fingerprint}}<button type="button" class="dropdown-item" data-copy="{{.Fingerprint}}"{{desc "copy-value"}}>{{icon "fingerprint"}}<span class="ms-2">Copy the fingerprint</span></button>{{end}}
               <button type="button" class="dropdown-item" data-copy="{{.IdentityFile}}"{{desc "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the identity file's path</span></button>
+              <a class="dropdown-item" href="{{basePath}}/checklist?item={{.Ref}}" data-inline{{desc "row-checklist"}}>{{icon "check"}}<span class="ms-2">Checklist</span></a>
               <a class="dropdown-item" href="{{basePath}}/history?key={{.Ref.KeyName}}&amp;profile={{.Ref.Profile}}" data-inline{{desc "row-history"}}>{{icon "history"}}<span class="ms-2">History</span></a>
               {{if not $.ReadOnly}}<button type="submit" class="dropdown-item" form="f-regen-{{.Ref.Profile}}-{{.Ref.KeyName}}"{{desc "key-regen-pub"}}>{{icon "refresh"}}<span class="ms-2">Rebuild the .pub</span></button>
               <a class="dropdown-item" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}#lifetime"{{desc "key-lifetime"}}>{{icon "hourglass"}}<span class="ms-2">Set lifetime</span></a>

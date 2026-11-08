@@ -99,6 +99,11 @@ var v1RemovedVerbs = map[string]string{
 // deviation that authorises it. An entry here is a decision someone made; an
 // addition without one is a test failure.
 var goOnly = map[string]string{
+	"checklist":                 "owner, 2026-11-08: a checklist for every revocable item, of where it is used and what is left to rotate or revoke it",
+	"checklist show":            "owner, 2026-11-08: one item's checklist, with the command for each step left",
+	"checklist tick":            "owner, 2026-11-08: tick a step authama cannot check (the issuer, a copy in CI)",
+	"checklist untick":          "owner, 2026-11-08: undo a tick",
+	"checklist revoking":        "owner, 2026-11-08: a token has no revoked state, so its revocation checklist starts when asked",
 	"notify send":               "go-notifykit - the notify verbs every Simtabi Go program shares",
 	"notify ping":               "go-notifykit - hand a notification to the running web UI",
 	"notify doctor":             "go-notifykit - whether desktop notifications work here, and why not",

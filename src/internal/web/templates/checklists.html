@@ -1,0 +1,38 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "Security" "Checklists" "Where every key and token is used, and what is left to rotate or revoke it completely.")}}
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Keys and tokens</h2>
+    <div class="card-actions">
+      <nav aria-label="Show" class="nav nav-segmented nav-sm">
+        <a class="nav-link{{if eq .Show ""}} active{{end}}" href="{{basePath}}/checklists"{{if eq .Show ""}} aria-current="page"{{end}}{{desc "checklists-show"}}>All <span class="badge badge-muted ms-1">{{index .Counts ""}}</span></a>
+        <a class="nav-link{{if eq .Show "open"}} active{{end}}" href="{{basePath}}/checklists?show=open"{{if eq .Show "open"}} aria-current="page"{{end}}{{desc "checklists-show"}}>Steps left <span class="badge badge-muted ms-1">{{index .Counts "open"}}</span></a>
+        <a class="nav-link{{if eq .Show "keys"}} active{{end}}" href="{{basePath}}/checklists?show=keys"{{if eq .Show "keys"}} aria-current="page"{{end}}{{desc "checklists-show"}}>Keys <span class="badge badge-muted ms-1">{{index .Counts "keys"}}</span></a>
+        <a class="nav-link{{if eq .Show "tokens"}} active{{end}}" href="{{basePath}}/checklists?show=tokens"{{if eq .Show "tokens"}} aria-current="page"{{end}}{{desc "checklists-show"}}>Tokens <span class="badge badge-muted ms-1">{{index .Counts "tokens"}}</span></a>
+      </nav>
+    </div>
+  </div>
+  {{if .Items}}
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead><tr><th scope="col">Item</th><th scope="col">Kind</th><th scope="col">State</th><th scope="col" class="w-25">Progress</th></tr></thead>
+      <tbody>
+        {{range .Items}}{{$c := .}}
+        <tr>
+          <th scope="row"><a href="{{basePath}}/checklist?item={{.ID}}" data-inline{{desc "checklist-open"}}><code>{{.Name}}</code></a>{{with .Fingerprint}}<div class="text-secondary small text-break">{{.}}</div>{{end}}</th>
+          <td>{{if eq .Kind "key"}}SSH key{{else}}Auth token{{end}}</td>
+          <td>{{template "checklist_mode" .}}</td>
+          <td>{{template "checklist_progress" .}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  {{template "empty" (empty "circle-check" "Nothing here" "No key or token matches. Every step is done, or there is nothing to track yet.")}}
+  {{end}}
+  <div class="card-footer text-secondary small">
+    A key's checklist follows its life: where it is while in use, and what still has to go once it is revoked or a rotation replaces it. A token's revocation checklist starts from its page. The same lists as <code>authama checklist</code>.
+  </div>
+</div>
+{{end}}{{end}}

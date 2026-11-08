@@ -23,6 +23,7 @@
           <td class="text-end">
             {{if not $.ReadOnly}}<form method="post" action="{{basePath}}/changes/preview" data-inline id="f-token-{{.Target}}-{{.Host}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="token-delete"><input type="hidden" name="target" value="{{.Target}}"><input type="hidden" name="host" value="{{.Host}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for the %s token for %s" .Target .Host)}}
+              <a class="dropdown-item" href="{{basePath}}/checklist?item=token:{{.Target}}/{{.Host}}" data-inline{{desc "row-checklist"}}>{{icon "check"}}<span class="ms-2">Checklist</span></a>
               <a class="dropdown-item" href="{{basePath}}/history?credential={{.Target}}/{{.Host}}"{{desc "row-history"}}>{{icon "history"}}<span class="ms-2">History</span></a>
               <button type="button" class="dropdown-item" data-copy="{{.Host}}"{{desc "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the host</span></button>
               <button type="button" class="dropdown-item" data-copy="{{.File}}"{{desc "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the file's path</span></button>

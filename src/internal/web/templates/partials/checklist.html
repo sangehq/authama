@@ -1,0 +1,8 @@
+{{/* The state of an item's checklist, as a badge. */}}
+{{define "checklist_mode"}}{{if eq .Mode "revoked"}}<span class="badge badge-bad">revoked</span>{{else if eq .Mode "retired"}}<span class="badge badge-warn">retired by a rotation</span>{{else if eq .Mode "revoking"}}<span class="badge badge-warn">revoking</span>{{else}}<span class="badge badge-muted">in use</span>{{end}}{{with .Since}} <span class="text-secondary small">since {{.}}</span>{{end}}{{end}}
+
+{{/* How many of an item's steps are done, as a bar and a count. */}}
+{{define "checklist_progress"}}{{$done := stepsDone .}}{{$total := len .Steps}}<div class="d-flex align-items-center gap-2">
+  <div class="progress progress-sm flex-fill" role="progressbar" aria-label="Steps done" aria-valuenow="{{pct $done $total}}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar {{if eq $done $total}}bg-success{{else}}bg-primary{{end}} pct-{{pct $done $total}}"></div></div>
+  <span class="text-secondary small text-nowrap">{{$done}} of {{$total}}</span>
+</div>{{end}}

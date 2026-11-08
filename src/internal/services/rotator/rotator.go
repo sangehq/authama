@@ -336,12 +336,46 @@ func (r *Rotator) Rotate(selector string, allowUnverified bool, passphrase strin
 		results[i].Revoked = r.provider(hosts[i]).Remove(tgt)
 	}
 	report.Targets = results
+	r.recordRetirement(profile+"/"+keyName, report, results)
 
 	r.updateInventory(profile, keyName, keyType, comment, report, results)
 	report.Committed = true
 	log.Audit(r.p.AuditLog(), "rotate", log.Field{Key: "key", Value: keyName},
 		log.Field{Key: "old", Value: report.OldFingerprint}, log.Field{Key: "new", Value: report.NewFingerprint})
 	return report, nil
+}
+
+// recordRetirement keeps what the rotation did with the outgoing key: the
+// targets it was removed from, those it was not, and where the by-hand ones
+// are managed. It used to live only in the report, so once the job's output
+// was gone nothing said where the old key could still log in; the key's
+// checklist reads it from retired.json. Best-effort, like the removal itself.
+func (r *Rotator) recordRetirement(key string, report RotateReport, results []TargetResult) {
+	if report.OldFingerprint == "" {
+		return
+	}
+	path := inventory.RetiredPath(r.p.Inventory())
+	all, err := inventory.LoadRetirements(path)
+	if err != nil {
+		return
+	}
+	rec := inventory.Retirement{Key: key, Successor: report.NewFingerprint, RetiredOn: inventory.Today()}
+	for _, t := range results {
+		switch {
+		case t.Revoked:
+			rec.Removed = append(rec.Removed, t.Alias)
+		default:
+			rec.NotRemoved = append(rec.NotRemoved, t.Alias)
+			if t.ManageURL != "" {
+				if rec.ByHand == nil {
+					rec.ByHand = map[string]string{}
+				}
+				rec.ByHand[t.Alias] = t.ManageURL
+			}
+		}
+	}
+	all[report.OldFingerprint] = rec
+	_ = all.Save(path)
 }
 
 // keyType and comment are what the new key is and carries, so the record names it the way

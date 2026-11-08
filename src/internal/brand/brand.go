@@ -34,7 +34,7 @@ const (
 // TopLevel lists the commands that sit directly under Command. Every other
 // verb lives in the ssh group; a test in the cli package keeps this list equal
 // to the command tree.
-var TopLevel = []string{"version", "doctor", "init", "migrate", "settings", "history", "events", "man", "serve", "owner", "repair", "reset", "export", "ssh", "token"}
+var TopLevel = []string{"version", "doctor", "init", "migrate", "settings", "history", "events", "man", "serve", "owner", "repair", "reset", "export", "ssh", "token", "checklist"}
 
 // TopLevelAliases are the other names of top-level commands: `auth` is the
 // token group. The same test keeps it equal to the tree's aliases.

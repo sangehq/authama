@@ -20,6 +20,7 @@ import (
 	"github.com/simtabi/authama/src/internal/platform"
 	"github.com/simtabi/authama/src/internal/services/bundler"
 	"github.com/simtabi/authama/src/internal/services/change"
+	"github.com/simtabi/authama/src/internal/services/checklist"
 	"github.com/simtabi/authama/src/internal/services/doctor"
 	"github.com/simtabi/authama/src/internal/services/history"
 	"github.com/simtabi/authama/src/internal/services/keyaudit"
@@ -126,6 +127,9 @@ type KeyView struct {
 	DefaultDays int
 	Expiry      *expiry.Status
 	Ops         []history.Op
+	// Checklist is where the key is used and what is left to rotate or
+	// revoke it; nil when it could not be worked out.
+	Checklist *checklist.Checklist
 }
 
 // SnapshotView is one snapshot in the list.
@@ -406,6 +410,9 @@ func (e AppEngine) Key(ref string) (KeyView, error) {
 			}
 		}
 		v.Ops, _ = e.History(history.Filter{Key: r.KeyName, Profile: r.Profile, Limit: 20})
+		if c, err := checklist.New(e.P).Get(r.String()); err == nil {
+			v.Checklist = &c
+		}
 		return v, nil
 	}
 	return KeyView{}, ErrNotFound

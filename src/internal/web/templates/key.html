@@ -37,6 +37,14 @@
     </div>
   </div>
   <div class="col-lg-6">
+    {{with .Checklist}}<div class="card mb-3">
+      <div class="card-header"><h2 class="card-title">Checklist</h2><div class="card-actions">{{template "checklist_mode" .}}</div></div>
+      <div class="card-body">
+        {{template "checklist_progress" .}}
+        <p class="text-secondary small mt-2 mb-3">{{if eq .Mode "in-use"}}Every place this key is, and that each is sound.{{else}}What still has to go before this key stops working everywhere.{{end}}</p>
+        <a class="btn btn-outline-primary" href="{{basePath}}/checklist?item={{.ID}}" data-inline{{desc "key-checklist"}}>{{icon "check"}}<span class="ms-1">Open the checklist</span></a>
+      </div>
+    </div>{{end}}
     <div class="card">
       <div class="card-header"><h2 class="card-title">Deployments</h2></div>
       {{if .Detail.Deployments}}
