@@ -51,6 +51,9 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /vms", h.handleVMs)
 	mux.HandleFunc("GET /audit", h.handleAudit)
 	mux.HandleFunc("GET /tokens", h.handleTokens)
+	cl := checklistPages{s}
+	mux.HandleFunc("GET /checklists", cl.handleList)
+	mux.HandleFunc("GET /checklist", cl.handleItem)
 	mux.HandleFunc("GET /security", ownerPages{s}.handleSecurity)
 	mux.HandleFunc("GET /repair", ownerPages{s}.handleRepair)
 	sp := systemPages{s: s}
@@ -70,6 +73,10 @@ func (s *Server) routes() http.Handler {
 	if !s.opts.ReadOnly {
 		mux.HandleFunc("POST /api/export/selections", exportSelectionsAPI{s}.handleSave)
 		mux.HandleFunc("POST /api/export/selections/delete", exportSelectionsAPI{s}.handleDelete)
+		// A tick, or starting a token's revocation, is kept in the state
+		// directory and touches nothing under ~/.ssh: no preview.
+		mux.HandleFunc("POST /checklist/tick", checklistPages{s}.handleTick)
+		mux.HandleFunc("POST /checklist/revoking", checklistPages{s}.handleRevoking)
 		mux.HandleFunc("POST /changes/preview", h.handlePreview)
 		mux.HandleFunc("POST /changes/apply", h.handleApply)
 		mux.HandleFunc("POST /jobs/review", jh.handleJobReview)

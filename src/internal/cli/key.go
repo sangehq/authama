@@ -40,16 +40,26 @@ func newKeyCmd() *cobra.Command {
 }
 
 func newKeyDeleteCmd() *cobra.Command {
-	var purge, revoke, yes, noKeyBackup bool
+	var purge, revoke, yes, noKeyBackup, all bool
+	var category string
 	cmd := &cobra.Command{
-		Use:   "delete <profile/key>",
+		Use:   "delete [<profile/key>|profile|alias ...] [--category <name>] [--all]",
 		Short: "Delete a key (refuses while a host uses it)",
 		Long: "Delete a key (refuses while a host uses it).\n\n" +
 			"Without --purge the manifest declaration and the inventory record go away\n" +
 			"and the key files stay on disk, so an accidental delete costs nothing.\n" +
-			"--purge deletes the files too, after writing an encrypted backup.",
-		Args: cobra.ExactArgs(1),
+			"--purge deletes the files too, after writing an encrypted backup.\n\n" +
+			"Name several keys, profiles or host aliases, a --category or --all to delete\n" +
+			"each key among them that no host uses; the ones a host uses are named and kept.",
+		Args: cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
+			if err := needsSelection(args, all, category); err != nil {
+				return err
+			}
+			if !oneKey(c, args, all, category) {
+				return deleteMany(c, keysvc.Selection{Selectors: args, Category: category, All: all},
+					lifecycle.Options{Purge: purge, Revoke: revoke}, yes, noKeyBackup)
+			}
 			p, err := resolvePaths(c)
 			if err != nil {
 				return err
@@ -102,6 +112,8 @@ func newKeyDeleteCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&purge, "purge", false, "also delete the key files from disk")
 	cmd.Flags().BoolVar(&revoke, "revoke", false, "revoke the deployed public key from its targets first")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the confirmation prompt")
+	cmd.Flags().BoolVar(&all, "all", false, "delete every key no host uses")
+	cmd.Flags().StringVar(&category, "category", "", "delete every key no host uses in profiles of this category")
 	cmd.Flags().BoolVar(&noKeyBackup, "no-key-backup", false,
 		"purge without writing an encrypted backup first (the key is then unrecoverable)")
 	return cmd

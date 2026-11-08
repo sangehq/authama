@@ -110,6 +110,7 @@ func newRootCmd() *cobra.Command {
 	ssh.AddCommand(sshCommands()...)
 	root.AddCommand(ssh)
 	root.AddCommand(newTokenCmd())
+	root.AddCommand(newChecklistCmd())
 
 	// Two pre-group spellings stay, hidden, because files on disk run them:
 	// releases up to 2026-11-07 rendered `"<authama>" vm proxy <alias>` as each

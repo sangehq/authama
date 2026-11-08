@@ -1,5 +1,5 @@
 {{define "content"}}
-{{template "page_header" (header "SSH" "Keys" "Every key with its fingerprint and expiry, and the loose keys kept on purpose." (only (not .ReadOnly) (panel "Add a key" "add-key" "plus" | withTip "key-add")) (only (not .ReadOnly) (panel "Mint missing keys" "mint-keys" "key" | withTip "key-mint")) (only (and (not .ReadOnly) (gt (len .Data.Rows) 0)) (panel "Rebuild public keys" "regen-pub" "refresh" | withTip "key-regen-pub-many")) (only (not .ReadOnly) (panel "Move the key root" "key-root" "folder" | withTip "key-root")))}}
+{{template "page_header" (header "SSH" "Keys" "Every key with its fingerprint and expiry, and the loose keys kept on purpose." (only (not .ReadOnly) (panel "Add a key" "add-key" "plus" | withTip "key-add")) (only (not .ReadOnly) (panel "Mint missing keys" "mint-keys" "key" | withTip "key-mint")) (only (and (not .ReadOnly) (gt (len .Data.Rows) 0)) (panel "Rebuild public keys" "regen-pub" "refresh" | withTip "key-regen-pub-many")) (only (not .ReadOnly) (panel "Move the key root" "key-root" "folder" | withTip "key-root")) (only (and (not .ReadOnly) (not .DevRoot) (gt (len .Data.Rows) 0)) (panel "Rotate keys" "rotate-keys" "recycle" | withTip "keys-rotate")) (only (and (not .ReadOnly) (not .DevRoot) (gt (len .Data.Rows) 0)) (panel "Revoke keys" "revoke-keys" "ban" | withTip "keys-revoke")) (only (and (not .ReadOnly) (gt (len .Data.Rows) 0)) (panel "Delete keys" "delete-keys" "trash" | withTip "keys-delete")))}}
 <div class="card">
   <div class="card-header"><h2 class="card-title">Keys</h2>{{if .Data.Rows}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data.Rows}} in the manifest</span>{{template "csv" "/exports/keys.csv"}}</div>{{end}}</div>
   {{if .Data.Rows}}
@@ -24,6 +24,7 @@
               {{with index $.Data.Public .Ref.String}}<button type="button" class="dropdown-item" data-copy="{{.}}"{{desc "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the public key</span></button>{{end}}
               {{if .Fingerprint}}<button type="button" class="dropdown-item" data-copy="{{.Fingerprint}}"{{desc "copy-value"}}>{{icon "fingerprint"}}<span class="ms-2">Copy the fingerprint</span></button>{{end}}
               <button type="button" class="dropdown-item" data-copy="{{.IdentityFile}}"{{desc "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the identity file's path</span></button>
+              <a class="dropdown-item" href="{{basePath}}/checklist?item={{.Ref}}" data-inline{{desc "row-checklist"}}>{{icon "check"}}<span class="ms-2">Checklist</span></a>
               <a class="dropdown-item" href="{{basePath}}/history?key={{.Ref.KeyName}}&amp;profile={{.Ref.Profile}}" data-inline{{desc "row-history"}}>{{icon "history"}}<span class="ms-2">History</span></a>
               {{if not $.ReadOnly}}<button type="submit" class="dropdown-item" form="f-regen-{{.Ref.Profile}}-{{.Ref.KeyName}}"{{desc "key-regen-pub"}}>{{icon "refresh"}}<span class="ms-2">Rebuild the .pub</span></button>
               <a class="dropdown-item" href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}#lifetime"{{desc "key-lifetime"}}>{{icon "hourglass"}}<span class="ms-2">Set lifetime</span></a>
@@ -106,6 +107,34 @@
           {{template "panel_actions" ""}}
         </form>
 {{template "panel_close"}}
+{{if .Data.Rows}}
+  {{if not .DevRoot}}
+{{template "panel_open" (header "rotate-keys" "Rotate keys" "Choose any keys: single keys, whole profiles or categories, or every key.")}}
+        {{template "job_open" .}}<input type="hidden" name="action" value="rotate-keys">
+          {{template "key_picker" (picker .Data "rotate")}}
+          <div class="mb-3"><label class="form-check"><input class="form-check-input" type="checkbox" name="allow_unverified" value="1"><span class="form-check-label">Go on when a login cannot be verified</span></label></div>
+          <p class="text-secondary small mb-3">Each chosen key a host uses rotates in turn, as a job. A key that fails is left as it was. An encrypted backup is written first.</p>
+          {{template "panel_actions" "btn-outline-danger"}}
+        </form>
+{{template "panel_close"}}
+{{template "panel_open" (header "revoke-keys" "Revoke keys" "Each chosen key is removed from every target it is deployed to and recorded as revoked.")}}
+        {{template "job_open" .}}<input type="hidden" name="action" value="revoke-keys">
+          {{template "key_picker" (picker .Data "revoke")}}
+          <div class="mb-3"><label class="form-label" for="rk-reason">Reason <span class="text-secondary">(optional, kept with the record)</span></label><input class="form-control" id="rk-reason" name="reason" autocomplete="off" maxlength="200"></div>
+          <p class="text-secondary small mb-3">The declarations, hosts and files stay: each key's checklist then lists what is left, such as minting a successor and deleting the private key.</p>
+          {{template "panel_actions" "btn-outline-danger"}}
+        </form>
+{{template "panel_close"}}
+  {{end}}
+{{template "panel_open" (header "delete-keys" "Delete keys" "Each chosen key's declaration and record go; a key a host uses is left alone.")}}
+        {{template "job_open" .}}<input type="hidden" name="action" value="delete-keys">
+          {{template "key_picker" (picker .Data "delete")}}
+          {{if not .DevRoot}}<div class="mb-2"><label class="form-check"><input class="form-check-input" type="checkbox" name="revoke" value="1"><span class="form-check-label">Revoke each from its targets first</span></label></div>{{end}}
+          <div class="mb-3"><label class="form-check"><input class="form-check-input" type="checkbox" name="purge" value="1"><span class="form-check-label">Delete the key files too, after an encrypted backup</span></label></div>
+          {{template "panel_actions" "btn-outline-danger"}}
+        </form>
+{{template "panel_close"}}
+{{end}}
 {{template "panel_open" (header "mint-keys" "Mint missing keys" "Keys that exist are left alone.")}}
         {{template "change_open" .}}<input type="hidden" name="action" value="keygen">
           <div class="mb-2"><label class="form-label" for="g-target">For a profile or host alias</label><input class="form-control" id="g-target" name="target" required autocomplete="off" spellcheck="false" list="k-profiles"></div>

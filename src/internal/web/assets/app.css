@@ -312,3 +312,33 @@ main:focus { outline: none; }
 /* Header logo mark: the favicon itself, so the tab and the header read as one product. */
 .navbar-brand-mark { width: 2rem; height: 2rem; flex: none; }
 .navbar-brand-text { margin-left: .625rem; font-weight: 600; white-space: nowrap; }
+
+/* Checklists: one step a row, its mark, what it is, and its command or link;
+   a step ticked by hand has its button at the end. */
+.checklist-step { display: flex; align-items: flex-start; gap: .75rem; }
+.checklist-mark { flex: none; margin-top: .125rem; }
+.checklist-step.is-done .checklist-mark { color: var(--tblr-success); }
+.checklist-step.is-todo .checklist-mark { color: var(--tblr-warning); }
+.checklist-step.is-unknown .checklist-mark { color: var(--tblr-secondary); }
+.checklist-body { flex: 1 1 auto; min-width: 0; }
+.checklist-title { font-weight: var(--tblr-font-weight-medium, 500); }
+.checklist-step.is-done .checklist-title { color: var(--tblr-secondary); font-weight: normal; }
+.checklist-fix { display: flex; align-items: center; gap: .25rem; margin-top: .25rem; flex-wrap: wrap; }
+.checklist-fix code { overflow-wrap: anywhere; }
+.checklist-tick { flex: none; }
+.checklist-progress { min-width: 12rem; }
+@media (max-width: 575.98px) {
+  .checklist-step { flex-wrap: wrap; }
+  .checklist-tick { width: 100%; padding-left: 2rem; }
+}
+
+/* Key picker: every key, whole categories or profiles, or single keys. The
+   list scrolls on its own so the panel's buttons stay in reach. */
+.key-picker { border: 0; padding: 0; margin: 0 0 1rem; min-width: 0; }
+.key-picker-cats { display: flex; flex-wrap: wrap; align-items: center; margin: .25rem 0 .5rem; }
+.key-picker-list { max-height: 18rem; overflow-y: auto; border: 1px solid var(--tblr-border-color); border-radius: var(--tblr-border-radius); padding: .5rem .75rem; }
+.key-picker-profile + .key-picker-profile { margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--tblr-border-color-translucent); }
+.key-picker-key { margin-left: 1.5rem; }
+.key-picker-key code { overflow-wrap: anywhere; }
+.key-picker-key.is-ineligible { opacity: .65; }
+.key-picker.is-all .key-picker-list, .key-picker.is-all .key-picker-cats { opacity: .5; }

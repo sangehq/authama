@@ -15,6 +15,7 @@ import { Inline, SidePanel } from "./js/components/side-panel.js";
 import { CsvExport } from "./js/components/csv-export.js";
 import { JsonField } from "./js/components/json-field.js";
 import { ExportPage } from "./js/components/export-page.js";
+import { KeyPicker } from "./js/components/key-picker.js";
 import { LiveBuild, RestartServer, Restarted } from "./js/components/restart.js";
 
 App.create()
@@ -33,6 +34,7 @@ App.create()
   .use(AutoSubmit)
   .use(JobStream)
   .use(ShowWhen)
+  .use(KeyPicker)
   .use(CopyText)
   .use(PanelOpen)
   .use(PanelFromHash)

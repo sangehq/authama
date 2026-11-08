@@ -18,6 +18,11 @@ Every command also takes the global flag:
 
 ## Contents
 
+- [`authama checklist`](#authama-checklist) - Where each key and token is used, and what is left to rotate or revoke it completely
+  - [`authama checklist revoking`](#authama-checklist-revoking) - Start a token's revocation checklist (--stop to go back to where it is used)
+  - [`authama checklist show`](#authama-checklist-show) - One item's checklist: every step, what is done, and the command for the rest
+  - [`authama checklist tick`](#authama-checklist-tick) - Mark a step authama cannot check as done
+  - [`authama checklist untick`](#authama-checklist-untick) - Mark a ticked step as not done
 - [`authama doctor`](#authama-doctor) - Diagnose deps, perms, agent, known_hosts, drift, dangling keys, and token-file perms
 - [`authama events`](#authama-events) - Every change seen to a file under ~/.ssh, the config home or a token file, newest first
 - [`authama export`](#authama-export) - Write any list as CSV, JSON, YAML, a PHP or JS array, Markdown or HTML, or hosts for an SSH client, filtered
@@ -147,6 +152,122 @@ Every command also takes the global flag:
   - [`authama token show`](#authama-token-show) - Everything about one installed token: tool, host, kind, user and file (secret masked)
   - [`authama token status`](#authama-token-status) - Which config is in use, where each tool's file is, and which variables are missing; write nothing
 - [`authama version`](#authama-version) - Print the authama version
+
+## authama checklist
+
+A checklist per key and per token. While a key is in use it lists where the key is:
+its files, the hosts that use it, each target it is installed on. Once it is revoked, or a
+rotation replaces it, it lists what still has to go: targets it could not be removed from,
+the private key, ssh-agent, encrypted bundles, and copies authama cannot see.
+
+A token's revocation checklist starts with `authama checklist revoking <item>`.
+
+Steps authama can check it works out each time. The rest (the token's issuer, Termius, a
+CI secret) you tick by hand with `authama checklist tick`; ticks are kept in the state
+directory. An item is named by its id from this list, or a key by profile/key.
+
+```
+authama checklist [flags]
+```
+
+Subcommands:
+
+- [`revoking`](#authama-checklist-revoking) - Start a token's revocation checklist (--stop to go back to where it is used)
+- [`show`](#authama-checklist-show) - One item's checklist: every step, what is done, and the command for the rest
+- [`tick`](#authama-checklist-tick) - Mark a step authama cannot check as done
+- [`untick`](#authama-checklist-untick) - Mark a ticked step as not done
+
+Examples:
+
+```sh
+  authama checklist
+  authama checklist --open
+  authama checklist --json
+```
+
+Flags:
+
+```
+      --json   print every checklist as JSON
+      --open   only items with steps left
+```
+
+## authama checklist revoking
+
+A token has no revoked state of its own: authama cannot tell whether its issuer still
+accepts it. This switches its checklist to the steps for revoking it - at the issuer, in each
+tool's file, in authama's .env, in CI - and --stop switches it back.
+
+A key's checklist follows the key; revoke it with `authama ssh key revoke` or rotate it.
+
+```
+authama checklist revoking <token item> [flags]
+```
+
+Examples:
+
+```sh
+  authama checklist revoking token:npm/registry.npmjs.org
+  authama checklist revoking token:npm/registry.npmjs.org --stop
+```
+
+Flags:
+
+```
+      --stop   stop the revocation checklist
+```
+
+## authama checklist show
+
+One item's checklist: every step, what is done, and the command for the rest.
+
+```
+authama checklist show <item> [flags]
+```
+
+Examples:
+
+```sh
+  authama checklist show work/deploy
+  authama checklist show token:npm/registry.npmjs.org --json
+```
+
+Flags:
+
+```
+      --json   print the checklist as JSON
+```
+
+## authama checklist tick
+
+Mark a step authama cannot check as done. The step is the id `authama checklist show` prints after "by hand:".
+Only steps authama cannot see for itself can be ticked.
+
+```
+authama checklist tick <item> <step>
+```
+
+Examples:
+
+```sh
+  authama checklist tick work/deploy copies
+  authama checklist tick token:npm/registry.npmjs.org issuer
+```
+
+## authama checklist untick
+
+Mark a ticked step as not done. The step is the id `authama checklist show` prints after "by hand:".
+Only steps authama cannot see for itself can be ticked.
+
+```
+authama checklist untick <item> <step>
+```
+
+Examples:
+
+```sh
+  authama checklist untick work/deploy copies
+```
 
 ## authama doctor
 
@@ -1704,8 +1825,11 @@ Without --purge the manifest declaration and the inventory record go away
 and the key files stay on disk, so an accidental delete costs nothing.
 --purge deletes the files too, after writing an encrypted backup.
 
+Name several keys, profiles or host aliases, a --category or --all to delete
+each key among them that no host uses; the ones a host uses are named and kept.
+
 ```
-authama ssh key delete <profile/key> [flags]
+authama ssh key delete [<profile/key>|profile|alias ...] [--category <name>] [--all] [flags]
 ```
 
 Aliases: `rm`
@@ -1720,10 +1844,12 @@ Examples:
 Flags:
 
 ```
-      --no-key-backup   purge without writing an encrypted backup first (the key is then unrecoverable)
-      --purge           also delete the key files from disk
-      --revoke          revoke the deployed public key from its targets first
-  -y, --yes             skip the confirmation prompt
+      --all               delete every key no host uses
+      --category string   delete every key no host uses in profiles of this category
+      --no-key-backup     purge without writing an encrypted backup first (the key is then unrecoverable)
+      --purge             also delete the key files from disk
+      --revoke            revoke the deployed public key from its targets first
+  -y, --yes               skip the confirmation prompt
 ```
 
 ## authama ssh key lifetime
@@ -1854,21 +1980,28 @@ provider cannot remove keys, is named so you can remove it by hand.
 The key's declaration, hosts and files stay. Mint its successor next:
 `ssh keygen <profile/key> --force` now, or `ssh rotate <profile/key>` staged.
 
+Name several keys, profiles or host aliases, a --category or --all to revoke
+each minted key among them in turn; one that fails is named and the rest go on.
+
 ```
-authama ssh key revoke <profile/key> [flags]
+authama ssh key revoke [<profile/key>|profile|alias ...] [--category <name>] [--all] [flags]
 ```
 
 Examples:
 
 ```sh
   authama ssh key revoke work/work_gh-ed25519 --reason "laptop lost"
+  authama ssh key revoke work personal/personal_gh-ed25519 --yes
+  authama ssh key revoke --category clients --yes
 ```
 
 Flags:
 
 ```
-      --reason string   why, recorded with the revocation (e.g. "laptop lost")
-  -y, --yes             skip the confirmation prompt
+      --all               revoke every minted key
+      --category string   revoke every minted key in profiles of this category
+      --reason string     why, recorded with the revocation (e.g. "laptop lost")
+  -y, --yes               skip the confirmation prompt
 ```
 
 ## authama ssh key root

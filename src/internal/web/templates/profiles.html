@@ -79,7 +79,7 @@
         {{template "job_open" .}}<input type="hidden" name="action" value="rotate-keys">
           <div class="mb-2"><label class="form-label" for="r-profile">Profile</label><select class="form-select" id="r-profile" name="profile">{{range .Data}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div>
           <div class="mb-3"><label class="form-check"><input class="form-check-input" type="checkbox" name="all" value="1"><span class="form-check-label">Every key in every profile instead</span></label></div>
-          <p class="text-secondary small mb-3">Each key a host uses rotates in turn, as a job. A key that fails is left as it was. An encrypted backup is written first.</p>
+          <p class="text-secondary small mb-3">Each key a host uses rotates in turn, as a job. A key that fails is left as it was. An encrypted backup is written first. To choose single keys, or several profiles or categories, <a href="{{basePath}}/keys#rotate-keys">rotate from the Keys page</a>.</p>
           {{template "panel_actions" "btn-outline-danger"}}
         </form>
 {{template "panel_close"}}

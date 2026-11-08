@@ -83,6 +83,7 @@ func SealedFiles(p paths.Paths) map[string]string {
 		"manifest.json":    p.Manifest(),
 		"inventory.json":   p.Inventory(),
 		"revoked.json":     inventory.RevokedPath(p.Inventory()),
+		"retired.json":     inventory.RetiredPath(p.Inventory()),
 		"providers.json":   p.Providers(),
 		"tokens.json":      p.Tokens(),
 		"authama.json":     p.SettingsFile(),
