@@ -19,7 +19,7 @@
   <header class="navbar navbar-expand-md d-print-none">
     <div class="container-xl">
       {{if .Authed}}<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-menu" aria-controls="navbar-menu" aria-expanded="false" aria-label="Show the menu"{{tip "menu-toggle"}}><span class="navbar-toggler-icon"></span></button>{{end}}
-      <a class="navbar-brand navbar-brand-autodark pe-0 pe-md-3" href="{{basePath}}/">{{icon "terminal-2"}}<span class="ms-2">{{brandCommand}}</span></a>
+      <a class="navbar-brand navbar-brand-autodark pe-0 pe-md-3" href="{{basePath}}/" aria-label="{{brandName}} home"><img class="navbar-brand-mark" src="{{asset "favicon.svg"}}" width="32" height="32" alt=""><span class="navbar-brand-text d-none d-lg-inline">{{brandName}}</span><span class="navbar-brand-text d-none d-sm-inline d-lg-none">{{brandCommand}}</span></a>
       {{if and .Authed .ReadOnly}}<span class="badge badge-muted" aria-description="This server only reads: every form that would change something is hidden">{{icon "lock"}}<span class="ms-1">read-only</span></span>{{end}}
       <div class="navbar-nav flex-row order-md-last">
         {{if .Authed}}<div class="nav-item d-none d-md-flex me-3">

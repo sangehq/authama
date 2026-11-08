@@ -308,3 +308,7 @@ main:focus { outline: none; }
 .nav-menu-item { align-items: flex-start; white-space: normal; min-width: 16rem; max-width: 22rem; }
 .nav-menu-item > .icon { margin-top: .125rem; flex: none; }
 .nav-menu-desc { line-height: 1.35; }
+
+/* Header logo mark: the favicon itself, so the tab and the header read as one product. */
+.navbar-brand-mark { width: 2rem; height: 2rem; flex: none; }
+.navbar-brand-text { margin-left: .625rem; font-weight: 600; white-space: nowrap; }

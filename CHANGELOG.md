@@ -220,7 +220,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the `lg` breakpoint, Export's saved selections and filters move into a panel opened by a
   Filters button, and the row kinds scroll on one line instead of wrapping into three.
 - **Web UI: paths under your home show as `~/…`** on Settings, About, Auth tokens, the overview's
-  State card and the Doctor report, with the full path on hover. The token audit lists problems
+  State card and the Doctor report, with a copy button beside each for the full path. The token audit lists problems
   first, each finding with an icon for its outcome.
 - **Web UI on a phone:** a page's actions take their own row under the title, the second action
   and More show their icons alone, and the overview's counts sit two to a row.
@@ -232,6 +232,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   opening menu, panel or dialog, never shown while a menu is open and never on a touch screen.
   No element carries a native `title` any more; preview cells wrap instead of cutting off text
   you could only read on hover. A copy button beside each `~/…` path copies the full path.
+- **The web UI's tab icon and header share one logo mark.** The favicon is authama's key,
+  drawn in white on the primary rounded square. The header shows that mark followed by the
+  product name, Authentication Access Manager, on wide screens and `authama` on narrower
+  ones. The About page uses the same mark. A test checks that every page links the
+  embedded SVG favicon, that it is served as `image/svg+xml` and that it is the logo mark.
 - `src/go.mod` retracts v0.1.0 to v0.1.3, which the Go module proxy cached from the deleted
   pre-restart history. The next release is v0.1.4 (`docs/release.md`).
 
@@ -284,6 +289,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   only inside `.accordion-button-toggle`, which no accordion had, so Export's Profiles, Keys,
   Roles, Tags and Status groups and About's licences read as plain headings. Each now shows a
   chevron that turns when it opens; a test fails on any accordion without one.
+- **The installers retry GitHub when it answers 504.** `install.sh` and `install.ps1` retry the
+  version lookup and every download on a timeout, a 408, a 429 or a 5xx, with backoff, before
+  giving up. A 404 still fails at once, so the API's "no release" falls through to the
+  `releases/latest` redirect as before.
+- **The installers install the highest version tag when there is no release.** With binary
+  releases on hold the repository publishes none, so `install.sh` and `install.ps1` found no
+  version and stopped with "could not determine the version to install". After the latest release
+  and its redirect, they now read the tags and take the highest `vX.Y.Z`, never the Go module's
+  `src/` alias or a pre-release.
+
 - `ssh vm add --hypervisor orbstack|podman`, a devbox on either, and the same web form sent you to
   `ssh vm docker-context`, which needs a VM host those machines can never be. The refusal now
   says where their Docker is: OrbStack's own `orbstack` context, or Podman's socket for
