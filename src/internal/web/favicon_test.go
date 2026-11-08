@@ -49,12 +49,20 @@ func TestEveryPageNamesTheLogoMarkFavicon(t *testing.T) {
 	}
 }
 
-// The sign-in page, which has no session, still names the favicon.
-func TestTheSignInPageNamesTheFavicon(t *testing.T) {
+// The sign-in page, which has no session, and the not-found page still name
+// the favicon.
+func TestTheSignInAndNotFoundPagesNameTheFavicon(t *testing.T) {
 	s, _, _ := newTestServer(t)
 	req, _ := http.NewRequest(http.MethodGet, "/", nil)
 	req.Host = "127.0.0.1"
 	if body := do(s, req).Body.String(); !strings.Contains(body, `type="image/svg+xml" href="`) {
 		t.Errorf("a page without a session names no favicon:\n%.400s", body)
+	}
+	rec := signIn(t, s).get("/no-such-page")
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("/no-such-page answered %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), `type="image/svg+xml" href="`) {
+		t.Error("the not-found page names no favicon")
 	}
 }
