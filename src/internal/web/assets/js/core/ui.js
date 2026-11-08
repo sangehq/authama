@@ -122,6 +122,7 @@ export class Ui {
     const hide = () => Ui.hideTooltip();
     document.addEventListener("click", hide, true);
     document.addEventListener("scroll", hide, { capture: true, passive: true });
+    window.addEventListener("resize", hide, { passive: true });
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         hide();
@@ -169,11 +170,23 @@ export class Ui {
       return null;
     }
     Ui.hideTooltip();
+    const order = Ui.tipPlacements(el);
     const tip = new lib.Tooltip(el, {
       title: text ?? el.getAttribute("data-tip") ?? "",
-      placement: el.getAttribute("data-tip-placement") || "top",
+      placement: order[0],
+      // If the page moves under it, Popper flips through the rest in order.
+      fallbackPlacements: order.slice(1),
       trigger: "manual",
       container: "body",
+      // Clear of the control, and never touching the edge of the window.
+      offset: [0, 6],
+      popperConfig: (/** @type {any} */ cfg) => ({
+        ...cfg,
+        modifiers: [
+          ...(cfg.modifiers ?? []).filter((/** @type {any} */ m) => m.name !== "preventOverflow"),
+          { name: "preventOverflow", options: { boundary: "viewport", padding: 8, altAxis: true } },
+        ],
+      }),
     });
     Ui.#tip = { el, tip };
     el.addEventListener("hidden.bs.tooltip", () => {
@@ -184,6 +197,37 @@ export class Ui {
     }, { once: true });
     tip.show();
     return tip;
+  }
+
+  /**
+   * The sides a tooltip may open on, best first: the one with the most room,
+   * above or below before left or right, because a line of text is wide. A
+   * side that cannot fit a tooltip (about 48px tall, 160px wide) goes last,
+   * so a control at the top of the window opens downward, one at the right
+   * edge opens to the left, and the tooltip never sits over its control. A
+   * data-tip-placement on the control is the first choice when it has room.
+   * @param {Element} el
+   * @returns {string[]}
+   */
+  static tipPlacements(el) {
+    const r = el.getBoundingClientRect();
+    const room = {
+      top: r.top,
+      bottom: window.innerHeight - r.bottom,
+      left: r.left,
+      right: window.innerWidth - r.right,
+    };
+    const need = { top: 48, bottom: 48, left: 160, right: 160 };
+    /** @param {"top" | "bottom" | "left" | "right"} side */
+    const fits = (side) => room[side] >= need[side];
+    const vertical = /** @type {const} */ (["top", "bottom"]).slice().sort((a, b) => room[b] - room[a]);
+    const horizontal = /** @type {const} */ (["right", "left"]).slice().sort((a, b) => room[b] - room[a]);
+    const ranked = [...vertical, ...horizontal].sort((a, b) => Number(fits(b)) - Number(fits(a)));
+    const asked = el.getAttribute("data-tip-placement");
+    if (asked && ranked.includes(/** @type {any} */ (asked)) && fits(/** @type {any} */ (asked))) {
+      return [asked, ...ranked.filter((s) => s !== asked)];
+    }
+    return ranked;
   }
 
   /** Hides (and so disposes) the tooltip that is showing, and any about to. */

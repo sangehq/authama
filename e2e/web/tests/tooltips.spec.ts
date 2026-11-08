@@ -88,3 +88,32 @@ test.describe('on a touch screen', () => {
     await expect(page.getByRole('tooltip')).toHaveCount(0);
   });
 });
+
+// Where a tooltip opens depends on the room around its control: it never
+// covers the control, never runs off the window, and a control at the top of
+// the window (the header's theme switch) gets its tooltip below.
+test('a tooltip opens where there is room, clear of its control and inside the window', async ({ page }) => {
+  const check = async (control: import('@playwright/test').Locator, side?: 'below') => {
+    await control.hover();
+    const tip = page.getByRole('tooltip');
+    await expect(tip).toBeVisible();
+    const t = (await tip.boundingBox())!;
+    const c = (await control.boundingBox())!;
+    const vp = page.viewportSize()!;
+    const overlaps = t.x < c.x + c.width && c.x < t.x + t.width && t.y < c.y + c.height && c.y < t.y + t.height;
+    expect(overlaps, 'the tooltip covers its control').toBe(false);
+    expect(t.x >= 0 && t.y >= 0 && t.x + t.width <= vp.width && t.y + t.height <= vp.height, 'the tooltip is inside the window').toBe(true);
+    if (side === 'below') {
+      expect(t.y, 'opens below a control at the top of the window').toBeGreaterThanOrEqual(c.y + c.height);
+    }
+    await page.mouse.click(1, vp.height - 1);
+    await expect(tip).toHaveCount(0);
+  };
+  await page.goto('/keys/work/work_hpc-ed25519');
+  await check(page.getByRole('link', { name: 'Dark theme' }).or(page.getByRole('link', { name: 'Light theme' })).first(), 'below');
+  await check(page.getByRole('button', { name: 'Copy the fingerprint' }));
+  // At the right edge of a narrow window it still fits.
+  await page.setViewportSize({ width: 420, height: 800 });
+  await page.goto('/keys/work/work_hpc-ed25519');
+  await check(page.getByRole('button', { name: 'Copy the fingerprint' }));
+});
