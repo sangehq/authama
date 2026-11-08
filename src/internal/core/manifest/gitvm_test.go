@@ -178,3 +178,14 @@ func TestSchemaListsEveryManifestField(t *testing.T) {
 		}
 	}
 }
+
+// No refusal sends an OrbStack or Podman user to `vm docker-context`, which
+// needs a VM host these machines never are.
+func TestOwnSSHRefusalNamesWhereDockerIs(t *testing.T) {
+	for hv, want := range map[string]string{HypervisorOrbStack: "docker context use orbstack", HypervisorPodman: "DOCKER_HOST"} {
+		msg := OwnSSHRefusal(hv)
+		if !strings.Contains(msg, want) || strings.Contains(msg, "docker-context") {
+			t.Errorf("%s: %q", hv, msg)
+		}
+	}
+}

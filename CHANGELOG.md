@@ -8,6 +8,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Docker devboxes say whether Docker works, not only whether it is installed.** `ssh vm sync`
+  now asks a running guest's Docker engine for its version as the guest user, over the session
+  `docker` itself uses. A guest with Docker still gets its context when the engine does not
+  answer, and the host's note names the cause and the fix (the user is not in the `docker` group,
+  the engine is stopped, rootless Docker without `DOCKER_HOST`). authama prints the fix and never
+  changes the guest's groups or services.
+- **Docker contexts in `doctor` and on the VMs page.** `doctor` lists the Docker contexts of VM
+  hosts and runs `docker --context <alias> version` for each running VM (never starting one): a
+  gone host, a context pointing elsewhere, or an engine that does not answer is a warning with
+  its fix, and `--strict` fails on it. When docker hides the guest's reason behind its generic
+  `http://docker.example.com` error, doctor asks the guest itself, so a refused socket reads as
+  "denied" with the `usermod` fix rather than as a stopped engine. `--json` gains `docker_contexts`. The web UI's VMs page
+  shows the same list, with *Check the engines* to run the check on demand.
+- **Shared SSH connections for VM hosts (`vm.multiplex`, on by default).** A VM host's block
+  renders `ControlMaster auto`, `ControlPath ~/.ssh/authama-cm/%C` and `ControlPersist 10m`, so a
+  run of `docker` or `ssh` commands asks the hypervisor for the address once. `config render` and
+  `vm proxy` create the socket directory owner-only; a value in the host's `raw_options` wins;
+  `vm sync` ends a host's shared connection before replacing its pin or removing it, and its probe
+  always opens a fresh connection. Not rendered on Windows. Set `vm.multiplex` false to turn it off.
+
 - **Fix buttons on the Overview.** Each row that needs attention keeps its command and, where the
   web UI can make the fix, adds a button: *Preview the fix* for `ssh reconcile` and
   `doctor --fix`, which previews the change in place, and a link to Doctor, Keys or the Hosts
@@ -237,6 +257,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   buttons and dev banner) is removed, with the rule that forced panel columns to full width.
 ### Fixed
 
+- `ssh vm add --hypervisor orbstack|podman`, a devbox on either, and the same web form sent you to
+  `ssh vm docker-context`, which needs a VM host those machines can never be. The refusal now
+  says where their Docker is: OrbStack's own `orbstack` context, or Podman's socket for
+  `DOCKER_HOST`. The `ssh vm --help` text no longer says they get a Docker context.
 - On the Export page, committing a transform step's second field before the preview had answered
   the first wrote the step back as it was, so a template step lost its column name and stayed
   unapplied. The column headings, and moving or removing a step, had the same flaw. Each now

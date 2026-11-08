@@ -27,6 +27,9 @@ var doctorKeys014 = []string{"reserved_keys"}
 // doctorKeys015 are the keys the release after 0.1.4 adds.
 var doctorKeys015 = []string{"owner_seal", "stranded_key_root"}
 
+// Added with the Docker devbox health check, after every earlier key.
+var doctorKeysDocker = []string{"docker_contexts"}
+
 func orderedKeys(t *testing.T, js string) []string {
 	t.Helper()
 	dec := json.NewDecoder(strings.NewReader(js))
@@ -62,7 +65,8 @@ func TestMachineReadableOutputKeepsTheV3Shape(t *testing.T) {
 	run("init")
 	js := run("doctor", "--json")
 	got := orderedKeys(t, js)
-	want := append(append(append(append(append([]string{}, doctorKeys3x...), doctorKeys013...), doctorKeys014...), doctorKeys015...), "tokens")
+	want := append(append(append(append(append([]string{}, doctorKeys3x...), doctorKeys013...), doctorKeys014...), doctorKeys015...), doctorKeysDocker...)
+	want = append(want, "tokens")
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("doctor --json keys changed:\n got %v\nwant %v", got, want)
 	}

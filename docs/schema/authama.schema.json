@@ -275,6 +275,11 @@
           "minLength": 1,
           "type": "string"
         },
+        "multiplex": {
+          "default": true,
+          "description": "Share one SSH connection per VM host (ControlMaster, kept 10 minutes), so a run of docker or ssh commands asks the hypervisor for the address once. Not on Windows, whose OpenSSH has no ControlMaster. Sets $AUTHAMA_VM_MULTIPLEX. Default: true.",
+          "type": "boolean"
+        },
         "prune_gone": {
           "default": true,
           "description": "Let `ssh vm sync` remove the host entry (never its key files) and Docker context of a VM its hypervisor no longer has. Off: sync only reports it. Sets $AUTHAMA_VM_PRUNE_GONE. Default: true.",

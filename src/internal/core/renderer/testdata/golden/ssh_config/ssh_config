@@ -34,6 +34,9 @@ Host devbox
     IdentitiesOnly yes
     UserKnownHostsFile /home/u/.ssh/known_hosts
     ProxyCommand "/usr/local/bin/authama" ssh vm proxy devbox
+    ControlMaster auto
+    ControlPath /home/u/.ssh/authama-cm/%C
+    ControlPersist 10m
 
 # --- git ssh mode: github.com as personal --------------------------
 Host github.com

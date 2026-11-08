@@ -7,9 +7,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/simtabi/authama/src/internal/core/renderer"
+	"github.com/simtabi/authama/src/internal/services/dockerctx"
 	"github.com/simtabi/authama/src/internal/services/knownhosts"
 )
 
@@ -25,9 +28,16 @@ type ProbeResult struct {
 	Status string
 	Docker bool   // the guest has a docker command
 	Detail string // why, when not ok
+	// Daemon is whether the guest user reaches the Docker engine: a docker
+	// command alone is not enough (the user may not be in the docker group,
+	// or the engine may be stopped). Empty State when the probe did not run.
+	Daemon dockerctx.Diagnosis
 }
 
-const dockerProbe = "command -v docker >/dev/null 2>&1 && echo authama-docker=yes || echo authama-docker=no"
+// dockerProbe asks the guest, as the guest user over a non-interactive ssh
+// session, whether it has docker and whether the engine answers
+// (dockerctx.GuestProbe, which doctor uses too).
+const dockerProbe = dockerctx.GuestProbe
 
 // probeTimeout bounds one probe.
 var probeTimeout = 30 * time.Second
@@ -60,6 +70,9 @@ func sshProbe(sshDir, alias string, port int, scanned []knownhosts.ScannedKey) P
 		"-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
 		"-o", "StrictHostKeyChecking=yes", "-o", "UserKnownHostsFile=" + kh,
 		"-o", "GlobalKnownHostsFile=/dev/null", "-o", "LogLevel=ERROR",
+		// A fresh connection: a shared master (vm.multiplex) would skip the
+		// host-key check this probe exists to make.
+		"-o", "ControlMaster=no", "-o", "ControlPath=none",
 		"--", alias, dockerProbe,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
@@ -86,10 +99,39 @@ func classify(err error, stdout, stderr string) ProbeResult {
 		}
 		return ProbeResult{Status: ProbeUnreachable, Detail: lastLine(msg)}
 	}
-	return ProbeResult{Status: ProbeOK, Docker: strings.Contains(stdout, "authama-docker=yes")}
+	pr := ProbeResult{Status: ProbeOK}
+	pr.Docker, pr.Daemon = readDockerProbe(stdout)
+	return pr
+}
+
+// readDockerProbe reads dockerProbe's output (dockerctx.ReadGuestProbe).
+func readDockerProbe(stdout string) (bool, dockerctx.Diagnosis) {
+	return dockerctx.ReadGuestProbe(stdout)
 }
 
 func lastLine(s string) string {
 	lines := strings.Split(strings.TrimSpace(s), "\n")
 	return strings.TrimSpace(lines[len(lines)-1])
+}
+
+// closeShared asks a VM host's shared connection to exit. It names the socket
+// the way the rendered config does (ControlPath <ssh dir>/authama-cm/%C, with
+// the alias as the host, as a VM host's HostName is), so it works after the
+// host has left the config too. No master, or no ssh, is not an error.
+func closeShared(sshDir, alias, user string, port int) {
+	dir := filepath.Join(sshDir, renderer.ControlDir)
+	if _, err := os.Stat(dir); err != nil {
+		return
+	}
+	if port == 0 {
+		port = 22
+	}
+	args := []string{"-F", os.DevNull, "-o", "ControlPath=" + filepath.Join(dir, "%C"), "-p", strconv.Itoa(port)}
+	if user != "" {
+		args = append(args, "-l", user)
+	}
+	args = append(args, "-O", "exit", alias)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_ = exec.CommandContext(ctx, "ssh", args...).Run()
 }

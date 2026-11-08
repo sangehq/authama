@@ -1,6 +1,6 @@
 {{define "content"}}{{with .Data}}
 {{template "page_header" (header "SSH" "VMs" "" (only (and (not $.ReadOnly) (gt (len .Loose) 0)) (panel "Adopt a loose key" "adopt-key" "key" | withTip "vm-adopt")))}}
-<p class="text-secondary">VM hosts as their hypervisors see them now, and what <code>authama ssh vm sync</code> would do. Nothing here connects to a guest; a sync does, for running VMs only. Stopped and suspended VMs are reported and never touched.</p>
+<p class="text-secondary">VM hosts as their hypervisors see them now, and what <code>authama ssh vm sync</code> would do. Nothing here connects to a guest unless you check the Docker engines; a sync does, for running VMs only. Stopped and suspended VMs are reported and never touched.</p>
 <div class="card mb-3">
   <div class="card-header"><h2 class="card-title">VM hosts</h2></div>
   {{if .Hosts}}
@@ -23,6 +23,33 @@
     </table>
   </div>
   {{else}}{{template "empty" (empty "device-desktop" "No VM hosts" "Add one on the Hosts page, adopt a loose key below, or declare a devbox in authama.json.")}}{{end}}
+</div>
+<div class="card mb-3" id="docker-contexts">
+  <div class="card-header"><h2 class="card-title">Docker contexts</h2>
+    {{if and .Docker .Contexts}}<div class="card-actions">{{if .Checked}}<span class="text-secondary small me-2">engines checked just now</span>{{end}}<a class="btn btn-sm" href="{{basePath}}/vms?check=docker#docker-contexts"{{tip "vm-docker-check"}}>{{icon "refresh"}}<span class="ms-1">Check the engines</span></a></div>{{end}}
+  </div>
+  {{if not .Docker}}
+  <div class="card-body text-secondary">The docker CLI is not installed, so authama manages no Docker contexts.</div>
+  {{else if .Contexts}}
+  <div class="table-responsive" tabindex="0">
+    <table class="table table-vcenter card-table" id="docker-contexts-table">
+      <caption class="visually-hidden">Docker contexts of VM hosts</caption>
+      <thead><tr><th scope="col">Context</th><th scope="col">Endpoint</th><th scope="col">VM</th><th scope="col">Engine</th><th scope="col">What to do</th></tr></thead>
+      <tbody>
+        {{range .Contexts}}
+        <tr>
+          <th scope="row"><code>{{.Name}}</code>{{if .Current}} <span class="badge badge-info">current</span>{{end}}{{if not .Managed}} <span class="badge badge-muted">not authama's</span>{{end}}</th>
+          <td><code>{{.Endpoint}}</code></td>
+          <td>{{if .VMState}}<span class="badge {{statusClass .VMState}}">{{.VMState}}</span>{{else}}<span class="text-secondary">no host</span>{{end}}</td>
+          <td>{{if .Docker}}<span class="badge {{statusClass .Docker.State}}">{{.Docker.State}}</span>{{if .Docker.Version}} <span class="text-secondary">{{.Docker.Version}}</span>{{end}}{{else if .Problem}}<span class="badge badge-warn">needs attention</span>{{else}}<span class="text-secondary">not checked</span>{{end}}</td>
+          <td class="text-break">{{if .Problem}}{{.Problem}}{{if .Fix}}<div class="text-secondary small">{{.Fix}}</div>{{end}}{{else}}<span class="text-secondary">–</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}<div class="card-body">{{template "empty" (empty "device-desktop" "No Docker contexts for VM hosts" "A sync makes one, ssh://<alias>, for each running VM whose guest has Docker.")}}</div>{{end}}
+  <div class="card-footer text-secondary small">The check runs <code>docker --context &lt;name&gt; version</code> for running VMs only, the path every docker command takes; it never starts a VM. The same check is in <code>authama doctor</code>.</div>
 </div>
 <div class="card mb-3">
   <div class="card-header"><h2 class="card-title">Sync</h2></div>

@@ -4,12 +4,60 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/simtabi/authama/src/internal/brand"
 
 	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/util/envnames"
 )
+
+// ControlDir is the directory under ~/.ssh that holds the shared-connection
+// sockets of VM hosts (vm.multiplex). `config render` and `vm proxy` create it
+// owner-only; ssh refuses to make a master in a directory that is missing.
+const ControlDir = "authama-cm"
+
+// ControlPersist is how long a VM host's shared connection outlives its last
+// session.
+const ControlPersist = "10m"
+
+// Multiplex reports whether VM hosts share one SSH connection (vm.multiplex,
+// on unless set false). Off on Windows, whose OpenSSH has no ControlMaster. A
+// variable so tests pin it.
+var Multiplex = defaultMultiplex
+
+func defaultMultiplex() bool {
+	if runtime.GOOS == "windows" {
+		return false
+	}
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(envnames.VMMultiplex))) {
+	case "":
+		return true
+	case "1", "true", "yes", "on":
+		return true
+	}
+	return false
+}
+
+// controlPathFor is the ControlPath a VM host renders when it shares its
+// connection, "" otherwise. %C is ssh's hash of the connection (local host,
+// remote host, port, user), which keeps the socket path short and unique.
+func controlPathFor(h manifest.Host) string {
+	if h.VM == nil || !Multiplex() {
+		return ""
+	}
+	return "~/.ssh/" + ControlDir + "/%C"
+}
+
+// multiplexOptions are the lines a shared-connection host renders, in order.
+func multiplexOptions(controlPath string) [][2]string {
+	return [][2]string{
+		{"ControlMaster", "auto"},
+		{"ControlPath", controlPath},
+		{"ControlPersist", ControlPersist},
+	}
+}
 
 // SelfPath returns the authama binary a VM host's ProxyCommand runs. A variable so tests pin it.
 var SelfPath = defaultSelfPath

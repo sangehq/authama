@@ -29,6 +29,7 @@ import (
 	"github.com/simtabi/authama/src/internal/services/owner"
 	"github.com/simtabi/authama/src/internal/services/preflight"
 	"github.com/simtabi/authama/src/internal/services/settings"
+	"github.com/simtabi/authama/src/internal/services/vmsync"
 	"github.com/simtabi/authama/src/internal/util/clipboard"
 	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/util/fs"
@@ -59,7 +60,10 @@ type Report struct {
 	// StalePins counts tagged known_hosts lines no manifest host uses.
 	StalePins int
 	// VM is the VM hosts and what `vm sync` would do; nil with none.
-	VM                 *VMStatus
+	VM *VMStatus
+	// DockerContexts are the Docker contexts that belong to VM hosts, with
+	// the engine behind each running one checked; nil without docker.
+	DockerContexts     []vmsync.ContextStatus
 	AliasCollisions    []string
 	ProvidersSource    string // "user file" | "shipped default"
 	StrandedLegacyHome string
@@ -108,6 +112,11 @@ func (r Report) Warnings() []string {
 	}
 	for _, h := range r.UnpinnedVMHosts {
 		w = append(w, "VM host key not pinned: "+h)
+	}
+	for _, c := range r.DockerContexts {
+		if c.Problem != "" {
+			w = append(w, "docker context "+c.Name+": "+c.Problem)
+		}
 	}
 	if r.VM != nil {
 		for _, g := range r.VM.Gone {
@@ -224,6 +233,7 @@ func (r Report) Format() string {
 			"(VPN-gated hosts: connect the VPN first)")
 	}
 	lines = append(lines, r.vmLines()...)
+	lines = append(lines, r.dockerLines()...)
 	if len(r.AliasCollisions) > 0 {
 		lines = append(lines, "WARNING: the same Host alias is used in >1 profile - ssh "+
 			"applies the FIRST match, so the others are shadowed:")
@@ -337,6 +347,8 @@ func (r Report) JSON() ([]byte, error) {
 		// Added after 0.1.4.
 		OwnerSeal       *string `json:"owner_seal"`
 		StrandedKeyRoot *string `json:"stranded_key_root"`
+		// Added with the Docker devbox health check.
+		DockerContexts []vmsync.ContextStatus `json:"docker_contexts"`
 	}
 	nz := func(s []string) []string {
 		if s == nil {
@@ -363,6 +375,7 @@ func (r Report) JSON() ([]byte, error) {
 		StrandedLegacyHome: strOrNil(r.StrandedLegacyHome),
 		OwnerSeal:          strOrNil(r.OwnerSeal),
 		StrandedKeyRoot:    strOrNil(r.StrandedKeyRoot),
+		DockerContexts:     dockerRows(r.DockerContexts),
 	})
 }
 
@@ -446,7 +459,9 @@ func (s *Service) Run(strict bool) Report {
 		rep.DuplicateKeys = duplicateKeys(ssh, manifest.KeyRoot(s.m))
 		rep.UnpinnedHosts, rep.UnpinnedVMHosts = s.unpinnedHosts(ssh)
 		rep.StalePins = s.stalePins()
-		rep.VM = s.vmStatus()
+		var plan vmsync.Plan
+		rep.VM, plan = s.vmStatus()
+		rep.DockerContexts = dockerStatus(plan)
 		rep.AliasCollisions = aliasCollisions(s.m)
 		rep.OnePassword = onePasswordIssues(s.m)
 		rep.StaleProxy = staleProxies(ssh, s.m)

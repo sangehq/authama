@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/simtabi/authama/src/internal/services/dockerctx"
 	"github.com/simtabi/authama/src/internal/services/knownhosts"
 	"github.com/simtabi/authama/src/internal/services/settings"
 	"github.com/simtabi/authama/src/internal/services/vmsync"
@@ -50,10 +51,10 @@ func hasVMHosts(m *manifest.Manifest) bool {
 	return false
 }
 
-func (s *Service) vmStatus() *VMStatus {
+func (s *Service) vmStatus() (*VMStatus, vmsync.Plan) {
 	plan, any, err := VMPlan(s.p)
 	if !any {
-		return nil
+		return nil, plan
 	}
 	st := &VMStatus{Hosts: plan.Hosts, Notes: plan.Notes}
 	if err != nil {
@@ -70,7 +71,67 @@ func (s *Service) vmStatus() *VMStatus {
 			st.Undeclared = append(st.Undeclared, a.Alias)
 		}
 	}
-	return st
+	return st, plan
+}
+
+// DockerList lists the Docker contexts (nil, nil when docker is not
+// installed); DockerCheck asks the engine behind one. Tests swap both.
+var (
+	DockerList = func() ([]dockerctx.Context, error) {
+		if dockerctx.Available() != nil {
+			return nil, nil
+		}
+		return dockerctx.List()
+	}
+	DockerCheck vmsync.Checker = dockerctx.Check
+)
+
+// dockerStatus is the Docker contexts that belong to VM hosts. It asks the
+// engine behind the context of each running VM (never starting one): the
+// same path every docker command takes, so a pass means it works.
+func dockerStatus(plan vmsync.Plan) []vmsync.ContextStatus {
+	cs, err := DockerList()
+	if err != nil {
+		return []vmsync.ContextStatus{{Name: "(docker)", Problem: err.Error()}}
+	}
+	return vmsync.ContextStatuses(plan, cs, DockerCheck)
+}
+
+func dockerRows(cs []vmsync.ContextStatus) []vmsync.ContextStatus {
+	if cs == nil {
+		return []vmsync.ContextStatus{}
+	}
+	return cs
+}
+
+// dockerLines is the Docker section of the human report.
+func (r Report) dockerLines() []string {
+	if len(r.DockerContexts) == 0 {
+		return nil
+	}
+	lines := []string{"Docker contexts of VM hosts:"}
+	for _, c := range r.DockerContexts {
+		state := "ok"
+		switch {
+		case c.Problem != "":
+			state = "WARNING: " + c.Problem
+		case c.Docker != nil && c.Docker.Version != "":
+			state = "ok, engine " + c.Docker.Version
+		case c.Docker == nil && c.VMState != "":
+			state = "not checked (VM " + c.VMState + ")"
+		case c.Docker == nil:
+			state = "not checked"
+		}
+		cur := ""
+		if c.Current {
+			cur = " (current)"
+		}
+		lines = append(lines, fmt.Sprintf("  %s%s -> %s  %s", c.Name, cur, c.Endpoint, state))
+		if c.Fix != "" {
+			lines = append(lines, "    -> "+c.Fix)
+		}
+	}
+	return lines
 }
 
 // stalePins counts the tagged known_hosts lines no manifest host uses any

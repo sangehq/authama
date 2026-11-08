@@ -62,6 +62,7 @@ type Action struct {
 	driver  hypervisor.Driver
 	vm      string
 	user    string
+	port    int
 	pubLine string
 	token   string
 	scanned []knownhosts.ScannedKey
@@ -93,6 +94,14 @@ type Host struct {
 	Note  string `json:"note,omitempty"`
 	// Declared is set when authama.json's devboxes section declares the host.
 	Declared bool `json:"declared,omitempty"`
+	// Running is set when the hypervisor says the VM runs (State is its own
+	// word for it, which differs between hypervisors).
+	Running bool `json:"running,omitempty"`
+	// User is the guest user the host connects as.
+	User string `json:"user,omitempty"`
+	// Docker is what the probe found about the guest's Docker engine; nil
+	// when the guest was not probed (not running, or a plan without probes).
+	Docker *dockerctx.Diagnosis `json:"docker,omitempty"`
 }
 
 // Plan is everything a sync would do, and why.
@@ -159,6 +168,10 @@ type Deps struct {
 	Scan    func(sshDir, host string, port int) ([]knownhosts.ScannedKey, error)
 	Probe   func(sshDir, alias string, port int, scanned []knownhosts.ScannedKey) ProbeResult
 	Docker  DockerOps
+	// CloseShared ends a host's shared connection (vm.multiplex) before its
+	// pin is replaced or its entry removed, so no master keeps talking to the
+	// old guest. nil does nothing.
+	CloseShared func(sshDir, alias, user string, port int)
 }
 
 // DockerOps is the docker CLI.
@@ -184,8 +197,16 @@ func RealDeps() Deps {
 		Scan: func(sshDir, host string, port int) ([]knownhosts.ScannedKey, error) {
 			return knownhosts.New(sshDir).ScanChecked(host, port)
 		},
-		Probe:  sshProbe,
-		Docker: realDocker{},
+		Probe:       sshProbe,
+		Docker:      realDocker{},
+		CloseShared: closeShared,
+	}
+}
+
+// closeSharedFor ends a's shared connection, when the deps can.
+func (s *Syncer) closeSharedFor(a Action) {
+	if s.Deps.CloseShared != nil {
+		s.Deps.CloseShared(s.P.SSHDir, a.Alias, a.user, a.port)
 	}
 }
 
@@ -285,7 +306,7 @@ func (s *Syncer) planned(plan Plan, kind, alias string) bool {
 
 func (s *Syncer) planHost(plan *Plan, m *manifest.Manifest, pname string, h manifest.Host,
 	list func(hypervisor.Driver) listing, contexts map[string]dockerctx.Context) {
-	st := Host{Profile: pname, Alias: h.Alias, Hypervisor: h.VM.Hypervisor, VM: h.VM.Name}
+	st := Host{Profile: pname, Alias: h.Alias, Hypervisor: h.VM.Hypervisor, VM: h.VM.Name, User: h.User}
 	_, st.Declared = s.Cfg.Devboxes[h.Alias]
 	add := func(state, note string) {
 		st.State, st.Note = state, note
@@ -336,7 +357,7 @@ func (s *Syncer) planHost(plan *Plan, m *manifest.Manifest, pname string, h mani
 			return
 		}
 		add("gone", "the VM is gone: the host entry is removed; its key files are kept")
-		plan.Actions = append(plan.Actions, Action{Kind: ActRemoveHost, Profile: pname, Alias: h.Alias,
+		plan.Actions = append(plan.Actions, Action{Kind: ActRemoveHost, Profile: pname, Alias: h.Alias, user: h.User, port: h.Port,
 			Detail: fmt.Sprintf("remove host %s/%s: %s has no VM %q any more (key files kept)", pname, h.Alias, d.Name(), h.VM.Name)})
 		if c, ok := contexts[h.Alias]; ok && c.Managed() {
 			if c.Current {
@@ -352,19 +373,19 @@ func (s *Syncer) planHost(plan *Plan, m *manifest.Manifest, pname string, h mani
 		add(vm.State, "not running; left alone (sync never starts, stops or deletes a VM)")
 		return
 	}
-	st.State = vm.State
+	st.State, st.Running = vm.State, true
 	if !s.Opt.Probe {
 		plan.Hosts = append(plan.Hosts, st)
 		return
 	}
-	notes := s.planRunning(plan, m, pname, h, d, *vm, contexts)
+	notes := s.planRunning(plan, m, pname, h, d, *vm, contexts, &st)
 	st.Note = strings.Join(notes, "; ")
 	plan.Hosts = append(plan.Hosts, st)
 }
 
 // planRunning plans the pin, the key and the Docker context of a running VM.
 func (s *Syncer) planRunning(plan *Plan, m *manifest.Manifest, pname string, h manifest.Host,
-	d hypervisor.Driver, vm hypervisor.VM, contexts map[string]dockerctx.Context) []string {
+	d hypervisor.Driver, vm hypervisor.VM, contexts map[string]dockerctx.Context, st *Host) []string {
 	var notes []string
 	ep, err := d.Address(h.VM.Name)
 	if err != nil {
@@ -390,7 +411,7 @@ func (s *Syncer) planRunning(plan *Plan, m *manifest.Manifest, pname string, h m
 		}
 	case knownhosts.PinChanged:
 		if s.Opt.Repin {
-			plan.Actions = append(plan.Actions, Action{Kind: ActRepin, Profile: pname, Alias: h.Alias, token: token, scanned: scanned,
+			plan.Actions = append(plan.Actions, Action{Kind: ActRepin, Profile: pname, Alias: h.Alias, token: token, scanned: scanned, user: h.User, port: h.Port,
 				Detail: fmt.Sprintf("replace %s's pinned host key: the guest now offers %s", h.Alias, fingerprints(scanned))})
 		} else {
 			notes = append(notes, "the guest's host key changed since it was pinned (a rebuilt VM?); "+
@@ -409,11 +430,36 @@ func (s *Syncer) planRunning(plan *Plan, m *manifest.Manifest, pname string, h m
 		notes = append(notes, "ssh did not get through ("+pr.Detail+")")
 	case ProbeOK:
 		notes = append(notes, "key accepted")
+		if pr.Daemon.State != "" {
+			d := pr.Daemon
+			if h.User != "" {
+				d.Fix = strings.ReplaceAll(d.Fix, "<user>", h.User)
+			}
+			st.Docker = &d
+			if note := dockerNote(d); note != "" {
+				notes = append(notes, note)
+			}
+		}
 	}
 	if s.Opt.Docker {
 		s.planDocker(plan, h.Alias, pr, contexts)
 	}
 	return notes
+}
+
+// dockerNote is the host note for the guest's Docker engine: nothing when it
+// answers or is not installed (most VMs run no Docker), and the cause and the
+// fix when the command is there but the engine does not answer this user.
+func dockerNote(d dockerctx.Diagnosis) string {
+	switch d.State {
+	case "", dockerctx.DaemonOK, dockerctx.DaemonAbsent:
+		return ""
+	}
+	note := "docker is installed but the engine does not answer this user (" + d.State + ")"
+	if d.Fix != "" {
+		note += ": " + d.Fix
+	}
+	return note
 }
 
 func (s *Syncer) planDocker(plan *Plan, alias string, pr ProbeResult, contexts map[string]dockerctx.Context) {
@@ -430,8 +476,13 @@ func (s *Syncer) planDocker(plan *Plan, alias string, pr ProbeResult, contexts m
 		plan.Actions = append(plan.Actions, Action{Kind: ActDockerUpdate, Alias: alias,
 			Detail: fmt.Sprintf("refresh the Docker context %s -> ssh://%s", alias, alias)})
 	case pr.Docker:
-		plan.Actions = append(plan.Actions, Action{Kind: ActDockerCreate, Alias: alias,
-			Detail: fmt.Sprintf("create the Docker context %s -> ssh://%s (the guest runs Docker)", alias, alias)})
+		// Made even when the engine does not answer yet: the context is right
+		// and the guest is not, and the host's note says how to fix the guest.
+		detail := fmt.Sprintf("create the Docker context %s -> ssh://%s (the guest runs Docker)", alias, alias)
+		if st := pr.Daemon.State; st != "" && st != dockerctx.DaemonOK {
+			detail = fmt.Sprintf("create the Docker context %s -> ssh://%s (docker is installed; the engine does not answer yet: see the host's note)", alias, alias)
+		}
+		plan.Actions = append(plan.Actions, Action{Kind: ActDockerCreate, Alias: alias, Detail: detail})
 	}
 }
 

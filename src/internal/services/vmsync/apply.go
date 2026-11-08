@@ -77,6 +77,7 @@ func (s *Syncer) ApplyManifest(plan Plan, out io.Writer) (int, error) {
 		var err error
 		switch a.Kind {
 		case ActRemoveHost:
+			s.closeSharedFor(a)
 			_, err = lifecycle.New(s.P, platform.EmitUseKeychain()).DeleteHost(a.Profile, a.Alias, lifecycle.Options{})
 		case ActAddDevbox:
 			err = AddVMHost(s.P, a.Profile, a.Alias, a.devbox.Hypervisor, a.devbox.VM, a.devbox.User, a.devbox.Key)
@@ -124,6 +125,7 @@ func (s *Syncer) ApplyOutside(plan Plan, out io.Writer) (int, error) {
 		case ActPin:
 			_, err = kh.PinAs(a.token, a.scanned)
 		case ActRepin:
+			s.closeSharedFor(a)
 			var untagged int
 			if _, untagged, err = kh.UnpinTagged(a.token); err == nil {
 				if untagged > 0 {

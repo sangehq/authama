@@ -157,6 +157,12 @@ func (s *Service) Write(dryRun bool) (*WriteResult, error) {
 			}
 		}
 	}
+	if !dryRun && rendersControlPath(rendered) {
+		// ssh will not make a shared-connection master in a missing directory.
+		if err := fs.EnsureDir(filepath.Join(s.sshDir, renderer.ControlDir), dirMode); err != nil {
+			return nil, err
+		}
+	}
 	for _, rel := range s.configFilesOnDisk() {
 		if _, ok := rendered[rel]; !ok {
 			res.Pruned = append(res.Pruned, rel)
@@ -381,4 +387,15 @@ func unifiedDiff(current, expected, rel string) string {
 		out.WriteString("\n")
 	}
 	return out.String()
+}
+
+// rendersControlPath reports whether a rendered file has a VM host sharing
+// its connection (vm.multiplex), so the socket directory must exist.
+func rendersControlPath(rendered map[string]string) bool {
+	for _, content := range rendered {
+		if strings.Contains(content, "/"+renderer.ControlDir+"/") {
+			return true
+		}
+	}
+	return false
 }

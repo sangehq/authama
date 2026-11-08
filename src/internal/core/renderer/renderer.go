@@ -74,6 +74,10 @@ type RenderHost struct {
 	RawOptions    manifest.OrderedOptions
 	// ProxyCommand is set by authama for a VM host (never from raw_options, which may not hold one).
 	ProxyCommand string
+	// ControlPath, when set, makes the host share one connection: the block
+	// gains ControlMaster/ControlPath/ControlPersist (a VM host, vm.multiplex).
+	// A value raw_options sets for one of them wins.
+	ControlPath string
 }
 
 const identitiesOnlyKey = "IdentitiesOnly"
@@ -138,6 +142,13 @@ func writeHostBlock(b *strings.Builder, h RenderHost) {
 	b.WriteString("    UserKnownHostsFile " + h.KnownHosts + "\n")
 	if h.ProxyCommand != "" {
 		b.WriteString("    ProxyCommand " + h.ProxyCommand + "\n")
+	}
+	if h.ControlPath != "" {
+		for _, kv := range multiplexOptions(h.ControlPath) {
+			if !hasOption(h.RawOptions, kv[0]) {
+				b.WriteString("    " + kv[0] + " " + kv[1] + "\n")
+			}
+		}
 	}
 	for _, k := range h.RawOptions.Keys() {
 		if strings.EqualFold(k, identitiesOnlyKey) {
@@ -309,6 +320,7 @@ func hostsByProfile(m *manifest.Manifest) (map[string][]RenderHost, error) {
 			KnownHosts:    m.KnownHostsFile(),
 			RawOptions:    rk.Host.RawOptions,
 			ProxyCommand:  proxyFor(rk.Host),
+			ControlPath:   controlPathFor(rk.Host),
 		})
 	}
 	return byProfile, nil
@@ -352,6 +364,7 @@ func RenderHostBlockFor(m *manifest.Manifest, profile string, host manifest.Host
 		KnownHosts:    m.KnownHostsFile(),
 		RawOptions:    host.RawOptions,
 		ProxyCommand:  proxyFor(host),
+		ControlPath:   controlPathFor(host),
 	})
 	return b.String(), nil
 }

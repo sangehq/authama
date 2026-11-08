@@ -200,8 +200,7 @@ func checkVM(profile string, h Host) error {
 			"\"hypervisors\" section)", profile, h.Alias, h.VM.Hypervisor, strings.Join(KnownHypervisors(), ", "))
 	}
 	if h.VM.Hypervisor == HypervisorOrbStack || h.VM.Hypervisor == HypervisorPodman {
-		return fmt.Errorf("%s/%s: %s runs its own SSH access and keys, so it cannot be a host; "+
-			"use authama ssh vm docker-context for Docker", profile, h.Alias, h.VM.Hypervisor)
+		return fmt.Errorf("%s/%s: %s", profile, h.Alias, OwnSSHRefusal(h.VM.Hypervisor))
 	}
 	if strings.TrimSpace(h.VM.Name) == "" {
 		return fmt.Errorf("%s/%s: vm.name is empty", profile, h.Alias)
@@ -224,4 +223,19 @@ func VMHost(m *Manifest, alias string) (Host, error) {
 		}
 	}
 	return Host{}, fmt.Errorf("no host %q", alias)
+}
+
+// OwnSSHRefusal is why an OrbStack or Podman machine cannot be a VM host, and
+// where its Docker is instead. `authama ssh vm docker-context` is not the
+// answer: it needs a VM host, which these machines never are.
+func OwnSSHRefusal(hypervisor string) string {
+	msg := hypervisor + " runs its own SSH access and keys, so authama does not make its machines hosts"
+	switch hypervisor {
+	case HypervisorOrbStack:
+		return msg + "; for Docker, OrbStack makes its own context: docker context use orbstack"
+	case HypervisorPodman:
+		return msg + "; for Docker, Podman serves the Docker API itself: point DOCKER_HOST at the socket " +
+			"`podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}'` prints"
+	}
+	return msg
 }

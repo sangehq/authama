@@ -97,6 +97,8 @@ var Specs = []Spec{
 	{Section: "vm", Name: "hypervisors", Env: envnames.VMHypervisors, Kind: KindString,
 		Default: "every built-in driver and every custom one in the hypervisors section",
 		Doc:     "The hypervisors you have and use, comma-separated (e.g. \"parallels,vmpal\"). `ssh vm list`, `ssh vm sync`, doctor and the web UI query only these; a VM host on another hypervisor is reported, never changed."},
+	{Section: "vm", Name: "multiplex", Env: envnames.VMMultiplex, Kind: KindBool, Default: "true",
+		Doc: "Share one SSH connection per VM host (ControlMaster, kept 10 minutes), so a run of docker or ssh commands asks the hypervisor for the address once. Not on Windows, whose OpenSSH has no ControlMaster."},
 	{Section: "vm", Name: "prune_gone", Env: envnames.VMPruneGone, Kind: KindBool, Default: "true",
 		Doc: "Let `ssh vm sync` remove the host entry (never its key files) and Docker context of a VM its hypervisor no longer has. Off: sync only reports it."},
 	{Section: "vm", Name: "repin_changed", Env: envnames.VMRepin, Kind: KindBool, Default: "false",
