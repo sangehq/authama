@@ -175,13 +175,14 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 		}
 	}
 	// The web asks `docker context inspect` once per preview, so reads are
-	// left out: what must match is every call that changes something.
+	// left out: what must match is every call that changes something. Each
+	// side has its own home, so paths under it are compared by name.
 	writes := func(side string) string {
 		b, _ := os.ReadFile(logs[side])
 		var keep []string
 		for _, l := range strings.Split(strings.TrimSpace(string(b)), "\n") {
 			if !strings.Contains(l, " inspect ") {
-				keep = append(keep, l)
+				keep = append(keep, sameIconPath(l))
 			}
 		}
 		return strings.Join(keep, "\n")
@@ -525,5 +526,26 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// iconFlag is notify-send's --icon=<path>, which go-notifykit points at the
+// icon it writes into the home's state directory.
+var iconFlag = regexp.MustCompile(`--icon=\S*/`)
+
+// sameIconPath keeps an icon argument's file name and drops the directory,
+// which differs between two homes that are otherwise doing the same thing.
+func sameIconPath(call string) string {
+	return iconFlag.ReplaceAllString(call, "--icon=<state>/")
+}
+
+func TestSameIconPathComparesTheIconByName(t *testing.T) {
+	a := sameIconPath("--app-name=authama --urgency=low --icon=/tmp/x/003/authama/notifykit/icon.png -- T B")
+	b := sameIconPath("--app-name=authama --urgency=low --icon=/tmp/x/005/authama/notifykit/icon.png -- T B")
+	if a != b || !strings.Contains(a, "--icon=<state>/icon.png") {
+		t.Fatalf("%q and %q should match", a, b)
+	}
+	if got := sameIconPath("context create x --docker host=ssh://a/b"); got != "context create x --docker host=ssh://a/b" {
+		t.Fatalf("a call without --icon changed: %q", got)
 	}
 }
