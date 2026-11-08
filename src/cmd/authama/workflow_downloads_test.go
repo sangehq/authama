@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"go.yaml.in/yaml/v3"
 )
 
 // A download in CI must survive the transient 5xx GitHub's release CDN
@@ -81,5 +83,58 @@ func TestEveryInstallerDownloadRetries(t *testing.T) {
 	}
 	if !strings.Contains(string(b), "CURL_RETRY=(--retry ") {
 		t.Error("install.sh no longer defines CURL_RETRY with --retry")
+	}
+}
+
+// golangci-lint-action downloads its binary from the same CDN, so ci.yml runs
+// it as two attempts: the first may fail, and a second, identical one runs
+// only if it did. The guard is the pairing: an attempt allowed to fail with no
+// second attempt behind it would let a real lint finding pass the job.
+func TestTheLintActionGetsASecondAttempt(t *testing.T) {
+	type step struct {
+		ID              string            `yaml:"id"`
+		If              string            `yaml:"if"`
+		Uses            string            `yaml:"uses"`
+		ContinueOnError any               `yaml:"continue-on-error"`
+		With            map[string]string `yaml:"with"`
+	}
+	var wf struct {
+		Jobs map[string]struct {
+			Steps []step `yaml:"steps"`
+		} `yaml:"jobs"`
+	}
+	b, err := os.ReadFile(filepath.Join(repoRoot(t), "..", ".github", "workflows", "ci.yml")) //nolint:gosec // the repository's own workflow
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := yaml.Unmarshal(b, &wf); err != nil {
+		t.Fatal(err)
+	}
+	pairs := 0
+	for name, job := range wf.Jobs {
+		for i, s := range job.Steps {
+			if !strings.HasPrefix(s.Uses, "golangci/golangci-lint-action@") || s.If != "" {
+				continue
+			}
+			if s.ContinueOnError != true || s.ID == "" {
+				t.Errorf("%s: the lint attempt at step %d has no id or is not continue-on-error, so a CDN 504 fails the job", name, i)
+				continue
+			}
+			if i+1 >= len(job.Steps) {
+				t.Errorf("%s: the lint attempt %q has no second attempt after it", name, s.ID)
+				continue
+			}
+			next := job.Steps[i+1]
+			want := "steps." + s.ID + ".outcome == 'failure'"
+			if next.Uses != s.Uses || next.If != want || next.ContinueOnError != nil ||
+				next.With["version"] != s.With["version"] || next.With["working-directory"] != s.With["working-directory"] {
+				t.Errorf("%s: the step after %q is not an identical second attempt under if: %s (got %+v)", name, s.ID, want, next)
+				continue
+			}
+			pairs++
+		}
+	}
+	if pairs == 0 {
+		t.Fatal("found no lint attempt in ci.yml; the scan is not matching it")
 	}
 }

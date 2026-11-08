@@ -72,12 +72,25 @@ jobs:
         run: make ci
       # Once per OS, not once overall: golangci-lint analyses a single GOOS, so
       # a single run never sees the build-tagged platform files at all.
+      #
+      # The action downloads golangci-lint from GitHub's release CDN, which
+      # answered 504 for minutes on 2026-11-08 and outlasted the action's own two
+      # retries on #160's Windows job. So a failed first attempt gets one more,
+      # identical one; a real lint finding fails both, and the job with them.
       - name: Lint
+        id: lint
+        continue-on-error: true
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: v2.14.0
           # The module is src/, and the action runs where it is told to. Without
           # this it lints a directory with no Go in it and passes.
+          working-directory: src
+      - name: Lint (second attempt)
+        if: steps.lint.outcome == 'failure'
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.14.0
           working-directory: src
       # No longer macOS-only: the shell version used BSD `stat -f`, which was the
       # single reason two thirds of the matrix never ran it.
