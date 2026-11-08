@@ -21,9 +21,10 @@ func TestEveryWorkflowDownloadRetries(t *testing.T) {
 	if len(files) < 3 {
 		t.Fatalf("read %d workflow files in %s; the scan is not reading them", len(files), dir)
 	}
-	// A curl command: the word at the start of a run line or after a pipe,
-	// with its continuation lines joined. Comments are prose, not commands.
-	curl := regexp.MustCompile(`(^|[|;&]\s*)curl\s`)
+	// A curl command: the word followed by a flag, wherever it starts (a run
+	// line, after a pipe, inside an if), with its continuation lines joined.
+	// Comments are prose, not commands.
+	curl := regexp.MustCompile(`(^|[\s|;&(])curl\s+-`)
 	calls := 0
 	for _, f := range files {
 		b, err := os.ReadFile(f) //nolint:gosec // the repository's own workflows
