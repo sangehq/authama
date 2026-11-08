@@ -54,3 +54,32 @@ func TestEveryWorkflowDownloadRetries(t *testing.T) {
 		t.Fatal("found no curl in any workflow; the scan is not matching them")
 	}
 }
+
+// The same holds for the shell installer, run by users and by CI's installer
+// job: every request it makes retries a transient answer, through the one
+// CURL_RETRY array it defines.
+func TestEveryInstallerDownloadRetries(t *testing.T) {
+	path := filepath.Join(repoRoot(t), "scripts", "install.sh")
+	b, err := os.ReadFile(path) //nolint:gosec // the repository's own installer
+	if err != nil {
+		t.Fatal(err)
+	}
+	curl := regexp.MustCompile(`(^|[\s|;&($])curl\s+-`)
+	calls := 0
+	for i, line := range strings.Split(string(b), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "#") || !curl.MatchString(line) {
+			continue
+		}
+		calls++
+		if !strings.Contains(line, `"${CURL_RETRY[@]}"`) {
+			t.Errorf("install.sh:%d: a request without \"${CURL_RETRY[@]}\":\n  %s", i+1, line)
+		}
+	}
+	if calls < 4 {
+		t.Fatalf("found %d curl requests in install.sh, want at least 4 (version lookup, its fallback, checksums, binary); the scan is not matching them", calls)
+	}
+	if !strings.Contains(string(b), "CURL_RETRY=(--retry ") {
+		t.Error("install.sh no longer defines CURL_RETRY with --retry")
+	}
+}
