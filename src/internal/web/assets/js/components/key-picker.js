@@ -75,7 +75,10 @@ export class KeyPicker extends Component {
     const chosen = keys.filter((k) => k.checked).length;
     const count = this.el.querySelector("[data-pick-count]");
     if (count) {
-      count.textContent = chosen === 0
+      const verb = { rotate: "rotated", revoke: "revoked", delete: "deleted" }[this.el.dataset.pickAction ?? ""] ?? "chosen";
+      count.textContent = keys.length === 0
+        ? `No key here can be ${verb}; each says why.`
+        : chosen === 0
         ? "No key chosen yet."
         : `${chosen} of ${keys.length} key${keys.length === 1 ? "" : "s"} chosen${all ? ", and any added later" : ""}.`;
     }

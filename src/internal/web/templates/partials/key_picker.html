@@ -2,7 +2,7 @@
      or single keys, in any mix. Built with `picker .Data "rotate"`. Without
      a script every box still posts; KeyPicker adds the group ticks and the
      count. A key the action cannot act on is shown, unticked, with why. */}}
-{{define "key_picker"}}{{$d := .}}<fieldset class="key-picker" data-key-picker>
+{{define "key_picker"}}{{$d := .}}<fieldset class="key-picker" data-key-picker data-pick-action="{{.Action}}">
   <legend class="form-label">Which keys</legend>
   <label class="form-check"><input class="form-check-input" type="checkbox" name="all" value="1" data-pick-all><span class="form-check-label">Every key in every profile</span></label>
   {{if .Categories}}<div class="key-picker-cats" role="group" aria-label="Categories"><span class="text-secondary small me-2">Whole categories:</span>{{range .Categories}}<label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="sel" value="category:{{.}}" data-pick-category="{{.}}"><span class="form-check-label">{{.}}</span></label>{{end}}</div>{{end}}
