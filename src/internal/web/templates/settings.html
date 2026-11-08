@@ -7,9 +7,9 @@
       <p class="text-secondary mb-0">The colour theme for this browser. Following the system matches the light or dark setting of this computer.</p>
     </div>
     <div class="btn-group" role="group" aria-label="Colour theme">
-      <a href="?theme=light" class="btn btn-outline-secondary" data-theme-choice="light"{{tip "theme-light"}}>{{icon "sun"}}<span class="ms-1">Light</span></a>
-      <a href="?theme=dark" class="btn btn-outline-secondary" data-theme-choice="dark"{{tip "theme-dark"}}>{{icon "moon"}}<span class="ms-1">Dark</span></a>
-      <a href="?theme=auto" class="btn btn-outline-secondary" data-theme-choice="auto"{{tip "theme-auto"}}>{{icon "device-desktop"}}<span class="ms-1">System</span></a>
+      <a href="?theme=light" class="btn btn-outline-secondary" data-theme-choice="light"{{desc "theme-light"}}>{{icon "sun"}}<span class="ms-1">Light</span></a>
+      <a href="?theme=dark" class="btn btn-outline-secondary" data-theme-choice="dark"{{desc "theme-dark"}}>{{icon "moon"}}<span class="ms-1">Dark</span></a>
+      <a href="?theme=auto" class="btn btn-outline-secondary" data-theme-choice="auto"{{desc "theme-auto"}}>{{icon "device-desktop"}}<span class="ms-1">System</span></a>
     </div>
   </div>
 </div>
@@ -19,16 +19,16 @@
       <div class="card-header"><h2 class="card-title">Files</h2></div>
       <div class="card-body">
         <dl class="row mb-0">
-          <dt class="col-sm-3">Config home</dt><dd class="col-sm-9 text-break"><code>{{.ConfigHome}}</code>{{if .ConfigSource}} <span class="text-secondary">({{.ConfigSource}})</span>{{end}}</dd>
-          <dt class="col-sm-3">State home</dt><dd class="col-sm-9 text-break"><code>{{.StateHome}}</code> <span class="text-secondary">(history, logs, snapshots, bundles, lock)</span></dd>
-          <dt class="col-sm-3"><code>.env</code></dt><dd class="col-sm-9 text-break"><code>{{.Dotenv}}</code>{{if .DotenvState}} <span class="text-secondary">({{.DotenvState}})</span>{{end}}</dd>
-          <dt class="col-sm-3"><code>authama.json</code></dt><dd class="col-sm-9 text-break mb-0"><code>{{.Settings}}</code>{{if .SettingsState}} <span class="text-secondary">({{.SettingsState}})</span>{{end}}</dd>
+          <dt class="col-sm-3">Config home</dt><dd class="col-sm-9 text-break"><code>{{tilde .ConfigHome}}</code> {{template "copy" (copy .ConfigHome "the config home")}}{{if .ConfigSource}} <span class="text-secondary">({{.ConfigSource}})</span>{{end}}</dd>
+          <dt class="col-sm-3">State home</dt><dd class="col-sm-9 text-break"><code>{{tilde .StateHome}}</code> {{template "copy" (copy .StateHome "the state home")}} <span class="text-secondary">(history, logs, snapshots, bundles, lock)</span></dd>
+          <dt class="col-sm-3"><code>.env</code></dt><dd class="col-sm-9 text-break"><code>{{tilde .Dotenv}}</code> {{template "copy" (copy .Dotenv "the .env path")}}{{if .DotenvState}} <span class="text-secondary">({{.DotenvState}})</span>{{end}}</dd>
+          <dt class="col-sm-3"><code>authama.json</code></dt><dd class="col-sm-9 text-break mb-0"><code>{{tilde .Settings}}</code> {{template "copy" (copy .Settings "the authama.json path")}}{{if .SettingsState}} <span class="text-secondary">({{.SettingsState}})</span>{{end}}</dd>
         </dl>
       </div>
       {{if and (not .HasSettings) (not $.ReadOnly)}}
       <div class="card-footer d-flex flex-wrap gap-2 align-items-center">
         <span class="text-secondary me-auto">No <code>authama.json</code> yet: every setting is at its default unless the environment or <code>.env</code> sets it.</span>
-        {{template "change_open" $}}<input type="hidden" name="action" value="settings-init"><button type="submit" class="btn btn-primary mt-2"{{tip "settings-init"}}>{{icon "plus"}}<span class="ms-1">Create a starter authama.json</span></button></form>
+        {{template "change_open" $}}<input type="hidden" name="action" value="settings-init"><button type="submit" class="btn btn-primary mt-2"{{desc "settings-init"}}>{{icon "plus"}}<span class="ms-1">Create a starter authama.json</span></button></form>
       </div>
       {{end}}
     </div>
@@ -58,7 +58,7 @@
             {{range .Effective}}
             <tr>
               <th scope="row"><code>{{.Key}}</code><div class="small text-secondary"><code>${{.Variable}}</code></div></th>
-              <td class="text-break w-50">{{if .Value}}{{.Value}}{{else}}<span class="text-secondary">(unset)</span>{{end}}</td>
+              <td class="text-break w-50">{{if .Value}}{{tildeText .Value}}{{else}}<span class="text-secondary">(unset)</span>{{end}}</td>
               <td>{{if eq .Source "default"}}<span class="badge badge-muted">default</span>{{else}}<span class="badge badge-info text-wrap text-start">{{.Source}}</span>{{end}}</td>
             </tr>
             {{end}}

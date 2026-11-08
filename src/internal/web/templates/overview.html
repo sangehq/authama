@@ -30,7 +30,7 @@
         <ul class="list-unstyled mb-0 small mt-auto">
           <li class="d-flex align-items-center"><span>Due for rotation</span><span class="ms-auto">{{if .Expiry}}<span class="badge badge-warn">{{len .Expiry}}</span>{{else}}<span class="badge badge-ok">0</span>{{end}}</span></li>
           <li class="d-flex align-items-center mt-2"><span>Reserved on purpose</span><span class="ms-auto"><span class="badge badge-muted">{{.Reserved}}</span></span></li>
-          <li class="d-flex align-items-center mt-2"><span>Loose in ~/.ssh</span><span class="ms-auto">{{if .Loose}}<a class="badge badge-warn" href="{{basePath}}/keys#loose" title="Files under ~/.ssh no profile owns">{{.Loose}}</a>{{else}}<span class="badge badge-ok">0</span>{{end}}</span></li>
+          <li class="d-flex align-items-center mt-2"><span>Loose in ~/.ssh</span><span class="ms-auto">{{if .Loose}}<a class="badge badge-warn" href="{{basePath}}/keys#loose" aria-description="Files under ~/.ssh no profile owns">{{.Loose}}</a>{{else}}<span class="badge badge-ok">0</span>{{end}}</span></li>
         </ul>
       </div>
     </div>
@@ -73,7 +73,7 @@
         </div>
         <ul class="list-unstyled mb-0 small mt-auto">
           <li class="d-flex align-items-center"><span>Newest</span><span class="ms-auto text-secondary">{{if .Snapshots}}{{when .LastSnapshot}}{{else}}none yet{{end}}</span></li>
-          <li class="d-flex align-items-center mt-2"><span>Hold private keys</span><span class="ms-auto">{{if .SnapshotsWithKeys}}<a class="badge badge-warn" href="{{basePath}}/snapshots" title="Taken before key exclusion; prune them when no longer needed">{{.SnapshotsWithKeys}}</a>{{else}}<span class="badge badge-ok">0</span>{{end}}</span></li>
+          <li class="d-flex align-items-center mt-2"><span>Hold private keys</span><span class="ms-auto">{{if .SnapshotsWithKeys}}<a class="badge badge-warn" href="{{basePath}}/snapshots" aria-description="Taken before key exclusion; prune them when no longer needed">{{.SnapshotsWithKeys}}</a>{{else}}<span class="badge badge-ok">0</span>{{end}}</span></li>
           <li class="d-flex align-items-center mt-2"><span>Oldest</span><span class="ms-auto text-secondary">{{if .Snapshots}}{{when .FirstSnapshot}}{{else}}none yet{{end}}</span></li>
         </ul>
       </div>
@@ -93,8 +93,8 @@
             {{range .Rows}}
             <tr{{if .Fix}} class="row-attention"{{end}}>
               <th scope="row">{{if .Fix}}{{icon "alert-triangle"}}<span class="visually-hidden">Needs attention: </span> {{end}}{{.Label}}</th>
-              <td class="text-break">{{.Value}}</td>
-              {{if .Fix}}<td class="fix-cell"><code>{{.Fix}}</code>{{with fixFor .Fix}}{{if .Action}}{{if not $.ReadOnly}}{{template "change_open" $}}<input type="hidden" name="action" value="{{.Action}}"><button type="submit" class="btn btn-sm mt-1"{{tip "overview-fix-preview"}}>{{icon "player-play"}}<span class="ms-1">{{.Label}}</span></button></form>{{end}}{{else}}<a class="btn btn-sm mt-1" href="{{u .Page}}"{{tip "overview-fix-open"}}>{{icon "link"}}<span class="ms-1">{{.Label}}</span></a>{{end}}{{end}}</td>{{else}}<td><span class="text-secondary">–</span></td>{{end}}
+              <td class="text-break">{{tildeText .Value}}</td>
+              {{if .Fix}}<td class="fix-cell"><code>{{.Fix}}</code>{{with fixFor .Fix}}{{if .Action}}{{if not $.ReadOnly}}{{template "change_open" $}}<input type="hidden" name="action" value="{{.Action}}"><button type="submit" class="btn btn-sm mt-1"{{desc "overview-fix-preview"}}>{{icon "player-play"}}<span class="ms-1">{{.Label}}</span></button></form>{{end}}{{else}}<a class="btn btn-sm mt-1" href="{{u .Page}}"{{desc "overview-fix-open"}}>{{icon "link"}}<span class="ms-1">{{.Label}}</span></a>{{end}}{{end}}</td>{{else}}<td><span class="text-secondary">–</span></td>{{end}}
             </tr>
             {{end}}
           </tbody>
@@ -109,13 +109,13 @@
       <div class="list-group list-group-flush">
         {{if not $.ReadOnly}}
         <div class="list-group-item">
-          {{template "change_open" $}}<input type="hidden" name="action" value="reconcile"><button type="submit" class="btn btn-primary w-100"{{tip "reconcile"}}>{{icon "refresh"}}<span class="ms-1">Reconcile: mint missing keys and render</span></button></form>
+          {{template "change_open" $}}<input type="hidden" name="action" value="reconcile"><button type="submit" class="btn btn-primary w-100"{{desc "reconcile"}}>{{icon "refresh"}}<span class="ms-1">Reconcile: mint missing keys and render</span></button></form>
         </div>
         <div class="list-group-item">
-          {{template "change_open" $}}<input type="hidden" name="action" value="config-render"><button type="submit" class="btn btn-outline-primary w-100"{{tip "render"}}>{{icon "file-code"}}<span class="ms-1">Re-render ~/.ssh/config</span></button></form>
+          {{template "change_open" $}}<input type="hidden" name="action" value="config-render"><button type="submit" class="btn btn-outline-primary w-100"{{desc "render"}}>{{icon "file-code"}}<span class="ms-1">Re-render ~/.ssh/config</span></button></form>
         </div>
         <div class="list-group-item">
-          {{template "change_open" $}}<input type="hidden" name="action" value="token-apply"><button type="submit" class="btn btn-outline-primary w-100"{{tip "token-apply"}}>{{icon "cloud-lock"}}<span class="ms-1">Apply the token config</span></button></form>
+          {{template "change_open" $}}<input type="hidden" name="action" value="token-apply"><button type="submit" class="btn btn-outline-primary w-100"{{desc "token-apply"}}>{{icon "cloud-lock"}}<span class="ms-1">Apply the token config</span></button></form>
         </div>
         {{end}}
         <a class="list-group-item list-group-item-action" href="{{basePath}}/ssh-config">{{icon "file-code"}}<span class="ms-2">See the rendered SSH config and its drift check</span></a>
@@ -178,7 +178,7 @@
       <div class="card-header"><h2 class="card-title">Rotation due</h2></div>
       {{if .Expiry}}
       <ul class="list-group list-group-flush">
-        {{range .Expiry}}<li class="list-group-item d-flex justify-content-between gap-2"><a href="{{basePath}}/keys/{{.Profile}}/{{.KeyName}}"><code>{{.Ref}}</code></a><span><span class="badge {{statusClass .State}}">{{.State}}</span> <span class="text-secondary">{{expiryDays .}}</span></span></li>{{end}}
+        {{range .Expiry}}<li class="list-group-item d-flex justify-content-between gap-2"><a href="{{basePath}}/keys/{{.Profile}}/{{.KeyName}}" data-inline><code>{{.Ref}}</code></a><span><span class="badge {{statusClass .State}}">{{.State}}</span> <span class="text-secondary">{{expiryDays .}}</span></span></li>{{end}}
       </ul>
       {{else}}{{template "empty" (empty "circle-check" "No key is due for rotation" "")}}{{end}}
     </div>

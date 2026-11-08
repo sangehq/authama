@@ -16,7 +16,7 @@
   </div>
   {{if and (not $.ReadOnly) (gt .Fixable 0)}}<div class="card-footer d-flex flex-wrap align-items-center gap-2">
     <span class="text-secondary small me-auto">{{.Fixable}} can be fixed now. ~/.ssh is snapshotted first, and the fixes are previewed before they run.</span>
-    {{template "change_open" $}}<input type="hidden" name="action" value="repair"><button type="submit" class="btn btn-primary"{{tip "repair"}}>{{icon "refresh"}}<span class="ms-1">Preview the fixes</span></button></form>
+    {{template "change_open" $}}<input type="hidden" name="action" value="repair"><button type="submit" class="btn btn-primary"{{desc "repair"}}>{{icon "refresh"}}<span class="ms-1">Preview the fixes</span></button></form>
   </div>{{end}}
   {{else}}{{template "empty" (empty "circle-check" "Nothing to repair" "The home, ~/.ssh and the token files are as authama expects.")}}{{end}}
 </div>

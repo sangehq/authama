@@ -221,6 +221,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Web UI: names open in the side panel, and Export's filters slide in on a phone.** A host's
+  or key's name in a list (Hosts, Keys, Connections, Validate, Audit, the overview, and the links
+  between a host and its key) now opens it in the slide-in panel over the list, like the row
+  menu's Open; Ctrl- or Cmd-click and the panel's "Open as a page" still go to the page. Below
+  the `lg` breakpoint, Export's saved selections and filters move into a panel opened by a
+  Filters button, and the row kinds scroll on one line instead of wrapping into three.
+- **Web UI: paths under your home show as `~/…`** on Settings, About, Auth tokens, the overview's
+  State card and the Doctor report, with a copy button beside each for the full path. The token audit lists problems
+  first, each finding with an icon for its outcome.
+- **Web UI on a phone:** a page's actions take their own row under the title, the second action
+  and More show their icons alone, and the overview's counts sit two to a row.
+- **Web UI: tooltips only where there is no label.** A button or link that shows its name, a
+  nav item, a menu entry and a dropdown toggle no longer show a tooltip, which covered the menu it
+  opened and repeated the label; their explainer is read to a screen reader instead, and each
+  navigation menu entry shows what its page holds as a line under its name. Icon-only buttons
+  keep a tooltip, after half a second, one at a time, put away by any click, Escape, scroll or
+  opening menu, panel or dialog, never shown while a menu is open and never on a touch screen.
+  No element carries a native `title` any more; preview cells wrap instead of cutting off text
+  you could only read on hover. A copy button beside each `~/…` path copies the full path.
 - **The web UI's tab icon and header share one logo mark.** The favicon is authama's key,
   drawn in white on the primary rounded square. The header shows that mark followed by the
   product name, Authentication Access Manager, on wide screens and `authama` on narrower
@@ -270,6 +289,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   buttons and dev banner) is removed, with the rule that forced panel columns to full width.
 ### Fixed
 
+- **Web UI: text typed into an Export step could vanish.** Committing a step's first field asks
+  for a new preview, and its answer redrew the steps from the saved selection, wiping a second
+  field still being typed in. A redraw now keeps uncommitted text, the focus and the caret, and
+  Enter or leaving the field commits it.
+- **Web UI: accordions showed no sign that they open.** Tabler 1.7 draws an accordion's chevron
+  only inside `.accordion-button-toggle`, which no accordion had, so Export's Profiles, Keys,
+  Roles, Tags and Status groups and About's licences read as plain headings. Each now shows a
+  chevron that turns when it opens; a test fails on any accordion without one.
 - **The installers retry GitHub when it answers 504.** `install.sh` and `install.ps1` retry the
   version lookup and every download on a timeout, a 408, a 429 or a 5xx, with backoff, before
   giving up. A 404 still fails at once, so the API's "no release" falls through to the

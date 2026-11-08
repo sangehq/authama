@@ -61,16 +61,23 @@ test('profiles lists every profile in the manifest', async ({ page }) => {
   await expect(work).toContainText('per_service');
 });
 
-test('hosts lists every host with its hostname, and a host opens', async ({ page }) => {
+test('hosts lists every host with its hostname, and a host opens in the side panel', async ({ page }) => {
   await page.goto('/hosts');
   for (const [alias, hostname] of Object.entries(hosts)) {
     const row = page.getByRole('row').filter({ has: page.getByRole('link', { name: alias, exact: true }) });
     await expect(row).toContainText(hostname);
   }
+  // A host's name slides its page in over the list, which stays where it was.
   await page.getByRole('link', { name: 'hpc', exact: true }).click();
+  const panel = page.locator('[data-side-panel]');
+  await expect(panel).toBeVisible();
+  await expect(page).toHaveURL(/\/hosts$/);
+  await expect(panel.getByRole('heading', { level: 1 })).toHaveText('hpc');
+  await expect(panel.locator('dd', { hasText: 'hpc.example.edu' })).toBeVisible();
+  // "Open as a page" still reaches the host's own page.
+  await panel.locator('[data-side-panel-full]').click();
   await expect(page).toHaveURL(/\/hosts\/hpc$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('hpc');
-  await expect(page.locator('dd', { hasText: 'hpc.example.edu' })).toBeVisible();
 });
 
 test('keys lists every reconciled key as on disk, with a fingerprint', async ({ page }) => {
@@ -80,9 +87,14 @@ test('keys lists every reconciled key as on disk, with a fingerprint', async ({ 
     await expect(row).toContainText('SHA256:');
     await expect(row.locator('.badge-ok')).toHaveText('yes');
   }
+  // A key's name slides its page in over the list.
   await page.getByRole('link', { name: 'work/work_hpc-ed25519', exact: true }).click();
+  const panel = page.locator('[data-side-panel]');
+  await expect(panel).toBeVisible();
+  await expect(page).toHaveURL(/\/keys$/);
+  await expect(panel.getByText(/SHA256:/).first()).toBeVisible();
+  await panel.locator('[data-side-panel-full]').click();
   await expect(page).toHaveURL(/\/keys\/work\/work_hpc-ed25519$/);
-  await expect(page.getByText(/SHA256:/).first()).toBeVisible();
 });
 
 test('doctor shows the report authama doctor prints', async ({ page }) => {
@@ -188,19 +200,11 @@ test('the tour walks the header step by step, and Escape ends it', async ({ page
   const pop = page.locator('.popover.tour-popover');
   await expect(pop).toBeVisible();
   await expect(pop.locator('.popover-header')).toHaveText(/^Search \(1 of \d+\)$/);
-  // Closing the account menu can leave the pointer on a header action, whose
-  // explainer then shows beside the tour. The tour stays on top of it, so
-  // its Next is never covered.
+  // Closing the account menu can leave the pointer on a header action. A
+  // labelled action shows no tooltip, so nothing can cover the tour's Next.
   await page.getByText('Add a token', { exact: true }).hover();
-  // Every control has an explainer now, so pick this action's own: the
-  // account menu's may still be showing for the toggle the tour left focused.
-  const tip = page.locator('.tooltip', { hasText: 'token' });
-  await expect(tip).toBeVisible();
-  // Where they overlap depends on fonts and layout, so compare the stacking
-  // order itself: on CI the tooltip's edge once covered Next and swallowed
-  // the click.
-  const z = (sel: string) => page.locator(sel).first().evaluate((el) => Number(getComputedStyle(el).zIndex));
-  expect(await z('.popover.tour-popover')).toBeGreaterThan(await tip.first().evaluate((el) => Number(getComputedStyle(el).zIndex)));
+  await page.waitForTimeout(800);
+  await expect(page.locator('.tooltip')).toHaveCount(0);
   await pop.getByRole('button', { name: 'Next' }).click();
   await expect(pop.locator('.popover-header')).toHaveText(/\(2 of \d+\)$/);
   await pop.getByRole('button', { name: 'Back' }).click();

@@ -116,6 +116,7 @@ func pageNames() ([]string, error) {
 }
 
 func funcs(a *assetSet, basePath string) template.FuncMap {
+	homes := homeDirs()
 	return template.FuncMap{
 		"asset": func(name string) (string, error) {
 			u, err := a.url(name)
@@ -239,6 +240,11 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 			return strings.Join(parts, ", ")
 		},
 		"base": filepath.Base,
+		// tilde shows a path under the home directory as ~/…, and tildeText
+		// does it for every such path inside free text; the full path stays
+		// in a title attribute where the template puts one.
+		"tilde":     func(p string) string { return tildePath(p, homes) },
+		"tildeText": func(s string) string { return tildeText(s, homes) },
 		// pct is part of whole as a percentage, rounded to the 5% steps
 		// app.css has width classes for (no inline style passes the CSP).
 		"pct": func(part, whole int) int {
@@ -334,7 +340,8 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 				CSV: strings.HasSuffix(strings.SplitN(href, "?", 2)[0], ".csv")}
 		},
 		// tip is ` data-tip="…"` from the catalogue in tips.go, for any element.
-		"tip": tipAttr,
+		"tip":  tipAttr,
+		"desc": descAttr,
 		// fixFor is the web UI's way of doing an overview row's fix, or nil.
 		"fixFor": fixFor,
 		// withTip gives a header action its explainer:

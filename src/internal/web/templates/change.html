@@ -20,8 +20,8 @@
   <input type="hidden" name="hash" value="{{.Plan.Hash}}">
   {{range .Fields}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}
   {{template "pin_field" $}}
-  <button type="submit" class="btn {{if .Destroy}}btn-danger{{else}}btn-primary{{end}}"{{tip "apply"}}>{{if .Destroy}}Yes, {{.Command}}{{else}}Make this change{{end}}</button>
-  <a href="{{basePath}}/" class="btn btn-link link-secondary"{{tip "cancel-change"}}>Cancel</a>
+  <button type="submit" class="btn {{if .Destroy}}btn-danger{{else}}btn-primary{{end}}"{{desc "apply"}}>{{if .Destroy}}Yes, {{.Command}}{{else}}Make this change{{end}}</button>
+  <a href="{{basePath}}/" class="btn btn-link link-secondary"{{desc "cancel-change"}}>Cancel</a>
 </form>
 {{end}}
 {{end}}{{end}}

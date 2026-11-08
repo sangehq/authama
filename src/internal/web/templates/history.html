@@ -16,8 +16,8 @@
     <div class="col-6 col-md-4 col-xl-2"><label class="form-label" for="f-since">Since</label><input class="form-control" type="date" id="f-since" name="since" value="{{.Filter.Since}}"></div>
     <div class="col-6 col-md-4 col-xl-2"><label class="form-label" for="f-until">Until</label><input class="form-control" type="date" id="f-until" name="until" value="{{.Filter.Until}}"></div>
     <div class="col-12 col-md-4 col-xl-auto ms-xl-auto d-flex gap-2">
-      <a class="btn btn-outline-secondary flex-fill" href="{{basePath}}/history"{{tip "filter-clear"}}>Clear</a>
-      <button type="submit" class="btn btn-primary flex-fill"{{tip "filter-apply"}}>Filter</button>
+      <a class="btn btn-outline-secondary flex-fill" href="{{basePath}}/history"{{desc "filter-clear"}}>Clear</a>
+      <button type="submit" class="btn btn-primary flex-fill"{{desc "filter-apply"}}>Filter</button>
     </div>
   </div>
 </form>

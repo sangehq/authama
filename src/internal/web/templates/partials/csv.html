@@ -3,7 +3,7 @@
      the script, the button opens "csv_dialog" first: pick the profiles, keys and
      columns, leave out rows, see the first rows, then download. Without it, it
      downloads. */}}
-{{define "csv"}}<a class="btn btn-sm btn-outline-secondary" href="{{u .}}" download data-csv-export{{tip "csv"}}>{{icon "download"}}<span class="ms-1">CSV</span></a>{{end}}
+{{define "csv"}}<a class="btn btn-sm btn-outline-secondary" href="{{u .}}" download data-csv-export{{desc "csv"}}>{{icon "download"}}<span class="ms-1">CSV</span></a>{{end}}
 
 {{define "csv_pick"}}<div class="csv-pick-panel" role="tabpanel" id="csv-tab-{{.}}" aria-labelledby="csv-tab-{{.}}-btn" data-csv-panel="{{.}}" hidden>
             <div class="px-3 pt-3 pb-2">
@@ -30,9 +30,9 @@
       <div class="modal-body p-0 csv-body">
         <aside class="csv-pick" aria-label="What the file holds">
           <div class="nav nav-bordered nav-fill px-3 pt-2" role="tablist" aria-label="Choose">
-            <button type="button" class="nav-link" role="tab" id="csv-tab-profiles-btn" aria-controls="csv-tab-profiles" data-csv-tab="profiles" hidden{{tip "csv-profiles"}}>Profiles <span class="badge badge-muted ms-1" data-csv-count="profiles"></span></button>
-            <button type="button" class="nav-link" role="tab" id="csv-tab-keys-btn" aria-controls="csv-tab-keys" data-csv-tab="keys" hidden{{tip "csv-keys"}}>Keys <span class="badge badge-muted ms-1" data-csv-count="keys"></span></button>
-            <button type="button" class="nav-link" role="tab" id="csv-tab-columns-btn" aria-controls="csv-tab-columns" data-csv-tab="columns"{{tip "csv-columns"}}>Columns <span class="badge badge-muted ms-1" data-csv-count="columns"></span></button>
+            <button type="button" class="nav-link" role="tab" id="csv-tab-profiles-btn" aria-controls="csv-tab-profiles" data-csv-tab="profiles" hidden{{desc "csv-profiles"}}>Profiles <span class="badge badge-muted ms-1" data-csv-count="profiles"></span></button>
+            <button type="button" class="nav-link" role="tab" id="csv-tab-keys-btn" aria-controls="csv-tab-keys" data-csv-tab="keys" hidden{{desc "csv-keys"}}>Keys <span class="badge badge-muted ms-1" data-csv-count="keys"></span></button>
+            <button type="button" class="nav-link" role="tab" id="csv-tab-columns-btn" aria-controls="csv-tab-columns" data-csv-tab="columns"{{desc "csv-columns"}}>Columns <span class="badge badge-muted ms-1" data-csv-count="columns"></span></button>
           </div>
           {{template "csv_pick" "profiles"}}
           {{template "csv_pick" "keys"}}
@@ -62,7 +62,7 @@
         </section>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-link link-secondary me-auto" data-csv-reset{{tip "csv-reset"}}>Reset</button>
+        <button type="button" class="btn btn-link link-secondary me-auto" data-csv-reset{{desc "csv-reset"}}>Reset</button>
         <span class="text-danger small me-2" data-csv-blocked hidden></span>
         <div class="input-group w-auto" data-csv-formats hidden>
           <label class="input-group-text" for="csv-format">Format</label>
@@ -72,9 +72,9 @@
             <option value="js">JavaScript array</option><option value="markdown">Markdown table</option><option value="html">HTML table</option>
           </select>
         </div>
-        <a class="btn" href="{{u "/export"}}" data-csv-open hidden{{tip "csv-open-export"}}>{{icon "file-export"}}<span class="ms-1">Open in Export</span></a>
+        <a class="btn" href="{{u "/export"}}" data-csv-open hidden{{desc "csv-open-export"}}>{{icon "file-export"}}<span class="ms-1">Open in Export</span></a>
         <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Cancel</button>
-        <a class="btn btn-primary" role="link" href="#" download data-csv-download{{tip "download"}}>{{icon "download"}}<span class="ms-1">Download</span></a>
+        <a class="btn btn-primary" role="link" href="#" download data-csv-download{{desc "download"}}>{{icon "download"}}<span class="ms-1">Download</span></a>
       </div>
     </div>
   </div>

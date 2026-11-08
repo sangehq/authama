@@ -17,7 +17,7 @@
     <h3 class="card-title mb-0"><code>{{.Path}}</code></h3>
     {{if .State}}<span class="badge {{if eq .State "changed"}}badge-info{{else if eq .State "added"}}badge-ok{{else}}badge-bad{{end}}">{{.State}}</span>{{end}}
     {{if .LangLabel}}<span class="badge badge-muted">{{.LangLabel}}</span>{{end}}
-    {{if .Checked}}{{if .Problem}}<span class="badge badge-bad" title="{{.Problem}}">{{icon "circle-x"}}<span class="ms-1">invalid {{.LangLabel}}</span></span>{{else}}<span class="badge badge-ok">{{icon "circle-check"}}<span class="ms-1">valid {{.LangLabel}}</span></span>{{end}}{{end}}
+    {{if .Checked}}{{if .Problem}}<span class="badge badge-bad">{{icon "circle-x"}}<span class="ms-1">invalid {{.LangLabel}}</span></span> <span class="text-secondary small">{{.Problem}}</span>{{else}}<span class="badge badge-ok">{{icon "circle-check"}}<span class="ms-1">valid {{.LangLabel}}</span></span>{{end}}{{end}}
     <span class="ms-auto diff-counts"><span class="text-success">+{{.Added}}</span> <span class="text-danger">&minus;{{.Removed}}</span></span>
     {{template "copy" (copy .Path "the path")}}
   </div>

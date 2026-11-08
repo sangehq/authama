@@ -73,8 +73,10 @@ export const test = base.extend<{ problems: string[] }>({
       }
     });
     page.on('requestfailed', (r) => {
-      // A reload during a live job aborts its event stream; that is the page working.
-      if (!r.url().endsWith('/events')) problems.push(`requestfailed: ${r.url()} ${r.failure()?.errorText}`);
+      // A reload during a live job aborts its event stream, and Export cancels a
+      // preview a newer edit has replaced; both are the page working.
+      const superseded = r.url().includes('/exports/run?') && r.url().includes('preview=1') && r.failure()?.errorText === 'net::ERR_ABORTED';
+      if (!r.url().endsWith('/events') && !superseded) problems.push(`requestfailed: ${r.url()} ${r.failure()?.errorText}`);
     });
     await signIn(page);
     await use(page);

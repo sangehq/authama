@@ -10,7 +10,7 @@
     {{if not $.ReadOnly}}
     {{template "change_open" $}}<input type="hidden" name="action" value="ssh-import"><input type="hidden" name="source" value="{{.Key}}">
       {{if $.Data.Profiles}}<label class="form-check mb-2"><input class="form-check-input" type="checkbox" name="replace" value="1"><span class="form-check-label">Replace the profiles in the manifest</span></label>{{end}}
-      <button type="submit" class="btn btn-primary"{{tip "ssh-import-preview"}}>Preview the import</button>
+      <button type="submit" class="btn btn-primary"{{desc "ssh-import-preview"}}>Preview the import</button>
     </form>
     {{end}}
   </div>
