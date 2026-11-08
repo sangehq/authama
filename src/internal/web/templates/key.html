@@ -27,7 +27,7 @@
           <dt class="col-5">Expires</dt><dd class="col-7">{{orDash .Detail.ExpiresOn}}{{with .Expiry}} <span class="badge {{statusClass .State}}">{{.State}}</span> <span class="text-secondary">{{expiryDays .}}</span>{{end}}</dd>
           <dt class="col-5">Store</dt><dd class="col-7">{{if .Detail.Vault}}1Password vault <code>{{.Detail.Vault}}</code>{{else}}disk{{end}}</dd>
           <dt class="col-5">Identity file</dt><dd class="col-7 text-break"><code>{{.Detail.IdentityFile}}</code> {{template "copy" (copy .Detail.IdentityFile "the identity file's path")}}</dd>
-          <dt class="col-5">Used by</dt><dd class="col-7">{{range $i, $h := .Detail.Hosts}}{{if $i}}, {{end}}<a href="{{basePath}}/hosts/{{$h}}"><code>{{$h}}</code></a>{{else}}–{{end}}</dd>
+          <dt class="col-5">Used by</dt><dd class="col-7">{{range $i, $h := .Detail.Hosts}}{{if $i}}, {{end}}<a href="{{basePath}}/hosts/{{$h}}" data-inline><code>{{$h}}</code></a>{{else}}–{{end}}</dd>
         </dl>
       </div>
       {{if .PublicKey}}<div class="card-footer">

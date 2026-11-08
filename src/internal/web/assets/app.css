@@ -272,3 +272,33 @@ main:focus { outline: none; }
 .export-saved .list-group-item { display: flex; align-items: center; gap: .5rem; }
 .export-steps .list-group-item::before { align-self: flex-start; padding-top: .25rem; }
 .export-steps textarea { min-height: 4.5rem; }
+
+/* Accordion indicator. Tabler 1.7 draws an accordion's chevron only inside
+   .accordion-button-toggle, and rotates that element when the item opens; the
+   vendored sprite has no chevron, so the shape itself is drawn here. */
+.accordion-button-toggle { position: relative; flex: none; }
+.accordion-button-toggle::before {
+  content: ""; position: absolute; inset: 0; margin: auto; width: .5rem; height: .5rem;
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+  transform: translateY(-25%) rotate(45deg);
+}
+
+/* Export: the row kinds stay one line and scroll sideways on a narrow screen
+   instead of wrapping into ragged rows; the Filters button sits at the end. */
+.export-header { display: flex; align-items: center; gap: .5rem; }
+.export-grains { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; min-width: 0; flex: 1 1 auto; }
+.export-grains .nav-link { white-space: nowrap; }
+.export-filters-open { flex: none; }
+@media (max-width: 991.98px) {
+  .export-filters.offcanvas-lg { --tblr-offcanvas-width: min(24rem, 90vw); }
+}
+
+/* Token audit: one finding per line, an icon for its outcome, text wrapping
+   under itself rather than under the icon. */
+.token-audit-item { display: flex; gap: .5rem; align-items: flex-start; padding: .25rem 0; overflow-wrap: anywhere; }
+.token-audit-item + .token-audit-item { border-top: 1px solid var(--tblr-border-color-translucent); }
+.token-audit-item .icon { flex: none; margin-top: .125rem; }
+/* Colour on the icon only: red text on a dark card fails contrast. */
+.token-audit-item.is-problem { font-weight: var(--tblr-font-weight-medium, 500); }
+.token-audit-item.is-problem .icon { color: var(--tblr-danger); }
+.token-audit-item:not(.is-problem):not(.text-secondary) .icon { color: var(--tblr-success); }

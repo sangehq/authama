@@ -109,6 +109,7 @@ var tips = map[string]string{
 	"snapshot-compare-now": "Shows what changed in ~/.ssh since this snapshot. Nothing changes.",
 	"filter-clear":         "Removes every filter and shows the whole list again.",
 	"export-clear":         "Clears this tab's filters. The preview updates; nothing is downloaded.",
+	"export-filters":       "Opens the saved selections and the filters in a panel; the file below follows them as you change them.",
 	"export-columns-reset": "Puts back the list's own columns, names and order.",
 	"export-add-column":    "Adds the chosen field as a column at the end.",
 	"export-add-step":      "Adds the chosen transform as the last step.",

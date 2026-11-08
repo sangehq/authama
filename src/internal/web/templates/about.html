@@ -36,9 +36,9 @@
           <dt class="col-5">Platform</dt><dd class="col-7">{{.OS}}/{{.Arch}}</dd>
           <dt class="col-5">Running as</dt><dd class="col-7">{{if .User}}{{.User}}{{else}}this machine's user{{end}}</dd>
           {{if .Host}}<dt class="col-5">Host</dt><dd class="col-7">{{.Host}}</dd>{{end}}
-          <dt class="col-5">Config home</dt><dd class="col-7 text-break"><code>{{.ConfigHome}}</code></dd>
-          <dt class="col-5">State home</dt><dd class="col-7 text-break"><code>{{.StateHome}}</code></dd>
-          <dt class="col-5">SSH directory</dt><dd class="col-7 text-break"><code>{{.SSHDir}}</code></dd>
+          <dt class="col-5">Config home</dt><dd class="col-7 text-break"><code title="{{.ConfigHome}}">{{tilde .ConfigHome}}</code></dd>
+          <dt class="col-5">State home</dt><dd class="col-7 text-break"><code title="{{.StateHome}}">{{tilde .StateHome}}</code></dd>
+          <dt class="col-5">SSH directory</dt><dd class="col-7 text-break"><code title="{{.SSHDir}}">{{tilde .SSHDir}}</code></dd>
           {{if .DevRoot}}<dt class="col-5">Dev root</dt><dd class="col-7 text-break mb-0"><code>{{.DevRoot}}</code></dd>{{end}}
         </dl>
       </div>
@@ -78,7 +78,7 @@
     {{range $i, $l := .Licences}}
     <div class="accordion-item">
       <h3 class="accordion-header" id="licence-{{$l.Name}}-head">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#licence-{{$l.Name}}" aria-expanded="false" aria-controls="licence-{{$l.Name}}">{{$l.Name}}</button>
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#licence-{{$l.Name}}" aria-expanded="false" aria-controls="licence-{{$l.Name}}">{{$l.Name}}<span class="accordion-button-toggle" aria-hidden="true"></span></button>
       </h3>
       <div id="licence-{{$l.Name}}" class="accordion-collapse collapse" aria-labelledby="licence-{{$l.Name}}-head" data-bs-parent="#licence-list">
         <div class="accordion-body"><pre class="licence-text" tabindex="0">{{$l.Text}}</pre></div>

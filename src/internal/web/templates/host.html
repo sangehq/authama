@@ -23,7 +23,7 @@
           <dt class="col-5">User</dt><dd class="col-7">{{orDash .User}}</dd>
           <dt class="col-5">Port</dt><dd class="col-7">{{.Port}}</dd>
           <dt class="col-5">Provider</dt><dd class="col-7">{{.ProviderLabel}}</dd>
-          <dt class="col-5">Key</dt><dd class="col-7"><a href="{{basePath}}/keys/{{.Profile}}/{{.KeyName}}"><code>{{.KeyName}}</code></a></dd>
+          <dt class="col-5">Key</dt><dd class="col-7"><a href="{{basePath}}/keys/{{.Profile}}/{{.KeyName}}" data-inline><code>{{.KeyName}}</code></a></dd>
           <dt class="col-5">Status</dt><dd class="col-7"><span class="badge {{statusClass .Status}}">{{.Status}}</span></dd>
           <dt class="col-5">Fingerprint</dt><dd class="col-7 text-break"><code>{{orDash (deref .Fingerprint)}}</code></dd>
           <dt class="col-5">Expires</dt><dd class="col-7">{{orDash (deref .ExpiresOn)}}</dd>

@@ -14,7 +14,7 @@
       <tbody>
         {{range .Rows}}
         <tr>
-          <th scope="row"><a href="{{basePath}}/hosts/{{.Alias}}"><code>{{.Alias}}</code></a></th>
+          <th scope="row"><a href="{{basePath}}/hosts/{{.Alias}}" data-inline><code>{{.Alias}}</code></a></th>
           <td><code>{{.Profile}}</code></td>
           <td>{{if .Online}}<span class="badge badge-ok">online</span>{{else}}<span class="badge badge-warn">offline</span>{{end}}</td>
           <td>{{if .RequiresVPN}}needed{{with .VPNName}} ({{.}}){{end}}{{else}}<span class="text-secondary">-</span>{{end}}</td>

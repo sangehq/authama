@@ -93,7 +93,7 @@
             {{range .Rows}}
             <tr{{if .Fix}} class="row-attention"{{end}}>
               <th scope="row">{{if .Fix}}{{icon "alert-triangle"}}<span class="visually-hidden">Needs attention: </span> {{end}}{{.Label}}</th>
-              <td class="text-break">{{.Value}}</td>
+              <td class="text-break">{{tildeText .Value}}</td>
               {{if .Fix}}<td class="fix-cell"><code>{{.Fix}}</code>{{with fixFor .Fix}}{{if .Action}}{{if not $.ReadOnly}}{{template "change_open" $}}<input type="hidden" name="action" value="{{.Action}}"><button type="submit" class="btn btn-sm mt-1"{{tip "overview-fix-preview"}}>{{icon "player-play"}}<span class="ms-1">{{.Label}}</span></button></form>{{end}}{{else}}<a class="btn btn-sm mt-1" href="{{u .Page}}"{{tip "overview-fix-open"}}>{{icon "link"}}<span class="ms-1">{{.Label}}</span></a>{{end}}{{end}}</td>{{else}}<td><span class="text-secondary">–</span></td>{{end}}
             </tr>
             {{end}}
@@ -178,7 +178,7 @@
       <div class="card-header"><h2 class="card-title">Rotation due</h2></div>
       {{if .Expiry}}
       <ul class="list-group list-group-flush">
-        {{range .Expiry}}<li class="list-group-item d-flex justify-content-between gap-2"><a href="{{basePath}}/keys/{{.Profile}}/{{.KeyName}}"><code>{{.Ref}}</code></a><span><span class="badge {{statusClass .State}}">{{.State}}</span> <span class="text-secondary">{{expiryDays .}}</span></span></li>{{end}}
+        {{range .Expiry}}<li class="list-group-item d-flex justify-content-between gap-2"><a href="{{basePath}}/keys/{{.Profile}}/{{.KeyName}}" data-inline><code>{{.Ref}}</code></a><span><span class="badge {{statusClass .State}}">{{.State}}</span> <span class="text-secondary">{{expiryDays .}}</span></span></li>{{end}}
       </ul>
       {{else}}{{template "empty" (empty "circle-check" "No key is due for rotation" "")}}{{end}}
     </div>

@@ -573,7 +573,9 @@ export class ExportPage extends Component {
     const state = pick.badge.state;
     const button = El.create("button").cls(`accordion-button${expanded ? "" : " collapsed"}`).prop("type", "button")
       .attr("data-bs-toggle", "collapse").attr("data-bs-target", `#${id}`).attr("aria-expanded", String(expanded)).attr("aria-controls", id)
-      .append(El.create("span").text(heading), El.create("span").cls(`badge ${state} ms-2`).text(pick.badge.text));
+      .append(El.create("span").text(heading), El.create("span").cls(`badge ${state} ms-2`).text(pick.badge.text),
+        // Tabler draws an accordion's chevron only in this element.
+        El.create("span").cls("accordion-button-toggle").attr("aria-hidden", "true"));
     return El.create("div").cls("accordion-item").append(
       El.create("h4").cls("accordion-header").append(button),
       El.create("div").cls(`accordion-collapse collapse${expanded ? " show" : ""}`).prop("id", id).append(

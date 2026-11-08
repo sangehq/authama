@@ -61,16 +61,23 @@ test('profiles lists every profile in the manifest', async ({ page }) => {
   await expect(work).toContainText('per_service');
 });
 
-test('hosts lists every host with its hostname, and a host opens', async ({ page }) => {
+test('hosts lists every host with its hostname, and a host opens in the side panel', async ({ page }) => {
   await page.goto('/hosts');
   for (const [alias, hostname] of Object.entries(hosts)) {
     const row = page.getByRole('row').filter({ has: page.getByRole('link', { name: alias, exact: true }) });
     await expect(row).toContainText(hostname);
   }
+  // A host's name slides its page in over the list, which stays where it was.
   await page.getByRole('link', { name: 'hpc', exact: true }).click();
+  const panel = page.locator('[data-side-panel]');
+  await expect(panel).toBeVisible();
+  await expect(page).toHaveURL(/\/hosts$/);
+  await expect(panel.getByRole('heading', { level: 1 })).toHaveText('hpc');
+  await expect(panel.locator('dd', { hasText: 'hpc.example.edu' })).toBeVisible();
+  // "Open as a page" still reaches the host's own page.
+  await panel.locator('[data-side-panel-full]').click();
   await expect(page).toHaveURL(/\/hosts\/hpc$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('hpc');
-  await expect(page.locator('dd', { hasText: 'hpc.example.edu' })).toBeVisible();
 });
 
 test('keys lists every reconciled key as on disk, with a fingerprint', async ({ page }) => {
@@ -80,9 +87,14 @@ test('keys lists every reconciled key as on disk, with a fingerprint', async ({ 
     await expect(row).toContainText('SHA256:');
     await expect(row.locator('.badge-ok')).toHaveText('yes');
   }
+  // A key's name slides its page in over the list.
   await page.getByRole('link', { name: 'work/work_hpc-ed25519', exact: true }).click();
+  const panel = page.locator('[data-side-panel]');
+  await expect(panel).toBeVisible();
+  await expect(page).toHaveURL(/\/keys$/);
+  await expect(panel.getByText(/SHA256:/).first()).toBeVisible();
+  await panel.locator('[data-side-panel-full]').click();
   await expect(page).toHaveURL(/\/keys\/work\/work_hpc-ed25519$/);
-  await expect(page.getByText(/SHA256:/).first()).toBeVisible();
 });
 
 test('doctor shows the report authama doctor prints', async ({ page }) => {

@@ -19,10 +19,10 @@
       <div class="card-header"><h2 class="card-title">Files</h2></div>
       <div class="card-body">
         <dl class="row mb-0">
-          <dt class="col-sm-3">Config home</dt><dd class="col-sm-9 text-break"><code>{{.ConfigHome}}</code>{{if .ConfigSource}} <span class="text-secondary">({{.ConfigSource}})</span>{{end}}</dd>
-          <dt class="col-sm-3">State home</dt><dd class="col-sm-9 text-break"><code>{{.StateHome}}</code> <span class="text-secondary">(history, logs, snapshots, bundles, lock)</span></dd>
-          <dt class="col-sm-3"><code>.env</code></dt><dd class="col-sm-9 text-break"><code>{{.Dotenv}}</code>{{if .DotenvState}} <span class="text-secondary">({{.DotenvState}})</span>{{end}}</dd>
-          <dt class="col-sm-3"><code>authama.json</code></dt><dd class="col-sm-9 text-break mb-0"><code>{{.Settings}}</code>{{if .SettingsState}} <span class="text-secondary">({{.SettingsState}})</span>{{end}}</dd>
+          <dt class="col-sm-3">Config home</dt><dd class="col-sm-9 text-break"><code title="{{.ConfigHome}}">{{tilde .ConfigHome}}</code>{{if .ConfigSource}} <span class="text-secondary">({{.ConfigSource}})</span>{{end}}</dd>
+          <dt class="col-sm-3">State home</dt><dd class="col-sm-9 text-break"><code title="{{.StateHome}}">{{tilde .StateHome}}</code> <span class="text-secondary">(history, logs, snapshots, bundles, lock)</span></dd>
+          <dt class="col-sm-3"><code>.env</code></dt><dd class="col-sm-9 text-break"><code title="{{.Dotenv}}">{{tilde .Dotenv}}</code>{{if .DotenvState}} <span class="text-secondary">({{.DotenvState}})</span>{{end}}</dd>
+          <dt class="col-sm-3"><code>authama.json</code></dt><dd class="col-sm-9 text-break mb-0"><code title="{{.Settings}}">{{tilde .Settings}}</code>{{if .SettingsState}} <span class="text-secondary">({{.SettingsState}})</span>{{end}}</dd>
         </dl>
       </div>
       {{if and (not .HasSettings) (not $.ReadOnly)}}
@@ -58,7 +58,7 @@
             {{range .Effective}}
             <tr>
               <th scope="row"><code>{{.Key}}</code><div class="small text-secondary"><code>${{.Variable}}</code></div></th>
-              <td class="text-break w-50">{{if .Value}}{{.Value}}{{else}}<span class="text-secondary">(unset)</span>{{end}}</td>
+              <td class="text-break w-50">{{if .Value}}<span title="{{.Value}}">{{tildeText .Value}}</span>{{else}}<span class="text-secondary">(unset)</span>{{end}}</td>
               <td>{{if eq .Source "default"}}<span class="badge badge-muted">default</span>{{else}}<span class="badge badge-info text-wrap text-start">{{.Source}}</span>{{end}}</td>
             </tr>
             {{end}}

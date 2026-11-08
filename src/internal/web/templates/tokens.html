@@ -19,7 +19,7 @@
           <td>{{.Description}}</td>
           <td>{{orDash .Username}}</td>
           <td>{{if .SecretPresent}}<span class="badge badge-ok">set</span>{{else}}<span class="badge badge-warn">empty</span>{{end}}</td>
-          <td><code class="text-nowrap">{{.File}}</code></td>
+          <td><code class="text-nowrap" title="{{.File}}">{{tilde .File}}</code></td>
           <td class="text-end">
             {{if not $.ReadOnly}}<form method="post" action="{{basePath}}/changes/preview" data-inline id="f-token-{{.Target}}-{{.Host}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="token-delete"><input type="hidden" name="target" value="{{.Target}}"><input type="hidden" name="host" value="{{.Host}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for the %s token for %s" .Target .Host)}}
@@ -45,7 +45,7 @@
     <div class="card h-100">
       <div class="card-header"><h2 class="card-title">Status</h2></div>
       <div class="card-body pb-0">
-        <p class="mb-2">Token config: {{if .Status.Config.Builtin}}none found, so the built-in default (GitHub for Composer from <code>$GH_TOKEN</code>){{else}}<code>{{.Status.Config.Path}}</code>{{if .Status.Config.Legacy}} (an auth-token-manager location){{end}}{{end}}</p>
+        <p class="mb-2">Token config: {{if .Status.Config.Builtin}}none found, so the built-in default (GitHub for Composer from <code>$GH_TOKEN</code>){{else}}<code title="{{.Status.Config.Path}}">{{tilde .Status.Config.Path}}</code>{{if .Status.Config.Legacy}} (an auth-token-manager location){{end}}{{end}}</p>
       </div>
       <div class="table-responsive" tabindex="0">
         <table class="table table-vcenter card-table table-sm">
@@ -55,7 +55,7 @@
             {{range .Status.Targets}}
             <tr>
               <th scope="row">{{.Target}}</th>
-              <td><code class="text-nowrap">{{.File}}</code></td>
+              <td><code class="text-nowrap" title="{{.File}}">{{tilde .File}}</code></td>
               <td>{{if .Exists}}<code>{{.Mode}}</code>{{else}}<span class="text-secondary">absent</span>{{end}}</td>
               <td>{{.Installed}}</td>
               <td>{{.Configured}}</td>
@@ -78,7 +78,12 @@
       <div class="card-header" id="audit"><h2 class="card-title">Audit</h2></div>
       <div class="card-body">
         {{if .Failed}}<div class="alert alert-warning" role="status">{{icon "alert-triangle"}}<span class="ms-1">The token audit found a problem, marked ✗ below: a credential file others can read (<code>authama doctor --fix</code> makes it owner-only), or a <code>.gitignore</code>, where <code>authama serve</code> runs, that does not cover the secret files.</span></div>{{end}}
-        <ul class="list-unstyled mb-0">{{range .Findings}}<li>{{if eq .Level "ok"}}✓{{else if eq .Level "warn"}}✗{{else}}·{{end}} {{.Text}}</li>{{end}}</ul>
+        {{/* Problems first, then what passed, then what was only looked at. */}}
+        <ul class="list-unstyled mb-0 token-audit">
+          {{range .Findings}}{{if eq .Level "warn"}}<li class="token-audit-item is-problem">{{icon "circle-x"}}<span class="visually-hidden">Problem:</span><span>{{tildeText .Text}}</span></li>{{end}}{{end}}
+          {{range .Findings}}{{if eq .Level "ok"}}<li class="token-audit-item">{{icon "circle-check"}}<span class="visually-hidden">Passed:</span><span>{{tildeText .Text}}</span></li>{{end}}{{end}}
+          {{range .Findings}}{{if and (ne .Level "warn") (ne .Level "ok")}}<li class="token-audit-item text-secondary">{{icon "info-circle"}}<span class="visually-hidden">Checked:</span><span>{{tildeText .Text}}</span></li>{{end}}{{end}}
+        </ul>
       </div>
     </div>
   </div>

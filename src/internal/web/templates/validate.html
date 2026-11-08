@@ -19,7 +19,7 @@
         <thead><tr><th scope="col">Key</th><th scope="col">Profile</th><th scope="col">Status</th><th scope="col">Fingerprint</th><th scope="col">Detail</th></tr></thead>
         <tbody>{{range .Keys}}
           <tr>
-            <th scope="row"><a href="{{basePath}}/keys/{{.Profile}}/{{.Name}}"><code>{{.Name}}</code></a></th>
+            <th scope="row"><a href="{{basePath}}/keys/{{.Profile}}/{{.Name}}" data-inline><code>{{.Name}}</code></a></th>
             <td><code>{{.Profile}}</code></td>
             <td>{{if .OK}}<span class="badge badge-ok">ok</span>{{else}}<span class="badge badge-warn">fail</span>{{end}}</td>
             <td><code class="text-break">{{.Fingerprint}}</code></td>

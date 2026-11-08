@@ -10,7 +10,7 @@
       <tbody>
         {{range .Data.Rows}}
         <tr>
-          <th scope="row"><a href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}"><code>{{.Ref}}</code></a></th>
+          <th scope="row"><a href="{{basePath}}/keys/{{.Ref.Profile}}/{{.Ref.KeyName}}" data-inline><code>{{.Ref}}</code></a></th>
           <td>{{.Type}}</td>
           <td class="text-break"><code>{{orDash .Fingerprint}}</code></td>
           <td class="text-nowrap">{{orDash .ExpiresOn}}</td>

@@ -14,7 +14,7 @@
       <tbody>
         {{range $g := .Data}}{{range .Rows}}
         <tr>
-          <th scope="row"><a href="{{basePath}}/hosts/{{.Alias}}"><code>{{.Alias}}</code></a></th>
+          <th scope="row"><a href="{{basePath}}/hosts/{{.Alias}}" data-inline><code>{{.Alias}}</code></a></th>
           <td><code>{{$g.Name}}</code></td>
           <td class="text-break">{{.Hostname}}</td>
           <td>{{.ProviderLabel}}</td>
