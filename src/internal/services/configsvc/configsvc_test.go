@@ -305,7 +305,7 @@ func TestHandWrittenCategoryFileIsNeverPruned(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(ssh, "profiles", "others", "work"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(hand, []byte("Host unc\n    HostName sc.its.unc.edu\n"), 0o600); err != nil {
+	if err := os.WriteFile(hand, []byte("Host corp\n    HostName git.example.org\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	svc := New(ssh, load(t, manifestJSON), false)

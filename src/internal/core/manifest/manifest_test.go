@@ -717,7 +717,7 @@ func TestOrdinaryHostValuesStillValidate(t *testing.T) {
 	js := `{"profiles":{"p":{"hosts":[
 		{"alias":"oribi-web","hostname":"203.0.113.23","user":"ploi"},
 		{"alias":"github-imanimanyara","hostname":"github.com","user":"git"},
-		{"alias":"unc-sc","hostname":"sc.its.unc.edu","user":"uncgit"},
+		{"alias":"corp-git","hostname":"git.example.org","user":"corpgit"},
 		{"alias":"v6","hostname":"2001:db8::1","user":"deploy_bot"}]}}}`
 	if _, err := loadJSON(t, js); err != nil {
 		t.Errorf("an ordinary manifest was rejected: %v", err)
