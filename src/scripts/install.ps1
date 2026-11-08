@@ -59,10 +59,31 @@ switch ($env:PROCESSOR_ARCHITECTURE) {
 $defaultDir = -not $InstallDir
 if (-not $InstallDir) { $InstallDir = Join-Path $env:LOCALAPPDATA "Programs\$dirName" }
 
+# Each request to GitHub retries a transient failure (no answer, 408, 429, a
+# 5xx) with backoff, as install.sh does with curl --retry: GitHub answered 504
+# for minutes at a time on 2026-11-08. Anything else, a 404 included, fails at
+# once, so the API's "no release" still falls through to the redirect.
+function Test-Transient([System.Exception]$err) {
+  if (-not $err.PSObject.Properties['Response'] -or -not $err.Response) { return $true }
+  $code = [int]$err.Response.StatusCode
+  return ($code -eq 408 -or $code -eq 429 -or $code -ge 500)
+}
+function Invoke-Retried([scriptblock]$request) {
+  $delay = 1
+  for ($attempt = 1; ; $attempt++) {
+    try { return & $request }
+    catch {
+      if ($attempt -gt 5 -or -not (Test-Transient $_.Exception)) { throw }
+      Start-Sleep -Seconds $delay
+      $delay *= 2
+    }
+  }
+}
+
 if (-not $Version) {
   try {
-    $rel = Invoke-RestMethod -Headers @{ 'Accept' = 'application/vnd.github+json' } `
-      "https://api.github.com/repos/$owner/$repo/releases/latest"
+    $rel = Invoke-Retried { Invoke-RestMethod -Headers @{ 'Accept' = 'application/vnd.github+json' } `
+      "https://api.github.com/repos/$owner/$repo/releases/latest" }
     $Version = $rel.tag_name
   } catch { $Version = $null }
 
@@ -74,14 +95,21 @@ if (-not $Version) {
   # Windows PowerShell 5.1 and PowerShell 7; a 3xx can surface as an exception on
   # the latter, so its response is read from there too.
   if (-not $Version) {
-    $req = [System.Net.HttpWebRequest]::Create("https://github.com/$owner/$repo/releases/latest")
-    $req.AllowAutoRedirect = $false
-    $req.Method = 'HEAD'
-    try { $resp = $req.GetResponse() } catch [System.Net.WebException] { $resp = $_.Exception.Response }
-    if ($resp) {
-      try { $location = [string]$resp.Headers['Location'] } finally { $resp.Close() }
-      if ($location -match '/releases/tag/([^/?#]+)$') { $Version = $Matches[1] }
-    }
+    try {
+      $location = Invoke-Retried {
+        $req = [System.Net.HttpWebRequest]::Create("https://github.com/$owner/$repo/releases/latest")
+        $req.AllowAutoRedirect = $false
+        $req.Method = 'HEAD'
+        try { $resp = $req.GetResponse() } catch [System.Net.WebException] {
+          # A 3xx arrives here on PowerShell 7 and is the answer; no answer or a
+          # 5xx goes back to Invoke-Retried.
+          $resp = $_.Exception.Response
+          if (-not $resp -or [int]$resp.StatusCode -ge 500) { throw }
+        }
+        try { [string]$resp.Headers['Location'] } finally { $resp.Close() }
+      }
+    } catch { $location = $null }
+    if ($location -match '/releases/tag/([^/?#]+)$') { $Version = $Matches[1] }
   }
   if (-not $Version) { throw 'could not determine the version to install.' }
 }
@@ -92,7 +120,7 @@ $base  = if ($ReleaseBase) { $ReleaseBase } else { "https://github.com/$owner/$r
 # Get-Asset fetches one file of the release: by HTTP, or a copy from a local
 # directory (Invoke-WebRequest does not read file:// paths).
 function Get-Asset([string]$name, [string]$out) {
-  if ($base -match '^https?://') { Invoke-WebRequest "$base/$name" -OutFile $out }
+  if ($base -match '^https?://') { Invoke-Retried { Invoke-WebRequest "$base/$name" -OutFile $out } }
   else { Copy-Item -LiteralPath (Join-Path $base $name) -Destination $out -ErrorAction Stop }
 }
 $tmp   = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid())

@@ -138,3 +138,62 @@ func TestTheLintActionGetsASecondAttempt(t *testing.T) {
 		t.Fatal("found no lint attempt in ci.yml; the scan is not matching it")
 	}
 }
+
+// The PowerShell installer gets the same: every request it makes to GitHub,
+// the version lookup's two and the downloads, runs through Invoke-Retried.
+func TestEveryWindowsInstallerRequestRetries(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(repoRoot(t), "scripts", "install.ps1")) //nolint:gosec // the repository's own installer
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(string(b), "\n")
+	calls := 0
+	for i, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "#") {
+			continue
+		}
+		switch {
+		case strings.Contains(line, "Invoke-RestMethod") || strings.Contains(line, "Invoke-WebRequest"):
+			calls++
+			if !strings.Contains(line, "Invoke-Retried {") {
+				t.Errorf("install.ps1:%d: a request outside Invoke-Retried:\n  %s", i+1, line)
+			}
+		case strings.Contains(line, ".GetResponse()"):
+			calls++
+			inside := false
+			for j := i - 1; j >= 0 && j >= i-5; j-- {
+				inside = inside || strings.Contains(lines[j], "Invoke-Retried {")
+			}
+			if !inside {
+				t.Errorf("install.ps1:%d: the releases/latest request is not inside an Invoke-Retried block", i+1)
+			}
+		}
+	}
+	if calls < 3 {
+		t.Fatalf("found %d requests in install.ps1, want at least 3 (API lookup, redirect fallback, download); the scan is not matching them", calls)
+	}
+}
+
+// CI's installer step installs from a local release, and names the version, so
+// a github.com outage cannot fail it: on 2026-11-08 the version lookup met 504s
+// for longer than its retries last, on both test legs. The lookup itself is
+// tested in the same step against file:// stand-ins.
+func TestCIInstallsNameTheirVersion(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(repoRoot(t), "..", ".github", "workflows", "ci.yml")) //nolint:gosec // the repository's own workflow
+	if err != nil {
+		t.Fatal(err)
+	}
+	installs := regexp.MustCompile(`bash src/scripts/install\.sh(\s+(\S+))?`).FindAllStringSubmatch(string(b), -1)
+	if len(installs) < 2 {
+		t.Fatalf("found %d runs of install.sh in ci.yml, want at least 2; the scan is not matching them", len(installs))
+	}
+	for _, m := range installs {
+		if !strings.HasPrefix(m[2], "v") {
+			t.Errorf("ci.yml runs install.sh without a version, so it resolves one from github.com: %q", m[0])
+		}
+	}
+	if !strings.Contains(string(b), `lookup "file://`) {
+		t.Error("ci.yml no longer tests the version lookup against its stand-ins")
+	}
+}

@@ -107,7 +107,9 @@ jobs:
           set -euo pipefail
           # Binary releases are on hold, so the release carries no binary: build
           # this commit's into a local "release" with a real checksums.txt, and
-          # install from it. The version is still resolved from GitHub.
+          # install from it. The installs name their version, so nothing here
+          # waits on github.com, whose 504s failed this step on 2026-11-08; the
+          # version lookup is tested at the end against stand-ins for GitHub.
           case "$(uname -s)" in Darwin) os=macos ;; *) os=linux ;; esac
           case "$(uname -m)" in x86_64|amd64) arch=amd64 ;; arm64|aarch64) arch=arm64 ;; *) arch="$(uname -m)" ;; esac
           rel="$(mktemp -d)"
@@ -118,7 +120,7 @@ jobs:
           dir="$(mktemp -d)/bin"
           # bash explicitly, so the macOS runner exercises its system bash 3.2
           # rather than whatever `env bash` happens to find.
-          AUTHAMA_INSTALL_DIR="$dir" bash src/scripts/install.sh 2>&1 | tee "$rel/out"
+          AUTHAMA_INSTALL_DIR="$dir" bash src/scripts/install.sh v0.1.0 2>&1 | tee "$rel/out"
           test -x "$dir/authama"
           "$dir/authama" version
           # The checksum was checked, not skipped.
@@ -127,8 +129,22 @@ jobs:
           test ! -e "$dir/sshmgr"
           # The deprecated variable name still picks the directory.
           old="$(mktemp -d)/bin"
-          SSHMGR_INSTALL_DIR="$old" bash src/scripts/install.sh
+          SSHMGR_INSTALL_DIR="$old" bash src/scripts/install.sh v0.1.0
           test -x "$old/authama"
+          # The version lookup, with no version named: the API's tag_name, and,
+          # when the API has no answer, the tag the releases/latest redirect
+          # lands on. A copy of the installer reads both from file:// stand-ins.
+          printf '{"tag_name": "v9.8.7"}\n' > "$rel/latest.json"
+          mkdir -p "$rel/releases/tag" && : > "$rel/releases/tag/v6.5.4"
+          lookup() { # api stand-in, web stand-in, name -> the version installed
+            s="$rel/install-$3.sh"
+            sed -e "s|https://api.github.com/repos/\${OWNER}/\${REPO}/releases/latest|$1|" \
+                -e "s|https://github.com/\${OWNER}/\${REPO}/releases/latest|$2|" src/scripts/install.sh > "$s"
+            grep -qF "$1" "$s" && grep -qF "$2" "$s" || { echo "could not point the $3 lookup at its stand-in" >&2; exit 1; }
+            AUTHAMA_INSTALL_DIR="$(mktemp -d)/bin" bash "$s" 2>&1 | sed -n 's/^Downloading .* (\(v[^)]*\)).*/\1/p'
+          }
+          test "$(lookup "file://$rel/latest.json" "file://$rel/missing" api)" = v9.8.7
+          test "$(lookup "file://$rel/missing.json" "file://$rel/releases/tag/v6.5.4" redirect)" = v6.5.4
 
       # The Windows installer is an `irm | iex` entry point and was only ever
       # parsed, never run. Run it, then run it again with the API URL broken so
