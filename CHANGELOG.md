@@ -238,7 +238,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   navigation menu entry shows what its page holds as a line under its name. Icon-only buttons
   keep a tooltip, after half a second, one at a time, put away by any click, Escape, scroll or
   opening menu, panel or dialog, never shown while a menu is open and never on a touch screen.
-  No element carries a native `title` any more; preview cells wrap instead of cutting off text
+  Each tooltip opens on the side with room, clear of its control and inside the window. A tooltip goes the moment the pointer leaves its control or the window, the window loses focus or the tab is hidden, and a watchdog removes one whose control was redrawn or removed; a clicked control shows none. No element carries a native `title` any more; preview cells wrap instead of cutting off text
   you could only read on hover. A copy button beside each `~/…` path copies the full path.
 - **The web UI's tab icon and header share one logo mark.** The favicon is authama's key,
   drawn in white on the primary rounded square. The header shows that mark followed by the

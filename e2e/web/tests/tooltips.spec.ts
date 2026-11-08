@@ -55,8 +55,10 @@ test('an icon-only control shows its tooltip after a pause, one at a time, and a
   await expect(page.getByRole('tooltip')).toContainText('identity file');
   await page.mouse.click(5, 5);
   await expect(page.getByRole('tooltip')).toHaveCount(0);
-  // Escape does too.
+  // Keyboard focus shows it too, and Escape puts it away.
   await copy.focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
   await expect(page.getByRole('tooltip')).toHaveText('Copy the fingerprint');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('tooltip')).toHaveCount(0);
@@ -87,4 +89,61 @@ test.describe('on a touch screen', () => {
     await page.waitForTimeout(800);
     await expect(page.getByRole('tooltip')).toHaveCount(0);
   });
+});
+
+// Where a tooltip opens depends on the room around its control: it never
+// covers the control, never runs off the window, and a control at the top of
+// the window (the header's theme switch) gets its tooltip below.
+test('a tooltip opens where there is room, clear of its control and inside the window', async ({ page }) => {
+  const check = async (control: import('@playwright/test').Locator, side?: 'below') => {
+    await control.hover();
+    const tip = page.getByRole('tooltip');
+    await expect(tip).toBeVisible();
+    const t = (await tip.boundingBox())!;
+    const c = (await control.boundingBox())!;
+    const vp = page.viewportSize()!;
+    const overlaps = t.x < c.x + c.width && c.x < t.x + t.width && t.y < c.y + c.height && c.y < t.y + t.height;
+    expect(overlaps, 'the tooltip covers its control').toBe(false);
+    expect(t.x >= 0 && t.y >= 0 && t.x + t.width <= vp.width && t.y + t.height <= vp.height, 'the tooltip is inside the window').toBe(true);
+    if (side === 'below') {
+      expect(t.y, 'opens below a control at the top of the window').toBeGreaterThanOrEqual(c.y + c.height);
+    }
+    await page.mouse.click(1, vp.height - 1);
+    await expect(tip).toHaveCount(0);
+  };
+  await page.goto('/keys/work/work_hpc-ed25519');
+  await check(page.getByRole('link', { name: 'Dark theme' }).or(page.getByRole('link', { name: 'Light theme' })).first(), 'below');
+  await check(page.getByRole('button', { name: 'Copy the fingerprint' }));
+  // At the right edge of a narrow window it still fits.
+  await page.setViewportSize({ width: 420, height: 800 });
+  await page.goto('/keys/work/work_hpc-ed25519');
+  await check(page.getByRole('button', { name: 'Copy the fingerprint' }));
+});
+
+// A tooltip never outlives the reason for it: the pointer leaving, the control
+// leaving the page, or a click (which focuses without explaining).
+test('a tooltip goes when the pointer leaves, when its control is removed, and a click shows none', async ({ page }) => {
+  await page.goto('/keys/work/work_hpc-ed25519');
+  const copy = page.getByRole('button', { name: 'Copy the fingerprint' });
+  const tip = page.getByRole('tooltip');
+
+  await copy.hover();
+  await expect(tip).toBeVisible();
+  await page.mouse.move(5, 400);
+  await expect(tip).toHaveCount(0);
+
+  // The control removed while its tooltip shows: the watchdog takes it away.
+  await copy.hover();
+  await expect(tip).toBeVisible();
+  await copy.evaluate((el) => el.remove());
+  await expect(tip).toHaveCount(0, { timeout: 2000 });
+
+  // A click focuses the control; with the pointer then moved off, nothing
+  // stays on screen.
+  await page.reload();
+  const again = page.getByRole('button', { name: 'Copy the fingerprint' });
+  await again.click();
+  await page.mouse.move(5, 400);
+  await page.waitForTimeout(800);
+  await expect(tip).toHaveCount(0);
 });
