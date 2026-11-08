@@ -14,6 +14,7 @@ import (
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/services/keysvc"
 	"github.com/simtabi/authama/src/internal/services/snapshots"
+	"github.com/simtabi/authama/src/internal/util/perms"
 )
 
 // Groups a key's steps are shown under.
@@ -131,8 +132,10 @@ func (s *Service) liveKey(f *keyFacts, r keysvc.Row) Checklist {
 			Detail: "Only the public half is on disk: " + r.PublicPath})
 	case r.PrivateOnDisk && r.PublicOnDisk:
 		st, detail := Done, r.PrivatePath
-		if r.PrivateMode&0o077 != 0 {
-			st, detail = Todo, fmt.Sprintf("%s is %v; others can read it", r.PrivatePath, r.PrivateMode)
+		// Mode bits on Unix, the file's ACL on Windows, where every file
+		// reports -rw-rw-rw-.
+		if !perms.PermsOK(r.PrivatePath, perms.PrivateKeyMode) {
+			st, detail = Todo, r.PrivatePath+": others can read it"
 		}
 		c.Steps = append(c.Steps, Step{ID: "files", Group: gWhere, State: st, Title: "Key pair on disk, owner-only",
 			Detail: detail, Fix: fixIf(st != Done, "authama doctor --fix")})

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -162,7 +163,10 @@ func TestAKeyInUseListsWhereItIs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s := step(t, c, "files"); s.State != Done {
+	// Off Windows the fixture's 0600 key is owner-only. On Windows a temp
+	// file inherits its directory's ACL, so only the step's presence is
+	// checked there.
+	if s := step(t, c, "files"); runtime.GOOS != "windows" && s.State != Done {
 		t.Errorf("files: %+v", s)
 	}
 	if s := step(t, c, "target:gh-work"); s.State != Done || !strings.Contains(s.Title, "verified") {
@@ -234,7 +238,7 @@ func TestTicksPersistAndOnlyManualStepsTick(t *testing.T) {
 	if s := step(t, again, "target:panel"); s.State != Done {
 		t.Fatalf("the tick was not kept: %+v", s)
 	}
-	if fi, err := os.Stat(StorePath(h.p)); err != nil || fi.Mode().Perm() != 0o600 {
+	if fi, err := os.Stat(StorePath(h.p)); err != nil || (runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600) {
 		t.Fatalf("checklists.json: %v %v", fi, err)
 	}
 	if _, err := h.svc.Tick(c.ID, "files", true); err == nil {
