@@ -102,7 +102,7 @@ func TestRepinAndRemovalCloseTheSharedConnection(t *testing.T) {
 	var closed []string
 	s.Deps.CloseShared = func(_, alias, user string, port int) { closed = append(closed, alias+"/"+user) }
 	_, _ = s.ApplyManifest(Plan{Actions: []Action{{Kind: ActRemoveHost, Profile: "dev", Alias: "old", user: "me"}}}, &strings.Builder{})
-	_, _ = s.ApplyOutside(Plan{Actions: []Action{{Kind: ActRepin, Alias: "live", user: "me", token: "[live]:22"}}}, &strings.Builder{})
+	_, _ = s.ApplyOutside(Plan{Actions: []Action{{Kind: ActRepin, Alias: "live", user: "me", token: knownhosts.HostToken("live", 0)}}}, &strings.Builder{})
 	if strings.Join(closed, ",") != "old/me,live/me" {
 		t.Errorf("closed %v", closed)
 	}
