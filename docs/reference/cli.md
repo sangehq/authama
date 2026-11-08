@@ -1825,8 +1825,11 @@ Without --purge the manifest declaration and the inventory record go away
 and the key files stay on disk, so an accidental delete costs nothing.
 --purge deletes the files too, after writing an encrypted backup.
 
+Name several keys, profiles or host aliases, a --category or --all to delete
+each key among them that no host uses; the ones a host uses are named and kept.
+
 ```
-authama ssh key delete <profile/key> [flags]
+authama ssh key delete [<profile/key>|profile|alias ...] [--category <name>] [--all] [flags]
 ```
 
 Aliases: `rm`
@@ -1841,10 +1844,12 @@ Examples:
 Flags:
 
 ```
-      --no-key-backup   purge without writing an encrypted backup first (the key is then unrecoverable)
-      --purge           also delete the key files from disk
-      --revoke          revoke the deployed public key from its targets first
-  -y, --yes             skip the confirmation prompt
+      --all               delete every key no host uses
+      --category string   delete every key no host uses in profiles of this category
+      --no-key-backup     purge without writing an encrypted backup first (the key is then unrecoverable)
+      --purge             also delete the key files from disk
+      --revoke            revoke the deployed public key from its targets first
+  -y, --yes               skip the confirmation prompt
 ```
 
 ## authama ssh key lifetime
@@ -1975,21 +1980,28 @@ provider cannot remove keys, is named so you can remove it by hand.
 The key's declaration, hosts and files stay. Mint its successor next:
 `ssh keygen <profile/key> --force` now, or `ssh rotate <profile/key>` staged.
 
+Name several keys, profiles or host aliases, a --category or --all to revoke
+each minted key among them in turn; one that fails is named and the rest go on.
+
 ```
-authama ssh key revoke <profile/key> [flags]
+authama ssh key revoke [<profile/key>|profile|alias ...] [--category <name>] [--all] [flags]
 ```
 
 Examples:
 
 ```sh
   authama ssh key revoke work/work_gh-ed25519 --reason "laptop lost"
+  authama ssh key revoke work personal/personal_gh-ed25519 --yes
+  authama ssh key revoke --category clients --yes
 ```
 
 Flags:
 
 ```
-      --reason string   why, recorded with the revocation (e.g. "laptop lost")
-  -y, --yes             skip the confirmation prompt
+      --all               revoke every minted key
+      --category string   revoke every minted key in profiles of this category
+      --reason string     why, recorded with the revocation (e.g. "laptop lost")
+  -y, --yes               skip the confirmation prompt
 ```
 
 ## authama ssh key root

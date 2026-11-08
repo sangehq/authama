@@ -337,6 +337,48 @@ type KeysView struct {
 	Profiles []string
 	// KeyRoot is the directory under ~/.ssh that holds the profile directories.
 	KeyRoot string
+	// Picker is the keys by profile, for choosing which to rotate, revoke or
+	// delete; Categories are the categories profiles are filed under.
+	Picker     []PickerProfile
+	Categories []string
+}
+
+// pickerData is the key picker for one bulk action.
+type pickerData struct {
+	Action     string // rotate | revoke | delete
+	Profiles   []PickerProfile
+	Categories []string
+}
+
+// Why is "" when the action can act on k, and otherwise why it cannot.
+func (d pickerData) Why(k PickerKey) string {
+	switch {
+	case d.Action == "rotate" && !k.Wired:
+		return "no host uses it"
+	case d.Action == "revoke" && !k.Recorded:
+		return "never minted"
+	case d.Action == "delete" && k.Wired:
+		return "a host uses it"
+	}
+	return ""
+}
+
+// PickerProfile is one profile's keys in the key picker.
+type PickerProfile struct {
+	Name     string
+	Category string
+	Keys     []PickerKey
+}
+
+// PickerKey is one key in the key picker: what it is, and whether a host uses
+// it (a used key cannot be deleted) or it was minted (one never minted cannot
+// be revoked).
+type PickerKey struct {
+	Ref      string
+	Name     string
+	Wired    bool
+	Recorded bool
+	Status   string
 }
 
 // Keys lists every key, as `authama ssh key list` does.
@@ -359,6 +401,22 @@ func (e AppEngine) Keys() (KeysView, error) {
 		}
 	}
 	v.Reserved, v.Loose = e.reservedAndLoose(m)
+	at := map[string]int{}
+	for _, r := range rows {
+		i, ok := at[r.Ref.Profile]
+		if !ok {
+			i = len(v.Picker)
+			at[r.Ref.Profile] = i
+			cat := m.Profiles[r.Ref.Profile].Category
+			v.Picker = append(v.Picker, PickerProfile{Name: r.Ref.Profile, Category: cat})
+			if cat != "" && !slices.Contains(v.Categories, cat) {
+				v.Categories = append(v.Categories, cat)
+			}
+		}
+		v.Picker[i].Keys = append(v.Picker[i].Keys, PickerKey{Ref: r.Ref.String(), Name: r.Ref.KeyName,
+			Wired: r.Wired(), Recorded: r.Recorded && r.Fingerprint != "", Status: r.Status})
+	}
+	sort.Strings(v.Categories)
 	return v, nil
 }
 

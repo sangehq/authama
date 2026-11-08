@@ -111,6 +111,7 @@ else is in the [documentation index](#documentation).
 - [`token`](docs/tools/tokens.md) — auth tokens: apply, set, list, show, status, copy, delete, audit, import; per tool: [Composer](docs/tools/tokens/composer.md), [npm](docs/tools/tokens/npm.md), [Docker](docs/tools/tokens/docker.md), [git](docs/tools/tokens/git.md), [netrc](docs/tools/tokens/netrc.md), [PyPI](docs/tools/tokens/pypi.md), [Cargo](docs/tools/tokens/cargo.md), [RubyGems](docs/tools/tokens/gem.md), [Gradle](docs/tools/tokens/gradle.md), [Maven](docs/tools/tokens/maven.md), [Yarn Berry](docs/tools/tokens/yarn.md), [Helm](docs/tools/tokens/helm.md), [GitHub CLI](docs/tools/tokens/gh.md).
 - [`doctor`](docs/tools/doctor.md) — what it checks (SSH and token files), `--fix`, `--json`, `--strict`.
 - [`deploy`](docs/tools/deploy.md) — installing a public key on its target.
+- [`checklist`](docs/tools/checklist.md) — where each key and token is used, and what is left to rotate or revoke it; choosing several keys to rotate, revoke or delete.
 - [`providers`](docs/tools/providers.md) — the adapter catalog and how to extend it.
 - [VPS keys](docs/tools/vps.md) — cloud account keys and server keys.
 - [Key lifecycle](docs/tools/key-lifecycle.md) — a key's lifetime, rotation, regeneration and revocation, in one place.

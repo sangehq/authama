@@ -45,8 +45,13 @@ var jobFields = map[string][]string{
 	"rollback": {"key"},
 	// revoke removes a key from every target and records it as revoked.
 	"revoke": {"key", "reason"},
-	// rotate-keys rotates a profile's keys, or every key, one after another.
-	"rotate-keys": {"profile", "all", "allow_unverified"},
+	// rotate-keys rotates the chosen keys (sel: keys, profiles, categories),
+	// a profile's keys, or every key, one after another.
+	"rotate-keys": {"sel", "profile", "all", "allow_unverified"},
+	// revoke-keys revokes each chosen key, as `authama ssh key revoke` does.
+	"revoke-keys": {"sel", "all", "reason"},
+	// delete-keys deletes each chosen key, as `authama ssh key delete` does.
+	"delete-keys": {"sel", "all", "revoke", "purge"},
 	// bundle-restore lays a bundle from the state home's dist/ back.
 	"bundle-restore": {"bundle"},
 	// knownhosts-init scans a profile's hosts, or every host, and pins what
@@ -91,10 +96,17 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 	}
 	// Everything but a bundle restore reaches real servers, which a sandbox
 	// cannot contain: refused here, as the CLI refuses it.
-	if action != "bundle-restore" && !readsOnlyHostKeys[action] {
+	// Deleting keys without revoking them reaches no server.
+	localOnly := action == "delete-keys" && !checked(f, "revoke")
+	if action != "bundle-restore" && !readsOnlyHostKeys[action] && !localOnly {
 		verb := action
-		if verb == "rotate-keys" {
+		switch verb {
+		case "rotate-keys":
 			verb = "rotate"
+		case "revoke-keys":
+			verb = "revoke"
+		case "delete-keys":
+			verb = "delete"
 		}
 		if err := h.p.RefuseOutsideSandbox(verb); err != nil {
 			return jobSpec{}, badForm("%s", err.Error())
@@ -107,6 +119,10 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 	switch action {
 	case "rotate-keys":
 		return rotateKeysSpec(f, h, retain)
+	case "revoke-keys":
+		return revokeKeysSpec(f, h)
+	case "delete-keys":
+		return deleteKeysSpec(f, h)
 	case "bundle-restore":
 		return bundleRestoreSpec(f, h, retain)
 	case "knownhosts-init":
@@ -285,16 +301,9 @@ func rollbackJob(j *jobs.Job, p paths.Paths, retain int, key string) error {
 // rotateKeysSpec is `authama ssh rotate <profile> --yes` or `authama ssh rotate --all
 // --yes`: every key the selection holds that a host uses, one after another.
 func rotateKeysSpec(f url.Values, h home, retain int) (jobSpec, error) {
-	sel := keysvc.Selection{All: checked(f, "all")}
-	args := []string{"--all"}
-	var subjects []history.Subject
-	if !sel.All {
-		profile, err := name(f, "profile")
-		if err != nil {
-			return jobSpec{}, err
-		}
-		sel.Selectors, args = []string{profile}, []string{profile}
-		subjects = []history.Subject{{Kind: history.KindProfile, Name: profile}}
+	sel, args, subjects, err := keySelection(f, h.p)
+	if err != nil {
+		return jobSpec{}, err
 	}
 	allow := checked(f, "allow_unverified")
 	if allow {
@@ -435,8 +444,9 @@ func jobCommand(s mutation.Scope) string {
 func carriedJob(f url.Values) []formField {
 	out := []formField{{"action", f.Get("action")}}
 	for _, k := range jobFields[f.Get("action")] {
-		if f.Has(k) {
-			out = append(out, formField{k, f.Get(k)})
+		// sel holds every key chosen, so every value goes on.
+		for _, v := range f[k] {
+			out = append(out, formField{k, v})
 		}
 	}
 	return out

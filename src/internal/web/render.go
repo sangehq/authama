@@ -343,6 +343,11 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		// tip is ` data-tip="…"` from the catalogue in tips.go, for any element.
 		"tip":  tipAttr,
 		"desc": descAttr,
+		// picker is the key picker's data for one bulk action: rotate, revoke
+		// or delete.
+		"picker": func(v KeysView, action string) pickerData {
+			return pickerData{Action: action, Profiles: v.Picker, Categories: v.Categories}
+		},
 		// stepsDone is how many of a checklist's steps are done.
 		"stepsDone": func(c checklist.Checklist) int { d, _ := c.Counts(); return d },
 		// fixFor is the web UI's way of doing an overview row's fix, or nil.

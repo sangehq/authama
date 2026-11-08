@@ -1,0 +1,20 @@
+{{/* Choose keys for a bulk action: every key, whole categories or profiles,
+     or single keys, in any mix. Built with `picker .Data "rotate"`. Without
+     a script every box still posts; KeyPicker adds the group ticks and the
+     count. A key the action cannot act on is shown, unticked, with why. */}}
+{{define "key_picker"}}{{$d := .}}<fieldset class="key-picker" data-key-picker>
+  <legend class="form-label">Which keys</legend>
+  <label class="form-check"><input class="form-check-input" type="checkbox" name="all" value="1" data-pick-all><span class="form-check-label">Every key in every profile</span></label>
+  {{if .Categories}}<div class="key-picker-cats" role="group" aria-label="Categories"><span class="text-secondary small me-2">Whole categories:</span>{{range .Categories}}<label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="sel" value="category:{{.}}" data-pick-category="{{.}}"><span class="form-check-label">{{.}}</span></label>{{end}}</div>{{end}}
+  <div class="key-picker-list" data-pick-list>
+    {{range .Profiles}}{{$p := .}}
+    <div class="key-picker-profile" role="group" aria-label="Profile {{.Name}}" data-pick-group="{{.Name}}" data-pick-category-of="{{.Category}}">
+      <label class="form-check key-picker-head"><input class="form-check-input" type="checkbox" name="sel" value="{{.Name}}" data-pick-profile><span class="form-check-label"><strong>{{.Name}}</strong>{{with .Category}} <span class="text-secondary small">{{.}}</span>{{end}} <span class="text-secondary small">· all its keys</span></span></label>
+      {{range .Keys}}{{$why := $d.Why .}}
+      <label class="form-check key-picker-key{{if $why}} is-ineligible{{end}}"><input class="form-check-input" type="checkbox" name="sel" value="{{.Ref}}" data-pick-key{{if $why}} disabled data-pick-ineligible{{end}}><span class="form-check-label"><code>{{.Name}}</code>{{with $why}} <span class="text-secondary small">({{.}})</span>{{end}}</span></label>
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+  <div class="form-hint" data-pick-count aria-live="polite"></div>
+</fieldset>{{end}}

@@ -8,6 +8,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A checklist for every key and token.** `authama checklist` and **Security > Checklists**
+  list, for each key and token, every place it is used and every step to rotate or revoke it
+  completely. A key's follows its life: where it is while in use, and what still has to go once
+  it is revoked or a rotation retires it (targets it could not be removed from, hosts still
+  pointing at it, the private key, ssh-agent, encrypted bundles, old snapshots). A token's
+  revocation checklist starts with `authama checklist revoking`, and links to its issuer's
+  tokens page. Steps authama cannot see are ticked by hand and kept in `.state/checklists.json`.
+  Each key and token row has a **Checklist** entry, and each key page a summary card.
+- **Choose which keys to rotate, revoke or delete.** `ssh key revoke` and `ssh key delete`
+  take several keys, profiles or host aliases, `--category` or `--all`, as `ssh rotate` does.
+  The Keys page's **Rotate keys**, **Revoke keys** and **Delete keys** open a picker of every
+  key, whole categories and profiles, and single keys, showing why a key cannot be chosen.
 - **Notifications say authama, with its logo, and stay quiet in tests.** Desktop notifications now go
   through go-notifykit: on macOS a banner shows `authama` and the web UI's logo mark instead of
   "Script Editor", Linux's `notify-send` gets the same icon, and nothing is shown under `go test`
@@ -289,6 +301,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   buttons and dev banner) is removed, with the rule that forced panel columns to full width.
 ### Fixed
 
+- **A rotation forgot which servers still have the old key.** Removing the outgoing key from
+  each target was reported once and then lost. Rotation now records the targets it removed
+  the key from, those it could not, and where the by-hand ones are managed, in `retired.json`.
 - **Web UI: text typed into an Export step could vanish.** Committing a step's first field asks
   for a new preview, and its answer redrew the steps from the saved selection, wiping a second
   field still being typed in. A redraw now keeps uncommitted text, the focus and the caret, and

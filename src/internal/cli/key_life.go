@@ -10,6 +10,7 @@ import (
 	"github.com/simtabi/authama/src/internal/brand"
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/services/editor"
+	"github.com/simtabi/authama/src/internal/services/keysvc"
 )
 
 // newKeyLifetimeCmd is `ssh key lifetime`: how long a key lives before
@@ -104,10 +105,10 @@ func newKeyLifetimeCmd() *cobra.Command {
 // newKeyRevokeCmd is `ssh key revoke`: withdraw a key from everywhere it is
 // deployed, keep it declared, and never deploy that key again.
 func newKeyRevokeCmd() *cobra.Command {
-	var reason string
-	var yes bool
+	var reason, category string
+	var yes, all bool
 	cmd := &cobra.Command{
-		Use:   "revoke <profile/key>",
+		Use:   "revoke [<profile/key>|profile|alias ...] [--category <name>] [--all]",
 		Short: "Remove a key from every target it is deployed to, and never deploy it again",
 		Long: "Asks each target the key is deployed to, through its host's provider, to remove\n" +
 			"it: GitHub and GitLab through their CLIs, a cloud API, a server's\n" +
@@ -116,10 +117,20 @@ func newKeyRevokeCmd() *cobra.Command {
 			"rollback refuse it from then on. A target that cannot be reached, or whose\n" +
 			"provider cannot remove keys, is named so you can remove it by hand.\n\n" +
 			"The key's declaration, hosts and files stay. Mint its successor next:\n" +
-			"`ssh keygen <profile/key> --force` now, or `ssh rotate <profile/key>` staged.",
-		Example: "  " + brand.Command + " ssh key revoke work/work_gh-ed25519 --reason \"laptop lost\"",
-		Args:    cobra.ExactArgs(1),
+			"`ssh keygen <profile/key> --force` now, or `ssh rotate <profile/key>` staged.\n\n" +
+			"Name several keys, profiles or host aliases, a --category or --all to revoke\n" +
+			"each minted key among them in turn; one that fails is named and the rest go on.",
+		Example: "  " + brand.Command + " ssh key revoke work/work_gh-ed25519 --reason \"laptop lost\"\n" +
+			"  " + brand.Command + " ssh key revoke work personal/personal_gh-ed25519 --yes\n" +
+			"  " + brand.Command + " ssh key revoke --category clients --yes",
+		Args: cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
+			if err := needsSelection(args, all, category); err != nil {
+				return err
+			}
+			if !oneKey(c, args, all, category) {
+				return revokeMany(c, keysvc.Selection{Selectors: args, Category: category, All: all}, strings.TrimSpace(reason), yes)
+			}
 			p, err := resolvePaths(c)
 			if err != nil {
 				return err
@@ -156,5 +167,7 @@ func newKeyRevokeCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&reason, "reason", "", "why, recorded with the revocation (e.g. \"laptop lost\")")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the confirmation prompt")
+	cmd.Flags().BoolVar(&all, "all", false, "revoke every minted key")
+	cmd.Flags().StringVar(&category, "category", "", "revoke every minted key in profiles of this category")
 	return cmd
 }

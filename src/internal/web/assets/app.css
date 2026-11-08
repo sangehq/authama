@@ -331,3 +331,14 @@ main:focus { outline: none; }
   .checklist-step { flex-wrap: wrap; }
   .checklist-tick { width: 100%; padding-left: 2rem; }
 }
+
+/* Key picker: every key, whole categories or profiles, or single keys. The
+   list scrolls on its own so the panel's buttons stay in reach. */
+.key-picker { border: 0; padding: 0; margin: 0 0 1rem; min-width: 0; }
+.key-picker-cats { display: flex; flex-wrap: wrap; align-items: center; margin: .25rem 0 .5rem; }
+.key-picker-list { max-height: 18rem; overflow-y: auto; border: 1px solid var(--tblr-border-color); border-radius: var(--tblr-border-radius); padding: .5rem .75rem; }
+.key-picker-profile + .key-picker-profile { margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--tblr-border-color-translucent); }
+.key-picker-key { margin-left: 1.5rem; }
+.key-picker-key code { overflow-wrap: anywhere; }
+.key-picker-key.is-ineligible { opacity: .65; }
+.key-picker.is-all .key-picker-list, .key-picker.is-all .key-picker-cats { opacity: .5; }
