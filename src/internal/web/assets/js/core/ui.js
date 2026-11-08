@@ -83,12 +83,21 @@ export class Ui {
   //  - one at a time;
   //  - hidden on any click, Escape or scroll, and when a dropdown, slide-in
   //    panel or dialog opens; never shown while a dropdown is open;
+  //  - hidden the moment the pointer leaves its control or the window, the
+  //    window loses focus or the tab is hidden; keyboard focus shows one only
+  //    when it came from the keyboard (:focus-visible), so a clicked control
+  //    does not keep one;
+  //  - a watchdog checks, while one shows, that its control is still on the
+  //    page and still hovered or keyboard-focused, so no missed event (a
+  //    redraw under the pointer, a removed control) can leave one behind;
   //  - never on a touch screen, which has no hover to end one.
 
   /** @type {{ el: Element, tip: any } | null} */
   static #tip = null;
   /** @type {number | undefined} */
   static #timer = undefined;
+  /** @type {number | undefined} */
+  static #watch = undefined;
   static #started = false;
 
   /** Starts the tooltip rules once for the whole page. */
@@ -103,6 +112,10 @@ export class Ui {
     const begin = (/** @type {Event} */ e) => {
       const el = e.target instanceof Element ? e.target.closest("[data-tip]") : null;
       if (!el || el === Ui.#tip?.el || !Ui.tipAllowed(el)) {
+        return;
+      }
+      // Focus from a click is not a reason to explain the control.
+      if (e.type === "focusin" && !el.matches(":focus-visible")) {
         return;
       }
       Ui.hideTooltip();
@@ -122,6 +135,10 @@ export class Ui {
     const hide = () => Ui.hideTooltip();
     document.addEventListener("click", hide, true);
     document.addEventListener("scroll", hide, { capture: true, passive: true });
+    document.addEventListener("pointerdown", hide, true);
+    document.documentElement.addEventListener("mouseleave", hide);
+    document.addEventListener("visibilitychange", hide);
+    window.addEventListener("blur", hide);
     window.addEventListener("resize", hide, { passive: true });
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
@@ -193,9 +210,21 @@ export class Ui {
       tip.dispose();
       if (Ui.#tip?.tip === tip) {
         Ui.#tip = null;
+        window.clearInterval(Ui.#watch);
       }
     }, { once: true });
     tip.show();
+    // The watchdog: a flash (text given) holds for its own timeout; any other
+    // tooltip lasts only while its control is on the page and hovered or
+    // keyboard-focused.
+    window.clearInterval(Ui.#watch);
+    if (text === undefined) {
+      Ui.#watch = window.setInterval(() => {
+        if (!el.isConnected || !(el.matches(":hover") || el.matches(":focus-visible"))) {
+          Ui.hideTooltip();
+        }
+      }, 250);
+    }
     return tip;
   }
 
@@ -233,7 +262,20 @@ export class Ui {
   /** Hides (and so disposes) the tooltip that is showing, and any about to. */
   static hideTooltip() {
     window.clearTimeout(Ui.#timer);
-    Ui.#tip?.tip.hide();
+    window.clearInterval(Ui.#watch);
+    const t = Ui.#tip;
+    if (!t) {
+      return;
+    }
+    // A control already gone from the page cannot run Bootstrap's hide, so
+    // its tooltip is removed directly.
+    if (!t.el.isConnected) {
+      Ui.#tip = null;
+      t.tip.tip?.remove();
+      t.tip.dispose();
+      return;
+    }
+    t.tip.hide();
   }
 
   /**

@@ -55,8 +55,10 @@ test('an icon-only control shows its tooltip after a pause, one at a time, and a
   await expect(page.getByRole('tooltip')).toContainText('identity file');
   await page.mouse.click(5, 5);
   await expect(page.getByRole('tooltip')).toHaveCount(0);
-  // Escape does too.
+  // Keyboard focus shows it too, and Escape puts it away.
   await copy.focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
   await expect(page.getByRole('tooltip')).toHaveText('Copy the fingerprint');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('tooltip')).toHaveCount(0);
@@ -116,4 +118,32 @@ test('a tooltip opens where there is room, clear of its control and inside the w
   await page.setViewportSize({ width: 420, height: 800 });
   await page.goto('/keys/work/work_hpc-ed25519');
   await check(page.getByRole('button', { name: 'Copy the fingerprint' }));
+});
+
+// A tooltip never outlives the reason for it: the pointer leaving, the control
+// leaving the page, or a click (which focuses without explaining).
+test('a tooltip goes when the pointer leaves, when its control is removed, and a click shows none', async ({ page }) => {
+  await page.goto('/keys/work/work_hpc-ed25519');
+  const copy = page.getByRole('button', { name: 'Copy the fingerprint' });
+  const tip = page.getByRole('tooltip');
+
+  await copy.hover();
+  await expect(tip).toBeVisible();
+  await page.mouse.move(5, 400);
+  await expect(tip).toHaveCount(0);
+
+  // The control removed while its tooltip shows: the watchdog takes it away.
+  await copy.hover();
+  await expect(tip).toBeVisible();
+  await copy.evaluate((el) => el.remove());
+  await expect(tip).toHaveCount(0, { timeout: 2000 });
+
+  // A click focuses the control; with the pointer then moved off, nothing
+  // stays on screen.
+  await page.reload();
+  const again = page.getByRole('button', { name: 'Copy the fingerprint' });
+  await again.click();
+  await page.mouse.move(5, 400);
+  await page.waitForTimeout(800);
+  await expect(tip).toHaveCount(0);
 });
