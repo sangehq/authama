@@ -72,12 +72,25 @@ jobs:
         run: make ci
       # Once per OS, not once overall: golangci-lint analyses a single GOOS, so
       # a single run never sees the build-tagged platform files at all.
+      #
+      # The action downloads golangci-lint from GitHub's release CDN, which
+      # answered 504 for minutes on 2026-11-08 and outlasted the action's own two
+      # retries on #160's Windows job. So a failed first attempt gets one more,
+      # identical one; a real lint finding fails both, and the job with them.
       - name: Lint
+        id: lint
+        continue-on-error: true
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: v2.14.0
           # The module is src/, and the action runs where it is told to. Without
           # this it lints a directory with no Go in it and passes.
+          working-directory: src
+      - name: Lint (second attempt)
+        if: steps.lint.outcome == 'failure'
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.14.0
           working-directory: src
       # No longer macOS-only: the shell version used BSD `stat -f`, which was the
       # single reason two thirds of the matrix never ran it.
@@ -94,7 +107,9 @@ jobs:
           set -euo pipefail
           # Binary releases are on hold, so the release carries no binary: build
           # this commit's into a local "release" with a real checksums.txt, and
-          # install from it. The version is still resolved from GitHub.
+          # install from it. The installs name their version, so nothing here
+          # waits on github.com, whose 504s failed this step on 2026-11-08; the
+          # version lookup is tested at the end against stand-ins for GitHub.
           case "$(uname -s)" in Darwin) os=macos ;; *) os=linux ;; esac
           case "$(uname -m)" in x86_64|amd64) arch=amd64 ;; arm64|aarch64) arch=arm64 ;; *) arch="$(uname -m)" ;; esac
           rel="$(mktemp -d)"
@@ -105,7 +120,7 @@ jobs:
           dir="$(mktemp -d)/bin"
           # bash explicitly, so the macOS runner exercises its system bash 3.2
           # rather than whatever `env bash` happens to find.
-          AUTHAMA_INSTALL_DIR="$dir" bash src/scripts/install.sh 2>&1 | tee "$rel/out"
+          AUTHAMA_INSTALL_DIR="$dir" bash src/scripts/install.sh v0.1.0 2>&1 | tee "$rel/out"
           test -x "$dir/authama"
           "$dir/authama" version
           # The checksum was checked, not skipped.
@@ -114,8 +129,27 @@ jobs:
           test ! -e "$dir/sshmgr"
           # The deprecated variable name still picks the directory.
           old="$(mktemp -d)/bin"
-          SSHMGR_INSTALL_DIR="$old" bash src/scripts/install.sh
+          SSHMGR_INSTALL_DIR="$old" bash src/scripts/install.sh v0.1.0
           test -x "$old/authama"
+          # The version lookup, with no version named: the API's tag_name; when
+          # the API has no answer, the tag the releases/latest redirect lands on;
+          # and with no release at all, the highest vX.Y.Z tag, skipping the Go
+          # module's src/ alias and pre-releases. A copy of the installer reads
+          # each from file:// stand-ins.
+          printf '{"tag_name": "v9.8.7"}\n' > "$rel/latest.json"
+          mkdir -p "$rel/releases/tag" && : > "$rel/releases/tag/v6.5.4"
+          printf '[%s]\n' '{"ref": "refs/tags/src/v9.9.9"}, {"ref": "refs/tags/v1.9.0"}, {"ref": "refs/tags/v1.10.0"}, {"ref": "refs/tags/v2.0.0-rc.1"}, {"ref": "refs/tags/v1.2.3"}' > "$rel/tags.json"
+          lookup() { # api, web and tags stand-ins, name -> the version installed
+            s="$rel/install-$4.sh"
+            sed -e "s|https://api.github.com/repos/\${OWNER}/\${REPO}/releases/latest|$1|" \
+                -e "s|https://github.com/\${OWNER}/\${REPO}/releases/latest|$2|" \
+                -e "s|https://api.github.com/repos/\${OWNER}/\${REPO}/git/matching-refs/tags/v|$3|" src/scripts/install.sh > "$s"
+            grep -qF "$1" "$s" && grep -qF "$2" "$s" && grep -qF "$3" "$s" || { echo "could not point the $4 lookup at its stand-ins" >&2; exit 1; }
+            AUTHAMA_INSTALL_DIR="$(mktemp -d)/bin" bash "$s" 2>&1 | sed -n 's/^Downloading .* (\(v[^)]*\)).*/\1/p'
+          }
+          test "$(lookup "file://$rel/latest.json" "file://$rel/missing" "file://$rel/missing.json" api)" = v9.8.7
+          test "$(lookup "file://$rel/missing.json" "file://$rel/releases/tag/v6.5.4" "file://$rel/missing.json" redirect)" = v6.5.4
+          test "$(lookup "file://$rel/missing.json" "file://$rel/missing" "file://$rel/tags.json" tags)" = v1.10.0
 
       # The Windows installer is an `irm | iex` entry point and was only ever
       # parsed, never run. Run it, then run it again with the API URL broken so
@@ -244,11 +278,22 @@ jobs:
           VERSION=8.30.1
           # From the release's gitleaks_8.30.1_checksums.txt; bump both together.
           SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
-          curl -fsSL -o gitleaks.tar.gz \
-            "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
-          echo "${SHA256}  gitleaks.tar.gz" | sha256sum -c -
-          tar -xzf gitleaks.tar.gz gitleaks
-          sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
+          # GitHub's release CDN answers 502/504 for minutes at a time: on
+          # 2026-11-08 it failed this step on #160, then five retries 3s apart on
+          # #161. So back off exponentially for up to 4 minutes, and if the release
+          # still cannot be fetched, build the same version from the Go module
+          # proxy, a different CDN whose download Go checks against sum.golang.org.
+          # A tarball that downloads but fails its checksum is never worked round.
+          if curl -fsSL --retry 6 --retry-all-errors --retry-max-time 240 --connect-timeout 20 -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"; then
+            echo "${SHA256}  gitleaks.tar.gz" | sha256sum -c -
+            tar -xzf gitleaks.tar.gz gitleaks
+            sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
+          else
+            echo "::warning::the gitleaks ${VERSION} release could not be downloaded; building it from the Go module proxy"
+            GOBIN="${RUNNER_TEMP}/bin" go install "github.com/zricethezav/gitleaks/v8@v${VERSION}"
+            echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
+          fi
       - name: Scan for secrets
         run: gitleaks detect --source . --redact --no-banner --exit-code 1
 

@@ -55,6 +55,12 @@ if [ "$os" = "macos" ] && [ "$arch" != "amd64" ] && [ "$arch" != "arm64" ]; then
   err "unsupported macOS architecture $(uname -m)."
 fi
 
+# Every request retries a transient answer (408, 429, 5xx, a timeout) with
+# backoff: GitHub's release CDN answers 504 for minutes at a time, and on
+# 2026-11-08 that failed both the version lookup and the download in CI. A
+# 404 is not retried, so the API's "no release" still falls through at once.
+CURL_RETRY=(--retry 5 --retry-max-time 90 --connect-timeout 20)
+
 # --- version resolution -----------------------------------------------------
 VERSION="${1:-}"
 if [ -z "$VERSION" ]; then
@@ -75,15 +81,27 @@ if [ -z "$VERSION" ]; then
   # into a failed install - intermittently, depending on whether curl had
   # finished writing. awk reads a here-string, so there is no pipeline left for
   # an early exit to break.
-  body="$(curl -fsSL ${auth[@]+"${auth[@]}"} -H 'Accept: application/vnd.github+json' "$api" || true)"
+  body="$(curl -fsSL "${CURL_RETRY[@]}" ${auth[@]+"${auth[@]}"} -H 'Accept: application/vnd.github+json' "$api" || true)"
   VERSION="$(awk -F'"' '/"tag_name"/{print $4; exit}' <<<"$body")"
   # The API allows 60 unauthenticated requests an hour per IP, and anyone behind
   # a shared NAT - or on a CI runner - can find that spent and get a 403. The
   # releases/latest web redirect is not counted against it and names the same
   # tag, so fall back to it rather than failing the install.
   if [ -z "$VERSION" ]; then
-    latest="$(curl -fsSLI -o /dev/null -w '%{url_effective}' "https://github.com/${OWNER}/${REPO}/releases/latest" || true)"
+    latest="$(curl -fsSLI "${CURL_RETRY[@]}" -o /dev/null -w '%{url_effective}' "https://github.com/${OWNER}/${REPO}/releases/latest" || true)"
     case "$latest" in */tag/*) VERSION="${latest##*/tag/}" ;; esac
+  fi
+  # No release at all - binary releases are on hold, so the repository may
+  # publish none - leaves the highest version tag: vX.Y.Z only, so neither the
+  # Go module's src/vX.Y.Z alias nor a pre-release is picked.
+  if [ -z "$VERSION" ]; then
+    tags="https://api.github.com/repos/${OWNER}/${REPO}/git/matching-refs/tags/v"
+    refs="$(curl -fsSL "${CURL_RETRY[@]}" ${auth[@]+"${auth[@]}"} -H 'Accept: application/vnd.github+json' "$tags" || true)"
+    # One object per line whatever the JSON's layout, then each "ref": "...".
+    VERSION="$(tr ',{}' '\n\n\n' <<<"$refs" \
+      | awk -F'"' '$2 == "ref" && $4 ~ /^refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+$/ {sub("refs/tags/v", "", $4); print $4}' \
+      | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)"
+    if [ -n "$VERSION" ]; then VERSION="v$VERSION"; fi
   fi
 fi
 [ -n "$VERSION" ] || err "could not determine the version to install."
@@ -104,7 +122,7 @@ workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
 
 have_sums=0
-if curl -fsSL "${base}/checksums.txt" -o "${workdir}/checksums.txt" 2>/dev/null; then
+if curl -fsSL "${CURL_RETRY[@]}" "${base}/checksums.txt" -o "${workdir}/checksums.txt" 2>/dev/null; then
   have_sums=1
 else
   info "warning: checksums.txt not found; skipping verification."
@@ -115,7 +133,7 @@ fi
 fetch() {
   asset="${1}_${os}_${arch}"
   info "Downloading ${asset} (${VERSION}) ..."
-  curl -fsSL "${base}/${asset}" -o "${workdir}/${asset}" 2>/dev/null || return 1
+  curl -fsSL "${CURL_RETRY[@]}" "${base}/${asset}" -o "${workdir}/${asset}" 2>/dev/null || return 1
   if [ "$have_sums" = 1 ]; then
     ( cd "$workdir" && sha_check checksums.txt "$asset" ) || err "checksum verification failed for ${asset}"
   fi

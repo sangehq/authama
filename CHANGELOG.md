@@ -257,6 +257,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   buttons and dev banner) is removed, with the rule that forced panel columns to full width.
 ### Fixed
 
+- **The installers retry GitHub when it answers 504.** `install.sh` and `install.ps1` retry the
+  version lookup and every download on a timeout, a 408, a 429 or a 5xx, with backoff, before
+  giving up. A 404 still fails at once, so the API's "no release" falls through to the
+  `releases/latest` redirect as before.
+- **The installers install the highest version tag when there is no release.** With binary
+  releases on hold the repository publishes none, so `install.sh` and `install.ps1` found no
+  version and stopped with "could not determine the version to install". After the latest release
+  and its redirect, they now read the tags and take the highest `vX.Y.Z`, never the Go module's
+  `src/` alias or a pre-release.
+
 - `ssh vm add --hypervisor orbstack|podman`, a devbox on either, and the same web form sent you to
   `ssh vm docker-context`, which needs a VM host those machines can never be. The refusal now
   says where their Docker is: OrbStack's own `orbstack` context, or Podman's socket for
