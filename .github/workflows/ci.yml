@@ -244,7 +244,10 @@ jobs:
           VERSION=8.30.1
           # From the release's gitleaks_8.30.1_checksums.txt; bump both together.
           SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
-          curl -fsSL -o gitleaks.tar.gz \
+          # GitHub's release CDN answers a transient 502/504 now and then; one of
+          # those failed the job before gitleaks ran (#160). Retry, connection
+          # errors included, rather than report a scan that never happened.
+          curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors --connect-timeout 20 -o gitleaks.tar.gz \
             "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
           echo "${SHA256}  gitleaks.tar.gz" | sha256sum -c -
           tar -xzf gitleaks.tar.gz gitleaks
