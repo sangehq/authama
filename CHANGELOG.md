@@ -213,6 +213,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Web UI: names open in the side panel, and Export's filters slide in on a phone.** A host's
+  or key's name in a list (Hosts, Keys, Connections, Validate, Audit, the overview, and the links
+  between a host and its key) now opens it in the slide-in panel over the list, like the row
+  menu's Open; Ctrl- or Cmd-click and the panel's "Open as a page" still go to the page. Below
+  the `lg` breakpoint, Export's saved selections and filters move into a panel opened by a
+  Filters button, and the row kinds scroll on one line instead of wrapping into three.
+- **Web UI: paths under your home show as `~/…`** on Settings, About, Auth tokens, the overview's
+  State card and the Doctor report, with the full path on hover. The token audit lists problems
+  first, each finding with an icon for its outcome.
+- **Web UI on a phone:** a page's actions take their own row under the title, the second action
+  and More show their icons alone, and the overview's counts sit two to a row.
 - `src/go.mod` retracts v0.1.0 to v0.1.3, which the Go module proxy cached from the deleted
   pre-restart history. The next release is v0.1.4 (`docs/release.md`).
 
@@ -257,6 +268,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   buttons and dev banner) is removed, with the rule that forced panel columns to full width.
 ### Fixed
 
+- **Web UI: accordions showed no sign that they open.** Tabler 1.7 draws an accordion's chevron
+  only inside `.accordion-button-toggle`, which no accordion had, so Export's Profiles, Keys,
+  Roles, Tags and Status groups and About's licences read as plain headings. Each now shows a
+  chevron that turns when it opens; a test fails on any accordion without one.
 - `ssh vm add --hypervisor orbstack|podman`, a devbox on either, and the same web form sent you to
   `ssh vm docker-context`, which needs a VM host those machines can never be. The refusal now
   says where their Docker is: OrbStack's own `orbstack` context, or Podman's socket for
