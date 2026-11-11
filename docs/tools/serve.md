@@ -82,10 +82,14 @@ The layout is Tabler's, in two bars. The top bar holds the name (with a *read-on
 server only reads), a search box that opens the command palette, a theme toggle (light or dark), a
 bell listing the newest [file events](events.md), and an account menu named for the system user the
 server runs as. The account menu opens with *Running as <user> on <host>* and holds Settings, Events,
-Doctor, the tour and About. Under it, a menu holds the Overview and five dropdowns: **SSH**
+Doctor, the tour and About. Under it, a menu holds the Overview, an **Actions** menu, and five dropdowns: **SSH**
 (Profiles, Naming, Hosts, Keys, VMs), **Config & backups** (SSH config, Snapshots), **Security** (Auth tokens,
 Audit, Owner & PIN), **Activity** (History, Events), Export, and **System** (Doctor, Validate, Repair,
-Settings, About). On a narrow screen it folds behind a button. About shows the build (and whether it is
+Settings, About). **Actions**, outlined so it stands apart from the page menus, opens the forms people
+come back for from any page: Rotate keys, Revoke keys, Delete keys, Mint missing keys, Pin host keys,
+Add a host and Add a token. Each opens its page with the form's panel already open, and nothing runs
+until it is reviewed. A read-only server shows no Actions menu, and a dev sandbox leaves out rotate
+and revoke, which reach real servers. On a narrow screen it folds behind a button. About shows the build (and whether it is
 current), this computer, and the third-party licences; following the system's light or dark theme is
 chosen on the Settings page. The footer carries the copyright, the version, and links to About, the
 documentation, the source and the licences.
@@ -136,8 +140,18 @@ documentation, the source and the licences.
   written before the preview is confirmed. Screen readers announce the same text.
 - **Help** sits where it is needed: a hint under each form field, a ? beside a term that needs
   explaining (it opens a popover), and a tooltip on every icon button. **Take the tour**, in the
-  account menu, walks the header and the overview one step at a time; it offers itself once, on a
-  browser's first visit to the overview, and Escape ends it.
+  account menu, walks the header, the Actions menu and the overview one step at a time; it offers
+  itself once, on a browser's first visit to the overview, and Escape ends it.
+- **Get started.** Until a home has a profile, a host, a minted key and a token, and nothing needs
+  attention, the Overview opens with a **Get started** card: each step with why it matters and a
+  **Start** button that opens its form, ticked off by itself as the home fills in, with a bar for
+  how many are done. **Hide** puts it away in that browser until another step is done; the card
+  also starts the tour.
+- **Slow actions say so.** A preview, a change or a page in the side panel that has taken more than
+  two seconds shows a card at the foot of the screen with a spinner and the time so far. Once the
+  same action has been timed in that browser, the card adds a percentage and the time left,
+  estimated from the last runs and never past 95% until the answer arrives; an action never timed
+  shows a moving bar instead of a number.
 - **Every destructive action** (deleting a profile, host, key or token, pruning snapshots, restoring
   one, cleaning stale pins) is asked for first, in a dialog or in the panel it sits in, then
   previewed, then confirmed again on the preview.
@@ -354,8 +368,12 @@ Deploying, rotating and rolling back reach the hosts that use a key, and pinning
 hosts for theirs, so no copy can preview them. Each runs as a **job**:
 
 1. **Review.** The page says what the job will do, and the command it is the same as.
-2. **Run.** The job starts, and its page shows the output as it comes. It holds the lock until it
-   ends, and it is recorded in the history like any other change.
+2. **Run.** The job starts, and its page shows the output as it comes, under a progress card: a
+   spinner, the time so far, and for a job that works through several keys (rotate, revoke or
+   delete keys) a bar with *3 of 10 · 30% · about 1m 20s left* and the key under way. The time left
+   is the pace of the keys already done applied to the rest, so it shows once the first has
+   finished. A job that is one step shows a moving bar and says it gives no percentage. The job
+   holds the lock until it ends, and it is recorded in the history like any other change.
 
 | Job | Where | The same as |
 |---|---|---|
@@ -365,6 +383,7 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
 | Rotate a profile's keys, or every key | Profiles | `authama ssh rotate <profile> --yes`, `authama ssh rotate --all --yes` |
 | Restore an encrypted bundle from `dist/` | Snapshots | `authama ssh restore <bundle> --yes` |
 | Pin one host's keys, after you have seen their fingerprints | the host's page | `authama ssh knownhosts pin <alias>`, answered yes |
+| Rotate, revoke or delete chosen keys | Keys, or Actions | `authama ssh rotate <keys…> --yes`, `authama ssh key revoke <keys…> --yes`, `authama ssh key delete <keys…> --yes` |
 | Pin a profile's hosts, or every host (trust on first use) | Hosts → Pin host keys | `authama ssh knownhosts init <profile> --yes`, `authama ssh knownhosts init --all --yes` |
 
 - **Not in dev mode.** Deploy, rotate and rollback reach real servers, so under `--dev-root` the key
