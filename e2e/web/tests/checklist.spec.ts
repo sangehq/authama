@@ -190,3 +190,19 @@ test('a setting is edited from its page, through a preview', async ({ page }) =>
   await page.locator('[data-settings-filter]').fill('');
   await page.screenshot({ path: 'test-results/settings-page.png', fullPage: true });
 });
+
+test('a dry run of a rotation tests every key and shows the result as a tree', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/keys#rotate-keys');
+  const form = page.locator('#rotate-keys');
+  await form.getByLabel('Every key in every profile').check();
+  await form.locator('[data-pick-submit]').click();
+  const panel = page.locator('#side-panel');
+  await panel.getByRole('button', { name: 'Dry run: test every key' }).click();
+  await expect(panel.getByRole('heading', { level: 1 })).toHaveText(/^Dry run: rotate \d+ keys?$/);
+  await expect(panel.locator('#job-state')).toHaveAttribute('data-state', /done|failed/, { timeout: 90_000 });
+  const tree = panel.locator('.console');
+  await expect(tree.locator('.console-line.lvl-0').first()).toBeVisible();
+  await expect(tree.locator('.console-branch').first()).toHaveText(/[├└]─/);
+  await tree.screenshot({ path: 'test-results/dry-run-tree.png' });
+});

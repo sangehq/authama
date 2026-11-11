@@ -12,6 +12,8 @@ import (
 // warn, info, muted), the host or key it is about, and the rest. The CLI
 // prints plain text; the page colours and aligns it from these.
 type consoleLine struct {
+	// Last marks the last line under its parent, drawn └─ rather than ├─.
+	Last            bool
 	Indent          int
 	Tag, Kind       string
 	Name, Text, Raw string
@@ -62,6 +64,14 @@ func consoleLines(lines []string) []consoleLine {
 	out := make([]consoleLine, 0, len(lines))
 	for _, ln := range lines {
 		out = append(out, readConsoleLine(ln))
+	}
+	// A nested line is the last of its group when no line at its depth
+	// follows before a shallower one.
+	for i := range out {
+		if out[i].Indent == 0 {
+			continue
+		}
+		out[i].Last = i+1 == len(out) || out[i+1].Indent < out[i].Indent
 	}
 	return out
 }

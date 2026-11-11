@@ -115,8 +115,10 @@ test('validate runs every check, and the seeded home passes them all', async ({ 
 });
 
 test('history records the seeding commands', async ({ page }) => {
-  await page.goto('/history');
+  // Filtered by command: later tests add operations, which can push the
+  // oldest off the first page.
   for (const command of ['init', 'reconcile', 'bundle']) {
+    await page.goto(`/history?command=${command}`);
     await expect(page.getByRole('link', { name: command, exact: true }).first()).toBeVisible();
   }
 });

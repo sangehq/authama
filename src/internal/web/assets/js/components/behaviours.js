@@ -2,7 +2,7 @@
 import { Component } from "../core/component.js";
 import { Ui } from "../core/ui.js";
 import { SidePanel } from "./side-panel.js";
-import { consoleLineElement } from "./console.js";
+import { appendConsoleLine } from "./console.js";
 
 /**
  * ConfirmAction opens a confirmation modal instead of submitting: a submit
@@ -82,7 +82,7 @@ export class JobStream extends Component {
         this.el.querySelector("[data-console-empty]")?.remove();
         // Follow the newest line, unless the reader has scrolled up to read.
         const atEnd = this.el.scrollHeight - this.el.scrollTop - this.el.clientHeight < 40;
-        this.el.appendChild(consoleLineElement(/** @type {MessageEvent} */ (e).data));
+        appendConsoleLine(this.el, /** @type {MessageEvent} */ (e).data);
         if (atEnd) {
           this.el.scrollTop = this.el.scrollHeight;
         }
