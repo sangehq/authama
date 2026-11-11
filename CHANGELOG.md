@@ -8,6 +8,30 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Test a rotation before running it.** `authama ssh rotate --check` (and **Dry run: test every key**
+  on a rotation's review) checks every key and changes nothing: each server it is used on answers and
+  the current key still logs in, and each target that takes keys by hand is named. A key that would
+  not rotate cleanly is marked failed, with why; the job page shows each key as it is tested.
+- **A clean rotation, without the backup.** *Skip the encrypted backup* on Rotate keys, or *Rotate
+  without a backup* on a review blocked by a missing recipient, rotates with `--no-key-backup`:
+  no bundle is written, and each replaced key is still kept under `old/` for a rollback until the
+  next rotation.
+- **A fix takes you back to the job.** After *Create a backup key* (or another fix) started from a
+  job's review, the done page offers **Review the job again**, with its checks run again, instead
+  of leaving the old review, which still showed the check failing, behind the panel's back arrow.
+- **Edit settings from the Settings page.** Every setting sits in a card for its section with its
+  description, its value, and where that came from; **Edit** opens a form whose input fits it (a
+  switch-like On/Off, a menu of its choices, a number, or text with the default as a hint), previewed
+  before it is written into `authama.json`, and **Go back to the default** takes it out again. The
+  server uses a saved value at once, unless the environment or `.env` sets it, which still wins. A
+  filter narrows the page. The same from a terminal: `authama settings set <key> <value>` and
+  `authama settings unset <key>`.
+- **A job's failed check says how to fix it, and offers the fix.** A rotate with no backup recipient
+  offers **Create a backup key** (`authama settings backup-key`: an age key made with `age-keygen`,
+  its identity kept owner-only where `paths.age_identity_file` already points (else in the config
+  home), and `backup.age_recipient` and
+  `paths.age_identity_file` set to it, never shown in a page) or **Use a key you have**, which opens
+  that setting in Settings. A job that backs up first also checks that `age` is installed.
 - **Jobs have guardrails, and run one item at a time on screen.** A job's review is titled for
   the job (*Rotate 10 keys*), checks what it needs before it may start (no other job running, a
   backup recipient for one that backs up first) and keeps Start off until they pass, numbers its
@@ -350,6 +374,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   buttons and dev banner) is removed, with the rule that forced panel columns to full width.
 ### Fixed
 
+- **Create a backup key failed when pressed twice.** The second press found the key the first had
+  made and refused. It now uses the key already there and sets the settings up from it.
 - **A dialog opened inside the side panel could not be pressed.** The panel's stacking context
   held it under the page's backdrop. Every modal, wherever it is written, now opens from the page's
   body, in front of every slide-in panel, and goes back (or away, if its panel moved on) when it

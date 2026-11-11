@@ -139,6 +139,9 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		"brandCommand": func() string { return brand.Command },
 		"cmdline":      brand.Line,
 		"when":         func(t time.Time) string { return t.UTC().Format("2006-01-02 15:04 UTC") },
+		// settingSections groups the Settings page's rows by section.
+		"settingSections": settingSectionsOf,
+		"settingName":     settingName,
 		// tokenAudit lays the token audit out for its card.
 		"tokenAudit": layOutAudit,
 		// resetRow pairs a Reset page row with the page's view, for its

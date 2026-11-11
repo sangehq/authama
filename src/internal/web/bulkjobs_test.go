@@ -23,7 +23,16 @@ func TestBulkJobsReviewTheChosenKeys(t *testing.T) {
 	}
 	// Several selectors are carried to the run step, every one of them.
 	rev = c.change("/jobs/review", url.Values{"action": {"rotate-keys"}, "sel": {"work", key}})
-	if body := rev.Body.String(); rev.Code != http.StatusOK || strings.Count(body, `name="sel"`) != 2 {
+	// Counted in the job's own form: a fix form beside it (rotate without a
+	// backup) carries the same fields.
+	body := rev.Body.String()
+	if i := strings.Index(body, `id="job-form"`); i >= 0 {
+		body = body[i:]
+		if j := strings.Index(body, "</form>"); j >= 0 {
+			body = body[:j]
+		}
+	}
+	if rev.Code != http.StatusOK || strings.Count(body, `name="sel"`) != 2 {
 		t.Fatalf("both selectors carried: %d, %d sel fields", rev.Code, strings.Count(body, `name="sel"`))
 	}
 	for _, tc := range []struct {

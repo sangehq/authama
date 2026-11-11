@@ -45,29 +45,50 @@
     </div>
   </div>
 </div>
-<div class="row row-cards">
-  <div class="col-12">
-    <div class="card">
-      <div class="card-header"><h2 class="card-title">In effect</h2><div class="card-actions text-secondary small">{{len .Effective}} settings</div></div>
-      {{if .Effective}}
-      <div class="table-responsive" tabindex="0">
-        <table class="table table-vcenter card-table table-hover" data-table="settings">
-          <caption class="visually-hidden">Every setting, its value in effect, and where the value came from</caption>
-          <thead><tr><th scope="col">Setting</th><th scope="col">Value</th><th scope="col">From</th></tr></thead>
-          <tbody>
-            {{range .Effective}}
-            <tr>
-              <th scope="row"><code>{{.Key}}</code><div class="small text-secondary"><code>${{.Variable}}</code></div></th>
-              <td class="text-break w-50">{{if .Value}}{{tildeText .Value}}{{else}}<span class="text-secondary">(unset)</span>{{end}}</td>
-              <td>{{if eq .Source "default"}}<span class="badge badge-muted">default</span>{{else}}<span class="badge badge-info text-wrap text-start">{{.Source}}</span>{{end}}</td>
-            </tr>
-            {{end}}
-          </tbody>
-        </table>
+{{if .Effective}}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h2 class="h3 mb-0 me-auto">Settings in effect</h2>
+  <div class="input-icon settings-filter"><span class="input-icon-addon">{{icon "search"}}</span><input type="search" class="form-control" placeholder="Filter settings" aria-label="Filter settings" autocomplete="off" data-settings-filter></div>
+</div>
+<p class="text-secondary small">Each setting shows its value in effect and where it came from. <strong>Edit</strong> saves a value into <code>authama.json</code>, previewed first; this server uses it at once. A value set in the environment or <code>.env</code> wins over <code>authama.json</code>. Precedence: command-line flags, then the environment, then <code>.env</code>, then <code>authama.json</code>, then the defaults.</p>
+{{range settingSections .Effective}}{{$sec := .}}
+<div class="card mb-3 settings-section" id="settings-{{.Key}}" data-settings-section>
+  <div class="card-header"><div><h3 class="card-title">{{.Title}}</h3><div class="card-subtitle small text-secondary mt-1">{{.Summary}}</div></div>
+    {{if and (eq .Key "backup") (not $.ReadOnly)}}{{range .Fields}}{{if and (eq .Key "backup.age_recipient") (not .Value)}}<div class="card-actions">{{template "change_open" $}}<input type="hidden" name="action" value="backup-key"><button type="submit" class="btn btn-sm btn-primary"{{desc "backup-key"}}>{{icon "key"}}<span class="ms-1">Create a backup key</span></button></form></div>{{end}}{{end}}{{end}}
+  </div>
+  <div class="list-group list-group-flush">
+    {{range .Fields}}{{$f := .}}<div class="list-group-item setting-row" id="setting-{{.Key}}" data-settings-row="{{.Key}} {{.Variable}} {{settingName .Spec}} {{.Spec.Doc}}">
+      <div class="d-flex flex-wrap align-items-start gap-3">
+        <div class="setting-main">
+          <div class="d-flex flex-wrap align-items-center gap-2"><span class="fw-semibold">{{settingName .Spec}}</span><code class="small">{{.Key}}</code>{{if eq .Source "default"}}<span class="badge badge-muted">default</span>{{else if .InFile}}<span class="badge badge-ok">authama.json</span>{{else}}<span class="badge badge-info text-wrap text-start">{{.Source}}</span>{{end}}</div>
+          <div class="small text-secondary mt-1">{{.Spec.Doc}}</div>
+          <div class="setting-value mt-2">{{if not .Value}}<span class="text-secondary">not set</span>{{else if eq .Source "default"}}<span class="text-secondary">default: </span>{{tildeText .Value}}{{else}}<code>{{tildeText .Value}}</code>{{end}}<span class="small text-secondary ms-2">${{.Variable}}</span></div>
+        </div>
+        {{if not $.ReadOnly}}<div class="ms-auto flex-shrink-0">
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#edit-{{.Variable}}" aria-expanded="false" aria-controls="edit-{{.Variable}}"{{desc "setting-edit"}}>{{icon "pencil"}}<span class="ms-1">Edit</span></button>
+        </div>{{end}}
       </div>
-      {{else}}{{template "empty" (empty "info-circle" "Not known here" "The values in effect are known only to the command that started this server.")}}{{end}}
-      <div class="card-footer text-secondary">Precedence: command-line flags, then the environment, then <code>.env</code>, then <code>authama.json</code>, then the defaults. The values are those this server started with; <code>authama settings show --effective</code> prints them for a new run.</div>
-    </div>
+      {{if not $.ReadOnly}}<div class="collapse" id="edit-{{.Variable}}">
+        <div class="setting-edit mt-3">
+          {{if .Overridden}}<div class="alert alert-info py-2 small" role="note">{{icon "info-circle"}}<span class="ms-1">{{.Source}} sets this, and wins over <code>authama.json</code>: a value saved here takes effect once that is removed.</span></div>{{end}}
+          {{template "change_open" $}}<input type="hidden" name="action" value="settings-set"><input type="hidden" name="key" value="{{.Key}}">
+            <label class="form-label" for="v-{{.Variable}}">{{settingName .Spec}}</label>
+            <div class="d-flex flex-wrap gap-2 align-items-start">
+              {{if eq (print .Spec.Kind) "boolean"}}<select class="form-select setting-input" id="v-{{.Variable}}" name="value"><option value="true"{{if eq .Value "1" "true"}} selected{{end}}>On</option><option value="false"{{if eq .Value "0" "false"}} selected{{end}}>Off</option></select>
+              {{else if eq (print .Spec.Kind) "enum"}}<select class="form-select setting-input" id="v-{{.Variable}}" name="value">{{range .Spec.Enum}}<option value="{{.}}"{{if eq . $f.Value}} selected{{end}}>{{.}}</option>{{end}}</select>
+              {{else if eq (print .Spec.Kind) "integer"}}<input class="form-control setting-input" type="number" id="v-{{.Variable}}" name="value" min="{{.Spec.Min}}" step="1" value="{{.Value}}" required>
+              {{else}}<input class="form-control setting-input setting-input-wide" type="text" id="v-{{.Variable}}" name="value" value="{{if ne .Source "default"}}{{.Value}}{{end}}" placeholder="{{.Spec.Default}}" required autocomplete="off" spellcheck="false">{{end}}
+              <button type="submit" class="btn btn-primary"{{desc "preview"}}>Preview</button>
+            </div>
+            <div class="form-hint">{{if .Spec.Default}}Default: {{.Spec.Default}}. {{end}}The same as <code>authama settings set {{.Key}} &lt;value&gt;</code>.</div>
+          </form>
+          {{if .InFile}}{{template "change_open" $}}<input type="hidden" name="action" value="settings-unset"><input type="hidden" name="key" value="{{.Key}}"><button type="submit" class="btn btn-sm btn-link link-secondary px-0 mt-1"{{desc "setting-unset"}}>{{icon "arrow-back-up"}}<span class="ms-1">Go back to the default</span></button></form>{{end}}
+        </div>
+      </div>{{end}}
+    </div>{{end}}
   </div>
 </div>
+{{end}}
+<p class="text-secondary small" data-settings-nomatch hidden>No setting matches the filter.</p>
+{{else}}{{template "empty" (empty "info-circle" "Not known here" "The values in effect are known only to the command that started this server.")}}{{end}}
 {{end}}{{end}}

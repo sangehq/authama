@@ -59,9 +59,12 @@ Every command also takes the global flag:
 - [`authama reset`](#authama-reset) - Factory reset: move the authama home aside (kept) and start again; ~/.ssh is not touched
 - [`authama serve`](#authama-serve) - Open the web UI on this machine
 - [`authama settings`](#authama-settings) - Your settings files (.env and authama.json): where they are, what is in effect, validate, create
+  - [`authama settings backup-key`](#authama-settings-backup-key) - Make an age key for encrypted backups and set backup.age_recipient to it
   - [`authama settings init`](#authama-settings-init) - Create a starter authama.json (schema reference and version; every setting at its default)
   - [`authama settings path`](#authama-settings-path) - Print where the config home, state home, .env and authama.json are
+  - [`authama settings set`](#authama-settings-set) - Write one setting into authama.json, keeping the rest
   - [`authama settings show`](#authama-settings-show) - Print authama.json, or with --effective every setting's value and where it came from
+  - [`authama settings unset`](#authama-settings-unset) - Take one setting out of authama.json, so it goes back to its default
   - [`authama settings validate`](#authama-settings-validate) - Check authama.json (or FILE) against the schema, and .env's syntax and permissions
 - [`authama ssh`](#authama-ssh) - SSH keys, profiles, hosts, config and trust
   - [`authama ssh audit`](#authama-ssh-audit) - Deployment, expiry, and hygiene report
@@ -1153,10 +1156,31 @@ authama settings
 
 Subcommands:
 
+- [`backup-key`](#authama-settings-backup-key) - Make an age key for encrypted backups and set backup.age_recipient to it
 - [`init`](#authama-settings-init) - Create a starter authama.json (schema reference and version; every setting at its default)
 - [`path`](#authama-settings-path) - Print where the config home, state home, .env and authama.json are
+- [`set`](#authama-settings-set) - Write one setting into authama.json, keeping the rest
 - [`show`](#authama-settings-show) - Print authama.json, or with --effective every setting's value and where it came from
+- [`unset`](#authama-settings-unset) - Take one setting out of authama.json, so it goes back to its default
 - [`validate`](#authama-settings-validate) - Check authama.json (or FILE) against the schema, and .env's syntax and permissions
+
+## authama settings backup-key
+
+Makes a new age key with age-keygen, keeps its identity owner-only where
+paths.age_identity_file already points, else in the config home
+(backup/age-identity.txt), and sets backup.age_recipient and
+paths.age_identity_file to it in authama.json. Keep a copy of the identity file
+somewhere safe: without it no backup can be decrypted.
+
+```
+authama settings backup-key
+```
+
+Examples:
+
+```sh
+  authama settings backup-key
+```
 
 ## authama settings init
 
@@ -1200,6 +1224,23 @@ Flags:
       --json   machine-readable output (scripting)
 ```
 
+## authama settings set
+
+Writes one setting, by its dotted key (backup.age_recipient, web.port), into
+authama.json, creating the file when there is none. The value is checked against the
+setting first. `authama settings show --effective` lists every key.
+
+```
+authama settings set <key> <value>
+```
+
+Examples:
+
+```sh
+  authama settings set backup.age_recipient age1...   # your age recipient
+  authama settings set web.port 8000
+```
+
 ## authama settings show
 
 Print authama.json, or with --effective every setting's value and where it came from.
@@ -1220,6 +1261,20 @@ Flags:
 ```
       --effective   every setting with its value in effect and its source
       --json        machine-readable output (with --effective)
+```
+
+## authama settings unset
+
+Take one setting out of authama.json, so it goes back to its default.
+
+```
+authama settings unset <key>
+```
+
+Examples:
+
+```sh
+  authama settings unset web.port
 ```
 
 ## authama settings validate
@@ -2669,6 +2724,8 @@ Examples:
 ```sh
   authama ssh rotate work/deploy
   authama ssh rotate --all --dry-run
+  authama ssh rotate --all --check   # test every key first, change nothing
+  authama ssh rotate --all --no-key-backup --yes   # a clean rotation, no backup bundle
   authama ssh rotate --category clients --yes
 ```
 
@@ -2678,6 +2735,7 @@ Flags:
       --all                rotate every key a host uses
       --allow-unverified   commit even if a target can't auto-verify
       --category string    rotate every key in profiles of this category
+      --check              test each key's rotation and change nothing: every server answers and the current key logs in, or the target takes it by hand
       --dry-run            list the keys that would rotate, and change nothing
       --no-key-backup      rotate without writing an encrypted backup first (the earlier predecessor is lost)
       --passphrase         protect the rotated-in key (prompts without echo)

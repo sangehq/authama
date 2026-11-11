@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"github.com/simtabi/authama/src/internal/services/owner"
+	"github.com/simtabi/authama/src/internal/services/settings"
 	"github.com/simtabi/authama/src/internal/util/testcred"
 	"net/http"
 	"net/http/httptest"
@@ -323,6 +324,11 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 	}
 	collect("/repair")
 	collect("/reset")
+	// A setting held in authama.json can be sent back to its default.
+	if err := settings.Set(p.SettingsFile(), "export.save_to", "manifest"); err != nil {
+		t.Fatal(err)
+	}
+	collect("/settings")
 	if _, err := owner.MachineID(); err == nil {
 		if _, err := owner.Init(p, time.Now()); err != nil {
 			t.Fatal(err)

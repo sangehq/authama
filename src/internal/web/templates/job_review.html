@@ -8,7 +8,13 @@
       <ul class="list-group list-group-flush">
         {{range .Checks}}<li class="list-group-item job-check{{if not .OK}} is-blocking{{end}}">
           <span class="job-check-icon" aria-hidden="true">{{if .OK}}{{icon "circle-check"}}{{else}}{{icon "circle-x"}}{{end}}</span>
-          <span><span class="fw-medium">{{.Label}}</span>{{if not .OK}}<span class="visually-hidden"> (not met)</span>{{end}}<span class="d-block small text-secondary">{{.Detail}}</span></span>
+          <span><span class="fw-medium">{{.Label}}</span>{{if not .OK}}<span class="visually-hidden"> (not met)</span>{{end}}<span class="d-block small text-secondary">{{.Detail}}</span>
+            {{if and (not .OK) (not $.ReadOnly) (or .FixAction .FixHref)}}<span class="d-flex flex-wrap gap-2 mt-2">
+              {{if .FixAction}}{{template "change_open" $}}<input type="hidden" name="action" value="{{.FixAction}}">{{range $.Data.Fields}}<input type="hidden" name="then_{{.Name}}" value="{{.Value}}">{{end}}<button type="submit" class="btn btn-sm btn-primary"{{desc "job-fix"}}>{{icon "key"}}<span class="ms-1">{{.FixLabel}}</span></button></form>{{end}}
+              {{if .FixHref}}<a class="btn btn-sm btn-outline-secondary" href="{{u .FixHref}}"{{desc "job-fix-settings"}}>{{icon "settings"}}<span class="ms-1">{{.FixHrefLabel}}</span></a>{{end}}
+              {{if .FixNoBackup}}<form method="post" action="{{basePath}}/jobs/review" data-inline><input type="hidden" name="csrf" value="{{$.CSRF}}">{{range $.Data.Fields}}{{if ne .Name "no_backup"}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}{{end}}<input type="hidden" name="no_backup" value="1"><button type="submit" class="btn btn-sm btn-outline-secondary"{{desc "job-no-backup"}}>{{icon "recycle"}}<span class="ms-1">Rotate without a backup</span></button></form>{{end}}
+            </span>{{end}}
+          </span>
         </li>{{end}}
       </ul>
     </div>
@@ -30,6 +36,7 @@
   {{range .Fields}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}
   {{template "pin_field" $}}
   {{if not $.ReadOnly}}<span{{if .Blocked}}{{desc "job-blocked"}}{{end}}><button type="submit" class="btn {{if .Destroy}}btn-danger{{else}}btn-primary{{end}}" data-confirm="m-job"{{if .Blocked}} disabled{{end}}{{desc "job-run"}}>{{icon "player-play"}}<span class="ms-1">Start: {{.Title}}…</span></button></span>{{end}}
+  {{if and .CanCheck (not $.ReadOnly)}}<button type="submit" class="btn btn-outline-secondary" name="check" value="1" formaction="{{basePath}}/jobs"{{if .Busy}} disabled{{end}}{{desc "job-dry-run"}}>{{icon "list-check"}}<span class="ms-1">Dry run: test every key</span></button>{{end}}
   <a href="{{basePath}}/" class="btn btn-link link-secondary"{{desc "cancel-change"}}>Cancel</a>
   {{if .Blocked}}<span class="small text-danger">{{icon "alert-circle"}}<span class="ms-1">Fix what is marked above first.</span></span>{{end}}
 </form>

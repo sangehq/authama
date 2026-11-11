@@ -17,6 +17,9 @@ var tips = map[string]string{
 	"audit-copy-gitignore": "Copies the file names to add to that .gitignore, one per line.",
 	"audit-fix-perms":      "Previews authama doctor --fix, which makes every credential file readable by you alone. Nothing is written until you confirm.",
 	"error-history":        "Opens the History, which lists every change that was made and how it ended.",
+	"setting-edit":         "Opens a form for this setting. Saving it is previewed first, and this server uses the new value at once.",
+	"setting-unset":        "Takes this setting out of authama.json, so it goes back to its default. Previewed first.",
+	"backup-key":           "Makes an age key for encrypted backups with age-keygen and sets the recipient to it. Previewed first; the key itself is never shown.",
 	"setup-start":          "Opens the form for this step. Nothing is written until you confirm its preview.",
 	"setup-hide":           "Hides the Get started card in this browser. The tour stays in the account menu.",
 	"pick-clear":           "Unticks every key, profile and category, \"every key\" included.",
@@ -77,6 +80,11 @@ var tips = map[string]string{
 
 	// Added for every remaining control, 2026-11-06.
 	"apply":                    "Makes exactly the change previewed above and records it in History. Nothing else is written.",
+	"job-fix":                  "Previews the fix for this check. Nothing is written until you confirm; then review the job again.",
+	"job-fix-settings":         "Opens the setting in Settings, to set it to a value you already have.",
+	"job-no-backup":            "Reviews the same rotation without the encrypted backup: a clean start. Each replaced key is still kept under old/ for a rollback.",
+	"job-dry-run":              "Tests every key now and changes nothing: each server answers and the current key logs in, or the target takes the key by hand.",
+	"job-review-again":         "Goes back to the job this fixed, with its checks run again.",
 	"job-blocked":              "A check above is not met, so the job cannot start yet.",
 	"job-run":                  "Starts the job reviewed above. It runs step by step, this page follows it, and you can cancel between steps.",
 	"job-yes":                  "Answers yes: the job carries on with its next step.",

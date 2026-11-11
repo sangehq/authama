@@ -166,3 +166,27 @@ test('a preview asked for again by its address says why, instead of Not found', 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('This page answered a form');
   await expect(page.getByRole('link', { name: 'See the history' })).toBeVisible();
 });
+
+test('a setting is edited from its page, through a preview', async ({ page }) => {
+  await page.goto('/settings#setting-git.mode');
+  const row = page.locator('[id="setting-git.mode"]');
+  // Arriving at #setting-<key> opens that setting's form.
+  const select = row.locator('select[name="value"]');
+  await expect(select).toBeVisible();
+  await select.selectOption('https');
+  await row.getByRole('button', { name: 'Preview' }).click();
+  const panel = page.locator('#side-panel');
+  await expect(panel.getByRole('heading', { level: 1 })).toHaveText('Review the change');
+  await panel.getByRole('button', { name: 'Make this change' }).click();
+  await expect(panel.getByRole('heading', { level: 1 })).toHaveText('Done');
+
+  await page.goto('/settings');
+  const saved = page.locator('[id="setting-git.mode"]');
+  await expect(saved.locator('.setting-value')).toContainText('https');
+  await expect(saved.locator('.badge', { hasText: 'authama.json' })).toBeVisible();
+  // The filter narrows the page.
+  await page.locator('[data-settings-filter]').fill('git.mode');
+  await expect(page.locator('[id="settings-web"]')).toBeHidden();
+  await page.locator('[data-settings-filter]').fill('');
+  await page.screenshot({ path: 'test-results/settings-page.png', fullPage: true });
+});

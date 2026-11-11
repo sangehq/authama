@@ -116,6 +116,8 @@
             <div class="kp-section-label">Options</div>
             <label class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" role="switch" name="allow_unverified" value="1"><span class="form-check-label">Go on when a login cannot be verified</span></label>
             <div class="form-hint mb-0">Off, the job stops at a key whose new login it cannot prove, and that key keeps working as before. Turn it on only for hosts you cannot reach from here.</div>
+            <label class="form-check form-switch mb-1 mt-2"><input class="form-check-input" type="checkbox" role="switch" name="no_backup" value="1"><span class="form-check-label">Skip the encrypted backup (a clean rotation)</span></label>
+            <div class="form-hint mb-0">Starts afresh with no backup bundle. Each replaced key is still kept under <code>old/</code> for a rollback, until the next rotation replaces it. The review also offers a dry run that tests every key first.</div>
           </div>
           <ol class="kp-steps" aria-label="What happens">
             <li>An encrypted backup of <code>~/.ssh</code> is written first.</li>
