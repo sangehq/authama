@@ -87,23 +87,23 @@ func (r *Rotator) Check(selector string) (CheckReport, error) {
 // Format is the dry run as lines: the key, then each host with what was found.
 func (c CheckReport) Format() string {
 	var b strings.Builder
-	mark := "ok  "
+	mark := "ok"
 	if !c.OK() {
 		mark = "FAIL"
 	}
-	fmt.Fprintf(&b, "%s %s\n", mark, c.Key)
+	fmt.Fprintf(&b, "%-5s %s\n", mark, c.Key)
 	if c.Problem != "" {
-		fmt.Fprintf(&b, "       %s\n", c.Problem)
+		fmt.Fprintf(&b, "  %-5s %s\n", "FAIL", c.Problem)
 	}
 	for _, h := range c.Hosts {
-		tag := "ok  "
+		tag := "ok"
 		switch {
 		case !h.OK:
 			tag = "FAIL"
 		case h.Manual:
-			tag = "hand"
+			tag = "paste"
 		}
-		fmt.Fprintf(&b, "  %s %s: %s\n", tag, h.Alias, h.Message)
+		fmt.Fprintf(&b, "  %-5s %s: %s\n", tag, h.Alias, h.Message)
 	}
 	return b.String()
 }

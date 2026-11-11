@@ -2,6 +2,7 @@
 import { Component } from "../core/component.js";
 import { Ui } from "../core/ui.js";
 import { SidePanel } from "./side-panel.js";
+import { consoleLineElement } from "./console.js";
 
 /**
  * ConfirmAction opens a confirmation modal instead of submitting: a submit
@@ -72,13 +73,19 @@ export class JobStream extends Component {
       return this;
     }
     // Lines already on the page are skipped when the stream replays them.
-    const seen = (this.el.textContent ?? "").split("\n").length - 1;
+    const seen = this.el.querySelectorAll(".console-line").length;
     let count = 0;
     const events = new EventSource(this.options.events);
     events.addEventListener("line", (e) => {
       count += 1;
       if (count > seen) {
-        this.el.appendChild(document.createTextNode(`${/** @type {MessageEvent} */ (e).data}\n`));
+        this.el.querySelector("[data-console-empty]")?.remove();
+        // Follow the newest line, unless the reader has scrolled up to read.
+        const atEnd = this.el.scrollHeight - this.el.scrollTop - this.el.clientHeight < 40;
+        this.el.appendChild(consoleLineElement(/** @type {MessageEvent} */ (e).data));
+        if (atEnd) {
+          this.el.scrollTop = this.el.scrollHeight;
+        }
       }
     });
     const progress = new JobProgress(document.querySelector("[data-job-progress]"));

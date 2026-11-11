@@ -94,10 +94,13 @@ func (p Progress) Left(now time.Time) (time.Duration, bool) {
 // View is a job as a page shows it.
 type View struct {
 	ID, Command, State, Err, OpID string
-	Args                          []string
-	Lines                         []string
-	Question                      *Question
-	Started                       time.Time
+	// Title names the job for people ("Rotate 10 keys"); "" for a job that
+	// was given none, whose page then shows its command.
+	Title    string
+	Args     []string
+	Lines    []string
+	Question *Question
+	Started  time.Time
 	// Progress is nil for a job that does not count its steps.
 	Progress *Progress
 }
@@ -122,6 +125,15 @@ type Job struct {
 	progress *Progress
 	items    []string
 	failed   map[string]bool
+	title    string
+}
+
+// SetTitle names the job for people, as its review did: "Rotate 10 keys".
+func (j *Job) SetTitle(title string) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	j.title = title
+	j.notify()
 }
 
 // Plan names the things the job will work through, in order, so its page can
@@ -217,7 +229,7 @@ func (j *Job) View() (View, <-chan struct{}) {
 	if j.partial != "" && j.finished() {
 		lines = append(lines, j.partial)
 	}
-	v := View{ID: j.id, Command: j.command, Args: j.args, State: j.state, Err: j.err, OpID: j.opID,
+	v := View{ID: j.id, Command: j.command, Title: j.title, Args: j.args, State: j.state, Err: j.err, OpID: j.opID,
 		Lines: lines, Started: j.started}
 	if j.question != nil {
 		q := *j.question
