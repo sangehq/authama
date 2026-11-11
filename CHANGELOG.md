@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The job console draws a tree.** A key's line keeps its coloured badge; each host under it hangs
+  off a `├─` / `└─` branch with a coloured ✓, ✗ or ! for how it went, and each group gets a little
+  air. The dry run says why a key would fail: a key that answers but does not log in was never
+  deployed there (deploy it first), or was removed there since (deploy it again).
 - **A job's output reads like a console.** Each line's status word (ok, FAIL, paste, skip,
   WARNING) sits in a fixed column as a coloured badge, the host or key it is about is in its own
   colour, nested lines are indented under theirs, and failures are tinted; it follows the newest

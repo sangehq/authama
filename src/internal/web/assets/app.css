@@ -477,10 +477,21 @@ main:focus { outline: none; }
   padding: .75rem 0; max-height: 32rem; overflow: auto; border-radius: 0 0 var(--tblr-card-border-radius, .5rem) var(--tblr-card-border-radius, .5rem); }
 .console-empty { padding: .25rem 1rem; color: var(--c-dim); font-style: italic; }
 .console-line { display: flex; align-items: baseline; gap: .75rem; padding: .0625rem 1rem; white-space: pre-wrap; overflow-wrap: anywhere; }
-.console-line.lvl-1 { padding-left: 2.25rem; }
-.console-line.lvl-2 { padding-left: 3.5rem; }
+/* Nested lines hang off their parent as a tree: a branch, then a glyph for
+   how the line reads - check, cross, bang - in its colour. */
+.console-line.lvl-1 { padding-left: 1.6rem; gap: .4rem; }
+.console-line.lvl-2 { padding-left: 3.2rem; gap: .4rem; }
+.console-branch { flex: none; color: rgba(255, 255, 255, .28); }
+.console-glyph { flex: none; width: 1.5ch; text-align: center; font-weight: 700; }
+.console-line.is-ok .console-glyph::before { content: "\2713"; color: var(--c-ok); }
+.console-line.is-bad .console-glyph::before { content: "\2717"; color: var(--c-bad); }
+.console-line.is-warn .console-glyph::before { content: "!"; color: var(--c-warn); }
+.console-line.is-info .console-glyph::before { content: "\2022"; color: var(--c-info); }
+.console-line.is-muted .console-glyph::before { content: "\2013"; color: var(--c-dim); }
+/* A new group (a top-level line after nested ones) gets a little air. */
+.console-line.lvl-0 + .console-line.lvl-0, .console-line.is-last + .console-line.lvl-0 { margin-top: .35rem; }
 .console-line:hover { background: rgba(255, 255, 255, .04); }
-.console-tag { flex: none; width: 4.5ch; text-align: center; font-size: .6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; border-radius: .25rem; line-height: 1.5; }
+.console-tag { flex: none; min-width: 7.5ch; padding: 0 .4em; text-align: center; white-space: nowrap; font-size: .6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; border-radius: .25rem; line-height: 1.5; }
 .console-tag:empty { visibility: hidden; }
 .console-body { flex: 1; min-width: 0; }
 .console-name { color: var(--c-name); font-weight: 600; }

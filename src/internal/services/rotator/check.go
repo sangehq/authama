@@ -68,7 +68,12 @@ func (r *Rotator) Check(selector string) (CheckReport, error) {
 			case !st.Reachable:
 				hc.OK, hc.Message = false, st.Message()
 			case !prov.Verify(r.target(h, profile, cur+".pub", readFile(cur+".pub"), cur)):
-				hc.OK, hc.Message = false, "answers, but the current key does not log in"
+				hc.OK = false
+				if r.deployedTo(cur, h.Alias) {
+					hc.Message = "answers, but the current key no longer logs in: it was removed there, or the user changed; deploy it again first"
+				} else {
+					hc.Message = "answers, but the current key does not log in: it was never deployed here, so there is nothing to rotate yet; deploy it first (the key's page, Deploy)"
+				}
 			default:
 				hc.Message = "answers, and the current key logs in"
 			}
@@ -106,4 +111,23 @@ func (c CheckReport) Format() string {
 		fmt.Fprintf(&b, "  %-5s %s: %s\n", tag, h.Alias, h.Message)
 	}
 	return b.String()
+}
+
+// deployedTo reports whether the inventory records the key at path as
+// deployed to the host alias.
+func (r *Rotator) deployedTo(path, alias string) bool {
+	if r.inv == nil {
+		return false
+	}
+	for _, rec := range r.inv.Keys {
+		if rec.Path != path {
+			continue
+		}
+		for _, d := range rec.Deployments {
+			if d.Target == alias {
+				return true
+			}
+		}
+	}
+	return false
 }

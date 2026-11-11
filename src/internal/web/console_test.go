@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"os"
 	"regexp"
 	"sort"
@@ -55,5 +56,24 @@ func TestTheConsoleScriptKnowsTheSameStatusWords(t *testing.T) {
 	sort.Strings(gosrc)
 	if len(gosrc) < 10 || strings.Join(js, " ") != strings.Join(gosrc, " ") {
 		t.Errorf("status words differ:\n script %v\n server %v", js, gosrc)
+	}
+}
+
+// Nested lines are drawn as a tree: each is ├─ but the last of its group,
+// which is └─.
+func TestConsoleLinesKnowTheLastOfEachGroup(t *testing.T) {
+	ls := consoleLines([]string{
+		"ok    work/a",
+		"  ok    a-1: logs in",
+		"  paste a-2: by hand",
+		"FAIL  work/b",
+		"  FAIL  b-1: unreachable",
+	})
+	var got []bool
+	for _, l := range ls {
+		got = append(got, l.Last)
+	}
+	if want := []bool{false, false, true, false, true}; strings.Join(strings.Fields(strings.Trim(fmt.Sprint(got), "[]")), ",") != strings.Join(strings.Fields(strings.Trim(fmt.Sprint(want), "[]")), ",") {
+		t.Errorf("last flags = %v, want %v", got, want)
 	}
 }

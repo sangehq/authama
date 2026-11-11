@@ -63,9 +63,34 @@ export function consoleLineElement(raw) {
   const l = readConsoleLine(raw);
   const row = document.createElement("div");
   row.className = `console-line lvl-${Math.min(l.indent, 2)}${l.kind ? ` is-${l.kind}` : ""}`;
-  const tag = document.createElement("span");
-  tag.className = "console-tag";
-  tag.textContent = l.tag;
+  row.dataset.indent = String(l.indent);
+  /** @type {Node[]} */
+  const lead = [];
+  if (l.indent > 0) {
+    // A nested line: a tree branch and a glyph for its status; the word is
+    // kept for screen readers and for copying. It is drawn as the last of its
+    // group until a sibling follows (see appendConsoleLine).
+    const branch = document.createElement("span");
+    branch.className = "console-branch";
+    branch.setAttribute("aria-hidden", "true");
+    branch.textContent = "└─";
+    row.classList.add("is-last");
+    const glyph = document.createElement("span");
+    glyph.className = "console-glyph";
+    glyph.setAttribute("aria-hidden", "true");
+    lead.push(branch, glyph);
+    if (l.tag) {
+      const word = document.createElement("span");
+      word.className = "visually-hidden";
+      word.textContent = `${l.tag} `;
+      lead.push(word);
+    }
+  } else {
+    const tag = document.createElement("span");
+    tag.className = "console-tag";
+    tag.textContent = l.tag;
+    lead.push(tag, document.createTextNode(" "));
+  }
   const body = document.createElement("span");
   body.className = "console-body";
   // The colon and spaces are real text, so a copied line reads as it was
@@ -85,6 +110,26 @@ export function consoleLineElement(raw) {
     t.textContent = l.text;
     body.appendChild(t);
   }
-  row.append(tag, document.createTextNode(" "), body);
+  row.append(...lead, body);
+  return row;
+}
+
+/**
+ * Appends a line to a console, turning the line before it from └─ into ├─
+ * when the new one is its sibling, so the tree stays right as lines arrive.
+ * @param {HTMLElement} console
+ * @param {string} raw
+ */
+export function appendConsoleLine(console, raw) {
+  const row = consoleLineElement(raw);
+  const prev = console.lastElementChild;
+  if (prev instanceof HTMLElement && prev.classList.contains("is-last") && prev.dataset.indent === row.dataset.indent) {
+    prev.classList.remove("is-last");
+    const branch = prev.querySelector(".console-branch");
+    if (branch) {
+      branch.textContent = "├─";
+    }
+  }
+  console.appendChild(row);
   return row;
 }
