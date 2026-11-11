@@ -332,8 +332,9 @@ func newSettingsBackupKeyCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "backup-key",
 		Short: "Make an age key for encrypted backups and set backup.age_recipient to it",
-		Long: "Makes a new age key with age-keygen, keeps its identity owner-only in the config\n" +
-			"home (backup/age-identity.txt), and sets backup.age_recipient and\n" +
+		Long: "Makes a new age key with age-keygen, keeps its identity owner-only where\n" +
+			"paths.age_identity_file already points, else in the config home\n" +
+			"(backup/age-identity.txt), and sets backup.age_recipient and\n" +
 			"paths.age_identity_file to it in authama.json. Keep a copy of the identity file\n" +
 			"somewhere safe: without it no backup can be decrypted.",
 		Args: cobra.NoArgs,

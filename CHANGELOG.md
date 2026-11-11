@@ -17,7 +17,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `authama settings unset <key>`.
 - **A job's failed check says how to fix it, and offers the fix.** A rotate with no backup recipient
   offers **Create a backup key** (`authama settings backup-key`: an age key made with `age-keygen`,
-  its identity kept owner-only in the config home, and `backup.age_recipient` and
+  its identity kept owner-only where `paths.age_identity_file` already points (else in the config
+  home), and `backup.age_recipient` and
   `paths.age_identity_file` set to it, never shown in a page) or **Use a key you have**, which opens
   that setting in Settings. A job that backs up first also checks that `age` is installed.
 - **Jobs have guardrails, and run one item at a time on screen.** A job's review is titled for

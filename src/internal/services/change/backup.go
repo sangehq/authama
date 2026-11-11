@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/simtabi/authama/src/internal/services/settings"
+	"github.com/simtabi/authama/src/internal/util/envnames"
 	"github.com/simtabi/authama/src/internal/util/fs"
 	"github.com/simtabi/authama/src/internal/util/homeperms"
 	"github.com/simtabi/authama/src/internal/util/paths"
@@ -95,8 +96,13 @@ func SettingsUnset(key string) Change {
 }
 
 // BackupKeyFile is where `settings backup-key` keeps the age identity it
-// makes: in the config home, owner-only.
+// makes, owner-only: where paths.age_identity_file (AUTHAMA_AGE_IDENTITY_FILE)
+// already points, when it does, so a restore finds the key it expects;
+// otherwise in the config home.
 func BackupKeyFile(p paths.Paths) string {
+	if f := envnames.Get(nil, envnames.AgeIdentityFile); f != "" {
+		return f
+	}
 	return filepath.Join(p.ConfigDir, "backup", "age-identity.txt")
 }
 
@@ -112,7 +118,7 @@ func BackupKey() Change {
 				return nil, errors.New("age-keygen is not installed: install age (brew install age, apt install age), then try again")
 			}
 			if fs.Exists(BackupKeyFile(p)) {
-				return nil, fmt.Errorf("%s already exists; set backup.age_recipient to its recipient (age-keygen -y %s)", BackupKeyFile(p), BackupKeyFile(p))
+				return nil, fmt.Errorf("%s already exists; use it: authama settings set backup.age_recipient \"$(age-keygen -y %s)\"", BackupKeyFile(p), BackupKeyFile(p))
 			}
 			return []string{
 				"makes a new age key with age-keygen, and keeps its identity, owner-only, in " + BackupKeyFile(p),

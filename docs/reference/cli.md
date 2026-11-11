@@ -1166,8 +1166,9 @@ Subcommands:
 
 ## authama settings backup-key
 
-Makes a new age key with age-keygen, keeps its identity owner-only in the config
-home (backup/age-identity.txt), and sets backup.age_recipient and
+Makes a new age key with age-keygen, keeps its identity owner-only where
+paths.age_identity_file already points, else in the config home
+(backup/age-identity.txt), and sets backup.age_recipient and
 paths.age_identity_file to it in authama.json. Keep a copy of the identity file
 somewhere safe: without it no backup can be decrypted.
 

@@ -75,3 +75,18 @@ func TestBackupKeySetsUpEncryptedBackups(t *testing.T) {
 		t.Error("a second backup-key would replace the identity already there")
 	}
 }
+
+// A key is made where paths.age_identity_file already points, so a restore
+// finds it; with nothing configured, in the config home.
+func TestBackupKeyGoesWhereTheIdentityIsConfigured(t *testing.T) {
+	p := home(t)
+	t.Setenv("AUTHAMA_AGE_IDENTITY_FILE", "")
+	if got, want := BackupKeyFile(p), filepath.Join(p.ConfigDir, "backup", "age-identity.txt"); got != want {
+		t.Errorf("with nothing configured: %s, want %s", got, want)
+	}
+	want := filepath.Join(t.TempDir(), "mine.txt")
+	t.Setenv("AUTHAMA_AGE_IDENTITY_FILE", want)
+	if got := BackupKeyFile(p); got != want {
+		t.Errorf("with the identity configured: %s, want %s", got, want)
+	}
+}
