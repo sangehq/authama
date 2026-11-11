@@ -548,6 +548,7 @@ func (h jobPages) handleJobStart(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		h.s.renderError(w, r, http.StatusConflict, "The job was not started", err.Error())
 	default:
+		j.SetTitle(spec.title)
 		v, _ := j.View()
 		http.Redirect(w, r, "/jobs/"+v.ID, http.StatusSeeOther)
 	}

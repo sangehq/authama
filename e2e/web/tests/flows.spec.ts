@@ -108,6 +108,9 @@ test('a bundle restore runs as a job and its stream is watched to the end', asyn
   await expect(panel.locator('[data-side-panel-full]')).toHaveAttribute('href', /\/jobs\/(?!review$)[^/]+$/);
   const jobURL = (await panel.locator('[data-side-panel-full]').getAttribute('href')) ?? '';
 
+  // The output is a console: each line its own row, its status word in a
+  // fixed column, coloured by how it reads.
+  await expect(panel.locator('.console .console-line').first()).toBeVisible({ timeout: 30_000 });
   // The event stream replays every line and ends once the job does; reading
   // it to the end is watching the job finish.
   const events = await page.request.get(`${new URL(jobURL).pathname}/events`, { timeout: 60_000 });
@@ -121,6 +124,7 @@ test('a bundle restore runs as a job and its stream is watched to the end', asyn
   // in the panel, without leaving the page under it.
   await expect(panel.locator('#job-state')).toHaveAttribute('data-state', 'done', { timeout: 30_000 });
   await expect(panel.locator('#job-log')).toContainText('restore: laid down');
+  await panel.locator('.console').screenshot({ path: 'test-results/job-console.png' });
   await expect(panel.locator('#job-state .badge')).toHaveText('done');
   await expect(page).toHaveURL(/\/snapshots$/);
   // A change was made in the panel, so closing it reloads the page under it.

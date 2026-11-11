@@ -8,6 +8,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A job's output reads like a console.** Each line's status word (ok, FAIL, paste, skip,
+  WARNING) sits in a fixed column as a coloured badge, the host or key it is about is in its own
+  colour, nested lines are indented under theirs, and failures are tinted; it follows the newest
+  line unless you scroll up, and a copied line reads as it was printed. A job page is titled for
+  the job (*Dry run: rotate 10 keys*) with its full command beneath, the Output card counts what
+  passed and failed, and a finished job says *Finished: 7 passed, 3 failed* rather than *Finished*.
+  `rotate --check` prints its status words in an aligned column too, and a target that takes keys
+  by hand reads `paste`.
 - **Test a rotation before running it.** `authama ssh rotate --check` (and **Dry run: test every key**
   on a rotation's review) checks every key and changes nothing: each server it is used on answers and
   the current key still logs in, and each target that takes keys by hand is named. A key that would

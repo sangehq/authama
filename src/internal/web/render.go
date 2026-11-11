@@ -139,6 +139,9 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		"brandCommand": func() string { return brand.Command },
 		"cmdline":      brand.Line,
 		"when":         func(t time.Time) string { return t.UTC().Format("2006-01-02 15:04 UTC") },
+		// consoleLines reads a job's output into status, subject and text.
+		"consoleLines": consoleLines,
+		"itemTally":    itemTally,
 		// settingSections groups the Settings page's rows by section.
 		"settingSections": settingSectionsOf,
 		"settingName":     settingName,
