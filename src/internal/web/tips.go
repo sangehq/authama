@@ -16,11 +16,8 @@ var tips = map[string]string{
 	// The key picker.
 	"setup-start": "Opens the form for this step. Nothing is written until you confirm its preview.",
 	"setup-hide":  "Hides the Get started card in this browser. The tour stays in the account menu.",
-	// The Reset page's own two forms; its other cards carry their text.
-	"reset-settings": "Shows the new authama.json and the copy of the old one before anything is written.",
-	"reset-init":     "Shows the manifest, inventory and .env as they would be written, and the backup, before anything is written.",
-	"pick-clear":     "Unticks every key, profile and category, \"every key\" included.",
-	"run":            "Confirms this change now, the same as the button at the foot of the review.",
+	"pick-clear":  "Unticks every key, profile and category, \"every key\" included.",
+	"run":         "Confirms this change now, the same as the button at the foot of the review.",
 
 	// Profiles, hosts, keys.
 	"profile-add":        "Adds a profile: a group of hosts that share a key policy and a folder under ~/.ssh/profiles/.",

@@ -408,11 +408,16 @@ main:focus { outline: none; }
 .setup-step-why { display: block; font-size: .8125rem; color: var(--tblr-secondary); }
 .setup-card[hidden] { display: none; }
 
-/* The Reset page's cards: the ones that cannot be undone from authama itself
-   carry a red edge. */
-.reset-card-icon { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: var(--tblr-border-radius); background: rgba(var(--tblr-primary-rgb), .1); color: var(--tblr-primary); }
-.reset-card.is-danger { border-left: 3px solid var(--tblr-danger); }
-.reset-card.is-danger .reset-card-icon { background: rgba(var(--tblr-danger-rgb), .1); color: var(--tblr-danger); }
+/* The Reset page: one row per reset, its details folded away. */
+.reset-row { padding-block: .875rem; }
+.reset-row-body { min-width: 0; }
+.reset-row-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: var(--tblr-border-radius); background: var(--tblr-bg-surface-secondary); color: var(--tblr-secondary); }
+.reset-row-icon.is-permanent { background: rgba(var(--tblr-danger-rgb), .1); color: var(--tblr-danger); }
+.reset-row-title { font-weight: 600; }
+.reset-details summary { cursor: pointer; color: var(--tblr-secondary); width: max-content; }
+.reset-details summary:hover { color: var(--tblr-body-color); }
 .reset-facts { display: grid; grid-template-columns: auto 1fr; gap: .25rem .75rem; font-size: .8125rem; }
 .reset-facts dt { font-weight: 600; color: var(--tblr-secondary); }
-.reset-facts dd { margin: 0; }
+.reset-facts dd { margin: 0; overflow-wrap: anywhere; }
+.reset-list { padding-left: 1.25rem; color: var(--tblr-secondary); }
+.reset-list li + li { margin-top: .25rem; }

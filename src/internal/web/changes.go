@@ -385,6 +385,8 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch = change.SettingsInit(false)
 	case "settings-reset":
 		ch = change.SettingsInit(true)
+	case "history-reset":
+		ch = change.HistoryReset(strings.TrimSpace(f.Get("confirm")) == "history")
 	case "home-init":
 		ch = change.HomeInit(strings.TrimSpace(f.Get("confirm")) == "init")
 	case "export-selection-save":

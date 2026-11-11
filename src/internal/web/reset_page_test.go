@@ -17,14 +17,18 @@ func TestTheResetPageOffersEveryReset(t *testing.T) {
 		`href="/keys?pick=all#rotate-keys"`, `href="/keys#revoke-keys"`, `href="/snapshots#prune"`,
 		`href="/security#forget"`, `href="/repair#factory-reset"`,
 		`name="action" value="settings-reset"`, `name="action" value="home-init"`, `pattern="init"`,
-		"authama settings init --force", "authama init --force --backup", "authama reset",
+		`name="action" value="history-reset"`, `pattern="history"`, `data-bs-target="#history-reset"`,
+		"authama settings init --force", "authama init --force --backup", "authama history reset", "authama reset",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the reset page lacks %q", want)
 		}
 	}
-	if n := strings.Count(body, "<dt>Undo</dt>"); n < 7 {
-		t.Errorf("%d cards say how to undo them, want every one of the 7", n)
+	if n := strings.Count(body, "<dt>Undo</dt>"); n < 8 {
+		t.Errorf("%d rows say how to undo them, want every one of the 8", n)
+	}
+	if !strings.Contains(body, "Cannot be undone") || !strings.Contains(body, "Undoable") {
+		t.Error("the rows do not say which resets can be undone")
 	}
 
 	p, _ := fixtureHome(t)
@@ -35,6 +39,21 @@ func TestTheResetPageOffersEveryReset(t *testing.T) {
 	roBody := signIn(t, ro).get("/reset").Body.String()
 	if strings.Contains(roBody, `value="home-init"`) || strings.Contains(roBody, `href="/repair#factory-reset"`) {
 		t.Error("a read-only server offers a reset control")
+	}
+}
+
+// With history.permanent on, the history is never set aside: the page offers
+// no history reset and says why, and the change itself refuses.
+func TestAPermanentHistoryIsNotOffered(t *testing.T) {
+	t.Setenv("AUTHAMA_HISTORY_PERMANENT", "true")
+	s, _, _ := newTestServer(t)
+	c := signIn(t, s)
+	body := c.get("/reset").Body.String()
+	if strings.Contains(body, `value="history-reset"`) {
+		t.Error("the page offers a history reset while history.permanent is on")
+	}
+	if !strings.Contains(body, "history.permanent is on") {
+		t.Error("the page does not say the history is kept for good")
 	}
 }
 

@@ -132,7 +132,7 @@ test('the Reset page opens the rotate picker with every key already chosen', asy
   await page.goto('/reset');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Reset');
   await page.screenshot({ path: 'test-results/reset-page.png', fullPage: true });
-  await page.getByRole('link', { name: 'Choose keys to rotate' }).click();
+  await page.locator('a[href*="pick=all"]').click(); // Rotate every key's row
   await expect(page).toHaveURL(/\/keys\?pick=all#rotate-keys$/);
   const picker = page.locator('#rotate-keys [data-key-picker]');
   await expect(picker.getByLabel('Every key in every profile')).toBeChecked();

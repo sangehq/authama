@@ -138,6 +138,17 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		"brandCommand": func() string { return brand.Command },
 		"cmdline":      brand.Line,
 		"when":         func(t time.Time) string { return t.UTC().Format("2006-01-02 15:04 UTC") },
+		// resetRow pairs a Reset page row with the page's view, for its
+		// CSRF token and whether the server only reads.
+		"resetRow": func(o resetOption, v view) struct {
+			Opt  resetOption
+			View view
+		} {
+			return struct {
+				Opt  resetOption
+				View view
+			}{o, v}
+		},
 		// unixMilli hands a time to the page's script, which counts from it.
 		"unixMilli": func(t time.Time) int64 { return t.UnixMilli() },
 		// timeLeft is a job's estimated time left, "" until a step has

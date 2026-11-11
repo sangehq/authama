@@ -29,6 +29,7 @@ const (
 	OldKeyMaxAgeDays = "AUTHAMA_OLD_KEY_MAX_AGE_DAYS"
 	AutoPin          = "AUTHAMA_AUTO_PIN"
 	History          = "AUTHAMA_HISTORY"
+	HistoryPermanent = "AUTHAMA_HISTORY_PERMANENT"
 	GitMode          = "AUTHAMA_GIT_MODE"
 	TokensConfig     = "AUTHAMA_TOKENS_CONFIG"
 	TokensCatalog    = "AUTHAMA_TOKENS_CATALOG"
@@ -62,7 +63,7 @@ const (
 func Names() []string {
 	out := []string{
 		AgeIdentityFile, AgeRecipient, AskpassMode, AskpassSecret, AutoPin, ConfigDir,
-		DevRoot, DockerCredsStore, ExportSaveTo, GitMode, HelloCheck, History, NoDotenv, Notifications,
+		DevRoot, DockerCredsStore, ExportSaveTo, GitMode, HelloCheck, History, HistoryPermanent, NoDotenv, Notifications,
 		OldKeyMaxAgeDays, OwnerStore, ServeHandoff, SnapshotRetain, StateDir, TokensCatalog, TokensConfig,
 		VMHypervisors, VMMultiplex, VMPruneGone, VMRepin, WebAddr, WebAutoRestart, WebBasePath, WebMenuExport, WebPort,
 	}

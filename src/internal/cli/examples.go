@@ -27,6 +27,7 @@ var commandExamples = map[string][]string{
 	"doctor":            {"doctor", "doctor --fix", "doctor --strict --json   # CI: fail on anything worth fixing"},
 	"history":           {"history", "history --since 7d --command \"host add\"", "history --host web1 --json"},
 	"history show":      {"history show 224f5bf1   # an OP id from history"},
+	"history reset":     {"history reset", "history reset --confirm history   # a script"},
 	"init":              {"init", "init --force --backup   # reset manifest, inventory and .env, keeping copies"},
 	"migrate":           {"migrate", "migrate --force --yes"},
 	"settings path":     {"settings path", "settings path --json"},

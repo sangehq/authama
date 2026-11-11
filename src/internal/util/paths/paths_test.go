@@ -303,6 +303,7 @@ func TestTheEnvironmentVariableNamesAreTheDocumentedOnes(t *testing.T) {
 		"AUTHAMA_SNAPSHOT_RETAIN":      "how many ~/.ssh snapshots to keep",
 		"AUTHAMA_OLD_KEY_MAX_AGE_DAYS": "when an archived predecessor is called stale",
 		"AUTHAMA_HISTORY":              "0 stops recording operations in log/history.db",
+		"AUTHAMA_HISTORY_PERMANENT":    "1 keeps the history for good: history reset refuses",
 		"AUTHAMA_GIT_MODE":             "overrides defaults.git.mode for one command",
 		"AUTHAMA_EXPORT_SAVE_TO":       "export.save_to: where a saved export selection goes, user or manifest",
 		"AUTHAMA_TOKENS_CONFIG":        "the token config file, ahead of ./authama-tokens.json and <home>/tokens.json",
