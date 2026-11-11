@@ -9,7 +9,7 @@
     <input class="form-check-input" type="checkbox" name="all" value="1" data-pick-all>
     <span class="kp-all-text"><span class="kp-all-title">Every key in every profile</span>
       <span class="kp-all-desc">{{.Total}} key{{if ne .Total 1}}s{{end}} now, and any added before the job runs.</span></span>
-    <span class="kp-all-icon" aria-hidden="true">{{icon "key"}}</span>
+    <span class="kp-all-icon" aria-hidden="true">{{icon "stack-2"}}</span>
   </label>
   <div class="kp-all-note" data-pick-all-note hidden>{{icon "info-circle"}}<span class="ms-1">Every key is chosen. Untick it above to choose profiles or single keys instead.</span></div>
   <div class="kp-rest" data-pick-rest>
@@ -49,5 +49,5 @@
      many keys it will act on once the picker has counted them. */}}
 {{define "pick_actions"}}<div class="d-flex align-items-center justify-content-end gap-2 pt-3 mt-3 border-top">
   <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
-  <button type="submit" class="btn btn-danger" data-pick-submit="{{.}}"{{desc "review"}}>{{icon "player-play"}}<span class="ms-1" data-pick-submit-label>Review</span></button>
+  <button type="submit" class="btn btn-danger" data-pick-submit="{{.}}"{{desc "review"}}><span class="me-1" data-pick-submit-label>Review</span>{{icon "arrow-right"}}</button>
 </div>{{end}}
