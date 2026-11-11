@@ -89,7 +89,7 @@ export class JobStream extends Component {
         if (this.el.closest("[data-side-panel]") && SidePanel.current) {
           SidePanel.current.reload();
         } else {
-          window.location.reload();
+          Ui.reload();
         }
       }
     });

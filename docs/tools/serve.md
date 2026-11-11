@@ -265,7 +265,7 @@ documentation, the source and the licences.
 | Snapshots | every snapshot. A snapshot's page diffs it against `~/.ssh` now or against another snapshot |
 | History | the [`history`](history.md), filtered the same way. An operation's page shows its events and the manifest before and after |
 | VMs | the VM hosts and their VMs' state, their Docker contexts (with an on-demand engine check), the pending `ssh vm sync` plan, the enabled hypervisors and their VMs, the declared devboxes (planned ones without a VM yet), the reserved keys, the loose keys that could be adopted, and whether the daily sync is scheduled |
-| Auth tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret), each tool's file with its mode and how many entries are installed, configured and resolvable, what `token apply` would skip, and the token audit, as `authama token list`, `token status` and `token audit` print |
+| Auth tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret), each tool's file with its mode and how many entries are installed, configured and resolvable, what `token apply` would skip, and the token audit, as `authama token list`, `token status` and `token audit` print. The audit card counts what to fix, what is owner-only and what is not set up; a file others can read has a *Make it owner-only* button (a preview of `doctor --fix`), a `.gitignore` that misses secret files offers the lines to add, and the tools with no file fold into a list, each opening *Add a token* for that tool |
 | SSH config | every file the manifest renders into `~/.ssh` and whether the files on disk match it, as `authama ssh config show` and `ssh config check` print |
 | Doctor, Audit | the reports `authama doctor` and `authama ssh audit` print |
 | Validate | every validate check on one page, run when you open it: the manifest loads and passes its rules, `authama settings validate`, `authama ssh validate` (each keypair parses, matches and has safe permissions) and `authama ssh config check`. A manifest that does not load fails the two checks that need it rather than reporting them clean. Reads only |
@@ -383,6 +383,12 @@ is refused here, as its page refuses to open it.
 **Exports download.** The hosts page offers the flat `ssh_config` (`authama ssh config export --flat`)
 and the Termius CSV (`authama export hosts --format termius`, with or without git hosts) as downloads. Nothing is
 written to the home, so `--read-only` keeps them.
+
+**A preview or a review answers its form, and has no address of its own.** Reloading one, going Back
+to it, or a server restart reloading open pages into a new build used to ask for its address and show
+*Not found*. The restart's reload now goes back to the page the form was on, and the address itself
+says that the page answered a form and that nothing was changed, with links to the Overview and the
+History.
 
 ## Jobs
 

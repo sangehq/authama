@@ -55,7 +55,7 @@ export class RestartServer extends Component {
         // no storage: the page still reloads, without the confirmation
       }
       const token = new URLSearchParams(reply.sign_in.replace(/^\?/, "")).get("token") ?? "";
-      const url = new URL(location.href);
+      const url = new URL(Ui.reloadAddress());
       url.searchParams.set("token", token);
       location.replace(url.toString());
     } catch (err) {
@@ -182,6 +182,6 @@ export class LiveBuild extends Component {
     } catch {
       // no storage: the page reloads without the confirmation
     }
-    location.reload();
+    Ui.reload();
   }
 }

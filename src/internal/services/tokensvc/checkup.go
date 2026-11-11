@@ -16,6 +16,12 @@ type Finding struct {
 	Level  string // ok | absent | warn | note
 	Target string
 	Text   string
+	// Path, Mode and Missing let a page lay the finding out rather than print
+	// Text: the file looked at, its permission bits ("0600", or "ACL" on
+	// Windows), and for a .gitignore the secret file names it does not cover.
+	Path    string
+	Mode    string
+	Missing []string
 }
 
 // Checkup reports, for each target (the set's, or all five), whether its
@@ -30,7 +36,7 @@ func (e Env) Checkup(set *tokens.Set, project string) (out []Finding, failed boo
 	for _, t := range targets {
 		path := e.TargetPath(t, project)
 		if !exists(path) {
-			out = append(out, Finding{"absent", t, fmt.Sprintf("%s: %s  (absent)", t, path)})
+			out = append(out, Finding{Level: "absent", Target: t, Text: fmt.Sprintf("%s: %s  (absent)", t, path), Path: path})
 			continue
 		}
 		ok := ownerOnly(path)
@@ -38,13 +44,13 @@ func (e Env) Checkup(set *tokens.Set, project string) (out []Finding, failed boo
 		if !ok {
 			lvl = "warn"
 		}
-		out = append(out, Finding{lvl, t, fmt.Sprintf("%s: %s  perms=%s", t, path, permString(path))})
+		out = append(out, Finding{Level: lvl, Target: t, Text: fmt.Sprintf("%s: %s  perms=%s", t, path, permString(path)), Path: path, Mode: modeString(path)})
 		if !ok {
-			out = append(out, Finding{"warn", t, "world/group-readable — `doctor --fix` (or chmod 600) makes it owner-only."})
+			out = append(out, Finding{Level: "warn", Target: t, Text: "world/group-readable — `doctor --fix` (or chmod 600) makes it owner-only.", Path: path, Mode: modeString(path)})
 			failed = true
 		}
 		if t == tokens.Composer {
-			out = append(out, Finding{"note", t, "a present auth.json OVERRIDES $COMPOSER_AUTH."})
+			out = append(out, Finding{Level: "note", Target: t, Text: "a present auth.json OVERRIDES $COMPOSER_AUTH.", Path: path})
 		}
 	}
 	base := e.abs(project)
@@ -73,7 +79,7 @@ func (e Env) Checkup(set *tokens.Set, project string) (out []Finding, failed boo
 			}
 		}
 		if len(missing) > 0 {
-			out = append(out, Finding{"warn", "", fmt.Sprintf("%s is missing: %s", gi, strings.Join(missing, ", "))})
+			out = append(out, Finding{Level: "warn", Text: fmt.Sprintf("%s is missing: %s", gi, strings.Join(missing, ", ")), Path: gi, Missing: missing})
 			failed = true
 		}
 	}
@@ -95,6 +101,19 @@ func ownerOnlyOn(windows bool, path string) bool {
 }
 
 func permString(path string) string { return permStringOn(platform.IsWindows(), path) }
+
+// modeString is a file's permission bits as people write them, "0600", or
+// "ACL" on Windows, for a page to show.
+func modeString(path string) string {
+	fi, err := os.Stat(path)
+	switch {
+	case err != nil:
+		return ""
+	case platform.IsWindows():
+		return "ACL"
+	}
+	return fmt.Sprintf("%04o", fi.Mode().Perm())
+}
 
 func permStringOn(windows bool, path string) string {
 	fi, err := os.Stat(path)
@@ -124,11 +143,11 @@ func (e Env) HomeFiles(fix bool) (out []Finding, failed bool, fixed []string) {
 			}
 		}
 		if ownerOnly(path) {
-			out = append(out, Finding{"ok", t, fmt.Sprintf("%s: %s  perms=%s", t, path, permString(path))})
+			out = append(out, Finding{Level: "ok", Target: t, Text: fmt.Sprintf("%s: %s  perms=%s", t, path, permString(path)), Path: path, Mode: modeString(path)})
 			continue
 		}
-		out = append(out, Finding{"warn", t, fmt.Sprintf("%s: %s  perms=%s — group/world-readable (doctor --fix, or chmod 600)",
-			t, path, permString(path))})
+		out = append(out, Finding{Level: "warn", Target: t, Text: fmt.Sprintf("%s: %s  perms=%s — group/world-readable (doctor --fix, or chmod 600)",
+			t, path, permString(path)), Path: path, Mode: modeString(path)})
 		failed = true
 	}
 	return out, failed, fixed

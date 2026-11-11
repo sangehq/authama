@@ -76,15 +76,46 @@
   </div>
   <div class="col-lg-5">
     <div class="card h-100">
-      <div class="card-header" id="audit"><h2 class="card-title">Audit</h2></div>
+      {{$a := tokenAudit .Findings}}
+      <div class="card-header" id="audit">
+        <h2 class="card-title">Audit</h2>
+        <div class="card-actions d-flex flex-wrap gap-1">
+          {{if $a.Problems}}<span class="badge badge-bad">{{len $a.Problems}} to fix</span>{{end}}
+          {{if $a.Passed}}<span class="badge badge-ok">{{len $a.Passed}} owner-only</span>{{end}}
+          {{if $a.Absent}}<span class="badge badge-muted">{{len $a.Absent}} not set up</span>{{end}}
+        </div>
+      </div>
       <div class="card-body">
-        {{if .Failed}}<div class="alert alert-warning" role="status">{{icon "alert-triangle"}}<span class="ms-1">The token audit found a problem, marked ✗ below: a credential file others can read (<code>authama doctor --fix</code> makes it owner-only), or a <code>.gitignore</code>, where <code>authama serve</code> runs, that does not cover the secret files.</span></div>{{end}}
-        {{/* Problems first, then what passed, then what was only looked at. */}}
-        <ul class="list-unstyled mb-0 token-audit">
-          {{range .Findings}}{{if eq .Level "warn"}}<li class="token-audit-item is-problem">{{icon "circle-x"}}<span class="visually-hidden">Problem:</span><span>{{tildeText .Text}}</span></li>{{end}}{{end}}
-          {{range .Findings}}{{if eq .Level "ok"}}<li class="token-audit-item">{{icon "circle-check"}}<span class="visually-hidden">Passed:</span><span>{{tildeText .Text}}</span></li>{{end}}{{end}}
-          {{range .Findings}}{{if and (ne .Level "warn") (ne .Level "ok")}}<li class="token-audit-item text-secondary">{{icon "info-circle"}}<span class="visually-hidden">Checked:</span><span>{{tildeText .Text}}</span></li>{{end}}{{end}}
-        </ul>
+        <p class="text-secondary small">Each tool's credential file should be readable by you alone, and a <code>.gitignore</code> should keep secret files out of git.</p>
+        {{if $a.Problems}}<div class="audit-section-label">To fix</div>
+        <ul class="list-unstyled audit-list mb-3">
+          {{range $a.Problems}}<li class="audit-item is-problem">
+            <span class="audit-icon" aria-hidden="true">{{icon "circle-x"}}</span>
+            <div class="audit-body">
+              {{if .Missing}}<div class="audit-title">A .gitignore does not cover the secret files</div>
+              <div class="small text-secondary"><code>{{tilde .Path}}</code>, in the folder <code>authama serve</code> was started in, leaves out {{range $i, $m := .Missing}}{{if $i}}, {{end}}<code>{{$m}}</code>{{end}}. Add them so they are never committed.</div>
+              <div class="mt-2"><button type="button" class="btn btn-sm btn-outline-secondary" data-copy="{{join .Missing "\n"}}"{{desc "audit-copy-gitignore"}}>{{icon "copy"}}<span class="ms-1">Copy the lines to add</span></button></div>
+              {{else}}<div class="audit-title"><span class="badge badge-muted me-1">{{.Target}}</span>Others can read this credential file</div>
+              <div class="small text-secondary"><code>{{tilde .Path}}</code> has mode <code>{{.Mode}}</code>; it should be <code>0600</code>, readable by you alone.</div>
+              {{if not $.ReadOnly}}<div class="mt-2">{{template "change_open" $}}<input type="hidden" name="action" value="doctor-fix"><button type="submit" class="btn btn-sm btn-primary"{{desc "audit-fix-perms"}}>{{icon "lock"}}<span class="ms-1">Make it owner-only</span></button></form></div>{{end}}{{end}}
+            </div>
+          </li>{{end}}
+        </ul>{{end}}
+        {{if $a.Passed}}<div class="audit-section-label">Owner-only</div>
+        <ul class="list-unstyled audit-list mb-3">
+          {{range $a.Passed}}<li class="audit-item">
+            <span class="audit-icon is-ok" aria-hidden="true">{{icon "circle-check"}}</span><span class="visually-hidden">Passed:</span>
+            <div class="audit-body">
+              <div class="audit-title"><span class="badge badge-muted me-1">{{.Target}}</span><code>{{tilde .Path}}</code></div>
+              <div class="small text-secondary">Mode <code>{{.Mode}}</code>, readable by you alone.{{with .Note}} {{.}}{{end}}</div>
+            </div>
+          </li>{{end}}
+        </ul>{{end}}
+        {{if $a.Absent}}<details class="audit-absent">
+          <summary class="small">{{len $a.Absent}} tool{{if ne (len $a.Absent) 1}}s have{{else}} has{{end}} no credential file here</summary>
+          <p class="small text-secondary mt-2 mb-2">Nothing to fix: these tools have no file in your home. Add a token to set one up.</p>
+          <div class="d-flex flex-wrap gap-1">{{range $a.Absent}}{{if $.ReadOnly}}<span class="badge badge-muted">{{.Target}}</span>{{else}}<button type="button" class="btn btn-sm btn-ghost-secondary audit-chip" data-panel-open="add-token" data-panel-fill-target="{{.Target}}" aria-description="Opens Add a token for {{.Target}}, whose file would be {{tilde .Path}}.">{{icon "plus"}}<span class="ms-1">{{.Target}}</span></button>{{end}}{{end}}</div>
+        </details>{{end}}
       </div>
     </div>
   </div>
