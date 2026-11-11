@@ -14,9 +14,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/simtabi/authama/src/internal/platform"
 	"github.com/simtabi/authama/src/internal/services/exports"
 	"github.com/simtabi/authama/src/internal/services/history"
 	"github.com/simtabi/authama/src/internal/services/mutation"
+	"github.com/simtabi/authama/src/internal/services/repair"
 	"github.com/simtabi/authama/src/internal/util/csvout"
 	"github.com/simtabi/authama/src/internal/util/lock"
 	"github.com/simtabi/authama/src/internal/util/paths"
@@ -111,6 +113,7 @@ func newHistoryCmd() *cobra.Command {
 			return writeOp(c.OutOrStdout(), s, op)
 		},
 	})
+	cmd.AddCommand(newHistoryResetCmd())
 	return cmd
 }
 
@@ -259,4 +262,63 @@ func parseWhen(s string) (string, error) {
 		return s, nil
 	}
 	return "", fmt.Errorf("%q is not a date, a time or an age like 7d", s)
+}
+
+// newHistoryResetCmd is `authama history reset`: start the history again,
+// moving the history database and the audit log aside rather than deleting
+// them. It refuses while history.permanent is on.
+func newHistoryResetCmd() *cobra.Command {
+	var confirmWord string
+	cmd := &cobra.Command{
+		Use:   "reset",
+		Short: "Start the history again: move the history and audit log aside (kept)",
+		Long: "Renames the history database and the audit log to <name>.reset-<time>, so renaming\n" +
+			"them back undoes it. Both go, because a new history imports the audit log the first\n" +
+			"time it is opened. The next change starts a new history, which first lists what is on\n" +
+			"disk now. Refused while history.permanent (AUTHAMA_HISTORY_PERMANENT) is on.\n\n" +
+			"It asks you to type \"history\"; a script passes --confirm history.",
+		Args: cobra.NoArgs,
+		RunE: func(c *cobra.Command, _ []string) error {
+			p, err := resolvePaths(c)
+			if err != nil {
+				return err
+			}
+			if repair.HistoryPermanent(nil) {
+				return repair.ErrHistoryPermanent
+			}
+			moves := repair.PlanHistoryReset(p, time.Now())
+			if len(moves) == 0 {
+				say(c, "nothing to reset: there is no history yet")
+				return nil
+			}
+			out := c.OutOrStdout()
+			for _, mv := range moves {
+				_, _ = fmt.Fprintf(out, "move  %s\n  ->  %s\n", mv[0], mv[1])
+			}
+			if confirmWord == "" {
+				if !platform.StdinIsTerminal() {
+					return errors.New("a history reset needs --confirm history when there is no terminal to ask on")
+				}
+				_, _ = fmt.Fprint(out, `Type "history" to go on: `)
+				line, err := platform.ReadLine(c.InOrStdin())
+				if err != nil {
+					return err
+				}
+				confirmWord = strings.TrimSpace(line)
+			}
+			if confirmWord != "history" {
+				return errAborted
+			}
+			mutation.LockForMutation(p)
+			mutation.FinishEarly()
+			mutation.Release()
+			if _, err := repair.ResetHistory(p, time.Now(), nil); err != nil {
+				return err
+			}
+			say(c, "✓ the history starts again; renaming the moved files back undoes it")
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&confirmWord, "confirm", "", `type "history" to start the history again without being asked`)
+	return cmd
 }

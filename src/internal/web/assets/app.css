@@ -379,12 +379,6 @@ main:focus { outline: none; }
 .kp-steps { margin: 1rem 0 0; padding-left: 1.25rem; font-size: .8125rem; color: var(--tblr-secondary); }
 .kp-steps li + li { margin-top: .25rem; }
 
-/* The Actions menu stands out from the page menus: it is where work starts. */
-.navbar .nav-actions > .nav-link { color: var(--tblr-body-color); font-weight: 600; border: 1px solid rgba(var(--tblr-primary-rgb), .35); border-radius: var(--tblr-border-radius); padding-inline: .75rem; margin-inline: .25rem; }
-.navbar .nav-actions > .nav-link:hover, .navbar .nav-actions.show > .nav-link { background: rgba(var(--tblr-primary-rgb), .08); }
-.navbar .nav-actions > .nav-link .icon { color: var(--tblr-primary); }
-@media (max-width: 767.98px) { .navbar .nav-actions > .nav-link { border: 0; margin: 0; } }
-
 /* A job's progress: a native <progress>, so the server can draw it without
    an inline style; with no value it is indeterminate. */
 .job-progress-bar { display: block; width: 100%; height: .5rem; border: 0; border-radius: 999px; overflow: hidden; appearance: none; background: var(--tblr-bg-surface-secondary); color: var(--tblr-primary); }
@@ -413,3 +407,17 @@ main:focus { outline: none; }
 .setup-step-title { display: block; font-weight: 600; }
 .setup-step-why { display: block; font-size: .8125rem; color: var(--tblr-secondary); }
 .setup-card[hidden] { display: none; }
+
+/* The Reset page: one row per reset, its details folded away. */
+.reset-row { padding-block: .875rem; }
+.reset-row-body { min-width: 0; }
+.reset-row-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: var(--tblr-border-radius); background: var(--tblr-bg-surface-secondary); color: var(--tblr-secondary); }
+.reset-row-icon.is-permanent { background: rgba(var(--tblr-danger-rgb), .1); color: var(--tblr-danger); }
+.reset-row-title { font-weight: 600; }
+.reset-details summary { cursor: pointer; color: var(--tblr-secondary); width: max-content; }
+.reset-details summary:hover { color: var(--tblr-body-color); }
+.reset-facts { display: grid; grid-template-columns: auto 1fr; gap: .25rem .75rem; font-size: .8125rem; }
+.reset-facts dt { font-weight: 600; color: var(--tblr-secondary); }
+.reset-facts dd { margin: 0; overflow-wrap: anywhere; }
+.reset-list { padding-left: 1.25rem; color: var(--tblr-secondary); }
+.reset-list li + li { margin-top: .25rem; }

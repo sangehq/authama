@@ -92,6 +92,8 @@ var Specs = []Spec{
 		Doc:     "What to do with registries Docker keeps in a credential store: store them with `docker login` or refuse and warn."},
 	{Section: "history", Name: "enabled", Env: envnames.History, Kind: KindBool, Default: "true",
 		Doc: "Record every change in the history database (`authama history`)."},
+	{Section: "history", Name: "permanent", Env: envnames.HistoryPermanent, Kind: KindBool, Default: "false",
+		Doc: "Keep the history for good: `history reset` and the web UI's Start the history again refuse, so the record of every change cannot be set aside."},
 	{Section: "notifications", Name: "desktop", Env: envnames.Notifications, Kind: KindBool, Default: "true",
 		Doc: "Show desktop notifications for keys due for rotation and dangling keys."},
 	{Section: "vm", Name: "hypervisors", Env: envnames.VMHypervisors, Kind: KindString,

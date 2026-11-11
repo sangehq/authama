@@ -39,6 +39,7 @@ Every command also takes the global flag:
     - [`authama export selections save`](#authama-export-selections-save) - Save a selection by name, from a JSON file
     - [`authama export selections show`](#authama-export-selections-show) - Print a saved selection as JSON
 - [`authama history`](#authama-history) - List the changes authama has made, newest first
+  - [`authama history reset`](#authama-history-reset) - Start the history again: move the history and audit log aside (kept)
   - [`authama history show`](#authama-history-show) - Show one operation: its events and what it changed in the manifest
 - [`authama init`](#authama-init) - Create/converge the per-user home
 - [`authama man`](#authama-man) - Write a manual page (troff, section 1) for every command into DIR
@@ -682,6 +683,7 @@ authama history [flags]
 
 Subcommands:
 
+- [`reset`](#authama-history-reset) - Start the history again: move the history and audit log aside (kept)
 - [`show`](#authama-history-show) - Show one operation: its events and what it changed in the manifest
 
 Examples:
@@ -706,6 +708,32 @@ Flags:
       --source string    only operations from cli, tui, web or backfill
       --token string     only operations about this token: TOOL or TOOL/HOST, e.g. npm/registry.npmjs.org
       --until string     only operations started at or before this
+```
+
+## authama history reset
+
+Renames the history database and the audit log to <name>.reset-<time>, so renaming
+them back undoes it. Both go, because a new history imports the audit log the first
+time it is opened. The next change starts a new history, which first lists what is on
+disk now. Refused while history.permanent (AUTHAMA_HISTORY_PERMANENT) is on.
+
+It asks you to type "history"; a script passes --confirm history.
+
+```
+authama history reset [flags]
+```
+
+Examples:
+
+```sh
+  authama history reset
+  authama history reset --confirm history   # a script
+```
+
+Flags:
+
+```
+      --confirm string   type "history" to start the history again without being asked
 ```
 
 ## authama history show

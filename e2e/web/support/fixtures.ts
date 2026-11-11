@@ -25,6 +25,7 @@ export const pages: { path: string; heading: string }[] = [
   { path: '/tokens', heading: 'Auth tokens' },
   { path: '/security', heading: 'Owner & PIN' },
   { path: '/repair', heading: 'Repair' },
+  { path: '/reset', heading: 'Reset' },
   { path: '/settings', heading: 'Settings' },
   { path: '/about', heading: 'About' },
   { path: '/about/licenses', heading: 'Third-party licences' },

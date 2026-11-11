@@ -99,6 +99,7 @@ var v1RemovedVerbs = map[string]string{
 // deviation that authorises it. An entry here is a decision someone made; an
 // addition without one is a test failure.
 var goOnly = map[string]string{
+	"history reset":             "owner, 2026-11-11: start the history again, moving history.db and audit.log aside (kept); refused while history.permanent is on",
 	"checklist":                 "owner, 2026-11-08: a checklist for every revocable item, of where it is used and what is left to rotate or revoke it",
 	"checklist show":            "owner, 2026-11-08: one item's checklist, with the command for each step left",
 	"checklist tick":            "owner, 2026-11-08: tick a step authama cannot check (the issuer, a copy in CI)",

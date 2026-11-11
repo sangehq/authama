@@ -1,0 +1,69 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "System" "Reset" "Start something again, from one key to the whole home. Each reset says what it changes and how to undo it, and nothing runs before you review it.")}}
+{{if $.ReadOnly}}<div class="alert alert-info" role="status">{{icon "lock"}}<span class="ms-1">This server only reads, so it resets nothing. Each row's details name the command that does it at a terminal.</span></div>{{end}}
+{{range .Groups}}{{if .Options}}
+<div class="card mb-3">
+  <div class="card-header"><div><h2 class="card-title">{{.Title}}</h2><div class="card-subtitle text-secondary small mt-1">{{.Summary}}</div></div></div>
+  <div class="list-group list-group-flush">
+    {{range .Options}}{{template "reset_row" (resetRow . $)}}{{end}}
+  </div>
+</div>
+{{end}}{{end}}
+{{if $.DevRoot}}<p class="text-secondary small">Rotating and revoking keys reach real servers, so a dev sandbox does not offer them.</p>{{end}}
+{{if not $.ReadOnly}}
+{{template "panel_open" (header "home-init" "Initialise the home again" "The global config is written again with fresh defaults, after a backup.")}}
+  <ul class="reset-list mb-3">
+    <li>The manifest, the inventory and <code>.env</code> are written again: every profile, host and key declaration goes.</li>
+    <li>The old files are copied first into the state home's <code>.state/init-backup-&lt;time&gt;/</code>; copying them back undoes it.</li>
+    <li><code>~/.ssh</code> is not touched: your keys, config and <code>known_hosts</code> stay.</li>
+  </ul>
+  {{template "change_open" $}}<input type="hidden" name="action" value="home-init">
+    <div class="mb-1"><label class="form-label" for="init-confirm">Type <code>init</code> to confirm</label><input class="form-control" id="init-confirm" name="confirm" required pattern="init" autocomplete="off" spellcheck="false"></div>
+    <div class="form-hint">The same as <code>authama init --force --backup</code>. You see the change before it is made.</div>
+    {{template "panel_actions" "btn-outline-danger"}}
+  </form>
+{{template "panel_close"}}
+{{if not .HistoryPermanent}}
+{{template "panel_open" (header "history-reset" "Start the history again" "The history and the audit log it is rebuilt from are moved aside, kept.")}}
+  <ul class="reset-list mb-3">
+    <li><code>history.db</code> and <code>audit.log</code> are renamed to <code>&lt;name&gt;.reset-&lt;time&gt;</code>; renaming them back undoes it.</li>
+    <li>This reset is the last entry in the old history. The next change starts a new one, which first lists what is on disk now.</li>
+    <li>To keep the history for good instead, turn on <code>history.permanent</code> in Settings: this reset is then refused.</li>
+  </ul>
+  {{template "change_open" $}}<input type="hidden" name="action" value="history-reset">
+    <div class="mb-1"><label class="form-label" for="history-confirm">Type <code>history</code> to confirm</label><input class="form-control" id="history-confirm" name="confirm" required pattern="history" autocomplete="off" spellcheck="false"></div>
+    <div class="form-hint">The same as <code>authama history reset</code>. You see the change before it is made.</div>
+    {{template "panel_actions" "btn-outline-danger"}}
+  </form>
+{{template "panel_close"}}
+{{end}}
+{{end}}
+{{end}}{{end}}
+
+{{/* One reset: its icon, name and one line; whether authama can undo it;
+     the details folded away; and one small button that starts it. Built with
+     (resetRow option $), the page's view carrying the CSRF token and whether
+     the server only reads. */}}
+{{define "reset_row"}}{{$v := .View}}{{with .Opt}}<div class="list-group-item reset-row">
+  <div class="d-flex align-items-start gap-3">
+    <span class="reset-row-icon{{if not .Undoable}} is-permanent{{end}}" aria-hidden="true">{{icon .Icon}}</span>
+    <div class="flex-fill reset-row-body">
+      <div class="d-flex flex-wrap align-items-center gap-2"><span class="reset-row-title">{{.Title}}</span>{{if .Undoable}}<span class="badge badge-ok">Undoable</span>{{else}}<span class="badge badge-bad">Cannot be undone</span>{{end}}</div>
+      <div class="text-secondary small mt-1">{{.What}}</div>
+      <details class="reset-details mt-1">
+        <summary class="small">Details</summary>
+        <dl class="reset-facts mt-2 mb-1">
+          <dt>Resets</dt><dd>{{.Resets}}</dd>
+          <dt>Keeps</dt><dd>{{.Keeps}}</dd>
+          <dt>Undo</dt><dd>{{.Undo}}</dd>
+          <dt>Command</dt><dd><code>{{.Command}}</code></dd>
+        </dl>
+      </details>
+    </div>
+    {{if not $v.ReadOnly}}<div class="flex-shrink-0 align-self-center">
+      {{if .Href}}<a class="btn btn-sm {{if .Undoable}}btn-outline-secondary{{else}}btn-outline-danger{{end}}" href="{{u .Href}}" aria-description="{{.Tip}}">{{.Button}}</a>
+      {{else if .Panel}}<button type="button" class="btn btn-sm {{if .Undoable}}btn-outline-secondary{{else}}btn-outline-danger{{end}}" data-bs-toggle="offcanvas" data-bs-target="#{{.Panel}}" aria-controls="{{.Panel}}" aria-description="{{.Tip}}">{{.Button}}</button>
+      {{else if .Action}}<form method="post" action="{{basePath}}/changes/preview" data-inline><input type="hidden" name="csrf" value="{{$v.CSRF}}"><input type="hidden" name="action" value="{{.Action}}"><button type="submit" class="btn btn-sm btn-outline-secondary" aria-description="{{.Tip}}">{{.Button}}</button></form>{{end}}
+    </div>{{end}}
+  </div>
+</div>{{end}}{{end}}

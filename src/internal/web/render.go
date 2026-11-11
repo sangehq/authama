@@ -138,6 +138,17 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		"brandCommand": func() string { return brand.Command },
 		"cmdline":      brand.Line,
 		"when":         func(t time.Time) string { return t.UTC().Format("2006-01-02 15:04 UTC") },
+		// resetRow pairs a Reset page row with the page's view, for its
+		// CSRF token and whether the server only reads.
+		"resetRow": func(o resetOption, v view) struct {
+			Opt  resetOption
+			View view
+		} {
+			return struct {
+				Opt  resetOption
+				View view
+			}{o, v}
+		},
 		// unixMilli hands a time to the page's script, which counts from it.
 		"unixMilli": func(t time.Time) int64 { return t.UnixMilli() },
 		// timeLeft is a job's estimated time left, "" until a step has
@@ -758,17 +769,18 @@ func paletteItems(readOnly bool) []paletteItem {
 		{"hosts", "Hosts", "/hosts", "server", "SSH", "host alias hostname", "g h", ""},
 		{"keys", "Keys", "/keys", "key", "SSH", "key fingerprint expiry reserve", "g k", ""},
 		{"vms", "VMs", "/vms", "device-desktop", "SSH", "vm hypervisor devbox sync", "g v", ""},
-		{"sshconfig", "SSH config", "/ssh-config", "file-code", "Config & backups", "config render drift check", "g c", ""},
-		{"snapshots", "Snapshots", "/snapshots", "archive", "Config & backups", "snapshot bundle backup restore", "g s", ""},
-		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Security", "token npm composer docker git netrc pypi cargo gem gradle maven yarn helm gh", "g t", ""},
+		{"sshconfig", "SSH config", "/ssh-config", "file-code", "SSH", "config render drift check", "g c", ""},
+		{"snapshots", "Snapshots", "/snapshots", "archive", "Backups & export", "snapshot bundle backup restore", "g s", ""},
+		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Auth tokens", "token npm composer docker git netrc pypi cargo gem gradle maven yarn helm gh", "g t", ""},
 		{"audit", "Audit", "/audit", "shield-check", "Security", "audit key age", "g a", ""},
 		{"security", "Owner & PIN", "/security", "lock", "Security", "owner pin seal tamper binding fingerprint", "g w", ""},
 		{"history", "History", "/history", "history", "Activity", "history operations changes log", "g y", ""},
 		{"events", "Events", "/events", "activity", "Activity", "events file changes tracking", "g e", ""},
-		{"export", "Export", "/export", "file-export", "Export", "export download csv json yaml php javascript markdown html filter columns", "g x", ""},
+		{"export", "Export", "/export", "file-export", "Backups & export", "export download csv json yaml php javascript markdown html filter columns", "g x", ""},
 		{"doctor", "Doctor", "/doctor", "stethoscope", "System", "doctor checks fix", "g d", ""},
 		{"validate", "Validate", "/validate", "circle-check", "System", "validate check manifest settings keys keypair config schema", "g l", ""},
-		{"repair", "Repair", "/repair", "refresh", "System", "repair fix corrupt permissions factory reset", "g r", ""},
+		{"repair", "Repair", "/repair", "refresh", "System", "repair fix corrupt permissions", "g r", ""},
+		{"reset", "Reset", "/reset", "refresh", "System", "reset factory start again initialise init defaults settings unbind rotate every key", "g z", ""},
 		{"settings", "Settings", "/settings", "settings", "System", "settings theme appearance env", "g ,", ""},
 		{"about", "About", "/about", "info-circle", "System", "about version licences", "g i", ""},
 	}
@@ -777,6 +789,8 @@ func paletteItems(readOnly bool) []paletteItem {
 			paletteItem{"add-profile", "Add a profile", "/profiles#add-profile", "plus", "Action", "new create profile", "n p", ""},
 			paletteItem{"add-host", "Add a host", "/hosts#add-host", "plus", "Action", "new create host", "n h", ""},
 			paletteItem{"add-token", "Add or replace a token", "/tokens#add-token", "plus", "Action", "new set rotate token secret", "n t", ""},
+			paletteItem{"act-rotate", "Rotate keys", "/keys#rotate-keys", "recycle", "Action", "rotate replace renew keys every all", "n r", ""},
+			paletteItem{"act-revoke", "Revoke keys", "/keys#revoke-keys", "ban", "Action", "revoke remove untrust keys", "n v", ""},
 		)
 	}
 	return append(items,

@@ -34,38 +34,44 @@ import (
 // actionFields are the form fields each action reads, in the order the
 // confirmation carries them.
 var actionFields = map[string][]string{
-	"profile-add":             {"name", "key_scope", "key_name", "key_comment", "category"},
-	"profile-comment":         {"name", "key_comment"},
-	"profile-edit":            {"name", "key_scope", "key_name"},
-	"profile-delete":          {"name", "purge"},
-	"profile-category":        {"name", "category"},
-	"host-add":                {"profile", "alias", "hostname", "user", "port", "tags"},
-	"host-edit":               {"profile", "alias", "hostname", "user", "port", "tags"},
-	"host-delete":             {"profile", "alias"},
-	"key-delete":              {"profile", "key"},
-	"key-reserve":             {"key", "for", "note"},
-	"key-unreserve":           {"key"},
-	"vm-add":                  {"profile", "alias", "hypervisor", "vm", "user"},
-	"config-render":           {},
-	"reconcile":               {},
-	"keygen":                  {"target"},
-	"key-add":                 {"profile", "key", "key_type", "host"},
-	"providers-export":        {},
-	"snapshots-prune":         {"keep"},
-	"doctor-fix":              {},
-	"host-apply":              {"profile", "specs", "create", "category"},
-	"clean":                   {"adopt"},
-	"bundle":                  {"keep"},
-	"vm-docker-context":       {"alias"},
-	"snapshots-restore":       {"id"},
-	"notify-test":             {},
-	"audit-notify":            {},
-	"token-delete":            {"target", "host"},
-	"token-apply":             {},
-	"vm-sync":                 {"repin"},
-	"vm-adopt-key":            {"key", "profile", "alias", "hypervisor", "vm", "user"},
-	"vm-schedule":             {"install"},
-	"settings-init":           {},
+	"profile-add":       {"name", "key_scope", "key_name", "key_comment", "category"},
+	"profile-comment":   {"name", "key_comment"},
+	"profile-edit":      {"name", "key_scope", "key_name"},
+	"profile-delete":    {"name", "purge"},
+	"profile-category":  {"name", "category"},
+	"host-add":          {"profile", "alias", "hostname", "user", "port", "tags"},
+	"host-edit":         {"profile", "alias", "hostname", "user", "port", "tags"},
+	"host-delete":       {"profile", "alias"},
+	"key-delete":        {"profile", "key"},
+	"key-reserve":       {"key", "for", "note"},
+	"key-unreserve":     {"key"},
+	"vm-add":            {"profile", "alias", "hypervisor", "vm", "user"},
+	"config-render":     {},
+	"reconcile":         {},
+	"keygen":            {"target"},
+	"key-add":           {"profile", "key", "key_type", "host"},
+	"providers-export":  {},
+	"snapshots-prune":   {"keep"},
+	"doctor-fix":        {},
+	"host-apply":        {"profile", "specs", "create", "category"},
+	"clean":             {"adopt"},
+	"bundle":            {"keep"},
+	"vm-docker-context": {"alias"},
+	"snapshots-restore": {"id"},
+	"notify-test":       {},
+	"audit-notify":      {},
+	"token-delete":      {"target", "host"},
+	"token-apply":       {},
+	"vm-sync":           {"repin"},
+	"vm-adopt-key":      {"key", "profile", "alias", "hypervisor", "vm", "user"},
+	"vm-schedule":       {"install"},
+	"settings-init":     {},
+	// settings-reset writes authama.json again at its defaults, keeping the
+	// old file beside it.
+	"settings-reset": {},
+	// home-init writes the manifest, inventory and .env again with fresh
+	// defaults, after a backup; it asks for "init" to be typed.
+	"home-init":               {"confirm"},
 	"export-selection-save":   {"name", "selection"},
 	"export-selection-delete": {"name"},
 	"token-set":               {"target", "service", "server", "username", "scope", "docker_mode", "secret_ref"},
@@ -377,6 +383,12 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch = change.ProvidersExport()
 	case "settings-init":
 		ch = change.SettingsInit(false)
+	case "settings-reset":
+		ch = change.SettingsInit(true)
+	case "history-reset":
+		ch = change.HistoryReset(strings.TrimSpace(f.Get("confirm")) == "history")
+	case "home-init":
+		ch = change.HomeInit(strings.TrimSpace(f.Get("confirm")) == "init")
 	case "export-selection-save":
 		name, sel, err := savedSelectionForm(f)
 		errs = append(errs, err)

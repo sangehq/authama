@@ -185,7 +185,8 @@ var pageTips = map[string]string{
 	"export":     "Make a file of any list, filtered, in any of nine formats.",
 	"doctor":     "Checks this home and offers fixes.",
 	"validate":   "Checks the manifest, the settings files, every keypair and ~/.ssh, and says what is wrong.",
-	"repair":     "Fixes a damaged home, or starts it again.",
+	"repair":     "Finds what is wrong with the home and fixes what is safe to fix.",
+	"reset":      "Every way to start something again: keys, settings, the home's files, the owner, or everything.",
 	"settings":   "Theme, defaults, and where authama keeps things.",
 	"about":      "This build, this computer, and the licences.",
 	// The Actions menu: the jobs people come back for, one click from any page.
@@ -196,16 +197,17 @@ var pageTips = map[string]string{
 	"act-pin":     "Scan hosts and pin their keys into known_hosts.",
 	"act-addhost": "Add a server to a profile's ssh config.",
 	"act-token":   "Store a token npm, Composer, Docker, git or PyPI reads.",
+	"act-reset":   "Choose what to start again: keys, settings, the home's files, the owner, or everything.",
 }
 
 // groupTips says what each menu heading holds, keyed as navGroup keys it.
 var groupTips = map[string]string{
-	"ssh":      "Profiles, hosts, keys and VMs.",
-	"files":    "The rendered ssh config, and the snapshots and bundles of ~/.ssh.",
-	"auth":     "Auth tokens, the key audit, and the PIN and seal.",
+	"ssh":      "Profiles, hosts, keys and VMs, the naming rules, and the rendered ssh config.",
+	"backups":  "Snapshots and encrypted bundles of ~/.ssh, and files of any list.",
+	"auth":     "The checklists, the key audit, and the PIN and seal.",
 	"activity": "What changed: History of authama's changes, and Events for every file change.",
-	"system":   "Doctor, Validate, Repair, Settings and About.",
-	"actions":  "Rotate, revoke or delete keys, mint missing ones, pin host keys, add a host or a token.",
+	"system":   "Doctor, Validate, Repair, Reset, Settings and About.",
+	"actions":  "Rotate, revoke or delete keys, mint missing ones, pin host keys, add a host or a token, or reset something.",
 }
 
 // tipText is the explainer for id. An unknown id is an error, so a template

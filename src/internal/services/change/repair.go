@@ -80,3 +80,44 @@ func FactoryReset(confirmed bool) Change {
 		Run: func(paths.Paths, io.Writer) error { return nil },
 	}
 }
+
+// HistoryReset is `authama history reset --confirm history`: the history
+// database and the audit log are moved aside, kept, and the next change
+// starts a new history. confirmed is the word the form asks to be typed. It
+// refuses while history.permanent is on.
+func HistoryReset(confirmed bool) Change {
+	return Change{
+		Command: "history reset", Args: []string{"--confirm", "history"}, NoSnapshot: true,
+		Effects: func(p paths.Paths) ([]string, error) {
+			if !confirmed {
+				return nil, errors.New(`type "history" to confirm`)
+			}
+			if repair.HistoryPermanent(nil) {
+				return nil, repair.ErrHistoryPermanent
+			}
+			moves := repair.PlanHistoryReset(p, time.Now())
+			if len(moves) == 0 {
+				return nil, errors.New("there is no history to start again")
+			}
+			lines := make([]string, 0, len(moves)+2)
+			for _, mv := range moves {
+				lines = append(lines, fmt.Sprintf("moves %s aside, kept, to %s.reset-<time>", mv[0], mv[0]))
+			}
+			return append(lines, "this reset is the last entry in the old history",
+				"the next change starts a new history, which first lists what is on disk now"), nil
+		},
+		OnApply: func(p paths.Paths, out io.Writer) error {
+			// The history is open while this change is recorded; finishing it
+			// first puts this reset in the old history, and lets Windows rename
+			// the file.
+			mutation.FinishEarly()
+			mutation.Release()
+			moves, err := repair.ResetHistory(p, time.Now(), nil)
+			for _, mv := range moves {
+				_, _ = fmt.Fprintf(out, "moved %s -> %s\n", mv[0], mv[1])
+			}
+			return err
+		},
+		Run: func(paths.Paths, io.Writer) error { return nil },
+	}
+}

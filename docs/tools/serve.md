@@ -82,14 +82,23 @@ The layout is Tabler's, in two bars. The top bar holds the name (with a *read-on
 server only reads), a search box that opens the command palette, a theme toggle (light or dark), a
 bell listing the newest [file events](events.md), and an account menu named for the system user the
 server runs as. The account menu opens with *Running as <user> on <host>* and holds Settings, Events,
-Doctor, the tour and About. Under it, a menu holds the Overview, an **Actions** menu, and five dropdowns: **SSH**
-(Profiles, Naming, Hosts, Keys, VMs), **Config & backups** (SSH config, Snapshots), **Security** (Auth tokens,
-Audit, Owner & PIN), **Activity** (History, Events), Export, and **System** (Doctor, Validate, Repair,
-Settings, About). **Actions**, outlined so it stands apart from the page menus, opens the forms people
-come back for from any page: Rotate keys, Revoke keys, Delete keys, Mint missing keys, Pin host keys,
-Add a host and Add a token. Each opens its page with the form's panel already open, and nothing runs
-until it is reviewed. A read-only server shows no Actions menu, and a dev sandbox leaves out rotate
-and revoke, which reach real servers. On a narrow screen it folds behind a button. About shows the build (and whether it is
+Doctor, the tour and About. Under it, the main menu groups the pages by what they are about:
+
+| Entry | Holds |
+|---|---|
+| Overview | What needs attention, counts, and Get started for a new home |
+| **Actions** | Rotate keys, Revoke keys, Delete keys, Mint missing keys, Pin host keys, Add a host, Add a token, Reset… |
+| **SSH** | Profiles, Hosts, Keys, VMs, Naming, and the SSH config rendered from them |
+| Auth tokens | The tokens npm, Composer, Docker, git, PyPI and the rest read |
+| **Security** | Checklists, Audit, Owner & PIN |
+| **Backups & export** | Snapshots (and encrypted bundles), Export |
+| **Activity** | History, Events |
+| **System** | Doctor, Validate, Repair, Reset, Settings, About |
+
+**Actions** is a menu like the others. Each entry opens its page with the form's panel already open,
+and nothing runs until it is reviewed. A read-only server shows no Actions menu, and a dev sandbox
+leaves out rotate and revoke, which reach real servers. When export is turned off, Snapshots is an
+entry of its own. On a narrow screen it folds behind a button. About shows the build (and whether it is
 current), this computer, and the third-party licences; following the system's light or dark theme is
 chosen on the Settings page. The footer carries the copyright, the version, and links to About, the
 documentation, the source and the licences.
@@ -150,6 +159,16 @@ documentation, the source and the licences.
   **Start** button that opens its form, ticked off by itself as the home fills in, with a bar for
   how many are done. **Hide** puts it away in that browser until another step is done; the card
   also starts the tour.
+- **Reset** (System → Reset, or Actions → Reset…) gathers every way to start something again, one
+  row each in four groups: *Keys* (rotate every key, revoke keys), *Configuration* (settings to their
+  defaults, initialise the home again, old snapshots), *History* (start the history again) and
+  *Everything* (unbind this home, factory reset). Each row says in a line what it does and whether
+  authama can undo it; **Details** opens what it resets, what it keeps, how to undo it and the command
+  it is the same as. *Rotate every key* opens Rotate keys with every key already chosen; revoke is
+  never preset. *Settings to their defaults* previews straight from its row and keeps the old
+  `authama.json` beside the new one. *Initialise the home again* and *Start the history again* open
+  a panel that lists what changes and asks for `init` or `history` to be typed. With
+  `history.permanent` on, the history row says it is kept for good and offers no reset.
 - **Slow actions say so.** A preview, a change or a page in the side panel that has taken more than
   two seconds shows a card at the foot of the screen with a spinner and the time so far. Once the
   same action has been timed in that browser, the card adds a percentage and the time left,

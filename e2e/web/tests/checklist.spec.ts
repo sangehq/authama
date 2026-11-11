@@ -127,3 +127,20 @@ test('the Actions menu opens the rotate form from any page, and the Overview off
     await setup.screenshot({ path: 'test-results/get-started.png' });
   }
 });
+
+test('the Reset page opens the rotate picker with every key already chosen', async ({ page }) => {
+  await page.goto('/reset');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Reset');
+  await page.screenshot({ path: 'test-results/reset-page.png', fullPage: true });
+  await page.locator('a[href*="pick=all"]').click(); // Rotate every key's row
+  await expect(page).toHaveURL(/\/keys\?pick=all#rotate-keys$/);
+  const picker = page.locator('#rotate-keys [data-key-picker]');
+  await expect(picker.getByLabel('Every key in every profile')).toBeChecked();
+  await expect(page.locator('#rotate-keys [data-pick-submit]')).toHaveText(/Review every key to rotate/);
+  // Only rotate takes the preset: revoking every key is never chosen for you.
+  await expect(page.locator('#revoke-keys [data-pick-all]')).not.toBeChecked();
+
+  await page.goto('/hosts');
+  await page.getByRole('button', { name: 'Actions', exact: true }).click();
+  await page.locator('header.navbar-expand-md:not(.navbar)').screenshot({ path: 'test-results/main-menu-actions.png' });
+});
