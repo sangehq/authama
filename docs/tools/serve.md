@@ -410,7 +410,10 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
    the form) makes a clean rotation with no bundle. After a fix started from a review, the done page
    offers **Review the job again**; a job that cannot be undone (revoke, delete) asks in
    red.
-2. **Run.** The job starts, and its page shows the output as it comes, under a progress card: a
+2. **Run.** The job starts, and its page, titled for the job with its full command beneath, shows
+   the output as it comes in a console: each line's status word (ok, FAIL, paste, skip, WARNING)
+   in a fixed column as a coloured badge, the host or key in its own colour, nested lines indented,
+   and failures tinted; it follows the newest line unless you scroll up. Above it is a progress card: a
    spinner, the time so far, and for a job that works through several keys or hosts (rotate,
    revoke or delete keys, pin host keys) a bar with *3 of 10 · 30% · about 1m 20s left* and the key or host under way. The time
    left is the pace of the ones already done applied to the rest, so it shows once the first has
