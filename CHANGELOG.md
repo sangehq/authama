@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A clearer token audit.** The Auth tokens page's Audit card counts what to fix, what is
+  owner-only and what is not set up; a credential file others can read has *Make it owner-only*, a
+  `.gitignore` missing secret files offers the lines to copy, files read as `0600` rather than
+  `0o600`, Composer's note sits with its file, and the tools with no file fold into a list that opens
+  *Add a token* for each.
 - **A checklist for every key and token.** `authama checklist` and **Security > Checklists**
   list, for each key and token, every place it is used and every step to rotate or revoke it
   completely. A key's follows its life: where it is while in use, and what still has to go once
@@ -336,6 +341,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   buttons and dev banner) is removed, with the rule that forced panel columns to full width.
 ### Fixed
 
+- **"Not found" after a server restart on a preview page.** A restart (after `make install`, say)
+  reloads every open page into the new build; a preview, a job's review or a checklist tick answers a
+  form, so its reload asked for `/changes/preview` by address and got *Not found*. The reload now goes
+  back to the page the form was on, and those addresses say the page answered a form and nothing was
+  changed (410) instead of 404. A test follows every link on every page and fails on a 404 or 500.
 - **A rotation forgot which servers still have the old key.** Removing the outgoing key from
   each target was reported once and then lost. Rotation now records the targets it removed
   the key from, those it could not, and where the by-hand ones are managed, in `retired.json`.
