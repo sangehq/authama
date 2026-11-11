@@ -131,6 +131,7 @@ type dashboard struct {
 	ProfileRows                 []ProfileView
 	MaxHosts                    int
 	Events                      []EventRow
+	Setup                       Setup
 }
 
 func (h pages) handleOverview(w http.ResponseWriter, r *http.Request) {
@@ -179,6 +180,7 @@ func (h pages) handleOverview(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	d.Events = h.s.recentEvents(events.Filter{Limit: 6})
+	d.Setup = setupFor(d)
 	h.s.render(w, http.StatusOK, "overview", h.s.newView(r, "overview", "Overview", d))
 }
 

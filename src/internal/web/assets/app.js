@@ -10,12 +10,13 @@ import { AutoSubmit, ConfirmAction, CopyText, JobStream, ThemeChoice, Tip } from
 import { CommandPalette, PanelFromHash } from "./js/components/palette.js";
 import { Shortcuts } from "./js/components/shortcuts.js";
 import { PanelOpen, ShowWhen } from "./js/components/forms.js";
-import { Tour } from "./js/components/guide.js";
+import { SetupCard, Tour } from "./js/components/guide.js";
 import { Inline, SidePanel } from "./js/components/side-panel.js";
 import { CsvExport } from "./js/components/csv-export.js";
 import { JsonField } from "./js/components/json-field.js";
 import { ExportPage } from "./js/components/export-page.js";
 import { KeyPicker } from "./js/components/key-picker.js";
+import { SlowProgress } from "./js/components/slow-progress.js";
 import { LiveBuild, RestartServer, Restarted } from "./js/components/restart.js";
 
 App.create()
@@ -35,12 +36,14 @@ App.create()
   .use(JobStream)
   .use(ShowWhen)
   .use(KeyPicker)
+  .use(SlowProgress)
   .use(CopyText)
   .use(PanelOpen)
   .use(PanelFromHash)
   .use(CommandPalette)
   .use(Shortcuts)
   .use(Tour)
+  .use(SetupCard)
   .start();
 
 // The tooltip rules cover controls a script adds later too, so they start

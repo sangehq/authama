@@ -50,6 +50,33 @@ type Question struct {
 	Yes, No string
 }
 
+// Progress is how far a job made of counted steps has got: Done of Total
+// steps finished, Label naming the one under way, and Since when the first
+// step began, from which a page works out the time left.
+type Progress struct {
+	Done, Total int
+	Label       string
+	Since       time.Time
+}
+
+// Percent is how much of the job is done, 0 to 100.
+func (p Progress) Percent() int {
+	if p.Total <= 0 {
+		return 0
+	}
+	return min(100, p.Done*100/p.Total)
+}
+
+// Left is the time the remaining steps should take at the pace of the
+// finished ones, and false while no step has finished to judge by.
+func (p Progress) Left(now time.Time) (time.Duration, bool) {
+	if p.Done <= 0 || p.Total <= p.Done || p.Since.IsZero() {
+		return 0, false
+	}
+	per := now.Sub(p.Since) / time.Duration(p.Done)
+	return per * time.Duration(p.Total-p.Done), true
+}
+
 // View is a job as a page shows it.
 type View struct {
 	ID, Command, State, Err, OpID string
@@ -57,6 +84,8 @@ type View struct {
 	Lines                         []string
 	Question                      *Question
 	Started                       time.Time
+	// Progress is nil for a job that does not count its steps.
+	Progress *Progress
 }
 
 // Job is one running or finished job.
@@ -76,6 +105,20 @@ type Job struct {
 	changed  chan struct{} // closed and replaced on every update
 	answer   chan bool
 	cancel   bool
+	progress *Progress
+}
+
+// Progress records that done of total steps are finished and label is the
+// one under way, for the job's page to show as a bar with the time left.
+// A job whose work is one step does not call it.
+func (j *Job) Progress(done, total int, label string) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	if j.progress == nil {
+		j.progress = &Progress{Since: time.Now()}
+	}
+	j.progress.Done, j.progress.Total, j.progress.Label = done, total, label
+	j.notify()
 }
 
 // Write appends output, one line at a time, so a page can stream it.
@@ -139,6 +182,10 @@ func (j *Job) View() (View, <-chan struct{}) {
 	if j.question != nil {
 		q := *j.question
 		v.Question = &q
+	}
+	if j.progress != nil {
+		pr := *j.progress
+		v.Progress = &pr
 	}
 	return v, j.changed
 }

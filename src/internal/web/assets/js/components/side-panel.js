@@ -1,5 +1,6 @@
 // @ts-check
 import { Component } from "../core/component.js";
+import { SlowProgress } from "./slow-progress.js";
 import { Ui } from "../core/ui.js";
 
 /** The request header that asks the server for a page's content alone. */
@@ -103,7 +104,8 @@ export class SidePanel extends Component {
     // URL-encoded, as the browser sends a form: the server parses that body,
     // and no form here uploads a file.
     const body = new URLSearchParams(/** @type {any} */ (data));
-    return this.#load(action.href, { method, body }).finally(() => this.#busy(form, false));
+    const done = SlowProgress.begin(SlowProgress.key(form), SlowProgress.label(submitter));
+    return this.#load(action.href, { method, body }, done).finally(() => this.#busy(form, false));
   }
 
   /** Loads the current page again, in place: a job that has moved on. */
@@ -127,9 +129,10 @@ export class SidePanel extends Component {
    * @param {string} url
    * @param {RequestInit} init
    */
-  async #load(url, init) {
+  async #load(url, init, done = SlowProgress.begin(`GET ${new URL(url, window.location.href).pathname}`, "Loading…")) {
     this.#inflight?.abort();
     this.#inflight = new AbortController();
+    let ok = false;
     Ui.offcanvas(this.el)?.show();
     this.el.setAttribute("aria-busy", "true");
     try {
@@ -151,6 +154,7 @@ export class SidePanel extends Component {
       const entry = { url: res.url, title: page.getAttribute("data-title") ?? doc.title, node };
       this.#stack.push(entry);
       this.#show(entry);
+      ok = res.ok;
     } catch (err) {
       if (!(err instanceof DOMException && err.name === "AbortError")) {
         this.#stack.push({ url, title: "Could not load", node: SidePanel.#problem(String(err)) });
@@ -158,6 +162,7 @@ export class SidePanel extends Component {
       }
     } finally {
       this.el.removeAttribute("aria-busy");
+      done(ok);
     }
     return this;
   }

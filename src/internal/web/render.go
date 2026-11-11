@@ -20,6 +20,7 @@ import (
 	"github.com/simtabi/authama/src/internal/services/checklist"
 	"github.com/simtabi/authama/src/internal/services/events"
 	"github.com/simtabi/authama/src/internal/services/history"
+	"github.com/simtabi/authama/src/internal/services/jobs"
 	"github.com/simtabi/authama/src/internal/services/owner"
 	"github.com/simtabi/authama/src/internal/util/highlight"
 )
@@ -137,6 +138,16 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		"brandCommand": func() string { return brand.Command },
 		"cmdline":      brand.Line,
 		"when":         func(t time.Time) string { return t.UTC().Format("2006-01-02 15:04 UTC") },
+		// unixMilli hands a time to the page's script, which counts from it.
+		"unixMilli": func(t time.Time) int64 { return t.UnixMilli() },
+		// timeLeft is a job's estimated time left, "" until a step has
+		// finished to judge the pace by.
+		"timeLeft": func(p jobs.Progress) string {
+			if d, ok := p.Left(time.Now()); ok {
+				return "about " + humanDuration(d) + " left"
+			}
+			return ""
+		},
 		"stamp": func(s string) string {
 			if t, err := time.Parse(history.TimeFormat, s); err == nil {
 				return t.UTC().Format("2006-01-02 15:04:05 UTC")
@@ -378,6 +389,19 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 			return navItem{Active: v.Nav == key, Href: href, Icon: icon, Label: label, Tip: pageTips[key]}
 		},
 	}
+}
+
+// humanDuration is d to the second, in the largest two units: "45s",
+// "3m 05s", "1h 20m".
+func humanDuration(d time.Duration) string {
+	d = d.Round(time.Second)
+	switch {
+	case d < time.Minute:
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	case d < time.Hour:
+		return fmt.Sprintf("%dm %02ds", int(d.Minutes()), int(d.Seconds())%60)
+	}
+	return fmt.Sprintf("%dh %02dm", int(d.Hours()), int(d.Minutes())%60)
 }
 
 func shorten(s string, n int) string {

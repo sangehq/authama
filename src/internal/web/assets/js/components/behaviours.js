@@ -78,9 +78,12 @@ export class JobStream extends Component {
         this.el.appendChild(document.createTextNode(`${/** @type {MessageEvent} */ (e).data}\n`));
       }
     });
+    const progress = new JobProgress(document.querySelector("[data-job-progress]"));
+    events.addEventListener("progress", (e) => progress.update(/** @type {MessageEvent} */ (e).data));
     events.addEventListener("state", (e) => {
       if (/** @type {MessageEvent} */ (e).data !== state) {
         events.close();
+        progress.stop();
         // In the side panel, the panel's page is the one to refresh, not the
         // page under it.
         if (this.el.closest("[data-side-panel]") && SidePanel.current) {
@@ -91,6 +94,101 @@ export class JobStream extends Component {
       }
     });
     return this;
+  }
+}
+
+/** @param {number} ms @returns {string} "45s", "3m 05s", "1h 20m" */
+export function humanDuration(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 60) {
+    return `${s}s`;
+  }
+  if (s < 3600) {
+    return `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
+  }
+  return `${Math.floor(s / 3600)}h ${String(Math.floor(s / 60) % 60).padStart(2, "0")}m`;
+}
+
+/**
+ * JobProgress keeps a job page's progress card current: the bar, "3 of 10 ·
+ * 30% · about 1m left" and the elapsed time, ticking once a second. The time
+ * left is the pace of the finished steps applied to the rest, so it says
+ * nothing until one step has finished.
+ */
+class JobProgress {
+  /** @param {Element | null} card */
+  constructor(card) {
+    this.card = card instanceof HTMLElement ? card : null;
+    this.started = Number(this.card?.dataset.jobStarted ?? 0);
+    this.since = Number(this.card?.dataset.jobProgressSince ?? 0);
+    this.done = 0;
+    this.total = 0;
+    const bar = this.card?.querySelector("[data-job-progress-bar]");
+    if (bar instanceof HTMLProgressElement && bar.hasAttribute("value")) {
+      this.done = bar.value;
+      this.total = bar.max;
+    }
+    this.at = Date.now();
+    this.timer = this.card ? window.setInterval(() => this.tick(), 1000) : 0;
+    this.tick();
+  }
+
+  /** @param {string} data "done total label" */
+  update(data) {
+    if (!this.card) {
+      return;
+    }
+    const [d, t, ...rest] = data.split(" ");
+    const done = Number(d);
+    const total = Number(t);
+    if (!this.since) {
+      this.since = Date.now();
+    }
+    this.done = done;
+    this.total = total;
+    this.at = Date.now();
+    const bar = this.card.querySelector("[data-job-progress-bar]");
+    if (bar instanceof HTMLProgressElement) {
+      bar.max = Math.max(total, 1);
+      bar.value = done;
+      bar.setAttribute("aria-label", "Job progress");
+      bar.textContent = `${this.percent()}%`;
+    }
+    this.card.querySelector("[data-job-progress-uncounted]")?.remove();
+    const label = this.card.querySelector("[data-job-progress-label]");
+    if (label) {
+      label.textContent = rest.join(" ") || "Finishing";
+    }
+    this.tick();
+  }
+
+  percent() {
+    return this.total > 0 ? Math.min(100, Math.floor((this.done * 100) / this.total)) : 0;
+  }
+
+  tick() {
+    if (!this.card) {
+      return;
+    }
+    const now = Date.now();
+    const elapsed = this.card.querySelector("[data-job-progress-elapsed]");
+    if (elapsed && this.started) {
+      elapsed.textContent = humanDuration(now - this.started);
+    }
+    const meta = this.card.querySelector("[data-job-progress-meta]");
+    if (meta && this.total > 0) {
+      let text = `${this.done} of ${this.total} · ${this.percent()}%`;
+      if (this.done > 0 && this.done < this.total && this.since) {
+        const per = (this.at - this.since) / this.done;
+        const left = per * (this.total - this.done) - (now - this.at);
+        text += left > 1000 ? ` · about ${humanDuration(left)} left` : " · almost done";
+      }
+      meta.textContent = text;
+    }
+  }
+
+  stop() {
+    window.clearInterval(this.timer);
   }
 }
 

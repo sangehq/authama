@@ -13,7 +13,11 @@ var tips = map[string]string{
 	// Opening a form never changes anything.
 	"preview": "Shows exactly what would change, file by file. Nothing is written until you confirm.",
 	"review":  "Shows what the job will do on other machines. It runs only when you start it.",
-	"run":     "Confirms this change now, the same as the button at the foot of the review.",
+	// The key picker.
+	"setup-start": "Opens the form for this step. Nothing is written until you confirm its preview.",
+	"setup-hide":  "Hides the Get started card in this browser. The tour stays in the account menu.",
+	"pick-clear":  "Unticks every key, profile and category, \"every key\" included.",
+	"run":         "Confirms this change now, the same as the button at the foot of the review.",
 
 	// Profiles, hosts, keys.
 	"profile-add":        "Adds a profile: a group of hosts that share a key policy and a folder under ~/.ssh/profiles/.",
@@ -184,6 +188,14 @@ var pageTips = map[string]string{
 	"repair":     "Fixes a damaged home, or starts it again.",
 	"settings":   "Theme, defaults, and where authama keeps things.",
 	"about":      "This build, this computer, and the licences.",
+	// The Actions menu: the jobs people come back for, one click from any page.
+	"act-rotate":  "Replace keys with new ones, deploying each before the old one goes.",
+	"act-revoke":  "Remove keys from every server they were deployed to, and record them as revoked.",
+	"act-delete":  "Forget keys no host uses; optionally delete their files after a backup.",
+	"act-mint":    "Create the keys hosts need that do not exist yet.",
+	"act-pin":     "Scan hosts and pin their keys into known_hosts.",
+	"act-addhost": "Add a server to a profile's ssh config.",
+	"act-token":   "Store a token npm, Composer, Docker, git or PyPI reads.",
 }
 
 // groupTips says what each menu heading holds, keyed as navGroup keys it.
@@ -193,6 +205,7 @@ var groupTips = map[string]string{
 	"auth":     "Auth tokens, the key audit, and the PIN and seal.",
 	"activity": "What changed: History of authama's changes, and Events for every file change.",
 	"system":   "Doctor, Validate, Repair, Settings and About.",
+	"actions":  "Rotate, revoke or delete keys, mint missing ones, pin host keys, add a host or a token.",
 }
 
 // tipText is the explainer for id. An unknown id is an error, so a template

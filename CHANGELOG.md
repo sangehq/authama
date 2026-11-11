@@ -20,6 +20,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   take several keys, profiles or host aliases, `--category` or `--all`, as `ssh rotate` does.
   The Keys page's **Rotate keys**, **Revoke keys** and **Delete keys** open a picker of every
   key, whole categories and profiles, and single keys, showing why a key cannot be chosen.
+- **A redesigned key picker.** Rotate, Revoke and Delete keys open a picker that puts *every key*
+  in a card of its own and hides the rest while it is ticked, shows categories as chips with their
+  key counts, lists each key with its type, hosts and expiry, counts what is chosen in each profile
+  (a profile's box shows a dash while only some of its keys are), filters a long list by key,
+  profile or host, and clears in one click. The button names what it will act on, *Review 3 keys
+  to rotate*, and each form lists what happens, in order, with its options as switches.
+- **Progress, with the time left.** A rotate, revoke or delete of several keys shows a bar on its
+  job page with the key under way, *3 of 10 · 30%*, and the time left at the pace so far; every
+  job shows a spinner and the time it has run. Any preview, change or side-panel page that takes
+  more than two seconds shows a card with the time so far, and, once the browser has timed that
+  action before, a percentage and the time left.
+- **An Actions menu** beside the Overview opens Rotate keys, Revoke keys, Delete keys, Mint missing
+  keys, Pin host keys, Add a host and Add a token from any page, and the tour points it out.
+- **Get started.** A new home's Overview lists the steps to set it up, each with a button that
+  opens its form, ticked as they are done, until every one is.
 - **Notifications say authama, with its logo, and stay quiet in tests.** Desktop notifications now go
   through go-notifykit: on macOS a banner shows `authama` and the web UI's logo mark instead of
   "Script Editor", Linux's `notify-send` gets the same icon, and nothing is shown under `go test`

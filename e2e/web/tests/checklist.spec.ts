@@ -74,3 +74,56 @@ test('the key picker chooses every key, whole profiles or single keys, and count
   await expect(del.locator('[data-pick-count]')).toHaveText('No key here can be deleted; each says why.');
   await expect(page.locator('#delete-keys [type="submit"]')).toBeDisabled();
 });
+
+test('the key picker filters, clears, counts per profile and names what Review will act on', async ({ page }) => {
+  await page.goto('/keys#rotate-keys');
+  const form = page.locator('#rotate-keys');
+  const picker = form.locator('[data-key-picker]');
+  const review = form.locator('[data-pick-submit]');
+  await expect(review).toHaveText(/^\s*Review\s*$/);
+
+  // One key: the button and the summary name it, and its profile counts it.
+  const group = picker.locator('[data-pick-group]').first();
+  const key = group.locator('[data-pick-key]:not([data-pick-ineligible])').first();
+  await key.check();
+  await expect(review).toHaveText(/Review 1 key to rotate/);
+  await expect(group.locator('[data-pick-group-count]')).toContainText('1 of');
+  await expect(picker.locator('[data-pick-count]')).toContainText('1 of');
+
+  // Every key hides the rest of the picker behind one sentence.
+  await picker.getByLabel('Every key in every profile').check();
+  await expect(review).toHaveText(/Review every key to rotate/);
+  await expect(picker.locator('[data-pick-all-note]')).toBeVisible();
+  await expect(picker.locator('[data-pick-rest]')).toBeHidden();
+
+  // Clear gives everything back, "every key" included.
+  await picker.getByLabel('Every key in every profile').uncheck();
+  await picker.locator('[data-pick-clear]').click();
+  await expect(key).not.toBeChecked();
+  await expect(review).toBeDisabled();
+
+  // The filter narrows the view, not the choice.
+  const filter = picker.locator('[data-pick-filter]');
+  if (await filter.isVisible()) {
+    await filter.fill('zz-no-such-key');
+    await expect(picker.locator('[data-pick-nomatch]')).toBeVisible();
+    await filter.fill('');
+    await expect(picker.locator('[data-pick-nomatch]')).toBeHidden();
+  }
+});
+
+test('the Actions menu opens the rotate form from any page, and the Overview offers Get started', async ({ page }) => {
+  await page.goto('/hosts');
+  await page.getByRole('button', { name: 'Actions', exact: true }).click();
+  await page.getByRole('link', { name: /Rotate keys/ }).click();
+  await expect(page).toHaveURL(/\/keys#rotate-keys$/);
+  await expect(page.locator('#rotate-keys')).toBeVisible();
+  await page.locator('#rotate-keys').screenshot({ path: 'test-results/rotate-keys-panel.png' });
+
+  await page.goto('/');
+  const setup = page.locator('[data-setup-card]');
+  if (await setup.count()) {
+    await expect(setup.getByRole('heading', { name: 'Get started' })).toBeVisible();
+    await setup.screenshot({ path: 'test-results/get-started.png' });
+  }
+});

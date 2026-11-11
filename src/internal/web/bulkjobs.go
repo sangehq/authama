@@ -154,7 +154,11 @@ func revokeKeysJob(j *jobs.Job, p paths.Paths, refs []manifest.KeyRef, reason st
 		return err
 	}
 	var failed []string
-	for _, ref := range refs {
+	for i, ref := range refs {
+		if err := j.Step(); err != nil {
+			return err
+		}
+		j.Progress(i, len(refs), "revoking "+ref.String())
 		res, err := editor.New(p).Unattended(j).RevokeKey(ref, reason)
 		if err != nil {
 			failed = append(failed, ref.String())
@@ -170,6 +174,7 @@ func revokeKeysJob(j *jobs.Job, p paths.Paths, refs []manifest.KeyRef, reason st
 			_, _ = fmt.Fprintf(j, "  NOT removed from (remove it there by hand): %s\n", strings.Join(res.NotRemoved, ", "))
 		}
 	}
+	j.Progress(len(refs), len(refs), "")
 	if len(failed) > 0 {
 		return fmt.Errorf("%d of %d key(s) need more: %s; see above, and each key's checklist", len(failed), len(refs), strings.Join(failed, ", "))
 	}
@@ -245,7 +250,11 @@ func deleteKeysJob(j *jobs.Job, p paths.Paths, retain int, refs []manifest.KeyRe
 		return err
 	}
 	var failed []string
-	for _, ref := range refs {
+	for i, ref := range refs {
+		if err := j.Step(); err != nil {
+			return err
+		}
+		j.Progress(i, len(refs), "deleting "+ref.String())
 		res, err := lifecycle.New(p, platform.EmitUseKeychain()).DeleteKey(ref, opt)
 		if err != nil {
 			failed = append(failed, ref.String())
@@ -257,6 +266,7 @@ func deleteKeysJob(j *jobs.Job, p paths.Paths, retain int, refs []manifest.KeyRe
 			_, _ = fmt.Fprintf(j, "  NOT revoked from (remove it there by hand): %s\n", strings.Join(res.NotRevoked, ", "))
 		}
 	}
+	j.Progress(len(refs), len(refs), "")
 	if len(failed) > 0 {
 		return fmt.Errorf("%d of %d key(s) were not deleted: %s; see above", len(failed), len(refs), strings.Join(failed, ", "))
 	}

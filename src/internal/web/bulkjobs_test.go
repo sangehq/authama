@@ -51,7 +51,7 @@ func TestTheKeysPageOffersThePickerForEachBulkAction(t *testing.T) {
 	c := signIn(t, s)
 	body := c.get("/keys").Body.String()
 	for _, want := range []string{`id="rotate-keys"`, `id="revoke-keys"`, `id="delete-keys"`, "data-key-picker",
-		`name="sel" value="work"`, "(never minted)", "(a host uses it)"} {
+		`name="sel" value="work"`, `kp-why">never minted<`, `kp-why">a host uses it<`, `data-pick-submit="rotate"`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the keys page lacks %q", want)
 		}
