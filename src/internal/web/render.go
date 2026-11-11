@@ -230,8 +230,19 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 			return "diff-ctx"
 		},
 		"fileDiff": newDiffView,
-		"commandCard": func(command string, runnable bool, form string, destroy bool) commandCard {
-			return commandCard{Command: command, Runnable: runnable, Form: form, Destroy: destroy}
+		// commandCard shows the command a page's action is the same as, for
+		// reference and copying; the page's own button, below, runs it.
+		"commandCard": func(command string) commandCard { return commandCard{Command: command} },
+		// calm makes a confirm dialog ask without alarm, for an action that
+		// reaches other machines but destroys nothing.
+		"calm": func(m confirmModal) confirmModal { m.Calm = true; return m },
+		"add":  func(a, b int) int { return a + b },
+		// lower lower-cases a sentence's first letter, to use a title inside one.
+		"lower": func(s string) string {
+			if s == "" {
+				return s
+			}
+			return strings.ToLower(s[:1]) + s[1:]
 		},
 		"diffOf": func(path string, lines []history.DiffLine) diffView {
 			return newDiffView(path, "", lines, false, "")
@@ -542,6 +553,7 @@ func (e emptyState) Subtitle() template.HTML {
 type confirmModal struct {
 	ID, Form, Title, Text, Label string
 	Purge                        bool // offer "and its key files", for a profile delete
+	Calm                         bool // asks without alarm: the action destroys nothing
 }
 
 // stat is one count on the overview.
@@ -675,10 +687,7 @@ func (s *Server) render(w http.ResponseWriter, status int, page string, v view) 
 // commandCard is the "The same as running" card: the command, a copy
 // button, and a Run button that submits the page's own confirmation form.
 type commandCard struct {
-	Command  string
-	Runnable bool
-	Form     string
-	Destroy  bool
+	Command string
 }
 
 // panelHeader marks a request from the side panel (see js/components/side-panel.js).

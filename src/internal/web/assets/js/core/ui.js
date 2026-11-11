@@ -31,6 +31,23 @@ export class Ui {
   }
 
   /**
+   * An icon from the page's sprite, as the server draws one with {{icon}}:
+   * decorative, so hidden from screen readers.
+   * @param {string} name a Tabler icon the sprite holds
+   */
+  static icon(name) {
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("class", "icon");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    const use = document.createElementNS(ns, "use");
+    use.setAttribute("href", `#tabler-${name}`);
+    svg.appendChild(use);
+    return svg;
+  }
+
+  /**
    * The address this page should be reloaded at. A page that answers a form
    * (a preview, a job's review) names the page the form came from: asking for
    * its own address again would be a GET, which has nothing to show.

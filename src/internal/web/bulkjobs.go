@@ -138,13 +138,14 @@ func revokeKeysSpec(f url.Values, h home) (jobSpec, error) {
 	return jobSpec{
 		scope: mutation.Scope{Command: "key revoke", Args: args, Source: history.SourceWeb, Subjects: subjects},
 		what: []string{
-			fmt.Sprintf("revokes %d key(s), one after another: %s", len(names), strings.Join(names, ", ")),
+			fmt.Sprintf("revokes %d key(s), one at a time, in the order listed", len(names)),
 			"asks every target each key is deployed to, through its host's provider, to remove it",
 			"names each target a key could not be removed from, for you to remove it there by hand",
 			"records each key as revoked, so deploy and rollback refuse it; each key's checklist then lists what is left",
 			"a key that fails is reported, and the rest go on",
 		},
-		run: func(j *jobs.Job) error { return revokeKeysJob(j, h.p, refs, reason) },
+		run:   func(j *jobs.Job) error { return revokeKeysJob(j, h.p, refs, reason) },
+		items: names,
 	}, nil
 }
 
@@ -154,6 +155,7 @@ func revokeKeysJob(j *jobs.Job, p paths.Paths, refs []manifest.KeyRef, reason st
 		return err
 	}
 	var failed []string
+	j.Plan(refStrings(refs))
 	for i, ref := range refs {
 		if err := j.Step(); err != nil {
 			return err
@@ -162,6 +164,7 @@ func revokeKeysJob(j *jobs.Job, p paths.Paths, refs []manifest.KeyRef, reason st
 		res, err := editor.New(p).Unattended(j).RevokeKey(ref, reason)
 		if err != nil {
 			failed = append(failed, ref.String())
+			j.Failed(ref.String())
 			_, _ = fmt.Fprintf(j, "%s: NOT revoked: %v\n", ref, err)
 			continue
 		}
@@ -171,6 +174,7 @@ func revokeKeysJob(j *jobs.Job, p paths.Paths, refs []manifest.KeyRef, reason st
 		}
 		if len(res.NotRemoved) > 0 {
 			failed = append(failed, ref.String())
+			j.Failed(ref.String())
 			_, _ = fmt.Fprintf(j, "  NOT removed from (remove it there by hand): %s\n", strings.Join(res.NotRemoved, ", "))
 		}
 	}
@@ -213,7 +217,7 @@ func deleteKeysSpec(f url.Values, h home) (jobSpec, error) {
 		args = append(args, "--purge")
 	}
 	what := []string{
-		fmt.Sprintf("deletes %d key(s)' declaration and inventory record: %s", len(names), strings.Join(names, ", ")),
+		fmt.Sprintf("deletes %d key(s)' declaration and inventory record, one at a time, in the order listed", len(names)),
 	}
 	if opt.Revoke {
 		what = append(what, "asks each target the keys are deployed to to remove them first")
@@ -230,6 +234,7 @@ func deleteKeysSpec(f url.Values, h home) (jobSpec, error) {
 		scope: mutation.Scope{Command: "key delete", Args: append(args, "--yes"), Source: history.SourceWeb, Subjects: subjects},
 		what:  what,
 		run:   func(j *jobs.Job) error { return deleteKeysJob(j, h.p, h.retain, refs, opt) },
+		items: names,
 	}, nil
 }
 
@@ -250,6 +255,7 @@ func deleteKeysJob(j *jobs.Job, p paths.Paths, retain int, refs []manifest.KeyRe
 		return err
 	}
 	var failed []string
+	j.Plan(refStrings(refs))
 	for i, ref := range refs {
 		if err := j.Step(); err != nil {
 			return err
@@ -258,6 +264,7 @@ func deleteKeysJob(j *jobs.Job, p paths.Paths, retain int, refs []manifest.KeyRe
 		res, err := lifecycle.New(p, platform.EmitUseKeychain()).DeleteKey(ref, opt)
 		if err != nil {
 			failed = append(failed, ref.String())
+			j.Failed(ref.String())
 			_, _ = fmt.Fprintf(j, "%s: NOT deleted: %v\n", ref, err)
 			continue
 		}
@@ -271,4 +278,13 @@ func deleteKeysJob(j *jobs.Job, p paths.Paths, retain int, refs []manifest.KeyRe
 		return fmt.Errorf("%d of %d key(s) were not deleted: %s; see above", len(failed), len(refs), strings.Join(failed, ", "))
 	}
 	return nil
+}
+
+// refStrings is each key as profile/key, for a job's list of items.
+func refStrings(refs []manifest.KeyRef) []string {
+	out := make([]string, len(refs))
+	for i, r := range refs {
+		out[i] = r.String()
+	}
+	return out
 }

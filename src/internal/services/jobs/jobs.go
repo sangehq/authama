@@ -57,7 +57,21 @@ type Progress struct {
 	Done, Total int
 	Label       string
 	Since       time.Time
+	// Items are the things the job works through in order (keys, hosts),
+	// each with its state, when the job named them with Plan.
+	Items []Item
 }
+
+// Item states, as a job page shows them.
+const (
+	ItemWaiting = "waiting"
+	ItemRunning = "running"
+	ItemDone    = "done"
+	ItemFailed  = "failed"
+)
+
+// Item is one thing a job works through, and how far it has got.
+type Item struct{ Name, State string }
 
 // Percent is how much of the job is done, 0 to 100.
 func (p Progress) Percent() int {
@@ -106,6 +120,32 @@ type Job struct {
 	answer   chan bool
 	cancel   bool
 	progress *Progress
+	items    []string
+	failed   map[string]bool
+}
+
+// Plan names the things the job will work through, in order, so its page can
+// list them one per row: waiting, running, done or failed. Progress moves
+// through them.
+func (j *Job) Plan(items []string) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	j.items = append([]string(nil), items...)
+	if j.progress == nil {
+		j.progress = &Progress{Since: time.Now(), Total: len(items)}
+	}
+	j.notify()
+}
+
+// Failed marks one of the planned items as failed; the rest go on.
+func (j *Job) Failed(item string) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	if j.failed == nil {
+		j.failed = map[string]bool{}
+	}
+	j.failed[item] = true
+	j.notify()
 }
 
 // Progress records that done of total steps are finished and label is the
@@ -185,9 +225,33 @@ func (j *Job) View() (View, <-chan struct{}) {
 	}
 	if j.progress != nil {
 		pr := *j.progress
+		pr.Items = j.itemStates(pr.Done)
 		v.Progress = &pr
 	}
 	return v, j.changed
+}
+
+// itemStates is each planned item's state: those before done are done (or
+// failed), the next is running while the job runs, the rest wait. Called with
+// mu held.
+func (j *Job) itemStates(done int) []Item {
+	if len(j.items) == 0 {
+		return nil
+	}
+	out := make([]Item, len(j.items))
+	for i, name := range j.items {
+		st := ItemWaiting
+		switch {
+		case j.failed[name]:
+			st = ItemFailed
+		case i < done:
+			st = ItemDone
+		case i == done && !j.finished():
+			st = ItemRunning
+		}
+		out[i] = Item{Name: name, State: st}
+	}
+	return out
 }
 
 func (j *Job) finished() bool { return j.state == Done || j.state == Failed || j.state == Cancelled }

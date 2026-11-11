@@ -13,11 +13,13 @@
   {{if .OpID}}<a class="ms-2" href="{{basePath}}/history/{{.OpID}}" data-inline>{{icon "history"}}<span class="ms-1">In the history</span></a>{{end}}
 </div>
 {{with .Question}}
-<div class="card mb-3">
+<div class="card mb-3 job-question" role="region" aria-labelledby="job-question-title">
   <div class="card-status-top bg-warning"></div>
   <div class="card-body">
-    <p>{{.Prompt}}</p>
-    {{if .Text}}<pre class="code-block" tabindex="0">{{.Text}}</pre>{{end}}
+    <div class="d-flex align-items-center gap-2 mb-2"><span class="text-warning" aria-hidden="true">{{icon "clock"}}</span><h2 class="card-title mb-0" id="job-question-title">The job is waiting for you</h2>{{with $.Data.Progress}}{{if .Total}}<span class="ms-auto small text-secondary">step {{add .Done 1}} of {{.Total}}{{with .Label}} · {{.}}{{end}}</span>{{end}}{{end}}</div>
+    <p class="mb-2">{{.Prompt}}</p>
+    {{if .Text}}<div class="d-flex align-items-start gap-2 mb-3"><pre class="code-block flex-grow-1 mb-0" tabindex="0">{{.Text}}</pre>{{template "copy" (copy .Text "it")}}</div>{{end}}
+    <p class="small text-secondary">Nothing goes on until you answer. Answering no stops the job here: the steps already done stay done, and nothing after this one runs.</p>
     <div class="d-flex gap-2">
       <form method="post" action="{{basePath}}/jobs/{{$.Data.ID}}/answer"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="answer" value="yes"><button type="submit" class="btn btn-primary"{{desc "job-yes"}}>{{with $.Data.Question.Yes}}{{.}}{{else}}Done, carry on{{end}}</button></form>
       <form method="post" action="{{basePath}}/jobs/{{$.Data.ID}}/answer"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="answer" value="no"><button type="submit" class="btn btn-outline-secondary"{{desc "job-no"}}>{{with $.Data.Question.No}}{{.}}{{else}}Not done, stop here{{end}}</button></form>
@@ -34,6 +36,7 @@
       <span class="ms-auto text-secondary small" data-job-progress-meta>{{with .Progress}}{{.Done}} of {{.Total}} · {{.Percent}}%{{with timeLeft .}} · {{.}}{{end}}{{end}}</span>
     </div>
     {{with .Progress}}<progress class="job-progress-bar" max="{{.Total}}" value="{{.Done}}" aria-label="Job progress" data-job-progress-bar>{{.Percent}}%</progress>{{else}}<progress class="job-progress-bar" aria-label="Job progress, steps not counted" data-job-progress-bar></progress>{{end}}
+    {{with .Progress}}{{if .Items}}<ol class="job-run-items mt-3 mb-0" data-job-items>{{range .Items}}<li class="job-run-item is-{{.State}}" data-job-item="{{.Name}}"><span class="job-run-mark" aria-hidden="true">{{if eq .State "running"}}<span class="spinner-border spinner-border-sm"></span>{{else if eq .State "done"}}{{icon "circle-check"}}{{else if eq .State "failed"}}{{icon "circle-x"}}{{else}}{{icon "clock"}}{{end}}</span><code>{{.Name}}</code><span class="job-run-state" data-job-item-state>{{.State}}</span></li>{{end}}</ol>{{end}}{{end}}
     <div class="small text-secondary mt-1">Elapsed <span data-job-progress-elapsed>since {{when .Started}}</span>{{if not .Progress}}<span data-job-progress-uncounted> · this job does not count its steps, so the bar shows activity, not a percentage</span>{{end}}</div>
   </div>
 </div>

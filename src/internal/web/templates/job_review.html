@@ -1,14 +1,38 @@
 {{define "content"}}{{with .Data}}
-{{template "page_header" (header "Job" "Review the job" "What the job will do. It reaches real hosts, so nothing is previewed.")}}
+{{template "page_header" (header "Job" .Title "A job cannot be previewed. Check below what it will do; it starts only when you confirm, and you can watch each step and cancel between them.")}}
 {{if .Busy}}<div class="alert alert-warning" role="alert">{{icon "alert-triangle"}}<span class="ms-1"><code>{{cmdline .Busy.Command}}</code> is still running, and one change runs at a time. <a href="{{basePath}}/jobs/{{.Busy.ID}}">Watch it</a>, and start this one when it ends.</span></div>{{end}}
-{{template "command_card" (commandCard .Command (and (not .Busy) (not $.ReadOnly)) "job-form" false)}}
-<div class="card mb-3"><div class="card-header"><h2 class="card-title">What it will do</h2></div><ul class="list-group list-group-flush">{{range .What}}<li class="list-group-item">{{.}}</li>{{end}}</ul></div>
-<p class="text-secondary">This reaches other machines, so it cannot be previewed. Its output shows as it runs. It holds the lock until it ends, and it can be cancelled between steps.</p>
+<div class="row row-cards mb-3">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><h2 class="card-title">Before it starts</h2></div>
+      <ul class="list-group list-group-flush">
+        {{range .Checks}}<li class="list-group-item job-check{{if not .OK}} is-blocking{{end}}">
+          <span class="job-check-icon" aria-hidden="true">{{if .OK}}{{icon "circle-check"}}{{else}}{{icon "circle-x"}}{{end}}</span>
+          <span><span class="fw-medium">{{.Label}}</span>{{if not .OK}}<span class="visually-hidden"> (not met)</span>{{end}}<span class="d-block small text-secondary">{{.Detail}}</span></span>
+        </li>{{end}}
+      </ul>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><h2 class="card-title">What it does, in order</h2></div>
+      <div class="card-body"><ol class="job-steps mb-0">{{range .What}}<li>{{.}}</li>{{end}}</ol></div>
+    </div>
+  </div>
+</div>
+{{if .Items}}<div class="card mb-3">
+  <div class="card-header"><h2 class="card-title">One at a time</h2><div class="card-actions text-secondary small">{{len .Items}} in this order</div></div>
+  <div class="card-body"><ol class="job-items">{{range .Items}}<li><code>{{.}}</code></li>{{end}}</ol></div>
+</div>{{end}}
+{{template "command_card" (commandCard .Command)}}
 <form method="post" action="{{basePath}}/jobs" class="d-flex flex-wrap align-items-center gap-2" id="job-form">
   <input type="hidden" name="csrf" value="{{$.CSRF}}">
   {{range .Fields}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}
   {{template "pin_field" $}}
-  <button type="submit" class="btn btn-primary"{{if .Busy}} disabled{{end}}{{desc "job-run"}}>Run {{.Command}}</button>
+  {{if not $.ReadOnly}}<span{{if .Blocked}}{{desc "job-blocked"}}{{end}}><button type="submit" class="btn {{if .Destroy}}btn-danger{{else}}btn-primary{{end}}" data-confirm="m-job"{{if .Blocked}} disabled{{end}}{{desc "job-run"}}>{{icon "player-play"}}<span class="ms-1">Start: {{.Title}}…</span></button></span>{{end}}
   <a href="{{basePath}}/" class="btn btn-link link-secondary"{{desc "cancel-change"}}>Cancel</a>
+  {{if .Blocked}}<span class="small text-danger">{{icon "alert-circle"}}<span class="ms-1">Fix what is marked above first.</span></span>{{end}}
 </form>
+{{$text := "It starts now. You can watch each step and cancel between steps."}}{{if .Remote}}{{$text = "It starts now and reaches real servers. You can watch each step and cancel between steps."}}{{end}}
+{{if .Destroy}}{{template "confirm" (confirm "m-job" "job-form" (printf "%s now?" .Title) (printf "%s It cannot be undone from authama." $text) "Yes, start it")}}{{else}}{{template "confirm" (calm (confirm "m-job" "job-form" (printf "%s now?" .Title) $text "Yes, start it"))}}{{end}}
 {{end}}{{end}}
