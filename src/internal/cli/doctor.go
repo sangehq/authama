@@ -244,7 +244,7 @@ func withTokens(report []byte, fs []tokensvc.Finding, failed bool) ([]byte, erro
 		Findings []finding `json:"findings"`
 	}{OK: !failed, Findings: []finding{}}
 	for _, f := range fs {
-		view.Findings = append(view.Findings, finding(f))
+		view.Findings = append(view.Findings, finding{Level: f.Level, Target: f.Target, Text: f.Text})
 	}
 	tok, err := json.Marshal(view)
 	if err != nil {

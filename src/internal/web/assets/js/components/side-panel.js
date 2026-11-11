@@ -199,7 +199,7 @@ export class SidePanel extends Component {
     this.#body().replaceChildren();
     if (this.#changed) {
       this.#changed = false;
-      window.location.reload();
+      Ui.reload();
     }
   }
 

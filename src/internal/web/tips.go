@@ -14,10 +14,13 @@ var tips = map[string]string{
 	"preview": "Shows exactly what would change, file by file. Nothing is written until you confirm.",
 	"review":  "Shows what the job will do on other machines. It runs only when you start it.",
 	// The key picker.
-	"setup-start": "Opens the form for this step. Nothing is written until you confirm its preview.",
-	"setup-hide":  "Hides the Get started card in this browser. The tour stays in the account menu.",
-	"pick-clear":  "Unticks every key, profile and category, \"every key\" included.",
-	"run":         "Confirms this change now, the same as the button at the foot of the review.",
+	"audit-copy-gitignore": "Copies the file names to add to that .gitignore, one per line.",
+	"audit-fix-perms":      "Previews authama doctor --fix, which makes every credential file readable by you alone. Nothing is written until you confirm.",
+	"error-history":        "Opens the History, which lists every change that was made and how it ended.",
+	"setup-start":          "Opens the form for this step. Nothing is written until you confirm its preview.",
+	"setup-hide":           "Hides the Get started card in this browser. The tour stays in the account menu.",
+	"pick-clear":           "Unticks every key, profile and category, \"every key\" included.",
+	"run":                  "Confirms this change now, the same as the button at the foot of the review.",
 
 	// Profiles, hosts, keys.
 	"profile-add":        "Adds a profile: a group of hosts that share a key policy and a folder under ~/.ssh/profiles/.",

@@ -144,3 +144,25 @@ test('the Reset page opens the rotate picker with every key already chosen', asy
   await page.getByRole('button', { name: 'Actions', exact: true }).click();
   await page.locator('header.navbar-expand-md:not(.navbar)').screenshot({ path: 'test-results/main-menu-actions.png' });
 });
+
+test('the token audit counts its findings and offers each tool with no file', async ({ page }) => {
+  await page.goto('/tokens');
+  const audit = page.locator('#audit').locator('..');
+  await expect(audit.getByRole('heading', { name: 'Audit' })).toBeVisible();
+  const absent = audit.locator('details.audit-absent');
+  if (await absent.count()) {
+    await absent.locator('summary').click();
+    const chip = absent.locator('[data-panel-open="add-token"]').first();
+    await expect(chip).toBeVisible();
+    await chip.click();
+    await expect(page.locator('#add-token')).toBeVisible();
+  }
+  await audit.screenshot({ path: 'test-results/token-audit.png' });
+});
+
+test('a preview asked for again by its address says why, instead of Not found', async ({ page }) => {
+  const res = await page.goto('/changes/preview');
+  expect(res?.status()).toBe(410);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('This page answered a form');
+  await expect(page.getByRole('link', { name: 'See the history' })).toBeVisible();
+});

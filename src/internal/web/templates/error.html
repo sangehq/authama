@@ -1,8 +1,8 @@
 {{define "content"}}{{with .Data}}
 <div class="empty">
-  <p class="empty-title h1">{{.Status}}</p>
+  {{if eq .Status 410}}<div class="empty-icon" aria-hidden="true">{{icon "refresh"}}</div>{{else}}<p class="empty-title h1">{{.Status}}</p>{{end}}
   <h1 class="empty-subtitle h2">{{.Heading}}</h1>
   <p class="empty-subtitle text-secondary">{{.Message}}</p>
-  {{if $.Authed}}<div class="empty-action"><a href="{{basePath}}/" class="btn btn-primary"{{desc "back-home"}}>{{icon "arrow-left"}}<span class="ms-1">Back to the overview</span></a></div>{{end}}
+  {{if $.Authed}}<div class="empty-action"><a href="{{basePath}}/" class="btn btn-primary"{{desc "back-home"}}>{{icon "arrow-left"}}<span class="ms-1">Back to the overview</span></a>{{if eq .Status 410}} <a href="{{basePath}}/history" class="btn btn-outline-secondary ms-2"{{desc "error-history"}}>{{icon "history"}}<span class="ms-1">See the history</span></a>{{end}}</div>{{end}}
 </div>
 {{end}}{{end}}

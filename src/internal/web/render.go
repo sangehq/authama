@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"path"
 	"path/filepath"
 	"sort"
@@ -138,6 +139,8 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		"brandCommand": func() string { return brand.Command },
 		"cmdline":      brand.Line,
 		"when":         func(t time.Time) string { return t.UTC().Format("2006-01-02 15:04 UTC") },
+		// tokenAudit lays the token audit out for its card.
+		"tokenAudit": layOutAudit,
 		// resetRow pairs a Reset page row with the page's view, for its
 		// CSRF token and whether the server only reads.
 		"resetRow": func(o resetOption, v view) struct {
@@ -415,6 +418,25 @@ func humanDuration(d time.Duration) string {
 	return fmt.Sprintf("%dh %02dm", int(d.Hours()), int(d.Minutes())%60)
 }
 
+// reloadTo is the page a form was sent from, for a page that answers a POST:
+// reloading the answer itself would ask for its address with GET, which has
+// nothing to show. "" when there is no such page to name; the layout then
+// sends a reload to the overview (FormAnswer says the page answers a form).
+func reloadTo(r *http.Request) string {
+	if r.Method != http.MethodPost {
+		return ""
+	}
+	if ref, err := url.Parse(r.Referer()); err == nil && ref.Host == r.Host {
+		if p := ref.EscapedPath(); localPath.MatchString(p) && p != r.URL.Path {
+			if ref.RawQuery != "" {
+				p += "?" + ref.RawQuery
+			}
+			return p
+		}
+	}
+	return ""
+}
+
 func shorten(s string, n int) string {
 	if len(s) <= n {
 		return s
@@ -554,7 +576,12 @@ type view struct {
 	Home     string
 	SSHDir   string
 	DevRoot  string
-	Data     any
+	// ReloadTo is where a reload of this page should go instead of its own
+	// address: set for a page that answers a form (a preview, a review),
+	// whose address shows nothing when asked for again.
+	ReloadTo   string
+	FormAnswer bool
+	Data       any
 	// Bell is the newest file events, for the header's notifications menu.
 	Bell []events.Event
 	// BellNew is how many of them are from the last day: the bell's dot
@@ -593,7 +620,7 @@ func (s *Server) newView(r *http.Request, nav, title string, data any) view {
 	v := view{Title: title, Nav: nav, Version: s.opts.Version, ReadOnly: s.opts.ReadOnly, Data: data,
 		Home: p.ConfigDir, SSHDir: p.SSHDir, DevRoot: p.DevRoot,
 		User: s.who.user, Host: s.who.host, Initials: s.who.initials(), Year: s.now().Year(),
-		Panel: r.Header.Get(panelHeader) == "1"}
+		Panel: r.Header.Get(panelHeader) == "1", FormAnswer: r.Method == http.MethodPost, ReloadTo: reloadTo(r)}
 	if sess := sessionFrom(r.Context()); sess != nil {
 		v.Authed = true
 		v.CSRF = sess.csrf

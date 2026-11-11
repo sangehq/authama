@@ -86,6 +86,12 @@ func (s *Server) routes() http.Handler {
 		mux.HandleFunc("GET /jobs/{id}/events", jh.handleJobEvents)
 		mux.HandleFunc("POST /jobs/{id}/answer", jh.handleJobAnswer)
 		mux.HandleFunc("POST /jobs/{id}/cancel", jh.handleJobCancel)
+		// A preview, a review or a tick answers a form. Asked for again by its
+		// address - a reload, a restart reloading open pages, Back - it has no
+		// form to answer, and used to fall through to "Not found".
+		for _, path := range []string{"/changes/preview", "/changes/apply", "/jobs/review", "/jobs", "/checklist/tick", "/checklist/revoking"} {
+			mux.HandleFunc("GET "+path, s.handleFormAnswerAgain)
+		}
 	}
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
@@ -553,4 +559,13 @@ func (h pages) listCSV(name string, q url.Values) (t csvout.Table, ok bool, err 
 		return exports.Deployments(inv), true, err
 	}
 	return csvout.Table{}, false, nil
+}
+
+// handleFormAnswerAgain answers a GET for an address that only answers a
+// form: it says why there is nothing to show, and nothing was changed.
+func (s *Server) handleFormAnswerAgain(w http.ResponseWriter, r *http.Request) {
+	s.renderError(w, r, http.StatusGone, "This page answered a form",
+		"A preview or a review is made from the form you sent, so opening its address again has nothing to show: "+
+			"that happens after a reload, a restart of the server, or going back. Nothing was changed. "+
+			"Open the form again from its page, or see what was done in the History.")
 }

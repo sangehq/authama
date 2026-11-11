@@ -30,6 +30,26 @@ export class Ui {
     return Ui.base() + p;
   }
 
+  /**
+   * The address this page should be reloaded at. A page that answers a form
+   * (a preview, a job's review) names the page the form came from: asking for
+   * its own address again would be a GET, which has nothing to show.
+   */
+  static reloadAddress() {
+    const to = document.querySelector('meta[name="authama-reload-to"]')?.getAttribute("content");
+    return to ? new URL(to, location.href).toString() : location.href;
+  }
+
+  /** Reloads the page, or goes to the page a form answer came from. */
+  static reload() {
+    const to = Ui.reloadAddress();
+    if (to === location.href) {
+      location.reload();
+    } else {
+      location.replace(to);
+    }
+  }
+
   /** The Offcanvas instance for el, or null without Tabler. @param {Element} el */
   static offcanvas(el) {
     return Ui.#lib?.Offcanvas?.getOrCreateInstance(el) ?? null;
