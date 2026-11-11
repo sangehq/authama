@@ -365,10 +365,22 @@ func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection,
 	}
 	mutation.SnapshotBeforeMutation(p, retain)
 	r := rotator.New(p, m, inv).Unattended(j).WithManualStep(manualPaste(j))
-	failed, err := r.RotateEach(names, allowUnverified, "", j, func() error { return inv.Save(p.Inventory()) }, j.Step)
+	// RotateEach calls next once before each key, so the count it keeps is
+	// the number of keys already finished.
+	at := 0
+	next := func() error {
+		if err := j.Step(); err != nil {
+			return err
+		}
+		j.Progress(at, len(names), "rotating "+names[at])
+		at++
+		return nil
+	}
+	failed, err := r.RotateEach(names, allowUnverified, "", j, func() error { return inv.Save(p.Inventory()) }, next)
 	if err != nil {
 		return err
 	}
+	j.Progress(len(names), len(names), "")
 	if len(failed) > 0 {
 		return fmt.Errorf("%d of %d key(s) were not rotated, and are as they were: %s",
 			len(failed), len(names), strings.Join(failed, ", "))
@@ -537,13 +549,20 @@ func (h jobPages) handleJobEvents(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Accel-Buffering", "no")
-	sent, state := 0, ""
+	sent, state, progress := 0, "", ""
 	heartbeat := time.NewTicker(15 * time.Second)
 	defer heartbeat.Stop()
 	for {
 		v, changed := j.View()
 		for ; sent < len(v.Lines); sent++ {
 			writeEvent(w, "line", v.Lines[sent])
+		}
+		if v.Progress != nil {
+			// "done total label": the label is the rest of the line.
+			if pr := fmt.Sprintf("%d %d %s", v.Progress.Done, v.Progress.Total, v.Progress.Label); pr != progress {
+				progress = pr
+				writeEvent(w, "progress", pr)
+			}
 		}
 		if v.State != state {
 			state = v.State

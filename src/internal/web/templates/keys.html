@@ -112,26 +112,43 @@
 {{template "panel_open" (header "rotate-keys" "Rotate keys" "Choose any keys: single keys, whole profiles or categories, or every key.")}}
         {{template "job_open" .}}<input type="hidden" name="action" value="rotate-keys">
           {{template "key_picker" (picker .Data "rotate")}}
-          <div class="mb-3"><label class="form-check"><input class="form-check-input" type="checkbox" name="allow_unverified" value="1"><span class="form-check-label">Go on when a login cannot be verified</span></label></div>
-          <p class="text-secondary small mb-3">Each chosen key a host uses rotates in turn, as a job. A key that fails is left as it was. An encrypted backup is written first.</p>
-          {{template "panel_actions" "btn-outline-danger"}}
+          <div class="kp-options">
+            <div class="kp-section-label">Options</div>
+            <label class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" role="switch" name="allow_unverified" value="1"><span class="form-check-label">Go on when a login cannot be verified</span></label>
+            <div class="form-hint mb-0">Off, the job stops at a key whose new login it cannot prove, and that key keeps working as before. Turn it on only for hosts you cannot reach from here.</div>
+          </div>
+          <ol class="kp-steps" aria-label="What happens">
+            <li>An encrypted backup of <code>~/.ssh</code> is written first.</li>
+            <li>Each chosen key a host uses is replaced in turn: a new key is minted, deployed and logged in with.</li>
+            <li>A key that fails is left as it was, and the rest go on. Progress and time left show while it runs.</li>
+          </ol>
+          {{template "pick_actions" "rotate"}}
         </form>
 {{template "panel_close"}}
 {{template "panel_open" (header "revoke-keys" "Revoke keys" "Each chosen key is removed from every target it is deployed to and recorded as revoked.")}}
         {{template "job_open" .}}<input type="hidden" name="action" value="revoke-keys">
           {{template "key_picker" (picker .Data "revoke")}}
-          <div class="mb-3"><label class="form-label" for="rk-reason">Reason <span class="text-secondary">(optional, kept with the record)</span></label><input class="form-control" id="rk-reason" name="reason" autocomplete="off" maxlength="200"></div>
-          <p class="text-secondary small mb-3">The declarations, hosts and files stay: each key's checklist then lists what is left, such as minting a successor and deleting the private key.</p>
-          {{template "panel_actions" "btn-outline-danger"}}
+          <div class="kp-options"><label class="form-label" for="rk-reason">Reason <span class="text-secondary">(optional)</span></label><input class="form-control" id="rk-reason" name="reason" autocomplete="off" maxlength="200" placeholder="laptop lost, contractor left…"><div class="form-hint mb-0">Kept with the revocation record and shown in the history.</div></div>
+          <ol class="kp-steps" aria-label="What happens">
+            <li>Each chosen key is removed from every target it is deployed to.</li>
+            <li>It is recorded as revoked, so deploy and rollback refuse it.</li>
+            <li>The declarations, hosts and files stay: each key's checklist then lists what is left, such as minting a successor and deleting the private key.</li>
+          </ol>
+          {{template "pick_actions" "revoke"}}
         </form>
 {{template "panel_close"}}
   {{end}}
 {{template "panel_open" (header "delete-keys" "Delete keys" "Each chosen key's declaration and record go; a key a host uses is left alone.")}}
         {{template "job_open" .}}<input type="hidden" name="action" value="delete-keys">
           {{template "key_picker" (picker .Data "delete")}}
-          {{if not .DevRoot}}<div class="mb-2"><label class="form-check"><input class="form-check-input" type="checkbox" name="revoke" value="1"><span class="form-check-label">Revoke each from its targets first</span></label></div>{{end}}
-          <div class="mb-3"><label class="form-check"><input class="form-check-input" type="checkbox" name="purge" value="1"><span class="form-check-label">Delete the key files too, after an encrypted backup</span></label></div>
-          {{template "panel_actions" "btn-outline-danger"}}
+          <div class="kp-options">
+            <div class="kp-section-label">Options</div>
+            {{if not .DevRoot}}<label class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" role="switch" name="revoke" value="1"><span class="form-check-label">Revoke each from its targets first</span></label>
+            <div class="form-hint mb-2">Removes the key from every server it was deployed to before forgetting it.</div>{{end}}
+            <label class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" role="switch" name="purge" value="1"><span class="form-check-label">Delete the key files too, after an encrypted backup</span></label>
+            <div class="form-hint mb-0">Off, the files stay in <code>~/.ssh</code> and only the declaration and record go.</div>
+          </div>
+          {{template "pick_actions" "delete"}}
         </form>
 {{template "panel_close"}}
 {{end}}

@@ -5,6 +5,29 @@
 {{template "page_header" (header "Home" "Overview" "What this home holds, and what needs attention." (action "Add a host" "/hosts#add-host" "plus" | withTip "host-add") (action "Add a token" "/tokens#add-token" "cloud-lock" | withTip "token-add") (only (gt .Hosts 0) (inline "Check connections" "/net" "activity" | withTip "net")))}}
 {{end}}
 
+{{if and (not $.ReadOnly) (not .Setup.Complete)}}
+<div class="card mb-3 setup-card" data-setup-card data-setup-card-done="{{.Setup.Done}}">
+  <div class="card-body">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+      <h2 class="card-title mb-0">Get started</h2>
+      <span class="text-secondary small">{{.Setup.Done}} of {{len .Setup.Steps}} done</span>
+      <div class="ms-auto d-flex gap-2">
+        <button type="button" class="btn btn-sm btn-outline-primary" data-tour-start{{desc "tour"}}>{{icon "route"}}<span class="ms-1">Take the tour</span></button>
+        <button type="button" class="btn btn-sm btn-ghost-secondary" data-setup-hide{{desc "setup-hide"}}>{{icon "x"}}<span class="ms-1">Hide</span></button>
+      </div>
+    </div>
+    <p class="text-secondary mb-2">The steps a new home goes through. Each one opens its form, and every change is previewed before anything is written.</p>
+    <progress class="job-progress-bar mb-3" max="{{len .Setup.Steps}}" value="{{.Setup.Done}}" aria-label="Setup progress">{{.Setup.Percent}}%</progress>
+    <ol class="setup-steps">
+      {{range .Setup.Steps}}<li class="setup-step{{if .Done}} is-done{{end}}">
+        <span class="setup-step-mark" aria-hidden="true">{{if .Done}}{{icon "check"}}{{else}}{{icon .Icon}}{{end}}</span>
+        <span class="setup-step-text"><span class="setup-step-title">{{.Title}}</span>{{if .Done}}<span class="visually-hidden"> (done)</span>{{end}}<span class="setup-step-why">{{.Why}}</span></span>
+        {{if not .Done}}<a class="btn btn-sm btn-primary" href="{{u .Href}}"{{desc "setup-start"}}>Start</a>{{end}}
+      </li>{{end}}
+    </ol>
+  </div>
+</div>
+{{end}}
 <div class="row row-cards mb-3" data-tour="7" data-tour-title="At a glance" data-tour-text="Each count opens its list; Needs attention lists what to fix and the command that fixes it.">
   {{template "stat" (stat "Profiles" .Profiles "/profiles" "users" "primary")}}
   {{template "stat" (stat "Hosts" .Hosts "/hosts" "server" "azure")}}

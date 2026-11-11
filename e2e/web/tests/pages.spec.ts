@@ -196,13 +196,13 @@ test('a link to a form in a panel opens the panel', async ({ page }) => {
 test('the tour walks the header step by step, and Escape ends it', async ({ page }) => {
   await page.goto('/');
   await page.locator('a[data-tour="6"]').click(); // the account menu
-  await page.locator('[data-tour-start]').click();
+  await page.locator('.dropdown-item[data-tour-start]').click(); // the menu's, not the Get started card's
   const pop = page.locator('.popover.tour-popover');
   await expect(pop).toBeVisible();
   await expect(pop.locator('.popover-header')).toHaveText(/^Search \(1 of \d+\)$/);
   // Closing the account menu can leave the pointer on a header action. A
   // labelled action shows no tooltip, so nothing can cover the tour's Next.
-  await page.getByText('Add a token', { exact: true }).hover();
+  await page.getByRole('link', { name: 'Add a token', exact: true }).hover(); // the page header's
   await page.waitForTimeout(800);
   await expect(page.locator('.tooltip')).toHaveCount(0);
   await pop.getByRole('button', { name: 'Next' }).click();

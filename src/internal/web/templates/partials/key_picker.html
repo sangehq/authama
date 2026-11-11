@@ -1,20 +1,53 @@
 {{/* Choose keys for a bulk action: every key, whole categories or profiles,
      or single keys, in any mix. Built with `picker .Data "rotate"`. Without
-     a script every box still posts; KeyPicker adds the group ticks and the
-     count. A key the action cannot act on is shown, unticked, with why. */}}
+     a script every box still posts; KeyPicker adds the group ticks, the
+     filter, the counts and the submit button's label. A key the action
+     cannot act on is shown, unticked, with why. */}}
 {{define "key_picker"}}{{$d := .}}<fieldset class="key-picker" data-key-picker data-pick-action="{{.Action}}">
-  <legend class="form-label">Which keys</legend>
-  <label class="form-check"><input class="form-check-input" type="checkbox" name="all" value="1" data-pick-all><span class="form-check-label">Every key in every profile</span></label>
-  {{if .Categories}}<div class="key-picker-cats" role="group" aria-label="Categories"><span class="text-secondary small me-2">Whole categories:</span>{{range .Categories}}<label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="sel" value="category:{{.}}" data-pick-category="{{.}}"><span class="form-check-label">{{.}}</span></label>{{end}}</div>{{end}}
-  <div class="key-picker-list" data-pick-list>
-    {{range .Profiles}}{{$p := .}}
-    <div class="key-picker-profile" role="group" aria-label="Profile {{.Name}}" data-pick-group="{{.Name}}" data-pick-category-of="{{.Category}}">
-      <label class="form-check key-picker-head"><input class="form-check-input" type="checkbox" name="sel" value="{{.Name}}" data-pick-profile><span class="form-check-label"><strong>{{.Name}}</strong>{{with .Category}} <span class="text-secondary small">{{.}}</span>{{end}} <span class="text-secondary small">· all its keys</span></span></label>
-      {{range .Keys}}{{$why := $d.Why .}}
-      <label class="form-check key-picker-key{{if $why}} is-ineligible{{end}}"><input class="form-check-input" type="checkbox" name="sel" value="{{.Ref}}" data-pick-key{{if $why}} disabled data-pick-ineligible{{end}}><span class="form-check-label"><code>{{.Name}}</code>{{with $why}} <span class="text-secondary small">({{.}})</span>{{end}}</span></label>
-      {{end}}
+  <legend class="form-label mb-2">Which keys</legend>
+  <label class="kp-all">
+    <input class="form-check-input" type="checkbox" name="all" value="1" data-pick-all>
+    <span class="kp-all-text"><span class="kp-all-title">Every key in every profile</span>
+      <span class="kp-all-desc">{{.Total}} key{{if ne .Total 1}}s{{end}} now, and any added before the job runs.</span></span>
+    <span class="kp-all-icon" aria-hidden="true">{{icon "key"}}</span>
+  </label>
+  <div class="kp-all-note" data-pick-all-note hidden>{{icon "info-circle"}}<span class="ms-1">Every key is chosen. Untick it above to choose profiles or single keys instead.</span></div>
+  <div class="kp-rest" data-pick-rest>
+  {{if .Categories}}<div class="kp-section" role="group" aria-label="Whole categories">
+    <div class="kp-section-label">Or whole categories</div>
+    <div class="kp-chips">{{range .Categories}}<label class="kp-chip"><input class="form-check-input" type="checkbox" name="sel" value="category:{{.}}" data-pick-category="{{.}}"><span>{{.}}</span><span class="kp-chip-count">{{$d.InCategory .}}</span></label>{{end}}</div>
+  </div>{{end}}
+  <div class="kp-section">
+    <div class="kp-toolbar">
+      <div class="kp-section-label me-auto">Or profiles and single keys</div>
+      <button type="button" class="btn btn-sm btn-ghost-secondary" data-pick-clear{{desc "pick-clear"}}>{{icon "x"}}<span class="ms-1">Clear</span></button>
     </div>
-    {{end}}
+    <div class="input-icon mb-2" data-pick-filter-box hidden>
+      <span class="input-icon-addon">{{icon "search"}}</span>
+      <input type="search" class="form-control form-control-sm" placeholder="Filter by key, profile or host" aria-label="Filter keys" autocomplete="off" spellcheck="false" data-pick-filter>
+    </div>
+    <div class="key-picker-list" data-pick-list>
+      {{range .Profiles}}{{$p := .}}
+      <div class="key-picker-profile" role="group" aria-label="Profile {{.Name}}" data-pick-group="{{.Name}}" data-pick-category-of="{{.Category}}">
+        <label class="key-picker-head"><input class="form-check-input" type="checkbox" name="sel" value="{{.Name}}" data-pick-profile><span class="kp-head-name">{{.Name}}</span>{{with .Category}}<span class="badge badge-muted">{{.}}</span>{{end}}<span class="kp-head-count" data-pick-group-count>{{$d.Eligible .}} of {{len .Keys}}</span></label>
+        {{range .Keys}}{{$why := $d.Why .}}
+        <label class="key-picker-key{{if $why}} is-ineligible{{end}}" data-pick-text="{{.Name}} {{$p.Name}} {{join .Hosts " "}}"><input class="form-check-input" type="checkbox" name="sel" value="{{.Ref}}" data-pick-key{{if $why}} disabled data-pick-ineligible{{end}}>
+          <span class="kp-key-main"><code>{{.Name}}</code>
+            <span class="kp-key-meta">{{with .Type}}<span>{{.}}</span>{{end}}{{if .Hosts}}<span>{{icon "server"}} {{join .Hosts ", "}}</span>{{end}}{{with .ExpiresOn}}<span>{{icon "hourglass"}} expires {{.}}</span>{{end}}</span></span>
+          {{with $why}}<span class="badge badge-muted kp-why">{{.}}</span>{{end}}</label>
+        {{end}}
+      </div>
+      {{end}}
+      <p class="text-secondary small mb-0 p-2" data-pick-nomatch hidden>No key matches the filter.</p>
+    </div>
   </div>
-  <div class="form-hint" data-pick-count aria-live="polite"></div>
+  </div>
+  <div class="kp-summary" data-pick-count aria-live="polite"></div>
 </fieldset>{{end}}
+
+{{/* A bulk key action's footer: Cancel, and a submit button that names how
+     many keys it will act on once the picker has counted them. */}}
+{{define "pick_actions"}}<div class="d-flex align-items-center justify-content-end gap-2 pt-3 mt-3 border-top">
+  <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="offcanvas">Cancel</button>
+  <button type="submit" class="btn btn-danger" data-pick-submit="{{.}}"{{desc "review"}}>{{icon "player-play"}}<span class="ms-1" data-pick-submit-label>Review</span></button>
+</div>{{end}}

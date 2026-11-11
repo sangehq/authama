@@ -25,6 +25,19 @@
   </div>
 </div>
 {{end}}
+{{if or (eq .State "running") (eq .State "waiting") .Progress}}
+<div class="card mb-3 job-progress" data-job-progress data-job-started="{{unixMilli .Started}}"{{with .Progress}} data-job-progress-since="{{unixMilli .Since}}"{{end}}>
+  <div class="card-body">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+      {{if eq .State "running"}}<span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>{{else if eq .State "waiting"}}<span class="text-warning">{{icon "clock"}}</span>{{else if eq .State "done"}}<span class="text-success">{{icon "circle-check"}}</span>{{else}}<span class="text-danger">{{icon "alert-circle"}}</span>{{end}}
+      <strong data-job-progress-label>{{with .Progress}}{{if .Label}}{{.Label}}{{else if eq $.Data.State "running"}}Finishing{{else}}Finished{{end}}{{else}}{{if eq .State "waiting"}}Waiting for your answer{{else}}Working{{end}}{{end}}</strong>
+      <span class="ms-auto text-secondary small" data-job-progress-meta>{{with .Progress}}{{.Done}} of {{.Total}} · {{.Percent}}%{{with timeLeft .}} · {{.}}{{end}}{{end}}</span>
+    </div>
+    {{with .Progress}}<progress class="job-progress-bar" max="{{.Total}}" value="{{.Done}}" aria-label="Job progress" data-job-progress-bar>{{.Percent}}%</progress>{{else}}<progress class="job-progress-bar" aria-label="Job progress, steps not counted" data-job-progress-bar></progress>{{end}}
+    <div class="small text-secondary mt-1">Elapsed <span data-job-progress-elapsed>since {{when .Started}}</span>{{if not .Progress}}<span data-job-progress-uncounted> · this job does not count its steps, so the bar shows activity, not a percentage</span>{{end}}</div>
+  </div>
+</div>
+{{end}}
 {{if .Err}}<div class="alert {{if eq .State "cancelled"}}alert-warning{{else}}alert-danger{{end}}" role="alert">{{.Err}}</div>{{end}}
 <div class="card mb-3">
   <div class="card-header"><h2 class="card-title">Output</h2></div>

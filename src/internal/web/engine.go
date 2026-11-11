@@ -363,6 +363,38 @@ func (d pickerData) Why(k PickerKey) string {
 	return ""
 }
 
+// Eligible is how many of p's keys the action can act on.
+func (d pickerData) Eligible(p PickerProfile) int {
+	n := 0
+	for _, k := range p.Keys {
+		if d.Why(k) == "" {
+			n++
+		}
+	}
+	return n
+}
+
+// InCategory is how many keys the action can act on in the profiles of
+// category cat.
+func (d pickerData) InCategory(cat string) int {
+	n := 0
+	for _, p := range d.Profiles {
+		if p.Category == cat {
+			n += d.Eligible(p)
+		}
+	}
+	return n
+}
+
+// Total is how many keys the action can act on, in every profile.
+func (d pickerData) Total() int {
+	n := 0
+	for _, p := range d.Profiles {
+		n += d.Eligible(p)
+	}
+	return n
+}
+
 // PickerProfile is one profile's keys in the key picker.
 type PickerProfile struct {
 	Name     string
@@ -379,6 +411,11 @@ type PickerKey struct {
 	Wired    bool
 	Recorded bool
 	Status   string
+	// Type, Hosts and ExpiresOn are shown beside the name, so a key can be
+	// told apart from its neighbours without leaving the picker.
+	Type      string
+	Hosts     []string
+	ExpiresOn string
 }
 
 // Keys lists every key, as `authama ssh key list` does.
@@ -414,7 +451,8 @@ func (e AppEngine) Keys() (KeysView, error) {
 			}
 		}
 		v.Picker[i].Keys = append(v.Picker[i].Keys, PickerKey{Ref: r.Ref.String(), Name: r.Ref.KeyName,
-			Wired: r.Wired(), Recorded: r.Recorded && r.Fingerprint != "", Status: r.Status})
+			Wired: r.Wired(), Recorded: r.Recorded && r.Fingerprint != "", Status: r.Status,
+			Type: r.Type, Hosts: r.Hosts, ExpiresOn: r.ExpiresOn})
 	}
 	sort.Strings(v.Categories)
 	return v, nil

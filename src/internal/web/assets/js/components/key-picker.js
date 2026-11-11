@@ -19,6 +19,56 @@ export class KeyPicker extends Component {
 
   init() {
     this.el.addEventListener("change", () => this.sync());
+    const filter = /** @type {HTMLInputElement | null} */ (this.el.querySelector("[data-pick-filter]"));
+    if (filter) {
+      // The filter only helps with a long list, and needs the script.
+      const box = this.el.querySelector("[data-pick-filter-box]");
+      if (box instanceof HTMLElement && this.#boxes("[data-pick-key]").length > 6) {
+        box.hidden = false;
+      }
+      filter.addEventListener("input", () => this.filter(filter.value));
+    }
+    this.el.querySelector("[data-pick-clear]")?.addEventListener("click", () => this.clear());
+    this.sync();
+    return this;
+  }
+
+  /**
+   * Shows only the keys whose name, profile or hosts contain text. A hidden
+   * key keeps its tick: the filter narrows the view, not the choice.
+   * @param {string} text
+   */
+  filter(text) {
+    const q = text.trim().toLowerCase();
+    let shown = 0;
+    for (const group of /** @type {HTMLElement[]} */ ([...this.el.querySelectorAll("[data-pick-group]")])) {
+      let any = false;
+      for (const row of /** @type {HTMLElement[]} */ ([...group.querySelectorAll("[data-pick-text]")])) {
+        const hit = q === "" || (row.dataset.pickText ?? "").toLowerCase().includes(q);
+        row.hidden = !hit;
+        any ||= hit;
+      }
+      group.hidden = !any;
+      shown += any ? 1 : 0;
+    }
+    const none = this.el.querySelector("[data-pick-nomatch]");
+    if (none instanceof HTMLElement) {
+      none.hidden = shown > 0;
+    }
+    return this;
+  }
+
+  /** Unticks everything, "every key" included. */
+  clear() {
+    for (const b of this.#boxes("input[type=checkbox]")) {
+      if (b.hasAttribute("data-pick-ineligible")) {
+        continue;
+      }
+      b.disabled = false;
+      b.checked = false;
+      b.indeterminate = false;
+      delete b.dataset.pickWas;
+    }
     this.sync();
     return this;
   }
@@ -70,6 +120,24 @@ export class KeyPicker extends Component {
         this.#cover(k, whole);
       }
     }
+    // Each profile says how many of its keys are chosen, and its box shows a
+    // dash while only some are.
+    for (const group of /** @type {HTMLElement[]} */ ([...this.el.querySelectorAll("[data-pick-group]")])) {
+      const own = /** @type {HTMLInputElement[]} */ ([...group.querySelectorAll("[data-pick-key]:not([data-pick-ineligible])")]);
+      const on = own.filter((k) => k.checked).length;
+      const prof = /** @type {HTMLInputElement | null} */ (group.querySelector("[data-pick-profile]"));
+      if (prof) {
+        prof.indeterminate = !prof.checked && on > 0 && on < own.length;
+      }
+      const label = group.querySelector("[data-pick-group-count]");
+      if (label) {
+        label.textContent = own.length === 0 ? "none eligible" : `${on} of ${own.length} chosen`;
+      }
+    }
+    const note = this.el.querySelector("[data-pick-all-note]");
+    if (note instanceof HTMLElement) {
+      note.hidden = !all;
+    }
     // Count what will be acted on: every eligible key that is ticked.
     const keys = this.#boxes("[data-pick-key]").filter((k) => !k.hasAttribute("data-pick-ineligible"));
     const chosen = keys.filter((k) => k.checked).length;
@@ -82,9 +150,20 @@ export class KeyPicker extends Component {
         ? "No key chosen yet."
         : `${chosen} of ${keys.length} key${keys.length === 1 ? "" : "s"} chosen${all ? ", and any added later" : ""}.`;
     }
+    count?.classList.toggle("has-choice", chosen > 0);
     const submit = this.el.closest("form")?.querySelector('[type="submit"]');
     if (submit instanceof HTMLButtonElement) {
       submit.disabled = chosen === 0;
+      // "Review 3 keys to rotate": the button says what it will act on.
+      const label = submit.querySelector("[data-pick-submit-label]");
+      const verb = submit.dataset.pickSubmit;
+      if (label && verb) {
+        label.textContent = chosen === 0
+          ? "Review"
+          : all
+          ? `Review every key to ${verb}`
+          : `Review ${chosen} key${chosen === 1 ? "" : "s"} to ${verb}`;
+      }
     }
     return this;
   }

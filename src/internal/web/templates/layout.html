@@ -84,6 +84,7 @@
           <nav class="d-flex flex-wrap align-items-center w-100" aria-label="Main">
             <ul class="navbar-nav">
               {{template "navlink" (navItem . "overview" "/" "layout-dashboard" "Overview")}}
+              {{if not .ReadOnly}}{{if .DevRoot}}{{template "navgroup" (navGroup . "actions" "player-play" "Actions" (navItem . "act-delete" "/keys#delete-keys" "trash" "Delete keys") (navItem . "act-mint" "/keys#mint-keys" "key" "Mint missing keys") (navItem . "act-pin" "/hosts#knownhosts-init" "fingerprint" "Pin host keys") (navItem . "act-addhost" "/hosts#add-host" "server" "Add a host") (navItem . "act-token" "/tokens#add-token" "cloud-lock" "Add a token"))}}{{else}}{{template "navgroup" (navGroup . "actions" "player-play" "Actions" (navItem . "act-rotate" "/keys#rotate-keys" "recycle" "Rotate keys") (navItem . "act-revoke" "/keys#revoke-keys" "ban" "Revoke keys") (navItem . "act-delete" "/keys#delete-keys" "trash" "Delete keys") (navItem . "act-mint" "/keys#mint-keys" "key" "Mint missing keys") (navItem . "act-pin" "/hosts#knownhosts-init" "fingerprint" "Pin host keys") (navItem . "act-addhost" "/hosts#add-host" "server" "Add a host") (navItem . "act-token" "/tokens#add-token" "cloud-lock" "Add a token"))}}{{end}}{{end}}
               {{template "navgroup" (navGroup . "ssh" "key" "SSH" (navItem . "profiles" "/profiles" "users" "Profiles") (navItem . "naming" "/naming" "license" "Naming") (navItem . "hosts" "/hosts" "server" "Hosts") (navItem . "keys" "/keys" "key" "Keys") (navItem . "vms" "/vms" "device-desktop" "VMs"))}}
               {{template "navgroup" (navGroup . "files" "file-code" "Config & backups" (navItem . "sshconfig" "/ssh-config" "file-code" "SSH config") (navItem . "snapshots" "/snapshots" "archive" "Snapshots"))}}
               {{template "navgroup" (navGroup . "auth" "lock" "Security" (navItem . "tokens" "/tokens" "cloud-lock" "Auth tokens") (navItem . "checklists" "/checklists" "check" "Checklists") (navItem . "audit" "/audit" "shield-check" "Audit") (navItem . "security" "/security" "lock" "Owner & PIN"))}}
@@ -157,7 +158,11 @@
   </div>
   {{if .Authed}}{{template "side_panel" .}}{{template "csv_dialog" .}}{{end}}
 </div>
-{{if .Authed}}{{template "palette" .}}{{end}}
+{{if .Authed}}{{template "palette" .}}
+<div class="slow-progress shadow" data-slow-progress role="status" aria-live="polite" hidden>
+  <div class="d-flex align-items-center gap-2"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span><strong data-slow-progress-label>Working…</strong><span class="ms-auto small text-secondary" data-slow-progress-meta></span></div>
+  <progress class="job-progress-bar mt-2" aria-label="Progress" data-slow-progress-bar></progress>
+</div>{{end}}
 <script src="{{asset "vendor/tabler/tabler.min.js"}}" defer></script>
 <script type="module" src="{{asset "app.js"}}"></script>
 </body>

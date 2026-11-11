@@ -174,3 +174,41 @@ export class Tour extends Component {
     }
   }
 }
+
+/**
+ * SetupCard is the Overview's "Get started" card. Its Hide button hides it
+ * in this browser; the card comes back by itself when the steps it lists
+ * change, since the key it is remembered under names how many are done.
+ *
+ *   <div data-setup-card data-setup-card-done="2">… <button data-setup-hide> …</div>
+ *
+ * @extends {Component<{done: string}>}
+ */
+export class SetupCard extends Component {
+  static attribute = "setup-card";
+  static defaults = { done: "" };
+
+  get #key() {
+    return `authama.setup.hidden.${this.options.done}`;
+  }
+
+  init() {
+    try {
+      if (window.localStorage.getItem(this.#key) === "1") {
+        this.el.hidden = true;
+        return this;
+      }
+    } catch {
+      // Without storage the card always shows.
+    }
+    this.el.querySelector("[data-setup-hide]")?.addEventListener("click", () => {
+      this.el.hidden = true;
+      try {
+        window.localStorage.setItem(this.#key, "1");
+      } catch {
+        // Hidden for this page only.
+      }
+    });
+    return this;
+  }
+}
