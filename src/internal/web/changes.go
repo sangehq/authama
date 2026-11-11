@@ -17,6 +17,7 @@ import (
 	"github.com/simtabi/authama/src/internal/services/editor"
 	"github.com/simtabi/authama/src/internal/services/keysvc"
 	"github.com/simtabi/authama/src/internal/services/savedsel"
+	"github.com/simtabi/authama/src/internal/services/settings"
 	"github.com/simtabi/authama/src/internal/services/tokensvc"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
@@ -69,6 +70,11 @@ var actionFields = map[string][]string{
 	// settings-reset writes authama.json again at its defaults, keeping the
 	// old file beside it.
 	"settings-reset": {},
+	// settings-set writes one setting into authama.json; backup-key makes an
+	// age key for encrypted backups and sets it up.
+	"settings-set":   {"key", "value"},
+	"settings-unset": {"key"},
+	"backup-key":     {},
 	// home-init writes the manifest, inventory and .env again with fresh
 	// defaults, after a backup; it asks for "init" to be typed.
 	"home-init":               {"confirm"},
@@ -383,6 +389,20 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch = change.ProvidersExport()
 	case "settings-init":
 		ch = change.SettingsInit(false)
+	case "settings-set":
+		key, value := strings.TrimSpace(f.Get("key")), strings.TrimSpace(f.Get("value"))
+		if _, ok := settings.Find(key); !ok {
+			errs = append(errs, badForm("%s is not a setting", key))
+		}
+		ch = change.SettingsSet(key, value)
+	case "settings-unset":
+		key := strings.TrimSpace(f.Get("key"))
+		if _, ok := settings.Find(key); !ok {
+			errs = append(errs, badForm("%s is not a setting", key))
+		}
+		ch = change.SettingsUnset(key)
+	case "backup-key":
+		ch = change.BackupKey()
 	case "settings-reset":
 		ch = change.SettingsInit(true)
 	case "history-reset":

@@ -99,6 +99,9 @@ var v1RemovedVerbs = map[string]string{
 // deviation that authorises it. An entry here is a decision someone made; an
 // addition without one is a test failure.
 var goOnly = map[string]string{
+	"settings set":              "owner, 2026-11-11: edit a setting from the web UI's Settings page or the terminal, previewed",
+	"settings unset":            "owner, 2026-11-11: send a setting back to its default",
+	"settings backup-key":       "owner, 2026-11-11: make and set up an age key so a job's backup check can be fixed in one step",
 	"history reset":             "owner, 2026-11-11: start the history again, moving history.db and audit.log aside (kept); refused while history.permanent is on",
 	"checklist":                 "owner, 2026-11-08: a checklist for every revocable item, of where it is used and what is left to rotate or revoke it",
 	"checklist show":            "owner, 2026-11-08: one item's checklist, with the command for each step left",

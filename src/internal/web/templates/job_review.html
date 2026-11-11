@@ -8,7 +8,12 @@
       <ul class="list-group list-group-flush">
         {{range .Checks}}<li class="list-group-item job-check{{if not .OK}} is-blocking{{end}}">
           <span class="job-check-icon" aria-hidden="true">{{if .OK}}{{icon "circle-check"}}{{else}}{{icon "circle-x"}}{{end}}</span>
-          <span><span class="fw-medium">{{.Label}}</span>{{if not .OK}}<span class="visually-hidden"> (not met)</span>{{end}}<span class="d-block small text-secondary">{{.Detail}}</span></span>
+          <span><span class="fw-medium">{{.Label}}</span>{{if not .OK}}<span class="visually-hidden"> (not met)</span>{{end}}<span class="d-block small text-secondary">{{.Detail}}</span>
+            {{if and (not .OK) (not $.ReadOnly) (or .FixAction .FixHref)}}<span class="d-flex flex-wrap gap-2 mt-2">
+              {{if .FixAction}}{{template "change_open" $}}<input type="hidden" name="action" value="{{.FixAction}}"><button type="submit" class="btn btn-sm btn-primary"{{desc "job-fix"}}>{{icon "key"}}<span class="ms-1">{{.FixLabel}}</span></button></form>{{end}}
+              {{if .FixHref}}<a class="btn btn-sm btn-outline-secondary" href="{{u .FixHref}}"{{desc "job-fix-settings"}}>{{icon "settings"}}<span class="ms-1">{{.FixHrefLabel}}</span></a>{{end}}
+            </span>{{end}}
+          </span>
         </li>{{end}}
       </ul>
     </div>

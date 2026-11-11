@@ -37,7 +37,7 @@ func newSettingsCmd() *cobra.Command {
 		Args: cobra.ArbitraryArgs,
 		RunE: groupHelp,
 	}
-	cmd.AddCommand(newSettingsPathCmd(), newSettingsShowCmd(), newSettingsValidateCmd(), newSettingsInitCmd())
+	cmd.AddCommand(newSettingsPathCmd(), newSettingsShowCmd(), newSettingsValidateCmd(), newSettingsInitCmd(), newSettingsSetCmd(), newSettingsUnsetCmd(), newSettingsBackupKeyCmd())
 	return cmd
 }
 
@@ -156,12 +156,25 @@ func effective() []effectiveRow {
 			row.Source = ".env ($" + from + ")"
 		case in(st.Applied.Set, from):
 			row.Source = "authama.json"
+		case fileHas(s.Key(), v):
+			row.Source = "authama.json"
 		default:
 			row.Source = "$" + from
 		}
 		rows = append(rows, row)
 	}
 	return rows
+}
+
+// fileHas reports whether authama.json holds value for key: a setting saved
+// from the web UI after start-up, which this process took at once.
+func fileHas(key, value string) bool {
+	st := currentStartup()
+	if st == nil {
+		return false
+	}
+	v, ok := settings.FileValue(st.Paths.SettingsFile(), key)
+	return ok && v == value
 }
 
 func newSettingsShowCmd() *cobra.Command {
@@ -274,6 +287,68 @@ func newSettingsInitCmd() *cobra.Command {
 	}
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "replace an existing authama.json")
 	return cmd
+}
+
+// newSettingsSetCmd is `authama settings set <key> <value>`: one setting
+// written into authama.json, checked first, every other kept.
+func newSettingsSetCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "set <key> <value>",
+		Short: "Write one setting into authama.json, keeping the rest",
+		Long: "Writes one setting, by its dotted key (backup.age_recipient, web.port), into\n" +
+			"authama.json, creating the file when there is none. The value is checked against the\n" +
+			"setting first. `authama settings show --effective` lists every key.",
+		Args: cobra.ExactArgs(2),
+		RunE: func(c *cobra.Command, args []string) error {
+			p, err := resolvePaths(c)
+			if err != nil {
+				return err
+			}
+			return change.SettingsSet(args[0], args[1]).Run(p, c.OutOrStdout())
+		},
+	}
+}
+
+// newSettingsUnsetCmd is `authama settings unset <key>`: the setting goes
+// back to its default.
+func newSettingsUnsetCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "unset <key>",
+		Short: "Take one setting out of authama.json, so it goes back to its default",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			p, err := resolvePaths(c)
+			if err != nil {
+				return err
+			}
+			return change.SettingsUnset(args[0]).Run(p, c.OutOrStdout())
+		},
+	}
+}
+
+// newSettingsBackupKeyCmd is `authama settings backup-key`: an age key for
+// encrypted backups, made and set up in one step.
+func newSettingsBackupKeyCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "backup-key",
+		Short: "Make an age key for encrypted backups and set backup.age_recipient to it",
+		Long: "Makes a new age key with age-keygen, keeps its identity owner-only in the config\n" +
+			"home (backup/age-identity.txt), and sets backup.age_recipient and\n" +
+			"paths.age_identity_file to it in authama.json. Keep a copy of the identity file\n" +
+			"somewhere safe: without it no backup can be decrypted.",
+		Args: cobra.NoArgs,
+		RunE: func(c *cobra.Command, _ []string) error {
+			p, err := resolvePaths(c)
+			if err != nil {
+				return err
+			}
+			ch := change.BackupKey()
+			if _, err := ch.Effects(p); err != nil {
+				return err
+			}
+			return ch.OnApply(p, c.OutOrStdout())
+		},
+	}
 }
 
 func writeJSONTo(w io.Writer, v any) error {

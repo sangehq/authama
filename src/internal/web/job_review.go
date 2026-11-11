@@ -3,6 +3,7 @@ package web
 import (
 	"fmt"
 	"net/url"
+	"os/exec"
 
 	"github.com/simtabi/authama/src/internal/util/envnames"
 )
@@ -12,6 +13,11 @@ import (
 type preflight struct {
 	Label, Detail string
 	OK, Blocking  bool
+	// A check that fails offers its fix: a change to preview (FixAction,
+	// named FixLabel), and a page that does it another way (FixHref, named
+	// FixHrefLabel).
+	FixAction, FixLabel   string
+	FixHref, FixHrefLabel string
 }
 
 // describeJob gives a job its name for people and its guardrails: what it is
@@ -58,14 +64,20 @@ func preflights(f url.Values, spec jobSpec, busy bool) []preflight {
 	checks := []preflight{{Label: "No other job is running", OK: !busy, Blocking: true,
 		Detail: "One change runs at a time. Watch the one running, and start this when it ends."}}
 	if spec.backup {
+		_, ageErr := exec.LookPath("age")
+		checks = append(checks, preflight{Label: "age is installed", Blocking: true, OK: ageErr == nil,
+			Detail: "The encrypted backup is written with age. Install it (brew install age on a Mac, apt install age on Debian or Ubuntu), then review again."})
 		checks = append(checks, preflight{Label: "A backup recipient is set", Blocking: true,
-			OK:     envnames.Get(nil, envnames.AgeRecipient) != "",
-			Detail: "An encrypted backup of ~/.ssh is written first, to the age recipient in Settings (backup.age_recipient, or AUTHAMA_AGE_RECIPIENT). Set one, then review again."})
+			OK:        envnames.Get(nil, envnames.AgeRecipient) != "",
+			Detail:    "An encrypted backup of ~/.ssh is written first, to an age recipient. Create a backup key here, or use one you have; then review the job again.",
+			FixAction: "backup-key", FixLabel: "Create a backup key",
+			FixHref: "/settings#setting-backup.age_recipient", FixHrefLabel: "Use a key you have"})
 	}
 	if f.Get("action") == "bundle-restore" {
 		checks = append(checks, preflight{Label: "An age identity is set to decrypt with", Blocking: true,
-			OK:     envnames.Get(nil, envnames.AgeIdentityFile) != "",
-			Detail: "Set paths.age_identity_file in Settings (AUTHAMA_AGE_IDENTITY_FILE); it cannot have a passphrase here."})
+			OK:      envnames.Get(nil, envnames.AgeIdentityFile) != "",
+			Detail:  "Set the identity file the bundle was encrypted for (paths.age_identity_file); it cannot have a passphrase here.",
+			FixHref: "/settings#setting-paths.age_identity_file", FixHrefLabel: "Set it in Settings"})
 	}
 	if reachesServers(f) {
 		checks = append(checks, preflight{Label: "It reaches real servers", OK: true,

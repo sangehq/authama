@@ -458,3 +458,11 @@ main:focus { outline: none; }
 .offcanvas { z-index: 1045; }
 .modal-backdrop { z-index: 1050; }
 .modal { z-index: 1055; }
+
+/* The Settings page: one card per section, one row per setting. */
+.settings-filter { width: min(18rem, 100%); }
+.setting-main { flex: 1 1 22rem; min-width: 0; }
+.setting-value code { overflow-wrap: anywhere; }
+.setting-edit { padding: .75rem; border-radius: var(--tblr-border-radius); background: var(--tblr-bg-surface-secondary); }
+.setting-input { width: auto; min-width: 10rem; }
+.setting-input-wide { flex: 1 1 20rem; }

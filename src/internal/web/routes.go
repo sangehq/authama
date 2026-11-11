@@ -2,6 +2,9 @@ package web
 
 import (
 	"errors"
+	"github.com/simtabi/authama/src/internal/services/settings"
+	"github.com/simtabi/authama/src/internal/util/envnames"
+	"github.com/simtabi/authama/src/internal/util/paths"
 	"net/http"
 	"net/url"
 	"os"
@@ -367,7 +370,7 @@ func (h systemPages) handleSettings(w http.ResponseWriter, r *http.Request) {
 	} else {
 		_, err := os.Stat(p.SettingsFile())
 		v = SettingsView{ConfigHome: p.ConfigDir, StateHome: p.State(), Dotenv: p.EnvFile(),
-			Settings: p.SettingsFile(), HasSettings: err == nil}
+			Settings: p.SettingsFile(), HasSettings: err == nil, Effective: effectiveSettings(p)}
 	}
 	h.s.render(w, http.StatusOK, "settings", h.s.newView(r, "settings", "Settings", v))
 }
@@ -568,4 +571,25 @@ func (s *Server) handleFormAnswerAgain(w http.ResponseWriter, r *http.Request) {
 		"A preview or a review is made from the form you sent, so opening its address again has nothing to show: "+
 			"that happens after a reload, a restart of the server, or going back. Nothing was changed. "+
 			"Open the form again from its page, or see what was done in the History.")
+}
+
+// effectiveSettings is every setting's value in this process and where it
+// came from, for a server started without the CLI's own account of its
+// start-up: the environment, else authama.json, else the default.
+func effectiveSettings(p paths.Paths) []SettingRow {
+	var rows []SettingRow
+	for _, spec := range settings.Specs {
+		row := SettingRow{Key: spec.Key(), Variable: spec.Env}
+		v, from := envnames.Source(nil, spec.Env)
+		switch fv, inFile := settings.FileValue(p.SettingsFile(), spec.Key()); {
+		case inFile && (from == "" || fv == v):
+			row.Value, row.Source = fv, "authama.json"
+		case from == "":
+			row.Value, row.Source = spec.Default, "default"
+		default:
+			row.Value, row.Source = v, "environment ($"+from+")"
+		}
+		rows = append(rows, row)
+	}
+	return rows
 }
