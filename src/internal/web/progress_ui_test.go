@@ -2,6 +2,8 @@ package web
 
 import (
 	"net/url"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -133,6 +135,9 @@ func TestAJobReviewHasGuardrails(t *testing.T) {
 		t.Error("the start button spells out the command")
 	}
 
+	// With age on the PATH (a stand-in, so the test does not depend on the
+	// machine having it) and a recipient set, every check passes.
+	withStandInAge(t)
 	t.Setenv("AUTHAMA_AGE_RECIPIENT", "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq")
 	body = c.change("/jobs/review", url.Values{"action": {"rotate"}, "key": {key}}).Body.String()
 	if regexp.MustCompile(`data-confirm="m-job" disabled`).MatchString(body) {
@@ -166,5 +171,35 @@ func TestAJobPageListsItsItemsOneAtATime(t *testing.T) {
 	}
 	if ev := c.get("/jobs/" + v.ID + "/events").Body.String(); !strings.Contains(ev, "event: items\ndata: work/a=failed work/b=done\n\n") {
 		t.Errorf("the stream carries no items event:\n%s", ev)
+	}
+}
+
+// withStandInAge puts an executable named age first on the PATH, so a check
+// that looks for it passes on a machine without age installed (CI).
+func withStandInAge(t *testing.T) {
+	t.Helper()
+	dir := t.TempDir()
+	for _, name := range []string{"age", "age.bat"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+// Without age on the PATH a job that backs up first cannot start, and the
+// check says how to install it.
+func TestAJobThatBacksUpChecksAgeIsInstalled(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+	t.Setenv("AUTHAMA_AGE_RECIPIENT", "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq")
+	s, _, _ := newTestServer(t)
+	t.Cleanup(mutation.Release)
+	c := signIn(t, s)
+	body := c.change("/jobs/review", url.Values{"action": {"rotate"}, "key": {fixtureKey(t, c)}}).Body.String()
+	if !strings.Contains(body, "age is installed") || !strings.Contains(body, "brew install age") {
+		t.Error("the review does not check that age is installed")
+	}
+	if !regexp.MustCompile(`data-confirm="m-job" disabled`).MatchString(body) {
+		t.Error("without age, the rotate can still be started")
 	}
 }
