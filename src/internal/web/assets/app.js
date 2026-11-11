@@ -49,3 +49,5 @@ App.create()
 // The tooltip rules cover controls a script adds later too, so they start
 // with the page rather than with the first marked control.
 Ui.startTooltips();
+// Every modal opens in front of every slide-in panel.
+Ui.startModals();

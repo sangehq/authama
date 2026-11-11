@@ -101,6 +101,8 @@ test('a bundle restore runs as a job and its stream is watched to the end', asyn
   await expect(panel.locator('.job-steps li', { hasText: `decrypts ${name}` })).toBeVisible();
   await expect(panel.getByRole('button', { name: /^Run authama/ })).toHaveCount(0);
   await panel.getByRole('button', { name: `Start: Restore ${name}…` }).click();
+  // The dialog opens in front of the slide-in panel, from the page's body.
+  await expect(page.locator('body > #m-job')).toBeVisible();
   await page.getByRole('dialog').getByRole('button', { name: 'Yes, start it' }).click();
   // The job's page opens in the panel; its own address is the panel's "Open as a page".
   await expect(panel.locator('[data-side-panel-full]')).toHaveAttribute('href', /\/jobs\/(?!review$)[^/]+$/);

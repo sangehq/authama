@@ -350,6 +350,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   buttons and dev banner) is removed, with the rule that forced panel columns to full width.
 ### Fixed
 
+- **A dialog opened inside the side panel could not be pressed.** The panel's stacking context
+  held it under the page's backdrop. Every modal, wherever it is written, now opens from the page's
+  body, in front of every slide-in panel, and goes back (or away, if its panel moved on) when it
+  closes.
 - **"Not found" after a server restart on a preview page.** A restart (after `make install`, say)
   reloads every open page into the new build; a preview, a job's review or a checklist tick answers a
   form, so its reload asked for `/changes/preview` by address and got *Not found*. The reload now goes

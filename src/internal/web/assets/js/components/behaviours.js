@@ -22,22 +22,7 @@ export class ConfirmAction extends Component {
     }
     this.el.addEventListener("click", (e) => {
       e.preventDefault();
-      // A dialog inside the side panel is trapped in the panel's stacking
-      // context, under the page's backdrop, so its buttons cannot be
-      // pressed. It is shown from the page's body instead, and taken out
-      // again once closed, so a panel that loads a new page never finds a
-      // stale copy by its id.
-      if (modal.parentElement !== document.body && modal.closest(".offcanvas")) {
-        const home = modal.parentElement;
-        document.body.appendChild(modal);
-        modal.addEventListener("hidden.bs.modal", () => {
-          if (home?.isConnected) {
-            home.appendChild(modal);
-          } else {
-            modal.remove();
-          }
-        }, { once: true });
-      }
+      // Ui.startModals shows it in front of any slide-in panel.
       Modal.getOrCreateInstance(modal).show();
     });
     // Confirming closes the dialog as the form is sent.

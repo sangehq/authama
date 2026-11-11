@@ -174,6 +174,8 @@ documentation, the source and the licences.
   same action has been timed in that browser, the card adds a percentage and the time left,
   estimated from the last runs and never past 95% until the answer arrives; an action never timed
   shows a moving bar instead of a number.
+- **Dialogs are always in front.** A confirm dialog or any other modal opens above every slide-in
+  panel, wherever the page that holds it was loaded.
 - **Every destructive action** (deleting a profile, host, key or token, pruning snapshots, restoring
   one, cleaning stale pins) is asked for first, in a dialog or in the panel it sits in, then
   previewed, then confirmed again on the preview.

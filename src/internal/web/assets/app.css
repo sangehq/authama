@@ -451,3 +451,10 @@ main:focus { outline: none; }
 .job-run-item.is-done .job-run-mark { color: var(--tblr-success); }
 .job-run-item.is-failed .job-run-mark { color: var(--tblr-danger); }
 .job-run-item.is-failed .job-run-state { color: var(--tblr-danger); font-weight: 600; }
+
+/* Modals sit above every slide-in panel (Ui.startModals moves them to the
+   body so these hold): Bootstrap's own order, made explicit. */
+.offcanvas-backdrop { z-index: 1040; }
+.offcanvas { z-index: 1045; }
+.modal-backdrop { z-index: 1050; }
+.modal { z-index: 1055; }
