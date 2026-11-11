@@ -60,7 +60,13 @@ func knownhostsInitJob(j *jobs.Job, p paths.Paths, retain int, profile string, a
 	if err := j.Step(); err != nil {
 		return err
 	}
-	report, err := knownhosts.New(p.SSHDir).Init(m, profile, all, force)
+	report, err := knownhosts.New(p.SSHDir).InitEach(m, profile, all, force, func(done, total int, alias string) {
+		label := ""
+		if alias != "" {
+			label = "scanning " + alias
+		}
+		j.Progress(done, total, label)
+	})
 	if err != nil {
 		return err
 	}

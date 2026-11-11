@@ -60,3 +60,7 @@ filter
 link
 table
 grip-vertical
+arrow-right
+stack-2
+bolt
+list-check

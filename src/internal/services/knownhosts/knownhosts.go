@@ -470,6 +470,14 @@ func (r InitReport) Format() string {
 // which file to write - every host is pinned into the same store. Mirrors
 // facade.init_known_hosts. Caller handles the mutation guard (snapshot).
 func (s *Service) Init(m *manifest.Manifest, profile string, allProfiles, force bool) (InitReport, error) {
+	return s.InitEach(m, profile, allProfiles, force, nil)
+}
+
+// InitEach is Init, calling each before every host it scans with how many
+// hosts are done, how many there are, and the one about to be scanned, so a
+// caller can show progress. each may be nil.
+func (s *Service) InitEach(m *manifest.Manifest, profile string, allProfiles, force bool,
+	each func(done, total int, alias string)) (InitReport, error) {
 	targets, err := Targets(m)
 	if err != nil {
 		return InitReport{}, err
@@ -503,10 +511,20 @@ func (s *Service) Init(m *manifest.Manifest, profile string, allProfiles, force 
 	} else if created {
 		report.Created = append(report.Created, "known_hosts")
 	}
+	var chosen []Target
 	for _, t := range targets {
 		if inProfs[t.Profile] {
-			report.Results = append(report.Results, s.initOne(t.Profile, t.Alias, t.Hostname, t.Port, force))
+			chosen = append(chosen, t)
 		}
+	}
+	for i, t := range chosen {
+		if each != nil {
+			each(i, len(chosen), t.Alias)
+		}
+		report.Results = append(report.Results, s.initOne(t.Profile, t.Alias, t.Hostname, t.Port, force))
+	}
+	if each != nil {
+		each(len(chosen), len(chosen), "")
 	}
 	return report, nil
 }

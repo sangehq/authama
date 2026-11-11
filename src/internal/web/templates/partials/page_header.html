@@ -2,7 +2,8 @@
      a one-line summary, and the page's actions on the right. Built with
      `header "Section" "Title" "Summary" (panel "Label" "id" "icon") (action …) (download …)`.
      The first two actions are buttons, the first one primary; any more go in
-     one "More" menu, so a header never grows into a toolbar. */}}
+     one "More" menu, so a header never grows into a toolbar. Each More entry
+     says what it does under its name, as the main menu's entries do. */}}
 {{define "page_header"}}<div class="page-header d-print-none mb-3">
   <div class="row g-2 align-items-center">
     <div class="col">
@@ -20,7 +21,7 @@
         {{if gt (len .Actions) 2}}<div class="dropdown">
           <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More"{{desc "more"}}>{{icon "dots-vertical"}}<span class="ms-1 d-none d-sm-inline">More</span></button>
           <div class="dropdown-menu dropdown-menu-end">
-            {{range $i, $a := .Actions}}{{if ge $i 2}}<a href="{{u $a.Href}}" class="dropdown-item"{{template "action_attrs" $a}}>{{icon $a.Icon}}<span class="ms-2">{{$a.Label}}</span></a>
+            {{range $i, $a := .Actions}}{{if ge $i 2}}<a href="{{u $a.Href}}" class="dropdown-item nav-menu-item"{{template "action_attrs" $a}}>{{icon $a.Icon}}<span class="ms-2"><span class="d-block">{{$a.Label}}</span>{{if $a.Tip}}<span class="d-block text-secondary small nav-menu-desc">{{$a.Tip}}</span>{{end}}</span></a>
             {{end}}{{end}}
           </div>
         </div>{{end}}

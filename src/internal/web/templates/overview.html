@@ -9,7 +9,7 @@
 <div class="card mb-3 setup-card" data-setup-card data-setup-card-done="{{.Setup.Done}}">
   <div class="card-body">
     <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-      <h2 class="card-title mb-0">Get started</h2>
+      <h2 class="card-title mb-0">{{icon "list-check"}}<span class="ms-1">Get started</span></h2>
       <span class="text-secondary small">{{.Setup.Done}} of {{len .Setup.Steps}} done</span>
       <div class="ms-auto d-flex gap-2">
         <button type="button" class="btn btn-sm btn-outline-primary" data-tour-start{{desc "tour"}}>{{icon "route"}}<span class="ms-1">Take the tour</span></button>

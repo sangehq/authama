@@ -135,6 +135,9 @@ documentation, the source and the licences.
   value: every `env`, `user_env`, `pass_env`, `key_env` and `secret_env` must be an upper-case
   variable name of at most 48 characters that does not start like a known token (`ghp_`, `glpat-`,
   `npm_`, …), and a header that carries a credential must take it from `${VAR}`.
+- **A page's actions:** the first two are buttons, and the rest sit in a **More** menu where each
+  entry says what it does under its name, as the main menu's entries do. Keys leads with Add a key
+  and Rotate keys; Hosts with Add a host and Pin host keys.
 - **Every action says what it does** before you use it: hover or focus a page's actions, a form's
   Preview, a quick action or a destructive menu item, and a tip explains it, and that nothing is
   written before the preview is confirmed. Screen readers announce the same text.
@@ -369,9 +372,9 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
 
 1. **Review.** The page says what the job will do, and the command it is the same as.
 2. **Run.** The job starts, and its page shows the output as it comes, under a progress card: a
-   spinner, the time so far, and for a job that works through several keys (rotate, revoke or
-   delete keys) a bar with *3 of 10 · 30% · about 1m 20s left* and the key under way. The time left
-   is the pace of the keys already done applied to the rest, so it shows once the first has
+   spinner, the time so far, and for a job that works through several keys or hosts (rotate,
+   revoke or delete keys, pin host keys) a bar with *3 of 10 · 30% · about 1m 20s left* and the key or host under way. The time
+   left is the pace of the ones already done applied to the rest, so it shows once the first has
    finished. A job that is one step shows a moving bar and says it gives no percentage. The job
    holds the lock until it ends, and it is recorded in the history like any other change.
 
