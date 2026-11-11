@@ -20,7 +20,6 @@ var tips = map[string]string{
 	"setup-start":          "Opens the form for this step. Nothing is written until you confirm its preview.",
 	"setup-hide":           "Hides the Get started card in this browser. The tour stays in the account menu.",
 	"pick-clear":           "Unticks every key, profile and category, \"every key\" included.",
-	"run":                  "Confirms this change now, the same as the button at the foot of the review.",
 
 	// Profiles, hosts, keys.
 	"profile-add":        "Adds a profile: a group of hosts that share a key policy and a folder under ~/.ssh/profiles/.",
@@ -78,6 +77,7 @@ var tips = map[string]string{
 
 	// Added for every remaining control, 2026-11-06.
 	"apply":                    "Makes exactly the change previewed above and records it in History. Nothing else is written.",
+	"job-blocked":              "A check above is not met, so the job cannot start yet.",
 	"job-run":                  "Starts the job reviewed above. It runs step by step, this page follows it, and you can cancel between steps.",
 	"job-yes":                  "Answers yes: the job carries on with its next step.",
 	"job-no":                   "Answers no: the job stops here. Steps already done stay done, and History records where it stopped.",

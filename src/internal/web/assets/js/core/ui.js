@@ -31,6 +31,23 @@ export class Ui {
   }
 
   /**
+   * An icon from the page's sprite, as the server draws one with {{icon}}:
+   * decorative, so hidden from screen readers.
+   * @param {string} name a Tabler icon the sprite holds
+   */
+  static icon(name) {
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("class", "icon");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    const use = document.createElementNS(ns, "use");
+    use.setAttribute("href", `#tabler-${name}`);
+    svg.appendChild(use);
+    return svg;
+  }
+
+  /**
    * The address this page should be reloaded at. A page that answers a form
    * (a preview, a job's review) names the page the form came from: asking for
    * its own address again would be a GET, which has nothing to show.
@@ -119,6 +136,39 @@ export class Ui {
   /** @type {number | undefined} */
   static #watch = undefined;
   static #started = false;
+
+  /**
+   * Keeps every modal in front of every slide-in panel. A modal written inside
+   * a panel (a confirm dialog on a page the side panel loaded, an editor
+   * opened from a panel form) is trapped in the panel's stacking context,
+   * under the page's backdrop, where it shows but cannot be pressed. So any
+   * modal that opens anywhere but the page's body is moved there first, and
+   * put back, or dropped if its panel has since loaded another page, once it
+   * closes. Started once, for every modal now and later.
+   */
+  static startModals() {
+    if (Ui.#modalsStarted) {
+      return;
+    }
+    Ui.#modalsStarted = true;
+    document.addEventListener("show.bs.modal", (e) => {
+      const modal = e.target;
+      if (!(modal instanceof HTMLElement) || modal.parentElement === document.body) {
+        return;
+      }
+      const home = modal.parentElement;
+      document.body.appendChild(modal);
+      modal.addEventListener("hidden.bs.modal", () => {
+        if (home?.isConnected) {
+          home.appendChild(modal);
+        } else {
+          modal.remove();
+        }
+      }, { once: true });
+    });
+  }
+
+  static #modalsStarted = false;
 
   /** Starts the tooltip rules once for the whole page. */
   static startTooltips() {

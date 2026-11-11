@@ -71,8 +71,8 @@ test('a preview whose home moved underneath is refused, and nothing is written',
   const otherForm = other.locator('form', { has: other.locator('input[name="action"][value="profile-add"]') });
   await otherForm.getByLabel('Name', { exact: true }).fill('e2e-moved');
   await otherForm.getByRole('button', { name: 'Preview' }).click();
-  // The other tab confirms with Run, beside the command: the same as Make this change.
-  await other.locator('#side-panel').getByRole('button', { name: 'Run', exact: true }).click();
+  // The other tab confirms first.
+  await other.locator('#side-panel').getByRole('button', { name: 'Make this change' }).click();
   await expect(other.locator('#side-panel').getByRole('heading', { level: 1 })).toHaveText('Done');
   await other.close();
 
@@ -94,9 +94,16 @@ test('a bundle restore runs as a job and its stream is watched to the end', asyn
   await page.getByRole('dialog').getByRole('button', { name: 'Review the restore' }).click();
 
   const panel = page.locator('#side-panel');
-  await expect(panel.getByRole('heading', { level: 1 })).toHaveText('Review the job');
-  await expect(panel.locator('.list-group-item', { hasText: `decrypts ${name}` })).toBeVisible();
-  await panel.getByRole('button', { name: /^Run authama ssh restore / }).click();
+  // The review names the job, checks what it needs, lists its steps, and
+  // starts only once the dialog is confirmed.
+  await expect(panel.getByRole('heading', { level: 1 })).toHaveText(`Restore ${name}`);
+  await expect(panel.locator('.job-check', { hasText: 'An age identity is set' })).toBeVisible();
+  await expect(panel.locator('.job-steps li', { hasText: `decrypts ${name}` })).toBeVisible();
+  await expect(panel.getByRole('button', { name: /^Run authama/ })).toHaveCount(0);
+  await panel.getByRole('button', { name: `Start: Restore ${name}…` }).click();
+  // The dialog opens in front of the slide-in panel, from the page's body.
+  await expect(page.locator('body > #m-job')).toBeVisible();
+  await page.getByRole('dialog').getByRole('button', { name: 'Yes, start it' }).click();
   // The job's page opens in the panel; its own address is the panel's "Open as a page".
   await expect(panel.locator('[data-side-panel-full]')).toHaveAttribute('href', /\/jobs\/(?!review$)[^/]+$/);
   const jobURL = (await panel.locator('[data-side-panel-full]').getAttribute('href')) ?? '';

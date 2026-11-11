@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -62,4 +63,39 @@ func TestTimeLeftFollowsThePaceOfTheFinishedSteps(t *testing.T) {
 	if pct := (Progress{Done: 12, Total: 10}).Percent(); pct != 100 {
 		t.Errorf("Percent past the total = %d, want it capped at 100", pct)
 	}
+}
+
+// A job that plans its items shows each one's state: done before the one
+// under way, running, waiting after it, and failed where it said so.
+func TestPlannedItemsShowTheirState(t *testing.T) {
+	p := home(t)
+	r := NewRegistry()
+	release := make(chan struct{})
+	j, err := r.Start(p, mutation.Scope{Command: "rotate"}, func(j *Job) error {
+		j.Plan([]string{"a", "b", "c", "d"})
+		j.Progress(2, 4, "rotating c")
+		j.Failed("a")
+		<-release
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var v View
+	for deadline := time.Now().Add(5 * time.Second); time.Now().Before(deadline); time.Sleep(10 * time.Millisecond) {
+		if v, _ = j.View(); v.Progress != nil && len(v.Progress.Items) == 4 && v.Progress.Items[0].State == ItemFailed {
+			break
+		}
+	}
+	close(release)
+	var got []string
+	if v.Progress != nil {
+		for _, it := range v.Progress.Items {
+			got = append(got, it.Name+"="+it.State)
+		}
+	}
+	if want := "a=failed b=done c=running d=waiting"; strings.Join(got, " ") != want {
+		t.Errorf("items = %q, want %q", strings.Join(got, " "), want)
+	}
+	until(t, j, Done)
 }

@@ -174,6 +174,8 @@ documentation, the source and the licences.
   same action has been timed in that browser, the card adds a percentage and the time left,
   estimated from the last runs and never past 95% until the answer arrives; an action never timed
   shows a moving bar instead of a number.
+- **Dialogs are always in front.** A confirm dialog or any other modal opens above every slide-in
+  panel, wherever the page that holds it was loaded.
 - **Every destructive action** (deleting a profile, host, key or token, pruning snapshots, restoring
   one, cleaning stale pins) is asked for first, in a dialog or in the panel it sits in, then
   previewed, then confirmed again on the preview.
@@ -395,12 +397,21 @@ History.
 Deploying, rotating and rolling back reach the hosts that use a key, and pinning host keys asks
 hosts for theirs, so no copy can preview them. Each runs as a **job**:
 
-1. **Review.** The page says what the job will do, and the command it is the same as.
+1. **Review.** The page is titled for the job (*Rotate 10 keys*). **Before it starts** lists the
+   checks it must pass: no other job running, and, for one that writes an encrypted backup first, a
+   backup recipient set; a check that fails is marked and the job cannot start until it is fixed.
+   **What it does, in order** numbers its steps, **One at a time** lists the keys it works through,
+   and the command it is the same as is shown for reference, with a copy button. **Start: Rotate 10
+   keys…** opens a dialog that asks once more; a job that cannot be undone (revoke, delete) asks in
+   red.
 2. **Run.** The job starts, and its page shows the output as it comes, under a progress card: a
    spinner, the time so far, and for a job that works through several keys or hosts (rotate,
    revoke or delete keys, pin host keys) a bar with *3 of 10 · 30% · about 1m 20s left* and the key or host under way. The time
    left is the pace of the ones already done applied to the rest, so it shows once the first has
-   finished. A job that is one step shows a moving bar and says it gives no percentage. The job
+   finished. A job that works through keys lists each one below the bar, in order: waiting,
+   running (with a spinner), done or failed, updated as it goes. When the job needs you (pasting a
+   key where a target takes it by hand), a card says it is waiting, which step it is on, and what to
+   do, with the text to copy. A job that is one step shows a moving bar and says it gives no percentage. The job
    holds the lock until it ends, and it is recorded in the history like any other change.
 
 | Job | Where | The same as |

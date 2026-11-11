@@ -1,6 +1,8 @@
 package web
 
 import (
+	"net/url"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -104,5 +106,65 @@ func TestTheActionsMenuOpensTheKeyJobs(t *testing.T) {
 	roBody := signIn(t, ro).get("/").Body.String()
 	if strings.Contains(roBody, "/keys#rotate-keys") || strings.Contains(roBody, "data-setup-card") {
 		t.Error("a read-only server offers the Actions menu or the Get started card")
+	}
+}
+
+// A job's review names the job, lists its checks, its steps and the keys it
+// works through, and starts only from a button that asks to be confirmed,
+// never one that spells out the command. Without a backup recipient a rotate
+// cannot start, and the page says why.
+func TestAJobReviewHasGuardrails(t *testing.T) {
+	t.Setenv("AUTHAMA_AGE_RECIPIENT", "")
+	s, _, _ := newTestServer(t)
+	t.Cleanup(mutation.Release)
+	c := signIn(t, s)
+	key := fixtureKey(t, c)
+	body := c.change("/jobs/review", url.Values{"action": {"rotate"}, "key": {key}}).Body.String()
+	for _, want := range []string{"<h1 class=\"page-title\">Rotate " + key, "Before it starts", "A backup recipient is set",
+		"What it does, in order", `data-confirm="m-job"`, `id="m-job"`, "Start: Rotate " + key} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the review lacks %q", want)
+		}
+	}
+	if !regexp.MustCompile(`data-confirm="m-job" disabled`).MatchString(body) {
+		t.Error("with no backup recipient, the rotate can still be started")
+	}
+	if strings.Contains(body, ">Run authama") {
+		t.Error("the start button spells out the command")
+	}
+
+	t.Setenv("AUTHAMA_AGE_RECIPIENT", "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq")
+	body = c.change("/jobs/review", url.Values{"action": {"rotate"}, "key": {key}}).Body.String()
+	if regexp.MustCompile(`data-confirm="m-job" disabled`).MatchString(body) {
+		t.Error("with a backup recipient set, the rotate still cannot start")
+	}
+}
+
+// A job that plans its items lists them on its page with their states, and
+// streams each change as an "items" event.
+func TestAJobPageListsItsItemsOneAtATime(t *testing.T) {
+	s, p, _ := newTestServer(t)
+	t.Cleanup(mutation.Release)
+	c := signIn(t, s)
+	j, err := s.jobs.Start(p, mutation.Scope{Command: "key revoke", Source: history.SourceWeb}, func(j *jobs.Job) error {
+		j.Plan([]string{"work/a", "work/b"})
+		j.Progress(1, 2, "revoking work/b")
+		j.Failed("work/a")
+		j.Progress(2, 2, "")
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	v, _ := j.View()
+	waitJob(t, s, v.ID)
+	page := c.get("/jobs/" + v.ID).Body.String()
+	for _, want := range []string{`data-job-item="work/a"`, `job-run-item is-failed`, `data-job-item="work/b"`, `job-run-item is-done`} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the job page lacks %q", want)
+		}
+	}
+	if ev := c.get("/jobs/" + v.ID + "/events").Body.String(); !strings.Contains(ev, "event: items\ndata: work/a=failed work/b=done\n\n") {
+		t.Errorf("the stream carries no items event:\n%s", ev)
 	}
 }

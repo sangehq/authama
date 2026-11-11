@@ -77,6 +77,14 @@ type jobSpec struct {
 	scope mutation.Scope
 	what  []string
 	run   func(j *jobs.Job) error
+	// title names the job for people, "Rotate 10 keys"; items are what it
+	// works through, one at a time, listed on the review; backup says it
+	// writes an encrypted backup first, so it needs an age recipient; and
+	// destroy says it cannot be undone from authama.
+	title   string
+	items   []string
+	backup  bool
+	destroy bool
 }
 
 // keyRef reads a "profile/key" field.
@@ -320,11 +328,12 @@ func rotateKeysSpec(f url.Values, h home, retain int) (jobSpec, error) {
 		scope: mutation.Scope{Command: "rotate", Args: append(args, "--yes"), Source: history.SourceWeb, Subjects: subjects},
 		what: []string{
 			"writes an encrypted backup of ~/.ssh and the config first, so it needs AUTHAMA_AGE_RECIPIENT",
-			fmt.Sprintf("rotates %d key(s), one after another: %s", len(names), strings.Join(names, ", ")),
+			fmt.Sprintf("rotates %d key(s), one at a time, in the order listed: each is minted, deployed and logged in with before the next", len(names)),
 			"a key that fails is left as it was, and the rest go on",
 			"asks you to paste a new public key wherever a target takes it by hand, and waits",
 		},
-		run: func(j *jobs.Job) error { return rotateKeysJob(j, h.p, retain, sel, allow) },
+		run:   func(j *jobs.Job) error { return rotateKeysJob(j, h.p, retain, sel, allow) },
+		items: names,
 	}, nil
 }
 
@@ -364,6 +373,7 @@ func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection,
 		return err
 	}
 	mutation.SnapshotBeforeMutation(p, retain)
+	j.Plan(names)
 	r := rotator.New(p, m, inv).Unattended(j).WithManualStep(manualPaste(j))
 	// RotateEach calls next once before each key, so the count it keeps is
 	// the number of keys already finished.
@@ -379,6 +389,9 @@ func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection,
 	failed, err := r.RotateEach(names, allowUnverified, "", j, func() error { return inv.Save(p.Inventory()) }, next)
 	if err != nil {
 		return err
+	}
+	for _, n := range failed {
+		j.Failed(n)
 	}
 	j.Progress(len(names), len(names), "")
 	if len(failed) > 0 {
@@ -443,8 +456,14 @@ func bundleRestoreJob(j *jobs.Job, p paths.Paths, retain int, path string) error
 }
 
 type jobReview struct {
+	Title   string
 	Command string
 	What    []string
+	Items   []string
+	Checks  []preflight
+	Blocked bool
+	Destroy bool
+	Remote  bool // it logs in to other machines
 	Fields  []formField
 	Busy    *jobs.View
 }
@@ -480,6 +499,7 @@ func (h jobPages) parseJob(w http.ResponseWriter, r *http.Request) (jobSpec, boo
 		h.s.renderError(w, r, http.StatusBadRequest, "That job cannot be run", err.Error())
 		return jobSpec{}, false
 	}
+	describeJob(r.PostForm, &spec)
 	return spec, true
 }
 
@@ -488,12 +508,15 @@ func (h jobPages) handleJobReview(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	rev := jobReview{Command: jobCommand(spec.scope), What: spec.what, Fields: carriedJob(r.PostForm)}
+	rev := jobReview{Title: spec.title, Command: jobCommand(spec.scope), What: spec.what, Items: spec.items,
+		Destroy: spec.destroy, Remote: reachesServers(r.PostForm), Fields: carriedJob(r.PostForm)}
 	if j := h.s.jobs.Running(); j != nil {
 		v, _ := j.View()
 		rev.Busy = &v
 	}
-	h.s.render(w, http.StatusOK, "job_review", h.s.newView(r, "", "Review the job", rev))
+	rev.Checks = preflights(r.PostForm, spec, rev.Busy != nil)
+	rev.Blocked = blocked(rev.Checks)
+	h.s.render(w, http.StatusOK, "job_review", h.s.newView(r, "", spec.title, rev))
 }
 
 func (h jobPages) handleJobStart(w http.ResponseWriter, r *http.Request) {
@@ -549,7 +572,7 @@ func (h jobPages) handleJobEvents(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Accel-Buffering", "no")
-	sent, state, progress := 0, "", ""
+	sent, state, progress, items := 0, "", "", ""
 	heartbeat := time.NewTicker(15 * time.Second)
 	defer heartbeat.Stop()
 	for {
@@ -562,6 +585,18 @@ func (h jobPages) handleJobEvents(w http.ResponseWriter, r *http.Request) {
 			if pr := fmt.Sprintf("%d %d %s", v.Progress.Done, v.Progress.Total, v.Progress.Label); pr != progress {
 				progress = pr
 				writeEvent(w, "progress", pr)
+			}
+			// Each item's state, "name=state" joined by spaces: the page
+			// marks a key done, running or failed as the job moves on.
+			if len(v.Progress.Items) > 0 {
+				parts := make([]string, len(v.Progress.Items))
+				for i, it := range v.Progress.Items {
+					parts[i] = it.Name + "=" + it.State
+				}
+				if it := strings.Join(parts, " "); it != items {
+					items = it
+					writeEvent(w, "items", it)
+				}
 			}
 		}
 		if v.State != state {

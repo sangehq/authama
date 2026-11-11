@@ -22,8 +22,11 @@ export class ConfirmAction extends Component {
     }
     this.el.addEventListener("click", (e) => {
       e.preventDefault();
+      // Ui.startModals shows it in front of any slide-in panel.
       Modal.getOrCreateInstance(modal).show();
     });
+    // Confirming closes the dialog as the form is sent.
+    modal.querySelector('[type="submit"]')?.addEventListener("click", () => Modal.getInstance(modal)?.hide());
     return this;
   }
 }
@@ -80,6 +83,7 @@ export class JobStream extends Component {
     });
     const progress = new JobProgress(document.querySelector("[data-job-progress]"));
     events.addEventListener("progress", (e) => progress.update(/** @type {MessageEvent} */ (e).data));
+    events.addEventListener("items", (e) => progress.items(/** @type {MessageEvent} */ (e).data));
     events.addEventListener("state", (e) => {
       if (/** @type {MessageEvent} */ (e).data !== state) {
         events.close();
@@ -160,6 +164,42 @@ class JobProgress {
       label.textContent = rest.join(" ") || "Finishing";
     }
     this.tick();
+  }
+
+  /**
+   * Marks each listed item with its state as the job moves on: "name=state"
+   * pairs, space-separated (names hold no spaces or "=").
+   * @param {string} data
+   */
+  items(data) {
+    for (const pair of data.split(" ")) {
+      const at = pair.lastIndexOf("=");
+      const name = pair.slice(0, at);
+      const state = pair.slice(at + 1);
+      const row = [...(this.card?.querySelectorAll("[data-job-item]") ?? [])].find((r) => r instanceof HTMLElement && r.dataset.jobItem === name);
+      if (!(row instanceof HTMLElement) || row.classList.contains(`is-${state}`)) {
+        continue;
+      }
+      row.className = `job-run-item is-${state}`;
+      const label = row.querySelector("[data-job-item-state]");
+      if (label) {
+        label.textContent = state;
+      }
+      const mark = row.querySelector(".job-run-mark");
+      const icon = { running: null, done: "circle-check", failed: "circle-x", waiting: "clock" }[state];
+      if (mark) {
+        if (state === "running") {
+          const spin = document.createElement("span");
+          spin.className = "spinner-border spinner-border-sm";
+          mark.replaceChildren(spin);
+        } else if (icon) {
+          mark.replaceChildren(Ui.icon(icon));
+        }
+      }
+      if (state === "running") {
+        row.scrollIntoView({ block: "nearest" });
+      }
+    }
   }
 
   percent() {

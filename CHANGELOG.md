@@ -8,6 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Jobs have guardrails, and run one item at a time on screen.** A job's review is titled for
+  the job (*Rotate 10 keys*), checks what it needs before it may start (no other job running, a
+  backup recipient for one that backs up first) and keeps Start off until they pass, numbers its
+  steps, and lists the keys it works through. Start asks once more in a dialog, red for a job that
+  cannot be undone. The job page lists each key as waiting, running, done or failed as it goes, and
+  a job waiting for you says which step it is on, with the text to copy.
+- **Buttons say what they do, not the command.** The command a change or job is the same as is shown
+  for reference with a copy button; the Run button beside it is gone, and a destructive change
+  confirms in a dialog instead of a button reading *Yes, authama …*.
 - **A clearer token audit.** The Auth tokens page's Audit card counts what to fix, what is
   owner-only and what is not set up; a credential file others can read has *Make it owner-only*, a
   `.gitignore` missing secret files offers the lines to copy, files read as `0600` rather than
@@ -341,6 +350,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   buttons and dev banner) is removed, with the rule that forced panel columns to full width.
 ### Fixed
 
+- **A dialog opened inside the side panel could not be pressed.** The panel's stacking context
+  held it under the page's backdrop. Every modal, wherever it is written, now opens from the page's
+  body, in front of every slide-in panel, and goes back (or away, if its panel moved on) when it
+  closes.
 - **"Not found" after a server restart on a preview page.** A restart (after `make install`, say)
   reloads every open page into the new build; a preview, a job's review or a checklist tick answers a
   form, so its reload asked for `/changes/preview` by address and got *Not found*. The reload now goes
