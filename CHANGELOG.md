@@ -33,6 +33,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   action before, a percentage and the time left.
 - **An Actions menu** beside the Overview opens Rotate keys, Revoke keys, Delete keys, Mint missing
   keys, Pin host keys, Add a host and Add a token from any page, and the tour points it out.
+- **A Reset page** (System → Reset, and Actions → Reset…) offers every way to start something again,
+  grouped by how much each resets: rotate every key, revoke keys, prune old snapshots, settings to
+  their defaults, initialise the home again (manifest, inventory and `.env`, backed up first, after
+  typing `init`), unbind this home, and factory reset. Each says what it resets, keeps and how to
+  undo it.
+- **The main menu is grouped by what each page is about.** Actions is a menu like the others rather
+  than an outlined button and ends with Reset; SSH holds the rendered SSH config beside the hosts it
+  comes from; Auth tokens is an entry of its own; Snapshots and Export sit together under Backups &
+  export; System gains Reset. The command palette follows the same groups and gains Reset, Rotate
+  keys and Revoke keys.
 - **Pin host keys counts its hosts**, so its job page shows a percentage and the time left too.
 - **A page's More menu says what each entry does** under its name, and Keys and Hosts put Rotate
   keys and Pin host keys beside their first action instead of in the menu.
@@ -251,6 +261,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **`settings init --force` keeps the file it replaces**, as `authama.json.before-reset-<time>`
+  beside the new one, so resetting the settings to their defaults can be undone.
 - **Web UI: names open in the side panel, and Export's filters slide in on a phone.** A host's
   or key's name in a list (Hosts, Keys, Connections, Validate, Audit, the overview, and the links
   between a host and its key) now opens it in the slide-in panel over the list, like the row

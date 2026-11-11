@@ -50,7 +50,7 @@ when the profile has a category.
 | `settings path [--json]` | Print the config home, state home, `.env` and `authama.json` locations and whether each loaded. | U |
 | `settings show [--effective] [--json]` | Print `authama.json`, or with `--effective` every setting's value and where it came from (flag, environment, `.env`, `authama.json`, default). Secret values are never printed. | U |
 | `settings validate [FILE]` | Check `authama.json` (or FILE) against its schema and `.env`'s syntax and permissions; lists every problem, exit ≠0 on any. | U |
-| `settings init [--force]` | Create a starter `authama.json` (only `$schema` and `version`; every setting stays at its default until you add it). | U |
+| `settings init [--force]` | Create a starter `authama.json` (only `$schema` and `version`; every setting stays at its default until you add it). With `--force` the file already there is kept beside it as `authama.json.before-reset-<time>`. | U |
 | `doctor` | Verify the environment: deps, perms, agent, known_hosts, ≤1-old-key invariant, config drift, orphan/duplicate keys, alias collisions, and the modes of the token credential files (a loose one is a warning; `--strict` fails on it). Prints the **resolved home**, `~/.ssh`, and the active provider-catalog source; warns about a stranded legacy home. | U·E·F |
 | `doctor --fix` | Re-assert canonical perms on every tool-managed path (`~/.ssh` tree + home secrets + token credential files). | U·F |
 | `doctor --json` | Machine-readable report for scripting/monitoring. | U |
