@@ -133,6 +133,11 @@
           "default": true,
           "description": "Record every change in the history database (`authama history`). Sets $AUTHAMA_HISTORY. Default: true.",
           "type": "boolean"
+        },
+        "permanent": {
+          "default": false,
+          "description": "Keep the history for good: `history reset` and the web UI's Start the history again refuse, so the record of every change cannot be set aside. Sets $AUTHAMA_HISTORY_PERMANENT. Default: false.",
+          "type": "boolean"
         }
       },
       "type": "object"

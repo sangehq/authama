@@ -655,6 +655,7 @@ every setting stays at its default until you add it.
 | `backup.old_key_max_age_days` | `AUTHAMA_OLD_KEY_MAX_AGE_DAYS` | `90` (`0` turns the check off) |
 | `ssh.auto_pin` | `AUTHAMA_AUTO_PIN` | `true` |
 | `history.enabled` | `AUTHAMA_HISTORY` | `true` |
+| `history.permanent` | `AUTHAMA_HISTORY_PERMANENT` | `false` (`true` makes `history reset` and the web UI's *Start the history again* refuse) |
 | `git.mode` | `AUTHAMA_GIT_MODE` | the manifest's `defaults.git.mode`, else `profile` |
 | `export.save_to` | `AUTHAMA_EXPORT_SAVE_TO` | `user` (where a saved export selection goes: `user` or `manifest`; see [tools/export.md](tools/export.md#saved-selections)) |
 | `tokens.docker_creds_store` | `AUTHAMA_DOCKER_CREDS_STORE` | ask at a terminal, else refuse |
@@ -752,7 +753,10 @@ Every command that changes something is recorded in `log/history.db` in the
 state home (`~/.local/state/authama/log/history.db` by default), beside
 `audit.log`. `authama history` reads it; token writes and removals are recorded too,
 with the target and host but never the value. Set `AUTHAMA_HISTORY=0` (or `"history": {"enabled": false}` in `authama.json`) to record nothing; `audit.log` is
-written either way. See [`history`](tools/history.md).
+written either way. `authama history reset` (or *System → Reset → Start the history again*) moves
+`history.db` and `audit.log` aside, kept as `<name>.reset-<time>`, and the next change starts a new
+history; set `history.permanent` to `true` to keep the history for good, and it refuses. See
+[`history`](tools/history.md).
 
 ## Dev mode
 

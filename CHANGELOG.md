@@ -33,11 +33,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   action before, a percentage and the time left.
 - **An Actions menu** beside the Overview opens Rotate keys, Revoke keys, Delete keys, Mint missing
   keys, Pin host keys, Add a host and Add a token from any page, and the tour points it out.
-- **A Reset page** (System → Reset, and Actions → Reset…) offers every way to start something again,
-  grouped by how much each resets: rotate every key, revoke keys, prune old snapshots, settings to
-  their defaults, initialise the home again (manifest, inventory and `.env`, backed up first, after
-  typing `init`), unbind this home, and factory reset. Each says what it resets, keeps and how to
-  undo it.
+- **A Reset page** (System → Reset, and Actions → Reset…) lists every way to start something again,
+  one row each, grouped by how much each resets: rotate every key, revoke keys, settings to their
+  defaults, initialise the home again (manifest, inventory and `.env`, backed up first, after typing
+  `init`), old snapshots, the history, unbind this home, and factory reset. Each row says whether it
+  can be undone, and its details what it resets, keeps, how to undo it and the command.
+- **Start the history again.** `authama history reset` (and *Reset → Start the history again*, after
+  typing `history`) moves `history.db` and `audit.log` aside, kept as `<name>.reset-<time>`, so the
+  next change starts a new history. A new setting, `history.permanent`
+  (`AUTHAMA_HISTORY_PERMANENT`), keeps the history for good: the command refuses and the page offers
+  no reset.
 - **The main menu is grouped by what each page is about.** Actions is a menu like the others rather
   than an outlined button and ends with Reset; SSH holds the rendered SSH config beside the hosts it
   comes from; Auth tokens is an entry of its own; Snapshots and Export sit together under Backups &

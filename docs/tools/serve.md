@@ -159,14 +159,16 @@ documentation, the source and the licences.
   **Start** button that opens its form, ticked off by itself as the home fills in, with a bar for
   how many are done. **Hide** puts it away in that browser until another step is done; the card
   also starts the tour.
-- **Reset** (System → Reset, or Actions → Reset…) gathers every way to start something again, grouped
-  by how much each resets: *Keys* (rotate every key, revoke keys), *Configuration* (old snapshots,
-  settings to their defaults, initialise the home again) and *Everything* (unbind this home, factory
-  reset). Each card says what it resets, what it keeps, how to undo it and the command it is the same
-  as. *Rotate every key* opens Rotate keys with every key already chosen; revoke is never preset.
-  *Settings to their defaults* keeps the old `authama.json` beside the new one, and *Initialise the
-  home again* asks for `init` to be typed and backs the manifest, inventory and `.env` up first.
-  Starting the history again is not offered.
+- **Reset** (System → Reset, or Actions → Reset…) gathers every way to start something again, one
+  row each in four groups: *Keys* (rotate every key, revoke keys), *Configuration* (settings to their
+  defaults, initialise the home again, old snapshots), *History* (start the history again) and
+  *Everything* (unbind this home, factory reset). Each row says in a line what it does and whether
+  authama can undo it; **Details** opens what it resets, what it keeps, how to undo it and the command
+  it is the same as. *Rotate every key* opens Rotate keys with every key already chosen; revoke is
+  never preset. *Settings to their defaults* previews straight from its row and keeps the old
+  `authama.json` beside the new one. *Initialise the home again* and *Start the history again* open
+  a panel that lists what changes and asks for `init` or `history` to be typed. With
+  `history.permanent` on, the history row says it is kept for good and offers no reset.
 - **Slow actions say so.** A preview, a change or a page in the side panel that has taken more than
   two seconds shows a card at the foot of the screen with a spinner and the time so far. Once the
   same action has been timed in that browser, the card adds a percentage and the time left,
