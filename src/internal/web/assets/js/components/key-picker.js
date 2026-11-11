@@ -29,6 +29,13 @@ export class KeyPicker extends Component {
       filter.addEventListener("input", () => this.filter(filter.value));
     }
     this.el.querySelector("[data-pick-clear]")?.addEventListener("click", () => this.clear());
+    // /keys?pick=all#rotate-keys, from the Reset page's "Rotate every key",
+    // opens the rotate picker with every key already chosen. Only the rotate
+    // picker takes it: revoking or deleting every key is never preset.
+    const all = /** @type {HTMLInputElement | null} */ (this.el.querySelector("[data-pick-all]"));
+    if (all && this.el.dataset.pickAction === "rotate" && new URLSearchParams(window.location.search).get("pick") === "all") {
+      all.checked = true;
+    }
     this.sync();
     return this;
   }

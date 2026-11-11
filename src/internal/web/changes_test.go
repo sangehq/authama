@@ -322,6 +322,7 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 		t.Fatal(err)
 	}
 	collect("/repair")
+	collect("/reset")
 	if _, err := owner.MachineID(); err == nil {
 		if _, err := owner.Init(p, time.Now()); err != nil {
 			t.Fatal(err)

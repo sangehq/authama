@@ -1,0 +1,79 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "System" "Reset" "Every way to start something again, from one key to the whole home. Choose one: each says what it resets, what it keeps and how to undo it, and nothing runs before you review it.")}}
+{{if $.ReadOnly}}<div class="alert alert-info" role="status">{{icon "lock"}}<span class="ms-1">This server only reads, so it resets nothing. Each card still names the command that does it at a terminal.</span></div>{{end}}
+
+
+<h2 class="h3 mt-1 mb-2">Keys</h2>
+<div class="row row-cards mb-4">
+  {{range .Keys}}{{template "reset_card" .}}{{end}}
+  {{if $.DevRoot}}<div class="col-12"><p class="text-secondary small mb-0">Rotating and revoking reach real servers, so a dev sandbox does not offer them.</p></div>{{end}}
+</div>
+
+<h2 class="h3 mb-2">Configuration</h2>
+<div class="row row-cards mb-4">
+  {{range .Config}}{{template "reset_card" .}}{{end}}
+  <div class="col-md-6 col-xl-4">
+    <div class="card h-100 reset-card">
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex align-items-center gap-2 mb-2"><span class="reset-card-icon" aria-hidden="true">{{icon "settings"}}</span><h3 class="card-title mb-0">Settings to their defaults</h3></div>
+        <p class="text-secondary mb-2">Writes <code>authama.json</code> again with every setting at its default.</p>
+        <dl class="reset-facts mb-3">
+          <dt>Resets</dt><dd>authama.json: theme, defaults, retention and the rest.</dd>
+          <dt>Keeps</dt><dd>The old file, beside it as <code>authama.json.before-reset-&lt;time&gt;</code>; the manifest, keys and tokens.</dd>
+          <dt>Undo</dt><dd>Rename the kept file back.</dd>
+        </dl>
+        <div class="mt-auto">
+          <div class="small text-secondary mb-2">The same as <code>authama settings init --force</code></div>
+          {{if not $.ReadOnly}}{{template "change_open" $}}<input type="hidden" name="action" value="settings-reset"><button type="submit" class="btn btn-outline-primary w-100"{{desc "reset-settings"}}>Preview the reset</button></form>{{end}}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-4">
+    <div class="card h-100 reset-card is-danger">
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex align-items-center gap-2 mb-2"><span class="reset-card-icon" aria-hidden="true">{{icon "refresh"}}</span><h3 class="card-title mb-0">Initialise the home again</h3></div>
+        <p class="text-secondary mb-2">Writes the global config again with fresh defaults: the manifest, the inventory and <code>.env</code>.</p>
+        <dl class="reset-facts mb-3">
+          <dt>Resets</dt><dd>Every profile, host and key declaration, the key records, and .env.</dd>
+          <dt>Keeps</dt><dd>A copy of the old files in the state home's <code>.state/init-backup-&lt;time&gt;/</code>; <code>~/.ssh</code>, its keys and config.</dd>
+          <dt>Undo</dt><dd>Copy the backed-up files back.</dd>
+        </dl>
+        <div class="mt-auto">
+          <div class="small text-secondary mb-2">The same as <code>authama init --force --backup</code></div>
+          {{if not $.ReadOnly}}{{template "change_open" $}}<input type="hidden" name="action" value="home-init">
+            <label class="form-label small" for="init-confirm">Type <code>init</code> to confirm</label>
+            <div class="d-flex gap-2"><input class="form-control" id="init-confirm" name="confirm" required pattern="init" autocomplete="off" spellcheck="false"><button type="submit" class="btn btn-outline-danger text-nowrap"{{desc "reset-init"}}>Preview</button></div>
+          </form>{{end}}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2 class="h3 mb-2">Everything</h2>
+<div class="row row-cards mb-3">
+  {{range .Everything}}{{template "reset_card" .}}{{end}}
+</div>
+<p class="text-secondary small">Starting the history again is not offered: the history is the record of every change, and it is rebuilt from <code>audit.log</code> whenever it is opened fresh.</p>
+{{end}}{{end}}
+
+{{/* One way to reset something (red-edged when authama cannot undo it): what it resets, keeps and how to undo it, the
+     command it is the same as, and a link to the form that does it. */}}
+{{define "reset_card"}}<div class="col-md-6 col-xl-4">
+  <div class="card h-100 reset-card{{if .Danger}} is-danger{{end}}">
+    <div class="card-body d-flex flex-column">
+      <div class="d-flex align-items-center gap-2 mb-2"><span class="reset-card-icon" aria-hidden="true">{{icon .Icon}}</span><h3 class="card-title mb-0">{{.Title}}</h3></div>
+      <p class="text-secondary mb-2">{{.What}}</p>
+      <dl class="reset-facts mb-3">
+        <dt>Resets</dt><dd>{{.Resets}}</dd>
+        <dt>Keeps</dt><dd>{{.Keeps}}</dd>
+        <dt>Undo</dt><dd>{{.Undo}}</dd>
+      </dl>
+      <div class="mt-auto">
+        <div class="small text-secondary mb-2">The same as <code>{{.Command}}</code></div>
+        {{if .Href}}<a class="btn {{if .Danger}}btn-outline-danger{{else}}btn-outline-primary{{end}} w-100" href="{{u .Href}}" aria-description="{{.Tip}}">{{.Button}}</a>{{end}}
+      </div>
+    </div>
+  </div>
+</div>{{end}}

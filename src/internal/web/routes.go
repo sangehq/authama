@@ -56,6 +56,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /checklist", cl.handleItem)
 	mux.HandleFunc("GET /security", ownerPages{s}.handleSecurity)
 	mux.HandleFunc("GET /repair", ownerPages{s}.handleRepair)
+	mux.HandleFunc("GET /reset", ownerPages{s}.handleReset)
 	sp := systemPages{s: s}
 	mux.HandleFunc("GET /settings", sp.handleSettings)
 	mux.HandleFunc("GET /ssh-config", sp.handleSSHConfig)
