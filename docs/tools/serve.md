@@ -135,6 +135,9 @@ documentation, the source and the licences.
   value: every `env`, `user_env`, `pass_env`, `key_env` and `secret_env` must be an upper-case
   variable name of at most 48 characters that does not start like a known token (`ghp_`, `glpat-`,
   `npm_`, …), and a header that carries a credential must take it from `${VAR}`.
+- **A page's actions:** the first two are buttons, and the rest sit in a **More** menu where each
+  entry says what it does under its name, as the main menu's entries do. Keys leads with Add a key
+  and Rotate keys; Hosts with Add a host and Pin host keys.
 - **Every action says what it does** before you use it: hover or focus a page's actions, a form's
   Preview, a quick action or a destructive menu item, and a tip explains it, and that nothing is
   written before the preview is confirmed. Screen readers announce the same text.

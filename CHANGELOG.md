@@ -33,6 +33,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   action before, a percentage and the time left.
 - **An Actions menu** beside the Overview opens Rotate keys, Revoke keys, Delete keys, Mint missing
   keys, Pin host keys, Add a host and Add a token from any page, and the tour points it out.
+- **Pin host keys counts its hosts**, so its job page shows a percentage and the time left too.
+- **A page's More menu says what each entry does** under its name, and Keys and Hosts put Rotate
+  keys and Pin host keys beside their first action instead of in the menu.
 - **Get started.** A new home's Overview lists the steps to set it up, each with a button that
   opens its form, ticked as they are done, until every one is.
 - **Notifications say authama, with its logo, and stay quiet in tests.** Desktop notifications now go
