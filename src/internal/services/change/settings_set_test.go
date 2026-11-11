@@ -71,8 +71,17 @@ func TestBackupKeySetsUpEncryptedBackups(t *testing.T) {
 	if strings.Contains(out.String(), "AGE-SECRET-KEY") {
 		t.Error("the output shows the private key")
 	}
-	if _, err := ch.Effects(p); err == nil {
-		t.Error("a second backup-key would replace the identity already there")
+	// A second press uses the key already there rather than failing or
+	// replacing it.
+	before, _ := os.ReadFile(BackupKeyFile(p))
+	if lines, err := ch.Effects(p); err != nil || !strings.Contains(strings.Join(lines, " "), "no new key is made") {
+		t.Errorf("a second backup-key: %v, %v", lines, err)
+	}
+	if err := ch.OnApply(p, &out); err != nil {
+		t.Fatal(err)
+	}
+	if after, _ := os.ReadFile(BackupKeyFile(p)); string(after) != string(before) {
+		t.Error("a second backup-key replaced the identity already there")
 	}
 }
 

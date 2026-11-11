@@ -133,6 +133,7 @@ var goOnly = map[string]string{
 	"show":                      "D1 - reconciles manifest, key files, rendered config and trust store in one view",
 	"clean":                     "D1 - prunes stale pins and records left by deletions",
 
+	"rotate --check":  "owner, 2026-11-11: a dry run that tests each key's rotation (servers answer, the current key logs in) and changes nothing",
 	"doctor --strict": "settings - CI gate: escalates every dangling-key state to fatal",
 	"list --csv":      "exports - every host as CSV, the columns the web UI downloads",
 	"audit --csv":     "exports - every key's deployments as CSV, the columns the web UI downloads",

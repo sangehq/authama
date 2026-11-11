@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os/exec"
+	"strings"
 
 	"github.com/simtabi/authama/src/internal/util/envnames"
 )
@@ -18,6 +19,8 @@ type preflight struct {
 	// FixHrefLabel).
 	FixAction, FixLabel   string
 	FixHref, FixHrefLabel string
+	// FixNoBackup offers to review the same job without the backup.
+	FixNoBackup bool
 }
 
 // describeJob gives a job its name for people and its guardrails: what it is
@@ -36,9 +39,9 @@ func describeJob(f url.Values, spec *jobSpec) {
 	case "deploy":
 		spec.title = "Deploy " + key
 	case "rotate":
-		spec.title, spec.backup = "Rotate "+key, true
+		spec.title, spec.backup = "Rotate "+key, !checked(f, "no_backup")
 	case "rotate-keys":
-		spec.title, spec.backup = keys("Rotate"), true
+		spec.title, spec.backup = keys("Rotate"), !checked(f, "no_backup")
 	case "rollback":
 		spec.title = "Roll " + key + " back"
 	case "revoke":
@@ -57,6 +60,9 @@ func describeJob(f url.Values, spec *jobSpec) {
 	if spec.title == "" {
 		spec.title = "Run the job"
 	}
+	if spec.check {
+		spec.title, spec.backup, spec.destroy = "Dry run: "+lower(spec.title), false, false
+	}
 }
 
 // preflights are the checks a job's review shows before it may start.
@@ -71,7 +77,8 @@ func preflights(f url.Values, spec jobSpec, busy bool) []preflight {
 			OK:        envnames.Get(nil, envnames.AgeRecipient) != "",
 			Detail:    "An encrypted backup of ~/.ssh is written first, to an age recipient. Create a backup key here, or use one you have; then review the job again.",
 			FixAction: "backup-key", FixLabel: "Create a backup key",
-			FixHref: "/settings#setting-backup.age_recipient", FixHrefLabel: "Use a key you have"})
+			FixHref: "/settings#setting-backup.age_recipient", FixHrefLabel: "Use a key you have",
+			FixNoBackup: f.Get("action") == "rotate" || f.Get("action") == "rotate-keys"})
 	}
 	if f.Get("action") == "bundle-restore" {
 		checks = append(checks, preflight{Label: "An age identity is set to decrypt with", Blocking: true,
@@ -107,4 +114,12 @@ func reachesServers(f url.Values) bool {
 		return checked(f, "revoke")
 	}
 	return true
+}
+
+// lower lower-cases the first letter of s.
+func lower(s string) string {
+	if s == "" {
+		return s
+	}
+	return strings.ToLower(s[:1]) + s[1:]
 }

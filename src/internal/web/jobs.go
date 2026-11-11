@@ -41,13 +41,13 @@ import (
 // jobFields are the form fields each job reads.
 var jobFields = map[string][]string{
 	"deploy":   {"key", "target"},
-	"rotate":   {"key", "allow_unverified"},
+	"rotate":   {"key", "allow_unverified", "no_backup", "check"},
 	"rollback": {"key"},
 	// revoke removes a key from every target and records it as revoked.
 	"revoke": {"key", "reason"},
 	// rotate-keys rotates the chosen keys (sel: keys, profiles, categories),
 	// a profile's keys, or every key, one after another.
-	"rotate-keys": {"sel", "profile", "all", "allow_unverified"},
+	"rotate-keys": {"sel", "profile", "all", "allow_unverified", "no_backup", "check"},
 	// revoke-keys revokes each chosen key, as `authama ssh key revoke` does.
 	"revoke-keys": {"sel", "all", "reason"},
 	// delete-keys deletes each chosen key, as `authama ssh key delete` does.
@@ -85,6 +85,7 @@ type jobSpec struct {
 	items   []string
 	backup  bool
 	destroy bool
+	check   bool // a dry run: it changes nothing
 }
 
 // keyRef reads a "profile/key" field.
@@ -165,20 +166,25 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 			run: func(j *jobs.Job) error { return deployJob(j, h.p, retain, key, target) },
 		}, nil
 	case "rotate":
-		allow := checked(f, "allow_unverified")
+		if checked(f, "check") {
+			return rotateCheckSpec([]string{key}, []string{key, "--check"}, subjects, h), nil
+		}
+		allow, skip := checked(f, "allow_unverified"), checked(f, "no_backup")
 		args := []string{key, "--yes"}
 		if allow {
 			args = append(args, "--allow-unverified")
 		}
+		if skip {
+			args = append(args, "--no-key-backup")
+		}
 		return jobSpec{
 			scope: mutation.Scope{Command: "rotate", Args: args, Source: history.SourceWeb, Subjects: subjects},
-			what: []string{
-				"writes an encrypted backup of ~/.ssh and the config first, so it needs AUTHAMA_AGE_RECIPIENT",
-				"mints a new " + key + ", deploys it to every host that uses the key, and proves each login",
+			what: append([]string{backupStep(skip)},
+				"mints a new "+key+", deploys it to every host that uses the key, and proves each login",
 				"moves the current key to old/, replacing any earlier predecessor, once every target is done",
-				"asks you to paste the new public key where a target takes it by hand, and waits",
-			},
-			run: func(j *jobs.Job) error { return rotateJob(j, h.p, retain, key, allow) },
+				"asks you to paste the new public key where a target takes it by hand, and waits"),
+			run:   func(j *jobs.Job) error { return rotateJob(j, h.p, retain, key, allow, skip) },
+			items: []string{key},
 		}, nil
 	case "revoke":
 		reason, err := plain(f, "reason")
@@ -250,11 +256,11 @@ func deployJob(j *jobs.Job, p paths.Paths, retain int, key, target string) error
 
 // rotateJob is rotate's single-key path after its confirmation. A target that
 // takes the key by hand pauses the job with the new public key to paste.
-func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, allowUnverified bool) error {
+func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, allowUnverified, skipBackup bool) error {
 	if err := p.RefuseOutsideSandbox("rotate"); err != nil {
 		return err
 	}
-	if err := bundler.BackupBeforeDestroying(p, j, false); err != nil {
+	if err := bundler.BackupBeforeDestroying(p, j, skipBackup); err != nil {
 		return err
 	}
 	m, inv, err := loadState(p)
@@ -313,10 +319,7 @@ func rotateKeysSpec(f url.Values, h home, retain int) (jobSpec, error) {
 	if err != nil {
 		return jobSpec{}, err
 	}
-	allow := checked(f, "allow_unverified")
-	if allow {
-		args = append(args, "--allow-unverified")
-	}
+	allow, skip := checked(f, "allow_unverified"), checked(f, "no_backup")
 	names, err := selected(h.p, sel)
 	if err != nil {
 		return jobSpec{}, err
@@ -324,15 +327,24 @@ func rotateKeysSpec(f url.Values, h home, retain int) (jobSpec, error) {
 	if len(names) == 0 {
 		return jobSpec{}, badForm("no key there is used by a host, so there is nothing to rotate")
 	}
+	if checked(f, "check") {
+		return rotateCheckSpec(names, append(args, "--check"), subjects, h), nil
+	}
+	if allow {
+		args = append(args, "--allow-unverified")
+	}
+	if skip {
+		args = append(args, "--no-key-backup")
+	}
 	return jobSpec{
 		scope: mutation.Scope{Command: "rotate", Args: append(args, "--yes"), Source: history.SourceWeb, Subjects: subjects},
 		what: []string{
-			"writes an encrypted backup of ~/.ssh and the config first, so it needs AUTHAMA_AGE_RECIPIENT",
+			backupStep(skip),
 			fmt.Sprintf("rotates %d key(s), one at a time, in the order listed: each is minted, deployed and logged in with before the next", len(names)),
 			"a key that fails is left as it was, and the rest go on",
 			"asks you to paste a new public key wherever a target takes it by hand, and waits",
 		},
-		run:   func(j *jobs.Job) error { return rotateKeysJob(j, h.p, retain, sel, allow) },
+		run:   func(j *jobs.Job) error { return rotateKeysJob(j, h.p, retain, sel, allow, skip) },
 		items: names,
 	}, nil
 }
@@ -356,11 +368,11 @@ func selected(p paths.Paths, sel keysvc.Selection) ([]string, error) {
 	return names, nil
 }
 
-func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection, allowUnverified bool) error {
+func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection, allowUnverified, skipBackup bool) error {
 	if err := p.RefuseOutsideSandbox("rotate"); err != nil {
 		return err
 	}
-	if err := bundler.BackupBeforeDestroying(p, j, false); err != nil {
+	if err := bundler.BackupBeforeDestroying(p, j, skipBackup); err != nil {
 		return err
 	}
 	m, inv, err := loadState(p)
@@ -464,8 +476,10 @@ type jobReview struct {
 	Blocked bool
 	Destroy bool
 	Remote  bool // it logs in to other machines
-	Fields  []formField
-	Busy    *jobs.View
+	// CanCheck offers a dry run of this job first; Check says it is one.
+	CanCheck, Check bool
+	Fields          []formField
+	Busy            *jobs.View
 }
 
 func jobCommand(s mutation.Scope) string {
@@ -509,7 +523,9 @@ func (h jobPages) handleJobReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rev := jobReview{Title: spec.title, Command: jobCommand(spec.scope), What: spec.what, Items: spec.items,
-		Destroy: spec.destroy, Remote: reachesServers(r.PostForm), Fields: carriedJob(r.PostForm)}
+		Destroy: spec.destroy, Remote: reachesServers(r.PostForm), Fields: carriedJob(r.PostForm),
+		Check:    spec.check,
+		CanCheck: !spec.check && (r.PostForm.Get("action") == "rotate" || r.PostForm.Get("action") == "rotate-keys")}
 	if j := h.s.jobs.Running(); j != nil {
 		v, _ := j.View()
 		rev.Busy = &v
@@ -664,5 +680,67 @@ func revokeJob(j *jobs.Job, p paths.Paths, ref manifest.KeyRef, reason string) e
 		_, _ = fmt.Fprintf(j, "  NOT removed from (remove it there by hand): %s\n", strings.Join(res.NotRemoved, ", "))
 		return errors.New("the key is revoked, but not every target could remove it; see above")
 	}
+	return nil
+}
+
+// backupStep is a rotation's first step: the encrypted backup, or, when it
+// is skipped, what that means.
+func backupStep(skip bool) string {
+	if skip {
+		return "writes no encrypted backup: a clean rotation, so a key replaced now can come back only from old/, until the next rotation replaces that too"
+	}
+	return "writes an encrypted backup of ~/.ssh and the config first, so it needs a backup recipient"
+}
+
+// rotateCheckSpec is a dry run of a rotation, `authama ssh rotate ... --check`:
+// for each key, every server it is used on is asked whether it answers and the
+// current key still logs in, and a target that takes keys by hand is named.
+// Nothing changes, so it takes no backup and no snapshot.
+func rotateCheckSpec(names, args []string, subjects []history.Subject, h home) jobSpec {
+	return jobSpec{
+		scope: mutation.Scope{Command: "rotate", Args: args, Source: history.SourceWeb, Subjects: subjects},
+		what: []string{
+			fmt.Sprintf("tests %d key(s), one at a time, and changes nothing", len(names)),
+			"for each server a key is used on: it answers, and the current key still logs in",
+			"names each target that takes a new key by hand, where the real rotation will stop and ask",
+			"a key that would not rotate cleanly is marked failed, with why",
+		},
+		run:   func(j *jobs.Job) error { return rotateCheckJob(j, h.p, names) },
+		items: names,
+		check: true,
+	}
+}
+
+func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string) error {
+	m, inv, err := loadState(p)
+	if err != nil {
+		return err
+	}
+	r := rotator.New(p, m, inv)
+	j.Plan(names)
+	var failed []string
+	for i, n := range names {
+		if err := j.Step(); err != nil {
+			return err
+		}
+		j.Progress(i, len(names), "testing "+n)
+		rep, err := r.Check(n)
+		if err != nil {
+			failed = append(failed, n)
+			j.Failed(n)
+			_, _ = fmt.Fprintf(j, "FAIL %s\n       %v\n", n, err)
+			continue
+		}
+		_, _ = fmt.Fprint(j, rep.Format())
+		if !rep.OK() {
+			failed = append(failed, n)
+			j.Failed(n)
+		}
+	}
+	j.Progress(len(names), len(names), "")
+	if len(failed) > 0 {
+		return fmt.Errorf("%d of %d key(s) would not rotate cleanly: %s; nothing was changed", len(failed), len(names), strings.Join(failed, ", "))
+	}
+	_, _ = fmt.Fprintf(j, "every key would rotate; nothing was changed\n")
 	return nil
 }

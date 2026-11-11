@@ -143,3 +143,10 @@ func adapterFor(spec Spec) Provider {
 		return base{spec: spec}
 	}
 }
+
+// TakesKeysByHand reports whether p is a target with no API or ssh path in:
+// a web panel or an unknown kind, where a new key is pasted by hand.
+func TakesKeysByHand(p Provider) bool {
+	_, ok := p.(base)
+	return ok
+}

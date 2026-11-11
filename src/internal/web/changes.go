@@ -612,6 +612,29 @@ func carried(f url.Values) []formField {
 			out = append(out, formField{k, f.Get(k)})
 		}
 	}
+	return append(out, thenFields(f, thenPrefix)...)
+}
+
+// thenPrefix marks the fields of a job a change was started from (a fix on
+// a job's review): carried through the preview untouched, they let the done
+// page offer to review that job again.
+const thenPrefix = "then_"
+
+// thenFields is the job a change came from: every field named then_<name>
+// whose name is one a job reads, with prefix kept when keep is the prefix,
+// or stripped when it is "".
+func thenFields(f url.Values, keep string) []formField {
+	action := f.Get(thenPrefix + "action")
+	allowed, ok := jobFields[action]
+	if !ok {
+		return nil
+	}
+	out := []formField{{keep + "action", action}}
+	for _, k := range allowed {
+		for _, v := range f[thenPrefix+k] {
+			out = append(out, formField{keep + k, v})
+		}
+	}
 	return out
 }
 
@@ -629,6 +652,8 @@ type changePage struct {
 type donePage struct {
 	Command string
 	Result  change.Result
+	// Then is the job the change was a fix for, to review again.
+	Then []formField
 }
 
 func commandLine(p change.Plan) string {
@@ -707,7 +732,8 @@ func (h pages) handleApply(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		h.s.render(w, http.StatusOK, "done", h.s.newView(r, "", "Done",
-			donePage{Command: strings.TrimSpace(brand.Line(ch.Command) + " " + strings.Join(ch.Args, " ")), Result: res}))
+			donePage{Command: strings.TrimSpace(brand.Line(ch.Command) + " " + strings.Join(ch.Args, " ")), Result: res,
+				Then: thenFields(r.PostForm, "")}))
 	}
 }
 

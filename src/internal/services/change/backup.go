@@ -118,7 +118,11 @@ func BackupKey() Change {
 				return nil, errors.New("age-keygen is not installed: install age (brew install age, apt install age), then try again")
 			}
 			if fs.Exists(BackupKeyFile(p)) {
-				return nil, fmt.Errorf("%s already exists; use it: authama settings set backup.age_recipient \"$(age-keygen -y %s)\"", BackupKeyFile(p), BackupKeyFile(p))
+				return []string{
+					"uses the age key already in " + BackupKeyFile(p) + ": no new key is made",
+					"sets backup.age_recipient to its recipient and paths.age_identity_file to that file, in authama.json",
+					"this server uses them at once; encrypted backups are written to the recipient from then on",
+				}, nil
 			}
 			return []string{
 				"makes a new age key with age-keygen, and keeps its identity, owner-only, in " + BackupKeyFile(p),
@@ -129,11 +133,16 @@ func BackupKey() Change {
 		},
 		OnApply: func(p paths.Paths, out io.Writer) error {
 			file := BackupKeyFile(p)
-			if err := fs.EnsureDir(filepath.Dir(file), homeperms.DirMode); err != nil {
-				return err
-			}
-			if err := exec.Command("age-keygen", "-o", file).Run(); err != nil {
-				return fmt.Errorf("age-keygen: %w", err)
+			// A key already there is used, not replaced: a second press, or a
+			// key made before, sets the settings up from it.
+			made := !fs.Exists(file)
+			if made {
+				if err := fs.EnsureDir(filepath.Dir(file), homeperms.DirMode); err != nil {
+					return err
+				}
+				if err := exec.Command("age-keygen", "-o", file).Run(); err != nil {
+					return fmt.Errorf("age-keygen: %w", err)
+				}
 			}
 			if err := os.Chmod(file, homeperms.FileMode); err != nil {
 				return err
@@ -150,7 +159,11 @@ func BackupKey() Change {
 				}
 				useNow(kv[0], kv[1], old)
 			}
-			_, _ = fmt.Fprintf(out, "made a backup key: recipient %s, identity %s\nkeep a copy of %s somewhere safe\n", recipient, file, file)
+			verb := "made a backup key"
+			if !made {
+				verb = "set up the backup key already there"
+			}
+			_, _ = fmt.Fprintf(out, "%s: recipient %s, identity %s\nkeep a copy of %s somewhere safe\n", verb, recipient, file, file)
 			return nil
 		},
 		Run: func(paths.Paths, io.Writer) error { return nil },

@@ -14,7 +14,7 @@ import (
 )
 
 func newRotateCmd() *cobra.Command {
-	var allowUnverified, passphrase, yes, noKeyBackup, all, dryRun bool
+	var allowUnverified, passphrase, yes, noKeyBackup, all, dryRun, check bool
 	var category string
 	cmd := &cobra.Command{
 		Use: "rotate [<[profile/]key>|profile|alias ...] [--category <name>] [--all]",
@@ -31,11 +31,11 @@ func newRotateCmd() *cobra.Command {
 			"untouched and the rest still rotate. A key no host uses is skipped, since\n" +
 			"there is nothing to deploy it to.",
 		RunE: func(c *cobra.Command, args []string) error {
-			if len(args) == 1 && !all && category == "" && !dryRun && namesAKey(c, args[0]) {
+			if len(args) == 1 && !all && category == "" && !dryRun && !check && namesAKey(c, args[0]) {
 				return rotateOne(c, args[0], allowUnverified, passphrase, yes, noKeyBackup)
 			}
 			return rotateMany(c, keysvc.Selection{Selectors: args, Category: category, All: all},
-				allowUnverified, passphrase, yes, noKeyBackup, dryRun)
+				allowUnverified, passphrase, yes, noKeyBackup, dryRun, check)
 		},
 	}
 	cmd.Flags().BoolVar(&allowUnverified, "allow-unverified", false, "commit even if a target can't auto-verify")
@@ -46,6 +46,8 @@ func newRotateCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&all, "all", false, "rotate every key a host uses")
 	cmd.Flags().StringVar(&category, "category", "", "rotate every key in profiles of this category")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "list the keys that would rotate, and change nothing")
+	cmd.Flags().BoolVar(&check, "check", false,
+		"test each key's rotation and change nothing: every server answers and the current key logs in, or the target takes it by hand")
 	addNoPassphraseCompat(cmd)
 	return cmd
 }
@@ -122,7 +124,7 @@ func rotateOne(c *cobra.Command, key string, allowUnverified, passphrase, yes, n
 // rotateMany rotates a selection of keys one after another: one confirmation,
 // one backup, one snapshot, and the inventory saved after every committed key
 // so an interrupted batch keeps what it finished.
-func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphrase, yes, noKeyBackup, dryRun bool) error {
+func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphrase, yes, noKeyBackup, dryRun, check bool) error {
 	out := c.OutOrStdout()
 	p, err := resolvePaths(c)
 	if err != nil {
@@ -162,6 +164,25 @@ func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphr
 			_, _ = fmt.Fprintln(out, "rotate   "+n)
 		}
 		_, _ = fmt.Fprintf(out, "(dry run) %d key(s) would rotate\n", len(names))
+		return nil
+	}
+	if check {
+		r := rotator.New(p, m, inv)
+		var failed []string
+		for _, n := range names {
+			rep, err := r.Check(n)
+			if err != nil {
+				return err
+			}
+			_, _ = fmt.Fprint(out, rep.Format())
+			if !rep.OK() {
+				failed = append(failed, n)
+			}
+		}
+		if len(failed) > 0 {
+			return fmt.Errorf("%d of %d key(s) would not rotate cleanly: %s; nothing was changed", len(failed), len(names), strings.Join(failed, ", "))
+		}
+		_, _ = fmt.Fprintf(out, "(check) %d key(s) would rotate; nothing was changed\n", len(names))
 		return nil
 	}
 	if err := confirmOrAbort(c, fmt.Sprintf("Rotate %d key(s): %s? (each current key moves to old/, "+
