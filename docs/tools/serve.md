@@ -404,7 +404,11 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
    start until it passes.
    **What it does, in order** numbers its steps, **One at a time** lists the keys it works through,
    and the command it is the same as is shown for reference, with a copy button. **Start: Rotate 10
-   keys…** opens a dialog that asks once more; a job that cannot be undone (revoke, delete) asks in
+   keys…** opens a dialog that asks once more; **Dry run: test every key**, beside it, tests the
+   rotation and changes nothing (each server answers and the current key logs in; a target that
+   takes keys by hand is named), and *Rotate without a backup* (or *Skip the encrypted backup* on
+   the form) makes a clean rotation with no bundle. After a fix started from a review, the done page
+   offers **Review the job again**; a job that cannot be undone (revoke, delete) asks in
    red.
 2. **Run.** The job starts, and its page shows the output as it comes, under a progress card: a
    spinner, the time so far, and for a job that works through several keys or hosts (rotate,
