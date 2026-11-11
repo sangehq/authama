@@ -8,6 +8,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Edit settings from the Settings page.** Every setting sits in a card for its section with its
+  description, its value, and where that came from; **Edit** opens a form whose input fits it (a
+  switch-like On/Off, a menu of its choices, a number, or text with the default as a hint), previewed
+  before it is written into `authama.json`, and **Go back to the default** takes it out again. The
+  server uses a saved value at once, unless the environment or `.env` sets it, which still wins. A
+  filter narrows the page. The same from a terminal: `authama settings set <key> <value>` and
+  `authama settings unset <key>`.
+- **A job's failed check says how to fix it, and offers the fix.** A rotate with no backup recipient
+  offers **Create a backup key** (`authama settings backup-key`: an age key made with `age-keygen`,
+  its identity kept owner-only in the config home, and `backup.age_recipient` and
+  `paths.age_identity_file` set to it, never shown in a page) or **Use a key you have**, which opens
+  that setting in Settings. A job that backs up first also checks that `age` is installed.
 - **Jobs have guardrails, and run one item at a time on screen.** A job's review is titled for
   the job (*Rotate 10 keys*), checks what it needs before it may start (no other job running, a
   backup recipient for one that backs up first) and keeps Start off until they pass, numbers its

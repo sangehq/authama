@@ -275,7 +275,7 @@ documentation, the source and the licences.
 | About | this build (version, commit, Go, platform), the user and machine it runs as, this computer (OS and version, build, kernel, architecture, model, processor, cores, memory, uptime, read from the OS without running a command), where it keeps things, links to the documentation and the source, and the third-party licences of the bundled front-end assets |
 | Owner & PIN | whether the home is [bound to its owner](owner.md), where the sealing key is kept, whether a PIN and fingerprint unlock are on, and whether the sealed files match, naming each one changed outside authama. Changing any of it is done at a terminal, which proves the OS account; the page shows the commands |
 | Repair | what is wrong with the home, `~/.ssh` and the token files, the fixes made as one previewed change, and a factory reset; see [repair](repair.md) |
-| Settings | the colour theme (light, dark, or following the system); where the config home, state home, `.env` and `authama.json` are, every setting's value in effect and where it came from, and what `authama settings validate` reports, as `settings path`, `settings show --effective` and `settings validate` print them. The values are those the server started with |
+| Settings | the colour theme (light, dark, or following the system); where the config home, state home, `.env` and `authama.json` are, and what `authama settings validate` reports; every setting in a card for its section, with its description, value and where it came from. **Edit** opens a form whose input fits the setting and saves it into `authama.json`, previewed (the server uses it at once unless the environment or `.env` sets it); **Go back to the default** removes it; *Create a backup key* shows while no backup recipient is set. The same as `authama settings path`, `show --effective`, `validate`, `set`, `unset` and `backup-key` |
 | Third-party licences | the licences of the web UI's bundled front-end assets (Tabler, Tabler Icons, Bootstrap, Popper), at `/about/licenses` |
 
 ## Changes
@@ -399,7 +399,9 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
 
 1. **Review.** The page is titled for the job (*Rotate 10 keys*). **Before it starts** lists the
    checks it must pass: no other job running, and, for one that writes an encrypted backup first, a
-   backup recipient set; a check that fails is marked and the job cannot start until it is fixed.
+   backup recipient set and `age` installed; a check that fails is marked, offers its fix (*Create a
+   backup key*, or *Use a key you have*, which opens that setting in Settings), and the job cannot
+   start until it passes.
    **What it does, in order** numbers its steps, **One at a time** lists the keys it works through,
    and the command it is the same as is shown for reference, with a copy button. **Start: Rotate 10
    keys…** opens a dialog that asks once more; a job that cannot be undone (revoke, delete) asks in
