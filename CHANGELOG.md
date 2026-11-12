@@ -25,7 +25,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     `webhooks.allow_private` is on; redirects are never followed.
   - `authama mcp` serves the Model Context Protocol over stdio when `mcp.enabled` is on, with
     read-only tools for an AI client: profiles, keys, hosts, tokens set, the history, the feed and
-    doctor.
+    doctor. It is built on the official Go SDK, `github.com/modelcontextprotocol/go-sdk` v1.8.0,
+    which handles the framing, JSON-RPC, initialisation and version negotiation; the tools, their
+    input schemas, results and refusals are unchanged. A method it does not serve is refused with
+    `-32601` in the SDK's words, a line that is not JSON-RPC 2.0 ends the session where it was
+    answered with `-32700` or `-32600` before, and a call before `initialize` is refused. When stdin
+    closes, every request already read is still answered.
 
 - **Three JSON commands for sange's companion contract (v1).** `authama companion info --json` is the
   handshake: name, version, the contract versions it answers, its capabilities and its homes.

@@ -49,8 +49,35 @@ Every tool is marked read-only (`readOnlyHint`), and returns JSON as text and as
   material, and no token's value.
 - stdout carries nothing but protocol messages; anything else goes to stderr.
 
+## Protocol
+
+The server is built on the official Go SDK,
+[`github.com/modelcontextprotocol/go-sdk`](https://github.com/modelcontextprotocol/go-sdk), which
+handles the framing, JSON-RPC 2.0, initialisation and version negotiation. It answers `initialize`,
+`ping`, `tools/list` and `tools/call`; any other request is refused with `-32601`.
+
 The protocol revisions it speaks are `2025-11-25`, `2025-06-18` and `2025-03-26`: a client asking for
 one of them gets it, and any other gets the newest.
+
+| Request | Answer |
+|---|---|
+| a tool that fails, such as `get_key` with no `ref` | a result marked `isError`, with the reason as text, so the model can read it |
+| `tools/call` with no tool name | error `-32602`, `tools/call needs a tool name` |
+| `tools/call` naming no tool | error `-32602`, `no tool <name>` |
+| `tools/call` whose `arguments` is not an object | error `-32602`, `arguments must be an object` |
+| a method it does not serve | error `-32601`, `method not found` |
+| a line that is not JSON-RPC 2.0 | the session ends; start the server again |
+
+When stdin closes, the server answers every request it has already read before it exits, so a script
+can write its requests and close stdin:
+
+```sh
+printf '%s\n' \
+  '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"sh","version":"1"}}}' \
+  '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+  '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"list_profiles"}}' \
+  | authama mcp
+```
 
 ---
 
