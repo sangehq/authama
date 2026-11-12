@@ -44,7 +44,7 @@ VERSION := $(shell git describe --tags --match 'v[0-9]*' --always --dirty 2>/dev
 LDFLAGS := -s -w -X github.com/simtabi/authama/src/internal/version.Version=$(VERSION)
 GO      := go -C $(MODULE)
 
-.PHONY: help build build-all test vet fmt fmt-check lint lint-all ci check gates ci-linux e2e e2e-web feature-check docker-shell docker-run docker-down \
+.PHONY: help build build-all test vet fmt fmt-check lint lint-tool lint-all ci check gates ci-linux e2e e2e-web feature-check docker-shell docker-run docker-down \
         cross dist release-snapshot clean install uninstall doctor reconcile render rotate bundle settings generate tabler-check tabler-update tabler-vendor man
 
 help:  ## list targets
@@ -85,17 +85,24 @@ fmt: ## gofmt every file in place
 fmt-check: ## fail if anything is unformatted (what CI gates on)
 	@test -z "$$(gofmt -l $(MODULE)/cmd $(MODULE)/internal)" || { gofmt -l $(MODULE)/cmd $(MODULE)/internal; exit 1; }
 
-lint: ## golangci-lint (install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest)
-	@command -v golangci-lint >/dev/null 2>&1 || { \
-		echo "golangci-lint is not installed. Install it with:"; \
+# golangci-lint from PATH, else where `go install` puts it ($GOPATH/bin), which
+# is often not on PATH: a shell without it failed `make gates` with "command not
+# found" while the linter sat installed in ~/go/bin. GOLANGCI_LINT=... overrides.
+GOLANGCI_LINT ?= $(or $(shell command -v golangci-lint 2>/dev/null),$(firstword $(subst :, ,$(shell go env GOPATH 2>/dev/null)))/bin/golangci-lint)
+
+lint-tool:
+	@test -x "$(GOLANGCI_LINT)" || { \
+		echo "golangci-lint is not installed (looked on PATH and in \$$GOPATH/bin). Install it with:"; \
 		echo "  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest"; \
 		exit 1; }
-	cd $(MODULE) && golangci-lint run ./...
 
-lint-all: ## lint every GOOS - one run only sees one, so build-tagged files hide
+lint: lint-tool ## golangci-lint (install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest)
+	cd $(MODULE) && "$(GOLANGCI_LINT)" run ./...
+
+lint-all: lint-tool ## lint every GOOS - one run only sees one, so build-tagged files hide
 	@for os in darwin linux windows; do \
 		echo "--- GOOS=$$os ---"; \
-		( cd $(MODULE) && GOOS=$$os golangci-lint run ./... ) || exit 1; \
+		( cd $(MODULE) && GOOS=$$os "$(GOLANGCI_LINT)" run ./... ) || exit 1; \
 	done
 
 # `ci` is the gate the workflow runs, so there is one definition of it rather
