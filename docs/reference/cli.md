@@ -2726,6 +2726,7 @@ Examples:
   authama ssh rotate --all --dry-run
   authama ssh rotate --all --check   # test every key first, change nothing
   authama ssh rotate --all --no-key-backup --yes   # a clean rotation, no backup bundle
+  authama ssh rotate --all --force --yes   # replace locally what cannot rotate in place
   authama ssh rotate --category clients --yes
 ```
 
@@ -2737,6 +2738,7 @@ Flags:
       --category string    rotate every key in profiles of this category
       --check              test each key's rotation and change nothing: every server answers and the current key logs in, or the target takes it by hand
       --dry-run            list the keys that would rotate, and change nothing
+      --force              replace on this computer (as ssh keygen --force) each key that cannot be rotated in place - never deployed, or its host unreachable - to deploy afterwards
       --no-key-backup      rotate without writing an encrypted backup first (the earlier predecessor is lost)
       --passphrase         protect the rotated-in key (prompts without echo)
   -y, --yes                skip the confirmation prompt

@@ -60,6 +60,9 @@ func describeJob(f url.Values, spec *jobSpec) {
 	if spec.title == "" {
 		spec.title = "Run the job"
 	}
+	if checked(f, "force") && !spec.check {
+		spec.title, spec.destroy = spec.title+" (forced)", true
+	}
 	if spec.check {
 		spec.title, spec.backup, spec.destroy = "Dry run: "+lower(spec.title), false, false
 	}

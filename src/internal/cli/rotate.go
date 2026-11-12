@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"github.com/simtabi/authama/src/internal/services/reconciler"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -14,7 +15,7 @@ import (
 )
 
 func newRotateCmd() *cobra.Command {
-	var allowUnverified, passphrase, yes, noKeyBackup, all, dryRun, check bool
+	var allowUnverified, passphrase, yes, noKeyBackup, all, dryRun, check, force bool
 	var category string
 	cmd := &cobra.Command{
 		Use: "rotate [<[profile/]key>|profile|alias ...] [--category <name>] [--all]",
@@ -32,10 +33,10 @@ func newRotateCmd() *cobra.Command {
 			"there is nothing to deploy it to.",
 		RunE: func(c *cobra.Command, args []string) error {
 			if len(args) == 1 && !all && category == "" && !dryRun && !check && namesAKey(c, args[0]) {
-				return rotateOne(c, args[0], allowUnverified, passphrase, yes, noKeyBackup)
+				return rotateOne(c, args[0], allowUnverified, passphrase, yes, noKeyBackup, force)
 			}
 			return rotateMany(c, keysvc.Selection{Selectors: args, Category: category, All: all},
-				allowUnverified, passphrase, yes, noKeyBackup, dryRun, check)
+				allowUnverified, passphrase, yes, noKeyBackup, dryRun, check, force)
 		},
 	}
 	cmd.Flags().BoolVar(&allowUnverified, "allow-unverified", false, "commit even if a target can't auto-verify")
@@ -46,6 +47,8 @@ func newRotateCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&all, "all", false, "rotate every key a host uses")
 	cmd.Flags().StringVar(&category, "category", "", "rotate every key in profiles of this category")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "list the keys that would rotate, and change nothing")
+	cmd.Flags().BoolVar(&force, "force", false,
+		"replace on this computer (as ssh keygen --force) each key that cannot be rotated in place - never deployed, or its host unreachable - to deploy afterwards")
 	cmd.Flags().BoolVar(&check, "check", false,
 		"test each key's rotation and change nothing: every server answers and the current key logs in, or the target takes it by hand")
 	addNoPassphraseCompat(cmd)
@@ -70,7 +73,7 @@ func namesAKey(c *cobra.Command, arg string) bool {
 }
 
 // rotateOne is the single-key rotation, unchanged from before batches existed.
-func rotateOne(c *cobra.Command, key string, allowUnverified, passphrase, yes, noKeyBackup bool) error {
+func rotateOne(c *cobra.Command, key string, allowUnverified, passphrase, yes, noKeyBackup, force bool) error {
 	if err := confirmOrAbort(c, fmt.Sprintf("Rotate %s? (the current key moves to old/, "+
 		"replacing any earlier predecessor)", key), yes); err != nil {
 		return err
@@ -116,6 +119,11 @@ func rotateOne(c *cobra.Command, key string, allowUnverified, passphrase, yes, n
 	}
 	_, _ = fmt.Fprintln(c.OutOrStdout(), report.Format())
 	if !report.Committed {
+		if force {
+			if _, still := reconciler.ReplaceLocally(p, []string{key}, platform.EmitUseKeychain(), c.OutOrStdout()); len(still) == 0 {
+				return nil
+			}
+		}
 		return errNotClean
 	}
 	return nil
@@ -124,7 +132,7 @@ func rotateOne(c *cobra.Command, key string, allowUnverified, passphrase, yes, n
 // rotateMany rotates a selection of keys one after another: one confirmation,
 // one backup, one snapshot, and the inventory saved after every committed key
 // so an interrupted batch keeps what it finished.
-func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphrase, yes, noKeyBackup, dryRun, check bool) error {
+func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphrase, yes, noKeyBackup, dryRun, check, force bool) error {
 	out := c.OutOrStdout()
 	p, err := resolvePaths(c)
 	if err != nil {
@@ -208,6 +216,10 @@ func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphr
 	failed, err := rot.RotateEach(names, allowUnverified, pw, out, func() error { return inv.Save(p.Inventory()) }, nil)
 	if err != nil {
 		return err
+	}
+	if force && len(failed) > 0 {
+		_, _ = fmt.Fprintf(out, "forced: replacing %d key(s) the rotation could not rotate, on this computer\n", len(failed))
+		_, failed = reconciler.ReplaceLocally(p, failed, platform.EmitUseKeychain(), out)
 	}
 	if len(failed) > 0 {
 		return errNotClean

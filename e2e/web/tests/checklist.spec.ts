@@ -191,18 +191,44 @@ test('a setting is edited from its page, through a preview', async ({ page }) =>
   await page.screenshot({ path: 'test-results/settings-page.png', fullPage: true });
 });
 
-test('a dry run of a rotation tests every key and shows the result as a tree', async ({ page }) => {
+test('a rotation is reviewed on its own page, forced from its options, and dry-run as a tree', async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto('/keys#rotate-keys');
   const form = page.locator('#rotate-keys');
   await form.getByLabel('Every key in every profile').check();
+  // The steps follow the switches: a clean rotation writes no backup.
+  await expect(form.locator('.kp-if-backup')).toBeVisible();
+  await form.getByLabel('Skip the encrypted backup (a clean rotation)').check();
+  await expect(form.locator('.kp-if-backup')).toBeHidden();
+  await form.getByLabel('Skip the encrypted backup (a clean rotation)').uncheck();
   await form.locator('[data-pick-submit]').click();
-  const panel = page.locator('#side-panel');
-  await panel.getByRole('button', { name: 'Dry run: test every key' }).click();
-  await expect(panel.getByRole('heading', { level: 1 })).toHaveText(/^Dry run: rotate \d+ keys?$/);
-  await expect(panel.locator('#job-state')).toHaveAttribute('data-state', /done|failed/, { timeout: 90_000 });
-  const tree = panel.locator('.console');
+
+  // The review is a page of its own, not a slide-in panel.
+  await expect(page).toHaveURL(/\/jobs\/review$/);
+  await expect(page.locator('#side-panel')).toBeHidden();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^Rotate \d+ keys?$/);
+  await page.screenshot({ path: 'test-results/job-review-page.png', fullPage: true });
+
+  // Force reviews it again, marked dangerous; the confirm says so.
+  await page.getByLabel('Force: replace what cannot rotate in place').check();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/\(forced\)$/);
+  await expect(page.getByRole('alert').filter({ hasText: 'can lock you out' })).toBeVisible();
+  await expect(page.locator('.command-card')).toContainText('--force');
+  // Its Start button is red, and the dialog it opens says what forcing does.
+  await expect(page.getByRole('button', { name: /^Start: Rotate .*\(forced\)…$/ })).toHaveClass(/btn-danger/);
+  await expect(page.locator('#m-job')).toContainText('until you deploy it');
+  await expect(page.locator('#m-job').getByRole('button', { name: 'Yes, force it', includeHidden: true })).toHaveCount(1);
+  await page.getByLabel('Force: replace what cannot rotate in place').uncheck();
+  await expect(page.getByRole('heading', { level: 1 })).not.toHaveText(/forced/);
+
+  // The dry run opens the job as a page too.
+  await page.getByRole('button', { name: 'Dry run: test every key' }).click();
+  await expect(page).toHaveURL(/\/jobs\/(?!review$)[^/]+$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^Dry run: rotate \d+ keys?$/);
+  await expect(page.locator('#job-state')).toHaveAttribute('data-state', /done|failed/, { timeout: 90_000 });
+  const tree = page.locator('.console');
   await expect(tree.locator('.console-line.lvl-0').first()).toBeVisible();
   await expect(tree.locator('.console-branch').first()).toHaveText(/[├└]─/);
   await tree.screenshot({ path: 'test-results/dry-run-tree.png' });
+  await page.screenshot({ path: 'test-results/job-page.png', fullPage: true });
 });

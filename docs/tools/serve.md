@@ -397,7 +397,15 @@ History.
 Deploying, rotating and rolling back reach the hosts that use a key, and pinning host keys asks
 hosts for theirs, so no copy can preview them. Each runs as a **job**:
 
-1. **Review.** The page is titled for the job (*Rotate 10 keys*). **Before it starts** lists the
+1. **Review.** The review is a page of its own, never a slide-in panel, titled for the job
+   (*Rotate 10 keys*), with a trail back to where the job was chosen; Cancel goes back there.
+   The checks, steps and keys are on the left, and a column on the right stays in view as you
+   scroll: what the job reaches, whether it writes a backup, how to undo it, its options, and
+   its Start button. A rotation's options (*Skip the encrypted backup*, *Go on when a login
+   cannot be verified*, *Force: replace what cannot rotate in place*) review it again as soon as
+   one is turned. A forced rotation is titled *(forced)*, warns that it can lock you out of a host
+   until the replaced key is deployed, starts from a red button and asks in a red dialog;
+   see [rotate](rotate.md#forcing-a-rotation). **Before it starts** lists the
    checks it must pass: no other job running, and, for one that writes an encrypted backup first, a
    backup recipient set and `age` installed; a check that fails is marked, offers its fix (*Create a
    backup key*, or *Use a key you have*, which opens that setting in Settings), and the job cannot
@@ -410,7 +418,8 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
    the form) makes a clean rotation with no bundle. After a fix started from a review, the done page
    offers **Review the job again**; a job that cannot be undone (revoke, delete) asks in
    red.
-2. **Run.** The job starts, and its page, titled for the job with its full command beneath, shows
+2. **Run.** The job starts, and its page (a page of its own too, as is an operation in the
+   history), titled for the job with its full command beneath, shows
    the output as it comes in a console: each line's status word (ok, FAIL, paste, skip, WARNING)
    in a fixed column as a coloured badge, the host or key in its own colour, nested lines indented,
    and failures tinted; it follows the newest line unless you scroll up. Above it is a progress card: a
@@ -466,11 +475,10 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
 
 Some changes are terminal-only:
 
-- rotating with any option but `--allow-unverified`, overwriting a key (`keygen --force`), and
-  passphrases;
+- overwriting a single key (`keygen --force`) outside a forced rotation, and passphrases;
 - revoking a key from its targets (`--revoke`), and restoring a bundle from anywhere but `dist/`, or
   with an identity that has a passphrase;
-- `--no-key-backup`;
+- `--no-key-backup` for anything but a rotation;
 - importing from any folder but `~/.ssh` and the config home.
 
 `--read-only` serves none of the changes in the table above, and the pages show no forms.

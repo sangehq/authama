@@ -13,6 +13,17 @@ const CHANGING = ["/changes/apply", "/jobs"];
 const changes = (pathname) => CHANGING.some((p) => pathname === Ui.path(p));
 
 /**
+ * Paths that are pages of their own, never panel pages: a job's review, a
+ * running job and an operation in the history have too much on them for a
+ * slide-in panel, so a form or link to one goes to it as a whole page.
+ * @param {string} pathname
+ */
+export const fullPage = (pathname) => pathname === Ui.path("/jobs") || pathname.startsWith(Ui.path("/jobs/")) || pathname.startsWith(Ui.path("/history/"));
+
+/** The path a form sends to. The attribute, not form.action: these forms carry an input named "action". @param {HTMLFormElement} form @param {HTMLElement | null} [submitter] */
+const formPath = (form, submitter = null) => new URL(submitter?.getAttribute("formaction") ?? form.getAttribute("action") ?? window.location.href, window.location.href).pathname;
+
+/**
  * @typedef {{ url: string, title: string, node: Element }} PanelPage
  */
 
@@ -56,14 +67,14 @@ export class SidePanel extends Component {
     // marked data-inline: a preview's "Make this change", a job's answer.
     this.#body().addEventListener("submit", (e) => {
       const form = e.target;
-      if (form instanceof HTMLFormElement && !form.hasAttribute("data-panel-skip")) {
+      if (form instanceof HTMLFormElement && !form.hasAttribute("data-panel-skip") && !fullPage(formPath(form, /** @type {SubmitEvent} */ (e).submitter))) {
         e.preventDefault();
         this.submit(form, /** @type {SubmitEvent} */ (e).submitter);
       }
     });
     this.#body().addEventListener("click", (e) => {
       const a = e.target instanceof Element ? e.target.closest("a[data-inline]") : null;
-      if (a instanceof HTMLAnchorElement && SidePanel.local(a)) {
+      if (a instanceof HTMLAnchorElement && SidePanel.local(a) && !fullPage(a.pathname)) {
         e.preventDefault();
         this.open(a.href);
       }
@@ -143,7 +154,7 @@ export class SidePanel extends Component {
         signal: this.#inflight.signal,
       });
       const type = res.headers.get("Content-Type") ?? "";
-      if (!type.startsWith("text/html")) {
+      if (!type.startsWith("text/html") || (fullPage(new URL(res.url).pathname) && init.method === "GET")) {
         // A download or anything else the panel cannot show: let the browser have it.
         window.location.assign(res.url);
         return this;
@@ -254,7 +265,7 @@ export class Inline extends Component {
       const form = this.el;
       form.addEventListener("submit", (e) => {
         const panel = SidePanel.current;
-        if (!panel || e.defaultPrevented) {
+        if (!panel || e.defaultPrevented || fullPage(formPath(form, /** @type {SubmitEvent} */ (e).submitter))) {
           return;
         }
         e.preventDefault();
@@ -266,7 +277,7 @@ export class Inline extends Component {
       a.addEventListener("click", (e) => {
         const panel = SidePanel.current;
         // A modified click (new tab, new window) keeps its meaning.
-        if (!panel || !SidePanel.local(a) || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) {
+        if (!panel || !SidePanel.local(a) || fullPage(a.pathname) || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) {
           return;
         }
         e.preventDefault();

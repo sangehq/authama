@@ -88,7 +88,7 @@ var commandExamples = map[string][]string{
 	"ssh recover":           {"ssh recover", "ssh recover work/deploy"},
 	"ssh restore":           {"ssh restore ~/backup/authama-20261101-094319.age --identity ~/.age/key.txt"},
 	"ssh rollback":          {"ssh rollback work/deploy"},
-	"ssh rotate":            {"ssh rotate work/deploy", "ssh rotate --all --dry-run", "ssh rotate --all --check   # test every key first, change nothing", "ssh rotate --all --no-key-backup --yes   # a clean rotation, no backup bundle", "ssh rotate --category clients --yes"},
+	"ssh rotate":            {"ssh rotate work/deploy", "ssh rotate --all --dry-run", "ssh rotate --all --check   # test every key first, change nothing", "ssh rotate --all --no-key-backup --yes   # a clean rotation, no backup bundle", "ssh rotate --all --force --yes   # replace locally what cannot rotate in place", "ssh rotate --category clients --yes"},
 	"ssh show":              {"ssh show work", "ssh show web1", "ssh show work/deploy"},
 	"ssh snapshots list":    {"ssh snapshots list"},
 	"ssh snapshots prune":   {"ssh snapshots prune --keep 5"},

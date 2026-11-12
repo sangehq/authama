@@ -434,6 +434,14 @@ main:focus { outline: none; }
 .job-check-icon { flex: none; color: var(--tblr-success); margin-top: .1rem; }
 .job-check.is-blocking .job-check-icon { color: var(--tblr-danger); }
 .job-steps { padding-left: 1.25rem; }
+/* A job's review: the column with the Start button stays in view beside a long list. */
+@media (min-width: 992px) { .job-aside { position: sticky; top: 1rem; } }
+/* On a job's page the item list sits in that column, so it can run taller. */
+@media (min-width: 1200px) { .job-progress.job-aside .job-run-items { max-height: calc(100vh - 16rem); } }
+.job-facts { display: grid; grid-template-columns: auto 1fr; gap: .375rem 1rem; }
+.job-facts dt { font-weight: 500; color: var(--tblr-secondary); }
+.job-facts dd { margin: 0; }
+.form-switch.is-danger .form-check-input:checked { background-color: var(--tblr-danger); border-color: var(--tblr-danger); }
 .job-steps li + li { margin-top: .375rem; }
 .job-items { columns: 2 18rem; column-gap: 2rem; padding-left: 1.5rem; margin: 0; max-height: 20rem; overflow-y: auto; }
 .job-items li { break-inside: avoid; padding: .125rem 0; }
@@ -505,3 +513,9 @@ main:focus { outline: none; }
 .console-line.is-bad { background: rgba(255, 107, 107, .08); }
 .console-line.is-bad .console-text { color: #ffb3b3; }
 .console-line.is-warn .console-text { color: #f0d58a; }
+
+/* Rotate keys: the steps follow the switches above them. */
+.kp-steps .kp-if-force { display: none; }
+form:has(input[name="no_backup"]:checked) .kp-steps .kp-if-backup { display: none; }
+form:has(input[name="force"]:checked) .kp-steps .kp-if-force { display: list-item; color: var(--tblr-danger); }
+form:has(input[name="force"]:checked) .kp-steps .kp-if-not-force { display: none; }

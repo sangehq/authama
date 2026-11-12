@@ -40,12 +40,6 @@ test('a profile is previewed, then added', async ({ page }) => {
   await expect(page.locator('.tooltip')).toHaveCount(0);
   await expect(panel.getByRole('status')).toContainText(`profile add ${added}`);
 
-  // The history opens in the panel too, and Back returns to the result.
-  await panel.getByRole('link', { name: 'See it in the history' }).click();
-  await expect(panel.getByRole('heading', { level: 1 })).toContainText('profile add');
-  await panel.getByRole('button', { name: 'Back' }).click();
-  await expect(panel.getByRole('heading', { level: 1 })).toHaveText('Done');
-
   // Closing the panel after a change reloads the page under it.
   await panel.getByRole('button', { name: 'Close' }).click();
   await expect(page.getByRole('rowheader', { name: added, exact: true })).toBeVisible();
@@ -53,6 +47,10 @@ test('a profile is previewed, then added', async ({ page }) => {
   await expect(page.getByRole('rowheader', { name: added, exact: true })).toBeVisible();
   await page.goto('/history?source=web');
   await expect(page.getByRole('link', { name: 'profile add', exact: true }).first()).toBeVisible();
+  // An operation in the history is a page of its own, not a panel page.
+  await page.getByRole('link', { name: 'profile add', exact: true }).first().click();
+  await expect(page).toHaveURL(/\/history\/[0-9a-f]+$/);
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('profile add');
 });
 
 test('a preview whose home moved underneath is refused, and nothing is written', async ({ page }) => {
@@ -93,24 +91,23 @@ test('a bundle restore runs as a job and its stream is watched to the end', asyn
   await page.locator('.dropdown-menu.show').getByRole('button', { name: 'Restore' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Review the restore' }).click();
 
-  const panel = page.locator('#side-panel');
-  // The review names the job, checks what it needs, lists its steps, and
-  // starts only once the dialog is confirmed.
-  await expect(panel.getByRole('heading', { level: 1 })).toHaveText(`Restore ${name}`);
-  await expect(panel.locator('.job-check', { hasText: 'An age identity is set' })).toBeVisible();
-  await expect(panel.locator('.job-steps li', { hasText: `decrypts ${name}` })).toBeVisible();
-  await expect(panel.getByRole('button', { name: /^Run authama/ })).toHaveCount(0);
-  await panel.getByRole('button', { name: `Start: Restore ${name}…` }).click();
-  // The dialog opens in front of the slide-in panel, from the page's body.
+  // The review is a page of its own: it names the job, checks what it
+  // needs, lists its steps, and starts only once the dialog is confirmed.
+  await expect(page).toHaveURL(/\/jobs\/review$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Restore ${name}`);
+  await expect(page.locator('.job-check', { hasText: 'An age identity is set' })).toBeVisible();
+  await expect(page.locator('.job-steps li', { hasText: `decrypts ${name}` })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Run authama/ })).toHaveCount(0);
+  await page.getByRole('button', { name: `Start: Restore ${name}…` }).click();
   await expect(page.locator('body > #m-job')).toBeVisible();
   await page.getByRole('dialog').getByRole('button', { name: 'Yes, start it' }).click();
-  // The job's page opens in the panel; its own address is the panel's "Open as a page".
-  await expect(panel.locator('[data-side-panel-full]')).toHaveAttribute('href', /\/jobs\/(?!review$)[^/]+$/);
-  const jobURL = (await panel.locator('[data-side-panel-full]').getAttribute('href')) ?? '';
+  // The job opens as its own page.
+  await expect(page).toHaveURL(/\/jobs\/(?!review$)[^/]+$/);
+  const jobURL = page.url();
 
   // The output is a console: each line its own row, its status word in a
   // fixed column, coloured by how it reads.
-  await expect(panel.locator('.console .console-line').first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('.console .console-line').first()).toBeVisible({ timeout: 30_000 });
   // The event stream replays every line and ends once the job does; reading
   // it to the end is watching the job finish.
   const events = await page.request.get(`${new URL(jobURL).pathname}/events`, { timeout: 60_000 });
@@ -120,15 +117,14 @@ test('a bundle restore runs as a job and its stream is watched to the end', asyn
   expect(stream).toContain('event: line\ndata:   work_hpc-ed25519  SHA256:');
   expect(stream.trimEnd()).toMatch(/event: state\ndata: done$/);
 
-  // The panel follows the same stream, and refreshes into the finished job -
-  // in the panel, without leaving the page under it.
-  await expect(panel.locator('#job-state')).toHaveAttribute('data-state', 'done', { timeout: 30_000 });
-  await expect(panel.locator('#job-log')).toContainText('restore: laid down');
-  await panel.locator('.console').screenshot({ path: 'test-results/job-console.png' });
-  await expect(panel.locator('#job-state .badge')).toHaveText('done');
-  await expect(page).toHaveURL(/\/snapshots$/);
-  // A change was made in the panel, so closing it reloads the page under it.
-  await panel.getByRole('button', { name: 'Close' }).click();
+  // The page follows the same stream and refreshes into the finished job.
+  await expect(page.locator('#job-state')).toHaveAttribute('data-state', 'done', { timeout: 30_000 });
+  await expect(page.locator('#job-log')).toContainText('restore: laid down');
+  await page.locator('.console').screenshot({ path: 'test-results/job-console.png' });
+  await expect(page.locator('#job-state .badge')).toHaveText('done');
+  // Its record in the history is a page too.
+  await page.getByRole('link', { name: 'In the history' }).click();
+  await expect(page).toHaveURL(/\/history\/[0-9a-f]+$/);
 
   // The job snapshotted ~/.ssh before laying the bundle back.
   await page.goto('/snapshots');

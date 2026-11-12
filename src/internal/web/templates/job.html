@@ -1,18 +1,25 @@
 {{define "content"}}{{with .Data}}
+{{/* A job is a page of its own, never a slide-in panel: its state and
+     progress in a column that stays in view, its output beside it. */}}
 <div class="page-header d-print-none mb-3">
   {{template "breadcrumb" (crumbs "History" "/history" "Job" "")}}
-  {{if .Title}}<h1 class="page-title">{{.Title}}</h1>
-  <p class="text-secondary mb-0 mt-1"><code>{{cmdline .Command}}{{range .Args}} {{.}}{{end}}</code> · started {{when .Started}}</p>
-  {{else}}<h1 class="page-title"><code>{{cmdline .Command}}</code></h1>
-  <p class="text-secondary mb-0 mt-1">Started {{when .Started}}</p>{{end}}
-</div>
-<div class="mb-3" id="job-state" data-state="{{.State}}">
-  {{if eq .State "running"}}<span class="badge badge-info">running</span>
-  {{else if eq .State "waiting"}}<span class="badge badge-warn">waiting for you</span>
-  {{else if eq .State "done"}}<span class="badge badge-ok">done</span>
-  {{else if eq .State "cancelled"}}<span class="badge badge-warn">cancelled</span>
-  {{else}}<span class="badge badge-bad">failed</span>{{end}}
-  {{if .OpID}}<a class="ms-2" href="{{basePath}}/history/{{.OpID}}" data-inline>{{icon "history"}}<span class="ms-1">In the history</span></a>{{end}}
+  <div class="row g-2 align-items-center">
+    <div class="col">
+      <div class="d-flex flex-wrap align-items-center gap-2" id="job-state" data-state="{{.State}}">
+        <h1 class="page-title mb-0">{{if .Title}}{{.Title}}{{else}}<code>{{cmdline .Command}}</code>{{end}}</h1>
+        {{if eq .State "running"}}<span class="badge badge-info">running</span>
+        {{else if eq .State "waiting"}}<span class="badge badge-warn">waiting for you</span>
+        {{else if eq .State "done"}}<span class="badge badge-ok">done</span>
+        {{else if eq .State "cancelled"}}<span class="badge badge-warn">cancelled</span>
+        {{else}}<span class="badge badge-bad">failed</span>{{end}}
+      </div>
+      <p class="text-secondary mb-0 mt-1">{{if .Title}}<code>{{cmdline .Command}}{{range .Args}} {{.}}{{end}}</code> · started{{else}}Started{{end}} {{when .Started}}</p>
+    </div>
+    <div class="col-12 col-md-auto ms-md-auto d-print-none"><div class="btn-list">
+      {{if .OpID}}<a class="btn btn-outline-secondary" href="{{basePath}}/history/{{.OpID}}"{{desc "job-history"}}>{{icon "history"}}<span class="ms-1">In the history</span></a>{{end}}
+      <a class="btn btn-outline-secondary" href="{{basePath}}/keys"{{desc "job-keys"}}>{{icon "key"}}<span class="ms-1">Keys</span></a>
+    </div></div>
+  </div>
 </div>
 {{with .Question}}
 <div class="card mb-3 job-question" role="region" aria-labelledby="job-question-title">
@@ -29,8 +36,10 @@
   </div>
 </div>
 {{end}}
+<div class="row g-3">
+{{if or (eq .State "running") (eq .State "waiting") .Progress}}<div class="col-xl-4">
 {{if or (eq .State "running") (eq .State "waiting") .Progress}}
-<div class="card mb-3 job-progress" data-job-progress data-job-started="{{unixMilli .Started}}"{{with .Progress}} data-job-progress-since="{{unixMilli .Since}}"{{end}}>
+<div class="card mb-3 job-progress job-aside" data-job-progress data-job-started="{{unixMilli .Started}}"{{with .Progress}} data-job-progress-since="{{unixMilli .Since}}"{{end}}>
   <div class="card-body">
     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
       {{if eq .State "running"}}<span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>{{else if eq .State "waiting"}}<span class="text-warning">{{icon "clock"}}</span>{{else if eq .State "done"}}<span class="text-success">{{icon "circle-check"}}</span>{{else}}<span class="text-danger">{{icon "alert-circle"}}</span>{{end}}
@@ -43,6 +52,8 @@
   </div>
 </div>
 {{end}}
+</div>{{end}}
+<div class="{{if or (eq .State "running") (eq .State "waiting") .Progress}}col-xl-8{{else}}col-12{{end}}">
 {{if .Err}}<div class="alert {{if eq .State "cancelled"}}alert-warning{{else}}alert-danger{{end}}" role="alert">{{.Err}}</div>{{end}}
 <div class="card mb-3">
   <div class="card-header"><h2 class="card-title">Output</h2>{{with .Progress}}{{with itemTally .Items}}<div class="card-actions d-flex gap-1">{{if .Done}}<span class="badge badge-ok">{{.Done}} passed</span>{{end}}{{if .Failed}}<span class="badge badge-bad">{{.Failed}} failed</span>{{end}}{{if .Waiting}}<span class="badge badge-muted">{{.Waiting}} to go</span>{{end}}</div>{{end}}{{end}}</div>
@@ -52,6 +63,8 @@
 <form method="post" action="{{basePath}}/jobs/{{.ID}}/cancel"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="btn btn-outline-danger"{{desc "job-cancel"}}>Cancel at the next step</button></form>
 <p class="text-secondary small mt-2">The page updates as the job runs. Without JavaScript, reload it.</p>
 {{end}}
+</div>
+</div>
 {{end}}{{end}}
 
 {{/* One line of a job's output: its status word in a fixed column, coloured

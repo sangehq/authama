@@ -8,6 +8,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Force a rotation.** `authama ssh rotate --force` (and *Force: replace what cannot rotate in
+  place* on Rotate keys and on a rotation's review) replaces, on this computer only, each key that
+  cannot rotate in place: one never deployed, or whose host cannot be reached. Every other key
+  rotates as before. A replaced key keeps its predecessor under `old/` and has to be deployed next,
+  since until then a host that trusted the old key cannot be logged in to with it; so a forced
+  review is titled *(forced)*, warns of the lockout, starts from a red button, asks in a red dialog
+  and names the rollback from `old/` as its undo. A dry run is never forced.
+
 - **The job console draws a tree.** A key's line keeps its coloured badge; each host under it hangs
   off a `├─` / `└─` branch with a coloured ✓, ✗ or ! for how it went, and each group gets a little
   air. The dry run says why a key would fail: a key that answers but does not log in was never
@@ -316,6 +324,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **A job's review, a running job and an operation in the history are pages of their own**, no
+  longer slide-in panels. The review keeps its checks, steps and keys on the left and a column on
+  the right that stays in view, with what the job reaches, its backup, its undo, its options and
+  its Start button; turning an option reviews the job again. Cancel goes back to the page the job
+  was chosen on. A job's page puts its progress and item list in a column beside the output. Change
+  previews still open in the slide-in panel. Rotate keys' steps follow its switches: a clean
+  rotation drops the backup step, and Force adds its own.
 - **`settings init --force` keeps the file it replaces**, as `authama.json.before-reset-<time>`
   beside the new one, so resetting the settings to their defaults can be undone.
 - **Web UI: names open in the side panel, and Export's filters slide in on a phone.** A host's

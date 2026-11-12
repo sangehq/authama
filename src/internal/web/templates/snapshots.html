@@ -50,7 +50,7 @@
           <td class="text-nowrap">{{when .Written}}</td>
           <td>{{size .Size}}</td>
           <td class="text-end">
-            {{if not $.ReadOnly}}<form method="post" action="{{basePath}}/jobs/review" data-inline id="f-bundle-{{.Name}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="bundle-restore"><input type="hidden" name="bundle" value="{{.Name}}"></form>{{end}}
+            {{if not $.ReadOnly}}<form method="post" action="{{basePath}}/jobs/review" id="f-bundle-{{.Name}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="bundle-restore"><input type="hidden" name="bundle" value="{{.Name}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for bundle %s" .Name)}}
               <button type="button" class="dropdown-item" data-copy="{{.Name}}"{{desc "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the name</span></button>
               {{if not $.ReadOnly}}<div class="dropdown-divider"></div>
