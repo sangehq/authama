@@ -454,6 +454,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   buttons and dev banner) is removed, with the rule that forced panel columns to full width.
 ### Fixed
 
+- **`authama settings set`, `unset`, `init` and `backup-key` now run under the change lock.** They
+  wrote `authama.json` outside it, so they were not recorded in the history and the owner seal was
+  not renewed over the file: the next change warned that `authama.json` had changed since it was
+  sealed. The web UI's settings page already went through the lock.
+
 - **`web.menu_export` and `web.auto_restart` set to `false` in `authama.json` now take effect.** A
   boolean from the file reaches the environment as `0`, and both were compared with the word `false`,
   so turning either off in the file did nothing. Every boolean setting is now read as 1/0, true/false,
