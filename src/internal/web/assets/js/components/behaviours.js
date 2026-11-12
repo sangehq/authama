@@ -94,53 +94,65 @@ export class JobStream extends Component {
     // A job that draws a summary sends its version as each key finishes: the
     // summary is fetched again and swapped in place, or, on a page drawn
     // before the job had one, the page is drawn again.
+    // Redraws are debounced, so a burst of finished keys fetches once, and
+    // the page is never reloaded with a redraw still in flight: a reload
+    // would abort it.
     let summaryAt = 0;
+    /** @type {number} */
+    let timer = 0;
+    /** @type {Promise<void>} */
+    let inflight = Promise.resolve();
+    let ended = false;
+    const reload = () => {
+      events.close();
+      progress.stop();
+      // In the side panel, the panel's page is the one to refresh, not the
+      // page under it.
+      if (this.el.closest("[data-side-panel]") && SidePanel.current) {
+        SidePanel.current.reload();
+      } else {
+        Ui.reload();
+      }
+    };
     events.addEventListener("summary", (e) => {
       const version = Number(/** @type {MessageEvent} */ (e).data);
-      if (version <= summaryAt) {
+      if (version <= summaryAt || ended) {
         return;
       }
       summaryAt = version;
-      void JobStream.#redrawSummary(this.el);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        if (ended) {
+          return;
+        }
+        // A page drawn before the job had a summary is drawn again whole.
+        if (!document.getElementById("job-summary")) {
+          ended = true;
+          reload();
+          return;
+        }
+        inflight = JobStream.#redrawSummary();
+      }, 250);
     });
     events.addEventListener("state", (e) => {
-      if (/** @type {MessageEvent} */ (e).data !== state) {
-        events.close();
-        progress.stop();
-        // In the side panel, the panel's page is the one to refresh, not the
-        // page under it.
-        if (this.el.closest("[data-side-panel]") && SidePanel.current) {
-          SidePanel.current.reload();
-        } else {
-          Ui.reload();
-        }
+      if (/** @type {MessageEvent} */ (e).data !== state && !ended) {
+        ended = true;
+        window.clearTimeout(timer);
+        void inflight.finally(reload);
       }
     });
     return this;
   }
 
-  /** Whether a redraw is under way, so events arriving meanwhile do not stack fetches. */
-  static #redrawing = false;
-
   /**
    * Fetches the job's page and swaps its summary in, keeping where the reader
-   * had scrolled; with no summary on the page yet, draws the page again.
-   * @param {HTMLElement} log
+   * had scrolled.
    */
-  static async #redrawSummary(log) {
+  static async #redrawSummary() {
     const current = document.getElementById("job-summary");
     if (!current) {
-      if (log.closest("[data-side-panel]") && SidePanel.current) {
-        SidePanel.current.reload();
-      } else {
-        Ui.reload();
-      }
       return;
     }
-    if (JobStream.#redrawing) {
-      return;
-    }
-    JobStream.#redrawing = true;
     try {
       const res = await fetch(window.location.href, { credentials: "same-origin", headers: { "X-Authama-Panel": "1" } });
       const doc = new DOMParser().parseFromString(await res.text(), "text/html");
@@ -157,8 +169,6 @@ export class JobStream extends Component {
       }
     } catch {
       // The next event, or the reload when the job ends, draws it.
-    } finally {
-      JobStream.#redrawing = false;
     }
   }
 }
