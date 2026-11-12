@@ -37,6 +37,7 @@ while developing, or use `--dev-root` to sandbox `~/.ssh` as well.
 ## Before you push
 
 ```sh
+make gates               # ci and lint-all, then e2e and e2e-web, in one go; stops at the first failure
 make check               # the CI gate plus lint: gofmt, build, vet, tests, golangci-lint
 make ci-linux            # the same gate inside a linux container (needs docker)
 make lint-all            # lint every GOOS - one run only ever sees one
