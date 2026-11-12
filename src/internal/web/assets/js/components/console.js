@@ -12,7 +12,7 @@ const TAGS = {
   ok: "ok", done: "ok", revoked: "ok", deleted: "ok", pinned: "ok", deployed: "ok",
   FAIL: "bad", FAILED: "bad", "error:": "bad",
   paste: "warn", "WARNING:": "warn", "warning:": "warn",
-  skip: "muted", rotate: "info", move: "info",
+  skip: "muted", rotate: "info", move: "info", next: "info",
 };
 
 const NAME = /^([A-Za-z0-9_.@/-]+):\s+(.*)$/;

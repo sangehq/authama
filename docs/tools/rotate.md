@@ -82,6 +82,41 @@ finished. A key no host uses is skipped: there is nothing to deploy it to.
 A selector that matches nothing is an error, so a typo never runs as an empty
 batch, and `--all` cannot be combined with other selectors.
 
+## Forcing a rotation
+
+A rotation replaces a key only once the new one is deployed and logs in, so a key
+it cannot reach is left as it was. Two kinds of key can never rotate in place:
+one that was **never deployed** to a host that uses it (there is no old login to
+replace), and one whose **host cannot be reached** (a VM that is off, a network
+that is down). `rotate --check` names both.
+
+`--force` replaces those keys anyway, on this computer only, as
+`authama ssh keygen <profile/key> --force` does for one key:
+
+```sh
+authama ssh rotate --all --force --yes
+authama ssh rotate work/work_box-ed25519 --force
+```
+
+Every key that can rotate in place still does, with the flow above. Each key
+that cannot is minted afresh, its current key moved to `old/`, and nothing is
+deployed; the output marks it `next` and names the command that deploys it.
+
+> **A forced rotation can lock you out until you deploy.** A host that trusted the
+> old key does not trust the new one. Deploy each replaced key next
+> (`authama ssh deploy <profile/key>`, or **Deploy** on its page), or roll it back
+> with `authama ssh rollback <profile/key>`: the old key is kept under `old/`
+> until the next rotation replaces it.
+
+On the web, **Force: replace what cannot rotate in place** is an option on Rotate
+keys and on a rotation's review. A forced review is titled *(forced)*, warns of
+the lockout, starts from a red button, asks in a red dialog (**Yes, force it**),
+and lists the rollback from `old/` as its undo. A dry run is never forced.
+
+Revoking needs no force: `authama ssh key revoke` always records the key as
+revoked, and lists each target it could not reach as **not removed**, to remove
+by hand (see [key lifecycle](key-lifecycle.md)).
+
 ## Shared keys
 
 For a `shared` profile key the deploy/verify/revoke steps **fan out to every host**
