@@ -344,7 +344,7 @@ var tools = []tool{
 		}},
 	{Name: "list_events", Title: "List events", Description: "The event feed: changes that finished and watched files that changed, oldest first. Pass the returned next to read on.",
 		Props: map[string]prop{"after": {"string", "the next value a previous call returned"}, "limit": {"integer", "at most this many, up to 200 (default 50)"},
-			"type": {"string", "only types starting with this: operation.finished or file."}},
+			"type": {"string", "only types starting with this, whole or without com.simtabi.authama.: operation.finished, file."}},
 		run: func(s Server, a map[string]any) (any, error) {
 			evs, next, err := feed.List(s.Home, str(a, "after"), num(a, "limit", 50, 200))
 			if err != nil {

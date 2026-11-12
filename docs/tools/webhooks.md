@@ -16,30 +16,37 @@ An endpoint is sent what happens from when it is added, never the history before
 
 | Command | What it does |
 |---|---|
-| `authama webhook add <name> <url> [--event <prefix>]...` | adds an endpoint and prints its `whsec_` secret once; `--event` sends only types starting with a prefix (`operation.finished`, `file.`) |
+| `authama webhook add <name> <url> [--event <prefix>]...` | adds an endpoint and prints its `whsec_` secret once; `--event` sends only types starting with a prefix, whole or without `com.simtabi.authama.` (`operation.finished`, `file.`) |
 | `authama webhook list [--json]` | endpoints and how their delivery stands; never a secret |
 | `authama webhook remove <name>` | forgets an endpoint and its secret |
 | `authama webhook disable <name>`, `enable <name>` | pauses an endpoint, or resumes it from where it stopped |
-| `authama webhook test <name>` | sends one `webhook.test` event now; moves nothing |
+| `authama webhook test <name>` | sends one `com.simtabi.authama.webhook.tested` event now; moves nothing |
 | `authama webhook deliver` | sends every endpoint what is due, without `serve` |
 
 Endpoints and their secrets are kept in `webhooks.json` in the state home (mode 0600).
 
 ## What is sent
 
-Each event is a `POST` with a JSON body and three headers:
+Each event is a `POST` of the [CloudEvents](api.md#the-event-feed) event itself, in structured mode,
+with three Standard Webhooks headers:
 
 ```http
 POST /authama HTTP/1.1
-Content-Type: application/json
+Content-Type: application/cloudevents+json; charset=utf-8
+User-Agent: authama-webhooks/1
 webhook-id: op_0f9c2e1a7b3d4c5e
 webhook-timestamp: 1763000000
-webhook-signature: v1,K5oZfzN95Z9UVu1EsfQmfVNQhnkZ2pj9o9NDN/H/pI4=
+webhook-signature: v1,<base64 HMAC-SHA256>
 
-{"type":"operation.finished","timestamp":"2026-11-12T10:00:05Z","data":{"op_id":"0f9c2e1a7b3d4c5e","command":"ssh rotate", ...}}
+{"specversion":"1.0","id":"op_0f9c2e1a7b3d4c5e","source":"https://opensource.simtabi.com/products/simtabi/authama/install/7f3c2a9e5b1d4c60",
+ "type":"com.simtabi.authama.operation.finished","subject":"operation/0f9c2e1a7b3d4c5e","time":"2026-11-12T10:00:05Z",
+ "datacontenttype":"application/json","data":{...},"authamasub":"ops"}
 ```
 
-The types and their data are the [event feed's](api.md#the-event-feed). The signature is `v1,` and the
+`webhook-id` is the event's `id`, the same on every retry. `authamasub` is the endpoint's name,
+inside the signed body, so a delivery captured from one endpoint cannot be replayed to another that
+checks it. Every attribute is inside the signature: no `ce-*` header is sent. This is sange's wire
+format, so one receiver handles both. The signature is `v1,` and the
 base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>`, keyed with the base64-decoded part of
 the secret after `whsec_`. Any Standard Webhooks library verifies it. A receiver should:
 

@@ -1,7 +1,15 @@
 // Package feed is authama's event feed: one ordered stream of what happened,
-// for the API, webhooks and MCP. An operation that finished (any change, made
-// from the CLI, the TUI or the web) is an `operation.finished` event; a change
-// to a watched file is a `file.<kind>` event.
+// for the API, webhooks and MCP, each event a CloudEvents 1.0 event in
+// structured JSON (https://github.com/cloudevents/spec). An operation that
+// finished (any change, made from the CLI or the web) is a
+// com.simtabi.authama.operation.finished event; a change to a watched file is
+// com.simtabi.authama.file.added, .changed, .removed or .mode-changed.
+//
+// The envelope is sange's (its design, webhooks-and-events.md section 3.1),
+// so one receiver reads both: the type is reverse-DNS from authama's own
+// prefix, as its desktop notifier's app id is; the source is a URL naming
+// this install by a random id, never the host or the user; a path in a home
+// is written from ~, so neither a subject nor the data names the account.
 //
 // It is read from the history database and the file events log, so it holds
 // changes made by every authama process, not only the one serving the feed.
@@ -9,54 +17,109 @@
 package feed
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/simtabi/authama/src/internal/services/events"
 	"github.com/simtabi/authama/src/internal/services/history"
+	"github.com/simtabi/authama/src/internal/util/fs"
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
-// The event types. A file event's type is "file." and its kind (added,
-// changed, removed, mode, started).
+// TypePrefix starts every event type: reverse-DNS, as authama's desktop
+// notifier's app id is (com.simtabi.authama).
+const TypePrefix = "com.simtabi.authama."
+
+// The event types.
 const (
-	TypeOperation  = "operation.finished"
-	TypeFilePrefix = "file."
+	TypeOperation     = TypePrefix + "operation.finished"
+	TypeFileAdded     = TypePrefix + "file.added"
+	TypeFileChanged   = TypePrefix + "file.changed"
+	TypeFileRemoved   = TypePrefix + "file.removed"
+	TypeFileMode      = TypePrefix + "file.mode-changed"
+	TypeWatchStarted  = TypePrefix + "file.watch.started"
+	TypeWebhookTested = TypePrefix + "webhook.tested"
+	sourceBase        = "https://opensource.simtabi.com/products/simtabi/authama/install/"
+	specVersion       = "1.0"
+	jsonContentType   = "application/json"
 )
 
-// Event is one thing that happened.
+// fileTypes maps a file event's kind to its type.
+var fileTypes = map[string]string{
+	events.KindAdded: TypeFileAdded, events.KindChanged: TypeFileChanged, events.KindRemoved: TypeFileRemoved,
+	events.KindMode: TypeFileMode, events.KindStarted: TypeWatchStarted,
+}
+
+// Event is one thing that happened: a CloudEvents 1.0 event.
 type Event struct {
-	ID        string    `json:"id"`
-	Type      string    `json:"type"`
-	Timestamp time.Time `json:"timestamp"`
-	Data      any       `json:"data"`
+	SpecVersion     string    `json:"specversion"`
+	ID              string    `json:"id"`
+	Source          string    `json:"source"`
+	Type            string    `json:"type"`
+	Subject         string    `json:"subject,omitempty"`
+	Time            time.Time `json:"time"`
+	DataContentType string    `json:"datacontenttype"`
+	Data            any       `json:"data"`
+	// Sub is the authamasub extension: set per webhook delivery to the
+	// endpoint's name, inside the signed body, so a delivery captured from
+	// one endpoint cannot be replayed to another that checks it.
+	Sub string `json:"authamasub,omitempty"`
 }
 
 // Cursor is the event's place in the feed: the next List after it starts
 // after this event.
-func (e Event) Cursor() string { return e.Timestamp.UTC().Format(time.RFC3339Nano) + "|" + e.ID }
+func (e Event) Cursor() string { return e.Time.UTC().Format(time.RFC3339Nano) + "|" + e.ID }
+
+// New is an event of typ at t, from this install, with its data.
+func New(p paths.Paths, id, typ, subject string, t time.Time, data any) Event {
+	return Event{SpecVersion: specVersion, ID: id, Source: Source(p), Type: typ, Subject: subject, Time: t.UTC(),
+		DataContentType: jsonContentType, Data: data}
+}
+
+// Source is this install's CloudEvents source: a URL naming it by a random
+// id, made the first time it is asked for and kept in the state home. It
+// names neither the host nor the user.
+func Source(p paths.Paths) string { return sourceBase + installID(p) }
+
+func installID(p paths.Paths) string {
+	f := filepath.Join(p.StateDir(), "install-id")
+	if b, err := os.ReadFile(f); err == nil {
+		if id := strings.TrimSpace(string(b)); len(id) == 16 {
+			return id
+		}
+	}
+	raw := make([]byte, 8)
+	_, _ = rand.Read(raw)
+	id := hex.EncodeToString(raw)
+	if fs.EnsureDir(p.StateDir(), 0o700) == nil {
+		_ = fs.WriteTextAtomic(f, id+"\n", 0o600)
+	}
+	return id
+}
 
 // Operation is an operation.finished event's data.
 type Operation struct {
-	OpID     string   `json:"op_id"`
-	Command  string   `json:"command"`
-	Args     []string `json:"args"`
-	Source   string   `json:"source"`
+	OpID    string   `json:"op_id"`
+	Command string   `json:"command"`
+	Args    []string `json:"args"`
+	// MadeFrom is where the change was made: cli or web (the history's
+	// source; named apart from the event's own source).
+	MadeFrom string   `json:"made_from"`
 	Result   string   `json:"result"`
 	Error    string   `json:"error,omitempty"`
 	Subjects []string `json:"subjects,omitempty"`
 	Snapshot string   `json:"snapshot,omitempty"`
-	OSUser   string   `json:"os_user,omitempty"`
-	Machine  string   `json:"machine,omitempty"`
 }
 
-// File is a file.<kind> event's data. The event's timestamp is when authama
+// File is a file event's data. The event's time is when authama
 // noticed the change; ChangedAt is when the file says it changed, which can
 // be much earlier (a change made while nothing was watching).
 type File struct {
@@ -106,7 +169,7 @@ func List(p paths.Paths, cursor string, limit int) ([]Event, string, error) {
 		return nil, cursor, err
 	}
 	slices.SortStableFunc(all, func(a, b Event) int {
-		if c := a.Timestamp.Compare(b.Timestamp); c != 0 {
+		if c := a.Time.Compare(b.Time); c != 0 {
 			return c
 		}
 		return strings.Compare(a.ID, b.ID)
@@ -132,7 +195,7 @@ func List(p paths.Paths, cursor string, limit int) ([]Event, string, error) {
 }
 
 func after(e Event, at time.Time, id string) bool {
-	if c := e.Timestamp.Compare(at); c != 0 {
+	if c := e.Time.Compare(at); c != 0 {
 		return c > 0
 	}
 	return e.ID > id
@@ -156,7 +219,7 @@ func read(p paths.Paths, at time.Time) ([]Event, error) {
 		return nil, fmt.Errorf("file events: %w", err)
 	}
 	for _, ev := range evs {
-		out = append(out, fileEvent(ev))
+		out = append(out, fileEvent(p, ev))
 	}
 	return out, nil
 }
@@ -194,15 +257,15 @@ func operations(p paths.Paths, at time.Time) ([]Event, error) {
 		for _, sub := range op.Subjects {
 			subs = append(subs, sub.Kind+":"+sub.Name)
 		}
-		out = append(out, Event{ID: "op_" + op.OpID, Type: TypeOperation, Timestamp: t.UTC(), Data: Operation{
-			OpID: op.OpID, Command: op.Command, Args: nonNil(op.Args), Source: op.Source, Result: op.Result, Error: op.Error,
-			Subjects: subs, Snapshot: op.Snapshot, OSUser: op.OSUser, Machine: op.Machine,
-		}})
+		out = append(out, New(p, "op_"+op.OpID, TypeOperation, "operation/"+op.OpID, t, Operation{
+			OpID: op.OpID, Command: op.Command, Args: nonNil(op.Args), MadeFrom: op.Source, Result: op.Result, Error: op.Error,
+			Subjects: subs, Snapshot: op.Snapshot,
+		}))
 	}
 	return out, nil
 }
 
-func fileEvent(ev events.Event) Event {
+func fileEvent(p paths.Paths, ev events.Event) Event {
 	id := ev.Hash
 	if id == "" {
 		sum := sha256.Sum256([]byte(ev.Time.String() + ev.Kind + ev.Area + ev.Path + ev.Detail))
@@ -218,18 +281,47 @@ func fileEvent(ev events.Event) Event {
 	if seen.IsZero() {
 		seen = ev.Time
 	}
-	return Event{ID: "file_" + id, Type: TypeFilePrefix + ev.Kind, Timestamp: seen.UTC(), Data: File{
-		Kind: ev.Kind, ChangedAt: ev.Time.UTC(), Area: ev.Area, Path: ev.Path, Size: ev.Size, Mode: ev.Mode, Detail: ev.Detail,
-	}}
+	typ, ok := fileTypes[ev.Kind]
+	if !ok {
+		typ = TypePrefix + "file." + ev.Kind
+	}
+	path := fromHome(ev.Path)
+	subject := ""
+	if path != "" {
+		subject = "file/" + path
+	}
+	return New(p, "file_"+id, typ, subject, seen, File{
+		Kind: ev.Kind, ChangedAt: ev.Time.UTC(), Area: ev.Area, Path: path, Size: ev.Size, Mode: ev.Mode, Detail: ev.Detail,
+	})
 }
 
-// Matches reports whether e's type starts with one of prefixes; no prefixes
-// match every event.
+// fromHome writes a path in the user's home from ~, so an event never names
+// the account (/Users/<name>) it happened in.
+func fromHome(path string) string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" || path == "" {
+		return path
+	}
+	if path == home {
+		return "~"
+	}
+	if rest, ok := strings.CutPrefix(path, home+string(filepath.Separator)); ok {
+		return "~/" + filepath.ToSlash(rest)
+	}
+	return path
+}
+
+// Matches reports whether e's type starts with one of prefixes, each given
+// whole (com.simtabi.authama.file.) or without the common prefix (file.); no
+// prefixes match every event.
 func Matches(e Event, prefixes []string) bool {
 	if len(prefixes) == 0 {
 		return true
 	}
-	return slices.ContainsFunc(prefixes, func(pre string) bool { return strings.HasPrefix(e.Type, pre) })
+	short := strings.TrimPrefix(e.Type, TypePrefix)
+	return slices.ContainsFunc(prefixes, func(pre string) bool {
+		return strings.HasPrefix(e.Type, pre) || strings.HasPrefix(short, pre)
+	})
 }
 
 func nonNil(s []string) []string {

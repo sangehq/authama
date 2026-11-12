@@ -60,7 +60,7 @@ func newWebhookAddCmd() *cobra.Command {
 			return nil
 		},
 	}
-	c.Flags().StringSliceVar(&events, "event", nil, "send only events whose type starts with this (repeatable): operation.finished, file.")
+	c.Flags().StringSliceVar(&events, "event", nil, "send only events whose type starts with this, whole or without com.simtabi.authama. (repeatable): operation.finished, file.")
 	return c
 }
 

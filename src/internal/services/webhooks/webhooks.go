@@ -1,9 +1,12 @@
 // Package webhooks sends authama's event feed to endpoints you register, as
 // Standard Webhooks (https://www.standardwebhooks.com, spec 1.0.0) describes:
-// each event is a POST of {"type", "timestamp", "data"} with the headers
-// webhook-id, webhook-timestamp and webhook-signature, the signature being
-// "v1," and the base64 HMAC-SHA256 of "<id>.<timestamp>.<body>" under the
-// endpoint's whsec_ secret.
+// each event is a POST of the CloudEvent itself, in structured mode
+// (Content-Type: application/cloudevents+json), with the headers webhook-id
+// (the event's id), webhook-timestamp and webhook-signature, the signature
+// being "v1," and the base64 HMAC-SHA256 of "<id>.<timestamp>.<body>" under
+// the endpoint's whsec_ secret. The endpoint's name is in the signed body
+// (authamasub), so a delivery cannot be replayed to another endpoint that
+// checks it. This is sange's wire format, so one receiver reads both.
 //
 // A webhook is a request authama makes to an address someone chose, so the
 // sender refuses what would let it be aimed inward: only https, never a
@@ -253,12 +256,8 @@ func Verify(secret, id, tsHeader, sigHeader string, body []byte, now time.Time, 
 	return false
 }
 
-// payload is the body of one delivery.
-type payload struct {
-	Type      string    `json:"type"`
-	Timestamp time.Time `json:"timestamp"`
-	Data      any       `json:"data"`
-}
+// ContentType is a delivery's: a CloudEvent in structured mode.
+const ContentType = "application/cloudevents+json; charset=utf-8"
 
 // backoff is the wait after each failure in a row, after Standard Webhooks'
 // schedule; the last repeats.
@@ -343,7 +342,8 @@ func fail(ep *Endpoint, status int, err error, now time.Time) {
 
 // send POSTs one event and returns the status it was answered with.
 func send(ctx context.Context, client *http.Client, ep Endpoint, e feed.Event, now time.Time) (int, error) {
-	body, err := json.Marshal(payload{Type: e.Type, Timestamp: e.Timestamp, Data: e.Data})
+	e.Sub = ep.Name
+	body, err := json.Marshal(e)
 	if err != nil {
 		return 0, err
 	}
@@ -356,8 +356,8 @@ func send(ctx context.Context, client *http.Client, ep Endpoint, e feed.Event, n
 	if err != nil {
 		return 0, err
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "authama-webhooks")
+	req.Header.Set("Content-Type", ContentType)
+	req.Header.Set("User-Agent", "authama-webhooks/1")
 	req.Header.Set("webhook-id", e.ID)
 	req.Header.Set("webhook-timestamp", strconv.FormatInt(ts, 10))
 	req.Header.Set("webhook-signature", sig)
@@ -373,7 +373,7 @@ func send(ctx context.Context, client *http.Client, ep Endpoint, e feed.Event, n
 	return resp.StatusCode, nil
 }
 
-// Test sends one webhook.test event to an endpoint now, whatever its state,
+// Test sends one webhook.tested event to an endpoint now, whatever its state,
 // and moves nothing: its cursor and failures stay as they were.
 func Test(ctx context.Context, p paths.Paths, client *http.Client, name string, now time.Time) (int, error) {
 	eps, err := List(p)
@@ -386,7 +386,7 @@ func Test(ctx context.Context, p paths.Paths, client *http.Client, name string, 
 	}
 	raw := make([]byte, 12)
 	_, _ = rand.Read(raw)
-	e := feed.Event{ID: "test_" + base64.RawURLEncoding.EncodeToString(raw), Type: "webhook.test", Timestamp: now.UTC(),
-		Data: map[string]string{"message": "a test from authama: this endpoint receives its webhooks"}}
+	e := feed.New(p, "test_"+base64.RawURLEncoding.EncodeToString(raw), feed.TypeWebhookTested, "webhook/"+name, now,
+		map[string]string{"message": "a test from authama: this endpoint receives its webhooks"})
 	return send(ctx, client, eps[i], e, now)
 }

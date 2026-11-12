@@ -2,10 +2,17 @@ package webhooks
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -15,27 +22,42 @@ import (
 	"github.com/simtabi/authama/src/internal/util/paths"
 )
 
-// The signature is the one Standard Webhooks publishes for its example, byte
-// for byte, so a receiver using any of its libraries verifies ours.
-func TestTheSignatureMatchesTheStandardWebhooksExample(t *testing.T) {
-	// @credential-literal-exempt: the Standard Webhooks spec's published test vector, asserted byte for byte.
-	specVectorKey := "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw"
-	got, err := Sign(specVectorKey, "msg_p5jXN8AQM9LWM0D4loKWxJek", 1614265330, []byte(`{"test": 2432232314}`))
-	if err != nil {
+// The signature is Standard Webhooks' v1: the base64 HMAC-SHA256, keyed with
+// the decoded secret, of "<id>.<timestamp>.<body>". Checked against the
+// standard library computing it independently, with a secret, id and body
+// generated for each run (no secret is written in the source).
+func TestTheSignatureIsStandardWebhooksV1(t *testing.T) {
+	key := make([]byte, 32)
+	if _, err := rand.Read(key); err != nil {
 		t.Fatal(err)
 	}
-	if want := "v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE="; got != want {
-		t.Fatalf("signature %s, want %s", got, want)
+	secret := SecretPrefix + base64.StdEncoding.EncodeToString(key)
+	idRaw := make([]byte, 12)
+	_, _ = rand.Read(idRaw)
+	id := "msg_" + base64.RawURLEncoding.EncodeToString(idRaw)
+	ts := time.Now().Unix()
+	body := []byte(fmt.Sprintf(`{"n":%d}`, ts))
+
+	mac := hmac.New(sha256.New, key)
+	_, _ = fmt.Fprintf(mac, "%s.%d.%s", id, ts, body)
+	want := "v1," + base64.StdEncoding.EncodeToString(mac.Sum(nil))
+	got, err := Sign(secret, id, ts, body)
+	if err != nil || got != want {
+		t.Fatalf("signature %s, want %s (%v)", got, want, err)
 	}
-	now := time.Unix(1614265330, 0)
-	if !Verify(specVectorKey, "msg_p5jXN8AQM9LWM0D4loKWxJek", "1614265330", "v1,other "+got, []byte(`{"test": 2432232314}`), now, 5*time.Minute) {
+	now := time.Unix(ts, 0)
+	tsHeader := strconv.FormatInt(ts, 10)
+	if !Verify(secret, id, tsHeader, "v1,other "+got, body, now, 5*time.Minute) {
 		t.Error("a matching signature among several is refused")
 	}
-	if Verify(specVectorKey, "msg_p5jXN8AQM9LWM0D4loKWxJek", "1614265330", got, []byte(`{"test": 2432232315}`), now, 5*time.Minute) {
+	if Verify(secret, id, tsHeader, got, append(body, ' '), now, 5*time.Minute) {
 		t.Error("a changed body verifies")
 	}
-	if Verify(specVectorKey, "msg_p5jXN8AQM9LWM0D4loKWxJek", "1614265330", got, []byte(`{"test": 2432232314}`), now.Add(time.Hour), 5*time.Minute) {
+	if Verify(secret, id, tsHeader, got, body, now.Add(time.Hour), 5*time.Minute) {
 		t.Error("an old timestamp verifies")
+	}
+	if _, err := Sign("not-a-secret!", id, ts, body); err == nil {
+		t.Error("a secret that is not whsec_ base64 was used")
 	}
 }
 
@@ -93,6 +115,7 @@ type receiver struct {
 	mu     sync.Mutex
 	secret string
 	status int
+	name   string
 	got    []string // webhook-id of each verified delivery
 	bad    int
 }
@@ -101,7 +124,11 @@ func (rc *receiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	body, _ := io.ReadAll(r.Body)
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
-	if Verify(rc.secret, r.Header.Get("webhook-id"), r.Header.Get("webhook-timestamp"), r.Header.Get("webhook-signature"), body, time.Now(), time.Hour*24*365*50) {
+	var ce map[string]any
+	_ = json.Unmarshal(body, &ce)
+	cloudEvent := r.Header.Get("Content-Type") == ContentType && ce["specversion"] == "1.0" && ce["id"] == r.Header.Get("webhook-id") &&
+		ce["authamasub"] == rc.name && ce["source"] != nil && ce["type"] != nil
+	if cloudEvent && Verify(rc.secret, r.Header.Get("webhook-id"), r.Header.Get("webhook-timestamp"), r.Header.Get("webhook-signature"), body, time.Now(), time.Hour*24*365*50) {
 		rc.got = append(rc.got, r.Header.Get("webhook-id"))
 	} else {
 		rc.bad++
@@ -145,7 +172,7 @@ func TestDeliveryIsInOrderSignedAndRetried(t *testing.T) {
 	if fi, _ := os.Stat(File(p)); fi.Mode().Perm() != 0o600 {
 		t.Errorf("webhooks.json is %v", fi.Mode().Perm())
 	}
-	rc.secret = ep.Secret
+	rc.secret, rc.name = ep.Secret, ep.Name
 	finishOp(t, p, "one", t0.Add(10*time.Second))
 	finishOp(t, p, "two", t0.Add(20*time.Second))
 	cl := Client(true)

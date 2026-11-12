@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -74,7 +75,7 @@ func TestTheFeedOrdersEventsAndResumesFromACursor(t *testing.T) {
 	for _, e := range all {
 		got = append(got, e.ID+" "+e.Type)
 	}
-	want := []string{"op_a1 operation.finished", "file_h1 file.changed", "op_a3 operation.finished", "file_h2 file.added"}
+	want := []string{"op_a1 " + TypeOperation, "file_h1 " + TypeFileChanged, "op_a3 " + TypeOperation, "file_h2 " + TypeFileAdded}
 	if len(got) != len(want) {
 		t.Fatalf("feed %v, want %v", got, want)
 	}
@@ -83,7 +84,7 @@ func TestTheFeedOrdersEventsAndResumesFromACursor(t *testing.T) {
 			t.Fatalf("feed %v, want %v", got, want)
 		}
 	}
-	if op := all[2].Data.(Operation); op.Result != "error" || op.Error == "" || op.Source != "web" {
+	if op := all[2].Data.(Operation); op.Result != "error" || op.Error == "" || op.MadeFrom != "web" {
 		t.Errorf("operation data %+v", op)
 	}
 	if op := all[0].Data.(Operation); len(op.Subjects) != 1 || op.Subjects[0] != "profile:work" {
@@ -108,7 +109,18 @@ func TestTheFeedOrdersEventsAndResumesFromACursor(t *testing.T) {
 	if _, _, err := List(p, "not-a-cursor", 0); !errors.Is(err, ErrBadCursor) {
 		t.Errorf("a made-up cursor gave %v", err)
 	}
-	if !Matches(all[1], []string{"file."}) || Matches(all[0], []string{"file."}) || !Matches(all[0], nil) {
+	// Each is a CloudEvents 1.0 event from this install, the same source
+	// every time, and names no account.
+	for _, e := range all {
+		if e.SpecVersion != "1.0" || e.DataContentType != "application/json" || e.Subject == "" ||
+			!strings.HasPrefix(e.Source, "https://opensource.simtabi.com/products/simtabi/authama/install/") || e.Source != all[0].Source {
+			t.Errorf("not a CloudEvent from this install: %+v", e)
+		}
+	}
+	if all[0].Subject != "operation/a1" {
+		t.Errorf("an operation's subject is %q", all[0].Subject)
+	}
+	if !Matches(all[1], []string{"file."}) || !Matches(all[1], []string{TypePrefix + "file."}) || Matches(all[0], []string{"file."}) || !Matches(all[0], nil) {
 		t.Error("type prefixes do not filter as they should")
 	}
 }
@@ -118,5 +130,37 @@ func TestAnEmptyHomeHasAnEmptyFeed(t *testing.T) {
 	evs, next, err := List(paths.Paths{ConfigDir: t.TempDir()}, "", 0)
 	if err != nil || len(evs) != 0 || next != "" {
 		t.Fatalf("%v %q %v", evs, next, err)
+	}
+}
+
+// A path in the home is written from ~, so an event leaving the machine never
+// names the account; a path elsewhere is left as it is.
+func TestAPathInTheHomeIsWrittenFromTilde(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	if got := fromHome(filepath.Join(home, ".ssh", "config")); got != "~/.ssh/config" {
+		t.Errorf("got %q", got)
+	}
+	if got := fromHome(home); got != "~" {
+		t.Errorf("the home itself is %q", got)
+	}
+	if got := fromHome("/etc/ssh/ssh_config"); got != "/etc/ssh/ssh_config" {
+		t.Errorf("a path outside the home became %q", got)
+	}
+	if got := fromHome(home + "-other/x"); got != home+"-other/x" {
+		t.Errorf("a sibling of the home became %q", got)
+	}
+}
+
+// The source is made once and kept: every event from an install has the same.
+func TestTheSourceIsMadeOnceAndKept(t *testing.T) {
+	p := paths.Paths{ConfigDir: t.TempDir()}
+	a, b := Source(p), Source(p)
+	if a != b || len(strings.TrimPrefix(a, sourceBase)) != 16 {
+		t.Fatalf("sources %q and %q", a, b)
+	}
+	if other := Source(paths.Paths{ConfigDir: t.TempDir()}); other == a {
+		t.Error("two installs share a source")
 	}
 }

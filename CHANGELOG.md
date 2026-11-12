@@ -14,10 +14,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     events) and doctor. It reads only, answers only API tokens made with `authama api token create`
     (shown once, kept as a hash), refuses a request from a browser page, and never takes the web UI's
     session.
-  - The event feed is one ordered stream of finished changes (`operation.finished`, from any source)
-    and watched-file changes (`file.<kind>`), with a cursor to read on from.
+  - The event feed is one ordered stream of CloudEvents 1.0 events, in the envelope sange uses:
+    finished changes (`com.simtabi.authama.operation.finished`, from any source) and watched-file
+    changes (`com.simtabi.authama.file.*`), with a cursor to read on from. The source names the
+    install by a random id, never the host or the user, and paths in the home are written from `~`.
   - `authama webhook add` registers an endpoint that `serve` sends each new event to when
-    `webhooks.enabled` is on, signed as Standard Webhooks 1.0.0 describes, in order, retried with
+    `webhooks.enabled` is on, as a CloudEvent in structured mode (`application/cloudevents+json`)
+    with the endpoint's name inside the signed body, signed as Standard Webhooks 1.0.0 describes, in order, retried with
     backoff and turned off on 410 or 10 failures. Endpoints must be https on public addresses unless
     `webhooks.allow_private` is on; redirects are never followed.
   - `authama mcp` serves the Model Context Protocol over stdio when `mcp.enabled` is on, with

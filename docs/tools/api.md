@@ -53,14 +53,37 @@ An error is `{"error": {"code": "...", "message": "..."}}` with a matching statu
 ## The event feed
 
 One ordered stream of what happened, read from the history database and the [file events](events.md)
-log, so it holds changes made from the command line and the TUI as well as the web:
+log, so it holds changes made from the command line as well as the web. Each event is a
+[CloudEvents 1.0](https://github.com/cloudevents/spec) event in structured JSON, in the same envelope
+sange uses, so one receiver reads both:
 
-| Type | When | Data |
-|---|---|---|
-| `operation.finished` | a change finished, from any source | `op_id`, `command`, `args`, `source`, `result`, `error`, `subjects` |
-| `file.added`, `file.changed`, `file.removed`, `file.mode` | a watched file changed | `kind`, `area`, `path`, `changed_at` |
+```json
+{
+  "specversion": "1.0",
+  "id": "op_0f9c2e1a7b3d4c5e",
+  "source": "https://opensource.simtabi.com/products/simtabi/authama/install/7f3c2a9e5b1d4c60",
+  "type": "com.simtabi.authama.operation.finished",
+  "subject": "operation/0f9c2e1a7b3d4c5e",
+  "time": "2026-11-12T10:00:05Z",
+  "datacontenttype": "application/json",
+  "data": { "op_id": "0f9c2e1a7b3d4c5e", "command": "ssh rotate", "args": ["--all"], "made_from": "web", "result": "ok" }
+}
+```
 
-Each event has an `id`, a `type`, a `timestamp` and its `data`. `/events` returns `next`: pass it as
+| Type | When | Subject | Data |
+|---|---|---|---|
+| `com.simtabi.authama.operation.finished` | a change finished, from the command line or the web | `operation/<op_id>` | `op_id`, `command`, `args`, `made_from`, `result`, `error`, `subjects`, `snapshot` |
+| `com.simtabi.authama.file.added`, `.file.changed`, `.file.removed`, `.file.mode-changed` | a watched file changed | `file/<path>` | `kind`, `area`, `path`, `changed_at`, `size`, `mode` |
+| `com.simtabi.authama.file.watch.started` | watching began | | `detail` |
+| `com.simtabi.authama.webhook.tested` | `authama webhook test` | `webhook/<name>` | `message` |
+
+- **`source`** names this install by a random id, made once and kept in the state home. It never
+  names the host or the user.
+- **A path in your home** is written from `~` (`~/.ssh/config`), so no event names your account.
+- **`time`** is when it happened: when a change finished, or when authama noticed a file change (the
+  file's own time is `changed_at`).
+- A `type` filter takes a type whole or without `com.simtabi.authama.`: `file.` matches every file
+  event. `/events` returns `next`: pass it as
 `after` to read on, and each event is read once. A file event is ordered by when authama noticed it, so
 a change made while nothing was watching still comes after your cursor. The stream's SSE `id` is the
 same cursor, so a client that reconnects with `Last-Event-ID` resumes where it stopped.
