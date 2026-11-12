@@ -2,6 +2,7 @@ package apitokens
 
 import (
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -25,7 +26,8 @@ func TestATokenIsCheckedByItsHashUntilItGoes(t *testing.T) {
 	if strings.Contains(string(b), secret) || strings.Contains(string(b), strings.TrimPrefix(secret, Prefix)) {
 		t.Fatal("the file holds the token itself")
 	}
-	if fi, _ := os.Stat(File(p)); fi.Mode().Perm() != 0o600 {
+	// Windows has no mode bits: its permissions are ACLs (util/perms).
+	if fi, _ := os.Stat(File(p)); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
 		t.Errorf("the file is %v, not owner-only", fi.Mode().Perm())
 	}
 	if _, ok := Check(p, secret, ScopeRead, now); !ok {

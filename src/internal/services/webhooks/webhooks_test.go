@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -169,7 +170,8 @@ func TestDeliveryIsInOrderSignedAndRetried(t *testing.T) {
 	if !strings.HasPrefix(ep.Secret, SecretPrefix) {
 		t.Fatalf("secret %q", ep.Secret)
 	}
-	if fi, _ := os.Stat(File(p)); fi.Mode().Perm() != 0o600 {
+	// Windows has no mode bits: its permissions are ACLs (util/perms).
+	if fi, _ := os.Stat(File(p)); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
 		t.Errorf("webhooks.json is %v", fi.Mode().Perm())
 	}
 	rc.secret, rc.name = ep.Secret, ep.Name
