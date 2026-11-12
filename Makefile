@@ -44,7 +44,7 @@ VERSION := $(shell git describe --tags --match 'v[0-9]*' --always --dirty 2>/dev
 LDFLAGS := -s -w -X github.com/simtabi/authama/src/internal/version.Version=$(VERSION)
 GO      := go -C $(MODULE)
 
-.PHONY: help build build-all test vet fmt fmt-check lint lint-all ci check ci-linux e2e e2e-web feature-check docker-shell docker-run docker-down \
+.PHONY: help build build-all test vet fmt fmt-check lint lint-all ci check gates ci-linux e2e e2e-web feature-check docker-shell docker-run docker-down \
         cross dist release-snapshot clean install uninstall doctor reconcile render rotate bundle settings generate tabler-check tabler-update tabler-vendor man
 
 help:  ## list targets
@@ -113,6 +113,11 @@ ci: fmt-check build-all vet test ## the gate CI runs (lint runs there as its own
 ci: TESTFLAGS += -count=1
 
 check: ci lint ## everything: the CI gate plus lint, for humans
+
+# One command for every local gate a change passes before it is pushed: the CI
+# gate, lint for every GOOS, the end-to-end smoke and the browser suite. Run in
+# that order, cheapest first, and it stops at the first that fails.
+gates: ci lint-all e2e e2e-web ## every local gate before a push: ci, lint-all, e2e, e2e-web (needs node, age)
 
 # The ubuntu-latest leg, runnable without GitHub. `make ci` only ever tests the
 # machine you are on, and `lint-all` cross-compiles for other systems without
