@@ -19,8 +19,6 @@ type preflight struct {
 	// FixHrefLabel).
 	FixAction, FixLabel   string
 	FixHref, FixHrefLabel string
-	// FixNoBackup offers to review the same job without the backup.
-	FixNoBackup bool
 }
 
 // describeJob gives a job its name for people and its guardrails: what it is
@@ -80,8 +78,7 @@ func preflights(f url.Values, spec jobSpec, busy bool) []preflight {
 			OK:        envnames.Get(nil, envnames.AgeRecipient) != "",
 			Detail:    "An encrypted backup of ~/.ssh is written first, to an age recipient. Create a backup key here, or use one you have; then review the job again.",
 			FixAction: "backup-key", FixLabel: "Create a backup key",
-			FixHref: "/settings#setting-backup.age_recipient", FixHrefLabel: "Use a key you have",
-			FixNoBackup: f.Get("action") == "rotate" || f.Get("action") == "rotate-keys"})
+			FixHref: "/settings#setting-backup.age_recipient", FixHrefLabel: "Use a key you have"})
 	}
 	if f.Get("action") == "bundle-restore" {
 		checks = append(checks, preflight{Label: "An age identity is set to decrypt with", Blocking: true,

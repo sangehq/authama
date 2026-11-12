@@ -26,6 +26,12 @@ const (
 	KindReplaced = "replaced"
 	// KindNotRemoved is a key left trusted where it could not be removed.
 	KindNotRemoved = "not-removed"
+	// KindUnverified is a key put in place that no login has proved yet.
+	KindUnverified = "unverified"
+	// KindTrusted is a host whose keys were already pinned.
+	KindTrusted = "trusted"
+	// KindNoHostKeys is a host that answered with no keys to pin.
+	KindNoHostKeys = "no-host-keys"
 )
 
 // SummaryKey is one key's line in a summary.
@@ -41,6 +47,9 @@ type SummaryKey struct {
 	// Kind names why, as HostCheck.Kind does; Note is the long explanation,
 	// printed once under Notes however many keys share it.
 	Kind, Note string
+	// Key is what the KEY column shows, when not the key's own name: the key
+	// a host row is for, a host's address, a fingerprint.
+	Key string
 	// Pending is a key the run has not finished yet: Result is ResultWaiting,
 	// or what the run is doing to it now (testing, rotating, revoking).
 	Pending bool
@@ -174,6 +183,9 @@ func SummarizeRun(results []RunResult, replaced []string, elapsed time.Duration)
 	return s
 }
 
+// Classify names why a step failed, from what it said, as a summary's Kind.
+func Classify(msg string) string { return classify(msg) }
+
 // classify names why a rotation failed, from what it said.
 func classify(msg string) string {
 	m := strings.ToLower(msg)
@@ -193,10 +205,12 @@ func classify(msg string) string {
 var (
 	reasons = map[string]string{KindLogsIn: "logs in", KindManual: "awaiting paste", KindUnreachable: "host unreachable",
 		KindNeverDeployed: "never deployed", KindRemoved: "key removed there", KindNoKey: "not on disk",
-		KindFailed: "failed", KindReplaced: "deploy next", KindNotRemoved: "not removed there"}
+		KindFailed: "failed", KindReplaced: "deploy next", KindNotRemoved: "not removed there",
+		KindUnverified: "not verified", KindTrusted: "already trusted", KindNoHostKeys: "no host keys"}
 	needs = map[string]string{KindUnreachable: "check network", KindNeverDeployed: "deploy first",
 		KindRemoved: "deploy again", KindManual: "paste by hand", KindNoKey: "reconcile first",
-		KindFailed: "see the note", KindReplaced: "deploy next", KindNotRemoved: "remove by hand"}
+		KindFailed: "see the note", KindReplaced: "deploy next", KindNotRemoved: "remove by hand",
+		KindUnverified: "check it logs in", KindNoHostKeys: "check the host"}
 	marks = [...]string{"✓", "!", "×"}
 )
 
@@ -476,7 +490,11 @@ func (s Summary) Rows() []SummaryRow {
 		case l.key.Pending:
 			mark = "›"
 		}
-		return SummaryRow{Branch: branch, Label: l.name, Mark: mark, Key: keyName(l.key.Ref), Pending: l.key.Pending,
+		key := keyName(l.key.Ref)
+		if l.key.Key != "" {
+			key = l.key.Key
+		}
+		return SummaryRow{Branch: branch, Label: l.name, Mark: mark, Key: key, Pending: l.key.Pending,
 			Via: l.key.Via, Result: l.key.Result, Reason: reasons[l.key.Kind], Severity: l.key.Severity, Note: index[l.key.Note]}
 	}
 	owners := s.owners()

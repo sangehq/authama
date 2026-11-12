@@ -90,7 +90,6 @@ export class JobStream extends Component {
     });
     const progress = new JobProgress(document.querySelector("[data-job-progress]"));
     events.addEventListener("progress", (e) => progress.update(/** @type {MessageEvent} */ (e).data));
-    events.addEventListener("items", (e) => progress.items(/** @type {MessageEvent} */ (e).data));
     // A job that draws a summary sends its version as each key finishes: the
     // summary is fetched again and swapped in place, or, on a page drawn
     // before the job had one, the page is drawn again.
@@ -123,12 +122,6 @@ export class JobStream extends Component {
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
         if (ended) {
-          return;
-        }
-        // A page drawn before the job had a summary is drawn again whole.
-        if (!document.getElementById("job-summary")) {
-          ended = true;
-          reload();
           return;
         }
         inflight = JobStream.#redrawSummary();
@@ -236,42 +229,6 @@ class JobProgress {
       label.textContent = rest.join(" ") || "Finishing";
     }
     this.tick();
-  }
-
-  /**
-   * Marks each listed item with its state as the job moves on: "name=state"
-   * pairs, space-separated (names hold no spaces or "=").
-   * @param {string} data
-   */
-  items(data) {
-    for (const pair of data.split(" ")) {
-      const at = pair.lastIndexOf("=");
-      const name = pair.slice(0, at);
-      const state = pair.slice(at + 1);
-      const row = [...(this.card?.querySelectorAll("[data-job-item]") ?? [])].find((r) => r instanceof HTMLElement && r.dataset.jobItem === name);
-      if (!(row instanceof HTMLElement) || row.classList.contains(`is-${state}`)) {
-        continue;
-      }
-      row.className = `job-run-item is-${state}`;
-      const label = row.querySelector("[data-job-item-state]");
-      if (label) {
-        label.textContent = state;
-      }
-      const mark = row.querySelector(".job-run-mark");
-      const icon = { running: null, done: "circle-check", failed: "circle-x", waiting: "clock" }[state];
-      if (mark) {
-        if (state === "running") {
-          const spin = document.createElement("span");
-          spin.className = "spinner-border spinner-border-sm";
-          mark.replaceChildren(spin);
-        } else if (icon) {
-          mark.replaceChildren(Ui.icon(icon));
-        }
-      }
-      if (state === "running") {
-        row.scrollIntoView({ block: "nearest" });
-      }
-    }
   }
 
   percent() {

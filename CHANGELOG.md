@@ -24,6 +24,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   summary in place of the old console, with a slim progress bar above it while they run. When
   keys did not go through, a **Next** card offers **Review the failed keys again** and, after a
   rotation or its dry run, **Review again with Force**.
+- **Every job's page draws the summary.** Deploying and rolling back a key show a row per host
+  (deployed or rolled back and logged in with, in place but not yet proved, or not, and why),
+  restoring a bundle a row per key it laid back with its fingerprint, and pinning host keys a row
+  per host (pinned, already trusted, or not pinned and why), each with its re-run command; no job
+  page shows the old console as its output any more.
 - **Force a rotation.** `authama ssh rotate --force` (and *Force: replace what cannot rotate in
   place* on Rotate keys and on a rotation's review) replaces, on this computer only, each key that
   cannot rotate in place: one never deployed, or whose host cannot be reached. Every other key
@@ -340,6 +345,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Rotate, revoke and delete keys are chosen on their review page.** The slide-in pickers on Keys
+  and the profile rotation slide-in on Profiles are gone: their picker, options and steps live on
+  the job's review page, which opens with nothing chosen, draws the picker ticked as chosen, and
+  reviews the job again as the keys or an option change. The review has an address of its own
+  (`/jobs/review?action=rotate-keys`), so it reloads and can be bookmarked; an older
+  `/keys#rotate-keys` link is sent there. With nothing chosen the page asks for keys rather than
+  answering with an error.
+- **A review's *Rotate without a backup* button is gone; its option stays.** It did what the
+  *Skip the encrypted backup* option beside it does, so a review blocked by a missing backup
+  recipient is unblocked by turning that option on.
+- **A job's page never opens on the old console.** It draws a starting summary until the job
+  names its keys, and redraws it in place as they finish; the list of keys beside the progress bar
+  is gone, as the summary shows each one.
 - **A job's review, a running job and an operation in the history are pages of their own**, no
   longer slide-in panels. The review keeps its checks, steps and keys on the left and a column on
   the right that stays in view, with what the job reaches, its backup, its undo, its options and

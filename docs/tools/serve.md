@@ -397,7 +397,10 @@ History.
 Deploying, rotating and rolling back reach the hosts that use a key, and pinning host keys asks
 hosts for theirs, so no copy can preview them. Each runs as a **job**:
 
-1. **Review.** The review is a page of its own, never a slide-in panel, titled for the job
+1. **Review.** The review is a page of its own, never a slide-in panel. For rotating,
+   revoking or deleting chosen keys it is also where the keys are chosen: the picker sits
+   at its top, ticked as chosen, and opens with nothing chosen from Keys, Profiles, the
+   Actions menu or the palette. It is titled for the job
    (*Rotate 10 keys*), with a trail back to where the job was chosen; Cancel goes back there.
    The checks, steps and keys are on the left, and a column on the right stays in view as you
    scroll: what the job reaches, whether it writes a backup, how to undo it, its options, and
@@ -414,8 +417,8 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
    and the command it is the same as is shown for reference, with a copy button. **Start: Rotate 10
    keys…** opens a dialog that asks once more; **Dry run: test every key**, beside it, tests the
    rotation and changes nothing (each server answers and the current key logs in; a target that
-   takes keys by hand is named), and *Rotate without a backup* (or *Skip the encrypted backup* on
-   the form) makes a clean rotation with no bundle. After a fix started from a review, the done page
+   takes keys by hand is named), and the *Skip the encrypted backup* option makes a clean rotation with no
+   bundle, also when the backup check fails for want of a recipient. After a fix started from a review, the done page
    offers **Review the job again**; a job that cannot be undone (revoke, delete) asks in
    red.
 2. **Run.** The job starts, and its page (a page of its own too, as is an operation in the
@@ -430,8 +433,10 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
    running (with a spinner), done or failed, updated as it goes. When the job needs you (pasting a
    key where a target takes it by hand), a card says it is waiting, which step it is on, and what to
    do, with the text to copy. A job that is one step shows a moving bar and says it gives no percentage.
-   A rotation (of one key or many), its dry run, and revoking or deleting chosen keys show
-   their output as a **summary**, drawn as it goes: each key waiting (·), under way (›), then
+   Every job shows its output as a **summary**, drawn as it goes: a rotation (of one key or
+   many) and its dry run, revoking or deleting chosen keys, a deploy and a rollback (a row per
+   host), restoring a bundle (a row per key it laid back, with its fingerprint), and pinning
+   host keys (a row per host: pinned, already trusted, or not pinned and why). It reads: each key waiting (·), under way (›), then
    with its result, grouped by owner and project in columns (key, via, result, reason), each
    explanation once as a numbered note, **Needs you**, and the command for the failed keys;
    every line the job printed is folded beneath under **Full log**. A slim progress bar sits

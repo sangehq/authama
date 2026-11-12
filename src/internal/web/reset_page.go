@@ -43,13 +43,13 @@ func resetOptions(devRoot, historyPermanent bool) resetPage {
 			resetOption{Title: "Rotate every key", Icon: "recycle", Undoable: true,
 				What:   "Replaces every key a host uses with a new one, deploying each before the old one goes.",
 				Resets: "Each key a host uses.", Keeps: "Profiles and hosts; each old key under old/, for rollback.", Undo: "Roll a key back from its page.",
-				Command: "authama ssh rotate --all", Href: "/keys?pick=all#rotate-keys", Button: "Choose keys",
-				Tip: "Opens Rotate keys with every key chosen; untick any to keep. Nothing runs until you review the job."},
+				Command: "authama ssh rotate --all", Href: "/jobs/review?action=rotate-keys&all=1", Button: "Choose keys",
+				Tip: "Opens the rotation's review with every key chosen; untick it to choose fewer. Nothing runs until you start it."},
 			resetOption{Title: "Revoke keys", Icon: "ban",
 				What:   "Removes keys from every server they were deployed to, and records them as revoked.",
 				Resets: "Where the chosen keys are trusted.", Keeps: "The declarations, hosts and key files; each key's checklist lists what is left.", Undo: "None: mint and deploy a successor instead.",
-				Command: "authama ssh key revoke --all", Href: "/keys#revoke-keys", Button: "Choose keys",
-				Tip: "Opens Revoke keys to choose which to revoke. Nothing runs until you review the job."})
+				Command: "authama ssh key revoke --all", Href: "/jobs/review?action=revoke-keys", Button: "Choose keys",
+				Tip: "Opens the revocation's review to choose which keys. Nothing runs until you start it."})
 	}
 	history := resetOption{Title: "Start the history again", Icon: "history", Undoable: true,
 		What:   "Moves the record of every change, and the audit log it is rebuilt from, aside; the next change starts a new one.",

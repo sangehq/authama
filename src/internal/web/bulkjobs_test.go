@@ -44,7 +44,6 @@ func TestBulkJobsReviewTheChosenKeys(t *testing.T) {
 		{"delete a key a host uses", url.Values{"action": {"delete-keys"}, "sel": {key}}, "used by a host"},
 		{"an unknown category", url.Values{"action": {"rotate-keys"}, "sel": {"category:nosuch"}}, "no profile is filed"},
 		{"a malformed selector", url.Values{"action": {"rotate-keys"}, "sel": {"../etc"}}, "not a key or profile"},
-		{"nothing chosen", url.Values{"action": {"revoke-keys"}}, "choose at least one"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			rec := c.change("/jobs/review", tc.form)
@@ -55,14 +54,43 @@ func TestBulkJobsReviewTheChosenKeys(t *testing.T) {
 	}
 }
 
-func TestTheKeysPageOffersThePickerForEachBulkAction(t *testing.T) {
+// A bulk key job's review is where its keys are chosen: Keys, the Actions
+// menu and the palette link to it, it opens with the picker and nothing
+// chosen, and once keys are chosen it draws them ticked beside the review.
+func TestABulkJobsReviewIsWhereItsKeysAreChosen(t *testing.T) {
 	s, _, _ := newTestServer(t)
 	c := signIn(t, s)
-	body := c.get("/keys").Body.String()
-	for _, want := range []string{`id="rotate-keys"`, `id="revoke-keys"`, `id="delete-keys"`, "data-key-picker",
-		`name="sel" value="work"`, `kp-why">never minted<`, `kp-why">a host uses it<`, `data-pick-submit="rotate"`} {
-		if !strings.Contains(body, want) {
-			t.Errorf("the keys page lacks %q", want)
+	keys := c.get("/keys").Body.String()
+	for _, want := range []string{`href="/jobs/review?action=rotate-keys"`, `href="/jobs/review?action=revoke-keys"`, `href="/jobs/review?action=delete-keys"`} {
+		if !strings.Contains(keys, want) {
+			t.Errorf("the keys page does not link %q", want)
 		}
+	}
+	for _, gone := range []string{`id="rotate-keys"`, `id="revoke-keys"`, `id="delete-keys"`} {
+		if strings.Contains(keys, gone) {
+			t.Errorf("the keys page still holds the slide-in %s", gone)
+		}
+	}
+	for action, kind := range map[string]string{"rotate-keys": "rotate", "revoke-keys": "revoke", "delete-keys": "delete"} {
+		page := c.get("/jobs/review?action=" + action).Body.String()
+		for _, want := range []string{"data-key-picker", `data-pick-action="` + kind + `"`, "Choose keys above", `name="sel" value="work"`,
+			`data-confirm="m-job" disabled`, `method="get" action="/jobs/review" id="job-options"`} {
+			if !strings.Contains(page, want) {
+				t.Errorf("%s: the empty review lacks %q", action, want)
+			}
+		}
+	}
+	page := c.get("/jobs/review?action=rotate-keys&sel=work&force=1").Body.String()
+	for _, want := range []string{`value="work" data-pick-profile checked`, "(forced)", `name="force" value="1" checked form="job-options"`, "Before it starts"} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the review of a chosen profile lacks %q", want)
+		}
+	}
+	if strings.Contains(page, "Choose keys above") {
+		t.Error("a review with keys chosen still says to choose them")
+	}
+	// A key the action cannot act on is drawn, unticked, with why.
+	if del := c.get("/jobs/review?action=delete-keys").Body.String(); !strings.Contains(del, `kp-why">a host uses it<`) {
+		t.Error("the delete review does not say why a key cannot be chosen")
 	}
 }

@@ -1,5 +1,6 @@
 // @ts-check
 import { Component } from "../core/component.js";
+import { Ui } from "../core/ui.js";
 
 /**
  * KeyPicker makes the key picker's groups behave as groups: ticking a whole
@@ -29,13 +30,6 @@ export class KeyPicker extends Component {
       filter.addEventListener("input", () => this.filter(filter.value));
     }
     this.el.querySelector("[data-pick-clear]")?.addEventListener("click", () => this.clear());
-    // /keys?pick=all#rotate-keys, from the Reset page's "Rotate every key",
-    // opens the rotate picker with every key already chosen. Only the rotate
-    // picker takes it: revoking or deleting every key is never preset.
-    const all = /** @type {HTMLInputElement | null} */ (this.el.querySelector("[data-pick-all]"));
-    if (all && this.el.dataset.pickAction === "rotate" && new URLSearchParams(window.location.search).get("pick") === "all") {
-      all.checked = true;
-    }
     this.sync();
     return this;
   }
@@ -171,6 +165,28 @@ export class KeyPicker extends Component {
           ? `Review every key to ${verb}`
           : `Review ${chosen} key${chosen === 1 ? "" : "s"} to ${verb}`;
       }
+    }
+    return this;
+  }
+}
+
+/**
+ * MovedPanels sends an older link to a slide-in that has moved to a page of
+ * its own there: /keys#rotate-keys opens the rotation's review, where its keys
+ * are now chosen, and /keys?pick=all#rotate-keys opens it with every key
+ * chosen. Markup: `<span data-moved-panels="rotate-keys revoke-keys">`.
+ *
+ * @extends {Component<{}>}
+ */
+export class MovedPanels extends Component {
+  static attribute = "moved-panels";
+
+  init() {
+    const id = window.location.hash.slice(1);
+    const moved = (this.el.dataset.movedPanels ?? "").split(" ").filter(Boolean);
+    if (id && moved.includes(id)) {
+      const all = id === "rotate-keys" && new URLSearchParams(window.location.search).get("pick") === "all";
+      window.location.replace(Ui.path(`/jobs/review?action=${encodeURIComponent(id)}${all ? "&all=1" : ""}`));
     }
     return this;
   }

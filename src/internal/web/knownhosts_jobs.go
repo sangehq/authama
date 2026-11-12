@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"github.com/simtabi/authama/src/internal/services/rotator"
 	"net/url"
 	"strings"
 
@@ -60,10 +61,17 @@ func knownhostsInitJob(j *jobs.Job, p paths.Paths, retain int, profile string, a
 	if err := j.Step(); err != nil {
 		return err
 	}
+	scope := profile
+	if all {
+		scope = "--all"
+	}
+	sum := newSummaryOf(j, "pin", "authama ssh knownhosts init "+scope,
+		"Hosts marked not pinned are not trusted yet: ssh asks before it connects to them.")
 	report, err := knownhosts.New(p.SSHDir).InitEach(m, profile, all, force, func(done, total int, alias string) {
 		label := ""
 		if alias != "" {
 			label = "scanning " + alias
+			sum.pending("hosts/"+alias, "scanning")
 		}
 		j.Progress(done, total, label)
 	})
@@ -71,6 +79,7 @@ func knownhostsInitJob(j *jobs.Job, p paths.Paths, retain int, profile string, a
 		return err
 	}
 	_, _ = fmt.Fprintln(j, report.Format())
+	sum.show(pinRows(report.Results))
 	return nil
 }
 
@@ -128,6 +137,14 @@ func knownhostsPinJob(j *jobs.Job, p paths.Paths, retain int, t knownhosts.Targe
 		_, _ = fmt.Fprintln(j, line)
 		fps = append(fps, sk.Keytype+"  "+sk.Fingerprint)
 	}
+	owner := t.Profile
+	if owner == "" {
+		owner = "global"
+	}
+	sum := newSummaryOf(j, "pin", "", "")
+	row := rotator.SummaryKey{Ref: owner + "/" + t.Alias, Key: fmt.Sprintf("%s:%d", t.Hostname, t.Port), Via: "ssh-keyscan",
+		Result: "waiting", Pending: true}
+	sum.show([]rotator.SummaryKey{row})
 	if !j.AskWith(jobs.Question{
 		Prompt: fmt.Sprintf("Trust these %d host key(s) for %s? Check them against a fingerprint you got another way.", len(keys), t.Alias),
 		Text:   strings.Join(fps, "\n"),
@@ -135,6 +152,9 @@ func knownhostsPinJob(j *jobs.Job, p paths.Paths, retain int, t knownhosts.Targe
 		No:     "Don't trust them",
 	}) {
 		_, _ = fmt.Fprintln(j, "pinned 0 host key(s) into known_hosts")
+		row.Pending, row.Result, row.Severity, row.Kind = false, "not trusted", 1, rotator.KindFailed
+		row.Note = "you did not trust the keys shown, so nothing was pinned: ssh asks before it connects"
+		sum.show([]rotator.SummaryKey{row})
 		return nil
 	}
 	if err := j.Step(); err != nil {
@@ -150,5 +170,8 @@ func knownhostsPinJob(j *jobs.Job, p paths.Paths, retain int, t knownhosts.Targe
 		return err
 	}
 	_, _ = fmt.Fprintf(j, "pinned %d host key(s) into known_hosts\n", total)
+	row.Pending, row.Result = false, "pinned"
+	row.Note = fmt.Sprintf("pinned %d host key(s) into known_hosts", len(keys))
+	sum.show([]rotator.SummaryKey{row})
 	return nil
 }

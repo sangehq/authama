@@ -348,7 +348,16 @@ type pickerData struct {
 	Action     string // rotate | revoke | delete
 	Profiles   []PickerProfile
 	Categories []string
+	// All and Chosen are what the form already chose (every key; keys,
+	// profiles and "category:<name>" values), so a review draws its picker
+	// ticked.
+	All    bool
+	Chosen map[string]bool
 }
+
+// Picked reports whether the form already chose v: a key, a profile, or a
+// "category:<name>".
+func (d pickerData) Picked(v string) bool { return d.Chosen[v] }
 
 // Why is "" when the action can act on k, and otherwise why it cannot.
 func (d pickerData) Why(k PickerKey) string {

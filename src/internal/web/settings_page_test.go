@@ -95,7 +95,7 @@ func TestARotationCanBeTestedOrRunWithoutABackup(t *testing.T) {
 	c := signIn(t, s)
 	key := fixtureKey(t, c)
 	body := c.change("/jobs/review", url.Values{"action": {"rotate"}, "key": {key}}).Body.String()
-	for _, want := range []string{`name="check" value="1"`, "Dry run: test every key", "Rotate without a backup", `name="no_backup" value="1"`} {
+	for _, want := range []string{`name="check" value="1"`, "Dry run: test every key", "Skip the encrypted backup", `name="no_backup" value="1"`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the review lacks %q", want)
 		}

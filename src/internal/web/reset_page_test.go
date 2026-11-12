@@ -14,7 +14,7 @@ func TestTheResetPageOffersEveryReset(t *testing.T) {
 	c := signIn(t, s)
 	body := c.get("/reset").Body.String()
 	for _, want := range []string{
-		`href="/keys?pick=all#rotate-keys"`, `href="/keys#revoke-keys"`, `href="/snapshots#prune"`,
+		`href="/jobs/review?action=rotate-keys&amp;all=1"`, `href="/jobs/review?action=revoke-keys"`, `href="/snapshots#prune"`,
 		`href="/security#forget"`, `href="/repair#factory-reset"`,
 		`name="action" value="settings-reset"`, `name="action" value="home-init"`, `pattern="init"`,
 		`name="action" value="history-reset"`, `pattern="history"`, `data-bs-target="#history-reset"`,
@@ -76,7 +76,7 @@ func TestTheMainMenuGroupsPagesByWhatTheyAreAbout(t *testing.T) {
 		t.Fatalf("read %d menu groups, the pattern is not matching the menu", len(groups))
 	}
 	for group, hrefs := range map[string][]string{
-		"actions": {"/keys#rotate-keys", "/keys#revoke-keys", "/reset"},
+		"actions": {"/jobs/review?action=rotate-keys", "/jobs/review?action=revoke-keys", "/reset"},
 		"ssh":     {"/profiles", "/hosts", "/keys", "/vms", "/naming", "/ssh-config"},
 		"auth":    {"/checklists", "/audit", "/security"},
 		"backups": {"/snapshots", "/export"},

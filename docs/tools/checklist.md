@@ -66,10 +66,14 @@ authama ssh key delete work --purge --yes   # each key in work no host uses
 ```
 
 Each key is done in turn; one that fails is named and the rest go on. On the
-**Keys** page, **Rotate keys**, **Revoke keys** and **Delete keys** open a picker
-with every key, whole categories, whole profiles and single keys. A key the action
-cannot act on (rotate: no host uses it; revoke: never minted; delete: a host uses
-it) is shown, unticked, with the reason.
+**Keys** page (and in the Actions menu), **Rotate keys**, **Revoke keys** and
+**Delete keys** open the job's review page, where its keys are chosen: a picker
+with every key, whole categories, whole profiles and single keys, beside the job's
+options and its Start button. A key the action cannot act on (rotate: no host uses
+it; revoke: never minted; delete: a host uses it) is shown, unticked, with the
+reason. Changing the keys or an option reviews the job again, and the page has an
+address of its own (`/jobs/review?action=rotate-keys&sel=work`), so it can be
+reloaded or bookmarked; an older `/keys#rotate-keys` link opens it too.
 
 ---
 
