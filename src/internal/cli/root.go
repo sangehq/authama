@@ -101,6 +101,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newAPICmd())
 	root.AddCommand(newWebhookCmd())
 	root.AddCommand(newMCPCmd())
+	root.AddCommand(newCompanionCmd())
 
 	// The two feature groups.
 	ssh := &cobra.Command{

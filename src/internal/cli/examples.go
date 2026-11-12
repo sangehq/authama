@@ -61,7 +61,9 @@ var commandExamples = map[string][]string{
 	"ssh diff":            {"ssh diff"},
 	"ssh expiry":          {"ssh expiry"},
 	"ssh git status":      {"ssh git status", "ssh git status ~/code/acme ~/code/personal"},
-	"ssh git use":         {"ssh git use profile --dry-run", "ssh git use https ~/code/acme/api --yes", "ssh git use ssh --profile work"},
+	"ssh git use":         {"ssh git use profile --dry-run", "ssh git use https ~/code/acme/api --yes", "ssh git use ssh --profile work", "ssh git use profile ~/code/acme --dry-run --json"},
+	"ssh git resolve":     {"ssh git resolve simtabi/authama", "ssh git resolve simtabi/authama --json"},
+	"companion info":      {"companion info", "companion info --json"},
 	"ssh host add": {
 		"ssh host add work web1 --hostname web1.example.com --user deploy",
 		"ssh host add work gh --hostname github.com --user git --provider github --token-env GH_TOKEN_WORK",
