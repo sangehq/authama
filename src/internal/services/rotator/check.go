@@ -19,14 +19,33 @@ type HostCheck struct {
 	// OK is false when the rotation would fail here; Message says why.
 	OK      bool
 	Message string
+	// Kind names what was found, for a summary: KindLogsIn, KindAPI,
+	// KindManual, KindUnreachable, KindNeverDeployed or KindRemoved.
+	Kind string
+	// Via is how the new key would reach the host: ssh, a provider's API, or
+	// a provider that takes it by hand.
+	Via string
 }
+
+// What a dry run can find at a host, and why a key cannot rotate.
+const (
+	KindLogsIn        = "logs-in"
+	KindAPI           = "api"
+	KindManual        = "manual"
+	KindUnreachable   = "unreachable"
+	KindNeverDeployed = "never-deployed"
+	KindRemoved       = "removed"
+	KindNoKey         = "no-key"
+	KindFailed        = "failed"
+)
 
 // CheckReport is a dry run of one key's rotation.
 type CheckReport struct {
 	Key   string
 	Hosts []HostCheck
-	// Problem is set when the key cannot be rotated at all (no key file).
-	Problem string
+	// Problem is set when the key cannot be rotated at all (no key file);
+	// ProblemKind names it.
+	Problem, ProblemKind string
 }
 
 // OK reports whether the rotation would go through without a failure.
@@ -56,32 +75,36 @@ func (r *Rotator) Check(selector string) (CheckReport, error) {
 	cur := r.m.KeyPath(r.p.SSHDir, ref)
 	if !r.m.Profiles[profile].InOnePassword() && !exists(cur) {
 		rep.Problem = "the key is not on disk: run `authama ssh reconcile` first"
+		rep.ProblemKind = KindNoKey
 		return rep, nil
 	}
 	for _, h := range hosts {
 		prov := r.provider(h)
-		hc := HostCheck{Alias: h.Alias, Provider: prov.Name(), OK: true}
+		hc := HostCheck{Alias: h.Alias, Provider: prov.Name(), OK: true, Via: via(prov)}
 		switch prov.Category() {
 		case "server":
 			st := netcheck.Check(h.Hostname, h.Port, h.RequiresVPN, deref(h.VPNName), deref(h.VPNURL), 4*time.Second, true)
 			switch {
 			case !st.Reachable:
-				hc.OK, hc.Message = false, st.Message()
+				hc.OK, hc.Message, hc.Kind = false, st.Message(), KindUnreachable
 			case !prov.Verify(r.target(h, profile, cur+".pub", readFile(cur+".pub"), cur)):
 				hc.OK = false
+				hc.Kind = KindNeverDeployed
 				if r.deployedTo(cur, h.Alias) {
+					hc.Kind = KindRemoved
 					hc.Message = "answers, but the current key no longer logs in: it was removed there, or the user changed; deploy it again first"
 				} else {
 					hc.Message = "answers, but the current key does not log in: it was never deployed here, so there is nothing to rotate yet; deploy it first (the key's page, Deploy)"
 				}
 			default:
-				hc.Message = "answers, and the current key logs in"
+				hc.Message, hc.Kind = "answers, and the current key logs in", KindLogsIn
 			}
 		default:
 			if providers.TakesKeysByHand(prov) {
-				hc.Manual, hc.Message = true, prov.Name()+" takes the new key by hand: the rotation will stop and ask you to paste it"
+				hc.Manual, hc.Kind = true, KindManual
+				hc.Message = prov.Name() + " takes the new key by hand: the rotation will stop and ask you to paste it"
 			} else {
-				hc.Message = prov.Name() + ": the new key goes in through its API"
+				hc.Message, hc.Kind = prov.Name()+": the new key goes in through its API", KindAPI
 			}
 		}
 		rep.Hosts = append(rep.Hosts, hc)
@@ -111,6 +134,18 @@ func (c CheckReport) Format() string {
 		fmt.Fprintf(&b, "  %-5s %s: %s\n", tag, h.Alias, h.Message)
 	}
 	return b.String()
+}
+
+// via is how a provider takes a new key: ssh for a server, the provider's
+// API, or the provider's name where it takes the key by hand.
+func via(prov providers.Provider) string {
+	switch {
+	case prov.Category() == "server":
+		return "ssh"
+	case providers.TakesKeysByHand(prov):
+		return prov.Name()
+	}
+	return prov.Name() + " api"
 }
 
 // deployedTo reports whether the inventory records the key at path as

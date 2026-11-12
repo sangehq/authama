@@ -37,7 +37,7 @@
 </div>
 {{end}}
 <div class="row g-3">
-{{if or (eq .State "running") (eq .State "waiting") .Progress}}<div class="col-xl-4">
+{{if and (or (eq .State "running") (eq .State "waiting") .Progress) (not .Summary)}}<div class="col-xl-4">
 {{if or (eq .State "running") (eq .State "waiting") .Progress}}
 <div class="card mb-3 job-progress job-aside" data-job-progress data-job-started="{{unixMilli .Started}}"{{with .Progress}} data-job-progress-since="{{unixMilli .Since}}"{{end}}>
   <div class="card-body">
@@ -53,12 +53,15 @@
 </div>
 {{end}}
 </div>{{end}}
-<div class="{{if or (eq .State "running") (eq .State "waiting") .Progress}}col-xl-8{{else}}col-12{{end}}">
+<div class="{{if and (or (eq .State "running") (eq .State "waiting") .Progress) (not .Summary)}}col-xl-8{{else}}col-12{{end}}">
 {{if .Err}}<div class="alert {{if eq .State "cancelled"}}alert-warning{{else}}alert-danger{{end}}" role="alert">{{.Err}}</div>{{end}}
-<div class="card mb-3">
+{{with .Summary}}{{template "rotation_summary" .}}
+<details class="card mb-3 job-full-log"><summary class="card-header"><h2 class="card-title">Full log</h2><span class="card-actions small text-secondary">every line the job printed</span></summary>
+  <div class="card-body p-0"><div class="console" id="job-log" tabindex="0" role="log" aria-live="polite" aria-label="Job output" data-job-stream data-job-stream-events="{{basePath}}/jobs/{{$.Data.ID}}/events" data-job-stream-state="#job-state">{{range consoleLines $.Data.Lines}}{{template "console_line" .}}{{end}}</div></div>
+</details>{{else}}<div class="card mb-3">
   <div class="card-header"><h2 class="card-title">Output</h2>{{with .Progress}}{{with itemTally .Items}}<div class="card-actions d-flex gap-1">{{if .Done}}<span class="badge badge-ok">{{.Done}} passed</span>{{end}}{{if .Failed}}<span class="badge badge-bad">{{.Failed}} failed</span>{{end}}{{if .Waiting}}<span class="badge badge-muted">{{.Waiting}} to go</span>{{end}}</div>{{end}}{{end}}</div>
   <div class="card-body p-0"><div class="console" id="job-log" tabindex="0" role="log" aria-live="polite" aria-label="Job output" data-job-stream data-job-stream-events="{{basePath}}/jobs/{{.ID}}/events" data-job-stream-state="#job-state">{{range consoleLines .Lines}}{{template "console_line" .}}{{else}}<div class="console-empty" data-console-empty>Waiting for the first line…</div>{{end}}</div></div>
-</div>
+</div>{{end}}
 {{if or (eq .State "running") (eq .State "waiting")}}
 <form method="post" action="{{basePath}}/jobs/{{.ID}}/cancel"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="btn btn-outline-danger"{{desc "job-cancel"}}>Cancel at the next step</button></form>
 <p class="text-secondary small mt-2">The page updates as the job runs. Without JavaScript, reload it.</p>
@@ -71,3 +74,31 @@
      by how it reads, then the host or key it is about, then the rest. The
      page's script builds the same markup for lines that arrive later. */}}
 {{define "console_line"}}<div data-indent="{{.Indent}}" class="console-line lvl-{{if gt .Indent 2}}2{{else}}{{.Indent}}{{end}}{{with .Kind}} is-{{.}}{{end}}{{if .Last}} is-last{{end}}">{{if .Indent}}<span class="console-branch" aria-hidden="true">{{if .Last}}└─{{else}}├─{{end}}</span><span class="console-glyph" aria-hidden="true"></span>{{if .Tag}}<span class="visually-hidden">{{.Tag}} </span>{{end}}{{else}}<span class="console-tag">{{.Tag}}</span> {{end}}<span class="console-body">{{with .Name}}<span class="console-name">{{.}}{{if $.Text}}:{{end}}</span>{{end}}{{if and .Name .Text}} {{end}}{{with .Text}}<span class="console-text">{{.}}</span>{{end}}</span></div>{{end}}
+
+{{/* A rotation's summary, or its dry run's, as the job's Output: the
+     command, the result, the keys under one trunk grouped by owner and
+     project in columns, each explanation once as a numbered note, what is
+     left for you, and the counts with the command for the failed keys. The
+     same summary `authama ssh rotate` prints as plain text. */}}
+{{define "rotation_summary"}}<div class="card mb-3 rotation-summary" id="job-summary">
+  <div class="card-header"><h2 class="card-title">Output</h2>
+    <div class="card-actions d-flex flex-wrap gap-2">{{range .CountsUp}}<span class="sum-badge sev-{{.Severity}}">{{.N}} {{.Word}}</span>{{end}}</div>
+  </div>
+  <div class="card-body p-0"><div class="console sum-console" tabindex="0" aria-label="{{if .Check}}Dry run{{else}}Rotation{{end}} summary">
+    {{with .Command}}<p class="sum-cmd"><span class="sum-dim" aria-hidden="true">$ </span>{{.}}</p>{{end}}
+    <p class="sum-head"><span class="sum-title">Result</span>{{range $i, $c := .Counts}}{{if $i}}<span class="sum-sep"> · </span>{{end}}<span class="sev-{{$c.Severity}}">{{$c.N}} {{$c.Word}}</span>{{end}}<span class="sum-dim sum-of">of {{len .Keys}} key{{if ne (len .Keys) 1}}s{{end}} · {{.Owners}} owner{{if ne .Owners 1}}s{{end}}</span></p>
+    <div class="sum-scroll"><table class="sum-tree">
+      <thead><tr><th scope="col"><span class="visually-hidden">Owner, project and key</span></th><th scope="col">Key</th><th scope="col">Via</th><th scope="col">Result</th><th scope="col">Reason</th></tr></thead>
+      <tbody>{{range .Rows}}{{if .Gap}}<tr class="is-gap" aria-hidden="true"><td colspan="5"><span class="sum-branch">{{.Trunk}}</span></td></tr>{{end}}{{if .Group}}<tr class="is-group{{if .Root}} is-root{{end}}"><th scope="row" colspan="4"><span class="sum-branch" aria-hidden="true">{{.Branch}}</span>{{.Label}}{{with .Env}}<span class="sum-sep"> · </span><span class="sum-env">{{.}}</span>{{end}}</th><td class="sum-counts">{{.Counts}}</td></tr>
+      {{else}}<tr class="sev-{{.Severity}}"><th scope="row"><span class="sum-branch" aria-hidden="true">{{.Branch}}</span><span class="sum-mark" aria-hidden="true">{{.Mark}}</span> {{.Label}}</th><td class="sum-key">{{.Key}}</td><td class="sum-via">{{.Via}}</td><td class="sum-result">{{.Result}}</td><td class="sum-reason">{{.Reason}}{{if .Note}} <a class="sum-ref" href="#sum-note-{{.Note}}">[{{.Note}}]</a>{{end}}</td></tr>
+      {{end}}{{end}}</tbody>
+    </table></div>
+    {{if or .Notes .Untouched}}<div class="sum-section"><p class="sum-label">Notes</p>
+      <ol class="sum-notes">{{range .Notes}}<li id="sum-note-{{.N}}" class="sev-{{.Severity}}"><span class="sum-ref">[{{.N}}]</span><span class="sum-note">{{.Text}}</span></li>{{end}}</ol>
+      {{with .Untouched}}<p class="sum-dim sum-untouched mb-0">{{.}}</p>{{end}}</div>{{end}}
+    {{with .Needs}}<div class="sum-section"><p class="sum-label">Needs you</p>
+      <ol class="sum-needs">{{range $i, $n := .}}<li class="sev-{{.Severity}}"><span class="sum-mark" aria-hidden="true">{{.Mark}}</span><span class="sum-num">{{add $i 1}}</span><span class="sum-action">{{.Action}}</span><span class="sum-ref">{{if .Note}}[{{.Note}}]{{end}}</span><span class="sum-keys">{{.Keys}}</span></li>{{end}}</ol></div>{{end}}
+    <div class="sum-foot"><span>{{range $i, $c := .Counts}}{{if $i}}<span class="sum-sep"> · </span>{{end}}<span class="sev-{{$c.Severity}}">{{$c.N}} {{$c.Word}}</span>{{end}}{{with .Took}}<span class="sum-dim">  ·  {{.}}</span>{{end}}</span>
+      {{with .Rerun}}<span class="sum-rerun"><span class="sum-dim">re-run failed:</span> <code>{{.}}</code> {{template "copy" (copy . "the command")}}</span>{{end}}</div>
+  </div></div>
+</div>{{end}}

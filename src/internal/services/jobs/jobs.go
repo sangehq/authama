@@ -103,6 +103,9 @@ type View struct {
 	Started  time.Time
 	// Progress is nil for a job that does not count its steps.
 	Progress *Progress
+	// Summary is what the job set as its result once it ended, for its page
+	// to draw (a rotation's grouped summary); nil for most jobs.
+	Summary any
 }
 
 // Job is one running or finished job.
@@ -113,6 +116,7 @@ type Job struct {
 	started time.Time
 
 	mu       sync.Mutex
+	summary  any
 	lines    []string
 	partial  string
 	state    string
@@ -126,6 +130,14 @@ type Job struct {
 	items    []string
 	failed   map[string]bool
 	title    string
+}
+
+// SetSummary gives the job a result for its page to draw, above its output.
+func (j *Job) SetSummary(v any) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	j.summary = v
+	j.notify()
 }
 
 // SetTitle names the job for people, as its review did: "Rotate 10 keys".
@@ -230,7 +242,7 @@ func (j *Job) View() (View, <-chan struct{}) {
 		lines = append(lines, j.partial)
 	}
 	v := View{ID: j.id, Command: j.command, Title: j.title, Args: j.args, State: j.state, Err: j.err, OpID: j.opID,
-		Lines: lines, Started: j.started}
+		Lines: lines, Started: j.started, Summary: j.summary}
 	if j.question != nil {
 		q := *j.question
 		v.Question = &q

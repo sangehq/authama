@@ -79,6 +79,66 @@ rotate; the command exits non-zero and names the keys it left. The inventory is
 saved after every committed key, so an interrupted batch keeps what it
 finished. A key no host uses is skipped: there is nothing to deploy it to.
 
+A batch, and every dry run, ends with a **summary** of each key it covered:
+
+```text
+$ authama ssh rotate --all --check
+
+Result   3 would fail · 3 would pause · 4 would rotate   of 10 keys · 4 owners
+
+                       KEY                               VIA         RESULT        REASON
+rotate
+├─ simtabi                                                                 2 would fail · 3 would pause
+│  ├─ simbi · prd                                                                          2 would fail
+│  │  ├─ × web-00      simtabi_simbi-prd-web-00-ed25519  ssh         would fail    never deployed [2]
+│  │  └─ × db-00       simtabi_simbi-prd-db-00-ed25519   ssh         would fail    never deployed [2]
+│  └─ oribi                                                                               3 would pause
+│     ├─ ! web         simtabi_oribi-web-ed25519         ploi        would pause   awaiting paste [1]
+│     └─ ! db-maria    simtabi_oribi-db-maria-ed25519    ploi        would pause   awaiting paste [1]
+│
+└─ imanimanyara                                                           1 would fail · 1 would rotate
+   ├─ × docker-tunnel  docker-tunnel                     ssh         would fail    host unreachable [3]
+   └─ ✓ github         imanimanyara_github-ed25519       github api  would rotate
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────
+Notes
+  [1] ploi takes the new key by hand: the rotation will stop and ask you to paste it
+  [2] answers, but the current key does not log in: it was never deployed here, so there is nothing to
+      rotate yet; deploy it first (the key's page, Deploy)
+  [3] incus:22 unreachable - check your network connection
+  A dry run changes nothing: every key is as it was.
+─────────────────────────────────────────────────────────────────────────────────────────────────────
+Needs you
+  × 1  check network  [3]   imanimanyara: docker-tunnel
+  × 2  deploy first   [2]   simtabi/simbi·prd: web-00, db-00
+  ! 3  paste by hand  [1]   simtabi/oribi: web, db-maria
+─────────────────────────────────────────────────────────────────────────────────────────────────────
+3 would fail · 3 would pause · 4 would rotate  ·  12.4s     re-run failed: authama ssh rotate --failed --check
+```
+
+- **The command** and a **Result** line open it: how many keys went each way, worst first, of
+  how many keys and owners.
+- **The tree** hangs every key off one trunk under `rotate`, grouped by owner (profile), then by
+  project, read from each key's name: a name with an environment word (`prd`, `staging`, `dev`
+  and the like) after its first part is grouped as `project · env`, and keys that share a first
+  part are grouped under it. Owners, groups and keys are sorted worst first, and each owner and
+  group carries its own counts on the right.
+- **Each key** says its result in words (`rotated`, `replaced`, `not rotated`; for a dry run
+  `would rotate`, `would pause`, `would fail`) with a ✓, ! or ×, the key's full name, how the new
+  key reaches its hosts (`ssh`, a provider's API, or the provider that takes it by hand), and a
+  short reason.
+- **Notes** print each explanation once, numbered in the order the run met them, with a hanging
+  indent, and say what became of the keys that did not go through.
+- **Needs you** lists what is left to do (check the network, deploy first, paste by hand,
+  deploy a forced key next), worst first, with the keys each is for.
+- **The last line** repeats the counts and the time taken, and gives the command that runs the
+  failed keys again: `authama ssh rotate --failed` runs the keys the last rotation or dry run
+  left (add `--check` to test them again, `--force` to replace them).
+
+The output is plain text, so a pipe or a log reads it as printed. The web's job page shows the
+same summary, in colour, as the job's Output; every line the job printed is folded beneath it
+under **Full log**.
+
 A selector that matches nothing is an error, so a typo never runs as an empty
 batch, and `--all` cannot be combined with other selectors.
 

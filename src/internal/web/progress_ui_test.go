@@ -1,12 +1,14 @@
 package web
 
 import (
+	"github.com/simtabi/authama/src/internal/services/rotator"
 	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/simtabi/authama/src/internal/services/history"
 	"github.com/simtabi/authama/src/internal/services/jobs"
@@ -193,6 +195,39 @@ func TestAJobPageListsItsItemsOneAtATime(t *testing.T) {
 	}
 	if ev := c.get("/jobs/" + v.ID + "/events").Body.String(); !strings.Contains(ev, "event: items\ndata: work/a=failed work/b=done\n\n") {
 		t.Errorf("the stream carries no items event:\n%s", ev)
+	}
+}
+
+// A rotation's job page draws its summary: the keys grouped by owner and
+// project, results coloured by how they went, each note once, what is left
+// for you, and the command for the failed keys with a copy button.
+func TestARotationJobPageDrawsItsSummary(t *testing.T) {
+	s, p, _ := newTestServer(t)
+	t.Cleanup(mutation.Release)
+	c := signIn(t, s)
+	never := "answers, but the current key does not log in: it was never deployed here"
+	j, err := s.jobs.Start(p, mutation.Scope{Command: "ssh rotate", Args: []string{"--all", "--check"}, Source: history.SourceWeb}, func(j *jobs.Job) error {
+		sum := rotator.SummarizeCheck([]rotator.CheckReport{
+			{Key: "work/work_app-prd-web-ed25519", Hosts: []rotator.HostCheck{{Alias: "app-prd-web", Via: "ssh", Kind: rotator.KindNeverDeployed, Message: never}}},
+			{Key: "work/work_app-prd-db-ed25519", Hosts: []rotator.HostCheck{{Alias: "app-prd-db", Via: "ssh", OK: true, Kind: rotator.KindLogsIn}}},
+		}, time.Second)
+		sum.Command = jobLine(j)
+		j.SetSummary(sum)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	v, _ := j.View()
+	waitJob(t, s, v.ID)
+	page := c.get("/jobs/" + v.ID).Body.String()
+	for _, want := range []string{`id="job-summary"`, "$ </span>authama ssh rotate --all --check", `sum-badge sev-2">1 would fail`,
+		`app<span class="sum-sep"> · </span><span class="sum-env">prd</span>`, "rotate</th>", "Full log", `id="job-log"`,
+		`<tr class="sev-2">`, `href="#sum-note-1">[1]</a>`, `id="sum-note-1"`, never, "Needs you", "deploy first",
+		"re-run failed:", `data-copy="authama ssh rotate --failed --check"`} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the summary lacks %q", want)
+		}
 	}
 }
 

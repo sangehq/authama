@@ -8,6 +8,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A rotation ends in a summary.** A batch `authama ssh rotate`, and every `--check`, ends with
+  one summary of every key: the command, a Result line with the counts, every key under one trunk
+  grouped by owner and by project (and environment) read from its name, worst first, in aligned
+  columns (key, via, result, reason), each explanation printed once as a numbered note, **Needs
+  you** with what is left to do and the keys each is for, and a last line with the counts, the
+  time taken and the command for the failed keys. Results are words (`rotated`, `replaced`,
+  `not rotated`; `would rotate`, `would pause`, `would fail`) as well as ✓ ! ×. The web's job page
+  shows the same summary in colour as its Output, with the full log folded beneath.
+- **`authama ssh rotate --failed`** runs again the keys the last rotation or dry run left, from the
+  web or the terminal; it takes `--check` and `--force` like any rotation.
 - **Force a rotation.** `authama ssh rotate --force` (and *Force: replace what cannot rotate in
   place* on Rotate keys and on a rotation's review) replaces, on this computer only, each key that
   cannot rotate in place: one never deployed, or whose host cannot be reached. Every other key
