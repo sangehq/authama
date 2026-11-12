@@ -23,3 +23,16 @@ a05bdcdefcfdfe5dc51c21f032ec13e02bfc58ad:internal/util/askpass/askpass_test.go:g
 # lines, written to a temp dir by the test; not a key (the body is plain text).
 # Later commits build the armor at run time so it is not flagged again.
 eb1bf5e242d3752cbdd82a68950fc200bfa58227:src/internal/cli/termius_keys_test.go:private-key:11
+
+# A published test vector, not a credential. Commit 5bae99e's webhooks_test.go held the
+# Standard Webhooks 1.0.0 spec's own example (its documented secret, message id and the
+# signature it gives) to check authama's signing byte for byte. GitHub secret scanning
+# read it as a Stripe webhook secret (alert #1, resolved as used in tests). e26b292
+# removed it: the test now generates its key at run time and checks an independent HMAC.
+# These retire the published commit's lines (the secret, the expected signature, and the
+# three Verify calls that repeat it).
+5bae99e093bd867dc908edf467e51c2f7119e82d:src/internal/services/webhooks/webhooks_test.go:generic-api-key:22
+5bae99e093bd867dc908edf467e51c2f7119e82d:src/internal/services/webhooks/webhooks_test.go:generic-api-key:23
+5bae99e093bd867dc908edf467e51c2f7119e82d:src/internal/services/webhooks/webhooks_test.go:generic-api-key:31
+5bae99e093bd867dc908edf467e51c2f7119e82d:src/internal/services/webhooks/webhooks_test.go:generic-api-key:34
+5bae99e093bd867dc908edf467e51c2f7119e82d:src/internal/services/webhooks/webhooks_test.go:generic-api-key:37
