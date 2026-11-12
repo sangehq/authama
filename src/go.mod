@@ -10,11 +10,11 @@ retract [v0.1.0, v0.1.3]
 require (
 	github.com/simtabi/go-notifykit/src v0.0.0-20261108132608-322a05ada0ea
 	github.com/spf13/cobra v1.10.2
-	github.com/spf13/pflag v1.0.10
+	github.com/spf13/pflag v1.1.0
 	go.yaml.in/yaml/v3 v3.0.6
 	golang.org/x/crypto v0.58.0
 	golang.org/x/sys v0.49.0
-	modernc.org/sqlite v1.61.0
+	modernc.org/sqlite v1.61.1
 )
 
 require (
