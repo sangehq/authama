@@ -22,6 +22,20 @@
 </div>{{end}}
 <div class="row g-3">
   <div class="col-lg-8">
+    {{with .Picker}}<form method="get" action="{{basePath}}/jobs/review" id="job-options" class="card mb-3 job-pick">
+      {{range $.Data.Kept}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}
+      <div class="card-header"><h2 class="card-title">Keys to {{.Action}}</h2><div class="card-actions small text-secondary">{{if $.Data.Empty}}none chosen yet{{else}}{{len $.Data.Items}} chosen{{end}}</div></div>
+      <div class="card-body">{{template "key_picker" .}}</div>
+      <div class="card-footer d-flex flex-wrap align-items-center gap-2">
+        <span class="small text-secondary me-auto">Change the keys, then review again: the checks, steps and order below follow.</span>
+        <button type="submit" class="btn btn-primary" data-pick-submit="{{.Action}}"{{desc "job-pick-review"}}><span class="me-1" data-pick-submit-label>Review</span>{{icon "refresh"}}</button>
+      </div>
+    </form>{{end}}
+    {{if .Empty}}<div class="card mb-3"><div class="card-body empty py-4">
+      <div class="empty-icon" aria-hidden="true">{{icon "key"}}</div>
+      <p class="empty-title">Choose keys above</p>
+      <p class="empty-subtitle text-secondary">Every key, whole categories or profiles, or single keys. The checks, the steps and the order they run in show here once some are chosen; nothing runs until you start it.</p>
+    </div></div>{{else}}
     <div class="card mb-3">
       <div class="card-header"><h2 class="card-title">Before it starts</h2>{{if .Blocked}}<div class="card-actions"><span class="badge badge-bad">fix first</span></div>{{else}}<div class="card-actions"><span class="badge badge-ok">ready</span></div>{{end}}</div>
       <ul class="list-group list-group-flush">
@@ -31,7 +45,6 @@
             {{if and (not .OK) (not $.ReadOnly) (or .FixAction .FixHref)}}<span class="d-flex flex-wrap gap-2 mt-2">
               {{if .FixAction}}{{template "change_open" $}}<input type="hidden" name="action" value="{{.FixAction}}">{{range $.Data.Fields}}<input type="hidden" name="then_{{.Name}}" value="{{.Value}}">{{end}}<button type="submit" class="btn btn-sm btn-primary"{{desc "job-fix"}}>{{icon "key"}}<span class="ms-1">{{.FixLabel}}</span></button></form>{{end}}
               {{if .FixHref}}<a class="btn btn-sm btn-outline-secondary" href="{{u .FixHref}}"{{desc "job-fix-settings"}}>{{icon "settings"}}<span class="ms-1">{{.FixHrefLabel}}</span></a>{{end}}
-              {{if .FixNoBackup}}<form method="post" action="{{basePath}}/jobs/review"><input type="hidden" name="csrf" value="{{$.CSRF}}">{{range $.Data.Fields}}{{if ne .Name "no_backup"}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}{{end}}<input type="hidden" name="no_backup" value="1"><button type="submit" class="btn btn-sm btn-outline-secondary"{{desc "job-no-backup"}}>{{icon "recycle"}}<span class="ms-1">Rotate without a backup</span></button></form>{{end}}
             </span>{{end}}
           </span>
         </li>{{end}}
@@ -44,7 +57,7 @@
     {{if .Items}}<div class="card mb-3">
       <div class="card-header"><h2 class="card-title">One at a time</h2><div class="card-actions text-secondary small">{{len .Items}} in this order</div></div>
       <div class="card-body"><ol class="job-items">{{range .Items}}<li><code>{{.}}</code></li>{{end}}</ol></div>
-    </div>{{end}}
+    </div>{{end}}{{end}}
   </div>
   <div class="col-lg-4">
     <div class="job-aside">
@@ -52,41 +65,42 @@
         {{if .Destroy}}<div class="card-status-top bg-danger"></div>{{end}}
         <div class="card-header"><h2 class="card-title">{{if .Check}}Run the dry run{{else}}Start the job{{end}}</h2></div>
         <div class="card-body">
-          <dl class="job-facts mb-0">
+          {{if .Empty}}<p class="text-secondary mb-0">Choose the keys to {{.Picker.Action}} first; this column then says what the job reaches, what it writes first and how to undo it.</p>{{else}}<dl class="job-facts mb-0">
             {{if .Items}}<dt>Keys</dt><dd>{{len .Items}}, one at a time</dd>{{end}}
             <dt>Servers</dt><dd>{{if .Remote}}reaches real servers{{else}}stays on this computer{{end}}</dd>
             {{if not .Check}}<dt>Backup</dt><dd>{{if .Backup}}encrypted bundle first{{else}}none{{end}}</dd>
             <dt>Undo</dt><dd>{{if .Forced}}roll back each key from <code>old/</code>{{else if .Destroy}}cannot be undone from authama{{else}}roll back from <code>old/</code>{{end}}</dd>{{end}}
-          </dl>
+          </dl>{{end}}
         </div>
         {{if and .Options (not $.ReadOnly)}}<div class="card-body border-top">
-          <form method="post" action="{{basePath}}/jobs/review" id="job-options">
-            <input type="hidden" name="csrf" value="{{$.CSRF}}">
-            {{range .Kept}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}
+          {{if not .Picker}}<form method="get" action="{{basePath}}/jobs/review" id="job-options">
+            {{range .Kept}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}{{end}}
             <p class="subheader mb-2">Options</p>
             {{range .Options}}<div class="mb-2">
-              <label class="form-check form-switch mb-0{{if .Danger}} is-danger{{end}}">
-                <input class="form-check-input" type="checkbox" name="{{.Name}}" value="1"{{if .On}} checked{{end}} data-autosubmit aria-description="{{.Detail}}">
+              {{if .Text}}<label class="form-label mb-1" for="opt-{{.Name}}">{{.Label}}</label>
+              <input class="form-control form-control-sm" id="opt-{{.Name}}" name="{{.Name}}" value="{{.Value}}" placeholder="{{.Placeholder}}" maxlength="200" autocomplete="off"{{if $.Data.Picker}} form="job-options"{{end}} data-autosubmit aria-description="{{.Detail}}">
+              {{else}}<label class="form-check form-switch mb-0{{if .Danger}} is-danger{{end}}">
+                <input class="form-check-input" type="checkbox" name="{{.Name}}" value="1"{{if .On}} checked{{end}}{{if $.Data.Picker}} form="job-options"{{end}} data-autosubmit aria-description="{{.Detail}}">
                 <span class="form-check-label">{{.Label}}</span>
-              </label>
-              <p class="small text-secondary mb-0 ms-5" aria-hidden="true">{{.Detail}}</p>
+              </label>{{end}}
+              <p class="small text-secondary mb-0{{if not .Text}} ms-5{{end}}" aria-hidden="true">{{.Detail}}</p>
             </div>{{end}}
-            <noscript><button type="submit" class="btn btn-sm btn-outline-secondary"{{desc "job-options"}}>Review again</button></noscript>
-          </form>
+            {{if not .Picker}}<noscript><button type="submit" class="btn btn-sm btn-outline-secondary"{{desc "job-options"}}>Review again</button></noscript>
+          </form>{{end}}
         </div>{{end}}
         <div class="card-footer">
           <form method="post" action="{{basePath}}/jobs" class="d-grid gap-2" id="job-form">
             <input type="hidden" name="csrf" value="{{$.CSRF}}">
             {{range .Fields}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}
             {{template "pin_field" $}}
-            {{if not $.ReadOnly}}<span class="d-grid"{{if .Blocked}}{{desc "job-blocked"}}{{end}}><button type="submit" class="btn {{if .Destroy}}btn-danger{{else}}btn-primary{{end}}" data-confirm="m-job"{{if .Blocked}} disabled{{end}}{{desc "job-run"}}>{{icon "player-play"}}<span class="ms-1">Start: {{.Title}}…</span></button></span>{{end}}
-            {{if and .CanCheck (not $.ReadOnly)}}<button type="submit" class="btn btn-outline-secondary" name="check" value="1" formaction="{{basePath}}/jobs"{{if .Busy}} disabled{{end}}{{desc "job-dry-run"}}>{{icon "list-check"}}<span class="ms-1">Dry run: test every key</span></button>{{end}}
+            {{if not $.ReadOnly}}<span class="d-grid"{{if or .Blocked .Empty}}{{desc "job-blocked"}}{{end}}><button type="submit" class="btn {{if .Destroy}}btn-danger{{else}}btn-primary{{end}}" data-confirm="m-job"{{if or .Blocked .Empty}} disabled{{end}}{{desc "job-run"}}>{{icon "player-play"}}<span class="ms-1">Start: {{.Title}}…</span></button></span>{{end}}
+            {{if and .CanCheck (not $.ReadOnly) (not .Empty)}}<button type="submit" class="btn btn-outline-secondary" name="check" value="1" formaction="{{basePath}}/jobs"{{if .Busy}} disabled{{end}}{{desc "job-dry-run"}}>{{icon "list-check"}}<span class="ms-1">Dry run: test every key</span></button>{{end}}
             <a href="{{u .Back}}" class="btn btn-link link-secondary"{{desc "cancel-change"}}>Cancel</a>
             {{if .Blocked}}<span class="small text-danger">{{icon "alert-circle"}}<span class="ms-1">Fix what is marked under Before it starts first.</span></span>{{end}}
           </form>
         </div>
       </div>
-      {{template "command_card" (commandCard .Command)}}
+      {{if .Command}}{{template "command_card" (commandCard .Command)}}{{end}}
     </div>
   </div>
 </div>

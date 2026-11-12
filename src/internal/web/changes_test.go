@@ -324,6 +324,11 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 	}
 	collect("/repair")
 	collect("/reset")
+	// The bulk key jobs are offered on their own review page, where their
+	// keys are chosen.
+	for _, a := range []string{"rotate-keys", "revoke-keys", "delete-keys"} {
+		collect("/jobs/review?action=" + a)
+	}
 	// A setting held in authama.json can be sent back to its default.
 	if err := settings.Set(p.SettingsFile(), "export.save_to", "manifest"); err != nil {
 		t.Fatal(err)

@@ -15,7 +15,7 @@ import { Inline, SidePanel } from "./js/components/side-panel.js";
 import { CsvExport } from "./js/components/csv-export.js";
 import { JsonField } from "./js/components/json-field.js";
 import { ExportPage } from "./js/components/export-page.js";
-import { KeyPicker } from "./js/components/key-picker.js";
+import { KeyPicker, MovedPanels } from "./js/components/key-picker.js";
 import { SlowProgress } from "./js/components/slow-progress.js";
 import { SettingsFilter } from "./js/components/settings-page.js";
 import { LiveBuild, RestartServer, Restarted } from "./js/components/restart.js";
@@ -37,6 +37,7 @@ App.create()
   .use(JobStream)
   .use(ShowWhen)
   .use(KeyPicker)
+  .use(MovedPanels)
   .use(SlowProgress)
   .use(SettingsFilter)
   .use(CopyText)

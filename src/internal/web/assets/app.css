@@ -366,9 +366,6 @@ main:focus { outline: none; }
 .key-picker-key.is-ineligible .kp-key-main { opacity: .6; }
 .kp-summary { margin-top: .5rem; font-size: .875rem; color: var(--tblr-secondary); }
 .kp-summary.has-choice { color: var(--tblr-body-color); font-weight: 500; }
-.kp-options { margin-top: 1rem; padding: .75rem .875rem; border-radius: var(--tblr-border-radius-lg, .5rem); background: var(--tblr-bg-surface-secondary); }
-.kp-steps { margin: 1rem 0 0; padding-left: 1.25rem; font-size: .8125rem; color: var(--tblr-secondary); }
-.kp-steps li + li { margin-top: .25rem; }
 
 /* A job's progress: a native <progress>, so the server can draw it without
    an inline style; with no value it is indeterminate. */
@@ -436,6 +433,7 @@ main:focus { outline: none; }
 .job-steps { padding-left: 1.25rem; }
 /* A job's review: the column with the Start button stays in view beside a long list. */
 @media (min-width: 992px) { .job-aside { position: sticky; top: 1rem; } }
+.job-facts { display: grid; grid-template-columns: auto 1fr; gap: .375rem 1rem; }
 .job-facts dt { font-weight: 500; color: var(--tblr-secondary); }
 .job-facts dd { margin: 0; }
 .form-switch.is-danger .form-check-input:checked { background-color: var(--tblr-danger); border-color: var(--tblr-danger); }
@@ -500,11 +498,6 @@ main:focus { outline: none; }
 .console-line.is-bad .console-text { color: #ffb3b3; }
 .console-line.is-warn .console-text { color: #f0d58a; }
 
-/* Rotate keys: the steps follow the switches above them. */
-.kp-steps .kp-if-force { display: none; }
-form:has(input[name="no_backup"]:checked) .kp-steps .kp-if-backup { display: none; }
-form:has(input[name="force"]:checked) .kp-steps .kp-if-force { display: list-item; color: var(--tblr-danger); }
-form:has(input[name="force"]:checked) .kp-steps .kp-if-not-force { display: none; }
 
 /* A rotation's summary, as the job's Output: the job console's dark ground,
    the tree under one trunk in aligned columns, results coloured by how they
@@ -552,3 +545,6 @@ form:has(input[name="force"]:checked) .kp-steps .kp-if-not-force { display: none
 .sum-tree tr.is-pending th, .sum-tree tr.is-pending td { color: #7d8590; }
 .sum-tree tr.is-pending .sum-mark, .sum-tree tr.is-pending .sum-result { color: #79c0ff; }
 .job-progress.is-slim .card-body { padding-block: .75rem; }
+/* On a review the card's title names the picker, so its own legend is for
+   screen readers only. */
+.job-pick .key-picker > legend { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }

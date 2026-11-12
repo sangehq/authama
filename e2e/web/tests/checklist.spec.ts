@@ -41,8 +41,8 @@ test('a key page links its checklist, and a key row menu opens it', async ({ pag
 });
 
 test('the key picker chooses every key, whole profiles or single keys, and counts them', async ({ page }) => {
-  await page.goto('/keys#rotate-keys');
-  const form = page.locator('#rotate-keys');
+  await page.goto('/jobs/review?action=rotate-keys');
+  const form = page.locator('#job-options');
   await expect(form).toBeVisible();
   const picker = form.locator('[data-key-picker]');
   const review = form.locator('[type="submit"]');
@@ -68,16 +68,16 @@ test('the key picker chooses every key, whole profiles or single keys, and count
 
   // Where no key qualifies, the picker says so rather than "none chosen": in
   // this home every key is used by a host, so none can be deleted.
-  await page.goto('/keys#delete-keys');
-  const del = page.locator('#delete-keys [data-key-picker]');
+  await page.goto('/jobs/review?action=delete-keys');
+  const del = page.locator('#job-options [data-key-picker]');
   await expect(del.locator('.key-picker-key.is-ineligible').first()).toContainText('a host uses it');
   await expect(del.locator('[data-pick-count]')).toHaveText('No key here can be deleted; each says why.');
-  await expect(page.locator('#delete-keys [type="submit"]')).toBeDisabled();
+  await expect(page.locator('#job-options [type="submit"]')).toBeDisabled();
 });
 
 test('the key picker filters, clears, counts per profile and names what Review will act on', async ({ page }) => {
-  await page.goto('/keys#rotate-keys');
-  const form = page.locator('#rotate-keys');
+  await page.goto('/jobs/review?action=rotate-keys');
+  const form = page.locator('#job-options');
   const picker = form.locator('[data-key-picker]');
   const review = form.locator('[data-pick-submit]');
   await expect(review).toHaveText(/^\s*Review\s*$/);
@@ -116,9 +116,14 @@ test('the Actions menu opens the rotate form from any page, and the Overview off
   await page.goto('/hosts');
   await page.getByRole('button', { name: 'Actions', exact: true }).click();
   await page.getByRole('link', { name: /Rotate keys/ }).click();
-  await expect(page).toHaveURL(/\/keys#rotate-keys$/);
-  await expect(page.locator('#rotate-keys')).toBeVisible();
-  await page.locator('#rotate-keys').screenshot({ path: 'test-results/rotate-keys-panel.png' });
+  // Its keys are chosen on the rotation's review page, not in a slide-in.
+  await expect(page).toHaveURL(/\/jobs\/review\?action=rotate-keys$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Rotate keys');
+  await expect(page.locator('#job-options [data-key-picker]')).toBeVisible();
+  await page.screenshot({ path: 'test-results/rotate-keys-page.png', fullPage: true });
+  // An older link to the slide-in lands there too.
+  await page.goto('/keys#revoke-keys');
+  await expect(page).toHaveURL(/\/jobs\/review\?action=revoke-keys$/);
 
   await page.goto('/');
   const setup = page.locator('[data-setup-card]');
@@ -132,13 +137,14 @@ test('the Reset page opens the rotate picker with every key already chosen', asy
   await page.goto('/reset');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Reset');
   await page.screenshot({ path: 'test-results/reset-page.png', fullPage: true });
-  await page.locator('a[href*="pick=all"]').click(); // Rotate every key's row
-  await expect(page).toHaveURL(/\/keys\?pick=all#rotate-keys$/);
-  const picker = page.locator('#rotate-keys [data-key-picker]');
+  await page.locator('a[href*="all=1"]').click(); // Rotate every key's row
+  await expect(page).toHaveURL(/\/jobs\/review\?action=rotate-keys&all=1$/);
+  const picker = page.locator('#job-options [data-key-picker]');
   await expect(picker.getByLabel('Every key in every profile')).toBeChecked();
-  await expect(page.locator('#rotate-keys [data-pick-submit]')).toHaveText(/Review every key to rotate/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^Rotate \d+ keys?$/);
   // Only rotate takes the preset: revoking every key is never chosen for you.
-  await expect(page.locator('#revoke-keys [data-pick-all]')).not.toBeChecked();
+  await page.goto('/jobs/review?action=revoke-keys');
+  await expect(page.locator('#job-options [data-pick-all]')).not.toBeChecked();
 
   await page.goto('/hosts');
   await page.getByRole('button', { name: 'Actions', exact: true }).click();
@@ -193,18 +199,22 @@ test('a setting is edited from its page, through a preview', async ({ page }) =>
 
 test('a rotation is reviewed on its own page, forced from its options, and dry-run as a tree', async ({ page }) => {
   test.setTimeout(120_000);
-  await page.goto('/keys#rotate-keys');
-  const form = page.locator('#rotate-keys');
+  // The keys are chosen on the review page itself.
+  await page.goto('/jobs/review?action=rotate-keys');
+  const form = page.locator('#job-options');
+  await expect(page.getByText('Choose keys above')).toBeVisible();
   await form.getByLabel('Every key in every profile').check();
-  // The steps follow the switches: a clean rotation writes no backup.
-  await expect(form.locator('.kp-if-backup')).toBeVisible();
-  await form.getByLabel('Skip the encrypted backup (a clean rotation)').check();
-  await expect(form.locator('.kp-if-backup')).toBeHidden();
-  await form.getByLabel('Skip the encrypted backup (a clean rotation)').uncheck();
   await form.locator('[data-pick-submit]').click();
+  await expect(page).toHaveURL(/\/jobs\/review\?.*all=1/);
+  // The steps follow the options: a clean rotation writes no backup.
+  const steps = page.locator('.job-steps');
+  await expect(steps).toContainText('encrypted backup');
+  await page.getByLabel('Skip the encrypted backup').check();
+  await expect(steps).not.toContainText('writes an encrypted backup');
+  await page.getByLabel('Skip the encrypted backup').uncheck();
+  await expect(steps).toContainText('encrypted backup');
 
   // The review is a page of its own, not a slide-in panel.
-  await expect(page).toHaveURL(/\/jobs\/review$/);
   await expect(page.locator('#side-panel')).toBeHidden();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^Rotate \d+ keys?$/);
   await page.screenshot({ path: 'test-results/job-review-page.png', fullPage: true });

@@ -85,15 +85,17 @@ func TestTheActionsMenuOpensTheKeyJobs(t *testing.T) {
 	s, _, _ := newTestServer(t)
 	c := signIn(t, s)
 	body := c.get("/hosts").Body.String()
-	for _, href := range []string{"/keys#rotate-keys", "/keys#revoke-keys", "/keys#delete-keys", "/hosts#knownhosts-init", "/tokens#add-token"} {
+	for _, href := range []string{"/jobs/review?action=rotate-keys", "/jobs/review?action=revoke-keys", "/jobs/review?action=delete-keys", "/hosts#knownhosts-init", "/tokens#add-token"} {
 		if !strings.Contains(body, `href="`+href+`"`) {
 			t.Errorf("the Actions menu lacks %s", href)
 		}
 	}
 	keys := c.get("/keys").Body.String()
-	for _, id := range []string{`id="rotate-keys"`, `id="revoke-keys"`, `id="delete-keys"`, `id="mint-keys"`} {
+	// Rotate, revoke and delete open their review page, where the keys are
+	// chosen; an older /keys#rotate-keys is sent there.
+	for _, id := range []string{`id="mint-keys"`, `data-moved-panels="rotate-keys revoke-keys delete-keys"`} {
 		if !strings.Contains(keys, id) {
-			t.Errorf("the keys page has no panel %s for the menu to open", id)
+			t.Errorf("the keys page lacks %s", id)
 		}
 	}
 

@@ -2,7 +2,7 @@
 {{if .ReadOnly}}
 {{template "page_header" (header "SSH" "Profiles" "Each profile: its category, key scope and key store, and its hosts and keys.")}}
 {{else}}
-{{template "page_header" (header "SSH" "Profiles" "Each profile: its category, key scope and key store, and its hosts and keys." (panel "Add a profile" "add-profile" "plus" | withTip "profile-add") (inline "Import an ssh config" "/import" "download" | withTip "ssh-import") (only (gt (len .Data) 0) (panel "Change a key scope" "profile-scope" "key" | withTip "profile-scope")) (only (gt (len .Data) 0) (panel "Change a key comment" "profile-comment" "pencil" | withTip "profile-comment")) (only (gt (len .Data) 0) (panel "Move to a category" "profile-category" "folder" | withTip "profile-category")) (only (and (gt (len .Data) 0) (not .DevRoot)) (panel "Rotate keys" "profile-rotate" "recycle" | withTip "profile-rotate")))}}
+{{template "page_header" (header "SSH" "Profiles" "Each profile: its category, key scope and key store, and its hosts and keys." (panel "Add a profile" "add-profile" "plus" | withTip "profile-add") (inline "Import an ssh config" "/import" "download" | withTip "ssh-import") (only (gt (len .Data) 0) (panel "Change a key scope" "profile-scope" "key" | withTip "profile-scope")) (only (gt (len .Data) 0) (panel "Change a key comment" "profile-comment" "pencil" | withTip "profile-comment")) (only (gt (len .Data) 0) (panel "Move to a category" "profile-category" "folder" | withTip "profile-category")) (only (and (gt (len .Data) 0) (not .DevRoot)) (action "Rotate keys" "/jobs/review?action=rotate-keys" "recycle" | withTip "profile-rotate")))}}
 {{end}}
 <div class="card">
   <div class="card-header"><h2 class="card-title">Profiles</h2>{{if .Data}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data}} in the manifest</span>{{template "csv" "/exports/profiles.csv"}}</div>{{end}}</div>
@@ -31,7 +31,7 @@
               <a class="dropdown-item" href="#profile-scope" data-panel-open="profile-scope" data-panel-fill-name="{{.Name}}"{{desc "profile-scope"}}>{{icon "key"}}<span class="ms-2">Change key scope</span></a>
               <a class="dropdown-item" href="#profile-comment" data-panel-open="profile-comment" data-panel-fill-name="{{.Name}}"{{desc "profile-comment"}}>{{icon "pencil"}}<span class="ms-2">Change key comment</span></a>
               <a class="dropdown-item" href="#profile-category" data-panel-open="profile-category" data-panel-fill-name="{{.Name}}"{{desc "profile-category"}}>{{icon "folder"}}<span class="ms-2">Move to a category</span></a>
-              {{if not $.DevRoot}}<a class="dropdown-item" href="#profile-rotate" data-panel-open="profile-rotate" data-panel-fill-profile="{{.Name}}"{{desc "profile-rotate"}}>{{icon "recycle"}}<span class="ms-2">Rotate its keys</span></a>{{end}}
+              {{if not $.DevRoot}}<a class="dropdown-item" href="{{basePath}}/jobs/review?action=rotate-keys&amp;sel={{.Name}}"{{desc "profile-rotate"}}>{{icon "recycle"}}<span class="ms-2">Rotate its keys</span></a>{{end}}
               <div class="dropdown-divider"></div>
               <button type="submit" class="dropdown-item text-danger" form="f-profile-{{.Name}}" data-confirm="m-profile-{{.Name}}"{{desc "delete"}}>{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
             {{template "menu_close"}}
@@ -74,16 +74,8 @@
           {{template "panel_actions" ""}}
         </form>
 {{template "panel_close"}}
-  {{if not $.DevRoot}}
-{{template "panel_open" (header "profile-rotate" "Rotate keys" "")}}
-        {{template "job_open" .}}<input type="hidden" name="action" value="rotate-keys">
-          <div class="mb-2"><label class="form-label" for="r-profile">Profile</label><select class="form-select" id="r-profile" name="profile">{{range .Data}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div>
-          <div class="mb-3"><label class="form-check"><input class="form-check-input" type="checkbox" name="all" value="1"><span class="form-check-label">Every key in every profile instead</span></label></div>
-          <p class="text-secondary small mb-3">Each key a host uses rotates in turn, as a job. A key that fails is left as it was. An encrypted backup is written first. To choose single keys, or several profiles or categories, <a href="{{basePath}}/keys#rotate-keys">rotate from the Keys page</a>.</p>
-          {{template "panel_actions" "btn-outline-danger"}}
-        </form>
-{{template "panel_close"}}
-  {{end}}
+  {{/* Rotating a profile's keys is chosen on the rotation's review page,
+       with the profile ticked: /jobs/review?action=rotate-keys&sel=<profile>. */}}
 {{template "panel_open" (header "profile-category" "Move a profile to a category" "")}}
         {{template "change_open" .}}<input type="hidden" name="action" value="profile-category">
           <div class="mb-2"><label class="form-label" for="c-name">Profile</label><select class="form-select" id="c-name" name="name">{{range .Data}}<option value="{{.Name}}">{{.Name}}{{with .Category}} ({{.}}){{end}}</option>{{end}}</select></div>

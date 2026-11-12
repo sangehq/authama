@@ -554,6 +554,11 @@ type jobReview struct {
 	// Forced is a forced rotation; Backup says an encrypted backup is written
 	// first.
 	Forced, Backup bool
+	// Picker is a bulk key job's picker, ticked as the form chose; Empty says
+	// no key is chosen yet. Action is the job's form action.
+	Picker *pickerData
+	Empty  bool
+	Action string
 }
 
 // jobOption is one switch on a job's review: turning it reviews the job
@@ -561,6 +566,9 @@ type jobReview struct {
 type jobOption struct {
 	Name, Label, Detail string
 	On, Danger          bool
+	// Text is a text field rather than a switch, holding Value.
+	Text               bool
+	Value, Placeholder string
 }
 
 // jobOptions are the switches a job's review offers, and the fields carried
@@ -577,10 +585,21 @@ func jobOptions(f url.Values, fields []formField) ([]jobOption, []formField) {
 			{Name: "force", Label: "Force: replace what cannot rotate in place", Danger: true,
 				Detail: "A key never deployed, or whose host cannot be reached, is replaced on this computer anyway and must be deployed next. Until then a host that trusted the old key cannot be logged in to with it; the old key stays under old/ for a rollback."},
 		}
+	case "revoke-keys":
+		opts = []jobOption{{Name: "reason", Label: "Reason (optional)", Text: true, Placeholder: "laptop lost, contractor left…",
+			Detail: "Kept with the revocation record and shown in the history."}}
+	case "delete-keys":
+		opts = []jobOption{
+			{Name: "revoke", Label: "Revoke each from its targets first",
+				Detail: "Removes the key from every server it was deployed to before forgetting it."},
+			{Name: "purge", Label: "Delete the key files too, after an encrypted backup", Danger: true,
+				Detail: "Off, the files stay in ~/.ssh and only the declaration and record go."},
+		}
 	}
 	names := map[string]bool{}
 	for i := range opts {
 		opts[i].On = checked(f, opts[i].Name)
+		opts[i].Value = f.Get(opts[i].Name)
 		names[opts[i].Name] = true
 	}
 	var kept []formField
@@ -629,22 +648,90 @@ type jobPages struct{ s *Server }
 
 func (h jobPages) fail(w http.ResponseWriter, r *http.Request, err error) { pages(h).fail(w, r, err) }
 
-func (h jobPages) parseJob(w http.ResponseWriter, r *http.Request) (jobSpec, bool) {
-	if err := r.ParseForm(); err != nil {
-		h.s.renderError(w, r, http.StatusBadRequest, "Unreadable form", err.Error())
-		return jobSpec{}, false
-	}
-	spec, err := buildJob(r.PostForm, home{p: h.s.opts.Engine.Home(), retain: h.s.opts.Retain})
+// parseJob builds the job a form describes: a review's form, sent or in its
+// address, or the Start button's, which is always sent.
+func (h jobPages) parseJob(w http.ResponseWriter, r *http.Request, f url.Values) (jobSpec, bool) {
+	spec, err := buildJob(f, home{p: h.s.opts.Engine.Home(), retain: h.s.opts.Retain})
 	if err != nil {
 		h.s.renderError(w, r, http.StatusBadRequest, "That job cannot be run", err.Error())
 		return jobSpec{}, false
 	}
-	describeJob(r.PostForm, &spec)
+	describeJob(f, &spec)
 	return spec, true
 }
 
+// bulkActions are the jobs that act on keys chosen in the picker: their
+// review page is where the keys are chosen.
+var bulkActions = map[string]string{"rotate-keys": "rotate", "revoke-keys": "revoke", "delete-keys": "delete"}
+
+// bulkTitles name a bulk job's review before any key is chosen.
+var bulkTitles = map[string]string{"rotate-keys": "Rotate keys", "revoke-keys": "Revoke keys", "delete-keys": "Delete keys"}
+
+// chosen reports whether a bulk job's form names any key, profile or category.
+func chosen(f url.Values) bool {
+	if checked(f, "all") || strings.TrimSpace(f.Get("profile")) != "" {
+		return true
+	}
+	for _, v := range f["sel"] {
+		if strings.TrimSpace(v) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// reviewPicker is the key picker a bulk job's review draws, ticked as f
+// chose; nil for any other job.
+func (h jobPages) reviewPicker(f url.Values) (*pickerData, error) {
+	kind, ok := bulkActions[f.Get("action")]
+	if !ok {
+		return nil, nil
+	}
+	kv, err := h.s.opts.Engine.Keys()
+	if err != nil {
+		return nil, err
+	}
+	d := pickerData{Action: kind, Profiles: kv.Picker, Categories: kv.Categories, All: checked(f, "all"), Chosen: map[string]bool{}}
+	for _, v := range f["sel"] {
+		d.Chosen[strings.TrimSpace(v)] = true
+	}
+	if p := strings.TrimSpace(f.Get("profile")); p != "" {
+		d.Chosen[p] = true
+	}
+	return &d, nil
+}
+
+// handleJobReview is a job's review: what it checks, does and works
+// through, its options and its Start button. A bulk key job's review is also
+// where its keys are chosen: opened from a link (GET) it shows the picker,
+// with nothing chosen yet; each change sends the form again.
 func (h jobPages) handleJobReview(w http.ResponseWriter, r *http.Request) {
-	spec, ok := h.parseJob(w, r)
+	if err := r.ParseForm(); err != nil {
+		h.s.renderError(w, r, http.StatusBadRequest, "Unreadable form", err.Error())
+		return
+	}
+	f := r.Form
+	// Asked for by its address with no job named - a reload of an older
+	// review, Back - it says so, as any form's answer does.
+	if r.Method == http.MethodGet && f.Get("action") == "" {
+		h.s.handleFormAnswerAgain(w, r)
+		return
+	}
+	picker, err := h.reviewPicker(f)
+	if err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	if picker != nil && !chosen(f) {
+		title := bulkTitles[f.Get("action")]
+		rev := jobReview{Title: title, Picker: picker, Empty: true, Fields: carriedJob(f), Action: f.Get("action")}
+		rev.Back, rev.BackLabel = jobBack(f)
+		rev.Options, rev.Kept = jobOptions(f, rev.Fields)
+		rev.Kept = withoutPicked(rev.Kept)
+		h.s.render(w, http.StatusOK, "job_review", h.s.newView(r, "", title, rev))
+		return
+	}
+	spec, ok := h.parseJob(w, r, f)
 	if !ok {
 		return
 	}
@@ -655,25 +742,43 @@ func (h jobPages) handleJobReview(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	rev := jobReview{Title: spec.title, Command: jobCommand(spec.scope), What: what, Items: spec.items,
-		Destroy: spec.destroy, Remote: reachesServers(r.PostForm), Fields: carriedJob(r.PostForm),
+		Destroy: spec.destroy, Remote: reachesServers(f), Fields: carriedJob(f), Picker: picker, Action: f.Get("action"),
 		Check:    spec.check,
-		CanCheck: !spec.check && (r.PostForm.Get("action") == "rotate" || r.PostForm.Get("action") == "rotate-keys")}
+		CanCheck: !spec.check && (f.Get("action") == "rotate" || f.Get("action") == "rotate-keys")}
 	if j := h.s.jobs.Running(); j != nil {
 		v, _ := j.View()
 		rev.Busy = &v
 	}
-	rev.Back, rev.BackLabel = jobBack(r.PostForm)
+	rev.Back, rev.BackLabel = jobBack(f)
 	if !spec.check {
-		rev.Options, rev.Kept = jobOptions(r.PostForm, rev.Fields)
+		rev.Options, rev.Kept = jobOptions(f, rev.Fields)
 	}
-	rev.Forced, rev.Backup = checked(r.PostForm, "force") && !spec.check, spec.backup
-	rev.Checks = preflights(r.PostForm, spec, rev.Busy != nil)
+	if picker != nil {
+		rev.Kept = withoutPicked(rev.Kept)
+	}
+	rev.Forced, rev.Backup = checked(f, "force") && !spec.check, spec.backup
+	rev.Checks = preflights(f, spec, rev.Busy != nil)
 	rev.Blocked = blocked(rev.Checks)
 	h.s.render(w, http.StatusOK, "job_review", h.s.newView(r, "", spec.title, rev))
 }
 
+// withoutPicked drops the fields the picker sends itself.
+func withoutPicked(fields []formField) []formField {
+	var out []formField
+	for _, f := range fields {
+		if f.Name != "sel" && f.Name != "all" && f.Name != "profile" {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
 func (h jobPages) handleJobStart(w http.ResponseWriter, r *http.Request) {
-	spec, ok := h.parseJob(w, r)
+	if err := r.ParseForm(); err != nil {
+		h.s.renderError(w, r, http.StatusBadRequest, "Unreadable form", err.Error())
+		return
+	}
+	spec, ok := h.parseJob(w, r, r.PostForm)
 	if !ok || !ownerGate(h).stepUp(w, r) {
 		return
 	}

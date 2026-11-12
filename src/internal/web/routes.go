@@ -84,6 +84,9 @@ func (s *Server) routes() http.Handler {
 		mux.HandleFunc("POST /changes/preview", h.handlePreview)
 		mux.HandleFunc("POST /changes/apply", h.handleApply)
 		mux.HandleFunc("POST /jobs/review", jh.handleJobReview)
+		// A review changes nothing, so it has an address too: a link opens a
+		// bulk key job's review to choose keys, and its forms send it again.
+		mux.HandleFunc("GET /jobs/review", jh.handleJobReview)
 		mux.HandleFunc("POST /jobs", jh.handleJobStart)
 		mux.HandleFunc("GET /jobs/{id}", jh.handleJob)
 		mux.HandleFunc("GET /jobs/{id}/events", jh.handleJobEvents)
@@ -92,7 +95,7 @@ func (s *Server) routes() http.Handler {
 		// A preview, a review or a tick answers a form. Asked for again by its
 		// address - a reload, a restart reloading open pages, Back - it has no
 		// form to answer, and used to fall through to "Not found".
-		for _, path := range []string{"/changes/preview", "/changes/apply", "/jobs/review", "/jobs", "/checklist/tick", "/checklist/revoking"} {
+		for _, path := range []string{"/changes/preview", "/changes/apply", "/jobs", "/checklist/tick", "/checklist/revoking"} {
 			mux.HandleFunc("GET "+path, s.handleFormAnswerAgain)
 		}
 	}

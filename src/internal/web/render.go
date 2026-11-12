@@ -831,8 +831,8 @@ func paletteItems(readOnly bool) []paletteItem {
 			paletteItem{"add-profile", "Add a profile", "/profiles#add-profile", "plus", "Action", "new create profile", "n p", ""},
 			paletteItem{"add-host", "Add a host", "/hosts#add-host", "plus", "Action", "new create host", "n h", ""},
 			paletteItem{"add-token", "Add or replace a token", "/tokens#add-token", "plus", "Action", "new set rotate token secret", "n t", ""},
-			paletteItem{"act-rotate", "Rotate keys", "/keys#rotate-keys", "recycle", "Action", "rotate replace renew keys every all", "n r", ""},
-			paletteItem{"act-revoke", "Revoke keys", "/keys#revoke-keys", "ban", "Action", "revoke remove untrust keys", "n v", ""},
+			paletteItem{"act-rotate", "Rotate keys", "/jobs/review?action=rotate-keys", "recycle", "Action", "rotate replace renew keys every all", "n r", ""},
+			paletteItem{"act-revoke", "Revoke keys", "/jobs/review?action=revoke-keys", "ban", "Action", "revoke remove untrust keys", "n v", ""},
 		)
 	}
 	return append(items,
