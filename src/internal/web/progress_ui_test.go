@@ -23,36 +23,31 @@ func TestAJobPageShowsItsProgress(t *testing.T) {
 	s, p, _ := newTestServer(t)
 	t.Cleanup(mutation.Release)
 	c := signIn(t, s)
+	release := make(chan struct{})
 	j, err := s.jobs.Start(p, mutation.Scope{Command: "key revoke", Source: history.SourceWeb}, func(j *jobs.Job) error {
 		j.Progress(1, 4, "revoking work/gh")
+		<-release
 		return nil
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	v, _ := j.View()
-	waitJob(t, s, v.ID)
+	waitUntil(t, func() bool { v, _ := j.View(); return v.Progress != nil })
 	page := c.get("/jobs/" + v.ID).Body.String()
 	for _, want := range []string{"data-job-progress", `max="4" value="1"`, "1 of 4 · 25%", "revoking work/gh"} {
 		if !strings.Contains(page, want) {
-			t.Errorf("the job page lacks %q", want)
+			t.Errorf("the running job's page lacks %q", want)
 		}
 	}
+	close(release)
+	waitJob(t, s, v.ID)
 	if ev := c.get("/jobs/" + v.ID + "/events").Body.String(); !strings.Contains(ev, "event: progress\ndata: 1 4 revoking work/gh\n\n") {
 		t.Errorf("the stream carries no progress event:\n%s", ev)
 	}
-
-	quiet, err := s.jobs.Start(p, mutation.Scope{Command: "deploy", Source: history.SourceWeb}, func(j *jobs.Job) error {
-		_, _ = j.Write([]byte("one step\n"))
-		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	qv, _ := quiet.View()
-	waitJob(t, s, qv.ID)
-	if page := c.get("/jobs/" + qv.ID).Body.String(); strings.Contains(page, "data-job-progress") {
-		t.Errorf("a finished job that counted nothing still shows a progress card")
+	// Finished, the summary says how it went; the progress card goes.
+	if page := c.get("/jobs/" + v.ID).Body.String(); strings.Contains(page, "data-job-progress") {
+		t.Errorf("a finished job still shows its progress card")
 	}
 }
 
@@ -175,10 +170,12 @@ func TestAJobPageListsItsItemsOneAtATime(t *testing.T) {
 	s, p, _ := newTestServer(t)
 	t.Cleanup(mutation.Release)
 	c := signIn(t, s)
+	release := make(chan struct{})
 	j, err := s.jobs.Start(p, mutation.Scope{Command: "key revoke", Source: history.SourceWeb}, func(j *jobs.Job) error {
 		j.Plan([]string{"work/a", "work/b"})
 		j.Progress(1, 2, "revoking work/b")
 		j.Failed("work/a")
+		<-release
 		j.Progress(2, 2, "")
 		return nil
 	})
@@ -186,16 +183,35 @@ func TestAJobPageListsItsItemsOneAtATime(t *testing.T) {
 		t.Fatal(err)
 	}
 	v, _ := j.View()
-	waitJob(t, s, v.ID)
+	waitUntil(t, func() bool { v, _ := j.View(); return v.Progress != nil && v.Progress.Done == 1 })
+	// Before the job sets a summary of its own, its page draws one that is
+	// starting: the planned keys, waiting. Never the old console in its place.
 	page := c.get("/jobs/" + v.ID).Body.String()
-	for _, want := range []string{`data-job-item="work/a"`, `job-run-item is-failed`, `data-job-item="work/b"`, `job-run-item is-done`} {
+	for _, want := range []string{`id="job-summary"`, "<th scope=\"row\" colspan=\"4\"><span class=\"sum-branch\" aria-hidden=\"true\"></span>revoke", "waiting", `id="job-log"`} {
 		if !strings.Contains(page, want) {
-			t.Errorf("the job page lacks %q", want)
+			t.Errorf("the running job's page lacks %q", want)
 		}
 	}
+	if strings.Contains(page, "job-run-item") || strings.Contains(page, `<h2 class="card-title">Output</h2>{{`) {
+		t.Error("the job page still draws the old item list")
+	}
+	close(release)
+	waitJob(t, s, v.ID)
 	if ev := c.get("/jobs/" + v.ID + "/events").Body.String(); !strings.Contains(ev, "event: items\ndata: work/a=failed work/b=done\n\n") {
 		t.Errorf("the stream carries no items event:\n%s", ev)
 	}
+}
+
+// waitUntil polls cond until it holds, failing the test after a few seconds.
+func waitUntil(t *testing.T, cond func() bool) {
+	t.Helper()
+	for range 200 {
+		if cond() {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("the condition never held")
 }
 
 // A rotation's job page draws its summary: the keys grouped by owner and

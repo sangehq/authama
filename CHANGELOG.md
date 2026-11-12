@@ -24,6 +24,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   summary in place of the old console, with a slim progress bar above it while they run. When
   keys did not go through, a **Next** card offers **Review the failed keys again** and, after a
   rotation or its dry run, **Review again with Force**.
+- **Every job's page draws the summary.** Deploying and rolling back a key show a row per host
+  (deployed or rolled back and logged in with, in place but not yet proved, or not, and why),
+  restoring a bundle a row per key it laid back with its fingerprint, and pinning host keys a row
+  per host (pinned, already trusted, or not pinned and why), each with its re-run command; no job
+  page shows the old console as its output any more.
 - **Force a rotation.** `authama ssh rotate --force` (and *Force: replace what cannot rotate in
   place* on Rotate keys and on a rotation's review) replaces, on this computer only, each key that
   cannot rotate in place: one never deployed, or whose host cannot be reached. Every other key

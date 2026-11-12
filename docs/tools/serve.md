@@ -430,8 +430,10 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
    running (with a spinner), done or failed, updated as it goes. When the job needs you (pasting a
    key where a target takes it by hand), a card says it is waiting, which step it is on, and what to
    do, with the text to copy. A job that is one step shows a moving bar and says it gives no percentage.
-   A rotation (of one key or many), its dry run, and revoking or deleting chosen keys show
-   their output as a **summary**, drawn as it goes: each key waiting (·), under way (›), then
+   Every job shows its output as a **summary**, drawn as it goes: a rotation (of one key or
+   many) and its dry run, revoking or deleting chosen keys, a deploy and a rollback (a row per
+   host), restoring a bundle (a row per key it laid back, with its fingerprint), and pinning
+   host keys (a row per host: pinned, already trusted, or not pinned and why). It reads: each key waiting (·), under way (›), then
    with its result, grouped by owner and project in columns (key, via, result, reason), each
    explanation once as a numbered note, **Needs you**, and the command for the failed keys;
    every line the job printed is folded beneath under **Full log**. A slim progress bar sits

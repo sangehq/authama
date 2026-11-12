@@ -247,14 +247,21 @@ func deployJob(j *jobs.Job, p paths.Paths, retain int, key, target string) error
 	if err := j.Step(); err != nil {
 		return err
 	}
+	profile, keyName := splitKey(m, key)
+	sum := newSummaryOf(j, "deploy", "authama ssh deploy "+profile+"/"+keyName,
+		"Hosts marked not deployed do not have the key: it cannot log in there yet.")
+	sum.pending(profile+"/"+keyName, "deploying")
 	report, err := deployer.New(p, m, inv).Unattended(j).Deploy(key, target)
 	if err != nil {
+		sum.show([]rotator.SummaryKey{{Ref: profile + "/" + keyName, Result: "not deployed", Severity: 2,
+			Kind: rotator.Classify(err.Error()), Note: err.Error()}})
 		return err
 	}
 	if err := inv.Save(p.Inventory()); err != nil {
 		return err
 	}
 	_, _ = fmt.Fprintln(j, report.Format())
+	sum.show(deployRows(profile, keyName, report))
 	if report.AnyError() {
 		return errors.New("not every target took the key; see above")
 	}
@@ -326,14 +333,21 @@ func rollbackJob(j *jobs.Job, p paths.Paths, retain int, key string) error {
 	if err := j.Step(); err != nil {
 		return err
 	}
+	profile, keyName := splitKey(m, key)
+	sum := newSummaryOf(j, "rollback", "authama ssh rollback "+profile+"/"+keyName,
+		"Hosts marked not rolled back still trust the newer key.")
+	sum.pending(profile+"/"+keyName, "rolling back")
 	report, err := rotator.New(p, m, inv).Unattended(j).Rollback(key)
 	if err != nil {
+		sum.show([]rotator.SummaryKey{{Ref: profile + "/" + keyName, Result: "not rolled back", Severity: 2,
+			Kind: rotator.Classify(err.Error()), Note: err.Error()}})
 		return err
 	}
 	if err := inv.Save(p.Inventory()); err != nil {
 		return err
 	}
 	_, _ = fmt.Fprintln(j, report.Format())
+	sum.show(rollbackRows(profile, keyName, report))
 	if !report.Committed {
 		return errors.New("the rollback did not complete; see above")
 	}
@@ -500,12 +514,17 @@ func bundleRestoreJob(j *jobs.Job, p paths.Paths, retain int, path string) error
 	if err := j.Step(); err != nil {
 		return err
 	}
+	sum := newSummaryOf(j, "restore", "", "")
+	sum.pending(bundleOwner(path)+"/keys", "restoring")
 	res, err := bundler.New(p.SSHDir, p.ConfigDir, bundler.AgeCipher{}).WithKeyRoot(manifest.KeyRootAt(p.Manifest())).Restore(path, ident, keystore.New().Fingerprint)
 	if err != nil {
+		sum.show([]rotator.SummaryKey{{Ref: bundleOwner(path) + "/keys", Result: "not restored", Severity: 2,
+			Kind: rotator.KindFailed, Note: err.Error()}})
 		return err
 	}
 	finishErr := bundler.FinishRestore(p)
 	_, _ = fmt.Fprintln(j, res.Format())
+	sum.show(restoreRows(path, res))
 	if finishErr != nil {
 		return fmt.Errorf("keys restored, but ~/.ssh is not usable yet: %w", finishErr)
 	}
@@ -688,7 +707,30 @@ func (h jobPages) handleJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v, _ := j.View()
+	v.Summary = pageSummary(v)
 	h.s.render(w, http.StatusOK, "job", h.s.newView(r, "", brand.Line(v.Command), v))
+}
+
+// pageSummary is the summary a job's page draws: the job's own, or, before
+// the job has set one, a summary that is only starting - the keys it has
+// planned waiting, or none yet - so the page draws one output from its first
+// moment and never the old console in its place.
+func pageSummary(v jobs.View) rotator.Summary {
+	if sum, ok := v.Summary.(rotator.Summary); ok {
+		return sum
+	}
+	sum := rotator.Summary{Command: strings.TrimSpace(brand.Line(v.Command) + " " + strings.Join(v.Args, " "))}
+	if f := strings.Fields(v.Command); len(f) > 0 {
+		sum.Verb = f[len(f)-1]
+	}
+	if v.Progress != nil && (v.State == jobs.Running || v.State == jobs.Waiting) {
+		var names []string
+		for _, it := range v.Progress.Items {
+			names = append(names, it.Name)
+		}
+		sum.Keys = rotator.Pending(names, "")
+	}
+	return sum
 }
 
 // handleJobEvents streams a job's output as server-sent events: each new
@@ -882,6 +924,18 @@ func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string) error {
 	}
 	_, _ = fmt.Fprintf(j, "every key would rotate; nothing was changed\n")
 	return nil
+}
+
+// splitKey is a key selector's profile and key name, as the manifest
+// resolves it; the selector as given when it does not resolve.
+func splitKey(m *manifest.Manifest, key string) (profile, name string) {
+	if ref, err := m.ResolveKeySelector(key); err == nil {
+		return ref.Profile, ref.KeyName
+	}
+	if p, n, ok := strings.Cut(key, "/"); ok {
+		return p, n
+	}
+	return "key", key
 }
 
 // jobLine is a job's command line as a terminal would read it:

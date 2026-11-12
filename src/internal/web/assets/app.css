@@ -436,9 +436,6 @@ main:focus { outline: none; }
 .job-steps { padding-left: 1.25rem; }
 /* A job's review: the column with the Start button stays in view beside a long list. */
 @media (min-width: 992px) { .job-aside { position: sticky; top: 1rem; } }
-/* On a job's page the item list sits in that column, so it can run taller. */
-@media (min-width: 1200px) { .job-progress.job-aside .job-run-items { max-height: calc(100vh - 16rem); } }
-.job-facts { display: grid; grid-template-columns: auto 1fr; gap: .375rem 1rem; }
 .job-facts dt { font-weight: 500; color: var(--tblr-secondary); }
 .job-facts dd { margin: 0; }
 .form-switch.is-danger .form-check-input:checked { background-color: var(--tblr-danger); border-color: var(--tblr-danger); }
@@ -448,17 +445,6 @@ main:focus { outline: none; }
 .job-items code { background: none; padding: 0; overflow-wrap: anywhere; }
 
 /* A running job's items, one per row: waiting, running, done or failed. */
-.job-run-items { list-style: none; padding: 0; max-height: 18rem; overflow-y: auto; border: 1px solid var(--tblr-border-color); border-radius: var(--tblr-border-radius); }
-.job-run-item { display: flex; align-items: center; gap: .5rem; padding: .375rem .75rem; }
-.job-run-item + .job-run-item { border-top: 1px solid var(--tblr-border-color-translucent); }
-.job-run-item code { background: none; padding: 0; overflow-wrap: anywhere; flex: 1; }
-.job-run-mark { flex: none; display: inline-flex; width: 1.25rem; justify-content: center; color: var(--tblr-secondary); }
-.job-run-state { font-size: .75rem; color: var(--tblr-secondary); }
-.job-run-item.is-running { background: rgba(var(--tblr-primary-rgb), .06); }
-.job-run-item.is-running .job-run-mark { color: var(--tblr-primary); }
-.job-run-item.is-done .job-run-mark { color: var(--tblr-success); }
-.job-run-item.is-failed .job-run-mark { color: var(--tblr-danger); }
-.job-run-item.is-failed .job-run-state { color: var(--tblr-danger); font-weight: 600; }
 
 /* Modals sit above every slide-in panel (Ui.startModals moves them to the
    body so these hold): Bootstrap's own order, made explicit. */

@@ -105,9 +105,8 @@ test('a bundle restore runs as a job and its stream is watched to the end', asyn
   await expect(page).toHaveURL(/\/jobs\/(?!review$)[^/]+$/);
   const jobURL = page.url();
 
-  // The output is a console: each line its own row, its status word in a
-  // fixed column, coloured by how it reads.
-  await expect(page.locator('.console .console-line').first()).toBeVisible({ timeout: 30_000 });
+  // The output is the job's summary, drawn as it goes.
+  await expect(page.locator('#job-summary')).toBeVisible({ timeout: 30_000 });
   // The event stream replays every line and ends once the job does; reading
   // it to the end is watching the job finish.
   const events = await page.request.get(`${new URL(jobURL).pathname}/events`, { timeout: 60_000 });
@@ -119,8 +118,15 @@ test('a bundle restore runs as a job and its stream is watched to the end', asyn
 
   // The page follows the same stream and refreshes into the finished job.
   await expect(page.locator('#job-state')).toHaveAttribute('data-state', 'done', { timeout: 30_000 });
+  // The summary lists each key the bundle laid back, with its fingerprint;
+  // every line printed is folded under Full log.
+  const summary = page.locator('#job-summary');
+  await expect(summary.locator('tr.is-root')).toHaveText('restore');
+  await expect(summary.locator('tbody tr.sev-0', { hasText: 'restored' }).first()).toContainText('SHA256:');
+  await summary.screenshot({ path: 'test-results/restore-summary.png' });
+  await page.locator('.job-full-log > summary').click();
   await expect(page.locator('#job-log')).toContainText('restore: laid down');
-  await page.locator('.console').screenshot({ path: 'test-results/job-console.png' });
+  await page.locator('#job-log').screenshot({ path: 'test-results/job-console.png' });
   await expect(page.locator('#job-state .badge')).toHaveText('done');
   // Its record in the history is a page too.
   await page.getByRole('link', { name: 'In the history' }).click();
