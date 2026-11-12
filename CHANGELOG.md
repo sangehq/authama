@@ -18,6 +18,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   shows the same summary in colour as its Output, with the full log folded beneath.
 - **`authama ssh rotate --failed`** runs again the keys the last rotation or dry run left, from the
   web or the terminal; it takes `--check` and `--force` like any rotation.
+- **The summary is drawn as a job runs, and for more jobs.** A web job's summary fills in key by
+  key: waiting (·), under way (›), then each result, in the order the job runs them, sorted worst
+  first once it ends. Rotating one key, and revoking or deleting chosen keys, show the same
+  summary in place of the old console, with a slim progress bar above it while they run. When
+  keys did not go through, a **Next** card offers **Review the failed keys again** and, after a
+  rotation or its dry run, **Review again with Force**.
 - **Force a rotation.** `authama ssh rotate --force` (and *Force: replace what cannot rotate in
   place* on Rotate keys and on a rotation's review) replaces, on this computer only, each key that
   cannot rotate in place: one never deployed, or whose host cannot be reached. Every other key
@@ -410,6 +416,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   by any page (log, editor and finding styles from another project, the hand-made tabs, clear
   buttons and dev banner) is removed, with the rule that forced panel columns to full width.
 ### Fixed
+
+- **A job's time left no longer says *almost done* while a slow step runs.** The step under way
+  counts for at most its share of the time, so the estimate keeps the steps still to come.
 
 - **Create a backup key failed when pressed twice.** The second press found the key the first had
   made and refused. It now uses the key already there and sets the settings up from it.

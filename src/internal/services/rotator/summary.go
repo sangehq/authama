@@ -20,8 +20,12 @@ const (
 	ResultWouldRotate = "would rotate"
 	ResultWouldPause  = "would pause"
 	ResultWouldFail   = "would fail"
+	// ResultWaiting is a key the run has not reached yet.
+	ResultWaiting = "waiting"
 	// KindReplaced is a key a forced rotation replaced on this computer.
 	KindReplaced = "replaced"
+	// KindNotRemoved is a key left trusted where it could not be removed.
+	KindNotRemoved = "not-removed"
 )
 
 // SummaryKey is one key's line in a summary.
@@ -37,6 +41,9 @@ type SummaryKey struct {
 	// Kind names why, as HostCheck.Kind does; Note is the long explanation,
 	// printed once under Notes however many keys share it.
 	Kind, Note string
+	// Pending is a key the run has not finished yet: Result is ResultWaiting,
+	// or what the run is doing to it now (testing, rotating, revoking).
+	Pending bool
 }
 
 // Summary is the outcome of a rotation, or of its dry run, for every key it
@@ -50,6 +57,10 @@ type Summary struct {
 	// Command is the command line the run was, as its first line shows it:
 	// "authama ssh rotate --all".
 	Command string
+	// Verb is the tree's root, the command's own name: rotate (the default),
+	// revoke, delete. RerunCommand and UntouchedText replace the rotation's
+	// own re-run command and closing note, for another command's summary.
+	Verb, RerunCommand, UntouchedText string
 }
 
 // SummaryRow is one line of a summary's tree: an owner or a project group
@@ -68,6 +79,8 @@ type SummaryRow struct {
 	Severity                       int
 	// Note numbers the key's explanation under Notes; 0 for none.
 	Note int
+	// Pending is a key not finished yet: waiting, or under way.
+	Pending bool
 	// Gap puts a line before the row that holds only the trunk (Trunk):
 	// between owners.
 	Gap   bool
@@ -180,10 +193,10 @@ func classify(msg string) string {
 var (
 	reasons = map[string]string{KindLogsIn: "logs in", KindManual: "awaiting paste", KindUnreachable: "host unreachable",
 		KindNeverDeployed: "never deployed", KindRemoved: "key removed there", KindNoKey: "not on disk",
-		KindFailed: "failed", KindReplaced: "deploy next"}
+		KindFailed: "failed", KindReplaced: "deploy next", KindNotRemoved: "not removed there"}
 	needs = map[string]string{KindUnreachable: "check network", KindNeverDeployed: "deploy first",
 		KindRemoved: "deploy again", KindManual: "paste by hand", KindNoKey: "reconcile first",
-		KindFailed: "see the note", KindReplaced: "deploy next"}
+		KindFailed: "see the note", KindReplaced: "deploy next", KindNotRemoved: "remove by hand"}
 	marks = [...]string{"✓", "!", "×"}
 )
 
@@ -227,10 +240,11 @@ func counts(keys []SummaryKey) string {
 
 // Took is how long the run took, to a tenth of a second; "" when unknown.
 func (s Summary) Took() string {
-	if s.Elapsed <= 0 {
+	d := s.Elapsed.Round(100 * time.Millisecond)
+	if d <= 0 {
 		return ""
 	}
-	return s.Elapsed.Round(100 * time.Millisecond).String()
+	return d.String()
 }
 
 // Owners is how many profiles the summary covers.
@@ -256,8 +270,11 @@ func (s Summary) Failed() []string {
 // Rerun is the command that runs the failed keys again, or "": rotate
 // --failed reads the keys the last run left.
 func (s Summary) Rerun() string {
-	if len(s.Failed()) == 0 {
+	if len(s.Failed()) == 0 || s.Running() {
 		return ""
+	}
+	if s.RerunCommand != "" {
+		return s.RerunCommand
 	}
 	if s.Check {
 		return "authama ssh rotate --failed --check"
@@ -299,8 +316,37 @@ func (s Summary) CountsUp() []SummaryCount {
 	return c
 }
 
-// Root is the tree's first line: the command's own name, rotate.
-func (s Summary) Root() string { return "rotate" }
+// Root is the tree's first line: the command's own name, rotate unless Verb
+// says otherwise.
+func (s Summary) Root() string {
+	if s.Verb != "" {
+		return s.Verb
+	}
+	return "rotate"
+}
+
+// Running reports whether a key is not finished yet.
+func (s Summary) Running() bool {
+	for _, k := range s.Keys {
+		if k.Pending {
+			return true
+		}
+	}
+	return false
+}
+
+// Pending is the keys a run has yet to finish, for a summary drawn while it
+// runs: the first is under way (Result is now, "testing" say), the rest wait.
+func Pending(names []string, now string) []SummaryKey {
+	out := make([]SummaryKey, len(names))
+	for i, n := range names {
+		out[i] = SummaryKey{Ref: n, Result: ResultWaiting, Pending: true}
+		if i == 0 && now != "" {
+			out[i].Result = now
+		}
+	}
+	return out
+}
 
 // leaf is a key under its owner, with its short name.
 type leaf struct {
@@ -375,13 +421,19 @@ func (s Summary) owners() []owner {
 			at[label] = len(items)
 			items = append(items, item{label: label, keys: []leaf{{k, rest}}})
 		}
-		for _, it := range items {
-			sort.SliceStable(it.keys, func(a, b int) bool { return it.keys[a].key.Severity > it.keys[b].key.Severity })
+		if !s.Running() {
+			for _, it := range items {
+				sort.SliceStable(it.keys, func(a, b int) bool { return it.keys[a].key.Severity > it.keys[b].key.Severity })
+			}
+			sort.SliceStable(items, func(a, b int) bool { return severity(items[a].keys) > severity(items[b].keys) })
 		}
-		sort.SliceStable(items, func(a, b int) bool { return severity(items[a].keys) > severity(items[b].keys) })
 		out = append(out, owner{name: p, items: items})
 	}
-	sort.SliceStable(out, func(a, b int) bool { return ownerSeverity(out[a]) > ownerSeverity(out[b]) })
+	// While the run is under way the tree keeps the run's order, so rows do
+	// not jump as results come in; finished, it is worst first.
+	if !s.Running() {
+		sort.SliceStable(out, func(a, b int) bool { return ownerSeverity(out[a]) > ownerSeverity(out[b]) })
+	}
 	return out
 }
 
@@ -417,7 +469,14 @@ func (s Summary) Rows() []SummaryRow {
 	_, index := s.numbered()
 	rows := []SummaryRow{{Label: s.Root(), Root: true, Group: true}}
 	keyRow := func(branch string, l leaf) SummaryRow {
-		return SummaryRow{Branch: branch, Label: l.name, Mark: marks[l.key.Severity], Key: keyName(l.key.Ref),
+		mark := marks[l.key.Severity]
+		switch {
+		case l.key.Pending && l.key.Result == ResultWaiting:
+			mark = "·"
+		case l.key.Pending:
+			mark = "›"
+		}
+		return SummaryRow{Branch: branch, Label: l.name, Mark: mark, Key: keyName(l.key.Ref), Pending: l.key.Pending,
 			Via: l.key.Via, Result: l.key.Result, Reason: reasons[l.key.Kind], Severity: l.key.Severity, Note: index[l.key.Note]}
 	}
 	owners := s.owners()
@@ -539,6 +598,15 @@ func keyName(ref string) string {
 
 // Untouched says what became of the keys that did not go through.
 func (s Summary) Untouched() string {
+	if s.Running() {
+		return ""
+	}
+	if s.UntouchedText != "" {
+		if len(s.Failed()) == 0 {
+			return ""
+		}
+		return s.UntouchedText
+	}
 	if s.Check {
 		return "A dry run changes nothing: every key is as it was."
 	}

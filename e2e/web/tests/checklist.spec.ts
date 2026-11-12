@@ -240,4 +240,11 @@ test('a rotation is reviewed on its own page, forced from its options, and dry-r
   await expect(tree.locator('.console-line.lvl-0').first()).toBeVisible();
   await expect(tree.locator('.console-branch').first()).toHaveText(/[├└]─/);
   await page.screenshot({ path: 'test-results/job-page.png', fullPage: true });
+  // A key that would fail leaves a next step: review it again, with Force.
+  const next = page.locator('#job-next');
+  await expect(next).toBeVisible();
+  await next.getByRole('button', { name: 'Review again with Force' }).click();
+  await expect(page).toHaveURL(/\/jobs\/review$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/\(forced\)$/);
+  await expect(page.getByLabel('Force: replace what cannot rotate in place')).toBeChecked();
 });

@@ -103,9 +103,11 @@ type View struct {
 	Started  time.Time
 	// Progress is nil for a job that does not count its steps.
 	Progress *Progress
-	// Summary is what the job set as its result once it ended, for its page
-	// to draw (a rotation's grouped summary); nil for most jobs.
-	Summary any
+	// Summary is the job's result for its page to draw (a rotation's grouped
+	// summary), kept current as the job runs; nil for most jobs.
+	// SummaryVersion counts its changes, so a page knows to draw it again.
+	Summary        any
+	SummaryVersion int
 }
 
 // Job is one running or finished job.
@@ -117,6 +119,7 @@ type Job struct {
 
 	mu       sync.Mutex
 	summary  any
+	sumVer   int
 	lines    []string
 	partial  string
 	state    string
@@ -132,11 +135,13 @@ type Job struct {
 	title    string
 }
 
-// SetSummary gives the job a result for its page to draw, above its output.
+// SetSummary gives the job a result for its page to draw as its output; a
+// job may set it again as it goes, and its page draws it again.
 func (j *Job) SetSummary(v any) {
 	j.mu.Lock()
 	defer j.mu.Unlock()
 	j.summary = v
+	j.sumVer++
 	j.notify()
 }
 
@@ -242,7 +247,7 @@ func (j *Job) View() (View, <-chan struct{}) {
 		lines = append(lines, j.partial)
 	}
 	v := View{ID: j.id, Command: j.command, Title: j.title, Args: j.args, State: j.state, Err: j.err, OpID: j.opID,
-		Lines: lines, Started: j.started, Summary: j.summary}
+		Lines: lines, Started: j.started, Summary: j.summary, SummaryVersion: j.sumVer}
 	if j.question != nil {
 		q := *j.question
 		v.Question = &q

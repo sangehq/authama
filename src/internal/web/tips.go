@@ -84,6 +84,8 @@ var tips = map[string]string{
 	"job-fix-settings":         "Opens the setting in Settings, to set it to a value you already have.",
 	"job-history":              "Opens this job's record in the history: its arguments, its result and the audit events it raised.",
 	"job-keys":                 "Opens Keys, to see each key as the job left it.",
+	"job-review-failed":        "Opens the review again for only the keys that did not go through. Nothing runs until you start it.",
+	"job-review-force":         "Opens the review for the failed keys with Force on: a key that cannot rotate in place is replaced on this computer, to deploy next. Nothing runs until you start it, in a red dialog.",
 	"job-options":              "Reviews the job again with the options as set.",
 	"job-no-backup":            "Reviews the same rotation without the encrypted backup: a clean start. Each replaced key is still kept under old/ for a rollback.",
 	"job-dry-run":              "Tests every key now and changes nothing: each server answers and the current key logs in, or the target takes the key by hand.",

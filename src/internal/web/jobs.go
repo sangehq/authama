@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -278,10 +279,25 @@ func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, allowUnverifi
 		return err
 	}
 	r := rotator.New(p, m, inv).Unattended(j).WithManualStep(manualPaste(j))
+	began, line := time.Now(), jobLine(j)
+	res := rotator.RunResult{Ref: key, Via: r.Via(key)}
+	// The summary of one key: under way, then how it went.
+	show := func(replaced []string) {
+		sum := rotator.SummarizeRun([]rotator.RunResult{res}, replaced, time.Since(began))
+		if res.Report == nil && res.Err == nil {
+			sum = rotator.Summary{Keys: rotator.Pending([]string{key}, "rotating")}
+		}
+		sum.Command = line
+		j.SetSummary(sum)
+	}
+	show(nil)
 	report, err := r.Rotate(key, allowUnverified, "")
 	if err != nil {
+		res.Err = err
+		show(nil)
 		return err
 	}
+	res.Report = &report
 	if report.Committed {
 		if err := inv.Save(p.Inventory()); err != nil {
 			return err
@@ -290,10 +306,13 @@ func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, allowUnverifi
 	_, _ = fmt.Fprintln(j, report.Format())
 	if !report.Committed {
 		if still := replaceFailed(j, p, []string{key}, force); len(still) == 0 {
+			show([]string{key})
 			return nil
 		}
+		show(nil)
 		return errors.New("the rotation did not complete; see above")
 	}
+	show(nil)
 	return nil
 }
 
@@ -403,25 +422,31 @@ func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection,
 	// RotateEach calls next once before each key, so the count it keeps is
 	// the number of keys already finished.
 	at := 0
+	began := time.Now()
+	line := jobLine(j)
+	show := func(rest []string, now string, replaced []string) rotator.Summary {
+		sum := rotator.SummarizeRun(r.Results(), replaced, time.Since(began))
+		sum.Command = line
+		sum.Keys = append(sum.Keys, rotator.Pending(rest, now)...)
+		j.SetSummary(sum)
+		return sum
+	}
 	next := func() error {
 		if err := j.Step(); err != nil {
 			return err
 		}
 		j.Progress(at, len(names), "rotating "+names[at])
+		show(names[at:], "rotating", nil)
 		at++
 		return nil
 	}
-	began := time.Now()
 	failed, err := r.RotateEach(names, allowUnverified, "", j, func() error { return inv.Save(p.Inventory()) }, next)
 	if err != nil {
 		return err
 	}
 	before := failed
 	failed = replaceFailed(j, p, failed, force)
-	sum := rotator.SummarizeRun(r.Results(), without(before, failed), time.Since(began))
-	sum.Command = jobLine(j)
-	j.SetSummary(sum)
-	_ = rotator.SaveFailed(p, sum.Failed())
+	_ = rotator.SaveFailed(p, show(nil, "", without(before, failed)).Failed())
 	for _, n := range failed {
 		j.Failed(n)
 	}
@@ -682,7 +707,7 @@ func (h jobPages) handleJobEvents(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Accel-Buffering", "no")
-	sent, state, progress, items := 0, "", "", ""
+	sent, state, progress, items, summary := 0, "", "", "", 0
 	heartbeat := time.NewTicker(15 * time.Second)
 	defer heartbeat.Stop()
 	for {
@@ -708,6 +733,12 @@ func (h jobPages) handleJobEvents(w http.ResponseWriter, r *http.Request) {
 					writeEvent(w, "items", it)
 				}
 			}
+		}
+		// The summary's version: the page fetches the summary again when it
+		// changes, as a key finishes.
+		if v.SummaryVersion != summary {
+			summary = v.SummaryVersion
+			writeEvent(w, "summary", strconv.Itoa(summary))
 		}
 		if v.State != state {
 			state = v.State
@@ -815,17 +846,21 @@ func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string) error {
 	var failed []string
 	var reports []rotator.CheckReport
 	began := time.Now()
-	defer func() {
+	line := jobLine(j)
+	show := func(rest []string, now string) rotator.Summary {
 		sum := rotator.SummarizeCheck(reports, time.Since(began))
-		sum.Command = jobLine(j)
+		sum.Command = line
+		sum.Keys = append(sum.Keys, rotator.Pending(rest, now)...)
 		j.SetSummary(sum)
-		_ = rotator.SaveFailed(p, sum.Failed())
-	}()
+		return sum
+	}
+	defer func() { _ = rotator.SaveFailed(p, show(nil, "").Failed()) }()
 	for i, n := range names {
 		if err := j.Step(); err != nil {
 			return err
 		}
 		j.Progress(i, len(names), "testing "+n)
+		show(names[i:], "testing")
 		rep, err := r.Check(n)
 		if err != nil {
 			reports = append(reports, rotator.CheckReport{Key: n, Problem: err.Error(), ProblemKind: rotator.KindFailed})

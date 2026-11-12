@@ -231,6 +231,37 @@ func TestARotationJobPageDrawsItsSummary(t *testing.T) {
 	}
 }
 
+// A finished dry run with keys that would fail offers the next step: review
+// those keys again, or with Force; and the stream says when its summary
+// changed, so a page can draw it again.
+func TestAFailedDryRunOffersToReviewAgainWithForce(t *testing.T) {
+	s, p, _ := newTestServer(t)
+	t.Cleanup(mutation.Release)
+	c := signIn(t, s)
+	j, err := s.jobs.Start(p, mutation.Scope{Command: "ssh rotate", Args: []string{"--all", "--check"}, Source: history.SourceWeb}, func(j *jobs.Job) error {
+		j.SetSummary(rotator.Summary{Keys: rotator.Pending([]string{"work/work_a-ed25519"}, "testing")})
+		j.SetSummary(rotator.SummarizeCheck([]rotator.CheckReport{
+			{Key: "work/work_a-ed25519", Hosts: []rotator.HostCheck{{Alias: "a", Via: "ssh", Kind: rotator.KindUnreachable, Message: "a:22 unreachable"}}},
+		}, time.Second))
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	v, _ := j.View()
+	waitJob(t, s, v.ID)
+	page := c.get("/jobs/" + v.ID).Body.String()
+	for _, want := range []string{`id="job-next"`, "Review the failed keys again", "Review again with Force",
+		`name="action" value="rotate-keys"`, `name="sel" value="work/work_a-ed25519"`, `name="force" value="1"`} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the dry run's page lacks %q", want)
+		}
+	}
+	if ev := c.get("/jobs/" + v.ID + "/events").Body.String(); !strings.Contains(ev, "event: summary\ndata: 2\n\n") {
+		t.Errorf("the stream carries no summary event:\n%s", ev)
+	}
+}
+
 // withStandInAge puts an executable named age first on the PATH, so a check
 // that looks for it passes on a machine without age installed (CI).
 func withStandInAge(t *testing.T) {

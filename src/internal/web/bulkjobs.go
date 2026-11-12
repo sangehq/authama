@@ -2,8 +2,10 @@ package web
 
 import (
 	"fmt"
+	"github.com/simtabi/authama/src/internal/services/rotator"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/simtabi/authama/src/internal/core/manifest"
 	"github.com/simtabi/authama/src/internal/platform"
@@ -155,18 +157,29 @@ func revokeKeysJob(j *jobs.Job, p paths.Paths, refs []manifest.KeyRef, reason st
 		return err
 	}
 	var failed []string
-	j.Plan(refStrings(refs))
+	names := refStrings(refs)
+	j.Plan(names)
+	live := newLiveSummary(j, "revoke", "revoked", "not revoked",
+		"Keys marked not revoked are as they were: they still log in where they were deployed.")
+	defer live.done()
 	for i, ref := range refs {
 		if err := j.Step(); err != nil {
 			return err
 		}
 		j.Progress(i, len(refs), "revoking "+ref.String())
+		live.show(names[i:], "revoking")
 		res, err := editor.New(p).Unattended(j).RevokeKey(ref, reason)
 		if err != nil {
 			failed = append(failed, ref.String())
 			j.Failed(ref.String())
+			live.fail(ref.String(), err.Error())
 			_, _ = fmt.Fprintf(j, "%s: NOT revoked: %v\n", ref, err)
 			continue
+		}
+		if len(res.NotRemoved) > 0 {
+			live.partly(ref.String(), "recorded as revoked, but not removed from "+strings.Join(res.NotRemoved, ", ")+": remove it there by hand")
+		} else {
+			live.ok(ref.String())
 		}
 		_, _ = fmt.Fprintf(j, "revoked %s (%s)\n", res.Key, res.Fingerprint)
 		if len(res.Removed) > 0 {
@@ -255,18 +268,28 @@ func deleteKeysJob(j *jobs.Job, p paths.Paths, retain int, refs []manifest.KeyRe
 		return err
 	}
 	var failed []string
-	j.Plan(refStrings(refs))
+	names := refStrings(refs)
+	j.Plan(names)
+	live := newLiveSummary(j, "delete", "deleted", "not deleted", "Keys marked not deleted are as they were.")
+	defer live.done()
 	for i, ref := range refs {
 		if err := j.Step(); err != nil {
 			return err
 		}
 		j.Progress(i, len(refs), "deleting "+ref.String())
+		live.show(names[i:], "deleting")
 		res, err := lifecycle.New(p, platform.EmitUseKeychain()).DeleteKey(ref, opt)
 		if err != nil {
 			failed = append(failed, ref.String())
 			j.Failed(ref.String())
+			live.fail(ref.String(), err.Error())
 			_, _ = fmt.Fprintf(j, "%s: NOT deleted: %v\n", ref, err)
 			continue
+		}
+		if len(res.NotRevoked) > 0 {
+			live.partly(ref.String(), "deleted here, but not removed from "+strings.Join(res.NotRevoked, ", ")+": remove it there by hand")
+		} else {
+			live.ok(ref.String())
 		}
 		_, _ = fmt.Fprintf(j, "deleted %s\n", res.Removed)
 		if len(res.NotRevoked) > 0 {
@@ -288,3 +311,45 @@ func refStrings(refs []manifest.KeyRef) []string {
 	}
 	return out
 }
+
+// liveSummary keeps a bulk key job's summary current as it goes, in the shape
+// a rotation's takes: each key finished with its result, the one under way,
+// and the rest waiting.
+type liveSummary struct {
+	j               *jobs.Job
+	verb            string
+	okWord, badWord string
+	untouched, line string
+	began           time.Time
+	keys            []rotator.SummaryKey
+}
+
+func newLiveSummary(j *jobs.Job, verb, okWord, badWord, untouched string) *liveSummary {
+	return &liveSummary{j: j, verb: verb, okWord: okWord, badWord: badWord, untouched: untouched,
+		line: jobLine(j), began: time.Now()}
+}
+
+func (l *liveSummary) ok(ref string) {
+	l.keys = append(l.keys, rotator.SummaryKey{Ref: ref, Result: l.okWord})
+}
+
+func (l *liveSummary) partly(ref, note string) {
+	l.keys = append(l.keys, rotator.SummaryKey{Ref: ref, Result: "partly " + l.okWord, Severity: 1,
+		Kind: rotator.KindNotRemoved, Note: note})
+}
+
+func (l *liveSummary) fail(ref, note string) {
+	l.keys = append(l.keys, rotator.SummaryKey{Ref: ref, Result: l.badWord, Severity: 2, Kind: rotator.KindFailed, Note: note})
+}
+
+// show draws the summary with rest still to do, the first of them under way.
+func (l *liveSummary) show(rest []string, now string) {
+	sum := rotator.Summary{Keys: append(append([]rotator.SummaryKey(nil), l.keys...), rotator.Pending(rest, now)...),
+		Elapsed: time.Since(l.began), Command: l.line, Verb: l.verb, UntouchedText: l.untouched}
+	if failed := sum.Failed(); len(failed) > 0 {
+		sum.RerunCommand = "authama ssh key " + l.verb + " " + strings.Join(failed, " ")
+	}
+	l.j.SetSummary(sum)
+}
+
+func (l *liveSummary) done() { l.show(nil, "") }

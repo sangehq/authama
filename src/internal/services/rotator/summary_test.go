@@ -108,3 +108,28 @@ func TestTheFailedKeysAreKeptForTheNextRun(t *testing.T) {
 		t.Errorf("a clean run left %v", got)
 	}
 }
+
+// While a run is under way the summary keeps the run's order, marks the key
+// under way and the ones waiting, and offers no re-run and no closing note
+// until it ends.
+func TestASummaryDrawnWhileRunningKeepsTheRunsOrder(t *testing.T) {
+	reports := designRun()[:4] // three that pause, then one that fails
+	s := SummarizeCheck(reports, time.Second)
+	s.Keys = append(s.Keys, Pending([]string{"imanimanyara/docker-tunnel", "adelsaiq/adelsaiq_dani-prd-web-00-ed25519"}, "testing")...)
+	if !s.Running() {
+		t.Fatal("a summary with pending keys is not running")
+	}
+	out := s.Format()
+	for _, want := range []string{"› docker-tunnel", "testing", "· web-00", "waiting"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("the running summary lacks %q:\n%s", want, out)
+		}
+	}
+	// Run order: oribi (paused) before simbi (failed), as they ran.
+	if strings.Index(out, "oribi") > strings.Index(out, "simbi") {
+		t.Errorf("the running summary was resorted:\n%s", out)
+	}
+	if s.Rerun() != "" || s.Untouched() != "" {
+		t.Errorf("a running summary offers a re-run (%q) or a closing note (%q)", s.Rerun(), s.Untouched())
+	}
+}
