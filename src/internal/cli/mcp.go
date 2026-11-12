@@ -15,7 +15,10 @@ import (
 var errMCPOff = errors.New("the MCP server is off: turn it on with `authama settings set mcp.enabled true`")
 
 // newMCPCmd is `authama mcp`: an MCP server over stdio, for an AI client that
-// starts it. Its tools read only.
+// starts it. Its tools read only. The server is built on the official Go SDK
+// (services/mcp) and reads the process's stdin and writes its stdout with the
+// SDK's stdio framing; cobra's InOrStdin and OutOrStdout are those, except in
+// a test that sets them.
 func newMCPCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "mcp",

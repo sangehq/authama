@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -110,7 +111,10 @@ func wire(t *testing.T, s Server, lines ...string) map[string]map[string]any {
 	_ = inW.Close()
 	go func() { _, _ = io.Copy(io.Discard, outR) }()
 	select {
-	case <-done:
+	case err := <-done:
+		if err != nil {
+			t.Errorf("the session ended with %v when stdin closed", err)
+		}
 	case <-ctx.Done():
 		t.Fatal("the server did not stop when stdin closed")
 	}
@@ -120,16 +124,17 @@ func wire(t *testing.T, s Server, lines ...string) map[string]map[string]any {
 	return got
 }
 
-// connect is a client of the official SDK talking to the server.
+// connect is a client of the official SDK talking to the server over the
+// SDK's in-memory transports.
 func connect(t *testing.T, s Server) *sdk.ClientSession {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	inR, inW := io.Pipe()
-	outR, outW := io.Pipe()
-	go func() { _ = s.Serve(ctx, inR, outW); _ = outW.Close() }()
-	cs, err := sdk.NewClient(&sdk.Implementation{Name: "test-client", Version: "1"}, nil).
-		Connect(ctx, &sdk.IOTransport{Reader: outR, Writer: inW}, nil)
+	st, ct := sdk.NewInMemoryTransports()
+	if _, err := s.New().Connect(ctx, st, nil); err != nil {
+		t.Fatal(err)
+	}
+	cs, err := sdk.NewClient(&sdk.Implementation{Name: "test-client", Version: "1"}, nil).Connect(ctx, ct, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,7 +233,36 @@ var session = []string{
 
 // changed names the answers the move to the official SDK changes, with what
 // they are now; every other answer must equal the golden.
-var changed = map[string]func(t *testing.T, got map[string]any){}
+var changed = map[string]func(t *testing.T, got, want map[string]any){
+	// The tools capability is {} where it was {"listChanged":false}: the SDK
+	// leaves out a false listChanged, which means the same. The rest of the
+	// answer is unchanged.
+	"1": func(t *testing.T, got, want map[string]any) {
+		g, w := got["result"].(map[string]any), want["result"].(map[string]any)
+		if caps := fmt.Sprint(g["capabilities"]); caps != "map[tools:map[]]" {
+			t.Errorf("capabilities %s, want only tools, with no list changes", caps)
+		}
+		g, w = maps.Clone(g), maps.Clone(w)
+		delete(g, "capabilities")
+		delete(w, "capabilities")
+		if !reflect.DeepEqual(g, w) {
+			t.Errorf("initialize changed beyond its capabilities:\n got  %v\n want %v", g, w)
+		}
+	},
+	// A method the server does not declare is still -32601; the SDK words it.
+	"24": methodNotFound("resources/list"),
+	"26": methodNotFound("prompts/list"),
+	"27": methodNotFound("foo/bar"),
+}
+
+func methodNotFound(method string) func(t *testing.T, got, want map[string]any) {
+	return func(t *testing.T, got, want map[string]any) {
+		e, ok := got["error"].(map[string]any)
+		if !ok || e["code"] != want["error"].(map[string]any)["code"] || e["message"] != fmt.Sprintf("method not found: %q", method) {
+			t.Errorf("%s: %v, want -32601, method not found", method, got)
+		}
+	}
+}
 
 // Every tool's answer, and every refusal, is the one the hand-written server
 // gave: the same results, the same tool errors, the same JSON-RPC errors.
@@ -247,7 +281,7 @@ func TestEveryAnswerIsTheOneClientsHad(t *testing.T) {
 	for id, w := range want {
 		g := norm[id]
 		if check, ok := changed[id]; ok {
-			check(t, g.(map[string]any))
+			check(t, g.(map[string]any), w.(map[string]any))
 			continue
 		}
 		if !reflect.DeepEqual(g, w) {
@@ -380,30 +414,67 @@ func TestAnSDKClientCallsEveryTool(t *testing.T) {
 
 // No tool is named for a change: the server only reads.
 func TestNoToolChangesAnything(t *testing.T) {
-	if len(tools) != 9 {
-		t.Fatalf("%d tools; this test has stopped measuring the list", len(tools))
+	s, _ := fixture(t)
+	list, err := connect(t, s).ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, tl := range tools {
+	if len(list.Tools) != 9 {
+		t.Fatalf("%d tools; this test has stopped measuring the list", len(list.Tools))
+	}
+	for _, tl := range list.Tools {
 		if !strings.HasPrefix(tl.Name, "list_") && !strings.HasPrefix(tl.Name, "get_") && tl.Name != "doctor" {
 			t.Errorf("tool %s is not a read", tl.Name)
 		}
 	}
 }
 
-// A line that is not JSON, or not JSON-RPC 2.0, is answered with a JSON-RPC
-// error, and the session goes on.
-func TestMalformedLinesAreRefused(t *testing.T) {
+// A line that is not JSON, or not JSON-RPC 2.0, ends the session: the SDK's
+// stdio transport stops reading at a message it cannot decode, where the
+// hand-written server answered -32700 or -32600 and read on. Nothing but
+// protocol messages reaches stdout either way.
+func TestMalformedLinesEndTheSession(t *testing.T) {
 	s, _ := fixture(t)
-	got := wire(t, s, initialize, initialized,
-		`not json`,
-		`{"jsonrpc":"1.0","id":2,"method":"ping"}`,
-		`{"jsonrpc":"2.0","id":3,"method":"ping"}`)
-	for id, code := range map[string]float64{"<nil>": -32700, "2": -32600} {
-		if e, ok := got[id]["error"].(map[string]any); !ok || e["code"] != code {
-			t.Errorf("answer %s: %v, want error %v", id, got[id], code)
+	for _, bad := range []string{`not json`, `{"jsonrpc":"1.0","id":2,"method":"ping"}`} {
+		var out strings.Builder
+		in := strings.Join([]string{initialize, initialized, bad, `{"jsonrpc":"2.0","id":3,"method":"ping"}`}, "\n") + "\n"
+		if err := s.Serve(context.Background(), strings.NewReader(in), &out); err == nil {
+			t.Errorf("%s: the session did not end with an error", bad)
+		}
+		for _, l := range strings.Split(strings.TrimSpace(out.String()), "\n") {
+			if l != "" && !strings.HasPrefix(l, `{"jsonrpc":"2.0"`) {
+				t.Errorf("%s: stdout holds %q", bad, l)
+			}
+			if strings.Contains(l, `"id":3`) {
+				t.Errorf("%s: the session read on: %s", bad, l)
+			}
 		}
 	}
-	if _, ok := got["3"]["result"]; !ok {
-		t.Errorf("the session did not go on: %v", got["3"])
+}
+
+// A client that writes its requests and closes stdin gets every answer: the
+// session ends when the last one is written, not when stdin closes.
+func TestEveryRequestIsAnsweredBeforeStdinClosing(t *testing.T) {
+	s, _ := fixture(t)
+	lines := []string{initialize, initialized}
+	for id := 2; id < 40; id++ {
+		lines = append(lines, call(id, "list_hosts", `{}`))
+	}
+	var out strings.Builder
+	if err := s.Serve(context.Background(), strings.NewReader(strings.Join(lines, "\n")+"\n"), &out); err != nil {
+		t.Fatal(err)
+	}
+	if n := strings.Count(out.String(), "\n"); n != 39 {
+		t.Errorf("%d answers, want 39, one per request", n)
+	}
+}
+
+// A request before initialize is refused, as the SDK refuses it; the
+// hand-written server answered it.
+func TestARequestBeforeInitializeIsRefused(t *testing.T) {
+	s, _ := fixture(t)
+	got := wire(t, s, `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
+	if _, ok := got["2"]["error"]; !ok {
+		t.Errorf("tools/list before initialize: %v", got["2"])
 	}
 }

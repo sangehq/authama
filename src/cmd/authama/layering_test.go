@@ -209,6 +209,18 @@ func TestTheBinaryLinksOnlyItsTwoChosenDependencies(t *testing.T) {
 		// owner's decision of 2026-11-08: the shared notifier every Simtabi
 		// Go program uses. It links nothing outside the standard library.
 		"github.com/simtabi/go-notifykit/src": true,
+		// The MCP server (`authama mcp`) on the official Go SDK, the owner's
+		// decision of 2026-11-12: every Go project that serves MCP uses it.
+		// The rest is what go-sdk v1.8.0 links, measured with `go list -deps`
+		// on linux, darwin and windows, 2026-11-12.
+		"github.com/modelcontextprotocol/go-sdk": true,
+		"github.com/google/jsonschema-go":        true,
+		"github.com/segmentio/asm":               true,
+		"github.com/segmentio/encoding":          true,
+		"github.com/yosida95/uritemplate/v3":     true,
+		"golang.org/x/oauth2":                    true,
+		"golang.org/x/sync":                      true,
+		"golang.org/x/time":                      true,
 	}
 	var linked []string
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
