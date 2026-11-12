@@ -1,0 +1,204 @@
+[
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "authama's health report for this home: permissions, the agent, known_hosts, old keys, the config.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "name": "doctor",
+    "title": "Run doctor"
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "One key by its ref (profile/name), with the hosts that use it.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "ref": {
+          "description": "the key's ref, profile/name",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "get_key",
+    "title": "Get a key"
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "One recorded change by its id (or its first 8 characters), with its events.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "op_id": {
+          "description": "the operation's id",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "get_operation",
+    "title": "Get an operation"
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "The event feed: changes that finished and watched files that changed, oldest first. Pass the returned next to read on.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "after": {
+          "description": "the next value a previous call returned",
+          "type": "string"
+        },
+        "limit": {
+          "description": "at most this many, up to 200 (default 50)",
+          "type": "integer"
+        },
+        "type": {
+          "description": "only types starting with this, whole or without com.simtabi.authama.: operation.finished, file.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "list_events",
+    "title": "List events"
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Recorded changes, newest first, each with its result and events.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "description": "this command, or a prefix (\"host\")",
+          "type": "string"
+        },
+        "host": {
+          "description": "changes to this host",
+          "type": "string"
+        },
+        "key": {
+          "description": "changes to this key",
+          "type": "string"
+        },
+        "limit": {
+          "description": "at most this many, up to 200 (default 20)",
+          "type": "integer"
+        },
+        "profile": {
+          "description": "changes to this profile",
+          "type": "string"
+        },
+        "since": {
+          "description": "from this date, 2026-11-01",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "list_history",
+    "title": "List the history"
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Every SSH host, or a profile's: address, user, port, provider, key and status.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "description": "only this profile's hosts",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "list_hosts",
+    "title": "List hosts"
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Every SSH key, or a profile's: type, fingerprint, when it was made and expires, and whether it is on disk.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "description": "only this profile's keys",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "list_keys",
+    "title": "List keys"
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Every profile: its category, key scope and store, and how many hosts and keys it has.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "name": "list_profiles",
+    "title": "List profiles"
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Which package-manager and git auth tokens are set, and where. Never a token's value.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "name": "list_tokens",
+    "title": "List auth tokens"
+  }
+]

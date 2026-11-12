@@ -1,0 +1,674 @@
+{
+  "1": {
+    "id": 1,
+    "result": {
+      "capabilities": {
+        "tools": {
+          "listChanged": false
+        }
+      },
+      "instructions": "authama manages SSH keys, hosts and auth tokens. These tools read only: they list profiles, keys, hosts, which tokens are set (never a secret), the history of changes, the event feed and doctor's report.",
+      "protocolVersion": "2025-06-18",
+      "serverInfo": {
+        "name": "authama",
+        "title": "authama",
+        "version": "test"
+      }
+    }
+  },
+  "10": {
+    "id": 10,
+    "result": {
+      "content": [
+        {
+          "text": "{\"hosts\":[{\"alias\":\"simbi-prd-web-00\",\"profile\":\"simtabi\",\"hostname\":\"203.0.113.10\",\"user\":\"ploi\",\"port\":22,\"provider\":\"server\",\"key\":\"simtabi_simbi-prd-web-00-ed25519\",\"key_ref\":\"simtabi/simtabi_simbi-prd-web-00-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"prd\",\"role\":\"web\",\"code\":\"simbi\",\"number\":\"00\",\"named\":true,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[]},{\"alias\":\"oribi-web\",\"profile\":\"simtabi\",\"hostname\":\"203.0.113.11\",\"user\":\"ploi\",\"port\":22,\"provider\":\"server\",\"key\":\"simtabi_oribi-web-ed25519\",\"key_ref\":\"simtabi/simtabi_oribi-web-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"\",\"role\":\"\",\"code\":\"\",\"number\":\"\",\"named\":false,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[]}]}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "hosts": [
+          {
+            "alias": "simbi-prd-web-00",
+            "code": "simbi",
+            "env": "prd",
+            "hostname": "203.0.113.10",
+            "key": "simtabi_simbi-prd-web-00-ed25519",
+            "key_ref": "simtabi/simtabi_simbi-prd-web-00-ed25519",
+            "named": true,
+            "number": "00",
+            "options": [],
+            "port": 22,
+            "profile": "simtabi",
+            "provider": "server",
+            "proxy": false,
+            "requires_vpn": false,
+            "role": "web",
+            "status": "no-key",
+            "tags": [],
+            "token_env": "",
+            "user": "ploi",
+            "vm": false,
+            "vpn_name": ""
+          },
+          {
+            "alias": "oribi-web",
+            "code": "",
+            "env": "",
+            "hostname": "203.0.113.11",
+            "key": "simtabi_oribi-web-ed25519",
+            "key_ref": "simtabi/simtabi_oribi-web-ed25519",
+            "named": false,
+            "number": "",
+            "options": [],
+            "port": 22,
+            "profile": "simtabi",
+            "provider": "server",
+            "proxy": false,
+            "requires_vpn": false,
+            "role": "",
+            "status": "no-key",
+            "tags": [],
+            "token_env": "",
+            "user": "ploi",
+            "vm": false,
+            "vpn_name": ""
+          }
+        ]
+      }
+    }
+  },
+  "11": {
+    "id": 11,
+    "result": {
+      "content": [
+        {
+          "text": "{\"tokens\":[]}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "tokens": []
+      }
+    }
+  },
+  "12": {
+    "id": 12,
+    "result": {
+      "content": [
+        {
+          "text": "{\"operations\":[{\"op_id\":\"abcdef1234567890\",\"started_at\":\"\",\"command\":\"host add\",\"args\":null,\"source\":\"\",\"result\":\"ok\",\"events\":null}]}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "operations": [
+          {
+            "args": null,
+            "command": "host add",
+            "events": null,
+            "op_id": "abcdef1234567890",
+            "result": "ok",
+            "source": "",
+            "started_at": ""
+          }
+        ]
+      }
+    }
+  },
+  "13": {
+    "id": 13,
+    "result": {
+      "content": [
+        {
+          "text": "{\"operation\":{\"op_id\":\"abcdef1234567890\",\"started_at\":\"\",\"command\":\"host add\",\"args\":null,\"source\":\"\",\"result\":\"ok\",\"events\":null}}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "operation": {
+          "args": null,
+          "command": "host add",
+          "events": null,
+          "op_id": "abcdef1234567890",
+          "result": "ok",
+          "source": "",
+          "started_at": ""
+        }
+      }
+    }
+  },
+  "14": {
+    "id": 14,
+    "result": {
+      "content": [
+        {
+          "text": "give the operation's id, at least its first 8 characters",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  },
+  "15": {
+    "id": 15,
+    "result": {
+      "content": [
+        {
+          "text": "no operation zzzzzzzz",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  },
+  "16": {
+    "id": 16,
+    "result": {
+      "content": [
+        {
+          "text": "{\"events\":[],\"next\":\"\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "events": [],
+        "next": ""
+      }
+    }
+  },
+  "17": {
+    "id": 17,
+    "result": {
+      "content": [
+        {
+          "text": "{\"events\":[],\"next\":\"\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "events": [],
+        "next": ""
+      }
+    }
+  },
+  "18": {
+    "id": 18,
+    "result": {
+      "content": [
+        {
+          "text": "{\"ok\":false,\"report\":\"os: \\nruntime: native binary (no interpreter required)\\nnote: this OS is not yet first-class - support is in progress\\nhard deps: ok\\nRESULT: blocked - install the missing hard deps\\n\\nproviders: \\nagent: \\nknown_hosts: absent\\nconfig drift: DRIFT (run config render)\\nperms: ok\\n\\ndoctor: issues found\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "ok": false,
+        "report": "os: \nruntime: native binary (no interpreter required)\nnote: this OS is not yet first-class - support is in progress\nhard deps: ok\nRESULT: blocked - install the missing hard deps\n\nproviders: \nagent: \nknown_hosts: absent\nconfig drift: DRIFT (run config render)\nperms: ok\n\ndoctor: issues found"
+      }
+    }
+  },
+  "19": {
+    "id": 19,
+    "result": {
+      "content": [
+        {
+          "text": "{\"profiles\":[{\"name\":\"simtabi\",\"code\":\"simbi\",\"own_code\":true,\"category\":\"orgs\",\"key_scope\":\"per_service\",\"key_store\":\"disk\",\"key_comment\":\"\",\"naming\":{\"alias\":\"{code}-{env}-{role}-{nn}\",\"key_name\":\"{profile}_{alias}-{algo}\",\"envs\":[],\"roles\":[],\"enforce\":\"off\"},\"hosts\":2,\"keys\":2},{\"name\":\"work\",\"code\":\"\",\"own_code\":false,\"category\":\"\",\"key_scope\":\"per_service\",\"key_store\":\"disk\",\"key_comment\":\"\",\"naming\":{\"alias\":\"{code}-{env}-{role}-{nn}\",\"key_name\":\"{profile}_{alias}-{algo}\",\"envs\":[],\"roles\":[],\"enforce\":\"off\"},\"hosts\":1,\"keys\":1}]}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "profiles": [
+          {
+            "category": "orgs",
+            "code": "simbi",
+            "hosts": 2,
+            "key_comment": "",
+            "key_scope": "per_service",
+            "key_store": "disk",
+            "keys": 2,
+            "name": "simtabi",
+            "naming": {
+              "alias": "{code}-{env}-{role}-{nn}",
+              "enforce": "off",
+              "envs": [],
+              "key_name": "{profile}_{alias}-{algo}",
+              "roles": []
+            },
+            "own_code": true
+          },
+          {
+            "category": "",
+            "code": "",
+            "hosts": 1,
+            "key_comment": "",
+            "key_scope": "per_service",
+            "key_store": "disk",
+            "keys": 1,
+            "name": "work",
+            "naming": {
+              "alias": "{code}-{env}-{role}-{nn}",
+              "enforce": "off",
+              "envs": [],
+              "key_name": "{profile}_{alias}-{algo}",
+              "roles": []
+            },
+            "own_code": false
+          }
+        ]
+      }
+    }
+  },
+  "20": {
+    "id": 20,
+    "result": {
+      "content": [
+        {
+          "text": "{\"profiles\":[{\"name\":\"simtabi\",\"code\":\"simbi\",\"own_code\":true,\"category\":\"orgs\",\"key_scope\":\"per_service\",\"key_store\":\"disk\",\"key_comment\":\"\",\"naming\":{\"alias\":\"{code}-{env}-{role}-{nn}\",\"key_name\":\"{profile}_{alias}-{algo}\",\"envs\":[],\"roles\":[],\"enforce\":\"off\"},\"hosts\":2,\"keys\":2},{\"name\":\"work\",\"code\":\"\",\"own_code\":false,\"category\":\"\",\"key_scope\":\"per_service\",\"key_store\":\"disk\",\"key_comment\":\"\",\"naming\":{\"alias\":\"{code}-{env}-{role}-{nn}\",\"key_name\":\"{profile}_{alias}-{algo}\",\"envs\":[],\"roles\":[],\"enforce\":\"off\"},\"hosts\":1,\"keys\":1}]}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "profiles": [
+          {
+            "category": "orgs",
+            "code": "simbi",
+            "hosts": 2,
+            "key_comment": "",
+            "key_scope": "per_service",
+            "key_store": "disk",
+            "keys": 2,
+            "name": "simtabi",
+            "naming": {
+              "alias": "{code}-{env}-{role}-{nn}",
+              "enforce": "off",
+              "envs": [],
+              "key_name": "{profile}_{alias}-{algo}",
+              "roles": []
+            },
+            "own_code": true
+          },
+          {
+            "category": "",
+            "code": "",
+            "hosts": 1,
+            "key_comment": "",
+            "key_scope": "per_service",
+            "key_store": "disk",
+            "keys": 1,
+            "name": "work",
+            "naming": {
+              "alias": "{code}-{env}-{role}-{nn}",
+              "enforce": "off",
+              "envs": [],
+              "key_name": "{profile}_{alias}-{algo}",
+              "roles": []
+            },
+            "own_code": false
+          }
+        ]
+      }
+    }
+  },
+  "21": {
+    "error": {
+      "code": -32602,
+      "message": "arguments must be an object"
+    },
+    "id": 21
+  },
+  "22": {
+    "error": {
+      "code": -32602,
+      "message": "no tool rotate_everything"
+    },
+    "id": 22
+  },
+  "23": {
+    "error": {
+      "code": -32602,
+      "message": "tools/call needs a tool name"
+    },
+    "id": 23
+  },
+  "24": {
+    "error": {
+      "code": -32601,
+      "message": "no method resources/list"
+    },
+    "id": 24
+  },
+  "25": {
+    "id": 25,
+    "result": {}
+  },
+  "26": {
+    "error": {
+      "code": -32601,
+      "message": "no method prompts/list"
+    },
+    "id": 26
+  },
+  "27": {
+    "error": {
+      "code": -32601,
+      "message": "no method foo/bar"
+    },
+    "id": 27
+  },
+  "3": {
+    "id": 3,
+    "result": {
+      "content": [
+        {
+          "text": "{\"profiles\":[{\"name\":\"simtabi\",\"code\":\"simbi\",\"own_code\":true,\"category\":\"orgs\",\"key_scope\":\"per_service\",\"key_store\":\"disk\",\"key_comment\":\"\",\"naming\":{\"alias\":\"{code}-{env}-{role}-{nn}\",\"key_name\":\"{profile}_{alias}-{algo}\",\"envs\":[],\"roles\":[],\"enforce\":\"off\"},\"hosts\":2,\"keys\":2},{\"name\":\"work\",\"code\":\"\",\"own_code\":false,\"category\":\"\",\"key_scope\":\"per_service\",\"key_store\":\"disk\",\"key_comment\":\"\",\"naming\":{\"alias\":\"{code}-{env}-{role}-{nn}\",\"key_name\":\"{profile}_{alias}-{algo}\",\"envs\":[],\"roles\":[],\"enforce\":\"off\"},\"hosts\":1,\"keys\":1}]}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "profiles": [
+          {
+            "category": "orgs",
+            "code": "simbi",
+            "hosts": 2,
+            "key_comment": "",
+            "key_scope": "per_service",
+            "key_store": "disk",
+            "keys": 2,
+            "name": "simtabi",
+            "naming": {
+              "alias": "{code}-{env}-{role}-{nn}",
+              "enforce": "off",
+              "envs": [],
+              "key_name": "{profile}_{alias}-{algo}",
+              "roles": []
+            },
+            "own_code": true
+          },
+          {
+            "category": "",
+            "code": "",
+            "hosts": 1,
+            "key_comment": "",
+            "key_scope": "per_service",
+            "key_store": "disk",
+            "keys": 1,
+            "name": "work",
+            "naming": {
+              "alias": "{code}-{env}-{role}-{nn}",
+              "enforce": "off",
+              "envs": [],
+              "key_name": "{profile}_{alias}-{algo}",
+              "roles": []
+            },
+            "own_code": false
+          }
+        ]
+      }
+    }
+  },
+  "4": {
+    "id": 4,
+    "result": {
+      "content": [
+        {
+          "text": "{\"keys\":[{\"ref\":\"simtabi/simtabi_simbi-prd-web-00-ed25519\",\"profile\":\"simtabi\",\"name\":\"simtabi_simbi-prd-web-00-ed25519\",\"type\":\"ed25519\",\"fingerprint\":\"\",\"created\":\"\",\"expires_on\":\"\",\"rotate_after_days\":365,\"store\":\"disk\",\"on_disk\":false,\"recorded\":false,\"state\":\"no-key\",\"hosts\":[\"simbi-prd-web-00\"],\"deployments\":0},{\"ref\":\"simtabi/simtabi_oribi-web-ed25519\",\"profile\":\"simtabi\",\"name\":\"simtabi_oribi-web-ed25519\",\"type\":\"ed25519\",\"fingerprint\":\"\",\"created\":\"\",\"expires_on\":\"\",\"rotate_after_days\":365,\"store\":\"disk\",\"on_disk\":false,\"recorded\":false,\"state\":\"no-key\",\"hosts\":[\"oribi-web\"],\"deployments\":0},{\"ref\":\"work/work_gh-ed25519\",\"profile\":\"work\",\"name\":\"work_gh-ed25519\",\"type\":\"ed25519\",\"fingerprint\":\"\",\"created\":\"\",\"expires_on\":\"\",\"rotate_after_days\":365,\"store\":\"disk\",\"on_disk\":true,\"recorded\":false,\"state\":\"no-key\",\"hosts\":[\"gh\"],\"deployments\":0}]}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "keys": [
+          {
+            "created": "",
+            "deployments": 0,
+            "expires_on": "",
+            "fingerprint": "",
+            "hosts": [
+              "simbi-prd-web-00"
+            ],
+            "name": "simtabi_simbi-prd-web-00-ed25519",
+            "on_disk": false,
+            "profile": "simtabi",
+            "recorded": false,
+            "ref": "simtabi/simtabi_simbi-prd-web-00-ed25519",
+            "rotate_after_days": 365,
+            "state": "no-key",
+            "store": "disk",
+            "type": "ed25519"
+          },
+          {
+            "created": "",
+            "deployments": 0,
+            "expires_on": "",
+            "fingerprint": "",
+            "hosts": [
+              "oribi-web"
+            ],
+            "name": "simtabi_oribi-web-ed25519",
+            "on_disk": false,
+            "profile": "simtabi",
+            "recorded": false,
+            "ref": "simtabi/simtabi_oribi-web-ed25519",
+            "rotate_after_days": 365,
+            "state": "no-key",
+            "store": "disk",
+            "type": "ed25519"
+          },
+          {
+            "created": "",
+            "deployments": 0,
+            "expires_on": "",
+            "fingerprint": "",
+            "hosts": [
+              "gh"
+            ],
+            "name": "work_gh-ed25519",
+            "on_disk": true,
+            "profile": "work",
+            "recorded": false,
+            "ref": "work/work_gh-ed25519",
+            "rotate_after_days": 365,
+            "state": "no-key",
+            "store": "disk",
+            "type": "ed25519"
+          }
+        ]
+      }
+    }
+  },
+  "5": {
+    "id": 5,
+    "result": {
+      "content": [
+        {
+          "text": "{\"keys\":[{\"ref\":\"work/work_gh-ed25519\",\"profile\":\"work\",\"name\":\"work_gh-ed25519\",\"type\":\"ed25519\",\"fingerprint\":\"\",\"created\":\"\",\"expires_on\":\"\",\"rotate_after_days\":365,\"store\":\"disk\",\"on_disk\":true,\"recorded\":false,\"state\":\"no-key\",\"hosts\":[\"gh\"],\"deployments\":0}]}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "keys": [
+          {
+            "created": "",
+            "deployments": 0,
+            "expires_on": "",
+            "fingerprint": "",
+            "hosts": [
+              "gh"
+            ],
+            "name": "work_gh-ed25519",
+            "on_disk": true,
+            "profile": "work",
+            "recorded": false,
+            "ref": "work/work_gh-ed25519",
+            "rotate_after_days": 365,
+            "state": "no-key",
+            "store": "disk",
+            "type": "ed25519"
+          }
+        ]
+      }
+    }
+  },
+  "6": {
+    "id": 6,
+    "result": {
+      "content": [
+        {
+          "text": "give the key's ref, profile/name (list_keys lists them)",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  },
+  "7": {
+    "id": 7,
+    "result": {
+      "content": [
+        {
+          "text": "{\"hosts\":[{\"alias\":\"gh\",\"profile\":\"work\",\"hostname\":\"github.com\",\"user\":\"git\",\"port\":22,\"provider\":\"server\",\"key\":\"work_gh-ed25519\",\"key_ref\":\"work/work_gh-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"\",\"role\":\"\",\"code\":\"\",\"number\":\"\",\"named\":false,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[]}],\"key\":{\"ref\":\"work/work_gh-ed25519\",\"profile\":\"work\",\"name\":\"work_gh-ed25519\",\"type\":\"ed25519\",\"fingerprint\":\"\",\"created\":\"\",\"expires_on\":\"\",\"rotate_after_days\":365,\"store\":\"disk\",\"on_disk\":true,\"recorded\":false,\"state\":\"no-key\",\"hosts\":[\"gh\"],\"deployments\":0}}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "hosts": [
+          {
+            "alias": "gh",
+            "code": "",
+            "env": "",
+            "hostname": "github.com",
+            "key": "work_gh-ed25519",
+            "key_ref": "work/work_gh-ed25519",
+            "named": false,
+            "number": "",
+            "options": [],
+            "port": 22,
+            "profile": "work",
+            "provider": "server",
+            "proxy": false,
+            "requires_vpn": false,
+            "role": "",
+            "status": "no-key",
+            "tags": [],
+            "token_env": "",
+            "user": "git",
+            "vm": false,
+            "vpn_name": ""
+          }
+        ],
+        "key": {
+          "created": "",
+          "deployments": 0,
+          "expires_on": "",
+          "fingerprint": "",
+          "hosts": [
+            "gh"
+          ],
+          "name": "work_gh-ed25519",
+          "on_disk": true,
+          "profile": "work",
+          "recorded": false,
+          "ref": "work/work_gh-ed25519",
+          "rotate_after_days": 365,
+          "state": "no-key",
+          "store": "disk",
+          "type": "ed25519"
+        }
+      }
+    }
+  },
+  "8": {
+    "id": 8,
+    "result": {
+      "content": [
+        {
+          "text": "no key nope/none",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  },
+  "9": {
+    "id": 9,
+    "result": {
+      "content": [
+        {
+          "text": "{\"hosts\":[{\"alias\":\"simbi-prd-web-00\",\"profile\":\"simtabi\",\"hostname\":\"203.0.113.10\",\"user\":\"ploi\",\"port\":22,\"provider\":\"server\",\"key\":\"simtabi_simbi-prd-web-00-ed25519\",\"key_ref\":\"simtabi/simtabi_simbi-prd-web-00-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"prd\",\"role\":\"web\",\"code\":\"simbi\",\"number\":\"00\",\"named\":true,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[]},{\"alias\":\"oribi-web\",\"profile\":\"simtabi\",\"hostname\":\"203.0.113.11\",\"user\":\"ploi\",\"port\":22,\"provider\":\"server\",\"key\":\"simtabi_oribi-web-ed25519\",\"key_ref\":\"simtabi/simtabi_oribi-web-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"\",\"role\":\"\",\"code\":\"\",\"number\":\"\",\"named\":false,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[]},{\"alias\":\"gh\",\"profile\":\"work\",\"hostname\":\"github.com\",\"user\":\"git\",\"port\":22,\"provider\":\"server\",\"key\":\"work_gh-ed25519\",\"key_ref\":\"work/work_gh-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"\",\"role\":\"\",\"code\":\"\",\"number\":\"\",\"named\":false,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[]}]}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "hosts": [
+          {
+            "alias": "simbi-prd-web-00",
+            "code": "simbi",
+            "env": "prd",
+            "hostname": "203.0.113.10",
+            "key": "simtabi_simbi-prd-web-00-ed25519",
+            "key_ref": "simtabi/simtabi_simbi-prd-web-00-ed25519",
+            "named": true,
+            "number": "00",
+            "options": [],
+            "port": 22,
+            "profile": "simtabi",
+            "provider": "server",
+            "proxy": false,
+            "requires_vpn": false,
+            "role": "web",
+            "status": "no-key",
+            "tags": [],
+            "token_env": "",
+            "user": "ploi",
+            "vm": false,
+            "vpn_name": ""
+          },
+          {
+            "alias": "oribi-web",
+            "code": "",
+            "env": "",
+            "hostname": "203.0.113.11",
+            "key": "simtabi_oribi-web-ed25519",
+            "key_ref": "simtabi/simtabi_oribi-web-ed25519",
+            "named": false,
+            "number": "",
+            "options": [],
+            "port": 22,
+            "profile": "simtabi",
+            "provider": "server",
+            "proxy": false,
+            "requires_vpn": false,
+            "role": "",
+            "status": "no-key",
+            "tags": [],
+            "token_env": "",
+            "user": "ploi",
+            "vm": false,
+            "vpn_name": ""
+          },
+          {
+            "alias": "gh",
+            "code": "",
+            "env": "",
+            "hostname": "github.com",
+            "key": "work_gh-ed25519",
+            "key_ref": "work/work_gh-ed25519",
+            "named": false,
+            "number": "",
+            "options": [],
+            "port": 22,
+            "profile": "work",
+            "provider": "server",
+            "proxy": false,
+            "requires_vpn": false,
+            "role": "",
+            "status": "no-key",
+            "tags": [],
+            "token_env": "",
+            "user": "git",
+            "vm": false,
+            "vpn_name": ""
+          }
+        ]
+      }
+    }
+  }
+}
