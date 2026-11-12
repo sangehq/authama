@@ -402,7 +402,8 @@ func within(root, dest string) bool {
 	if err != nil {
 		return false
 	}
-	return rel == "." || (!strings.HasPrefix(rel, "..") && !filepath.IsAbs(rel))
+	// IsLocal, not a ".." prefix: a directory named "..foo" is inside root.
+	return rel == "." || filepath.IsLocal(rel)
 }
 
 // isRooted reports whether p begins at a path separator without naming a

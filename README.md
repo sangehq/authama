@@ -128,6 +128,9 @@ else is in the [documentation index](#documentation).
 - [`bundle`](docs/tools/bundle.md) — encrypted backup and restore.
 - [`history`](docs/tools/history.md) — every change authama has made, filtered by host, profile or key.
 - [`events`](docs/tools/events.md) — every change seen to a file under `~/.ssh`, the config home or a token file, by anyone.
+- [Read API](docs/tools/api.md) — JSON for programs at `/api/v1/` on `serve`, with API tokens; reads only, off by default.
+- [Webhooks](docs/tools/webhooks.md) — each change and file event sent to your endpoints, signed as Standard Webhooks; off by default.
+- [MCP server](docs/tools/mcp.md) — `authama mcp`, read-only tools for an AI client over stdio; off by default.
 - [`man`](docs/tools/man.md) — a manual page for every command, and the layout every `--help` shares.
 - [`serve`](docs/tools/serve.md) — the web UI: overview, hosts, keys, snapshots, auth tokens and history in a browser, with previewed changes.
 - [`recover`](docs/tools/recover.md) — break-glass when you are locked out.

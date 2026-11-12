@@ -35,6 +35,9 @@ var sectionTitles = []struct{ Key, Title, Summary string }{
 	{"vm", "VMs", "Which hypervisors are used, and what a VM sync may change."},
 	{"export", "Export", "Where a saved export selection goes."},
 	{"web", "Web UI", "Where this web UI listens and how it behaves."},
+	{"api", "API", "The read API programs call with an API token. Off by default."},
+	{"webhooks", "Webhooks", "Events sent to your endpoints as they happen. Off by default."},
+	{"mcp", "MCP", "The Model Context Protocol server an AI client can start. Off by default."},
 	{"paths", "Paths", "Where authama keeps its state, and the files it reads."},
 }
 

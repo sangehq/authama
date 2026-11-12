@@ -8,6 +8,17 @@
       "description": "The schema this file follows (for editors).",
       "type": "string"
     },
+    "api": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "description": "Serve the read API at /api/v1/ on `serve`, for programs holding an API token (`authama api token create`). It reads only: profiles, keys, hosts, which tokens are set (never a secret), the history, the event feed and doctor. Off: /api/v1/ is not served. Sets $AUTHAMA_API. Default: false.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
     "backup": {
       "additionalProperties": false,
       "properties": {
@@ -206,6 +217,17 @@
       },
       "type": "object"
     },
+    "mcp": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "description": "Let `authama mcp` serve the Model Context Protocol over stdio, for an AI client that starts it. Its tools read only, as the API does. Off: `authama mcp` refuses to start. Sets $AUTHAMA_MCP. Default: false.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
     "notifications": {
       "additionalProperties": false,
       "properties": {
@@ -326,6 +348,22 @@
           "description": "The port `serve` listens on first. When it is taken the next free one is used, as with the default; only --port makes a taken port an error. Sets $AUTHAMA_WEB_PORT. Default: 7822.",
           "minimum": 1,
           "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "webhooks": {
+      "additionalProperties": false,
+      "properties": {
+        "allow_private": {
+          "default": false,
+          "description": "Let an endpoint be on this machine or a private network (loopback, 10/8, 172.16/12, 192.168/16, link-local), and use plain http on loopback. Off: only https to public addresses, so a webhook cannot be aimed at services behind your firewall. Sets $AUTHAMA_WEBHOOKS_ALLOW_PRIVATE. Default: false.",
+          "type": "boolean"
+        },
+        "enabled": {
+          "default": false,
+          "description": "Have `serve` send each new event (a change finished, a watched file changed) to the endpoints added with `authama webhook add`, signed as Standard Webhooks do. Off: nothing is sent; `authama webhook deliver` still sends by hand. Sets $AUTHAMA_WEBHOOKS. Default: false.",
+          "type": "boolean"
         }
       },
       "type": "object"
