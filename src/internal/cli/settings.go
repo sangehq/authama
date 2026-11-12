@@ -282,6 +282,9 @@ func newSettingsInitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// A change like any other: under the lock, so it is recorded and the
+			// owner seal is renewed over the file it wrote.
+			lockForMutation(p)
 			return change.SettingsInit(force).Run(p, c.OutOrStdout())
 		},
 	}
@@ -304,6 +307,9 @@ func newSettingsSetCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// A change like any other: under the lock, so it is recorded and the
+			// owner seal is renewed over the file it wrote.
+			lockForMutation(p)
 			return change.SettingsSet(args[0], args[1]).Run(p, c.OutOrStdout())
 		},
 	}
@@ -321,6 +327,9 @@ func newSettingsUnsetCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// A change like any other: under the lock, so it is recorded and the
+			// owner seal is renewed over the file it wrote.
+			lockForMutation(p)
 			return change.SettingsUnset(args[0]).Run(p, c.OutOrStdout())
 		},
 	}
@@ -343,6 +352,9 @@ func newSettingsBackupKeyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// A change like any other: under the lock, so it is recorded and the
+			// owner seal is renewed over the file it wrote.
+			lockForMutation(p)
 			ch := change.BackupKey()
 			if _, err := ch.Effects(p); err != nil {
 				return err
