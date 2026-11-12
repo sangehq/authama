@@ -95,7 +95,7 @@
 {{template "panel_close"}}
 {{if not $.DevRoot}}
 {{template "panel_open" (header "revoke" "Revoke this key" "Removes it from every target it is deployed to, through each host's provider, and records it as revoked: deploy and rollback refuse it from then on.")}}
-  <form method="post" action="{{basePath}}/jobs/review" data-inline><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="revoke"><input type="hidden" name="key" value="{{.Detail.Ref}}">
+  <form method="post" action="{{basePath}}/jobs/review"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="revoke"><input type="hidden" name="key" value="{{.Detail.Ref}}">
     <div class="alert alert-warning" role="status">{{icon "alert-triangle"}}<span class="ms-1">Anything that logs in with this key stops working where it is removed. Mint its successor next: <strong>Rotate</strong>, or <code>keygen --force</code>.</span></div>
     <div class="mb-3">
       <label class="form-label" for="kr-reason">Reason</label>

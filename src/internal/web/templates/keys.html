@@ -118,11 +118,14 @@
             <div class="form-hint mb-0">Off, the job stops at a key whose new login it cannot prove, and that key keeps working as before. Turn it on only for hosts you cannot reach from here.</div>
             <label class="form-check form-switch mb-1 mt-2"><input class="form-check-input" type="checkbox" role="switch" name="no_backup" value="1"><span class="form-check-label">Skip the encrypted backup (a clean rotation)</span></label>
             <div class="form-hint mb-0">Starts afresh with no backup bundle. Each replaced key is still kept under <code>old/</code> for a rollback, until the next rotation replaces it. The review also offers a dry run that tests every key first.</div>
+            <label class="form-check form-switch is-danger mb-1 mt-2"><input class="form-check-input" type="checkbox" role="switch" name="force" value="1"><span class="form-check-label">Force: replace what cannot rotate in place</span></label>
+            <div class="form-hint mb-0">A key never deployed, or whose host cannot be reached, is replaced on this computer anyway, to deploy next. Until it is deployed, a host that trusted the old key cannot be logged in to with it. The old key stays under <code>old/</code> for a rollback.</div>
           </div>
           <ol class="kp-steps" aria-label="What happens">
-            <li>An encrypted backup of <code>~/.ssh</code> is written first.</li>
+            <li class="kp-if-backup">An encrypted backup of <code>~/.ssh</code> is written first.</li>
             <li>Each chosen key a host uses is replaced in turn: a new key is minted, deployed and logged in with.</li>
-            <li>A key that fails is left as it was, and the rest go on. Progress and time left show while it runs.</li>
+            <li class="kp-if-not-force">A key that fails is left as it was, and the rest go on. Progress and time left show while it runs.</li>
+            <li class="kp-if-force">A key that cannot rotate in place is replaced on this computer: deploy it next, or roll it back from <code>old/</code>.</li>
           </ol>
           {{template "pick_actions" "rotate"}}
         </form>

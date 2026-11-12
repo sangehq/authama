@@ -3,6 +3,8 @@ package web
 import (
 	"errors"
 	"fmt"
+	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/simtabi/authama/src/internal/services/reconciler"
 	"io"
 	"net/http"
 	"net/url"
@@ -41,13 +43,13 @@ import (
 // jobFields are the form fields each job reads.
 var jobFields = map[string][]string{
 	"deploy":   {"key", "target"},
-	"rotate":   {"key", "allow_unverified", "no_backup", "check"},
+	"rotate":   {"key", "allow_unverified", "no_backup", "check", "force"},
 	"rollback": {"key"},
 	// revoke removes a key from every target and records it as revoked.
 	"revoke": {"key", "reason"},
 	// rotate-keys rotates the chosen keys (sel: keys, profiles, categories),
 	// a profile's keys, or every key, one after another.
-	"rotate-keys": {"sel", "profile", "all", "allow_unverified", "no_backup", "check"},
+	"rotate-keys": {"sel", "profile", "all", "allow_unverified", "no_backup", "check", "force"},
 	// revoke-keys revokes each chosen key, as `authama ssh key revoke` does.
 	"revoke-keys": {"sel", "all", "reason"},
 	// delete-keys deletes each chosen key, as `authama ssh key delete` does.
@@ -169,7 +171,7 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 		if checked(f, "check") {
 			return rotateCheckSpec([]string{key}, []string{key, "--check"}, subjects, h), nil
 		}
-		allow, skip := checked(f, "allow_unverified"), checked(f, "no_backup")
+		allow, skip, force := checked(f, "allow_unverified"), checked(f, "no_backup"), checked(f, "force")
 		args := []string{key, "--yes"}
 		if allow {
 			args = append(args, "--allow-unverified")
@@ -177,13 +179,17 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 		if skip {
 			args = append(args, "--no-key-backup")
 		}
+		if force {
+			args = append(args, "--force")
+		}
 		return jobSpec{
 			scope: mutation.Scope{Command: "rotate", Args: args, Source: history.SourceWeb, Subjects: subjects},
 			what: append([]string{backupStep(skip)},
 				"mints a new "+key+", deploys it to every host that uses the key, and proves each login",
 				"moves the current key to old/, replacing any earlier predecessor, once every target is done",
-				"asks you to paste the new public key where a target takes it by hand, and waits"),
-			run:   func(j *jobs.Job) error { return rotateJob(j, h.p, retain, key, allow, skip) },
+				"asks you to paste the new public key where a target takes it by hand, and waits",
+				forceStep(force)),
+			run:   func(j *jobs.Job) error { return rotateJob(j, h.p, retain, key, allow, skip, force) },
 			items: []string{key},
 		}, nil
 	case "revoke":
@@ -256,7 +262,7 @@ func deployJob(j *jobs.Job, p paths.Paths, retain int, key, target string) error
 
 // rotateJob is rotate's single-key path after its confirmation. A target that
 // takes the key by hand pauses the job with the new public key to paste.
-func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, allowUnverified, skipBackup bool) error {
+func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, allowUnverified, skipBackup, force bool) error {
 	if err := p.RefuseOutsideSandbox("rotate"); err != nil {
 		return err
 	}
@@ -283,6 +289,9 @@ func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, allowUnverifi
 	}
 	_, _ = fmt.Fprintln(j, report.Format())
 	if !report.Committed {
+		if still := replaceFailed(j, p, []string{key}, force); len(still) == 0 {
+			return nil
+		}
 		return errors.New("the rotation did not complete; see above")
 	}
 	return nil
@@ -319,7 +328,7 @@ func rotateKeysSpec(f url.Values, h home, retain int) (jobSpec, error) {
 	if err != nil {
 		return jobSpec{}, err
 	}
-	allow, skip := checked(f, "allow_unverified"), checked(f, "no_backup")
+	allow, skip, force := checked(f, "allow_unverified"), checked(f, "no_backup"), checked(f, "force")
 	names, err := selected(h.p, sel)
 	if err != nil {
 		return jobSpec{}, err
@@ -336,6 +345,9 @@ func rotateKeysSpec(f url.Values, h home, retain int) (jobSpec, error) {
 	if skip {
 		args = append(args, "--no-key-backup")
 	}
+	if force {
+		args = append(args, "--force")
+	}
 	return jobSpec{
 		scope: mutation.Scope{Command: "rotate", Args: append(args, "--yes"), Source: history.SourceWeb, Subjects: subjects},
 		what: []string{
@@ -343,8 +355,9 @@ func rotateKeysSpec(f url.Values, h home, retain int) (jobSpec, error) {
 			fmt.Sprintf("rotates %d key(s), one at a time, in the order listed: each is minted, deployed and logged in with before the next", len(names)),
 			"a key that fails is left as it was, and the rest go on",
 			"asks you to paste a new public key wherever a target takes it by hand, and waits",
+			forceStep(force),
 		},
-		run:   func(j *jobs.Job) error { return rotateKeysJob(j, h.p, retain, sel, allow, skip) },
+		run:   func(j *jobs.Job) error { return rotateKeysJob(j, h.p, retain, sel, allow, skip, force) },
 		items: names,
 	}, nil
 }
@@ -368,7 +381,7 @@ func selected(p paths.Paths, sel keysvc.Selection) ([]string, error) {
 	return names, nil
 }
 
-func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection, allowUnverified, skipBackup bool) error {
+func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection, allowUnverified, skipBackup, force bool) error {
 	if err := p.RefuseOutsideSandbox("rotate"); err != nil {
 		return err
 	}
@@ -402,6 +415,7 @@ func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection,
 	if err != nil {
 		return err
 	}
+	failed = replaceFailed(j, p, failed, force)
 	for _, n := range failed {
 		j.Failed(n)
 	}
@@ -480,6 +494,68 @@ type jobReview struct {
 	CanCheck, Check bool
 	Fields          []formField
 	Busy            *jobs.View
+	// Back is the page the job was chosen on, and BackLabel names it: where
+	// Cancel goes.
+	Back, BackLabel string
+	// Options are the switches the review can be done again with; Kept are
+	// the fields carried past them.
+	Options []jobOption
+	Kept    []formField
+	// Forced is a forced rotation; Backup says an encrypted backup is written
+	// first.
+	Forced, Backup bool
+}
+
+// jobOption is one switch on a job's review: turning it reviews the job
+// again with the field set or cleared.
+type jobOption struct {
+	Name, Label, Detail string
+	On, Danger          bool
+}
+
+// jobOptions are the switches a job's review offers, and the fields carried
+// past them unchanged.
+func jobOptions(f url.Values, fields []formField) ([]jobOption, []formField) {
+	var opts []jobOption
+	switch f.Get("action") {
+	case "rotate", "rotate-keys":
+		opts = []jobOption{
+			{Name: "no_backup", Label: "Skip the encrypted backup",
+				Detail: "A clean rotation: no backup bundle is written. Each replaced key is still kept under old/ for a rollback."},
+			{Name: "allow_unverified", Label: "Go on when a login cannot be verified",
+				Detail: "Off, a key whose new login cannot be proved stops the job and keeps working as before."},
+			{Name: "force", Label: "Force: replace what cannot rotate in place", Danger: true,
+				Detail: "A key never deployed, or whose host cannot be reached, is replaced on this computer anyway and must be deployed next. Until then a host that trusted the old key cannot be logged in to with it; the old key stays under old/ for a rollback."},
+		}
+	}
+	names := map[string]bool{}
+	for i := range opts {
+		opts[i].On = checked(f, opts[i].Name)
+		names[opts[i].Name] = true
+	}
+	var kept []formField
+	for _, fl := range fields {
+		if !names[fl.Name] && fl.Name != "check" {
+			kept = append(kept, fl)
+		}
+	}
+	return opts, kept
+}
+
+// jobBack is the page a job was chosen on: a key's own page, the list it
+// was picked from, Snapshots or Hosts.
+func jobBack(f url.Values) (href, label string) {
+	switch f.Get("action") {
+	case "deploy", "rotate", "rollback", "revoke":
+		if k := f.Get("key"); strings.Contains(k, "/") {
+			return "/keys/" + k, k
+		}
+	case "bundle-restore":
+		return "/snapshots", "Snapshots"
+	case "knownhosts-init", "knownhosts-pin":
+		return "/hosts", "Hosts"
+	}
+	return "/keys", "Keys"
 }
 
 func jobCommand(s mutation.Scope) string {
@@ -522,7 +598,13 @@ func (h jobPages) handleJobReview(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	rev := jobReview{Title: spec.title, Command: jobCommand(spec.scope), What: spec.what, Items: spec.items,
+	var what []string
+	for _, w := range spec.what {
+		if w != "" {
+			what = append(what, w)
+		}
+	}
+	rev := jobReview{Title: spec.title, Command: jobCommand(spec.scope), What: what, Items: spec.items,
 		Destroy: spec.destroy, Remote: reachesServers(r.PostForm), Fields: carriedJob(r.PostForm),
 		Check:    spec.check,
 		CanCheck: !spec.check && (r.PostForm.Get("action") == "rotate" || r.PostForm.Get("action") == "rotate-keys")}
@@ -530,6 +612,11 @@ func (h jobPages) handleJobReview(w http.ResponseWriter, r *http.Request) {
 		v, _ := j.View()
 		rev.Busy = &v
 	}
+	rev.Back, rev.BackLabel = jobBack(r.PostForm)
+	if !spec.check {
+		rev.Options, rev.Kept = jobOptions(r.PostForm, rev.Fields)
+	}
+	rev.Forced, rev.Backup = checked(r.PostForm, "force") && !spec.check, spec.backup
 	rev.Checks = preflights(r.PostForm, spec, rev.Busy != nil)
 	rev.Blocked = blocked(rev.Checks)
 	h.s.render(w, http.StatusOK, "job_review", h.s.newView(r, "", spec.title, rev))
@@ -744,4 +831,24 @@ func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string) error {
 	}
 	_, _ = fmt.Fprintf(j, "every key would rotate; nothing was changed\n")
 	return nil
+}
+
+// forceStep is what a forced rotation adds, or "" for one that is not.
+func forceStep(force bool) string {
+	if !force {
+		return ""
+	}
+	return "forced: a key that cannot be rotated in place (never deployed, or its host unreachable) is replaced on this computer instead, its old key moved to old/. Until the new key is deployed, a host that trusted the old one cannot be logged in to with it; deploy it next, or roll back from old/"
+}
+
+// replaceFailed is a forced rotation's fallback: each key the rotation could
+// not rotate is replaced on this computer instead. It returns the keys still
+// failed.
+func replaceFailed(j *jobs.Job, p paths.Paths, failed []string, force bool) []string {
+	if !force || len(failed) == 0 {
+		return failed
+	}
+	_, _ = fmt.Fprintf(j, "forced: replacing %d key(s) the rotation could not rotate, on this computer\n", len(failed))
+	_, still := reconciler.ReplaceLocally(p, failed, platform.EmitUseKeychain(), j)
+	return still
 }

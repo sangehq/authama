@@ -169,18 +169,24 @@ test('tokens.json is checked as it is typed, and cannot be sent while it is not 
 });
 
 test('the side panel stacks pages, goes back, and closes with Escape', async ({ page }) => {
-  await page.goto('/history');
+  await page.goto('/hosts');
   await page.locator('table a[data-inline]').first().click();
   const panel = page.locator('#side-panel');
   await expect(panel).toHaveClass(/show/);
   await expect(panel.getByRole('button', { name: 'Back' })).toBeHidden();
-  // The diff is a table of numbered lines, never dark stripes in a pre.
-  await expect(panel.locator('pre.diff')).toHaveCount(0);
-  await expect(panel.getByRole('link', { name: 'Open as a page' })).toHaveAttribute('href', /\/history\/[^/]+$/);
+  await expect(panel.getByRole('link', { name: 'Open as a page' })).toHaveAttribute('href', /\/hosts\/[^/]+$/);
   await page.keyboard.press('Escape');
   await expect(panel).not.toHaveClass(/show/);
   // Nothing changed, so the page under it was not reloaded.
-  await expect(page).toHaveURL(/\/history$/);
+  await expect(page).toHaveURL(/\/hosts$/);
+
+  // An operation in the history is a page of its own, never a panel page.
+  await page.goto('/history');
+  await page.locator('table a[href*="/history/"]').first().click();
+  await expect(page).toHaveURL(/\/history\/[^/]+$/);
+  await expect(panel).not.toHaveClass(/show/);
+  // The diff is a table of numbered lines, never dark stripes in a pre.
+  await expect(page.locator('pre.diff')).toHaveCount(0);
 });
 
 test('a labelled action explains itself to a screen reader, and shows no tooltip over itself', async ({ page }) => {

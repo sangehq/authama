@@ -122,7 +122,7 @@ func TestAJobReviewHasGuardrails(t *testing.T) {
 	c := signIn(t, s)
 	key := fixtureKey(t, c)
 	body := c.change("/jobs/review", url.Values{"action": {"rotate"}, "key": {key}}).Body.String()
-	for _, want := range []string{"<h1 class=\"page-title\">Rotate " + key, "Before it starts", "A backup recipient is set",
+	for _, want := range []string{"<h1 class=\"page-title mb-0\">Rotate " + key, "Before it starts", "A backup recipient is set",
 		"What it does, in order", `data-confirm="m-job"`, `id="m-job"`, "Start: Rotate " + key} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the review lacks %q", want)
@@ -142,6 +142,28 @@ func TestAJobReviewHasGuardrails(t *testing.T) {
 	body = c.change("/jobs/review", url.Values{"action": {"rotate"}, "key": {key}}).Body.String()
 	if regexp.MustCompile(`data-confirm="m-job" disabled`).MatchString(body) {
 		t.Error("with a backup recipient set, the rotate still cannot start")
+	}
+	// The review is a page of its own: Cancel goes back to the key's page,
+	// and its options review it again.
+	for _, want := range []string{`href="/keys/` + key + `" class="btn btn-link`, `id="job-options"`, `name="force" value="1" data-autosubmit`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the review lacks %q", want)
+		}
+	}
+
+	// Forced, it is marked dangerous everywhere: its title, a red Start, a
+	// warning, the command and a confirm that names the lockout.
+	body = c.change("/jobs/review", url.Values{"action": {"rotate"}, "key": {key}, "force": {"1"}}).Body.String()
+	for _, want := range []string{"Rotate " + key + " (forced)", `class="btn btn-danger" data-confirm="m-job"`, "can lock you out until you deploy",
+		"--force", "Yes, force it", `name="force" value="1" checked`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the forced review lacks %q", want)
+		}
+	}
+	// A dry run is never forced, whatever the form says.
+	body = c.change("/jobs/review", url.Values{"action": {"rotate"}, "key": {key}, "force": {"1"}, "check": {"1"}}).Body.String()
+	if strings.Contains(body, "(forced)") || strings.Contains(body, "Yes, force it") {
+		t.Error("a dry run is labelled forced")
 	}
 }
 
