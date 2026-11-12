@@ -8,6 +8,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A read API, an event feed, webhooks and an MCP server, each off by default.**
+  - `authama serve` answers programs at `/api/v1/` with JSON when `api.enabled` is on: profiles, keys,
+    hosts, which tokens are set (never a secret), the history, the event feed (also as server-sent
+    events) and doctor. It reads only, answers only API tokens made with `authama api token create`
+    (shown once, kept as a hash), refuses a request from a browser page, and never takes the web UI's
+    session.
+  - The event feed is one ordered stream of CloudEvents 1.0 events, in the envelope sange uses:
+    finished changes (`com.simtabi.authama.operation.finished`, from any source) and watched-file
+    changes (`com.simtabi.authama.file.*`), with a cursor to read on from. The source names the
+    install by a random id, never the host or the user, and paths in the home are written from `~`.
+  - `authama webhook add` registers an endpoint that `serve` sends each new event to when
+    `webhooks.enabled` is on, as a CloudEvent in structured mode (`application/cloudevents+json`)
+    with the endpoint's name inside the signed body, signed as Standard Webhooks 1.0.0 describes, in order, retried with
+    backoff and turned off on 410 or 10 failures. Endpoints must be https on public addresses unless
+    `webhooks.allow_private` is on; redirects are never followed.
+  - `authama mcp` serves the Model Context Protocol over stdio when `mcp.enabled` is on, with
+    read-only tools for an AI client: profiles, keys, hosts, tokens set, the history, the feed and
+    doctor.
+
 - **A rotation ends in a summary.** A batch `authama ssh rotate`, and every `--check`, ends with
   one summary of every key: the command, a Result line with the counts, every key under one trunk
   grouped by owner and by project (and environment) read from its name, worst first, in aligned
@@ -434,6 +453,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   by any page (log, editor and finding styles from another project, the hand-made tabs, clear
   buttons and dev banner) is removed, with the rule that forced panel columns to full width.
 ### Fixed
+
+- **`web.menu_export` and `web.auto_restart` set to `false` in `authama.json` now take effect.** A
+  boolean from the file reaches the environment as `0`, and both were compared with the word `false`,
+  so turning either off in the file did nothing. Every boolean setting is now read as 1/0, true/false,
+  yes/no or on/off, and a test fails on any comparison with the word.
 
 - **A job's time left no longer says *almost done* while a slow step runs.** The step under way
   counts for at most its share of the time, so the estimate keeps the steps still to come.

@@ -528,8 +528,12 @@ Some changes are terminal-only:
 - **Headers.** Every response sends a strict Content-Security-Policy with no inline script or style,
   plus `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: same-origin` (no referrer leaves for another
   site) and same-origin COOP and CORP.
-- **No network.** The page loads nothing from the network: Tabler, its icons and the page's own script
-  are embedded in the binary.
+- **No network from the page.** The page loads nothing from the network: Tabler, its icons and the
+  page's own script are embedded in the binary. The server itself reaches out only when you turn
+  [webhooks](webhooks.md) on, and then only to https endpoints on public addresses unless
+  `webhooks.allow_private` is on.
+- **The read API is separate.** With `api.enabled` on, `/api/v1/` answers API tokens only, never the
+  browser's session, and the pages never answer an API token; see [read API](api.md).
 
 `--token-file <path>` also writes the sign-in address to a file with mode 0600, for scripts.
 

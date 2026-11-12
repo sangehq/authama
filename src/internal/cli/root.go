@@ -98,6 +98,9 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newRepairCmd())
 	root.AddCommand(newResetCmd())
 	root.AddCommand(newExportCmd())
+	root.AddCommand(newAPICmd())
+	root.AddCommand(newWebhookCmd())
+	root.AddCommand(newMCPCmd())
 
 	// The two feature groups.
 	ssh := &cobra.Command{

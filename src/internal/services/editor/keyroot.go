@@ -52,8 +52,14 @@ func MoveKeyRoot(e *Editor, root string) (KeyRootResult, error) {
 		return res, nil
 	}
 
-	oldDir := filepath.Join(e.p.SSHDir, res.From)
-	newDir := filepath.Join(e.p.SSHDir, res.To)
+	// A key root is one directory name directly under ~/.ssh (CheckKeyRoot, run
+	// by Validate above). Checked again here, where the path is built, so a
+	// root that is not one plain name can never reach a rename.
+	if !oneName(res.From) || !oneName(res.To) {
+		return KeyRootResult{}, fmt.Errorf("a key root is one directory name under ~/.ssh, not %q or %q", res.From, res.To)
+	}
+	oldDir := filepath.Join(e.p.SSHDir, filepath.Base(res.From))
+	newDir := filepath.Join(e.p.SSHDir, filepath.Base(res.To))
 	if fi, err := os.Lstat(newDir); err == nil {
 		if !fi.IsDir() || fi.Mode()&os.ModeSymlink != 0 {
 			return KeyRootResult{}, fmt.Errorf("~/.ssh/%s exists and is not a directory; move it aside first", res.To)
@@ -105,4 +111,10 @@ func MoveKeyRoot(e *Editor, root string) (KeyRootResult, error) {
 		log.Field{Key: "from", Value: res.From}, log.Field{Key: "to", Value: res.To},
 		log.Field{Key: "moved", Value: res.Moved})
 	return res, nil
+}
+
+// oneName reports whether name is a single, plain path element: not empty,
+// not "." or "..", and without a separator.
+func oneName(name string) bool {
+	return name != "" && name != "." && name != ".." && filepath.Base(name) == name && filepath.IsLocal(name)
 }

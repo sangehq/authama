@@ -12,12 +12,17 @@ is at the end.
 Every command also takes the global flag:
 
 ```
-      --dev-root string   run against a sandbox directory instead of ~/.ssh (also $AUTHAMA_DEV_ROOT)
-      --no-dotenv         do not read <config home>/.env this run (also $AUTHAMA_NO_DOTENV=1)
+      --dev-root string          run against a sandbox directory instead of ~/.ssh (also $AUTHAMA_DEV_ROOT)
+      --no-dotenv[=true|false]   do not read <config home>/.env this run (also $AUTHAMA_NO_DOTENV=1)
 ```
 
 ## Contents
 
+- [`authama api`](#authama-api) - Manage the read API's tokens
+  - [`authama api token`](#authama-api-token) - Make, list and revoke API tokens
+    - [`authama api token create`](#authama-api-token-create) - Make an API token, shown once
+    - [`authama api token list`](#authama-api-token-list) - List API tokens (never the tokens themselves)
+    - [`authama api token revoke`](#authama-api-token-revoke) - Revoke an API token: it stops working at once
 - [`authama checklist`](#authama-checklist) - Where each key and token is used, and what is left to rotate or revoke it completely
   - [`authama checklist revoking`](#authama-checklist-revoking) - Start a token's revocation checklist (--stop to go back to where it is used)
   - [`authama checklist show`](#authama-checklist-show) - One item's checklist: every step, what is done, and the command for the rest
@@ -43,6 +48,7 @@ Every command also takes the global flag:
   - [`authama history show`](#authama-history-show) - Show one operation: its events and what it changed in the manifest
 - [`authama init`](#authama-init) - Create/converge the per-user home
 - [`authama man`](#authama-man) - Write a manual page (troff, section 1) for every command into DIR
+- [`authama mcp`](#authama-mcp) - Serve the Model Context Protocol over stdio, for an AI client
 - [`authama migrate`](#authama-migrate) - Copy a pre-0.1.1 home (ssh-manager, sshmgr) into the authama home; the old one is kept and marked
 - [`authama owner`](#authama-owner) - Bind this home to you and this machine: a PIN, and a seal that notices outside changes
   - [`authama owner fingerprint`](#authama-owner-fingerprint) - Let a fingerprint stand in for the PIN at the terminal (Touch ID, Windows Hello, fprintd)
@@ -156,6 +162,100 @@ Every command also takes the global flag:
   - [`authama token show`](#authama-token-show) - Everything about one installed token: tool, host, kind, user and file (secret masked)
   - [`authama token status`](#authama-token-status) - Which config is in use, where each tool's file is, and which variables are missing; write nothing
 - [`authama version`](#authama-version) - Print the authama version
+- [`authama webhook`](#authama-webhook) - Send events to your endpoints as they happen
+  - [`authama webhook add`](#authama-webhook-add) - Add an endpoint; its signing secret is shown once
+  - [`authama webhook deliver`](#authama-webhook-deliver) - Send every endpoint the events due to it now
+  - [`authama webhook disable`](#authama-webhook-disable) - Stop sending to an endpoint; it keeps its place
+  - [`authama webhook enable`](#authama-webhook-enable) - Send to an endpoint again, from where it stopped
+  - [`authama webhook list`](#authama-webhook-list) - List endpoints and how their delivery stands (never their secrets)
+  - [`authama webhook remove`](#authama-webhook-remove) - Remove an endpoint and its secret
+  - [`authama webhook test`](#authama-webhook-test) - Send one webhook.test event now
+
+## authama api
+
+The read API is served by `authama serve` at /api/v1/ when api.enabled is on (it is off by default).
+Programs call it with an API token: `Authorization: Bearer ama_…`. A token reads only, and is shown
+once when it is made; authama keeps only its hash.
+
+```
+authama api
+```
+
+Subcommands:
+
+- [`token`](#authama-api-token) - Make, list and revoke API tokens
+
+## authama api token
+
+Make, list and revoke API tokens.
+
+```
+authama api token
+```
+
+Subcommands:
+
+- [`create`](#authama-api-token-create) - Make an API token, shown once
+- [`list`](#authama-api-token-list) - List API tokens (never the tokens themselves)
+- [`revoke`](#authama-api-token-revoke) - Revoke an API token: it stops working at once
+
+## authama api token create
+
+Make an API token, shown once.
+
+```
+authama api token create <name> [flags]
+```
+
+Examples:
+
+```sh
+  authama api token create ci   # prints the token once
+  authama api token create dashboard --expires 0   # never expires
+```
+
+Flags:
+
+```
+      --expires int   days until it expires; 0 for never (default 90)
+```
+
+## authama api token list
+
+List API tokens (never the tokens themselves).
+
+```
+authama api token list [flags]
+```
+
+Aliases: `ls`
+
+Examples:
+
+```sh
+  authama api token list
+  authama api token list --json
+```
+
+Flags:
+
+```
+      --json[=true|false]   a JSON array
+```
+
+## authama api token revoke
+
+Revoke an API token: it stops working at once.
+
+```
+authama api token revoke <name>
+```
+
+Examples:
+
+```sh
+  authama api token revoke ci
+```
 
 ## authama checklist
 
@@ -192,8 +292,8 @@ Examples:
 Flags:
 
 ```
-      --json   print every checklist as JSON
-      --open   only items with steps left
+      --json[=true|false]   print every checklist as JSON
+      --open[=true|false]   only items with steps left
 ```
 
 ## authama checklist revoking
@@ -218,7 +318,7 @@ Examples:
 Flags:
 
 ```
-      --stop   stop the revocation checklist
+      --stop[=true|false]   stop the revocation checklist
 ```
 
 ## authama checklist show
@@ -239,7 +339,7 @@ Examples:
 Flags:
 
 ```
-      --json   print the checklist as JSON
+      --json[=true|false]   print the checklist as JSON
 ```
 
 ## authama checklist tick
@@ -292,11 +392,11 @@ Examples:
 Flags:
 
 ```
-  -n, --dry-run   with --fix: show what it would do, change nothing
-      --fix       fix first: perms, stale authama pins, and a VM sync (backs up before removing)
-      --json      machine-readable output (scripting)
-      --strict    for CI: treat every dangling-key state as a failure, not only the blocking ones, and fail on a token file others can read
-  -y, --yes       with --fix: do the upkeep without confirming (implied when there is no terminal)
+  -n, --dry-run[=true|false]   with --fix: show what it would do, change nothing
+      --fix[=true|false]       fix first: perms, stale authama pins, and a VM sync (backs up before removing)
+      --json[=true|false]      machine-readable output (scripting)
+      --strict[=true|false]    for CI: treat every dangling-key state as a failure, not only the blocking ones, and fail on a token file others can read
+  -y, --yes[=true|false]       with --fix: do the upkeep without confirming (implied when there is no terminal)
 ```
 
 ## authama events
@@ -325,14 +425,14 @@ Examples:
 Flags:
 
 ```
-      --area string      only this area: ssh, config or auth
-      --csv              one CSV row per event, header first
-      --json             machine-readable output (scripting)
-      --kind string      only this kind: added, changed, removed, mode or started
-      --limit int        at most this many (newest first); 0 is all
-      --no-scan          list what is recorded without scanning first
-      --since duration   only events newer than this, e.g. 24h
-      --verify           check the log's hash chain for edited, removed or inserted lines; exit non-zero if broken
+      --area string            only this area: ssh, config or auth
+      --csv[=true|false]       one CSV row per event, header first
+      --json[=true|false]      machine-readable output (scripting)
+      --kind string            only this kind: added, changed, removed, mode or started
+      --limit int              at most this many (newest first); 0 is all
+      --no-scan[=true|false]   list what is recorded without scanning first
+      --since duration         only events newer than this, e.g. 24h
+      --verify[=true|false]    check the log's hash chain for edited, removed or inserted lines; exit non-zero if broken
 ```
 
 ## authama export
@@ -394,40 +494,40 @@ Examples:
 Flags:
 
 ```
-      --aggregate strings       with --group-by or --pivot: count, or op:field[=as] for sum, min, max, list, first
-      --area strings            events: only these areas (ssh, config, auth)
-      --columns strings         the columns, by field, in order; field=heading renames one
-      --command strings         history: only these commands, or their subcommands
-      --compact                 json, js, php: no indentation
-      --dedupe strings          keep the first row of each distinct value of these fields
-      --env strings             only these environments
-      --exclude string          leave out rows containing this text, ignoring case
-      --fields                  list every field the list's rows have, after any transforms, and write nothing
-      --format string           csv, tsv, json, jsonl, yaml, php, js, markdown or html; for hosts also hosts-csv, iterm2, mobaxterm, putty, remmina, securecrt, ssh_config, termius, windows-terminal (default "csv")
-      --group-by strings        a row per distinct value of these fields
-      --include string          only rows containing this text, ignoring case
-      --include-git             host formats: also export git hosts (user git, or a github or gitlab provider)
-      --key strings             only rows holding or using these keys (name or profile/name)
-      --kind strings            events and tokens: only these kinds
-      --limit int               at most this many rows (0: all)
-      --narrow                  profiles: count and list only the keys --key chose
-      --no-header               csv, tsv, markdown, html: leave the heading row out
-  -o, --out string              write to this file (mode 0600) instead of stdout
-      --pivot string            rows:column - a row per value of the rows fields (comma-separated), a column per value of column
-      --profile strings         only these profiles
-      --role strings            only these roles
-      --selection string        a selection as a JSON file (the Export page's), or a saved selection's name, instead of a list name
-      --shape string            json, js, php, yaml: "table" writes {columns, rows} instead of one object per row
-      --since string            only rows at or after this time (a prefix such as 2026-11 works)
-      --sort strings            sort by these fields; -field descends
-      --source strings          history: only these sources (cli, web, ...)
-      --status strings          only these statuses (a host's status, a key's state)
-      --tag strings             only rows with one of these tags
-      --template stringArray    a column from a template: as={profile}/{alias}
-      --tool strings            tokens: only these tools
-      --totals                  with --group-by: a last row over every group; with --pivot, also a total column
-      --transform stringArray   a transform step as JSON, e.g. {"kind":"map","field":"status","values":{"needs-redeploy":"pending"}}
-      --until string            only rows at or before this time
+      --aggregate strings          with --group-by or --pivot: count, or op:field[=as] for sum, min, max, list, first
+      --area strings               events: only these areas (ssh, config, auth)
+      --columns strings            the columns, by field, in order; field=heading renames one
+      --command strings            history: only these commands, or their subcommands
+      --compact[=true|false]       json, js, php: no indentation
+      --dedupe strings             keep the first row of each distinct value of these fields
+      --env strings                only these environments
+      --exclude string             leave out rows containing this text, ignoring case
+      --fields[=true|false]        list every field the list's rows have, after any transforms, and write nothing
+      --format string              csv, tsv, json, jsonl, yaml, php, js, markdown or html; for hosts also hosts-csv, iterm2, mobaxterm, putty, remmina, securecrt, ssh_config, termius, windows-terminal (default "csv")
+      --group-by strings           a row per distinct value of these fields
+      --include string             only rows containing this text, ignoring case
+      --include-git[=true|false]   host formats: also export git hosts (user git, or a github or gitlab provider)
+      --key strings                only rows holding or using these keys (name or profile/name)
+      --kind strings               events and tokens: only these kinds
+      --limit int                  at most this many rows (0: all)
+      --narrow[=true|false]        profiles: count and list only the keys --key chose
+      --no-header[=true|false]     csv, tsv, markdown, html: leave the heading row out
+  -o, --out string                 write to this file (mode 0600) instead of stdout
+      --pivot string               rows:column - a row per value of the rows fields (comma-separated), a column per value of column
+      --profile strings            only these profiles
+      --role strings               only these roles
+      --selection string           a selection as a JSON file (the Export page's), or a saved selection's name, instead of a list name
+      --shape string               json, js, php, yaml: "table" writes {columns, rows} instead of one object per row
+      --since string               only rows at or after this time (a prefix such as 2026-11 works)
+      --sort strings               sort by these fields; -field descends
+      --source strings             history: only these sources (cli, web, ...)
+      --status strings             only these statuses (a host's status, a key's state)
+      --tag strings                only rows with one of these tags
+      --template stringArray       a column from a template: as={profile}/{alias}
+      --tool strings               tokens: only these tools
+      --totals[=true|false]        with --group-by: a last row over every group; with --pivot, also a total column
+      --transform stringArray      a transform step as JSON, e.g. {"kind":"map","field":"status","values":{"needs-redeploy":"pending"}}
+      --until string               only rows at or before this time
 ```
 
 ## authama export schedule
@@ -545,7 +645,7 @@ Examples:
 Flags:
 
 ```
-      --quiet   print nothing unless one fails
+      --quiet[=true|false]   print nothing unless one fails
 ```
 
 ## authama export schedule uninstall
@@ -602,8 +702,8 @@ Examples:
 Flags:
 
 ```
-      --from string   the store to delete it from, when both have it: user or manifest
-  -y, --yes           delete from the manifest without confirming (implied when there is no terminal)
+      --from string        the store to delete it from, when both have it: user or manifest
+  -y, --yes[=true|false]   delete from the manifest without confirming (implied when there is no terminal)
 ```
 
 ## authama export selections list
@@ -626,7 +726,7 @@ Examples:
 Flags:
 
 ```
-      --json   print the selections as JSON
+      --json[=true|false]   print the selections as JSON
 ```
 
 ## authama export selections save
@@ -650,9 +750,9 @@ Examples:
 Flags:
 
 ```
-      --from string   the selection, as a JSON file
-      --to string     the store: user or manifest (default: the export.save_to setting, else user)
-  -y, --yes           save to the manifest without confirming (implied when there is no terminal)
+      --from string        the selection, as a JSON file
+      --to string          the store: user or manifest (default: the export.save_to setting, else user)
+  -y, --yes[=true|false]   save to the manifest without confirming (implied when there is no terminal)
 ```
 
 ## authama export selections show
@@ -700,17 +800,17 @@ Examples:
 Flags:
 
 ```
-      --command string   only this command ("host add"), or a group of them ("host")
-      --csv              one CSV row per operation, header first
-      --host string      only operations about this host alias
-      --json             one JSON object per operation, its events nested
-      --key string       only operations about this key
-      --limit int        at most this many operations (0 for all) (default 50)
-      --profile string   only operations about this profile
-      --since string     only operations started at or after this
-      --source string    only operations from cli, tui, web or backfill
-      --token string     only operations about this token: TOOL or TOOL/HOST, e.g. npm/registry.npmjs.org
-      --until string     only operations started at or before this
+      --command string      only this command ("host add"), or a group of them ("host")
+      --csv[=true|false]    one CSV row per operation, header first
+      --host string         only operations about this host alias
+      --json[=true|false]   one JSON object per operation, its events nested
+      --key string          only operations about this key
+      --limit int           at most this many operations (0 for all) (default 50)
+      --profile string      only operations about this profile
+      --since string        only operations started at or after this
+      --source string       only operations from cli, tui, web or backfill
+      --token string        only operations about this token: TOOL or TOOL/HOST, e.g. npm/registry.npmjs.org
+      --until string        only operations started at or before this
 ```
 
 ## authama history reset
@@ -771,8 +871,8 @@ Examples:
 Flags:
 
 ```
-      --backup   with --force, copy the old files into the state home's .state/ before overwriting
-  -f, --force    overwrite manifest/inventory/.env with fresh defaults
+      --backup[=true|false]   with --force, copy the old files into the state home's .state/ before overwriting
+  -f, --force[=true|false]    overwrite manifest/inventory/.env with fresh defaults
 ```
 
 ## authama man
@@ -793,6 +893,23 @@ Examples:
   authama man ~/.local/share/man/man1
 ```
 
+## authama mcp
+
+An AI client (Claude Code, Claude Desktop, an IDE) starts `authama mcp` and talks to it over stdio.
+Its tools read only: profiles, keys, hosts, which auth tokens are set (never a secret), the history,
+the event feed and doctor. It opens no port, so only the client that started it can reach it.
+It is off by default: `authama settings set mcp.enabled true` first.
+
+```
+authama mcp
+```
+
+Examples:
+
+```sh
+  authama mcp   # started by an AI client, which talks to it over stdio
+```
+
 ## authama migrate
 
 Copy a pre-0.1.1 home (ssh-manager, sshmgr) into the authama home; the old one is kept and marked.
@@ -811,8 +928,8 @@ Examples:
 Flags:
 
 ```
-  -f, --force   if both the legacy and standard home exist, back up the current home and replace it
-  -y, --yes     migrate without confirming (implied when there is no terminal)
+  -f, --force[=true|false]   if both the legacy and standard home exist, back up the current home and replace it
+  -y, --yes[=true|false]     migrate without confirming (implied when there is no terminal)
 ```
 
 ## authama owner
@@ -879,7 +996,7 @@ Examples:
 Flags:
 
 ```
-  -y, --yes   skip the confirmation prompt
+  -y, --yes[=true|false]   skip the confirmation prompt
 ```
 
 ## authama owner init
@@ -900,7 +1017,7 @@ Examples:
 Flags:
 
 ```
-  -y, --yes   skip the confirmation prompt
+  -y, --yes[=true|false]   skip the confirmation prompt
 ```
 
 ## authama owner pin
@@ -982,7 +1099,7 @@ Examples:
 Flags:
 
 ```
-  -y, --yes   skip the confirmation prompt
+  -y, --yes[=true|false]   skip the confirmation prompt
 ```
 
 ## authama owner status
@@ -1045,9 +1162,9 @@ Examples:
 Flags:
 
 ```
-      --area strings   only these areas: tool, ssh, tokens (repeatable)
-      --check          list what is wrong and change nothing; exit non-zero if anything is
-  -y, --yes            skip the confirmation prompt
+      --area strings         only these areas: tool, ssh, tokens (repeatable)
+      --check[=true|false]   list what is wrong and change nothing; exit non-zero if anything is
+  -y, --yes[=true|false]     skip the confirmation prompt
 ```
 
 ## authama reset
@@ -1125,18 +1242,18 @@ Examples:
 Flags:
 
 ```
-      --addr string              address to listen on, host or host:port (a port here pins it, like --port) (default "127.0.0.1")
-      --allow-host stringArray   extra Host header to accept with --allow-remote, e.g. a proxy's name (repeatable)
-      --allow-remote             allow a non-loopback --addr (plain HTTP; prefer an SSH tunnel)
-      --new                      start another server even when one is already running for this home
-      --no-open                  do not open a browser
-      --port int                 port to listen on; when not given and the default is taken, the next free port is used (default 7822)
-      --read-only                serve no route that changes anything, and show no form
-      --restart                  stop every authama web UI found, then start a fresh one: how to load a new build
-      --status                   say whether a server is running for this home, and its address
-      --stop                     stop the server running for this home
-      --stop-all                 stop every authama web UI answering on this machine's usual ports, whichever home or build
-      --token-file string        also write the sign-in address to this file, mode 0600, for scripts
+      --addr string                 address to listen on, host or host:port (a port here pins it, like --port) (default "127.0.0.1")
+      --allow-host stringArray      extra Host header to accept with --allow-remote, e.g. a proxy's name (repeatable)
+      --allow-remote[=true|false]   allow a non-loopback --addr (plain HTTP; prefer an SSH tunnel)
+      --new[=true|false]            start another server even when one is already running for this home
+      --no-open[=true|false]        do not open a browser
+      --port int                    port to listen on; when not given and the default is taken, the next free port is used (default 7822)
+      --read-only[=true|false]      serve no route that changes anything, and show no form
+      --restart[=true|false]        stop every authama web UI found, then start a fresh one: how to load a new build
+      --status[=true|false]         say whether a server is running for this home, and its address
+      --stop[=true|false]           stop the server running for this home
+      --stop-all[=true|false]       stop every authama web UI answering on this machine's usual ports, whichever home or build
+      --token-file string           also write the sign-in address to this file, mode 0600, for scripts
 ```
 
 ## authama settings
@@ -1200,7 +1317,7 @@ Examples:
 Flags:
 
 ```
-  -f, --force   replace an existing authama.json
+  -f, --force[=true|false]   replace an existing authama.json
 ```
 
 ## authama settings path
@@ -1221,7 +1338,7 @@ Examples:
 Flags:
 
 ```
-      --json   machine-readable output (scripting)
+      --json[=true|false]   machine-readable output (scripting)
 ```
 
 ## authama settings set
@@ -1259,8 +1376,8 @@ Examples:
 Flags:
 
 ```
-      --effective   every setting with its value in effect and its source
-      --json        machine-readable output (with --effective)
+      --effective[=true|false]   every setting with its value in effect and its source
+      --json[=true|false]        machine-readable output (with --effective)
 ```
 
 ## authama settings unset
@@ -1352,8 +1469,8 @@ Examples:
 Flags:
 
 ```
-      --csv      print the deployments as CSV, one row per key and target, header first
-      --notify   also fire the cadence-gated desktop alert
+      --csv[=true|false]      print the deployments as CSV, one row per key and target, header first
+      --notify[=true|false]   also fire the cadence-gated desktop alert
 ```
 
 ## authama ssh bundle
@@ -1405,9 +1522,9 @@ Examples:
 Flags:
 
 ```
-      --adopt     put untagged pins matching a manifest host under authama's management
-      --dry-run   report what would change, touch nothing
-  -y, --yes       clean without confirming (implied when there is no terminal)
+      --adopt[=true|false]     put untagged pins matching a manifest host under authama's management
+      --dry-run[=true|false]   report what would change, touch nothing
+  -y, --yes[=true|false]       clean without confirming (implied when there is no terminal)
 ```
 
 ## authama ssh config
@@ -1461,8 +1578,8 @@ Examples:
 Flags:
 
 ```
-      --flat         every host inline in one file, absolute paths, no Include
-  -o, --out string   where to write (default <config home>/exports/ssh_config; - for stdout)
+      --flat[=true|false]   every host inline in one file, absolute paths, no Include
+  -o, --out string          where to write (default <config home>/exports/ssh_config; - for stdout)
 ```
 
 ## authama ssh config render
@@ -1483,8 +1600,8 @@ Examples:
 Flags:
 
 ```
-  -n, --dry-run   preview changes without writing
-  -y, --yes       render without confirming (implied when there is no terminal)
+  -n, --dry-run[=true|false]   preview changes without writing
+  -y, --yes[=true|false]       render without confirming (implied when there is no terminal)
 ```
 
 ## authama ssh config show
@@ -1520,7 +1637,7 @@ Examples:
 Flags:
 
 ```
-  -y, --yes   deploy without confirming (implied when there is no terminal)
+  -y, --yes[=true|false]   deploy without confirming (implied when there is no terminal)
 ```
 
 ## authama ssh diff
@@ -1591,7 +1708,7 @@ Examples:
 Flags:
 
 ```
-      --json   machine-readable output (scripting); fields are only ever added
+      --json[=true|false]   machine-readable output (scripting); fields are only ever added
 ```
 
 ## authama ssh git use
@@ -1616,10 +1733,10 @@ Examples:
 Flags:
 
 ```
-      --dry-run          show what would change, touch nothing
-      --mode string      profile, ssh or https (overrides $AUTHAMA_GIT_MODE and the manifest)
-      --profile string   use this profile's key instead of the owner's mapping
-  -y, --yes              rewrite without confirming (implied when there is no terminal)
+      --dry-run[=true|false]   show what would change, touch nothing
+      --mode string            profile, ssh or https (overrides $AUTHAMA_GIT_MODE and the manifest)
+      --profile string         use this profile's key instead of the owner's mapping
+  -y, --yes[=true|false]       rewrite without confirming (implied when there is no terminal)
 ```
 
 ## authama ssh host
@@ -1713,15 +1830,15 @@ Examples:
 Flags:
 
 ```
-      --category string    category for a profile this creates (implies --create-profile)
-      --create-profile     create the profile if it does not exist
-      --dry-run            report what would change without writing
-  -f, --file string        read specs from a file, one per line or a JSON array (- for stdin)
-      --host stringArray   a spec "<alias> <host>[:port] <user> [role]" (repeatable)
-      --no-pin             with --reconcile: don't auto-pin reachable hosts' known_hosts
-      --reconcile          run reconcile afterwards to mint keys and re-render
-      --tag stringArray    extra tag for every host in the batch (repeatable)
-  -y, --yes                apply without confirming (implied when there is no terminal)
+      --category string               category for a profile this creates (implies --create-profile)
+      --create-profile[=true|false]   create the profile if it does not exist
+      --dry-run[=true|false]          report what would change without writing
+  -f, --file string                   read specs from a file, one per line or a JSON array (- for stdin)
+      --host stringArray              a spec "<alias> <host>[:port] <user> [role]" (repeatable)
+      --no-pin[=true|false]           with --reconcile: don't auto-pin reachable hosts' known_hosts
+      --reconcile[=true|false]        run reconcile afterwards to mint keys and re-render
+      --tag stringArray               extra tag for every host in the batch (repeatable)
+  -y, --yes[=true|false]              apply without confirming (implied when there is no terminal)
 ```
 
 ## authama ssh host delete
@@ -1749,10 +1866,10 @@ Examples:
 Flags:
 
 ```
-      --no-key-backup   purge without writing an encrypted backup first (the key is then unrecoverable)
-      --purge           also delete the key files, if the host was the only thing naming the key
-      --revoke          also revoke the deployed key from targets (with --yes)
-  -y, --yes             skip confirmation prompts
+      --no-key-backup[=true|false]   purge without writing an encrypted backup first (the key is then unrecoverable)
+      --purge[=true|false]           also delete the key files, if the host was the only thing naming the key
+      --revoke[=true|false]          also revoke the deployed key from targets (with --yes)
+  -y, --yes[=true|false]             skip confirmation prompts
 ```
 
 ## authama ssh host edit
@@ -1817,9 +1934,9 @@ Examples:
 Flags:
 
 ```
-      --dry-run   parse and report without writing
-  -f, --force     replace an existing non-empty manifest (backed up first)
-  -y, --yes       import without confirming (implied when there is no terminal)
+      --dry-run[=true|false]   parse and report without writing
+  -f, --force[=true|false]     replace an existing non-empty manifest (backed up first)
+  -y, --yes[=true|false]       import without confirming (implied when there is no terminal)
 ```
 
 ## authama ssh key
@@ -1865,10 +1982,10 @@ Examples:
 Flags:
 
 ```
-      --host string             wire an existing host in this profile to the key
-      --passphrase              protect the new key (prompts without echo)
-      --rotate-after-days int   rotation interval for this key (default: the manifest's defaults.rotate_after_days)
-      --type string             key algorithm (default: the manifest's defaults.key_type)
+      --host string               wire an existing host in this profile to the key
+      --passphrase[=true|false]   protect the new key (prompts without echo)
+      --rotate-after-days int     rotation interval for this key (default: the manifest's defaults.rotate_after_days)
+      --type string               key algorithm (default: the manifest's defaults.key_type)
 ```
 
 ## authama ssh key adopt
@@ -1896,8 +2013,8 @@ Examples:
 Flags:
 
 ```
-      --host string   wire the key to this host in the profile
-  -y, --yes           skip the confirmation prompt
+      --host string        wire the key to this host in the profile
+  -y, --yes[=true|false]   skip the confirmation prompt
 ```
 
 ## authama ssh key delete
@@ -1927,12 +2044,12 @@ Examples:
 Flags:
 
 ```
-      --all               delete every key no host uses
-      --category string   delete every key no host uses in profiles of this category
-      --no-key-backup     purge without writing an encrypted backup first (the key is then unrecoverable)
-      --purge             also delete the key files from disk
-      --revoke            revoke the deployed public key from its targets first
-  -y, --yes               skip the confirmation prompt
+      --all[=true|false]             delete every key no host uses
+      --category string              delete every key no host uses in profiles of this category
+      --no-key-backup[=true|false]   purge without writing an encrypted backup first (the key is then unrecoverable)
+      --purge[=true|false]           also delete the key files from disk
+      --revoke[=true|false]          revoke the deployed public key from its targets first
+  -y, --yes[=true|false]             skip the confirmation prompt
 ```
 
 ## authama ssh key lifetime
@@ -1961,9 +2078,9 @@ Examples:
 Flags:
 
 ```
-      --clear     drop the key's own lifetime, so it inherits the default
-      --default   set the lifetime every key without its own inherits
-  -y, --yes       skip the confirmation prompt
+      --clear[=true|false]     drop the key's own lifetime, so it inherits the default
+      --default[=true|false]   set the lifetime every key without its own inherits
+  -y, --yes[=true|false]       skip the confirmation prompt
 ```
 
 ## authama ssh key list
@@ -1986,7 +2103,7 @@ Examples:
 Flags:
 
 ```
-      --csv   print the keys as CSV, one row each, header first
+      --csv[=true|false]   print the keys as CSV, one row each, header first
 ```
 
 ## authama ssh key regen-pub
@@ -2013,10 +2130,10 @@ Examples:
 Flags:
 
 ```
-      --all               every key in the manifest
-      --category string   every key in profiles of this category
-      --dry-run           report what would change, and change nothing
-  -y, --yes               skip the confirmation prompt
+      --all[=true|false]       every key in the manifest
+      --category string        every key in profiles of this category
+      --dry-run[=true|false]   report what would change, and change nothing
+  -y, --yes[=true|false]       skip the confirmation prompt
 ```
 
 ## authama ssh key reserve
@@ -2045,10 +2162,10 @@ Examples:
 Flags:
 
 ```
-  -n, --dry-run       show what would be recorded; change nothing
-      --for string    what the key is kept for, e.g. devbox (shown by doctor)
-      --note string   a note to keep with it
-  -y, --yes           do not ask for confirmation
+  -n, --dry-run[=true|false]   show what would be recorded; change nothing
+      --for string             what the key is kept for, e.g. devbox (shown by doctor)
+      --note string            a note to keep with it
+  -y, --yes[=true|false]       do not ask for confirmation
 ```
 
 ## authama ssh key revoke
@@ -2081,10 +2198,10 @@ Examples:
 Flags:
 
 ```
-      --all               revoke every minted key
-      --category string   revoke every minted key in profiles of this category
-      --reason string     why, recorded with the revocation (e.g. "laptop lost")
-  -y, --yes               skip the confirmation prompt
+      --all[=true|false]   revoke every minted key
+      --category string    revoke every minted key in profiles of this category
+      --reason string      why, recorded with the revocation (e.g. "laptop lost")
+  -y, --yes[=true|false]   skip the confirmation prompt
 ```
 
 ## authama ssh key root
@@ -2118,7 +2235,7 @@ Examples:
 Flags:
 
 ```
-  -y, --yes   skip the confirmation prompt
+  -y, --yes[=true|false]   skip the confirmation prompt
 ```
 
 ## authama ssh key unreserve
@@ -2138,7 +2255,7 @@ Examples:
 Flags:
 
 ```
-  -y, --yes   do not ask for confirmation
+  -y, --yes[=true|false]   do not ask for confirmation
 ```
 
 ## authama ssh keygen
@@ -2159,11 +2276,11 @@ Examples:
 Flags:
 
 ```
-  -f, --force           overwrite existing keys (prompts; replaced keys move to old/)
-      --no-key-backup   overwrite without writing an encrypted backup first (any earlier predecessor is lost)
-      --no-pin          don't auto-pin reachable hosts' known_hosts
-      --passphrase      protect newly minted keys (prompts without echo)
-  -y, --yes             answer yes to overwrite prompts
+  -f, --force[=true|false]           overwrite existing keys (prompts; replaced keys move to old/)
+      --no-key-backup[=true|false]   overwrite without writing an encrypted backup first (any earlier predecessor is lost)
+      --no-pin[=true|false]          don't auto-pin reachable hosts' known_hosts
+      --passphrase[=true|false]      protect newly minted keys (prompts without echo)
+  -y, --yes[=true|false]             answer yes to overwrite prompts
 ```
 
 ## authama ssh knownhosts
@@ -2200,9 +2317,9 @@ Examples:
 Flags:
 
 ```
-      --all     scan every profile's hosts
-      --force   re-scan already-trusted hosts and add any new keys
-  -y, --yes     pin without confirming (implied when there is no terminal)
+      --all[=true|false]     scan every profile's hosts
+      --force[=true|false]   re-scan already-trusted hosts and add any new keys
+  -y, --yes[=true|false]     pin without confirming (implied when there is no terminal)
 ```
 
 ## authama ssh knownhosts pin
@@ -2224,9 +2341,9 @@ Examples:
 Flags:
 
 ```
-      --all        pin every host in the manifest
-  -p, --port int   port for an unmanaged host (default 22)
-  -y, --yes        trust scanned keys without prompting
+      --all[=true|false]   pin every host in the manifest
+  -p, --port int           port for an unmanaged host (default 22)
+  -y, --yes[=true|false]   trust scanned keys without prompting
 ```
 
 ## authama ssh list
@@ -2250,11 +2367,11 @@ Examples:
 Flags:
 
 ```
-      --csv               print the hosts as CSV, one row each, header first
-      --profile string    filter to one profile
-      --provider string   filter by provider
-      --tag string        filter by host tag
-      --type string       provider category, e.g. vcs
+      --csv[=true|false]   print the hosts as CSV, one row each, header first
+      --profile string     filter to one profile
+      --provider string    filter by provider
+      --tag string         filter by host tag
+      --type string        provider category, e.g. vcs
 ```
 
 ## authama ssh load
@@ -2318,7 +2435,7 @@ Examples:
 Flags:
 
 ```
-      --strict   exit non-zero when any host breaks the rules
+      --strict[=true|false]   exit non-zero when any host breaks the rules
 ```
 
 ## authama ssh naming key-template
@@ -2344,8 +2461,8 @@ Examples:
 Flags:
 
 ```
-      --profile string   set this profile's own key template instead of the manifest's
-  -y, --yes              skip the confirmation prompt
+      --profile string     set this profile's own key template instead of the manifest's
+  -y, --yes[=true|false]   skip the confirmation prompt
 ```
 
 ## authama ssh naming set
@@ -2455,7 +2572,7 @@ Examples:
 Flags:
 
 ```
-  -y, --yes   install without confirming (implied when there is no terminal)
+  -y, --yes[=true|false]   install without confirming (implied when there is no terminal)
 ```
 
 ## authama ssh notify ping
@@ -2533,12 +2650,12 @@ Examples:
 Flags:
 
 ```
-      --category string      file the profile under profiles/<category>/ and render its hosts into profiles/<category>/config
-      --code string          the organisation's code name, the first part of its servers' aliases (simbi for simtabi)
-      --key-comment string   comment template for keys minted from now on: {profile} {alias} {key} {date} {device} (default {profile}/{alias} {date})
-      --key-name string      profile key name (shared scope)
-      --key-scope string     per_service | shared (shared: one key, --key-name, for every host) (default "per_service")
-      --shared               shorthand for --key-scope shared (--shared=false: per_service)
+      --category string       file the profile under profiles/<category>/ and render its hosts into profiles/<category>/config
+      --code string           the organisation's code name, the first part of its servers' aliases (simbi for simtabi)
+      --key-comment string    comment template for keys minted from now on: {profile} {alias} {key} {date} {device} (default {profile}/{alias} {date})
+      --key-name string       profile key name (shared scope)
+      --key-scope string      per_service | shared (shared: one key, --key-name, for every host) (default "per_service")
+      --shared[=true|false]   shorthand for --key-scope shared (--shared=false: per_service)
 ```
 
 ## authama ssh profile delete
@@ -2566,10 +2683,10 @@ Examples:
 Flags:
 
 ```
-      --no-key-backup   purge without writing an encrypted backup first (the keys are then unrecoverable)
-      --purge           also delete the profile's key files and directory
-      --revoke          also revoke deployed keys from targets (with --yes)
-  -y, --yes             skip confirmation prompts
+      --no-key-backup[=true|false]   purge without writing an encrypted backup first (the keys are then unrecoverable)
+      --purge[=true|false]           also delete the profile's key files and directory
+      --revoke[=true|false]          also revoke deployed keys from targets (with --yes)
+  -y, --yes[=true|false]             skip confirmation prompts
 ```
 
 ## authama ssh profile edit
@@ -2590,12 +2707,12 @@ Examples:
 Flags:
 
 ```
-      --category string      move the profile under profiles/<category>/ (its key directory and inventory records follow); "" returns it to the flat layout
-      --code string          the organisation's code name, the first part of its servers' aliases; "" clears it
-      --key-comment string   comment template for keys minted from now on: {profile} {alias} {key} {date} {device} (default {profile}/{alias} {date}); "" inherits defaults.key_comment
-      --key-name string      the shared key every host in this profile uses (key_scope: shared)
-      --key-scope string     per_service | shared
-      --shared               shorthand for --key-scope shared (--shared=false: per_service)
+      --category string       move the profile under profiles/<category>/ (its key directory and inventory records follow); "" returns it to the flat layout
+      --code string           the organisation's code name, the first part of its servers' aliases; "" clears it
+      --key-comment string    comment template for keys minted from now on: {profile} {alias} {key} {date} {device} (default {profile}/{alias} {date}); "" inherits defaults.key_comment
+      --key-name string       the shared key every host in this profile uses (key_scope: shared)
+      --key-scope string      per_service | shared
+      --shared[=true|false]   shorthand for --key-scope shared (--shared=false: per_service)
 ```
 
 ## authama ssh providers
@@ -2616,8 +2733,8 @@ Examples:
 Flags:
 
 ```
-      --export   write the default catalog to <home>/providers.json to customize
-      --force    overwrite an existing file (with --export)
+      --export[=true|false]   write the default catalog to <home>/providers.json to customize
+      --force[=true|false]    overwrite an existing file (with --export)
 ```
 
 ## authama ssh reconcile
@@ -2638,10 +2755,10 @@ Examples:
 Flags:
 
 ```
-      --dry-run      preview without writing
-      --no-pin       don't auto-pin reachable hosts' known_hosts
-      --passphrase   protect newly minted keys (prompts without echo)
-  -y, --yes          apply without confirming (implied when there is no terminal)
+      --dry-run[=true|false]      preview without writing
+      --no-pin[=true|false]       don't auto-pin reachable hosts' known_hosts
+      --passphrase[=true|false]   protect newly minted keys (prompts without echo)
+  -y, --yes[=true|false]          apply without confirming (implied when there is no terminal)
 ```
 
 ## authama ssh recover
@@ -2676,8 +2793,8 @@ Examples:
 Flags:
 
 ```
-  -i, --identity string   age identity file (else $AUTHAMA_AGE_IDENTITY_FILE)
-  -y, --yes               skip the confirmation prompt
+  -i, --identity string    age identity file (else $AUTHAMA_AGE_IDENTITY_FILE)
+  -y, --yes[=true|false]   skip the confirmation prompt
 ```
 
 ## authama ssh rollback
@@ -2697,7 +2814,7 @@ Examples:
 Flags:
 
 ```
-  -y, --yes   skip the confirmation prompt
+  -y, --yes[=true|false]   skip the confirmation prompt
 ```
 
 ## authama ssh rotate
@@ -2734,16 +2851,16 @@ Examples:
 Flags:
 
 ```
-      --all                rotate every key a host uses
-      --allow-unverified   commit even if a target can't auto-verify
-      --category string    rotate every key in profiles of this category
-      --check              test each key's rotation and change nothing: every server answers and the current key logs in, or the target takes it by hand
-      --dry-run            list the keys that would rotate, and change nothing
-      --failed             run again the keys the last rotation or dry run left (not rotated, or would fail)
-      --force              replace on this computer (as ssh keygen --force) each key that cannot be rotated in place - never deployed, or its host unreachable - to deploy afterwards
-      --no-key-backup      rotate without writing an encrypted backup first (the earlier predecessor is lost)
-      --passphrase         protect the rotated-in key (prompts without echo)
-  -y, --yes                skip the confirmation prompt
+      --all[=true|false]                rotate every key a host uses
+      --allow-unverified[=true|false]   commit even if a target can't auto-verify
+      --category string                 rotate every key in profiles of this category
+      --check[=true|false]              test each key's rotation and change nothing: every server answers and the current key logs in, or the target takes it by hand
+      --dry-run[=true|false]            list the keys that would rotate, and change nothing
+      --failed[=true|false]             run again the keys the last rotation or dry run left (not rotated, or would fail)
+      --force[=true|false]              replace on this computer (as ssh keygen --force) each key that cannot be rotated in place - never deployed, or its host unreachable - to deploy afterwards
+      --no-key-backup[=true|false]      rotate without writing an encrypted backup first (the earlier predecessor is lost)
+      --passphrase[=true|false]         protect the rotated-in key (prompts without echo)
+  -y, --yes[=true|false]                skip the confirmation prompt
 ```
 
 ## authama ssh show
@@ -2795,7 +2912,7 @@ Examples:
 Flags:
 
 ```
-      --csv   print the snapshots as CSV, one row each, header first
+      --csv[=true|false]   print the snapshots as CSV, one row each, header first
 ```
 
 ## authama ssh snapshots prune
@@ -2841,7 +2958,7 @@ Examples:
 Flags:
 
 ```
-  -y, --yes   skip the confirmation prompt
+  -y, --yes[=true|false]   skip the confirmation prompt
 ```
 
 ## authama ssh termius
@@ -2882,11 +2999,11 @@ Examples:
 Flags:
 
 ```
-      --clear                  empty the clipboard and exit
-      --clear-after duration   after copying, wait this long (e.g. 60s) and empty the clipboard
-      --include-git            also list git hosts, as 'export hosts --format termius --include-git' exports them (an ALIAS finds a git host without it)
-      --print                  print the private key to stdout instead of copying it (warns on stderr)
-      --skip stringArray       leave out this alias (repeatable)
+      --clear[=true|false]         empty the clipboard and exit
+      --clear-after duration       after copying, wait this long (e.g. 60s) and empty the clipboard
+      --include-git[=true|false]   also list git hosts, as 'export hosts --format termius --include-git' exports them (an ALIAS finds a git host without it)
+      --print[=true|false]         print the private key to stdout instead of copying it (warns on stderr)
+      --skip stringArray           leave out this alias (repeatable)
 ```
 
 ## authama ssh validate
@@ -2966,7 +3083,7 @@ Flags:
       --key-name string     use this key instead of the derived <profile>_<alias>-<algo> name
   -u, --user string         guest user
       --vm string           the VM's name as the hypervisor lists it (see 'authama ssh vm list')
-  -y, --yes                 add without confirming (implied when there is no terminal)
+  -y, --yes[=true|false]    add without confirming (implied when there is no terminal)
 ```
 
 ## authama ssh vm adopt-key
@@ -2994,14 +3111,14 @@ Examples:
 Flags:
 
 ```
-      --docker-context      also create Docker context ssh://<alias>
-  -n, --dry-run             show what would happen and change nothing
-      --hypervisor string   the VM's hypervisor: parallels, vmpal, vmware, utm, lima, orbstack, podman
-      --key-name string     the adopted key's name in the profile (default: the file's name)
-      --move                remove the originals from ~/.ssh once the copy is verified identical
-  -u, --user string         guest user
-      --vm string           the VM's name as the hypervisor lists it (see 'authama ssh vm list')
-  -y, --yes                 adopt without confirming or asking (implied when there is no terminal)
+      --docker-context[=true|false]   also create Docker context ssh://<alias>
+  -n, --dry-run[=true|false]          show what would happen and change nothing
+      --hypervisor string             the VM's hypervisor: parallels, vmpal, vmware, utm, lima, orbstack, podman
+      --key-name string               the adopted key's name in the profile (default: the file's name)
+      --move[=true|false]             remove the originals from ~/.ssh once the copy is verified identical
+  -u, --user string                   guest user
+      --vm string                     the VM's name as the hypervisor lists it (see 'authama ssh vm list')
+  -y, --yes[=true|false]              adopt without confirming or asking (implied when there is no terminal)
 ```
 
 ## authama ssh vm docker-context
@@ -3062,13 +3179,13 @@ Examples:
 Flags:
 
 ```
-  -n, --dry-run            show the plan and change nothing
-      --install-schedule   run a quiet sync daily (sync --quiet --yes) with this system's scheduler
-      --no-probe           ask the hypervisors only; do not connect to running guests
-  -q, --quiet              print only what changed and errors (for a scheduled run)
-      --remove-schedule    remove the scheduled sync
-      --repin              replace a VM host's pin when the guest's host key changed (vm.repin_changed)
-  -y, --yes                apply without confirming (implied when there is no terminal)
+  -n, --dry-run[=true|false]            show the plan and change nothing
+      --install-schedule[=true|false]   run a quiet sync daily (sync --quiet --yes) with this system's scheduler
+      --no-probe[=true|false]           ask the hypervisors only; do not connect to running guests
+  -q, --quiet[=true|false]              print only what changed and errors (for a scheduled run)
+      --remove-schedule[=true|false]    remove the scheduled sync
+      --repin[=true|false]              replace a VM host's pin when the guest's host key changed (vm.repin_changed)
+  -y, --yes[=true|false]                apply without confirming (implied when there is no terminal)
 ```
 
 ## authama token
@@ -3124,14 +3241,14 @@ Examples:
 Flags:
 
 ```
-      --config string             the token config file (default: discovered)
-      --creds-store-mode string   when Docker keeps a registry in a credential store: login (docker login --password-stdin) or refuse
-      --dry-run                   print the resolved credentials as JSON, secrets masked; write nothing
-      --exports                   print COMPOSER_AUTH as a shell export instead of writing files
-      --no-env-hint               do not print the CI hint after writing Composer's file
-      --project string            write the project's auth.json and .npmrc instead of the user ones
-      --source string             load VAR=value lines from this env file first (set variables win)
-      --target strings            only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle, maven, yarn, helm, helm-oci, gh)
+      --config string              the token config file (default: discovered)
+      --creds-store-mode string    when Docker keeps a registry in a credential store: login (docker login --password-stdin) or refuse
+      --dry-run[=true|false]       print the resolved credentials as JSON, secrets masked; write nothing
+      --exports[=true|false]       print COMPOSER_AUTH as a shell export instead of writing files
+      --no-env-hint[=true|false]   do not print the CI hint after writing Composer's file
+      --project string             write the project's auth.json and .npmrc instead of the user ones
+      --source string              load VAR=value lines from this env file first (set variables win)
+      --target strings             only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle, maven, yarn, helm, helm-oci, gh)
 ```
 
 ## authama token audit
@@ -3206,8 +3323,8 @@ Examples:
 Flags:
 
 ```
-      --project string   edit the project's auth.json or .npmrc instead of the user one
-  -y, --yes              skip the confirmation prompt
+      --project string     edit the project's auth.json or .npmrc instead of the user one
+  -y, --yes[=true|false]   skip the confirmation prompt
 ```
 
 ## authama token examples
@@ -3232,9 +3349,9 @@ Examples:
 Flags:
 
 ```
-      --json             print the placeholders as JSON, masked, instead of as files
-      --project string   write the placeholder auth.json and .npmrc into this directory
-      --target strings   only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle, maven, yarn, helm, helm-oci, gh)
+      --json[=true|false]   print the placeholders as JSON, masked, instead of as files
+      --project string      write the placeholder auth.json and .npmrc into this directory
+      --target strings      only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle, maven, yarn, helm, helm-oci, gh)
 ```
 
 ## authama token import
@@ -3259,7 +3376,7 @@ Examples:
 Flags:
 
 ```
-      --dry-run   check the file parses and say where it would go; write nothing
+      --dry-run[=true|false]   check the file parses and say where it would go; write nothing
 ```
 
 ## authama token init
@@ -3304,12 +3421,12 @@ Examples:
 Flags:
 
 ```
-      --csv              print the list as CSV, header first; never the secrets
-      --json             print the list as JSON
-      --project string   read the project's auth.json and .npmrc instead of the user ones
-      --reveal           show the secret values (asks first; --yes when not at a terminal)
-      --target strings   only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle, maven, yarn, helm, helm-oci, gh)
-  -y, --yes              reveal without asking
+      --csv[=true|false]      print the list as CSV, header first; never the secrets
+      --json[=true|false]     print the list as JSON
+      --project string        read the project's auth.json and .npmrc instead of the user ones
+      --reveal[=true|false]   show the secret values (asks first; --yes when not at a terminal)
+      --target strings        only these tools (repeatable: composer, npm, docker, git, netrc, pypi, cargo, gem, gradle, maven, yarn, helm, helm-oci, gh)
+  -y, --yes[=true|false]      reveal without asking
 ```
 
 ## authama token providers
@@ -3385,13 +3502,13 @@ Examples:
 Flags:
 
 ```
-      --file string   the startup file (default: your shell's rc file)
-      --install       add or update the alias block
-      --login         use the login profile (.zprofile, .bash_profile) instead of the rc file
-      --no-backup     do not copy the file to <file>.authama.bak first
-      --print         print the alias lines, for eval
-      --quiet         print nothing on success
-      --uninstall     remove the alias block
+      --file string              the startup file (default: your shell's rc file)
+      --install[=true|false]     add or update the alias block
+      --login[=true|false]       use the login profile (.zprofile, .bash_profile) instead of the rc file
+      --no-backup[=true|false]   do not copy the file to <file>.authama.bak first
+      --print[=true|false]       print the alias lines, for eval
+      --quiet[=true|false]       print nothing on success
+      --uninstall[=true|false]   remove the alias block
 ```
 
 ## authama token show
@@ -3413,10 +3530,10 @@ Examples:
 Flags:
 
 ```
-      --json             print the entry as JSON (the same fields as token list --json)
-      --project string   read the project's auth.json or .npmrc instead of the user one
-      --reveal           show the secret value (asks first; --yes when not at a terminal)
-  -y, --yes              reveal without asking
+      --json[=true|false]     print the entry as JSON (the same fields as token list --json)
+      --project string        read the project's auth.json or .npmrc instead of the user one
+      --reveal[=true|false]   show the secret value (asks first; --yes when not at a terminal)
+  -y, --yes[=true|false]      reveal without asking
 ```
 
 ## authama token status
@@ -3441,9 +3558,9 @@ Examples:
 Flags:
 
 ```
-      --config string    the token config file (default: discovered)
-      --json             machine-readable output (scripting)
-      --project string   report the project's auth.json and .npmrc instead of the user ones
+      --config string       the token config file (default: discovered)
+      --json[=true|false]   machine-readable output (scripting)
+      --project string      report the project's auth.json and .npmrc instead of the user ones
 ```
 
 ## authama version
@@ -3458,6 +3575,141 @@ Examples:
 
 ```sh
   authama version
+```
+
+## authama webhook
+
+A webhook sends each new event (a change finished, a watched file changed) to an endpoint you add,
+signed as Standard Webhooks do. `authama serve` delivers them when webhooks.enabled is on (it is off by
+default); `authama webhook deliver` sends what is due by hand. Endpoints must be https to a public
+address unless webhooks.allow_private is on.
+
+```
+authama webhook
+```
+
+Subcommands:
+
+- [`add`](#authama-webhook-add) - Add an endpoint; its signing secret is shown once
+- [`deliver`](#authama-webhook-deliver) - Send every endpoint the events due to it now
+- [`disable`](#authama-webhook-disable) - Stop sending to an endpoint; it keeps its place
+- [`enable`](#authama-webhook-enable) - Send to an endpoint again, from where it stopped
+- [`list`](#authama-webhook-list) - List endpoints and how their delivery stands (never their secrets)
+- [`remove`](#authama-webhook-remove) - Remove an endpoint and its secret
+- [`test`](#authama-webhook-test) - Send one webhook.test event now
+
+## authama webhook add
+
+Add an endpoint; its signing secret is shown once.
+
+```
+authama webhook add <name> <url> [flags]
+```
+
+Examples:
+
+```sh
+  authama webhook add ops https://hooks.example.com/authama   # prints its signing secret once
+  authama webhook add audit https://hooks.example.com/a --event operation.finished
+```
+
+Flags:
+
+```
+      --event strings   send only events whose type starts with this, whole or without com.simtabi.authama. (repeatable): operation.finished, file.
+```
+
+## authama webhook deliver
+
+Send every endpoint the events due to it now.
+
+```
+authama webhook deliver
+```
+
+Examples:
+
+```sh
+  authama webhook deliver   # send what is due now
+```
+
+## authama webhook disable
+
+Stop sending to an endpoint; it keeps its place.
+
+```
+authama webhook disable <name>
+```
+
+Examples:
+
+```sh
+  authama webhook disable ops
+```
+
+## authama webhook enable
+
+Send to an endpoint again, from where it stopped.
+
+```
+authama webhook enable <name>
+```
+
+Examples:
+
+```sh
+  authama webhook enable ops   # after it was turned off
+```
+
+## authama webhook list
+
+List endpoints and how their delivery stands (never their secrets).
+
+```
+authama webhook list [flags]
+```
+
+Aliases: `ls`
+
+Examples:
+
+```sh
+  authama webhook list
+  authama webhook list --json
+```
+
+Flags:
+
+```
+      --json[=true|false]   a JSON array
+```
+
+## authama webhook remove
+
+Remove an endpoint and its secret.
+
+```
+authama webhook remove <name>
+```
+
+Examples:
+
+```sh
+  authama webhook remove ops
+```
+
+## authama webhook test
+
+Send one webhook.test event now.
+
+```
+authama webhook test <name>
+```
+
+Examples:
+
+```sh
+  authama webhook test ops
 ```
 
 ## Choosing between similar commands

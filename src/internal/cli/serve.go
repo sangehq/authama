@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -234,7 +235,7 @@ func newServeCmd() *cobra.Command {
 					}
 				})
 			srv, err := web.New(web.Options{
-				HideExport:   envnames.Get(nil, envnames.WebMenuExport) == "false",
+				HideExport:   !settingOn(envnames.WebMenuExport, true),
 				Instance:     instance,
 				Engine:       web.AppEngine{P: p, Retain: snapshotRetain()},
 				Settings:     settingsView,
@@ -248,7 +249,8 @@ func newServeCmd() *cobra.Command {
 				BindAddr:     ln.Addr().String(),
 				BasePath:     basePath,
 				Restart:      restartFn,
-				AutoRestart:  envnames.Get(nil, envnames.WebAutoRestart) != "false",
+				AutoRestart:  settingOn(envnames.WebAutoRestart, true),
+				API:          settingOn(envnames.API, false),
 				Sessions:     handoffSessions(handoff),
 			})
 			if err != nil {
@@ -275,6 +277,13 @@ func newServeCmd() *cobra.Command {
 				mode = "read-only"
 			}
 			_, _ = fmt.Fprintf(out, "home %s (%s)\n", p.ConfigDir, mode)
+			if settingOn(envnames.API, false) {
+				_, _ = fmt.Fprintf(out, "read API on: %s%s (API tokens only: authama api token create)\n",
+					strings.TrimSuffix(strings.SplitN(url, "?", 2)[0], "/"), "/api/v1")
+			}
+			if settingOn(envnames.Webhooks, false) {
+				_, _ = fmt.Fprintln(out, "webhooks on: events are sent to the endpoints in `authama webhook list`")
+			}
 			if allowRemote {
 				_, _ = fmt.Fprintln(c.ErrOrStderr(), "warning: --allow-remote serves plain HTTP; put a TLS proxy in front, or use an SSH tunnel")
 			}
@@ -296,6 +305,7 @@ func newServeCmd() *cobra.Command {
 			defer stop()
 			stopServing = stop
 			serveNotifications(ctx, c.ErrOrStderr())
+			serveWebhooks(ctx, p, c.ErrOrStderr())
 			return srv.Serve(ctx, ln)
 		},
 	}
