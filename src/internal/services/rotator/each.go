@@ -15,6 +15,7 @@ import (
 func (r *Rotator) RotateEach(names []string, allowUnverified bool, pw string, out io.Writer,
 	save, next func() error) ([]string, error) {
 	var failed []string
+	r.results = nil
 	for _, n := range names {
 		if next != nil {
 			if err := next(); err != nil {
@@ -22,6 +23,11 @@ func (r *Rotator) RotateEach(names []string, allowUnverified bool, pw string, ou
 			}
 		}
 		report, err := r.Rotate(n, allowUnverified, pw)
+		res := RunResult{Ref: n, Err: err, Via: r.via(n)}
+		if err == nil {
+			res.Report = &report
+		}
+		r.results = append(r.results, res)
 		switch {
 		case err != nil:
 			failed = append(failed, n)
@@ -43,4 +49,21 @@ func (r *Rotator) RotateEach(names []string, allowUnverified bool, pw string, ou
 	}
 	_, _ = fmt.Fprintln(out)
 	return nil, nil
+}
+
+// Results is what the last RotateEach did with each key, for its summary.
+func (r *Rotator) Results() []RunResult { return r.results }
+
+// via is how the key named reaches its hosts, as a summary's VIA column
+// says it: each distinct way, comma-separated.
+func (r *Rotator) via(name string) string {
+	_, _, hosts, err := r.profileAndHosts(name)
+	if err != nil {
+		return ""
+	}
+	var vias []string
+	for _, h := range hosts {
+		vias = appendNew(vias, via(r.provider(h)))
+	}
+	return strings.Join(vias, ", ")
 }

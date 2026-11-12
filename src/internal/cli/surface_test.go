@@ -134,6 +134,7 @@ var goOnly = map[string]string{
 	"clean":                     "D1 - prunes stale pins and records left by deletions",
 
 	"rotate --force":  "owner, 2026-11-12: a forced rotation replaces on this computer each key that cannot be rotated in place, to deploy afterwards",
+	"rotate --failed": "owner, 2026-11-12: runs again the keys the last rotation or dry run left, as the summary's re-run line says",
 	"rotate --check":  "owner, 2026-11-11: a dry run that tests each key's rotation (servers answer, the current key logs in) and changes nothing",
 	"doctor --strict": "settings - CI gate: escalates every dangling-key state to fatal",
 	"list --csv":      "exports - every host as CSV, the columns the web UI downloads",

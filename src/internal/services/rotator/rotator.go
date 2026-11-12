@@ -103,11 +103,13 @@ func revokeFlag(b bool) string {
 
 // Rotator rotates keys.
 type Rotator struct {
-	p   paths.Paths
-	m   *manifest.Manifest
-	inv *inventory.Inventory
-	ks  *keystore.KeyStore
-	op  *opstore.Client // for profiles whose key_store is 1password
+	// results is what the last RotateEach did, key by key.
+	results []RunResult
+	p       paths.Paths
+	m       *manifest.Manifest
+	inv     *inventory.Inventory
+	ks      *keystore.KeyStore
+	op      *opstore.Client // for profiles whose key_store is 1password
 	// manual waits for a pasted key on panel targets (nil: never asks); sshVerify proves it.
 	manual    ManualStep
 	sshVerify func(providers.Target) bool

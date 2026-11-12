@@ -519,3 +519,47 @@ main:focus { outline: none; }
 form:has(input[name="no_backup"]:checked) .kp-steps .kp-if-backup { display: none; }
 form:has(input[name="force"]:checked) .kp-steps .kp-if-force { display: list-item; color: var(--tblr-danger); }
 form:has(input[name="force"]:checked) .kp-steps .kp-if-not-force { display: none; }
+
+/* A rotation's summary, as the job's Output: the job console's dark ground,
+   the tree under one trunk in aligned columns, results coloured by how they
+   went (sev-0 went through, sev-1 needs you, sev-2 failed). */
+.sum-console { padding: 1.25rem 1.5rem; white-space: normal; line-height: 1.45; }
+.sum-console .sev-0 .sum-mark, .sum-console .sev-0 .sum-result, .sum-console span.sev-0 { color: #6fdd8b; }
+.sum-console .sev-1 .sum-mark, .sum-console .sev-1 .sum-result, .sum-console .sev-1 .sum-reason, .sum-console span.sev-1,
+.sum-notes .sev-1 .sum-note, .sum-needs .sev-1 .sum-action, .sum-needs .sev-1 .sum-num { color: #f5c451; }
+.sum-console .sev-2 .sum-mark, .sum-console .sev-2 .sum-result, .sum-console .sev-2 .sum-reason, .sum-console span.sev-2,
+.sum-notes .sev-2 .sum-note, .sum-needs .sev-2 .sum-action, .sum-needs .sev-2 .sum-num { color: #ff7b72; }
+.sum-console .sev-0 .sum-reason { color: #7d8590; }
+.sum-cmd { margin: 0 0 .75rem; color: #e6edf3; }
+.sum-head { margin: 0 0 .75rem; }
+.sum-of { margin-left: 2rem; }
+.sum-title, .sum-label { font-weight: 700; color: #e6edf3; margin-right: 2rem; }
+.sum-label { margin: 0 0 .125rem; }
+.sum-dim, .sum-sep, .sum-branch, .sum-ref { color: #7d8590; }
+.sum-env { color: #f5c451; }
+.sum-scroll { overflow-x: auto; }
+.sum-tree { border-collapse: collapse; width: 100%; }
+.sum-tree th, .sum-tree td { padding: 0 1.5rem 0 0; text-align: left; white-space: nowrap; font-weight: 400; vertical-align: top; }
+.sum-tree thead th { color: #7d8590; padding-bottom: .125rem; text-transform: uppercase; }
+.sum-tree tbody th { color: #e6edf3; }
+.sum-tree .sum-counts { text-align: right; padding-right: 0; }
+.sum-tree tr.is-group .sum-counts { color: #e6edf3; }
+.sum-tree tr.is-gap td { line-height: 1.45; }
+.sum-tree .sum-key, .sum-tree .sum-via { color: #b1bac4; }
+.sum-tree .sum-branch { white-space: pre; }
+.sum-tree a.sum-ref { text-decoration: none; }
+.sum-section { border-top: 1px solid rgba(125, 133, 144, .45); margin-top: 1rem; padding-top: .75rem; }
+.sum-notes, .sum-needs { list-style: none; padding: 0 0 0 1.5rem; margin: 0; }
+.sum-notes li { display: grid; grid-template-columns: 2.25rem 1fr; }
+.sum-untouched { padding-left: 1.5rem; }
+.sum-needs li { display: grid; grid-template-columns: 1rem 1.5rem max-content 2.75rem 1fr; column-gap: .5rem; }
+.sum-needs .sum-action { padding-right: 1rem; }
+.sum-needs .sum-keys { color: #e6edf3; }
+.sum-foot { border-top: 1px solid rgba(125, 133, 144, .45); margin-top: 1rem; padding-top: .75rem; display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; justify-content: space-between; align-items: center; }
+.sum-rerun code { background: none; color: #e6edf3; padding: 0; white-space: normal; overflow-wrap: anywhere; }
+.sum-badge { display: inline-block; padding: .25rem .625rem; font-size: .8125rem; border: 1px solid transparent; }
+.sum-badge.sev-0 { background: var(--tblr-bg-surface-secondary); color: var(--tblr-body-color); }
+.sum-badge.sev-1 { background: transparent; color: var(--tblr-danger); border-color: var(--tblr-danger); }
+.sum-badge.sev-2 { background: rgba(214, 57, 57, .1); color: var(--tblr-danger); }
+.job-full-log > summary { cursor: pointer; list-style: none; }
+.job-full-log > summary::-webkit-details-marker { display: none; }

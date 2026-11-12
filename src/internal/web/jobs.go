@@ -411,11 +411,17 @@ func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection,
 		at++
 		return nil
 	}
+	began := time.Now()
 	failed, err := r.RotateEach(names, allowUnverified, "", j, func() error { return inv.Save(p.Inventory()) }, next)
 	if err != nil {
 		return err
 	}
+	before := failed
 	failed = replaceFailed(j, p, failed, force)
+	sum := rotator.SummarizeRun(r.Results(), without(before, failed), time.Since(began))
+	sum.Command = jobLine(j)
+	j.SetSummary(sum)
+	_ = rotator.SaveFailed(p, sum.Failed())
 	for _, n := range failed {
 		j.Failed(n)
 	}
@@ -807,6 +813,14 @@ func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string) error {
 	r := rotator.New(p, m, inv)
 	j.Plan(names)
 	var failed []string
+	var reports []rotator.CheckReport
+	began := time.Now()
+	defer func() {
+		sum := rotator.SummarizeCheck(reports, time.Since(began))
+		sum.Command = jobLine(j)
+		j.SetSummary(sum)
+		_ = rotator.SaveFailed(p, sum.Failed())
+	}()
 	for i, n := range names {
 		if err := j.Step(); err != nil {
 			return err
@@ -814,12 +828,14 @@ func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string) error {
 		j.Progress(i, len(names), "testing "+n)
 		rep, err := r.Check(n)
 		if err != nil {
+			reports = append(reports, rotator.CheckReport{Key: n, Problem: err.Error(), ProblemKind: rotator.KindFailed})
 			failed = append(failed, n)
 			j.Failed(n)
 			_, _ = fmt.Fprintf(j, "FAIL %s\n       %v\n", n, err)
 			continue
 		}
 		_, _ = fmt.Fprint(j, rep.Format())
+		reports = append(reports, rep)
 		if !rep.OK() {
 			failed = append(failed, n)
 			j.Failed(n)
@@ -831,6 +847,28 @@ func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string) error {
 	}
 	_, _ = fmt.Fprintf(j, "every key would rotate; nothing was changed\n")
 	return nil
+}
+
+// jobLine is a job's command line as a terminal would read it:
+// "authama ssh rotate --all --check".
+func jobLine(j *jobs.Job) string {
+	v, _ := j.View()
+	return strings.TrimSpace(brand.Line(v.Command) + " " + strings.Join(v.Args, " "))
+}
+
+// without is the names in all that are not in some.
+func without(all, some []string) []string {
+	skip := map[string]bool{}
+	for _, n := range some {
+		skip[n] = true
+	}
+	var out []string
+	for _, n := range all {
+		if !skip[n] {
+			out = append(out, n)
+		}
+	}
+	return out
 }
 
 // forceStep is what a forced rotation adds, or "" for one that is not.

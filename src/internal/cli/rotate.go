@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"github.com/simtabi/authama/src/internal/services/reconciler"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/simtabi/authama/src/internal/core/inventory"
 	"github.com/simtabi/authama/src/internal/core/manifest"
@@ -17,6 +19,7 @@ import (
 func newRotateCmd() *cobra.Command {
 	var allowUnverified, passphrase, yes, noKeyBackup, all, dryRun, check, force bool
 	var category string
+	var failed bool
 	cmd := &cobra.Command{
 		Use: "rotate [<[profile/]key>|profile|alias ...] [--category <name>] [--all]",
 		// recycle is what a policy calls a staged rotation: the old key is
@@ -32,6 +35,23 @@ func newRotateCmd() *cobra.Command {
 			"untouched and the rest still rotate. A key no host uses is skipped, since\n" +
 			"there is nothing to deploy it to.",
 		RunE: func(c *cobra.Command, args []string) error {
+			if failed {
+				if len(args) > 0 || all || category != "" {
+					return fmt.Errorf("--failed runs the keys the last rotation left; name no keys, --all or --category with it")
+				}
+				p, err := resolvePaths(c)
+				if err != nil {
+					return err
+				}
+				left, err := rotator.LoadFailed(p)
+				if err != nil {
+					return err
+				}
+				if len(left) == 0 {
+					return fmt.Errorf("no key was left by the last rotation or dry run, so --failed has nothing to run")
+				}
+				return rotateMany(c, keysvc.Selection{Selectors: left}, allowUnverified, passphrase, yes, noKeyBackup, dryRun, check, force)
+			}
 			if len(args) == 1 && !all && category == "" && !dryRun && !check && namesAKey(c, args[0]) {
 				return rotateOne(c, args[0], allowUnverified, passphrase, yes, noKeyBackup, force)
 			}
@@ -49,6 +69,8 @@ func newRotateCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "list the keys that would rotate, and change nothing")
 	cmd.Flags().BoolVar(&force, "force", false,
 		"replace on this computer (as ssh keygen --force) each key that cannot be rotated in place - never deployed, or its host unreachable - to deploy afterwards")
+	cmd.Flags().BoolVar(&failed, "failed", false,
+		"run again the keys the last rotation or dry run left (not rotated, or would fail)")
 	cmd.Flags().BoolVar(&check, "check", false,
 		"test each key's rotation and change nothing: every server answers and the current key logs in, or the target takes it by hand")
 	addNoPassphraseCompat(cmd)
@@ -177,15 +199,25 @@ func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphr
 	if check {
 		r := rotator.New(p, m, inv)
 		var failed []string
-		for _, n := range names {
+		var reports []rotator.CheckReport
+		began := time.Now()
+		for i, n := range names {
+			stop := startProgress(c, fmt.Sprintf("testing %d of %d: %s", i+1, len(names), n))
 			rep, err := r.Check(n)
+			stop()
 			if err != nil {
 				return err
 			}
-			_, _ = fmt.Fprint(out, rep.Format())
+			reports = append(reports, rep)
 			if !rep.OK() {
 				failed = append(failed, n)
 			}
+		}
+		sum := rotator.SummarizeCheck(reports, time.Since(began))
+		sum.Command = commandLine(c)
+		_, _ = fmt.Fprint(out, sum.Format())
+		if err := rotator.SaveFailed(p, sum.Failed()); err != nil {
+			return err
 		}
 		if len(failed) > 0 {
 			return fmt.Errorf("%d of %d key(s) would not rotate cleanly: %s; nothing was changed", len(failed), len(names), strings.Join(failed, ", "))
@@ -213,13 +245,23 @@ func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphr
 	}
 	snapshotBeforeMutation(p)
 	rot := withManualPaste(c, rotator.New(p, m, inv))
+	began := time.Now()
 	failed, err := rot.RotateEach(names, allowUnverified, pw, out, func() error { return inv.Save(p.Inventory()) }, nil)
 	if err != nil {
 		return err
 	}
+	var replaced []string
 	if force && len(failed) > 0 {
 		_, _ = fmt.Fprintf(out, "forced: replacing %d key(s) the rotation could not rotate, on this computer\n", len(failed))
-		_, failed = reconciler.ReplaceLocally(p, failed, platform.EmitUseKeychain(), out)
+		replaced, failed = reconciler.ReplaceLocally(p, failed, platform.EmitUseKeychain(), out)
+	}
+	sum := rotator.SummarizeRun(rot.Results(), replaced, time.Since(began))
+	sum.Command = commandLine(c)
+	if len(names) > 1 {
+		_, _ = fmt.Fprint(out, "\n"+sum.Format())
+	}
+	if err := rotator.SaveFailed(p, sum.Failed()); err != nil {
+		return err
 	}
 	if len(failed) > 0 {
 		return errNotClean
@@ -283,4 +325,18 @@ func withManualPaste(c *cobra.Command, r *rotator.Rotator) *rotator.Rotator {
 		_, _ = fmt.Fprintf(out, "\n%s: this target takes the key by hand. %s\n\n%s\n\n", alias, where, strings.TrimSpace(pubkey))
 		return confirm(c, "  Pasted it? authama will now log in with the new key to prove it")
 	})
+}
+
+// commandLine is the command as it was typed, for a summary's first line:
+// its path, the flags given, and its arguments.
+func commandLine(c *cobra.Command) string {
+	parts := []string{c.CommandPath()}
+	c.Flags().Visit(func(f *pflag.Flag) {
+		if f.Value.Type() == "bool" {
+			parts = append(parts, "--"+f.Name)
+			return
+		}
+		parts = append(parts, "--"+f.Name, f.Value.String())
+	})
+	return strings.Join(append(parts, c.Flags().Args()...), " ")
 }

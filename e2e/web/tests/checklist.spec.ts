@@ -226,9 +226,18 @@ test('a rotation is reviewed on its own page, forced from its options, and dry-r
   await expect(page).toHaveURL(/\/jobs\/(?!review$)[^/]+$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^Dry run: rotate \d+ keys?$/);
   await expect(page.locator('#job-state')).toHaveAttribute('data-state', /done|failed/, { timeout: 90_000 });
-  const tree = page.locator('.console');
+  // The run ends in its summary, as the Output: keys grouped by owner under
+  // one trunk, a coloured result for each, the notes once, what is left.
+  const summary = page.locator('#job-summary');
+  await expect(summary).toBeVisible();
+  await expect(summary.locator('.sum-cmd')).toContainText('authama ssh rotate --all --check');
+  await expect(summary.locator('tr.is-root')).toHaveText('rotate');
+  await expect(summary.locator('.sum-head')).toContainText(/of \d+ keys? · \d+ owners?/);
+  await summary.screenshot({ path: 'test-results/rotation-summary.png' });
+  // Every line the job printed is still there, folded under Full log.
+  await page.locator('.job-full-log > summary').click();
+  const tree = page.locator('#job-log');
   await expect(tree.locator('.console-line.lvl-0').first()).toBeVisible();
   await expect(tree.locator('.console-branch').first()).toHaveText(/[├└]─/);
-  await tree.screenshot({ path: 'test-results/dry-run-tree.png' });
   await page.screenshot({ path: 'test-results/job-page.png', fullPage: true });
 });
