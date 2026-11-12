@@ -86,6 +86,60 @@ What it does per checkout:
 
 `--dry-run` stops after step 2. The command exits non-zero if any checkout was left unchanged by an error.
 
+`--json` prints one document instead of lines, with or without `--dry-run`, so a tool such as sange can
+compare its view of the same checkouts with authama's:
+
+```json
+{
+  "version": 1,
+  "mode": "profile",
+  "dry_run": true,
+  "checkouts": [
+    {"path": ".../app", "from": "https://github.com/acme/app.git", "to": "git@github-alice:acme/app.git",
+     "applied": false, "skipped": "", "error": ""},
+    {"path": ".../notes", "from": "", "to": "", "applied": false,
+     "skipped": "no origin (not a git checkout, or no remote named origin)", "error": ""}
+  ]
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `from`, `to` | the origin before, and the URL for the mode; `to` is empty when the checkout was skipped first |
+| `applied` | origin was rewritten (never on a dry run) |
+| `skipped` | why nothing changed, such as `already profile`; empty when it changed or would |
+| `error` | why the checkout was left as it was, such as a failed `ls-remote`; the command then exits non-zero |
+
+## `authama ssh git resolve OWNER/REPO`
+
+Says how a GitHub repository would be reached, with no checkout and without changing anything. The
+profile is `--profile`, else the owner's (`defaults.git.orgs`, then `defaults.git.profile`); the mode is
+`--mode`, else the same order as `use`.
+
+```text
+$ authama ssh git resolve acme/app
+profile:      alice
+mode:         profile
+url:          git@github-alice:acme/app.git
+host alias:   github-alice
+key:          alice/alice_github-alice-ed25519  SHA256:...
+```
+
+`--json` gives the shape sange's companion contract asks for, so its names are camelCase:
+
+```json
+{"version": 1, "profile": "alice", "mode": "profile", "url": "git@github-alice:acme/app.git",
+ "hostAlias": "github-alice", "keyFingerprint": "SHA256:..."}
+```
+
+| Field | Meaning |
+|---|---|
+| `hostAlias` | the SSH alias the URL connects through: the profile's `github.com` host in `profile` mode, `github.com` in `ssh` mode, empty in `https` mode |
+| `keyFingerprint` | that host's key, as the inventory recorded it; empty in `https` mode and for a key not made yet |
+
+Both `use --json` and `resolve --json` keep the promise `status --json` makes: fields are only ever
+added, and the same test guards them.
+
 Glob `packages/*`, not `*/`, where parked copies share names with live ones.
 
 ---

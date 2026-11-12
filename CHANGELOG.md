@@ -27,6 +27,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     read-only tools for an AI client: profiles, keys, hosts, tokens set, the history, the feed and
     doctor.
 
+- **Three JSON commands for sange's companion contract (v1).** `authama companion info --json` is the
+  handshake: name, version, the contract versions it answers, its capabilities and its homes.
+  `authama ssh git resolve <owner>/<repo> --json` says, without changing anything, which profile, mode,
+  URL, SSH alias and key fingerprint a repository would use. `authama ssh git use --json` (with or
+  without `--dry-run`) reports each checkout's from, to, applied, skipped and error. Like
+  `ssh git status --json`, their fields are only ever added.
+
 - **A rotation ends in a summary.** A batch `authama ssh rotate`, and every `--check`, ends with
   one summary of every key: the command, a Result line with the counts, every key under one trunk
   grouped by owner and by project (and environment) read from its name, worst first, in aligned

@@ -224,3 +224,59 @@ func Status(g Git, m *manifest.Manifest, dirs []string) []Checkout {
 	}
 	return out
 }
+
+// Resolution is how one GitHub repository would be reached: the profile that
+// owns it, the mode, the remote URL, and the SSH alias and key that URL
+// authenticates with. HostAlias and Key are empty in https mode, which uses the
+// git credential helper rather than a key.
+type Resolution struct {
+	Profile, Mode, URL, HostAlias string
+	Key                           *manifest.KeyRef
+}
+
+// Resolve works out how owner/repo would be reached, touching nothing. The
+// profile is the one given, else the owner's (manifest.ProfileForOwner), which
+// may be empty outside profile mode when no profile is mapped. In
+// profile mode the alias and key are the profile's github.com host; in ssh mode
+// they are Host github.com and defaults.git.profile's key, which that host uses.
+func Resolve(m *manifest.Manifest, owner, repo, mode, profile string) (Resolution, error) {
+	if owner == "" || repo == "" {
+		return Resolution{}, fmt.Errorf("want owner/repo")
+	}
+	if profile == "" {
+		// As Use: only profile mode needs the owner's profile to build its URL.
+		p, err := manifest.ProfileForOwner(m, owner)
+		if err != nil && mode == manifest.GitModeProfile {
+			return Resolution{}, err
+		}
+		profile = p
+	} else if _, ok := m.Profiles[profile]; !ok {
+		return Resolution{}, fmt.Errorf("no such profile: %q", profile)
+	}
+	url, err := URLFor(m, mode, owner, repo, profile)
+	if err != nil {
+		return Resolution{}, err
+	}
+	r := Resolution{Profile: profile, Mode: mode, URL: url}
+	keyProfile := profile
+	switch mode {
+	case manifest.GitModeHTTPS:
+		return r, nil
+	case manifest.GitModeSSH:
+		keyProfile = m.Defaults.Git.Profile
+	}
+	h, ok := manifest.GitHubHostOf(m, keyProfile)
+	if !ok {
+		return r, nil
+	}
+	r.HostAlias = h.Alias
+	if mode == manifest.GitModeSSH {
+		r.HostAlias = "github.com"
+	}
+	name, err := m.ResolvedKeyName(keyProfile, h)
+	if err != nil {
+		return Resolution{}, err
+	}
+	r.Key = &manifest.KeyRef{Profile: keyProfile, KeyName: name}
+	return r, nil
+}

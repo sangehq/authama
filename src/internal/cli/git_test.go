@@ -131,7 +131,8 @@ func TestGitStatusJSON(t *testing.T) {
 	}
 }
 
-// Fields of `ssh git status --json` are only ever added: each one other
+// Fields of `ssh git status --json`, `use --json`, `resolve --json` and
+// `companion info --json` are only ever added: each one other
 // tools may read is still there under its name. Removing or renaming one
 // fails here; bump the document's version instead, and say so in the
 // CHANGELOG.
@@ -152,6 +153,10 @@ func TestGitStatusJSONKeepsItsFields(t *testing.T) {
 	}{
 		{gitStatusDoc{}, []string{"version", "default_mode", "checkouts"}},
 		{gitremote.Checkout{}, []string{"path", "state", "url", "mode", "owner", "repo", "profile", "profile_from"}},
+		{gitUseDoc{}, []string{"version", "mode", "dry_run", "checkouts"}},
+		{gitUseRow{}, []string{"path", "from", "to", "applied", "skipped", "error"}},
+		{gitResolveDoc{}, []string{"version", "profile", "mode", "url", "hostAlias", "keyFingerprint"}},
+		{companionInfoDoc{}, []string{"name", "version", "contractVersions", "capabilities", "configHome", "stateHome"}},
 	} {
 		have := names(tc.v)
 		if len(have) < len(tc.want) {

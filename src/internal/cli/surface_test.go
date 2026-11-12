@@ -232,13 +232,21 @@ var goOnly = map[string]string{
 
 	// Git remote modes (3.4.0): profile SSH by default, plain SSH or HTTPS on demand,
 	// switched per checkout with an ls-remote check before origin is rewritten.
-	"git":               "git remote modes - group",
-	"git status":        "git remote modes - each checkout's mode, owner and profile",
-	"git use":           "git remote modes - point origin at profile, ssh or https",
-	"git use --mode":    "git remote modes - the mode when not given as the first argument",
-	"git use --profile": "git remote modes - override the owner-to-profile mapping",
-	"git use --dry-run": "git remote modes - show the rewrite, touch nothing",
-	"git use --yes":     "confirm-before-changing",
+	"git":                   "git remote modes - group",
+	"git status":            "git remote modes - each checkout's mode, owner and profile",
+	"git use":               "git remote modes - point origin at profile, ssh or https",
+	"git use --mode":        "git remote modes - the mode when not given as the first argument",
+	"git use --profile":     "git remote modes - override the owner-to-profile mapping",
+	"git use --dry-run":     "git remote modes - show the rewrite, touch nothing",
+	"git use --yes":         "confirm-before-changing",
+	"git use --json":        "owner, 2026-11-12: \"Yes, build them\" (sange's companion contract v1, companion-authama.md section 3): authama's view of the checkouts it would switch",
+	"git resolve":           "owner, 2026-11-12: \"Yes, build them\" (sange's companion contract v1, companion-authama.md section 3): how owner/repo would be reached, read-only",
+	"git resolve --mode":    "owner, 2026-11-12: \"Yes, build them\" (sange's companion contract v1, companion-authama.md section 3): the mode, as git use",
+	"git resolve --profile": "owner, 2026-11-12: \"Yes, build them\" (sange's companion contract v1, companion-authama.md section 3): the profile instead of the owner's mapping",
+	"git resolve --json":    "owner, 2026-11-12: \"Yes, build them\" (sange's companion contract v1, companion-authama.md section 3): profile, mode, url, hostAlias, keyFingerprint",
+	"companion":             "owner, 2026-11-12: \"Yes, build them\" (sange's companion contract v1, companion-authama.md section 3): the group a companion tool asks",
+	"companion info":        "owner, 2026-11-12: \"Yes, build them\" (sange's companion contract v1, companion-authama.md section 3): the capability handshake",
+	"companion info --json": "owner, 2026-11-12: \"Yes, build them\" (sange's companion contract v1, companion-authama.md section 3): name, version, contractVersions, capabilities, configHome, stateHome",
 
 	// Devboxes (3.4.0): a VM's address comes from its hypervisor at connect time.
 	"vm":                  "devboxes - group",

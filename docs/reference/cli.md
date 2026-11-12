@@ -28,6 +28,8 @@ Every command also takes the global flag:
   - [`authama checklist show`](#authama-checklist-show) - One item's checklist: every step, what is done, and the command for the rest
   - [`authama checklist tick`](#authama-checklist-tick) - Mark a step authama cannot check as done
   - [`authama checklist untick`](#authama-checklist-untick) - Mark a ticked step as not done
+- [`authama companion`](#authama-companion) - Answer a companion tool such as sange: what this build can do and where it keeps things
+  - [`authama companion info`](#authama-companion-info) - Print the name, version, contract versions, capabilities and homes; changes nothing
 - [`authama doctor`](#authama-doctor) - Diagnose deps, perms, agent, known_hosts, drift, dangling keys, and token-file perms
 - [`authama events`](#authama-events) - Every change seen to a file under ~/.ssh, the config home or a token file, newest first
 - [`authama export`](#authama-export) - Write any list as CSV, JSON, YAML, a PHP or JS array, Markdown or HTML, or hosts for an SSH client, filtered
@@ -85,6 +87,7 @@ Every command also takes the global flag:
   - [`authama ssh diff`](#authama-ssh-diff) - Preview what reconcile would change (manifest vs. ~/.ssh)
   - [`authama ssh expiry`](#authama-ssh-expiry) - Per-key rotation-age table
   - [`authama ssh git`](#authama-ssh-git) - Show or switch checkouts' GitHub remotes between profile SSH, plain SSH and HTTPS
+    - [`authama ssh git resolve`](#authama-ssh-git-resolve) - Show the profile, mode, URL, SSH alias and key a GitHub repository would use; changes nothing
     - [`authama ssh git status`](#authama-ssh-git-status) - Show each checkout's remote mode, owner and profile
     - [`authama ssh git use`](#authama-ssh-git-use) - Point checkouts' origin at a mode, after proving the new URL with ls-remote
   - [`authama ssh host`](#authama-ssh-host) - Manage a host within a profile (add/edit/delete/apply)
@@ -371,6 +374,41 @@ Examples:
 
 ```sh
   authama checklist untick work/deploy copies
+```
+
+## authama companion
+
+Answer a companion tool such as sange: what this build can do and where it keeps things.
+
+```
+authama companion
+```
+
+Subcommands:
+
+- [`info`](#authama-companion-info) - Print the name, version, contract versions, capabilities and homes; changes nothing
+
+## authama companion info
+
+The handshake of sange's companion contract. With --json, prints {"name", "version",
+"contractVersions", "capabilities", "configHome", "stateHome"}. A capability is listed when
+this build has it, whether or not a setting turns it on. Fields are only ever added.
+
+```
+authama companion info [flags]
+```
+
+Examples:
+
+```sh
+  authama companion info
+  authama companion info --json
+```
+
+Flags:
+
+```
+      --json[=true|false]   machine-readable output (scripting); fields are only ever added
 ```
 
 ## authama doctor
@@ -1684,8 +1722,38 @@ authama ssh git
 
 Subcommands:
 
+- [`resolve`](#authama-ssh-git-resolve) - Show the profile, mode, URL, SSH alias and key a GitHub repository would use; changes nothing
 - [`status`](#authama-ssh-git-status) - Show each checkout's remote mode, owner and profile
 - [`use`](#authama-ssh-git-use) - Point checkouts' origin at a mode, after proving the new URL with ls-remote
+
+## authama ssh git resolve
+
+Show how a GitHub repository would be reached, without a checkout and without changing
+anything. The profile is --profile, else the owner's (defaults.git.orgs, then defaults.git.profile);
+the mode is --mode, else $AUTHAMA_GIT_MODE, else defaults.git.mode, else profile.
+
+With --json, prints {"version": 1, "profile", "mode", "url", "hostAlias",
+"keyFingerprint"}, the names sange's companion contract uses. hostAlias and keyFingerprint are
+empty in https mode, and keyFingerprint is empty for a key not made yet. Fields are only ever added.
+
+```
+authama ssh git resolve <owner>/<repo> [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh git resolve simtabi/authama
+  authama ssh git resolve simtabi/authama --json
+```
+
+Flags:
+
+```
+      --json[=true|false]   machine-readable output (scripting); fields are only ever added
+      --mode string         profile, ssh or https (overrides $AUTHAMA_GIT_MODE and the manifest)
+      --profile string      use this profile instead of the owner's mapping
+```
 
 ## authama ssh git status
 
@@ -1718,6 +1786,9 @@ names one, else --mode, else $AUTHAMA_GIT_MODE, else defaults.git.mode, else pro
 A new URL is checked with git ls-remote before origin is rewritten, so a checkout
 never ends up with a remote it cannot authenticate to. Non-GitHub origins are skipped.
 
+With --json, prints {"version": 1, "mode": ..., "dry_run": ..., "checkouts": [...]}:
+each checkout's path, from, to, applied, skipped and error. Fields are only ever added.
+
 ```
 authama ssh git use [profile|ssh|https] [path...] [flags]
 ```
@@ -1728,12 +1799,14 @@ Examples:
   authama ssh git use profile --dry-run
   authama ssh git use https ~/code/acme/api --yes
   authama ssh git use ssh --profile work
+  authama ssh git use profile ~/code/acme --dry-run --json
 ```
 
 Flags:
 
 ```
       --dry-run[=true|false]   show what would change, touch nothing
+      --json[=true|false]      machine-readable output (scripting); fields are only ever added
       --mode string            profile, ssh or https (overrides $AUTHAMA_GIT_MODE and the manifest)
       --profile string         use this profile's key instead of the owner's mapping
   -y, --yes[=true|false]       rewrite without confirming (implied when there is no terminal)
