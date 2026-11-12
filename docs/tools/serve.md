@@ -429,12 +429,15 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
    finished. A job that works through keys lists each one below the bar, in order: waiting,
    running (with a spinner), done or failed, updated as it goes. When the job needs you (pasting a
    key where a target takes it by hand), a card says it is waiting, which step it is on, and what to
-   do, with the text to copy. A job that is one step shows a moving bar and says it gives no percentage. A rotation, and its dry run, ends with a **Result** card above the output: the keys grouped
-   by owner and project in columns (key, via, result, reason), results coloured by how they went,
-   each explanation once as a numbered note, **Needs you** with the keys each step is for, and the
-   command that runs the failed keys again, with a copy button; see
-   [rotate](rotate.md#rotating-a-batch). The job
-   holds the lock until it ends, and it is recorded in the history like any other change.
+   do, with the text to copy. A job that is one step shows a moving bar and says it gives no percentage.
+   A rotation (of one key or many), its dry run, and revoking or deleting chosen keys show
+   their output as a **summary**, drawn as it goes: each key waiting (·), under way (›), then
+   with its result, grouped by owner and project in columns (key, via, result, reason), each
+   explanation once as a numbered note, **Needs you**, and the command for the failed keys;
+   every line the job printed is folded beneath under **Full log**. A slim progress bar sits
+   above it while it runs. When keys did not go through, a **Next** card offers **Review the
+   failed keys again** and, for a rotation, **Review again with Force**; see
+   [rotate](rotate.md#rotating-a-batch).
 
 | Job | Where | The same as |
 |---|---|---|

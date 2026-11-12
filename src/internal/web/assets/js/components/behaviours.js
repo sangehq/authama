@@ -91,6 +91,18 @@ export class JobStream extends Component {
     const progress = new JobProgress(document.querySelector("[data-job-progress]"));
     events.addEventListener("progress", (e) => progress.update(/** @type {MessageEvent} */ (e).data));
     events.addEventListener("items", (e) => progress.items(/** @type {MessageEvent} */ (e).data));
+    // A job that draws a summary sends its version as each key finishes: the
+    // summary is fetched again and swapped in place, or, on a page drawn
+    // before the job had one, the page is drawn again.
+    let summaryAt = 0;
+    events.addEventListener("summary", (e) => {
+      const version = Number(/** @type {MessageEvent} */ (e).data);
+      if (version <= summaryAt) {
+        return;
+      }
+      summaryAt = version;
+      void JobStream.#redrawSummary(this.el);
+    });
     events.addEventListener("state", (e) => {
       if (/** @type {MessageEvent} */ (e).data !== state) {
         events.close();
@@ -105,6 +117,49 @@ export class JobStream extends Component {
       }
     });
     return this;
+  }
+
+  /** Whether a redraw is under way, so events arriving meanwhile do not stack fetches. */
+  static #redrawing = false;
+
+  /**
+   * Fetches the job's page and swaps its summary in, keeping where the reader
+   * had scrolled; with no summary on the page yet, draws the page again.
+   * @param {HTMLElement} log
+   */
+  static async #redrawSummary(log) {
+    const current = document.getElementById("job-summary");
+    if (!current) {
+      if (log.closest("[data-side-panel]") && SidePanel.current) {
+        SidePanel.current.reload();
+      } else {
+        Ui.reload();
+      }
+      return;
+    }
+    if (JobStream.#redrawing) {
+      return;
+    }
+    JobStream.#redrawing = true;
+    try {
+      const res = await fetch(window.location.href, { credentials: "same-origin", headers: { "X-Authama-Panel": "1" } });
+      const doc = new DOMParser().parseFromString(await res.text(), "text/html");
+      const next = doc.getElementById("job-summary");
+      if (next) {
+        const scroll = current.querySelector(".sum-scroll")?.scrollLeft ?? 0;
+        const node = document.importNode(next, true);
+        current.replaceWith(node);
+        const box = node.querySelector(".sum-scroll");
+        if (box) {
+          box.scrollLeft = scroll;
+        }
+        document.dispatchEvent(new CustomEvent("authama:mount", { detail: { root: node } }));
+      }
+    } catch {
+      // The next event, or the reload when the job ends, draws it.
+    } finally {
+      JobStream.#redrawing = false;
+    }
   }
 }
 
@@ -226,9 +281,12 @@ class JobProgress {
     if (meta && this.total > 0) {
       let text = `${this.done} of ${this.total} · ${this.percent()}%`;
       if (this.done > 0 && this.done < this.total && this.since) {
+        // The step under way takes at most its share of the time already
+        // spent: one that runs long does not eat the time the rest will take.
         const per = (this.at - this.since) / this.done;
-        const left = per * (this.total - this.done) - (now - this.at);
-        text += left > 1000 ? ` · about ${humanDuration(left)} left` : " · almost done";
+        const left = per * (this.total - this.done) - Math.min(now - this.at, per);
+        const steps = this.total - this.done;
+        text += left > 1000 ? ` · about ${humanDuration(left)} left` : steps > 1 ? ` · ${steps} to go` : " · on the last one";
       }
       meta.textContent = text;
     }

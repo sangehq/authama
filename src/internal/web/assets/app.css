@@ -523,7 +523,7 @@ form:has(input[name="force"]:checked) .kp-steps .kp-if-not-force { display: none
 /* A rotation's summary, as the job's Output: the job console's dark ground,
    the tree under one trunk in aligned columns, results coloured by how they
    went (sev-0 went through, sev-1 needs you, sev-2 failed). */
-.sum-console { padding: 1.25rem 1.5rem; white-space: normal; line-height: 1.45; }
+.sum-console { padding: 1.25rem 1.5rem; white-space: normal; line-height: 1.45; max-height: none; overflow: visible; }
 .sum-console .sev-0 .sum-mark, .sum-console .sev-0 .sum-result, .sum-console span.sev-0 { color: #6fdd8b; }
 .sum-console .sev-1 .sum-mark, .sum-console .sev-1 .sum-result, .sum-console .sev-1 .sum-reason, .sum-console span.sev-1,
 .sum-notes .sev-1 .sum-note, .sum-needs .sev-1 .sum-action, .sum-needs .sev-1 .sum-num { color: #f5c451; }
@@ -563,3 +563,6 @@ form:has(input[name="force"]:checked) .kp-steps .kp-if-not-force { display: none
 .sum-badge.sev-2 { background: rgba(214, 57, 57, .1); color: var(--tblr-danger); }
 .job-full-log > summary { cursor: pointer; list-style: none; }
 .job-full-log > summary::-webkit-details-marker { display: none; }
+.sum-tree tr.is-pending th, .sum-tree tr.is-pending td { color: #7d8590; }
+.sum-tree tr.is-pending .sum-mark, .sum-tree tr.is-pending .sum-result { color: #79c0ff; }
+.job-progress.is-slim .card-body { padding-block: .75rem; }

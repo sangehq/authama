@@ -39,23 +39,20 @@
 <div class="row g-3">
 {{if and (or (eq .State "running") (eq .State "waiting") .Progress) (not .Summary)}}<div class="col-xl-4">
 {{if or (eq .State "running") (eq .State "waiting") .Progress}}
-<div class="card mb-3 job-progress job-aside" data-job-progress data-job-started="{{unixMilli .Started}}"{{with .Progress}} data-job-progress-since="{{unixMilli .Since}}"{{end}}>
-  <div class="card-body">
-    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-      {{if eq .State "running"}}<span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>{{else if eq .State "waiting"}}<span class="text-warning">{{icon "clock"}}</span>{{else if eq .State "done"}}<span class="text-success">{{icon "circle-check"}}</span>{{else}}<span class="text-danger">{{icon "alert-circle"}}</span>{{end}}
-      <strong data-job-progress-label>{{with .Progress}}{{if .Label}}{{.Label}}{{else if eq $.Data.State "running"}}Finishing{{else}}{{with itemTally .Items}}{{if .Failed}}Finished: {{.Done}} passed, {{.Failed}} failed{{else}}Finished: all {{.Done}} passed{{end}}{{else}}Finished{{end}}{{end}}{{else}}{{if eq .State "waiting"}}Waiting for your answer{{else}}Working{{end}}{{end}}</strong>
-      <span class="ms-auto text-secondary small" data-job-progress-meta>{{with .Progress}}{{.Done}} of {{.Total}} · {{.Percent}}%{{with timeLeft .}} · {{.}}{{end}}{{end}}</span>
-    </div>
-    {{with .Progress}}<progress class="job-progress-bar" max="{{.Total}}" value="{{.Done}}" aria-label="Job progress" data-job-progress-bar>{{.Percent}}%</progress>{{else}}<progress class="job-progress-bar" aria-label="Job progress, steps not counted" data-job-progress-bar></progress>{{end}}
-    {{with .Progress}}{{if .Items}}<ol class="job-run-items mt-3 mb-0" data-job-items>{{range .Items}}<li class="job-run-item is-{{.State}}" data-job-item="{{.Name}}"><span class="job-run-mark" aria-hidden="true">{{if eq .State "running"}}<span class="spinner-border spinner-border-sm"></span>{{else if eq .State "done"}}{{icon "circle-check"}}{{else if eq .State "failed"}}{{icon "circle-x"}}{{else}}{{icon "clock"}}{{end}}</span><code>{{.Name}}</code><span class="job-run-state" data-job-item-state>{{.State}}</span></li>{{end}}</ol>{{end}}{{end}}
-    <div class="small text-secondary mt-1">Elapsed <span data-job-progress-elapsed>since {{when .Started}}</span>{{if not .Progress}}<span data-job-progress-uncounted> · this job does not count its steps, so the bar shows activity, not a percentage</span>{{end}}</div>
-  </div>
-</div>
+{{template "job_progress" .}}
 {{end}}
 </div>{{end}}
 <div class="{{if and (or (eq .State "running") (eq .State "waiting") .Progress) (not .Summary)}}col-xl-8{{else}}col-12{{end}}">
-{{if .Err}}<div class="alert {{if eq .State "cancelled"}}alert-warning{{else}}alert-danger{{end}}" role="alert">{{.Err}}</div>{{end}}
+{{if and .Err (or (not .Summary) (eq .State "cancelled") .Summary.Running)}}<div class="alert {{if eq .State "cancelled"}}alert-warning{{else}}alert-danger{{end}}" role="alert">{{.Err}}</div>{{end}}
+{{if and .Summary (or (eq .State "running") (eq .State "waiting"))}}{{template "job_progress" .}}{{end}}
 {{with .Summary}}{{template "rotation_summary" .}}
+{{if and .Failed (not .Running) (not $.ReadOnly)}}<div class="card mb-3 job-next" id="job-next">
+  <div class="card-body d-flex flex-wrap align-items-center gap-2">
+    <span class="me-auto"><strong>Next:</strong> <span class="text-secondary">{{len .Failed}} key{{if ne (len .Failed) 1}}s{{end}} {{if .Check}}would not rotate cleanly{{else}}did not go through{{end}}. Review {{if eq (len .Failed) 1}}it{{else}}them{{end}} again{{if eq .Root "rotate"}}, or force: a key that cannot rotate in place is replaced on this computer, to deploy next{{end}}.</span></span>
+    <form method="post" action="{{basePath}}/jobs/review"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="{{.Root}}-keys">{{range .Failed}}<input type="hidden" name="sel" value="{{.}}">{{end}}<button type="submit" class="btn btn-outline-secondary"{{desc "job-review-failed"}}>{{icon "refresh"}}<span class="ms-1">Review the failed keys again</span></button></form>
+    {{if eq .Root "rotate"}}<form method="post" action="{{basePath}}/jobs/review"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="rotate-keys">{{range .Failed}}<input type="hidden" name="sel" value="{{.}}">{{end}}<input type="hidden" name="force" value="1"><button type="submit" class="btn btn-outline-danger"{{desc "job-review-force"}}>{{icon "alert-triangle"}}<span class="ms-1">Review again with Force</span></button></form>{{end}}
+  </div>
+</div>{{end}}
 <details class="card mb-3 job-full-log"><summary class="card-header"><h2 class="card-title">Full log</h2><span class="card-actions small text-secondary">every line the job printed</span></summary>
   <div class="card-body p-0"><div class="console" id="job-log" tabindex="0" role="log" aria-live="polite" aria-label="Job output" data-job-stream data-job-stream-events="{{basePath}}/jobs/{{$.Data.ID}}/events" data-job-stream-state="#job-state">{{range consoleLines $.Data.Lines}}{{template "console_line" .}}{{end}}</div></div>
 </details>{{else}}<div class="card mb-3">
@@ -90,7 +87,7 @@
     <div class="sum-scroll"><table class="sum-tree">
       <thead><tr><th scope="col"><span class="visually-hidden">Owner, project and key</span></th><th scope="col">Key</th><th scope="col">Via</th><th scope="col">Result</th><th scope="col">Reason</th></tr></thead>
       <tbody>{{range .Rows}}{{if .Gap}}<tr class="is-gap" aria-hidden="true"><td colspan="5"><span class="sum-branch">{{.Trunk}}</span></td></tr>{{end}}{{if .Group}}<tr class="is-group{{if .Root}} is-root{{end}}"><th scope="row" colspan="4"><span class="sum-branch" aria-hidden="true">{{.Branch}}</span>{{.Label}}{{with .Env}}<span class="sum-sep"> · </span><span class="sum-env">{{.}}</span>{{end}}</th><td class="sum-counts">{{.Counts}}</td></tr>
-      {{else}}<tr class="sev-{{.Severity}}"><th scope="row"><span class="sum-branch" aria-hidden="true">{{.Branch}}</span><span class="sum-mark" aria-hidden="true">{{.Mark}}</span> {{.Label}}</th><td class="sum-key">{{.Key}}</td><td class="sum-via">{{.Via}}</td><td class="sum-result">{{.Result}}</td><td class="sum-reason">{{.Reason}}{{if .Note}} <a class="sum-ref" href="#sum-note-{{.Note}}">[{{.Note}}]</a>{{end}}</td></tr>
+      {{else}}<tr class="sev-{{.Severity}}{{if .Pending}} is-pending{{end}}"><th scope="row"><span class="sum-branch" aria-hidden="true">{{.Branch}}</span><span class="sum-mark" aria-hidden="true">{{.Mark}}</span> {{.Label}}</th><td class="sum-key">{{.Key}}</td><td class="sum-via">{{.Via}}</td><td class="sum-result">{{.Result}}</td><td class="sum-reason">{{.Reason}}{{if .Note}} <a class="sum-ref" href="#sum-note-{{.Note}}">[{{.Note}}]</a>{{end}}</td></tr>
       {{end}}{{end}}</tbody>
     </table></div>
     {{if or .Notes .Untouched}}<div class="sum-section"><p class="sum-label">Notes</p>
@@ -102,3 +99,20 @@
       {{with .Rerun}}<span class="sum-rerun"><span class="sum-dim">re-run failed:</span> <code>{{.}}</code> {{template "copy" (copy . "the command")}}</span>{{end}}</div>
   </div></div>
 </div>{{end}}
+
+{{/* A job's progress card: what it is doing, the bar with "3 of 10 · 30% ·
+     about 1m left", the elapsed time and, unless the job draws a summary
+     that shows each key, the list of what it works through. */}}
+{{define "job_progress"}}<div class="card mb-3 job-progress{{if not .Summary}} job-aside{{else}} is-slim{{end}}" data-job-progress data-job-started="{{unixMilli .Started}}"{{with .Progress}} data-job-progress-since="{{unixMilli .Since}}"{{end}}>
+  <div class="card-body">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+      {{if eq .State "running"}}<span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>{{else if eq .State "waiting"}}<span class="text-warning">{{icon "clock"}}</span>{{else if eq .State "done"}}<span class="text-success">{{icon "circle-check"}}</span>{{else}}<span class="text-danger">{{icon "alert-circle"}}</span>{{end}}
+      <strong data-job-progress-label>{{with .Progress}}{{if .Label}}{{.Label}}{{else if eq $.State "running"}}Finishing{{else}}{{with itemTally .Items}}{{if .Failed}}Finished: {{.Done}} passed, {{.Failed}} failed{{else}}Finished: all {{.Done}} passed{{end}}{{else}}Finished{{end}}{{end}}{{else}}{{if eq .State "waiting"}}Waiting for your answer{{else}}Working{{end}}{{end}}</strong>
+      <span class="ms-auto text-secondary small" data-job-progress-meta>{{with .Progress}}{{.Done}} of {{.Total}} · {{.Percent}}%{{with timeLeft .}} · {{.}}{{end}}{{end}}</span>
+    </div>
+    {{with .Progress}}<progress class="job-progress-bar" max="{{.Total}}" value="{{.Done}}" aria-label="Job progress" data-job-progress-bar>{{.Percent}}%</progress>{{else}}<progress class="job-progress-bar" aria-label="Job progress, steps not counted" data-job-progress-bar></progress>{{end}}
+    {{if not .Summary}}{{with .Progress}}{{if .Items}}<ol class="job-run-items mt-3 mb-0" data-job-items>{{range .Items}}<li class="job-run-item is-{{.State}}" data-job-item="{{.Name}}"><span class="job-run-mark" aria-hidden="true">{{if eq .State "running"}}<span class="spinner-border spinner-border-sm"></span>{{else if eq .State "done"}}{{icon "circle-check"}}{{else if eq .State "failed"}}{{icon "circle-x"}}{{else}}{{icon "clock"}}{{end}}</span><code>{{.Name}}</code><span class="job-run-state" data-job-item-state>{{.State}}</span></li>{{end}}</ol>{{end}}{{end}}{{end}}
+    <div class="small text-secondary mt-1">Elapsed <span data-job-progress-elapsed>since {{when .Started}}</span>{{if not .Progress}}<span data-job-progress-uncounted> · this job does not count its steps, so the bar shows activity, not a percentage</span>{{end}}</div>
+  </div>
+</div>
+{{end}}

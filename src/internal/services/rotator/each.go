@@ -54,6 +54,9 @@ func (r *Rotator) RotateEach(names []string, allowUnverified bool, pw string, ou
 // Results is what the last RotateEach did with each key, for its summary.
 func (r *Rotator) Results() []RunResult { return r.results }
 
+// Via is how the key named reaches its hosts, for a summary of one key.
+func (r *Rotator) Via(name string) string { return r.via(name) }
+
 // via is how the key named reaches its hosts, as a summary's VIA column
 // says it: each distinct way, comma-separated.
 func (r *Rotator) via(name string) string {
