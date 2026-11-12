@@ -49,6 +49,14 @@ const (
 	WebBasePath    = "AUTHAMA_WEB_BASE_PATH"
 	WebAutoRestart = "AUTHAMA_WEB_AUTO_RESTART"
 	WebMenuExport  = "AUTHAMA_WEB_MENU_EXPORT"
+	// API serves the read API (/api/v1/) on `serve`, for API tokens; off by default.
+	API = "AUTHAMA_API"
+	// Webhooks has `serve` deliver the event feed to registered endpoints.
+	Webhooks = "AUTHAMA_WEBHOOKS"
+	// WebhooksAllowPrivate lets an endpoint be on a loopback or private address.
+	WebhooksAllowPrivate = "AUTHAMA_WEBHOOKS_ALLOW_PRIVATE"
+	// MCP lets `authama mcp` serve MCP over stdio.
+	MCP = "AUTHAMA_MCP"
 	// ExportSaveTo is where a saved export selection goes: user or manifest.
 	ExportSaveTo = "AUTHAMA_EXPORT_SAVE_TO"
 	// ServeHandoff is set by a restarting `serve` for the one replacing it,
@@ -62,10 +70,10 @@ const (
 // Names returns every name authama reads, sorted.
 func Names() []string {
 	out := []string{
-		AgeIdentityFile, AgeRecipient, AskpassMode, AskpassSecret, AutoPin, ConfigDir,
-		DevRoot, DockerCredsStore, ExportSaveTo, GitMode, HelloCheck, History, HistoryPermanent, NoDotenv, Notifications,
+		API, AgeIdentityFile, AgeRecipient, AskpassMode, AskpassSecret, AutoPin, ConfigDir,
+		DevRoot, DockerCredsStore, ExportSaveTo, GitMode, HelloCheck, History, HistoryPermanent, MCP, NoDotenv, Notifications,
 		OldKeyMaxAgeDays, OwnerStore, ServeHandoff, SnapshotRetain, StateDir, TokensCatalog, TokensConfig,
-		VMHypervisors, VMMultiplex, VMPruneGone, VMRepin, WebAddr, WebAutoRestart, WebBasePath, WebMenuExport, WebPort,
+		VMHypervisors, VMMultiplex, VMPruneGone, VMRepin, WebAddr, WebAutoRestart, WebBasePath, WebMenuExport, WebPort, Webhooks, WebhooksAllowPrivate,
 	}
 	sort.Strings(out)
 	return out

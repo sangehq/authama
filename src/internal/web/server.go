@@ -41,6 +41,9 @@ type Options struct {
 	// ReadOnly registers no route that changes anything, and hides the forms.
 	ReadOnly bool
 
+	// API serves the read API at /api/v1/ for API tokens (api.enabled).
+	API bool
+
 	// Version and BindAddr are shown in the footer.
 	Version  string
 	BindAddr string
@@ -130,7 +133,7 @@ func New(opts Options) (*Server, error) {
 	}
 	s := &Server{opts: opts, pages: pages, assets: assets, jobs: jobs.NewRegistry(), who: currentUser(), binary: watchOwnBinary(opts.Now())}
 	s.sessions.adopt(opts.Sessions)
-	s.handler = securityHeaders(withBasePath(base, s.hostCheck(s.auth(s.sameOrigin(ownerGate{s}.requireUnlock(s.routes()))))))
+	s.handler = securityHeaders(withBasePath(base, s.hostCheck(s.splitAPI(s.auth(s.sameOrigin(ownerGate{s}.requireUnlock(s.routes())))))))
 	return s, nil
 }
 
