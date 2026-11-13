@@ -6,13 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.1.5] - 2026-11-13
+## [0.1.6] - 2026-11-13
 
 The first release since the history restarted at 0.1.0, and the first built by the shared release
 workflow: binaries, archives, deb/rpm/apk packages, SBOMs, the source tarball, `checksums.txt` and a
 build-provenance attestation, on the GitHub release only. Publishing it makes the `go.mod` retraction
-of v0.1.1 to v0.1.3 take effect. There is no 0.1.4: that tag was pushed on a commit with no
-CHANGELOG section, the release refused to publish it, and a tag is never reused.
+of v0.1.1 to v0.1.3 take effect. There is no 0.1.4 or 0.1.5: both tags were pushed on a commit with
+no CHANGELOG section for them, the release refused to publish either, and a tag is never reused.
 
 ### Added
 
@@ -2322,6 +2322,6 @@ generalised beyond Composer, packaged for PyPI, and given an interactive UI.
 ##### Security
 - Owner-only hardening now applies on Windows (ACL), not just POSIX `chmod`.
 
-[Unreleased]: https://github.com/simtabi/authama/compare/v0.1.5...HEAD
-[0.1.5]: https://github.com/simtabi/authama/releases/tag/v0.1.5
+[Unreleased]: https://github.com/simtabi/authama/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/simtabi/authama/releases/tag/v0.1.6
 [0.1.0]: https://github.com/simtabi/authama/releases/tag/v0.1.0
