@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Documentation
+
+- **The provenance check now works.** `gh attestation verify` in the installation and release pages
+  names the signer, `--signer-workflow simtabi/.github/.github/workflows/go-release.yml`: the shared
+  release workflow signs, and without the flag the check fails against v0.1.6. A test fails any doc
+  that shows the command without it. The pages no longer say that no release has been published.
+
 ## [0.1.6] - 2026-11-13
 
 The first release since the history restarted at 0.1.0, and the first built by the shared release
