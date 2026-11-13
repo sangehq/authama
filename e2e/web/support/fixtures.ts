@@ -31,9 +31,19 @@ export const pages: { path: string; heading: string }[] = [
   { path: '/about/licenses', heading: 'Third-party licences' },
 ];
 
+// newSignInLink asks the server for a sign-in link, as `authama serve` does
+// for a server already running: a link works once, so every test needs its own.
+export async function newSignInLink(page: Page): Promise<string> {
+  const control = process.env.AUTHAMA_E2E_CONTROL;
+  if (!control) throw new Error('AUTHAMA_E2E_CONTROL is not set: the global setup did not run');
+  const res = await page.request.post('/auth/link', { headers: { 'X-Authama-Control': control } });
+  expect(res.status(), 'asking for a sign-in link').toBe(200);
+  const { sign_in: signIn } = (await res.json()) as { sign_in: string };
+  return new URLSearchParams(signIn.replace(/^\?/, '')).get('token') ?? '';
+}
+
 async function signIn(page: Page): Promise<void> {
-  const token = process.env.AUTHAMA_E2E_TOKEN;
-  if (!token) throw new Error('AUTHAMA_E2E_TOKEN is not set: the global setup did not run');
+  const token = await newSignInLink(page);
   const res = await page.goto(`/?token=${encodeURIComponent(token)}`);
   expect(res?.status(), 'signing in with the launch token').toBe(200);
   // The token is exchanged for a cookie and stripped from the address.

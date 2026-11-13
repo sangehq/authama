@@ -28,8 +28,14 @@ type Options struct {
 	// Engine reads the authama home. Required.
 	Engine Engine
 
-	// Token is the launch token printed in the URL. Required.
+	// Token is the first sign-in link's token, printed in the URL. It works
+	// once, for LinkLifetime. Required.
 	Token string
+	// Control is the key `authama serve` presents at LinkPath for a new
+	// sign-in link. Empty: no link is made that way.
+	Control string
+	// Links are sign-in links a restarted server gave out and nobody used yet.
+	Links []LinkState
 
 	// AllowedHosts are the Host header values answered (see AllowedHosts).
 	AllowedHosts []string
@@ -99,6 +105,7 @@ type Server struct {
 	pages    *pageSet
 	assets   *assetSet
 	sessions sessions
+	links    links
 	secrets  secretStash
 	who      whoami
 	jobs     *jobs.Registry
@@ -132,7 +139,13 @@ func New(opts Options) (*Server, error) {
 		return nil, err
 	}
 	s := &Server{opts: opts, pages: pages, assets: assets, jobs: jobs.NewRegistry(), who: currentUser(), binary: watchOwnBinary(opts.Now())}
-	s.sessions.adopt(opts.Sessions)
+	s.sessions.adopt(opts.Sessions, opts.Now())
+	s.links.add(opts.Token, opts.Now().Add(LinkLifetime))
+	for _, l := range opts.Links {
+		if l.Token != "" {
+			s.links.add(l.Token, l.Expires)
+		}
+	}
 	s.handler = securityHeaders(withBasePath(base, s.hostCheck(s.splitAPI(s.auth(s.sameOrigin(ownerGate{s}.requireUnlock(s.routes())))))))
 	return s, nil
 }

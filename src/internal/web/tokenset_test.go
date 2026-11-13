@@ -75,7 +75,7 @@ func TestTokenSetKeepsTheSecretOutOfEveryPage(t *testing.T) {
 
 	// Used once: the stash no longer holds it, and the same reference is
 	// refused.
-	if _, ok := s.secrets.get(s.sessions.get(c.cookie.Value), ref[1], s.now()); ok {
+	if _, ok := s.secrets.get(s.sessions.get(c.cookie.Value, s.now()), ref[1], s.now()); ok {
 		t.Error("the stash still holds the secret after the change was made")
 	}
 	if res := confirm(c); res.StatusCode == http.StatusOK {

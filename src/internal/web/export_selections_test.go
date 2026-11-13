@@ -20,7 +20,7 @@ func (c *client) postJSON(path, body string) *httptest.ResponseRecorder {
 	r := httptest.NewRequest(http.MethodPost, "http://"+testHost+path, strings.NewReader(body))
 	r.Header.Set("Content-Type", "application/json")
 	r.Header.Set("Origin", "http://"+testHost)
-	r.Header.Set("X-CSRF-Token", c.s.sessions.get(c.cookie.Value).csrf)
+	r.Header.Set("X-CSRF-Token", c.s.sessions.get(c.cookie.Value, c.s.now()).csrf)
 	r.AddCookie(c.cookie)
 	return do(c.s, r)
 }

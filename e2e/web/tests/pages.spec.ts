@@ -1,6 +1,6 @@
 // Every read-only page, against the seeded home: each answers, carries its
 // heading, and shows what the manifest and the reconciled ~/.ssh actually hold.
-import { test, expect, pages } from '../support/fixtures';
+import { test, expect, pages, newSignInLink } from '../support/fixtures';
 
 // The shipped example manifest (src/config/manifest.json).
 const profiles = ['work', 'personal', 'simtabi', 'development', 'school'];
@@ -37,6 +37,16 @@ test('without the token every page answers 401', async ({ playwright }) => {
   }
   expect((await anon.get('/?token=not-the-token')).status()).toBe(401);
   await anon.dispose();
+});
+
+test('a sign-in link works once', async ({ playwright, page }) => {
+  const token = await newSignInLink(page);
+  const browser = await playwright.request.newContext({ baseURL: process.env.AUTHAMA_E2E_URL, maxRedirects: 0 });
+  expect((await browser.get(`/?token=${token}`)).status(), 'first use').toBe(303);
+  const other = await playwright.request.newContext({ baseURL: process.env.AUTHAMA_E2E_URL, maxRedirects: 0 });
+  expect((await other.get(`/?token=${token}`)).status(), 'second use, another browser').toBe(401);
+  await browser.dispose();
+  await other.dispose();
 });
 
 test('the overview counts what the other pages list', async ({ page }) => {

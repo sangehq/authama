@@ -35,7 +35,9 @@ func (x restartAPI) handleRestart(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusAccepted)
-	_ = json.NewEncoder(w).Encode(restartReply{Instance: x.s.opts.Instance, SignIn: "?token=" + x.s.opts.Token})
+	// A new link, handed to the next server with the others not yet used, for
+	// a page whose session did not survive the restart.
+	_ = json.NewEncoder(w).Encode(restartReply{Instance: x.s.opts.Instance, SignIn: "?token=" + NewLink(x.s).Token})
 	if f, ok := w.(http.Flusher); ok {
 		f.Flush()
 	}
@@ -63,6 +65,9 @@ type SessionState struct {
 	ID      string    `json:"id"`
 	CSRF    string    `json:"csrf"`
 	Created time.Time `json:"created"`
+	// Seen is when it last made a request; a server before this field hands
+	// over none, and the session counts as seen when it is adopted.
+	Seen time.Time `json:"seen,omitempty"`
 }
 
 // Sessions is every signed-in session, for the server replacing this one.
@@ -71,13 +76,13 @@ func (s *Server) Sessions() []SessionState {
 	defer s.sessions.mu.Unlock()
 	out := make([]SessionState, 0, len(s.sessions.byID))
 	for id, sess := range s.sessions.byID {
-		out = append(out, SessionState{ID: id, CSRF: sess.csrf, Created: sess.created})
+		out = append(out, SessionState{ID: id, CSRF: sess.csrf, Created: sess.created, Seen: sess.seen})
 	}
 	return out
 }
 
 // adopt takes over sessions a restarted server handed over.
-func (s *sessions) adopt(states []SessionState) {
+func (s *sessions) adopt(states []SessionState, now time.Time) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.byID == nil {
@@ -85,7 +90,13 @@ func (s *sessions) adopt(states []SessionState) {
 	}
 	for _, st := range states {
 		if st.ID != "" && st.CSRF != "" && len(s.byID) < maxSessions {
-			s.byID[st.ID] = &session{csrf: st.CSRF, created: st.Created}
+			seen := st.Seen
+			if seen.IsZero() {
+				seen = now
+			}
+			if !expired(st.Created, seen, now) {
+				s.byID[st.ID] = &session{csrf: st.CSRF, created: st.Created, seen: seen}
+			}
 		}
 	}
 }
