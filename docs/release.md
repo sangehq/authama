@@ -8,18 +8,27 @@ restarted, so until the next one users build from source
 ([installation](installation.md#install)).
 
 ```bash
-git push origin v0.1.4                                            # builds and publishes v0.1.4
-gh workflow run release.yml --repo simtabi/authama -f tag=v0.1.4   # the same, for a tag already pushed
+git push origin v0.1.6                                            # builds and publishes v0.1.6
+gh workflow run release.yml --repo simtabi/authama -f tag=v0.1.6   # the same, for a tag already pushed
 ```
 
 A pushed tag publishes, and tags are final, so push one only for code that is ready.
 
-## The next version is v0.1.4
+## The next version is v0.1.6
 
 v0.1.1 to v0.1.3 are retracted in `src/go.mod`: the Go module proxy cached them
 from history that was deleted when the versions restarted, and a cached version
-cannot be replaced. No doc offers the module through the Go toolchain. Those numbers are never tagged again, so the next release is
-v0.1.4. The retraction takes effect when v0.1.4 is published.
+cannot be replaced. No doc offers the module through the Go toolchain. Those numbers are
+never tagged again. The retraction takes effect when v0.1.6 is published.
+
+v0.1.4 and v0.1.5 are tags with no release. Both were pushed on 2026-11-13 on
+`3bc0a81`, a commit whose CHANGELOG had no section for either, and the release refused
+to publish them (runs 43447818596 and 43450588924 stopped at "Extract the changelog
+section"). The workflow reads the notes from the tagged commit, so those tags can never
+publish, and a tag is never moved. No `src/v0.1.4` or `src/v0.1.5` was pushed, so the
+Go toolchain never sees them and nothing needs retracting. The next release is v0.1.6:
+tag the merge commit of the pull request that adds its section, never `main` before it
+merges.
 
 v0.1.0 is kept as a release, not retracted. The proxy's copy of it is the
 first commit tagged `src/v0.1.0` (`f21ef51`), which is not the commit the tag
@@ -75,11 +84,11 @@ publishing block (`TestGoReleaserPublishesOnlyToTheGitHubRelease`); and no doc o
 ## Cut a release
 
 1. Update `CHANGELOG.md` (move Unreleased into a dated, semver-tagged section).
-2. Tag and push: `git tag -a v0.1.4 -m v0.1.4 && git push origin v0.1.4`. The push
+2. Tag and push: `git tag -a v0.1.6 -m v0.1.6 && git push origin v0.1.6`. The push
    starts the release. A tag with a pre-release suffix (`-rc.1`) is published as a
    GitHub pre-release and needs no CHANGELOG section; test with one before a final tag.
 3. To build a tag that is already pushed (a first release of an older tag, or a
-   re-run after a failure): `gh workflow run release.yml --repo simtabi/authama -f tag=v0.1.4`.
+   re-run after a failure): `gh workflow run release.yml --repo simtabi/authama -f tag=v0.1.6`.
 4. The run publishes the per-OS/arch binaries and archives, the deb/rpm/apk packages,
    per-archive SBOMs, the source tarball, the two install scripts, `checksums.txt`, and
    a signed build-provenance attestation. Verify any downloaded artifact with
