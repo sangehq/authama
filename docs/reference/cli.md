@@ -1787,7 +1787,8 @@ A new URL is checked with git ls-remote before origin is rewritten, so a checkou
 never ends up with a remote it cannot authenticate to. Non-GitHub origins are skipped.
 
 With --json, prints {"version": 1, "mode": ..., "dry_run": ..., "checkouts": [...]}:
-each checkout's path, from, to, applied, skipped and error. Fields are only ever added.
+each checkout's path, from, to, applied, skipped, error, owner, repo, profile and
+profile_from (flag or owner). Fields are only ever added.
 
 ```
 authama ssh git use [profile|ssh|https] [path...] [flags]

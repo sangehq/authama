@@ -108,7 +108,8 @@ func newGitCmd() *cobra.Command {
 			"A new URL is checked with git ls-remote before origin is rewritten, so a checkout\n" +
 			"never ends up with a remote it cannot authenticate to. Non-GitHub origins are skipped.\n\n" +
 			"With --json, prints {\"version\": 1, \"mode\": ..., \"dry_run\": ..., \"checkouts\": [...]}:\n" +
-			"each checkout's path, from, to, applied, skipped and error. Fields are only ever added.",
+			"each checkout's path, from, to, applied, skipped, error, owner, repo, profile and\n" +
+			"profile_from (flag or owner). Fields are only ever added.",
 		RunE: func(c *cobra.Command, args []string) error {
 			explicit := modeFlag
 			if len(args) > 0 && isGitMode(args[0]) {
@@ -140,7 +141,8 @@ func newGitCmd() *cobra.Command {
 			for _, dir := range args {
 				ch, err := gitremote.Use(gitremote.Exec{}, m, dir, mode, profileFlag, dryRun)
 				if useJSON {
-					row := gitUseRow{Path: dir, From: ch.From, To: ch.To, Applied: ch.Applied, Skipped: ch.Skipped}
+					row := gitUseRow{Path: dir, From: ch.From, To: ch.To, Applied: ch.Applied, Skipped: ch.Skipped,
+						Owner: ch.Owner, Repo: ch.Repo, Profile: ch.Profile, ProfileFrom: ch.ProfileFrom}
 					if err != nil {
 						row.Error = err.Error()
 						failed = append(failed, dir)
@@ -272,6 +274,13 @@ type gitUseRow struct {
 	Applied bool   `json:"applied"`
 	Skipped string `json:"skipped"`
 	Error   string `json:"error"`
+	// Owner, Repo, Profile and ProfileFrom are empty when the checkout was
+	// skipped before its origin was parsed. ProfileFrom is "flag" (--profile)
+	// or "owner" (defaults.git.orgs, then defaults.git.profile).
+	Owner       string `json:"owner"`
+	Repo        string `json:"repo"`
+	Profile     string `json:"profile"`
+	ProfileFrom string `json:"profile_from"`
 }
 
 // gitResolveDoc is `ssh git resolve --json`. Its names after version are the

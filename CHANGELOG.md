@@ -39,6 +39,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   without `--dry-run`) reports each checkout's from, to, applied, skipped and error. Like
   `ssh git status --json`, their fields are only ever added.
 
+- **`ssh git use --json` names each checkout's repository and profile.** Every row now also carries
+  `owner`, `repo`, `profile` and `profile_from` (`flag` for `--profile`, `owner` for the
+  `defaults.git.orgs` / `defaults.git.profile` mapping), so sange can match a dry run against its own
+  identity verdict without parsing the URL. Existing fields are unchanged.
+
 - **A rotation ends in a summary.** A batch `authama ssh rotate`, and every `--check`, ends with
   one summary of every key: the command, a Result line with the counts, every key under one trunk
   grouped by owner and by project (and environment) read from its name, worst first, in aligned
