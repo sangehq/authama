@@ -9,8 +9,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/util/envnames"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // BackupBeforeDestroying writes an age-encrypted bundle so an operation that

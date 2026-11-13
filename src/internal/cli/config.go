@@ -7,11 +7,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/services/configsvc"
-	"github.com/simtabi/authama/src/internal/services/knownhosts"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/configsvc"
+	"github.com/sangehq/authama/src/internal/services/knownhosts"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // loadConfigService resolves the home, loads the manifest, and builds the config

@@ -5,9 +5,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/services/owner"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/services/owner"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // sealState is what the owner seal said when a scope first took the lock.

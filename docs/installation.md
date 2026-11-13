@@ -26,14 +26,14 @@ macOS, Linux and Windows are all first-class, each validated on its own CI runne
 
 Two ways, in this order:
 
-1. **Download a binary from the [GitHub release](https://github.com/simtabi/authama/releases).**
+1. **Download a binary from the [GitHub release](https://github.com/sangehq/authama/releases).**
    Each release carries `authama_<os>_<arch>` (`.exe` on Windows), archives, deb/rpm/apk
    packages and `checksums.txt`. Check what you downloaded before running it, then put it on
    your `PATH`:
 
    ```sh
    shasum -a 256 -c checksums.txt --ignore-missing
-   gh attestation verify authama_linux_amd64 --repo simtabi/authama \
+   gh attestation verify authama_linux_amd64 --repo sangehq/authama \
      --signer-workflow simtabi/.github/.github/workflows/go-release.yml   # optional: build provenance
    ```
 
@@ -46,7 +46,7 @@ Nothing is published to a package manager, an image registry or the Go module pr
 page offers no `brew`, `scoop`, `winget` or `go install` path.
 
 ```sh
-git clone https://github.com/simtabi/authama ~/src/authama
+git clone https://github.com/sangehq/authama ~/src/authama
 make -C ~/src/authama install    # builds build/<your-os>/authama, then copies it to ~/.local/bin
 authama doctor          # verify deps, perms, agent, known_hosts, drift, token-file modes
 ```

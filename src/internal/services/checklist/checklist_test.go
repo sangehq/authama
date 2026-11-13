@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/util/paths"
-	"github.com/simtabi/authama/src/internal/util/testcred"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/testcred"
 )
 
 // work/work_gh is in use: deployed and verified on gh-work, pasted by hand on

@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/platform"
 )
 
 // HardBins must be present; OptionalBins degrade gracefully.

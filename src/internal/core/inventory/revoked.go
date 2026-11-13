@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/simtabi/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/fs"
 )
 
 // Revocation is one revoked key: the key it was, when it was revoked, and the

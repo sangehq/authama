@@ -7,9 +7,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/simtabi/authama/src/internal/core/tokens"
-	"github.com/simtabi/authama/src/internal/services/history"
-	"github.com/simtabi/authama/src/internal/services/mutation"
+	"github.com/sangehq/authama/src/internal/core/tokens"
+	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/services/mutation"
 )
 
 // recordedFlags are the string flags whose values are names from the manifest

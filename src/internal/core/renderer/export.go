@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/util/encode"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/util/encode"
 )
 
 // ExportPaths is what an export needs to turn the ~ form paths the managed

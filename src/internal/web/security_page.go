@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"sort"
 
-	"github.com/simtabi/authama/src/internal/services/owner"
+	"github.com/sangehq/authama/src/internal/services/owner"
 )
 
 // securityPage is the owner binding as the Owner & PIN page shows it. It is

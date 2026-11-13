@@ -2,21 +2,21 @@ package web
 
 import (
 	"fmt"
-	"github.com/simtabi/authama/src/internal/services/rotator"
+	"github.com/sangehq/authama/src/internal/services/rotator"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/services/bundler"
-	"github.com/simtabi/authama/src/internal/services/editor"
-	"github.com/simtabi/authama/src/internal/services/history"
-	"github.com/simtabi/authama/src/internal/services/jobs"
-	"github.com/simtabi/authama/src/internal/services/keysvc"
-	"github.com/simtabi/authama/src/internal/services/lifecycle"
-	"github.com/simtabi/authama/src/internal/services/mutation"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/bundler"
+	"github.com/sangehq/authama/src/internal/services/editor"
+	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/services/jobs"
+	"github.com/sangehq/authama/src/internal/services/keysvc"
+	"github.com/sangehq/authama/src/internal/services/lifecycle"
+	"github.com/sangehq/authama/src/internal/services/mutation"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // keySelection reads which keys a bulk job acts on: "all", or any mix of

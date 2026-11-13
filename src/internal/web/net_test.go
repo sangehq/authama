@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/netstat"
-	"github.com/simtabi/authama/src/internal/util/netcheck"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/netstat"
+	"github.com/sangehq/authama/src/internal/util/netcheck"
 )
 
 // fakeNet replaces ssh net's probe with one that touches no network, and

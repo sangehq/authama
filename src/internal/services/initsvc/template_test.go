@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/services/settings"
+	"github.com/sangehq/authama/src/internal/services/settings"
 )
 
 // The .env authama init seeds is loaded at every start, so the template must

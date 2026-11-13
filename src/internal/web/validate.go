@@ -4,13 +4,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/services/configsvc"
-	"github.com/simtabi/authama/src/internal/services/settings"
-	"github.com/simtabi/authama/src/internal/services/validate"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/configsvc"
+	"github.com/sangehq/authama/src/internal/services/settings"
+	"github.com/sangehq/authama/src/internal/services/validate"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // ValidateView is the /validate page: every check the validate commands run,

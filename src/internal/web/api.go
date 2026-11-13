@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/apitokens"
-	"github.com/simtabi/authama/src/internal/services/dataset"
-	"github.com/simtabi/authama/src/internal/services/feed"
-	"github.com/simtabi/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/services/apitokens"
+	"github.com/sangehq/authama/src/internal/services/dataset"
+	"github.com/sangehq/authama/src/internal/services/feed"
+	"github.com/sangehq/authama/src/internal/services/history"
 )
 
 // APIPrefix is where the read API is served, when api.enabled is on.

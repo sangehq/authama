@@ -9,10 +9,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/savedsel"
-	"github.com/simtabi/authama/src/internal/services/selection"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/savedsel"
+	"github.com/sangehq/authama/src/internal/services/selection"
 )
 
 // newExportSelectionsCmd is `export selections`: the selections saved by

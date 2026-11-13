@@ -6,9 +6,9 @@ import (
 	"io"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/mutation"
-	"github.com/simtabi/authama/src/internal/services/repair"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/services/mutation"
+	"github.com/sangehq/authama/src/internal/services/repair"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // Repair is `authama repair --yes`: every fix repair.Home.Check finds. The

@@ -3,10 +3,10 @@ package web
 import (
 	"net/http"
 
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/services/repair"
-	"github.com/simtabi/authama/src/internal/services/tokensvc"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/repair"
+	"github.com/sangehq/authama/src/internal/services/tokensvc"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // repairHome is what the web repairs: the server's home, its token files, and

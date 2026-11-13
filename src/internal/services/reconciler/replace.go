@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // ReplaceLocally is a forced rotation's fallback, as `ssh keygen --force`

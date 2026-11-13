@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/fs"
 )
 
 // Set writes one setting into the authama.json at path, creating the file

@@ -6,7 +6,7 @@
 # This file only says when.
 #
 #   git push origin v0.1.4                                          builds and publishes v0.1.4
-#   gh workflow run release.yml --repo simtabi/authama -f tag=v0.1.4  the same, for a tag already pushed
+#   gh workflow run release.yml --repo sangehq/authama -f tag=v0.1.4  the same, for a tag already pushed
 #
 # Push a version tag only for final code: tags are final, and a pushed tag publishes.
 name: Release

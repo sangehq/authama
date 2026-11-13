@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/pin"
-	"github.com/simtabi/authama/src/internal/util/fs"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/pin"
+	"github.com/sangehq/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // FreeAttempts is how many wrong PINs in a row are allowed before each further

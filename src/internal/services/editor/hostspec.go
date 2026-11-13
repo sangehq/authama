@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/util/log"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/util/log"
 )
 
 // HostSpec is one compact host declaration: `<alias> <host>[:port] <user> [role]`,

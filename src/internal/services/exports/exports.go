@@ -11,14 +11,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/tokens"
-	"github.com/simtabi/authama/src/internal/services/events"
-	"github.com/simtabi/authama/src/internal/services/history"
-	"github.com/simtabi/authama/src/internal/services/keysvc"
-	"github.com/simtabi/authama/src/internal/services/query"
-	"github.com/simtabi/authama/src/internal/services/snapshots"
-	"github.com/simtabi/authama/src/internal/util/csvout"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/tokens"
+	"github.com/sangehq/authama/src/internal/services/events"
+	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/services/keysvc"
+	"github.com/sangehq/authama/src/internal/services/query"
+	"github.com/sangehq/authama/src/internal/services/snapshots"
+	"github.com/sangehq/authama/src/internal/util/csvout"
 )
 
 // Hosts is `ssh list`: every host, with its profile.

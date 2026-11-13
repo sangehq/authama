@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/core/hypervisor"
+	"github.com/sangehq/authama/src/internal/core/hypervisor"
 )
 
 func TestTheVMSectionsParse(t *testing.T) {

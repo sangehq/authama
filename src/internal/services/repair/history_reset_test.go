@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // Starting the history again moves the history and the audit log aside and

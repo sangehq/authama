@@ -26,9 +26,9 @@ import (
 	"sync"
 	"time"
 
-	ufs "github.com/simtabi/authama/src/internal/util/fs"
-	"github.com/simtabi/authama/src/internal/util/homeperms"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	ufs "github.com/sangehq/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/homeperms"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // The areas a tracked file belongs to.

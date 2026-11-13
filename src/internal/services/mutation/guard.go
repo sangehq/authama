@@ -11,12 +11,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/snapshots"
-	"github.com/simtabi/authama/src/internal/util/lock"
-	"github.com/simtabi/authama/src/internal/util/log"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/snapshots"
+	"github.com/sangehq/authama/src/internal/util/lock"
+	"github.com/sangehq/authama/src/internal/util/log"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // heldLock keeps the acquired advisory lock alive for the rest of the process so

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/util/testcred"
+	"github.com/sangehq/authama/src/internal/util/testcred"
 )
 
 var (

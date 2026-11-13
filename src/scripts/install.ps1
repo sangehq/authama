@@ -8,7 +8,7 @@
   named, so it can be removed by hand.
 
 .EXAMPLE
-  irm https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.ps1 | iex
+  irm https://raw.githubusercontent.com/sangehq/authama/main/src/scripts/install.ps1 | iex
 
 .EXAMPLE
   # Pin a version / custom dir (AUTHAMA_*, or the deprecated SSHMGR_*)
@@ -30,7 +30,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$owner   = 'simtabi'
+$owner   = 'sangehq'
 $repo    = 'authama'
 # Releases up to 0.1.0 installed into Programs\ssh-manager; 0.1.1 and later
 # install into Programs\authama and take the old folder off the user PATH (its

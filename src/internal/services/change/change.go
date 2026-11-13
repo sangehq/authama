@@ -30,11 +30,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/history"
-	"github.com/simtabi/authama/src/internal/services/mutation"
-	"github.com/simtabi/authama/src/internal/services/snapshots"
-	"github.com/simtabi/authama/src/internal/util/highlight"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/services/mutation"
+	"github.com/sangehq/authama/src/internal/services/snapshots"
+	"github.com/sangehq/authama/src/internal/util/highlight"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // ErrStale reports a confirmation made against a preview that no longer

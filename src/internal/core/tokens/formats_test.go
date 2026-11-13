@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/util/testcred"
+	"github.com/sangehq/authama/src/internal/util/testcred"
 )
 
 // Each added tool's file round-trips: merging a credential into a file that

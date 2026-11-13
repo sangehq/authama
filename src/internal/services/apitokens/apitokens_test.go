@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // A token is shown once and kept only as its hash; it is accepted for its

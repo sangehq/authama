@@ -2,8 +2,8 @@
 
 <!-- Three badges, not the usual four: authama ships as a static binary and has no
      package-registry release, so a registry-version badge would have no target. -->
-[![Tests](https://img.shields.io/github/actions/workflow/status/simtabi/authama/ci.yml?branch=main&label=tests)](https://github.com/simtabi/authama/actions/workflows/ci.yml)
-[![Static analysis](https://img.shields.io/github/actions/workflow/status/simtabi/authama/codeql.yml?branch=main&label=codeql)](https://github.com/simtabi/authama/actions/workflows/codeql.yml)
+[![Tests](https://img.shields.io/github/actions/workflow/status/sangehq/authama/ci.yml?branch=main&label=tests)](https://github.com/sangehq/authama/actions/workflows/ci.yml)
+[![Static analysis](https://img.shields.io/github/actions/workflow/status/sangehq/authama/codeql.yml?branch=main&label=codeql)](https://github.com/sangehq/authama/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 > Authentication Access Manager: SSH keys and config, and package-manager / git auth tokens, in one tool.
@@ -22,12 +22,12 @@ Coming from sshmgr or auth-token-manager? See the [migration guide](docs/migrati
 
 ## Install
 
-Binaries ship on the [GitHub release](https://github.com/simtabi/authama/releases):
+Binaries ship on the [GitHub release](https://github.com/sangehq/authama/releases):
 download the one for your platform and check it against that release's `checksums.txt`.
 Or build from source; you need Go (the version `src/go.mod` names), `git` and `make`.
 
 ```sh
-git clone https://github.com/simtabi/authama ~/src/authama
+git clone https://github.com/sangehq/authama ~/src/authama
 make -C ~/src/authama install    # builds build/<your-os>/authama, then copies it to ~/.local/bin
 authama doctor
 ```

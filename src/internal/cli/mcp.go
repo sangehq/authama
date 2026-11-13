@@ -5,10 +5,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/services/mcp"
-	"github.com/simtabi/authama/src/internal/util/envnames"
-	"github.com/simtabi/authama/src/internal/version"
-	"github.com/simtabi/authama/src/internal/web"
+	"github.com/sangehq/authama/src/internal/services/mcp"
+	"github.com/sangehq/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/version"
+	"github.com/sangehq/authama/src/internal/web"
 )
 
 // errMCPOff is `authama mcp` with mcp.enabled off, which is the default.

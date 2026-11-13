@@ -6,15 +6,15 @@
 # no longer installed; one already there is left alone, and named, so it can be
 # removed by hand.
 #
-#   curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash
-#   curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash -s v0.1.0
+#   curl -fsSL https://raw.githubusercontent.com/sangehq/authama/main/src/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/sangehq/authama/main/src/scripts/install.sh | bash -s v0.1.0
 #
 # Windows users: use src/scripts/install.ps1 (irm ... | iex) or download the bare
 # authama_windows_<arch>.exe from the releases page.
 #
 set -euo pipefail
 
-OWNER="simtabi"
+OWNER="sangehq"
 REPO="authama"
 BINARY="authama"
 # The name releases before 0.1.0 shipped as; only ever reported, never installed.

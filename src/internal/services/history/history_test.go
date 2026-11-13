@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/util/log"
+	"github.com/sangehq/authama/src/internal/util/log"
 )
 
 func open(t *testing.T) *Store {

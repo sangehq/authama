@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/util/perms"
+	"github.com/sangehq/authama/src/internal/util/perms"
 )
 
 func addTo(t *testing.T, ssh string, lines ...string) (*Service, string) {

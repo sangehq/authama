@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/fs"
 )
 
 const schemaVersion = 1

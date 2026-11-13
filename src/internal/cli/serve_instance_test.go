@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/web"
+	"github.com/sangehq/authama/src/internal/web"
 )
 
 // A server already running for the home is opened again, not doubled: the

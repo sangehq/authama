@@ -5,8 +5,9 @@
 // new command with it. Every user-facing mention of either goes through these
 // constants, so the next rename is an edit here and not a search across the tree.
 //
-// The repository (simtabi/authama) and the Go module path
-// (github.com/simtabi/authama/src) followed the name at 0.1.0; the config home
+// The repository (simtabi/authama, moved to sangehq/authama on 2026-11-13) and the Go
+// module path (github.com/simtabi/authama/src, now github.com/sangehq/authama/src)
+// followed the name at 0.1.0; the config home
 // (~/.config/authama) and the environment variables (AUTHAMA_*) at 0.1.1; the
 // release archives, the Linux packages, the Homebrew cask and the Scoop
 // manifest at 0.1.2. The sshmgr binary that shipped beside authama as a

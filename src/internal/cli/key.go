@@ -8,17 +8,17 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/services/editor"
-	"github.com/simtabi/authama/src/internal/services/exports"
-	"github.com/simtabi/authama/src/internal/services/keyaudit"
-	"github.com/simtabi/authama/src/internal/services/keysvc"
-	"github.com/simtabi/authama/src/internal/services/lifecycle"
-	"github.com/simtabi/authama/src/internal/services/pubkeys"
-	"github.com/simtabi/authama/src/internal/services/reconciler"
-	"github.com/simtabi/authama/src/internal/util/csvout"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/editor"
+	"github.com/sangehq/authama/src/internal/services/exports"
+	"github.com/sangehq/authama/src/internal/services/keyaudit"
+	"github.com/sangehq/authama/src/internal/services/keysvc"
+	"github.com/sangehq/authama/src/internal/services/lifecycle"
+	"github.com/sangehq/authama/src/internal/services/pubkeys"
+	"github.com/sangehq/authama/src/internal/services/reconciler"
+	"github.com/sangehq/authama/src/internal/util/csvout"
 )
 
 // newKeyCmd is the key lifecycle verb. A key used to exist only as a property of

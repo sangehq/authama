@@ -3,9 +3,9 @@ package web
 import (
 	"net/http"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/netstat"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/netstat"
 )
 
 // netProbe is `ssh net`'s probe. Tests swap it for one that touches no network.

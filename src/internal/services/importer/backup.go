@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/util/homeperms"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/homeperms"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // BackupTargets copies manifest + inventory into <home>/.state/import-backup-<ts>/.

@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/renderer"
-	"github.com/simtabi/authama/src/internal/services/dockerctx"
-	"github.com/simtabi/authama/src/internal/services/knownhosts"
+	"github.com/sangehq/authama/src/internal/core/renderer"
+	"github.com/sangehq/authama/src/internal/services/dockerctx"
+	"github.com/sangehq/authama/src/internal/services/knownhosts"
 )
 
 // Probe outcomes.

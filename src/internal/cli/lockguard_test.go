@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/mutation"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/services/mutation"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // The mutation guard must be re-entrant within a process. flock is per file

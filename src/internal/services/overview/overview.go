@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/services/doctor"
-	"github.com/simtabi/authama/src/internal/services/notifier"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/doctor"
+	"github.com/sangehq/authama/src/internal/services/notifier"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // Row is one line of the state block. A row with a fix is a problem; Fix is

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // invalidRecipient is deliberately not an age recipient (see dotenvRecipient).

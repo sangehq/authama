@@ -8,29 +8,31 @@ users who prefer can still build from source ([installation](installation.md#ins
 
 ```bash
 git push origin v0.1.7                                            # builds and publishes v0.1.7
-gh workflow run release.yml --repo simtabi/authama -f tag=v0.1.7   # the same, for a tag already pushed
+gh workflow run release.yml --repo sangehq/authama -f tag=v0.1.7   # the same, for a tag already pushed
 ```
 
 A pushed tag publishes, and tags are final, so push one only for code that is ready.
 
 ## Version numbers since the restart
 
-v0.1.1 to v0.1.3 are retracted in `src/go.mod`: the Go module proxy cached them
-from history that was deleted when the versions restarted, and a cached version
-cannot be replaced. No doc offers the module through the Go toolchain. Those numbers are
-never tagged again. The retraction took effect when v0.1.6 was published.
+On 2026-11-13 the repository moved from `simtabi/authama` to `sangehq/authama`, and the Go
+module path from `github.com/simtabi/authama/src` to `github.com/sangehq/authama/src`.
+GitHub redirects the old repository URLs. The old module path's versions stay cached by
+the Go module proxy under that path, and nothing points at them; no doc offers either
+path through the Go toolchain. The new path has no published version, so `src/go.mod`
+retracts nothing.
 
-v0.1.4 and v0.1.5 are tags with no release. Both were pushed on 2026-11-13 on
-`3bc0a81`, a commit whose CHANGELOG had no section for either, and the release refused
-to publish them (runs 43447818596 and 43450588924 stopped at "Extract the changelog
-section"). The workflow reads the notes from the tagged commit, so those tags can never
-publish, and a tag is never moved. No `src/v0.1.4` or `src/v0.1.5` was pushed, so the
-Go toolchain never sees them and nothing needs retracting. v0.1.6 was tagged on the merge
-commit of the pull request that added its section (`6c56209`), which is the order every
-release follows: merge the CHANGELOG section first, then tag that merge commit, never `main`
-before it merges. The next release is v0.1.7.
+Under the old path: v0.1.1 to v0.1.3 were retracted; v0.1.4 and v0.1.5 are tags with no
+release, both pushed on `3bc0a81` before the commit that added their CHANGELOG section
+(runs 43447818596 and 43450588924 refused them); v0.1.6 is the last release, tagged on the
+merge commit that added its section (`6c56209`). That order holds for every release:
+merge the CHANGELOG section first, then tag that merge commit, never `main` before it
+merges.
 
-v0.1.0 is kept as a release, not retracted. The proxy's copy of it is the
+The versions restart at v0.1.0 under the new module path (owner, 2026-11-13), once the
+old tags are cleared.
+
+Under the old path, v0.1.0 was kept as a release, not retracted. The proxy's copy of it is the
 first commit tagged `src/v0.1.0` (`f21ef51`), which is not the commit the tag
 names today (`282d76c`), so a module fetch of v0.1.0 gets the older code. Building
 from a checkout of the tag builds the newer one.
@@ -88,11 +90,11 @@ publishing block (`TestGoReleaserPublishesOnlyToTheGitHubRelease`); and no doc o
    starts the release. A tag with a pre-release suffix (`-rc.1`) is published as a
    GitHub pre-release and needs no CHANGELOG section; test with one before a final tag.
 3. To build a tag that is already pushed (a first release of an older tag, or a
-   re-run after a failure): `gh workflow run release.yml --repo simtabi/authama -f tag=v0.1.7`.
+   re-run after a failure): `gh workflow run release.yml --repo sangehq/authama -f tag=v0.1.7`.
 4. The run publishes the per-OS/arch binaries and archives, the deb/rpm/apk packages,
    per-archive SBOMs, the source tarball, the two install scripts, `checksums.txt`, and
    a signed build-provenance attestation. Verify any downloaded artifact with
-   `gh attestation verify <file> --repo simtabi/authama --signer-workflow simtabi/.github/.github/workflows/go-release.yml`.
+   `gh attestation verify <file> --repo sangehq/authama --signer-workflow simtabi/.github/.github/workflows/go-release.yml`.
    The shared workflow is what signs, so its path is the signer; without the flag `gh`
    expects a workflow in this repository and the check fails.
 
@@ -104,7 +106,7 @@ publishing block (`TestGoReleaserPublishesOnlyToTheGitHubRelease`); and no doc o
 
 1. Make the repo public and enable Issues.
 2. Set the metadata:
-   `gh repo edit simtabi/authama --homepage "https://github.com/simtabi/authama#readme"`,
+   `gh repo edit sangehq/authama --homepage "https://github.com/sangehq/authama#readme"`,
    topics `oss ssh ssh-keys ssh-config key-rotation cli go`.
 3. The `release` GitHub Environment the old pipeline ran in is no longer used: a
    reusable workflow's job cannot name one from the caller.

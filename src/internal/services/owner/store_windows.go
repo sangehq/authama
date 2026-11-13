@@ -8,8 +8,8 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"github.com/simtabi/authama/src/internal/util/fs"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // dpapi keeps the key in a file in the state home, encrypted with DPAPI for

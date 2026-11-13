@@ -55,9 +55,9 @@ builds:
     mod_timestamp: "{{ .CommitTimestamp }}"
     ldflags:
       - -s -w
-      - -X github.com/simtabi/authama/src/internal/version.Version={{ .Version }}
-      - -X github.com/simtabi/authama/src/internal/version.Commit={{ .Commit }}
-      - -X github.com/simtabi/authama/src/internal/version.Date={{ .CommitDate }}
+      - -X github.com/sangehq/authama/src/internal/version.Version={{ .Version }}
+      - -X github.com/sangehq/authama/src/internal/version.Commit={{ .Commit }}
+      - -X github.com/sangehq/authama/src/internal/version.Date={{ .CommitDate }}
 
 # A single macOS universal binary (amd64 + arm64) alongside the per-arch ones.
 universal_binaries:
@@ -106,7 +106,7 @@ nfpms:
     replaces: [sshmgr]
     conflicts: [sshmgr]
     vendor: Simtabi LLC
-    homepage: "https://github.com/simtabi/authama"
+    homepage: "https://github.com/sangehq/authama"
     maintainer: "Imani Manyara <imani@simtabi.com>"
     description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
     license: MIT
@@ -136,7 +136,7 @@ sboms:
 # to carry were removed on 2026-11-13; simtabi/homebrew-tap and simtabi/scoop-bucket are frozen.
 release:
   github:
-    owner: simtabi
+    owner: sangehq
     name: authama
   draft: false
   prerelease: auto

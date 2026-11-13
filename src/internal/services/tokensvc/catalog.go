@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/simtabi/authama/src/internal/core/tokens"
-	"github.com/simtabi/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/core/tokens"
+	"github.com/sangehq/authama/src/internal/util/envnames"
 )
 
 // Catalog override variables. authama reads $AUTHAMA_TOKENS_CATALOG first,

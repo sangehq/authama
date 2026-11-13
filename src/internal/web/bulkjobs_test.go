@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/services/mutation"
+	"github.com/sangehq/authama/src/internal/services/mutation"
 )
 
 // The bulk jobs take any mix of keys, profiles and categories, and say which

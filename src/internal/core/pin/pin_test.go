@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/crypto/argon2"
 
-	"github.com/simtabi/authama/src/internal/util/testcred"
+	"github.com/sangehq/authama/src/internal/util/testcred"
 )
 
 func salt() []byte { return []byte(testcred.Secret("salt"))[:SaltLen] }

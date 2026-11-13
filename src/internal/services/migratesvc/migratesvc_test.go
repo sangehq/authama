@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // setup isolates legacy detection by pointing HOME at a clean temp dir, and

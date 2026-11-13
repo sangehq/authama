@@ -3,7 +3,7 @@ package web
 import (
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/services/settings"
+	"github.com/sangehq/authama/src/internal/services/settings"
 )
 
 // settingField is one setting on the Settings page: its value in effect and

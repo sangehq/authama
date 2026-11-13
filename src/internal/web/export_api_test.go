@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/services/selection"
+	"github.com/sangehq/authama/src/internal/services/selection"
 )
 
 // Every built-in preset, as CSV, is byte for byte what the list's own CSV

@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/brand"
 )
 
 // helpTemplate lays every command's help out as a manual page does: NAME,
@@ -64,7 +64,7 @@ func seeAlso(c *cobra.Command) string {
 		refs = append(refs, c.CommandPath()+" help <command>")
 	}
 	refs = append(refs, "man "+manName(c),
-		"https://opensource.simtabi.com/documentation/simtabi/"+brand.Command+"/")
+		"https://opensource.simtabi.com/documentation/sangehq/"+brand.Command+"/")
 	return strings.Join(refs, ", ")
 }
 

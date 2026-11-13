@@ -1299,7 +1299,7 @@ Flags:
 authama reads two files from its config home at start-up:
 
   .env           KEY=value lines: tokens, and any AUTHAMA_* setting
-  authama.json   settings, checked against a schema (https://raw.githubusercontent.com/simtabi/authama/main/docs/schema/authama.schema.json)
+  authama.json   settings, checked against a schema (https://raw.githubusercontent.com/sangehq/authama/main/docs/schema/authama.schema.json)
 
 Precedence: command-line flags > environment > .env > authama.json > defaults.
 A variable already in the environment is never replaced by a file; --no-dotenv

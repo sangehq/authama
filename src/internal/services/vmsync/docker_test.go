@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/services/dockerctx"
-	"github.com/simtabi/authama/src/internal/services/knownhosts"
+	"github.com/sangehq/authama/src/internal/services/dockerctx"
+	"github.com/sangehq/authama/src/internal/services/knownhosts"
 )
 
 // The probe asks the engine, not only for the command: a guest user outside

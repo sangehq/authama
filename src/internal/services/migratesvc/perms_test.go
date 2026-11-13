@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // Both move paths preserve the source's modes, so a legacy home created under a

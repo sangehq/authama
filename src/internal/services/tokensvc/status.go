@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/simtabi/authama/src/internal/core/tokens"
+	"github.com/sangehq/authama/src/internal/core/tokens"
 )
 
 // Status is `authama token status`: the config that would be used, and per

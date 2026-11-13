@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/mutation"
-	"github.com/simtabi/authama/src/internal/util/lock"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/services/mutation"
+	"github.com/sangehq/authama/src/internal/util/lock"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // Every prompt and every message belongs to the command that raised it, not to

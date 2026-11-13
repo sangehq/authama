@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/owner"
+	"github.com/sangehq/authama/src/internal/services/owner"
 )
 
 // ownerGate is the PIN's hold on the web UI. It is its own type, beside

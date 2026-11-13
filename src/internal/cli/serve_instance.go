@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/util/fs"
-	"github.com/simtabi/authama/src/internal/util/paths"
-	"github.com/simtabi/authama/src/internal/web"
+	"github.com/sangehq/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/web"
 )
 
 // serveRecord is what a running `authama serve` leaves in its home's state

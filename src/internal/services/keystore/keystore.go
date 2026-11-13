@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/util/askpass"
-	"github.com/simtabi/authama/src/internal/util/perms"
+	"github.com/sangehq/authama/src/internal/util/askpass"
+	"github.com/sangehq/authama/src/internal/util/perms"
 )
 
 const installHint = "install OpenSSH (macOS ships it; else: brew install openssh)"

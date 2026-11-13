@@ -3,7 +3,7 @@ package web
 import (
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/services/tokensvc"
+	"github.com/sangehq/authama/src/internal/services/tokensvc"
 )
 
 // The token audit is laid out as what to fix, what passed (with its note),

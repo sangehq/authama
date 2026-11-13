@@ -18,9 +18,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/events"
-	"github.com/simtabi/authama/src/internal/services/jobs"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/services/events"
+	"github.com/sangehq/authama/src/internal/services/jobs"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // Options configures a Server.

@@ -1,7 +1,7 @@
 package web
 
 import (
-	"github.com/simtabi/authama/src/internal/services/rotator"
+	"github.com/sangehq/authama/src/internal/services/rotator"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/history"
-	"github.com/simtabi/authama/src/internal/services/jobs"
-	"github.com/simtabi/authama/src/internal/services/mutation"
+	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/services/jobs"
+	"github.com/sangehq/authama/src/internal/services/mutation"
 )
 
 // A job that counts its steps streams them as "progress" events, and its page
