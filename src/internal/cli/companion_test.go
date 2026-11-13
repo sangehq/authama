@@ -102,14 +102,23 @@ func TestGitUseJSONDryRun(t *testing.T) {
 	got := jsonOf(t, run(t, "ssh", "git", "use", "profile", repo, none, "--dry-run", "--json"))
 	want := map[string]any{"version": 1.0, "mode": "profile", "dry_run": true, "checkouts": []any{
 		map[string]any{"path": repo, "from": "https://github.com/simtabi/pheg.git", "to": "git@github-imanimanyara:simtabi/pheg.git",
-			"applied": false, "skipped": "", "error": ""},
+			"applied": false, "skipped": "", "error": "",
+			"owner": "simtabi", "repo": "pheg", "profile": "imanimanyara", "profile_from": "owner"},
 		map[string]any{"path": none, "from": "", "to": "", "applied": false,
-			"skipped": "no origin (not a git checkout, or no remote named origin)", "error": ""},
+			"skipped": "no origin (not a git checkout, or no remote named origin)", "error": "",
+			"owner": "", "repo": "", "profile": "", "profile_from": ""},
 	}}
 	if !reflect.DeepEqual(got, want) {
 		g, _ := json.MarshalIndent(got, "", "  ")
 		w, _ := json.MarshalIndent(want, "", "  ")
 		t.Errorf("ssh git use --json:\n%s\nwant:\n%s", g, w)
+	}
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "github-work", "-H", "github.com", "-u", "git")
+	got = jsonOf(t, run(t, "ssh", "git", "use", "profile", repo, "--profile", "work", "--dry-run", "--json"))
+	row := got["checkouts"].([]any)[0].(map[string]any)
+	if row["profile"] != "work" || row["profile_from"] != "flag" || row["to"] != "git@github-work:simtabi/pheg.git" {
+		t.Errorf("--profile work: %v", row)
 	}
 	if origin, _ := os.ReadFile(repo + "/.git/config"); !strings.Contains(string(origin), "https://github.com/simtabi/pheg.git") {
 		t.Error("a dry run rewrote origin")

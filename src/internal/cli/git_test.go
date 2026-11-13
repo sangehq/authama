@@ -154,7 +154,7 @@ func TestGitStatusJSONKeepsItsFields(t *testing.T) {
 		{gitStatusDoc{}, []string{"version", "default_mode", "checkouts"}},
 		{gitremote.Checkout{}, []string{"path", "state", "url", "mode", "owner", "repo", "profile", "profile_from"}},
 		{gitUseDoc{}, []string{"version", "mode", "dry_run", "checkouts"}},
-		{gitUseRow{}, []string{"path", "from", "to", "applied", "skipped", "error"}},
+		{gitUseRow{}, []string{"path", "from", "to", "applied", "skipped", "error", "owner", "repo", "profile", "profile_from"}},
 		{gitResolveDoc{}, []string{"version", "profile", "mode", "url", "hostAlias", "keyFingerprint"}},
 		{companionInfoDoc{}, []string{"name", "version", "contractVersions", "capabilities", "configHome", "stateHome"}},
 	} {

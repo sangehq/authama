@@ -96,9 +96,11 @@ compare its view of the same checkouts with authama's:
   "dry_run": true,
   "checkouts": [
     {"path": ".../app", "from": "https://github.com/acme/app.git", "to": "git@github-alice:acme/app.git",
-     "applied": false, "skipped": "", "error": ""},
+     "applied": false, "skipped": "", "error": "",
+     "owner": "acme", "repo": "app", "profile": "alice", "profile_from": "owner"},
     {"path": ".../notes", "from": "", "to": "", "applied": false,
-     "skipped": "no origin (not a git checkout, or no remote named origin)", "error": ""}
+     "skipped": "no origin (not a git checkout, or no remote named origin)", "error": "",
+     "owner": "", "repo": "", "profile": "", "profile_from": ""}
   ]
 }
 ```
@@ -109,6 +111,9 @@ compare its view of the same checkouts with authama's:
 | `applied` | origin was rewritten (never on a dry run) |
 | `skipped` | why nothing changed, such as `already profile`; empty when it changed or would |
 | `error` | why the checkout was left as it was, such as a failed `ls-remote`; the command then exits non-zero |
+| `owner`, `repo` | the repository the origin points at; empty when the checkout was skipped before its origin was read |
+| `profile` | the profile the new URL is built for; empty when none is given or mapped (ssh and https need none) |
+| `profile_from` | `flag` (`--profile`) or `owner` (`defaults.git.orgs`, then `defaults.git.profile`); empty with `profile` |
 
 ## `authama ssh git resolve OWNER/REPO`
 

@@ -89,6 +89,10 @@ type Change struct {
 	Dir, From, To string
 	Applied       bool
 	Skipped       string // why nothing changed; empty when it changed or would
+	// Owner and Repo are the origin's; Profile is the one the new URL is built
+	// for, and ProfileFrom says what chose it. All four are empty when the
+	// checkout was skipped before its origin was parsed.
+	Owner, Repo, Profile, ProfileFrom string
 }
 
 // Use points dir's origin at mode. The new URL is proven with ls-remote before origin is
@@ -106,9 +110,15 @@ func Use(g Git, m *manifest.Manifest, dir, mode, profile string, dryRun bool) (C
 		ch.Skipped = "origin is not a GitHub remote authama manages"
 		return ch, nil
 	}
-	if profile == "" {
+	ch.Owner, ch.Repo = r.Owner, r.Repo
+	if profile != "" {
+		ch.Profile, ch.ProfileFrom = profile, ProfileFromFlag
+	} else {
 		if profile, err = manifest.ProfileForOwner(m, r.Owner); err != nil && mode == manifest.GitModeProfile {
 			return ch, err
+		}
+		if profile != "" {
+			ch.Profile, ch.ProfileFrom = profile, ProfileFromOwner
 		}
 	}
 	to, err := URLFor(m, mode, r.Owner, r.Repo, profile)
@@ -183,6 +193,7 @@ const (
 const (
 	ProfileFromRemote = "remote" // the origin names it (profile mode)
 	ProfileFromOwner  = "owner"  // defaults.git.orgs, then defaults.git.profile
+	ProfileFromFlag   = "flag"   // --profile on `ssh git use`
 )
 
 // Checkout is one checkout's origin, as `ssh git status` reports it. Its JSON
