@@ -8,10 +8,15 @@ Release. Until binary releases resume, users build from source
 
 ## The next version is v0.1.4
 
-v0.1.0 to v0.1.3 are retracted in `src/go.mod`: the Go module proxy cached them
+v0.1.1 to v0.1.3 are retracted in `src/go.mod`: the Go module proxy cached them
 from history that was deleted when the versions restarted, and a cached version
 cannot be replaced. Those numbers are never tagged again, so the next release is
 v0.1.4. The retraction takes effect when v0.1.4 is published.
+
+v0.1.0 is kept as a release, not retracted. The proxy's copy of it is the
+first commit tagged `src/v0.1.0` (`f21ef51`), which is not the commit the tag
+names today (`282d76c`), so `go get ...@v0.1.0` builds the older code. Building
+from a checkout of the tag builds the newer one.
 
 ## Two tags per release
 

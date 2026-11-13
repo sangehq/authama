@@ -376,6 +376,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **v0.1.0 is no longer retracted.** `src/go.mod` now retracts only v0.1.1 to v0.1.3, which the
+  Go module proxy cached from deleted history. The proxy's v0.1.0 is an earlier commit than the
+  tag names today (`docs/release.md`).
+
 - **Rotate, revoke and delete keys are chosen on their review page.** The slide-in pickers on Keys
   and the profile rotation slide-in on Profiles are gone: their picker, options and steps live on
   the job's review page, which opens with nothing chosen, draws the picker ticked as chosen, and

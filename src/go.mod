@@ -2,10 +2,11 @@ module github.com/simtabi/authama/src
 
 go 1.26.0
 
-// v0.1.0 to v0.1.3 were cached by proxy.golang.org from history deleted when the
+// v0.1.1 to v0.1.3 were cached by proxy.golang.org from history deleted when the
 // versions restarted, so the proxy serves code that is no longer in this repository.
-// The next release is v0.1.4; these numbers are never tagged again.
-retract [v0.1.0, v0.1.3]
+// v0.1.0 stays a release (owner, 2026-11-13: "keep v0.1.0"). The next release is
+// v0.1.4; these numbers are never tagged again.
+retract [v0.1.1, v0.1.3]
 
 require (
 	github.com/modelcontextprotocol/go-sdk v1.8.0
