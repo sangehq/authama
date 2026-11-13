@@ -214,7 +214,7 @@ cross: ## build every release target into build/{os}/, with build/checksums.txt
 dist: ## cross, plus build/archives/: a tar.gz or zip per target, Authama.app for macOS, checksums
 	./$(MODULE)/scripts/build-all.sh
 
-# GoReleaser is the release path (release.yml, dispatch-only). Its output is an
+# GoReleaser is the release path (release.yml, through simtabi/.github go-release.yml). Its output is an
 # intermediate and goes to .goreleaser-dist/ at the root, never into build/.
 release-snapshot: ## check the GoReleaser config locally, into .goreleaser-dist/ (needs goreleaser; publishes nothing)
 	$(GORELEASER) release --clean --snapshot

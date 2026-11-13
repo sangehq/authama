@@ -22,9 +22,10 @@ Coming from sshmgr or auth-token-manager? See the [migration guide](docs/migrati
 
 ## Install
 
-authama is built from source: binary releases are on hold, so there is no
-download, package-manager or `go install` channel to use. You need Go (the
-version `src/go.mod` names), `git` and `make`.
+Binaries ship on the [GitHub release](https://github.com/simtabi/authama/releases):
+download the one for your platform and check it against that release's `checksums.txt`.
+No release has been published since the history restarted, so for now build from
+source. You need Go (the version `src/go.mod` names), `git` and `make`.
 
 ```sh
 git clone https://github.com/simtabi/authama ~/src/authama

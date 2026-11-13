@@ -136,7 +136,7 @@ Nothing you have stops working.
 | `vm` ProxyCommand | `sshmgr vm proxy …` | `authama ssh config render` points it at `authama`; run it before removing an old `sshmgr` |
 | Repository and Go module | `github.com/simtabi/ssh-manager`, module `github.com/simtabi/ssh-manager/src/v3` | `github.com/simtabi/authama`, module `github.com/simtabi/authama/src` (v3.6.1 alone was published as `.../authama/src/v3`). GitHub redirects the old repository URLs, so old clones and the old `install.sh`/`install.ps1` URLs keep working |
 | Version | 3.6.1 | **0.1.0**: authama restarted its version numbers. The 3.x tags and GitHub releases were removed; their history is in the [CHANGELOG](../CHANGELOG.md#pre-010-history-formerly-ssh-manager-1x361-and-auth-token-manager-0x). A package manager may treat 0.1.0 as older than 3.6.x; see below |
-| Install | `install.sh`, `install.ps1`, release archives | releases are on hold, so authama is built from source ([installation](installation.md)). The installers, archives and packages of the withdrawn 0.1.x builds carried both binaries until the `sshmgr` alias was [removed](#removing-the-sshmgr-alias); those channels are frozen ([earlier binary releases](installation.md#earlier-binary-releases)) |
+| Install | `install.sh`, `install.ps1`, release archives | binaries ship on the GitHub release only, and until the next one authama is built from source ([installation](installation.md)). The installers, archives and packages of the withdrawn 0.1.x builds carried both binaries until the `sshmgr` alias was [removed](#removing-the-sshmgr-alias); those channels are frozen ([earlier binary releases](installation.md#earlier-binary-releases)) |
 
 Because 0.1.0 sorts below 3.6.x, a package manager that only moves forward
 may leave you on 3.6.x. Remove that install, then build authama from source
@@ -148,8 +148,9 @@ scoop uninstall authama sshmgr                     # Scoop
 authama version                                     # after `make install`: the build you made
 ```
 
-Releases are on hold, so no channel offers a newer build yet; the Homebrew cask
-and the Scoop manifest still point at the withdrawn 0.1.x assets.
+No release has been published since the history restarted, so no channel offers a newer build yet. The Homebrew cask
+and the Scoop manifest were withdrawn with the 0.1.x assets they named, and stay frozen: the next release ships on the
+GitHub release only.
 
 Behaviour changes to know about:
 
@@ -268,7 +269,7 @@ commands) and `--list --json` (with and without secrets).
 
 | auth-token-manager | authama | Proof |
 |---|---|---|
-| pip / pipx / `.pyz` install | a static binary, built from source with `make build` while releases are on hold; the install scripts, archives and Homebrew, Scoop and deb/rpm/apk packages of the withdrawn builds are frozen | [installation](installation.md) |
+| pip / pipx / `.pyz` install | a static binary, downloaded from the GitHub release or built from source with `make build`; the install scripts, archives and Homebrew, Scoop and deb/rpm/apk packages of the withdrawn builds are frozen | [installation](installation.md) |
 | Docker dev container | `Dockerfile` + `compose.yaml`, `make docker-shell`; its home defaults to `./.authama-home`, not your `$HOME` | [installation](installation.md#dev-container) |
 | Python library API (`render`, `remove_installed`, …) | dropped | authama is a command, not a library; scripts call the CLI with `--json` |
 | `tests/test_core.py`, `test_merge.py`, `test_writers.py`, `test_inventory.py` | `core/tokens/port_test.go`, `golden_test.go` (golden files generated from the Python code) | 34 tests |

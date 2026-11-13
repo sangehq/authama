@@ -299,13 +299,45 @@ func TestTestsGenerateTheirCredentials(t *testing.T) {
 	}
 }
 
+// goFetch is a command that installs or fetches this module through the Go
+// toolchain, which reads the public module proxy.
+var goFetch = regexp.MustCompile(`go (?:install|get) \S*github\.com/simtabi/authama`)
+
+// TestNoDocOffersGoInstall keeps every doc, the release page and the migration
+// guide included, from offering `go install` or `go get` of the module: binaries
+// ship on the GitHub release only (~/.claude/rules/go.md), and the proxy still
+// serves versions cached from deleted history. CHANGELOG.md is history and is
+// not read.
+func TestNoDocOffersGoInstall(t *testing.T) {
+	root, files := trackedFiles(t)
+	pages := 0
+	for _, name := range files {
+		if !strings.HasSuffix(name, ".md") || name == "CHANGELOG.md" || strings.HasPrefix(name, ".claude/") {
+			continue
+		}
+		body, err := os.ReadFile(filepath.Join(root, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		pages++
+		for i, line := range strings.Split(string(body), "\n") {
+			if goFetch.MatchString(line) {
+				t.Errorf("%s:%d offers the module through the Go toolchain; binaries ship on the GitHub release: %s", name, i+1, strings.TrimSpace(line))
+			}
+		}
+	}
+	if pages < 40 {
+		t.Fatalf("read %d markdown files; the walk is not finding them", pages)
+	}
+}
+
 // releaseChannel is a command that installs authama from a release channel:
 // the Homebrew cask, the Scoop manifest, go install, or a piped install script.
 var releaseChannel = regexp.MustCompile(`brew install --cask simtabi/|scoop install simtabi/|go install github\.com/simtabi/authama|install\.(?:sh|ps1)\S* *\| *(?:ba)?sh|irm \S+install\.ps1`)
 
-// TestDocsOfferNoReleaseChannelAsCurrent keeps the docs to the one current way
-// to install while releases are on hold: build from source. The release page
-// documents channels for when releases resume, the "To 0.1.x" sections of the
+// TestDocsOfferNoReleaseChannelAsCurrent keeps the docs to the current ways to
+// install: a binary from the GitHub release, or a build from source. The
+// release page names the frozen channels, the "To 0.1.x" sections of the
 // migration guide are upgrade notes for withdrawn builds people still have,
 // and installation.md's "Earlier binary releases" says those channels are
 // frozen; everywhere else a channel command reads as an instruction that no
@@ -338,7 +370,7 @@ func TestDocsOfferNoReleaseChannelAsCurrent(t *testing.T) {
 				}
 			}
 			if !inHistory && releaseChannel.MatchString(line) {
-				t.Errorf("%s:%d offers a release channel as a way to install; releases are on hold, so point at building from source: %s", name, i+1, strings.TrimSpace(line))
+				t.Errorf("%s:%d offers a release channel as a way to install; binaries ship on the GitHub release only, so point at it or at building from source: %s", name, i+1, strings.TrimSpace(line))
 			}
 		}
 	}
