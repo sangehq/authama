@@ -24,9 +24,24 @@ macOS, Linux and Windows are all first-class, each validated on its own CI runne
 
 ## Install
 
-authama is built from source. Binary releases are on hold until the maintainer
-decides otherwise, so this page offers no download, package-manager or
-`go install` path. You need Go (the version `src/go.mod` names), `git` and `make`.
+Two ways, in this order:
+
+1. **Download a binary from the [GitHub release](https://github.com/simtabi/authama/releases).**
+   Each release carries `authama_<os>_<arch>` (`.exe` on Windows), archives, deb/rpm/apk
+   packages and `checksums.txt`. Check what you downloaded before running it, then put it on
+   your `PATH`:
+
+   ```sh
+   shasum -a 256 -c checksums.txt --ignore-missing
+   gh attestation verify authama_linux_amd64 --repo simtabi/authama   # optional: build provenance
+   ```
+
+   No release has been published since the history restarted (see
+   [Earlier binary releases](#earlier-binary-releases)), so until the next one, build from source.
+2. **Build from source.** You need Go (the version `src/go.mod` names), `git` and `make`.
+
+Nothing is published to a package manager, an image registry or the Go module proxy, so this
+page offers no `brew`, `scoop`, `winget` or `go install` path.
 
 ```sh
 git clone https://github.com/simtabi/authama ~/src/authama
@@ -135,8 +150,8 @@ Before 2026-11-06, versions 0.1.0 to 0.1.3 were published with binaries, archive
 Linux packages, a Homebrew cask and a Scoop manifest. The history was then folded
 into one commit and the version restarted at v0.1.0, and those releases were
 withdrawn: an installed binary keeps working, but the cask and the Scoop manifest
-no longer download, and nothing is published while releases are on hold. Build
-from source. Go's module proxy still serves the old `src/v0.1.0` to `src/v0.1.3`
+no longer download. The next release ships on the GitHub release only, and those
+channels stay frozen. Until it does, build from source. Go's module proxy still serves the old `src/v0.1.0` to `src/v0.1.3`
 it cached, which is one more reason this page offers no `go install` path. [Migration](migration.md) covers
 moving an `sshmgr` install to `authama`.
 

@@ -376,6 +376,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **A release builds on a pushed version tag, or on a dispatch naming one, through the shared
+  workflow.** `release.yml` now calls simtabi/.github's reusable `go-release.yml`, pinned to a
+  commit: `git push origin v0.1.4` publishes, and `gh workflow run release.yml --repo simtabi/authama
+  -f tag=v0.1.4` does the same for a tag already pushed. The dispatch-only `confirm=release-go`
+  gate and the `release` environment are gone. Binaries ship on the GitHub release only: the Homebrew
+  cask, Scoop manifest and Winget blocks are removed from `src/.goreleaser.yaml`, and the tap and
+  bucket stay frozen. The README and installation page offer the release download first, then a
+  build from source. Three tests hold it: the release triggers and the shared call, no publishing
+  block in the GoReleaser config, and no doc offering `go install` or `go get` of the module.
 - **A web UI sign-in link works once, and sessions end.** The address `authama serve` prints signs
   one browser in, within 10 minutes; before, it signed in any number of browsers for as long as the
   server ran. Running `authama serve` again while a server is running asks it for a new link (through
