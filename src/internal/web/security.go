@@ -25,8 +25,8 @@ const (
 	csrfHeader = "X-CSRF-Token"
 )
 
-// maxSessions bounds the session table. A session is only created by
-// presenting the launch token, so this is a ceiling on memory, not a defence.
+// maxSessions bounds the session table. A session is only created by using a
+// sign-in link, so this is a ceiling on memory, not a defence.
 const maxSessions = 64
 
 // ContentSecurityPolicy is sent on every response. Everything is same-origin;
@@ -48,6 +48,8 @@ func NewToken() string {
 type session struct {
 	csrf    string
 	created time.Time
+	// seen is when the session last made a request; guarded by sessions.mu.
+	seen time.Time
 
 	// pinMu guards the PIN times: requests in one session run concurrently.
 	pinMu sync.Mutex
@@ -98,15 +100,27 @@ func (s *sessions) create(now time.Time) (id string, sess *session) {
 		delete(s.byID, oldest)
 	}
 	id = NewToken()
-	sess = &session{csrf: NewToken(), created: now}
+	sess = &session{csrf: NewToken(), created: now, seen: now}
 	s.byID[id] = sess
 	return id, sess
 }
 
-func (s *sessions) get(id string) *session {
+// get returns the session id names, or nil when there is none or it has ended
+// (SessionIdle without a request, or SessionMax since it began). A live one is
+// marked seen now.
+func (s *sessions) get(id string, now time.Time) *session {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.byID[id]
+	sess := s.byID[id]
+	if sess == nil {
+		return nil
+	}
+	if expired(sess.created, sess.seen, now) {
+		delete(s.byID, id)
+		return nil
+	}
+	sess.seen = now
+	return sess
 }
 
 func equal(a, b string) bool {
@@ -194,15 +208,26 @@ func (s *Server) auth(next http.Handler) http.Handler {
 			_, _ = fmt.Fprintf(w, `{"app":"authama","instance":%q}`+"\n", s.opts.Instance)
 			return
 		}
+		if r.URL.Path == LinkPath && r.Method == http.MethodPost {
+			handleLink(s, w, r)
+			return
+		}
 		tok := r.URL.Query().Get("token")
-		// A browser already signed in is not signed out by a stray ?token= -
-		// a link carrying an old sign-in token, or another page's own
-		// parameter by that name: only a matching token is exchanged.
-		if tok != "" && !equal(tok, s.opts.Token) && s.signedIn(r) {
+		// A browser already signed in keeps its session. A link it carries
+		// (the page reloading after a restart) is used up and dropped from the
+		// address; anything else by that name (a used link, a page's own
+		// parameter) is left alone.
+		if tok != "" && s.signedIn(r) {
+			if r.Method == http.MethodGet && s.links.take(tok, s.now()) {
+				redirectWithoutToken(w, r)
+				return
+			}
 			tok = ""
 		}
 		if tok != "" {
-			if !equal(tok, s.opts.Token) || (r.Method != http.MethodGet && r.Method != http.MethodHead) {
+			// A link is used up only by a GET: a HEAD (a link preview) or a
+			// stray POST cannot spend it.
+			if r.Method != http.MethodGet || !s.links.take(tok, s.now()) {
 				s.renderUnauthorized(w, r)
 				return
 			}
@@ -211,25 +236,7 @@ func (s *Server) auth(next http.Handler) http.Handler {
 				Name: SessionCookie, Value: id, Path: s.opts.BasePath + "/",
 				HttpOnly: true, SameSite: http.SameSiteStrictMode, Secure: s.secure(r),
 			})
-			// Strip the token from the address bar and the history.
-			clean := *r.URL
-			q := clean.Query()
-			q.Del("token")
-			clean.RawQuery = q.Encode()
-			target := clean.EscapedPath()
-			if clean.RawQuery != "" {
-				target += "?" + clean.RawQuery
-			}
-			if !isLocalURL(clean.Path) {
-				target = "/"
-			}
-			// The same rule as isLocalURL, checked inline on the value that is
-			// redirected to, so the check guards the http.Redirect call itself.
-			if localPath.MatchString(target) {
-				http.Redirect(w, r, target, http.StatusSeeOther)
-			} else {
-				http.Redirect(w, r, "/", http.StatusSeeOther)
-			}
+			redirectWithoutToken(w, r)
 			return
 		}
 		c, err := r.Cookie(SessionCookie)
@@ -237,7 +244,7 @@ func (s *Server) auth(next http.Handler) http.Handler {
 			s.renderUnauthorized(w, r)
 			return
 		}
-		sess := s.sessions.get(c.Value)
+		sess := s.sessions.get(c.Value, s.now())
 		if sess == nil {
 			s.renderUnauthorized(w, r)
 			return
@@ -249,7 +256,30 @@ func (s *Server) auth(next http.Handler) http.Handler {
 // signedIn reports whether r carries a live session cookie.
 func (s *Server) signedIn(r *http.Request) bool {
 	c, err := r.Cookie(SessionCookie)
-	return err == nil && s.sessions.get(c.Value) != nil
+	return err == nil && s.sessions.get(c.Value, s.now()) != nil
+}
+
+// redirectWithoutToken sends the browser to the same address without ?token=,
+// so the token leaves the address bar and the history.
+func redirectWithoutToken(w http.ResponseWriter, r *http.Request) {
+	clean := *r.URL
+	q := clean.Query()
+	q.Del("token")
+	clean.RawQuery = q.Encode()
+	target := clean.EscapedPath()
+	if clean.RawQuery != "" {
+		target += "?" + clean.RawQuery
+	}
+	if !isLocalURL(clean.Path) {
+		target = "/"
+	}
+	// The same rule as isLocalURL, checked inline on the value that is
+	// redirected to, so the check guards the http.Redirect call itself.
+	if localPath.MatchString(target) {
+		http.Redirect(w, r, target, http.StatusSeeOther)
+	} else {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+	}
 }
 
 func (s *Server) secure(r *http.Request) bool {

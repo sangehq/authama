@@ -26,7 +26,9 @@ import (
 // listening. It travels in one environment variable that the new server
 // clears as soon as it reads it.
 type serveHandoff struct {
-	Token    string `json:"token"`
+	Token string `json:"token"`
+	// Control is the key for new sign-in links, kept so the record stays valid.
+	Control  string `json:"control,omitempty"`
 	Port     int    `json:"port"`
 	Record   bool   `json:"record"`
 	Addr     string `json:"addr"` // host:port the old one listens on
@@ -34,6 +36,8 @@ type serveHandoff struct {
 	Instance string `json:"instance"`
 	// Sessions are the signed-in sessions, so open pages stay signed in.
 	Sessions []web.SessionState `json:"sessions,omitempty"`
+	// Links are sign-in links given out and not yet used, so they still work.
+	Links []web.LinkState `json:"links,omitempty"`
 }
 
 // takeHandoff reads and clears the handoff, or nil when this server is not
@@ -66,10 +70,10 @@ func (h *serveHandoff) waitGone() {
 // again from the binary now at this executable's path, with a handoff, then
 // stop this server. The new one inherits the terminal, so its address is
 // printed where this one's was.
-func relaunch(h serveHandoff, sessions func() []web.SessionState, stop func()) func() error {
+func relaunch(h serveHandoff, state func(*serveHandoff), stop func()) func() error {
 	return func() error {
-		if sessions != nil {
-			h.Sessions = sessions()
+		if state != nil {
+			state(&h)
 		}
 		exe, err := os.Executable()
 		if err != nil {
@@ -227,6 +231,14 @@ func recordInstance(r *serveRecord) string {
 		return ""
 	}
 	return r.Instance
+}
+
+// handoffLinks are the sign-in links a restarted server was handed, or none.
+func handoffLinks(h *serveHandoff) []web.LinkState {
+	if h == nil {
+		return nil
+	}
+	return h.Links
 }
 
 // handoffSessions are the sessions a restarted server was handed, or none.

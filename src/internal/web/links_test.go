@@ -31,7 +31,7 @@ func TestAFormAnswerReloadsToThePageItCameFrom(t *testing.T) {
 	s, _, _ := newTestServer(t)
 	c := signIn(t, s)
 	preview := func(referer string) string {
-		sess := c.s.sessions.get(c.cookie.Value)
+		sess := c.s.sessions.get(c.cookie.Value, c.s.now())
 		f := addHost("reloadme")
 		f.Set(csrfField, sess.csrf)
 		r := httptest.NewRequest(http.MethodPost, "http://"+testHost+"/changes/preview", strings.NewReader(f.Encode()))

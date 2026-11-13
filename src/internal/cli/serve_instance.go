@@ -3,14 +3,17 @@ package cli
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/simtabi/authama/src/internal/util/fs"
 	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/simtabi/authama/src/internal/web"
 )
 
 // serveRecord is what a running `authama serve` leaves in its home's state
@@ -29,6 +32,39 @@ type serveRecord struct {
 	Started  time.Time `json:"started"`
 	// BasePath is the path it serves under (web.base_path), "" at the root.
 	BasePath string `json:"base_path,omitempty"`
+	// Control is the key that gets a new sign-in link from the server
+	// (web.LinkPath). The record is mode 0600 in the state home, so only its
+	// owner reads it. A record from before this field has none.
+	Control string `json:"control,omitempty"`
+}
+
+// address is the server's address with no sign-in token.
+func (r *serveRecord) address() string { return "http://" + r.Addr + r.BasePath + "/" }
+
+// newLink asks the recorded server for a new sign-in address, which works once
+// within web.LinkLifetime: the one it printed when it started may be used or
+// expired.
+func (r *serveRecord) newLink() (string, error) {
+	if r.Control == "" {
+		return "", errors.New("its record has no control key (a server from an older build)")
+	}
+	req, err := http.NewRequest(http.MethodPost, "http://"+r.Addr+r.BasePath+web.LinkPath, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set(web.ControlHeader, r.Control)
+	resp, err := healthClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	var reply struct {
+		SignIn string `json:"sign_in"`
+	}
+	if resp.StatusCode != http.StatusOK || json.NewDecoder(resp.Body).Decode(&reply) != nil || !strings.HasPrefix(reply.SignIn, "?token=") {
+		return "", fmt.Errorf("it answered %d", resp.StatusCode)
+	}
+	return r.address() + reply.SignIn, nil
 }
 
 func serveRecordPath(p paths.Paths) string { return filepath.Join(p.StateDir(), "serve.json") }
@@ -112,6 +148,10 @@ func (r *serveRecord) stop() error {
 	}
 	return errors.New("the server did not stop within 10 seconds")
 }
+
+// serveNewLink is newLink, swappable in tests, for the same reason as
+// serveAlive.
+var serveNewLink = func(r *serveRecord) (string, error) { return r.newLink() }
 
 // serveAlive is checkAlive, swappable in tests, which serve on a fake
 // listener that no HTTP request can reach.

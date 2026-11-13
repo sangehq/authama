@@ -24,9 +24,18 @@ func TestAServerRestartsItselfFromTheBanner(t *testing.T) {
 		t.Fatalf("restart: %d %s", rec.Code, rec.Body.String())
 	}
 	var reply restartReply
-	if err := json.Unmarshal(rec.Body.Bytes(), &reply); err != nil || reply.Instance != s.opts.Instance ||
-		reply.SignIn != "?token="+s.opts.Token {
+	// The reply carries a new link, not the used one, and it is among the
+	// links handed to the next server.
+	if err := json.Unmarshal(rec.Body.Bytes(), &reply); err != nil || reply.Instance != s.opts.Instance {
 		t.Fatalf("reply = %+v, %v", reply, err)
+	}
+	tok := strings.TrimPrefix(reply.SignIn, "?token=")
+	handed := false
+	for _, l := range PendingLinks(s) {
+		handed = handed || l.Token == tok
+	}
+	if tok == "" || tok == s.opts.Token || !handed {
+		t.Fatalf("reply = %+v: not a new link handed to the next server", reply)
 	}
 	select {
 	case <-called:
@@ -113,7 +122,7 @@ func TestSessionsSurviveARestart(t *testing.T) {
 		t.Fatalf("after the handoff: %d", rec.Code)
 	}
 	// The CSRF token moved too, so a form from before the restart still posts.
-	if old.sessions.get(c.cookie.Value).csrf != next.sessions.get(c.cookie.Value).csrf {
+	if old.sessions.get(c.cookie.Value, old.now()).csrf != next.sessions.get(c.cookie.Value, next.now()).csrf {
 		t.Error("the CSRF token changed across the restart")
 	}
 	if body := moved.get("/hosts").Body.String(); !strings.Contains(body, `name="authama-instance"`) || !strings.Contains(body, "data-live-build") {

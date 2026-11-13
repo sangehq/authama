@@ -177,7 +177,7 @@ func newServeCmd() *cobra.Command {
 					return nil
 				}
 				_, _ = fmt.Fprintf(out, "running since %s, pid %d: %s\n",
-					running.Started.Local().Format("2006-01-02 15:04"), running.PID, running.URL)
+					running.Started.Local().Format("2006-01-02 15:04"), running.PID, running.address())
 				return nil
 			}
 			// Reuse the running server, unless asked for a new one or for
@@ -185,15 +185,23 @@ func newServeCmd() *cobra.Command {
 			// a remote bind.
 			if running != nil && !fresh && !pinned && !allowRemote && web.IsLoopback(host) && running.ReadOnly == readOnly &&
 				running.BasePath == basePath {
-				_, _ = fmt.Fprintf(out, "%s web UI is already running for this home (pid %d): %s\n", brand.Name, running.PID, running.URL)
-				_, _ = fmt.Fprintf(out, "stop it with `%s serve --stop`, or start another with `%s serve --new`\n", brand.Command, brand.Command)
+				// The address it printed when it started has a link that works
+				// once, so it is asked for a new one.
+				link, err := serveNewLink(running)
+				if err != nil {
+					return fmt.Errorf("%s web UI is already running for this home (pid %d) at %s, but gave no sign-in link: %v; "+
+						"restart it with `%s serve --restart`", brand.Name, running.PID, running.address(), err, brand.Command)
+				}
+				_, _ = fmt.Fprintf(out, "%s web UI is already running for this home (pid %d): %s\n", brand.Name, running.PID, link)
+				_, _ = fmt.Fprintf(out, "the link signs in once, within %d minutes; stop the server with `%s serve --stop`, or start another with `%s serve --new`\n",
+					int(web.LinkLifetime/time.Minute), brand.Command, brand.Command)
 				if tokenFile != "" {
-					if err := writeTokenFile(tokenFile, running.URL); err != nil {
+					if err := writeTokenFile(tokenFile, link); err != nil {
 						return err
 					}
 				}
 				if !noOpen && platform.StdinIsTerminal() {
-					if err := serveBrowser(running.URL); err != nil {
+					if err := serveBrowser(link); err != nil {
 						_, _ = fmt.Fprintf(c.ErrOrStderr(), "could not open a browser (%s); open the address above yourself\n", err)
 					}
 				}
@@ -206,9 +214,12 @@ func newServeCmd() *cobra.Command {
 			}
 			bound := ln.Addr().(*net.TCPAddr).Port
 
-			token := web.NewToken()
+			token, control := web.NewToken(), web.NewToken()
 			if handoff != nil {
 				token = handoff.Token
+				if handoff.Control != "" {
+					control = handoff.Control
+				}
 			}
 			instance := web.NewToken()[:16]
 			// Recorded only for the default kind of server, the one a later
@@ -221,13 +232,12 @@ func newServeCmd() *cobra.Command {
 			}
 			var stopServing context.CancelFunc
 			var srvRef *web.Server
-			restartFn := relaunch(serveHandoff{Token: token, Port: bound, Record: record,
+			restartFn := relaunch(serveHandoff{Token: token, Control: control, Port: bound, Record: record,
 				Addr: net.JoinHostPort(displayHost(host), strconv.Itoa(bound)), BasePath: basePath, Instance: instance},
-				func() []web.SessionState {
-					if srvRef == nil {
-						return nil
+				func(h *serveHandoff) {
+					if srvRef != nil {
+						h.Sessions, h.Links = srvRef.Sessions(), web.PendingLinks(srvRef)
 					}
-					return srvRef.Sessions()
 				},
 				func() {
 					if stopServing != nil {
@@ -242,6 +252,8 @@ func newServeCmd() *cobra.Command {
 				EventRoots:   eventRoots,
 				Retain:       snapshotRetain(),
 				Token:        token,
+				Control:      control,
+				Links:        handoffLinks(handoff),
 				AllowedHosts: web.AllowedHosts(host, bound, allowHosts),
 				AllowRemote:  allowRemote,
 				ReadOnly:     readOnly,
@@ -263,7 +275,7 @@ func newServeCmd() *cobra.Command {
 			if record {
 				if err := writeServeRecord(p, serveRecord{PID: os.Getpid(), Addr: net.JoinHostPort(displayHost(host), strconv.Itoa(bound)),
 					URL: url, Instance: instance, ReadOnly: readOnly, Version: version.Version, Started: time.Now(),
-					BasePath: basePath}); err != nil {
+					BasePath: basePath, Control: control}); err != nil {
 					_, _ = fmt.Fprintf(c.ErrOrStderr(), "could not record this server (%v); the next launch will start another\n", err)
 				}
 				defer removeServeRecord(p, instance)
@@ -272,6 +284,8 @@ func newServeCmd() *cobra.Command {
 				_, _ = fmt.Fprintf(out, "port %d is in use; listening on %d instead\n", pinnedPort, bound)
 			}
 			_, _ = fmt.Fprintf(out, "%s web UI: %s\n", brand.Name, url)
+			_, _ = fmt.Fprintf(out, "the link signs in once, within %d minutes; run `%s serve` again for another\n",
+				int(web.LinkLifetime/time.Minute), brand.Command)
 			mode := "changes are previewed before they are made"
 			if readOnly {
 				mode = "read-only"

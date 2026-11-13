@@ -376,6 +376,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **A web UI sign-in link works once, and sessions end.** The address `authama serve` prints signs
+  one browser in, within 10 minutes; before, it signed in any number of browsers for as long as the
+  server ran. Running `authama serve` again while a server is running asks it for a new link (through
+  a control key in its owner-only record), prints it and opens it. A session ends after 8 hours
+  without a request or 24 hours after signing in; before, it lasted until the server stopped. A
+  restart hands over sessions and unused links, so open pages stay signed in. `serve --status` shows
+  the address without a token.
+
 - **v0.1.0 is no longer retracted.** `src/go.mod` now retracts only v0.1.1 to v0.1.3, which the
   Go module proxy cached from deleted history. The proxy's v0.1.0 is an earlier commit than the
   tag names today (`docs/release.md`).

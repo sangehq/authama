@@ -1,10 +1,13 @@
 package cli
 
 import (
+	"errors"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/simtabi/authama/src/internal/web"
 )
 
 // A server already running for the home is opened again, not doubled: the
@@ -17,18 +20,29 @@ func TestServeReusesTheRunningServerForTheHome(t *testing.T) {
 	if err := writeServeRecord(p, rec); err != nil {
 		t.Fatal(err)
 	}
-	prev := serveAlive
-	t.Cleanup(func() { serveAlive = prev })
+	prev, prevLink := serveAlive, serveNewLink
+	t.Cleanup(func() { serveAlive, serveNewLink = prev, prevLink })
 	serveAlive = func(r *serveRecord) bool { return r.Instance == "abc" }
+	// The running server is asked for a new link: the one it printed works once.
+	fresh := "http://127.0.0.1:7822/?token=" + web.NewToken()
+	serveNewLink = func(r *serveRecord) (string, error) { return fresh, nil }
 
 	tried, stop := fakeServe(t)
 	out, err := runServe(t, stop)
-	if err != nil || !strings.Contains(out, "already running for this home (pid 4242)") || len(*tried) != 0 {
+	if err != nil || !strings.Contains(out, "already running for this home (pid 4242): "+fresh) || len(*tried) != 0 {
 		t.Fatalf("second launch: %v, bound %v\n%s", err, *tried, out)
 	}
-	if out, _ := runServe(t, stop, "--status"); !strings.Contains(out, "pid 4242") {
-		t.Fatalf("--status:\n%s", out)
+	if out, _ := runServe(t, stop, "--status"); !strings.Contains(out, "pid 4242: http://127.0.0.1:7822/\n") || strings.Contains(out, "token=") {
+		t.Fatalf("--status shows the address without a token:\n%s", out)
 	}
+	// A server that gives no link (one from an older build) is named, with the
+	// way out, and nothing is started beside it.
+	serveNewLink = func(r *serveRecord) (string, error) { return "", errors.New("its record has no control key") }
+	tried, stop = fakeServe(t)
+	if _, err := runServe(t, stop); err == nil || !strings.Contains(err.Error(), "serve --restart") || len(*tried) != 0 {
+		t.Fatalf("a server that gives no link: %v, bound %v", err, *tried)
+	}
+	serveNewLink = func(r *serveRecord) (string, error) { return fresh, nil }
 
 	// --new starts one beside it; it records itself, and removes only its own
 	// record when it stops.

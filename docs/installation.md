@@ -86,7 +86,7 @@ is still identifiable.
 
 **The web UI follows a new build by itself.** A running `authama serve` watches its own
 binary. After `make install` (or any rebuild of the file it runs from), once the new file has
-stopped changing, the server restarts itself from it: same address, same sign-in, and every
+stopped changing, the server restarts itself from it: same address, and every
 signed-in page stays signed in. Open pages notice the new server within a few seconds and
 reload; a green banner then says the page runs the current build, and the header marks the
 build *current*. A page with unsaved input in a form is not reloaded under you: it shows

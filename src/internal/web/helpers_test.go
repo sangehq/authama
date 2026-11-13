@@ -127,10 +127,11 @@ type client struct {
 	cookie *http.Cookie
 }
 
-// signIn exchanges the launch token for a session cookie, as a browser does.
+// signIn uses a new sign-in link for a session cookie, as a browser does. A
+// link works once, so each call has its own.
 func signIn(t *testing.T, s *Server) *client {
 	t.Helper()
-	rec := do(s, httptest.NewRequest(http.MethodGet, "http://"+testHost+"/?token="+testToken, nil))
+	rec := do(s, httptest.NewRequest(http.MethodGet, "http://"+testHost+"/?token="+NewLink(s).Token, nil))
 	if rec.Code != http.StatusSeeOther {
 		t.Fatalf("token exchange: %d", rec.Code)
 	}

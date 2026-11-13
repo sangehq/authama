@@ -25,8 +25,14 @@ home /Users/you/.config/authama (changes are previewed before they are made)
 press Ctrl-C to stop
 ```
 
-The token in the address signs the browser in, once. The browser swaps it for a session cookie and
-drops it from the address bar. Without the token, every page answers 401.
+The token in the address signs one browser in, once, within 10 minutes. The browser swaps it for a
+session cookie and drops it from the address bar; after that the address signs nobody in, so a copy
+left in a terminal, a file or a browser's history is of no use. Without a session, every page
+answers 401. For another sign-in, run `authama serve` again: it asks the running server for a new
+link (see [one server per home](#one-server-per-home)).
+
+A session ends after 8 hours without a request, or 24 hours after you signed in, whichever comes
+first, and when the server stops. The page then answers 401, and `authama serve` gives a new link.
 
 If port 7822 is taken, `serve` uses the next free port and says which. If all twenty from 7822 up are
 taken, it uses any free port the system offers. `--port` pins a port and fails when that port is
@@ -36,7 +42,8 @@ taken.
 
 Launching `authama serve` again - or the app, or a bare `authama` - while a server is already
 running for the same home opens that server in the browser instead of starting another, so servers
-never pile up and fill the ports:
+never pile up and fill the ports. It asks the running server for a new sign-in link, since the one
+printed at start works once, and prints and opens that:
 
 ```sh
 authama serve --status   # is one running for this home? where, since when, which pid
@@ -45,7 +52,8 @@ authama serve --new      # start another beside it anyway
 ```
 
 The running server leaves an owner-only `serve.json` in the state home's `.state/`, with its pid,
-address and sign-in address. A launch trusts it only when the server at that address answers
+address, the sign-in address it printed, and a control key. Only a request from this machine that
+presents that key at `/auth/link` gets a new sign-in link. A launch trusts the record only when the server at that address answers
 `/healthz` with the same random instance id, so a stale record (a server that crashed) or a pid or
 port reused by something else is ignored. `/healthz` is the one page that answers without signing
 in, and it says nothing but `{"app":"authama","instance":"…"}`. A pinned `--port`, `--read-only`
@@ -187,8 +195,8 @@ documentation, the source and the licences.
   the running build's version, marked *current* or *older build*, with when it was built and when
   the server started. The account menu also says which user and host the server runs as.
   When the `authama` binary is rebuilt, reinstalled or removed after `authama serve` started, every page shows a yellow banner naming the file, with **Restart
-  now**: the server relaunches from the binary now installed, on the same address and with the
-  same sign-in token, stops, and the page signs back in and reloads, then says in a green banner
+  now**: the server relaunches from the binary now installed, on the same address, with the
+  same sessions and every sign-in link not yet used, stops, and the page reloads, still signed in, then says in a green banner
   that it runs the current build. With `web.auto_restart` (the default) this happens by itself
   when the binary is rebuilt: open pages reload into the new build, or offer **Reload** when
   they hold unsaved input. `serve --restart` and `serve --stop-all` do the same from a
@@ -520,6 +528,9 @@ Some changes are terminal-only:
   `ssh -L 7822:127.0.0.1:7822 <host>`.
 - **Host check.** The server answers only to `127.0.0.1`, `localhost` and `::1` at its port, plus
   any `--allow-host`. That stops a page on another site from rebinding its name to this machine.
+- **Sign-in links work once.** A link signs one browser in, within 10 minutes; a used or old one is
+  refused. A link preview (`HEAD`) does not use it up.
+- **Sessions end.** After 8 hours without a request, or 24 hours after signing in.
 - **Session cookie.** `HttpOnly` and `SameSite=Strict`. Every change is also held to the page's own
   origin and a per-session form token.
 - **Forms take names, never paths.** Profile, host and key names must be letters, digits, `.`, `_`
@@ -535,7 +546,8 @@ Some changes are terminal-only:
 - **The read API is separate.** With `api.enabled` on, `/api/v1/` answers API tokens only, never the
   browser's session, and the pages never answer an API token; see [read API](api.md).
 
-`--token-file <path>` also writes the sign-in address to a file with mode 0600, for scripts.
+`--token-file <path>` also writes the sign-in address to a file with mode 0600, for scripts. Like
+the printed address it works once, within 10 minutes.
 
 ## Flags
 

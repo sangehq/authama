@@ -118,7 +118,10 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
 
     const tokenFile = join(home, 'serve-url');
     let output = '';
-    server = spawn(bin, ['serve', '--no-open', '--port', '0', '--token-file', tokenFile], {
+    // No --port: a server on a port it picked records itself in the state
+    // home, with the control key the specs use for a sign-in link each, since
+    // a link works once.
+    server = spawn(bin, ['serve', '--no-open', '--token-file', tokenFile], {
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -128,6 +131,9 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
 
     process.env.AUTHAMA_E2E_URL = signIn.origin;
     process.env.AUTHAMA_E2E_TOKEN = signIn.searchParams.get('token') ?? '';
+    const record = JSON.parse(readFileSync(join(state, '.state', 'serve.json'), 'utf8')) as { control?: string };
+    if (!record.control) throw new Error(`the server's record in ${state} has no control key`);
+    process.env.AUTHAMA_E2E_CONTROL = record.control;
     process.env.AUTHAMA_E2E_BUNDLE = bundle;
     process.env.AUTHAMA_E2E_HOME = home;
     if (!process.env.AUTHAMA_E2E_TOKEN) throw new Error(`no token in the sign-in address ${signIn.origin}`);

@@ -204,9 +204,13 @@ func TestAuth(t *testing.T) {
 	if loc := rec.Header().Get("Location"); strings.Contains(loc, "token") || !strings.Contains(loc, "/hosts") {
 		t.Errorf("the redirect keeps the token or loses the page: %s", loc)
 	}
+	// The link works once: the same address again signs nobody in.
+	if again := do(s, httptest.NewRequest(http.MethodGet, "http://"+testHost+"/hosts?token="+testToken, nil)); again.Code != http.StatusUnauthorized {
+		t.Errorf("a used link signed in again: %d", again.Code)
+	}
 	// A path a browser reads as another host never leaves the redirect.
 	for _, path := range []string{"//evil.example/", "/%5Cevil.example/", "//evil.example/hosts"} {
-		rec := do(s, httptest.NewRequest(http.MethodGet, "http://"+testHost+path+"?token="+testToken, nil))
+		rec := do(s, httptest.NewRequest(http.MethodGet, "http://"+testHost+path+"?token="+NewLink(s).Token, nil))
 		if loc := rec.Header().Get("Location"); rec.Code != http.StatusSeeOther || loc != "/" {
 			t.Errorf("%s: %d to %q, want a redirect to /", path, rec.Code, loc)
 		}
@@ -256,7 +260,7 @@ func TestOnlyTheChangeRoutesTakeAPost(t *testing.T) {
 	if rec := c.post("/hosts", "x=1"); rec.Code != http.StatusForbidden {
 		t.Errorf("POST without a CSRF token: %d, want 403", rec.Code)
 	}
-	sess := s.sessions.get(c.cookie.Value)
+	sess := s.sessions.get(c.cookie.Value, s.now())
 	for _, path := range []string{"/", "/hosts", "/hosts/gh", "/snapshots/ssh-20261001-100000.tar.gz"} {
 		if rec := c.post(path, csrfField+"="+sess.csrf); rec.Code != http.StatusMethodNotAllowed {
 			t.Errorf("POST %s with a valid token: %d, want 405", path, rec.Code)

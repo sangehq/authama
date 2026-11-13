@@ -27,7 +27,7 @@ import (
 )
 
 func (c *client) change(path string, f url.Values) *httptest.ResponseRecorder {
-	sess := c.s.sessions.get(c.cookie.Value)
+	sess := c.s.sessions.get(c.cookie.Value, c.s.now())
 	f.Set(csrfField, sess.csrf)
 	return c.post(path, f.Encode())
 }
