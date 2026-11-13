@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **A release runs under the `release` environment again.** `release.yml` passes
+  `environment: release` to the shared workflow, whose pin moves to simtabi/.github `d648d89`
+  (the newest, which takes an environment). Each release is recorded as a deployment; the
+  environment has no protection rules yet, so a required reviewer added there would gate every tag.
+
 ### Documentation
 
 - **The provenance check now works.** `gh attestation verify` in the installation and release pages
