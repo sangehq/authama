@@ -331,6 +331,42 @@ func TestNoDocOffersGoInstall(t *testing.T) {
 	}
 }
 
+// sharedSigner is the workflow that signs every release's provenance: the
+// shared release workflow in simtabi/.github, which release.yml calls.
+const sharedSigner = "--signer-workflow simtabi/.github/.github/workflows/go-release.yml"
+
+// TestAttestationChecksNameTheSharedSigner keeps every `gh attestation verify`
+// a doc shows runnable. The shared workflow signs the provenance, so without
+// --signer-workflow naming it, gh expects a workflow in this repository and
+// the check fails (measured against v0.1.6 on 2026-11-13). A command continued
+// with a trailing backslash is read as one line.
+func TestAttestationChecksNameTheSharedSigner(t *testing.T) {
+	root, files := trackedFiles(t)
+	commands := 0
+	for _, name := range files {
+		if !strings.HasSuffix(name, ".md") || name == "CHANGELOG.md" || strings.HasPrefix(name, ".claude/") {
+			continue
+		}
+		body, err := os.ReadFile(filepath.Join(root, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		text := strings.ReplaceAll(string(body), "\\\n", " ")
+		for i, line := range strings.Split(text, "\n") {
+			if !strings.Contains(line, "gh attestation verify") {
+				continue
+			}
+			commands++
+			if !strings.Contains(strings.Join(strings.Fields(line), " "), sharedSigner) {
+				t.Errorf("%s (near line %d) shows gh attestation verify without %s; it fails for a release the shared workflow signed: %s", name, i+1, sharedSigner, strings.TrimSpace(line))
+			}
+		}
+	}
+	if commands < 2 {
+		t.Fatalf("found %d gh attestation verify commands in the docs, want at least 2 (installation.md and release.md)", commands)
+	}
+}
+
 // releaseChannel is a command that installs authama from a release channel:
 // the Homebrew cask, the Scoop manifest, go install, or a piped install script.
 var releaseChannel = regexp.MustCompile(`brew install --cask simtabi/|scoop install simtabi/|go install github\.com/simtabi/authama|install\.(?:sh|ps1)\S* *\| *(?:ba)?sh|irm \S+install\.ps1`)

@@ -33,11 +33,13 @@ Two ways, in this order:
 
    ```sh
    shasum -a 256 -c checksums.txt --ignore-missing
-   gh attestation verify authama_linux_amd64 --repo simtabi/authama   # optional: build provenance
+   gh attestation verify authama_linux_amd64 --repo simtabi/authama \
+     --signer-workflow simtabi/.github/.github/workflows/go-release.yml   # optional: build provenance
    ```
 
-   No release has been published since the history restarted (see
-   [Earlier binary releases](#earlier-binary-releases)), so until the next one, build from source.
+   The provenance was signed by simtabi/.github's shared release workflow, which built the binary,
+   so the check names that workflow; without `--signer-workflow` it fails. v0.1.6 is the first
+   release since the history restarted (see [Earlier binary releases](#earlier-binary-releases)).
 2. **Build from source.** You need Go (the version `src/go.mod` names), `git` and `make`.
 
 Nothing is published to a package manager, an image registry or the Go module proxy, so this
