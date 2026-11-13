@@ -108,8 +108,11 @@ publishing block (`TestGoReleaserPublishesOnlyToTheGitHubRelease`); and no doc o
 2. Set the metadata:
    `gh repo edit sangehq/authama --homepage "https://github.com/sangehq/authama#readme"`,
    topics `oss ssh ssh-keys ssh-config key-rotation cli go`.
-3. The `release` GitHub Environment the old pipeline ran in is no longer used: a
-   reusable workflow's job cannot name one from the caller.
+3. The `release` GitHub Environment: `release.yml` passes `environment: release` to the
+   shared workflow, so the job runs under it and each release is recorded as a deployment.
+   It requires the owner's approval (added 2026-11-13): a pushed tag starts the run, which
+   waits on the Actions page until it is approved there, so a tag pushed by mistake
+   publishes nothing.
 4. Green on macOS, Linux and Windows: `make check`, `make e2e`, `make feature-check`.
 5. After the release publishes, download the binary for one platform from the release
    page, check it against `checksums.txt`, and run `authama version`.

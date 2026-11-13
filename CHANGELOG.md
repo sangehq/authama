@@ -17,6 +17,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   event `source` (both identify events to webhook consumers), and the notifier's macOS
   identity `com.simtabi.authama` (changing it resets the notification permission).
 
+- **A release runs under the `release` environment again.** `release.yml` passes
+  `environment: release` to the shared workflow, whose pin moves to simtabi/.github `d648d89`
+  (the newest, which takes an environment). Each release is recorded as a deployment, and the
+  environment requires the owner's approval (added 2026-11-13), so a pushed tag publishes nothing
+  until it is approved.
+
 ### Documentation
 
 - **The provenance check now works.** `gh attestation verify` in the installation and release pages
