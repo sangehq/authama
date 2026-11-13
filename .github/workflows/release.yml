@@ -36,6 +36,6 @@ jobs:
       contents: write
       id-token: write
       attestations: write
-    uses: simtabi/.github/.github/workflows/go-release.yml@a1dca588d5c64798085a5fad57c872f6ce02e9aa # simtabi/.github#27
+    uses: simtabi/.github/.github/workflows/go-release.yml@745880bdb9b35a21eb16824cfc995f16e1e82fd5 # simtabi/.github#27, merged
     with:
       tag: ${{ inputs.tag || github.ref_name }}
