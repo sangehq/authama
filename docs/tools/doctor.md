@@ -20,6 +20,7 @@ authama doctor --strict  # any warning fails the run (CI)
 | `optional` | which of `age`, `sops`, `gitleaks`, `gh`, `glab`, `age-plugin-yubikey` are missing |
 | `home` / `state` / `ssh` | the resolved config home, the state home (when it is separate) and `~/.ssh`, so an override is visible |
 | `providers` | whether the catalog is the shipped default or a user file |
+| crash residue | what a run killed part-way left under `~/.ssh`: a `.staging` or `.mint-*` directory, or a temp file. It can hold a private key, so it is a warning (`--strict` fails) naming each path; `authama ssh clean` sweeps it, as the next `reconcile` does. `--json`: `crash_residue` |
 | `manifest` | a `manifest.json` that exists but does not load (bad JSON, a value validation refuses): every command that reads it refuses it, so the drift checks are skipped and this fails the verdict. `--json`: `manifest_error` |
 | `agent` | whether `ssh-agent` is running and how many keys it holds |
 | `1Password` | when a profile uses `key_store: 1password`: that `op` is on PATH, the agent socket exists, and the agent serves the profile's vault (`agent.toml`) |
@@ -98,7 +99,7 @@ Keys: `ok`, `home`, `ssh_dir`, `preflight_ok`, `providers_source`, `agent`,
 `dangling_keys`, `stranded_legacy_home`, `shadowed_hosts`, `raw_option_overlaps`, `needed_tools`, `clipboard` (`null` when a
 clipboard tool was found), and since 0.1.3 `unpinned_vm_hosts`, `stale_pins` and `vm` (the VM hosts, their
 state and the pending sync actions), and since 2026-11-14 `manifest_error` (`null` unless the manifest
-fails to load).
+fails to load) and `crash_residue`.
 
 `tokens` is `{"ok": bool, "findings": [{"level", "target", "text"}]}`. Its `ok` is
 separate from the top-level `ok`, which stays the SSH verdict; the exit code

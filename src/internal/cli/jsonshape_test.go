@@ -31,7 +31,7 @@ var doctorKeys015 = []string{"owner_seal", "stranded_key_root"}
 var doctorKeysDocker = []string{"docker_contexts"}
 
 // Added 2026-11-14 with the manifest check (review R-BUG-03), after every earlier key.
-var doctorKeysManifest = []string{"manifest_error"}
+var doctorKeysManifest = []string{"manifest_error", "crash_residue"}
 
 func orderedKeys(t *testing.T, js string) []string {
 	t.Helper()

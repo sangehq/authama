@@ -29,6 +29,7 @@ import (
 	"github.com/sangehq/authama/src/internal/services/owner"
 	"github.com/sangehq/authama/src/internal/services/preflight"
 	"github.com/sangehq/authama/src/internal/services/settings"
+	"github.com/sangehq/authama/src/internal/services/snapshots"
 	"github.com/sangehq/authama/src/internal/services/vmsync"
 	"github.com/sangehq/authama/src/internal/util/clipboard"
 	"github.com/sangehq/authama/src/internal/util/envnames"
@@ -98,6 +99,9 @@ type Report struct {
 	OwnerSeal string
 	// ManifestError is why manifest.json could not be loaded, when it exists.
 	ManifestError string
+	// CrashResidue is what an interrupted run left under ~/.ssh (.staging,
+	// .mint-*, temp files), relative to it. It can hold a private key.
+	CrashResidue []string
 	// Strict is set by Run(strict=true), the CI mode: every warning then counts
 	// against the verdict, so `doctor --strict` never says clean over one.
 	Strict bool
@@ -109,6 +113,9 @@ type Report struct {
 // a warning.
 func (r Report) Warnings() []string {
 	var w []string
+	for _, c := range r.CrashResidue {
+		w = append(w, "left by an interrupted run, and may hold a private key: ~/.ssh/"+c+" (`authama ssh clean` sweeps it)")
+	}
 	for _, h := range r.UnpinnedHosts {
 		w = append(w, "host key not pinned: "+h)
 	}
@@ -355,8 +362,9 @@ func (r Report) JSON() ([]byte, error) {
 		StrandedKeyRoot *string `json:"stranded_key_root"`
 		// Added with the Docker devbox health check.
 		DockerContexts []vmsync.ContextStatus `json:"docker_contexts"`
-		// Added 2026-11-14 (review R-BUG-03).
-		ManifestError *string `json:"manifest_error"`
+		// Added 2026-11-14 (review R-BUG-03, R-GAP-07).
+		ManifestError *string  `json:"manifest_error"`
+		CrashResidue  []string `json:"crash_residue"`
 	}
 	nz := func(s []string) []string {
 		if s == nil {
@@ -385,6 +393,7 @@ func (r Report) JSON() ([]byte, error) {
 		StrandedKeyRoot:    strOrNil(r.StrandedKeyRoot),
 		DockerContexts:     dockerRows(r.DockerContexts),
 		ManifestError:      strOrNil(r.ManifestError),
+		CrashResidue:       nz(r.CrashResidue),
 	})
 }
 
@@ -432,6 +441,17 @@ func (s *Service) Run(strict bool) Report {
 		ConfigInSync:    true,
 		OldKeys:         map[string]int{},
 		Strict:          strict,
+	}
+	// What a run killed part-way left behind can hold a private key; the next
+	// reconcile, or `ssh clean`, sweeps it.
+	root := manifest.DefaultKeyRoot
+	if s.m != nil {
+		root = manifest.KeyRoot(s.m)
+	}
+	for _, f := range snapshots.FindTempArtifactsIn(s.p.SSHDir, root) {
+		if rel, err := filepath.Rel(s.p.SSHDir, f); err == nil {
+			rep.CrashResidue = append(rep.CrashResidue, filepath.ToSlash(rel))
+		}
 	}
 	// A manifest that exists but does not load is a finding, not a reason to
 	// skip quietly: the caller passes nil for it, and every other command

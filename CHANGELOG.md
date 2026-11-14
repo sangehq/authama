@@ -38,6 +38,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`doctor` reports what an interrupted run left behind.** A reconcile killed mid-run could leave a
+  `.mint-*` directory holding a private key, and doctor said nothing until the next reconcile swept
+  it. It is now a warning naming each path and `authama ssh clean` (`--strict` fails), and
+  `crash_residue` in `--json`.
 - **`settings validate` checks what `.env` sets, and migration renames old names.** It said "ok" over
   a `.env` whose settings were never read: old `SSHMGR_`/`SSH_MANAGER_` names, a misspelt `AUTHAMA_`
   name, and values like `AUTHAMA_SNAPSHOT_RETAIN=abc` or a boolean `maybe` (read as false). It now
