@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -139,5 +141,35 @@ func TestTheHandoffThisBuildWritesIsTaken(t *testing.T) {
 	h := takeHandoff()
 	if h == nil || h.Control != "control-key" || h.Port != 7822 {
 		t.Fatalf("handoff written without a token was not taken: %+v", h)
+	}
+}
+
+// A restart runs the binary at this executable's path while it is there,
+// else the authama PATH resolves, else it says why (found 2026-11-13: a
+// server started from a checkout that then moved execed a missing file).
+func TestARestartRunsTheBinaryOnPATHWhenItsOwnIsGone(t *testing.T) {
+	dir := t.TempDir()
+	own := filepath.Join(dir, "authama")
+	onPath := filepath.Join(dir, "elsewhere", "authama")
+	for _, f := range []string{own, onPath} {
+		if err := os.MkdirAll(filepath.Dir(f), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(f, []byte("bin"), 0o755); err != nil { //nolint:gosec // a test executable
+			t.Fatal(err)
+		}
+	}
+	look := func(string) (string, error) { return onPath, nil }
+	if got, err := restartExecutable(own, look); err != nil || got != own {
+		t.Errorf("own binary present: %q, %v", got, err)
+	}
+	gone := filepath.Join(dir, "moved-away", "authama")
+	want, _ := filepath.EvalSymlinks(onPath)
+	if got, err := restartExecutable(gone, look); err != nil || got != want {
+		t.Errorf("own binary gone: %q, %v; want the one on PATH", got, err)
+	}
+	none := func(string) (string, error) { return "", exec.ErrNotFound }
+	if _, err := restartExecutable(gone, none); err == nil || !strings.Contains(err.Error(), gone) || !strings.Contains(err.Error(), "PATH") {
+		t.Errorf("nothing to run: %v; want the reason naming the old path and PATH", err)
 	}
 }
