@@ -38,6 +38,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A `Match host` block that covers a managed host is reported.** The shadow check skipped every
+  `Match` block, so a `Match host *.corp` above the managed block quietly gave `api.corp` another
+  user. `Match` blocks made only of `host` and `originalhost` criteria are now evaluated (against
+  the alias, as ssh does there), and `host add`, like any command that changes the manifest, prints a
+  shadow it finds as a warning instead of leaving it to `doctor`.
 - **`ssh import` says what it leaves behind.** After import and reconcile, `doctor` failed at once on
   the hand-written blocks import had copied (they stay in your config, above the managed block), and
   `Match` and wildcard `Host` blocks were dropped without a word. The summary now names the blocks
