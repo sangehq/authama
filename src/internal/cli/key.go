@@ -1,15 +1,19 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/sangehq/authama/src/internal/core/inventory"
 	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/recency"
 	"github.com/sangehq/authama/src/internal/platform"
 	"github.com/sangehq/authama/src/internal/services/editor"
 	"github.com/sangehq/authama/src/internal/services/exports"
@@ -34,6 +38,7 @@ func newKeyCmd() *cobra.Command {
 	cmd.AddCommand(newKeyUnreserveCmd())
 	cmd.AddCommand(newKeyLifetimeCmd())
 	cmd.AddCommand(newKeyRevokeCmd())
+	cmd.AddCommand(newKeyAckCmd())
 	cmd.AddCommand(newKeyAdoptCmd())
 	cmd.AddCommand(newKeyRootCmd())
 	return cmd
@@ -196,7 +201,7 @@ func newKeyAddCmd() *cobra.Command {
 }
 
 func newKeyListCmd() *cobra.Command {
-	var asCSV bool
+	var asCSV, asJSON, onlyNew bool
 	cmd := &cobra.Command{
 		Use:   "list [profile|alias|key]",
 		Short: "Every key with its fingerprint, expiry, hosts and state",
@@ -222,35 +227,76 @@ func newKeyListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			rec := keysvc.Recency(m, inv, p.Inventory(), rows, recency.FromEnv(nil), time.Now())
+			if onlyNew {
+				rows = slices.DeleteFunc(rows, func(r keysvc.Row) bool { return !rec[r.Ref.String()].IsNew })
+			}
 			if asCSV {
 				return csvout.Write(c.OutOrStdout(), exports.Keys(rows))
 			}
-			writeKeyTable(c.OutOrStdout(), rows)
-			if selector == "" {
+			if asJSON {
+				return writeKeyJSON(c.OutOrStdout(), rows, rec)
+			}
+			writeKeyTable(c.OutOrStdout(), rows, rec)
+			if selector == "" && !onlyNew {
 				writeReserved(c.OutOrStdout(), m, inv, p.SSHDir, vmConfig(p).PlannedKeys())
 			}
 			return nil
 		},
 	}
 	cmd.Flags().BoolVar(&asCSV, "csv", false, "print the keys as CSV, one row each, header first")
+	cmd.Flags().BoolVar(&asJSON, "json", false, "print the keys as JSON, each with its recency: events, ages, is_new and pill")
+	cmd.Flags().BoolVar(&onlyNew, "new", false, "only the keys labelled new (see keys.new_window_days)")
+	cmd.MarkFlagsMutuallyExclusive("csv", "json")
 	return cmd
 }
 
-// writeKeyTable renders the key table.
-func writeKeyTable(out io.Writer, rows []keysvc.Row) {
+// keyJSON is one key as `key list --json` prints it.
+type keyJSON struct {
+	Key         string         `json:"key"`
+	Type        string         `json:"type"`
+	Fingerprint string         `json:"fingerprint"`
+	Created     string         `json:"created"`
+	ExpiresOn   string         `json:"expires_on"`
+	Hosts       []string       `json:"hosts"`
+	State       string         `json:"state"`
+	Recency     recency.Status `json:"recency"`
+}
+
+func writeKeyJSON(out io.Writer, rows []keysvc.Row, rec map[string]recency.Status) error {
+	list := make([]keyJSON, 0, len(rows))
+	for _, r := range rows {
+		hosts := r.Hosts
+		if hosts == nil {
+			hosts = []string{}
+		}
+		list = append(list, keyJSON{Key: r.Ref.String(), Type: r.Type, Fingerprint: r.Fingerprint, Created: r.Created,
+			ExpiresOn: r.ExpiresOn, Hosts: hosts, State: r.Status, Recency: rec[r.Ref.String()]})
+	}
+	enc := json.NewEncoder(out)
+	enc.SetIndent("", "  ")
+	return enc.Encode(list)
+}
+
+// writeKeyTable renders the key table. AGE is how long ago the key was
+// created, added or rotated in, and STATUS its recency pill (new, current,
+// ageing, due soon, overdue, revoked, retired), as words: no colour.
+func writeKeyTable(out io.Writer, rows []keysvc.Row, rec map[string]recency.Status) {
 	if len(rows) == 0 {
 		_, _ = fmt.Fprintln(out, "no keys in the manifest (add one with `authama ssh key add`)")
 		return
 	}
 	tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-	_, _ = fmt.Fprintln(tw, "KEY\tTYPE\tFINGERPRINT\tEXPIRES\tHOSTS\tSTATE")
+	_, _ = fmt.Fprintln(tw, "KEY\tTYPE\tFINGERPRINT\tEXPIRES\tAGE\tSTATUS\tHOSTS\tSTATE")
 	for _, r := range rows {
 		state := r.Status
 		if notes := keyaudit.Notes(r); len(notes) > 0 {
 			state += "  " + strings.Join(notes, ",")
 		}
-		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
-			r.Ref, r.Type, dash(r.Fingerprint), dash(r.ExpiresOn), dash(strings.Join(r.Hosts, ",")), state)
+		st := rec[r.Ref.String()]
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+			r.Ref, r.Type, dash(r.Fingerprint), dash(r.ExpiresOn), dash(st.Age), dash(st.Pill.Label),
+			dash(strings.Join(r.Hosts, ",")), state)
 	}
 	_ = tw.Flush()
 }

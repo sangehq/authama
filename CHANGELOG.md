@@ -19,6 +19,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`AUTHAMA_KEYS_NEW_EVENTS`, default `created,added,rotated,deployed`, `restored` also allowed) which
   events make it new. `settings set` and `settings validate` refuse an unknown event or a negative
   window, and the schema checks both.
+- **`ssh key list` shows how new and how old each key is.** Two columns, `AGE` (since it was
+  created, added or rotated in) and `STATUS` (`new`, `current`, `ageing`, `due soon`, `overdue`,
+  `revoked`, `retired`), as words. `--new` keeps the keys labelled new, and `--json` prints each key
+  with its recency: every event with its time, age and constraint, `is_new`, `new_because` and the
+  pill.
+- **`ssh key ack` clears the new label** on the keys it names (or `--category`, `--all`) until their
+  next event, and records when it did in `key-events.json` and the history.
 
 ## [0.1.0] - 2026-11-14
 
