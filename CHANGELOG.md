@@ -26,6 +26,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   pill.
 - **`ssh key ack` clears the new label** on the keys it names (or `--category`, `--all`) until their
   next event, and records when it did in `key-events.json` and the history.
+- **The web UI shows key recency as pills.** The Keys list gains a Status column (the pill and the
+  key's age), and a key's page its status and a Lifecycle card listing every event with its age, a
+  machine-readable `<time>` and its constraint. Each pill carries its word, not colour alone, in the
+  existing badge colours. *Mark as seen* on a new key is `key ack`, previewed and confirmed like any
+  change.
 
 ## [0.1.0] - 2026-11-14
 

@@ -204,6 +204,9 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 			}
 			return "badge-bad"
 		},
+		// toneClass is the badge class for a recency tone (core/recency):
+		// ok, info, warn, bad or muted, each an existing badge-* class.
+		"toneClass": func(tone string) string { return "badge-" + tone },
 		"statusClass": func(s string) string {
 			switch s {
 			case "deployed", "ok", "running":

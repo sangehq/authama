@@ -121,10 +121,15 @@ records an `acknowledged` time; the next of those events makes the key new again
 
 Each event also carries its own age against the key's constraints: `fresh` inside the new window,
 `old` past the key's lifetime, `ageing` past half of it, `current` otherwise. A revocation, a
-retirement and an acknowledgement end or note something, so they carry only their time. The web
-UI shows the status as a pill on the Keys list and every event, with its age, on the key's page;
-each pill says its word, so nothing depends on colour. The table and `--json` never carry colour or
-terminal escapes.
+retirement and an acknowledgement end or note something, so they carry only their time. The table
+and `--json` never carry colour or terminal escapes.
+
+In the web UI the Keys list has a **Status** column with the pill and the key's age, and a key's
+page shows its status and a **Lifecycle** card: every event with how long ago it was (a `<time>`
+carrying the exact time) and its constraint. A new key's card offers **Mark as seen**, which is `key ack` as a
+previewed change. Each pill says its word as well as taking the badge colour (blue for new and
+fresh, green for current, amber for ageing and due soon, red for old and overdue, grey for revoked
+and retired), so nothing depends on colour.
 
 ## History and events
 
