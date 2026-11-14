@@ -16,6 +16,8 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [main]
+    # ready_for_review: a draft marked ready runs, though nothing was pushed.
+    types: [opened, synchronize, reopened, ready_for_review]
   # Weekly run on main: nothing re-runs after a merge, so this is what catches drift there
   # (a dependency release, two green PRs that interact) and keeps the Tests badge current.
   schedule:
@@ -37,6 +39,8 @@ concurrency:
 
 jobs:
   test:
+    # Draft pull requests run nothing; marking one ready starts the run.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     # The whole product: pure Go, every verb native. Build, vet, test and gofmt
     # across the three first-class OSes - the Windows leg matters because the
     # platform layer (icacls, schtasks, toast, console modes) only runs there.
@@ -57,8 +61,9 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@v7
         with:
-          # The module declares its toolchain; `stable` moved to 1.27 under a
-          # golangci-lint built with 1.26, which panics on the newer stdlib.
+          # The module declares its toolchain (go 1.27.0, toolchain go1.27.4, as
+          # sange and imprimatur do); golangci-lint v2.15.0 below handles it. A
+          # lint built for an older Go panicked on the newer stdlib.
           go-version-file: src/go.mod
           # The module is src/, so the cache key has to name src/go.sum: the default
           # looks for go.sum at the root, finds none, and restores and saves nothing
@@ -82,7 +87,7 @@ jobs:
         continue-on-error: true
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          version: v2.14.0
+          version: v2.15.0
           # The module is src/, and the action runs where it is told to. Without
           # this it lints a directory with no Go in it and passes.
           working-directory: src
@@ -90,7 +95,7 @@ jobs:
         if: steps.lint.outcome == 'failure'
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          version: v2.14.0
+          version: v2.15.0
           working-directory: src
       # No longer macOS-only: the shell version used BSD `stat -f`, which was the
       # single reason two thirds of the matrix never ran it.
@@ -125,6 +130,17 @@ jobs:
           "$dir/authama" version
           # The checksum was checked, not skipped.
           if grep -q 'skipping verification' "$rel/out"; then echo "the installer skipped checksum verification"; exit 1; fi
+          # A release with no checksums.txt is refused, not installed unverified;
+          # AUTHAMA_INSTALL_NO_VERIFY=1 is the explicit way past that.
+          mv "$rel/checksums.txt" "$rel/checksums.txt.held"
+          nosums="$(mktemp -d)/bin"
+          if AUTHAMA_INSTALL_DIR="$nosums" bash src/scripts/install.sh v0.1.0; then
+            echo "the installer installed with no checksums.txt"; exit 1
+          fi
+          test ! -e "$nosums/authama"
+          AUTHAMA_INSTALL_NO_VERIFY=1 AUTHAMA_INSTALL_DIR="$nosums" bash src/scripts/install.sh v0.1.0
+          test -x "$nosums/authama"
+          mv "$rel/checksums.txt.held" "$rel/checksums.txt"
           # The sshmgr alias is no longer installed.
           test ! -e "$dir/sshmgr"
           # The deprecated variable name still picks the directory.
@@ -194,6 +210,8 @@ jobs:
 
 
   darwin:
+    # Draft pull requests run nothing; marking one ready starts the run.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     # macOS on every pull request without a macOS runner: build and vet every
     # package, tests included, for darwin on both architectures. vet type-checks
     # the build-tagged *_darwin.go files, which a Linux build never compiles.
@@ -220,6 +238,8 @@ jobs:
           done
 
   web-e2e:
+    # Draft pull requests run nothing; marking one ready starts the run.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     # The web UI in a browser: Playwright drives every page of `authama serve` and
     # its write flows against a throwaway home, and axe fails a serious or
     # critical violation in either theme. Linux only, as the plan settled: the
@@ -259,6 +279,8 @@ jobs:
           retention-days: 7
 
   gitleaks:
+    # Draft pull requests run nothing; marking one ready starts the run.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     # The only secret scanner now, and the only one that ever mattered: it runs
     # against the full history, which the pre-commit hook of the same name could
     # not do. That hook, and the interpreter the pre-commit job needed to run
@@ -298,6 +320,8 @@ jobs:
         run: gitleaks detect --source . --redact --no-banner --exit-code 1
 
   scripts:
+    # Draft pull requests run nothing; marking one ready starts the run.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     # The four shell artifacts nothing else exercises. install.sh and install.ps1
     # are user-facing `curl | bash` entry points with no test of any kind - a
     # broken arch detection or a renamed asset would surface as a user report -

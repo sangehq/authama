@@ -34,7 +34,9 @@ func newDoctorCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			// A missing/invalid manifest is non-fatal: drift checks are skipped.
+			// A manifest that does not load leaves m nil: the drift checks are
+			// skipped, and the doctor reports the load error itself as a
+			// finding that fails the verdict (doctor.Report.ManifestError).
 			m, _ := manifest.Load(p.Manifest())
 			svc := doctor.New(p, m, platform.EmitUseKeychain())
 

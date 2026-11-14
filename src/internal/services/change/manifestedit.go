@@ -40,10 +40,18 @@ func ApplyManifestEdit(out io.Writer, p paths.Paths) error {
 	if err := fs.EnsureDir(p.SSHDir, perms.DirMode); err != nil {
 		return err
 	}
-	res, err := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).Write(false)
+	svc := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain())
+	res, err := svc.Write(false)
 	if err != nil {
 		return fmt.Errorf("the manifest edit was saved, but the config could not be re-rendered "+
 			"(fix this, then run `authama ssh reconcile`): %w", err)
+	}
+	// A hand-written block above the managed one that covers a managed host
+	// wins for what it sets, so say so now rather than leave it to doctor.
+	if chk, err := svc.Check(false); err == nil {
+		for _, sh := range chk.Shadowed {
+			_, _ = fmt.Fprintf(out, "warning: %s; %s\n", sh, configsvc.ShadowFix)
+		}
 	}
 	if len(res.Written) > 0 {
 		_, _ = fmt.Fprintf(out, "re-rendered %s\n", strings.Join(res.Written, ", "))

@@ -50,20 +50,15 @@ and the Scoop manifest - to `authama`. Your config, keys and `~/.ssh` need nothi
 | Remote lock and temp files on servers | `.ssh-manager.lock`, `authorized_keys.ssh-manager.*` | `.authama.lock`, `authorized_keys.authama.*` |
 | VM `ProxyCommand` | the binary that rendered it | always `authama` |
 
-To move over:
+To move over, install authama from the GitHub release or build it from source
+([installation](installation.md)). The Homebrew cask, the Scoop bucket and the install scripts
+that once carried the rename are frozen and no longer updated
+([earlier binary releases](installation.md#earlier-binary-releases)); a Linux package from the
+release still replaces `sshmgr`:
 
 ```sh
-# Homebrew: the rename is picked up on update; if it is not, swap the casks
-brew update && brew upgrade
-brew list --cask sshmgr >/dev/null 2>&1 && brew uninstall --cask sshmgr && brew install --cask simtabi/tap/authama
-
-# Scoop
-scoop uninstall sshmgr; scoop install simtabi/authama
-
-# deb / rpm / apk: install the authama package; it replaces sshmgr
+# deb / rpm / apk from the GitHub release: install the authama package; it replaces sshmgr
 sudo apt install ./authama_linux_amd64.deb
-
-# install.sh / install.ps1 / go install: nothing changes, they install authama
 
 # then, once:
 authama ssh config render        # rewrites VM ProxyCommand lines to authama

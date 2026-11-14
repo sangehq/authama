@@ -11,6 +11,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`authama version` names the commit and build day.** It printed only the version, so a build from a
   branch said `authama dev`; it now adds them when Go recorded them, as in
   `authama v0.1.6 (6c56209, 2026-11-13)`. The line still starts `authama <version>`.
+- **Go 1.27, golangci-lint v2.15.0 and the current go-notifykit.** The module now declares `go 1.27.0`
+  with `toolchain go1.27.4`, as sange and imprimatur do, and CI lints with golangci-lint v2.15.0; the dev
+  container defaults to Go 1.27. go-notifykit moves to the build sange uses, which drops the
+  `terminal-notifier` backend (macOS uses its helper app, else `osascript`).
+- **Desktop notifications replace rather than stack.** Each carries a group named after the event, so
+  the same event posted again replaces its banner. With no backend, the message now says to install
+  `notify-send` on Linux and to run `authama notify doctor` elsewhere, not `terminal-notifier`.
+- **CI skips draft pull requests and cancels superseded CodeQL runs.** Every CI and CodeQL job now
+  waits until a draft is marked ready (which starts a run), as sange and imprimatur already did, and
+  CodeQL cancels a pull request's earlier run when a new push supersedes it.
 - **`init --force` keeps a copy and asks first.** It reset `manifest.json`, `inventory.json` and `.env`
   to their defaults with no copy unless `--backup` was given (and `--backup` without `--force` was
   silently ignored), and never asked. It now copies them into the state home's `init-backup-<stamp>/`
@@ -27,8 +37,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   identity `com.simtabi.authama` (changing it resets the notification permission).
 
 - **A release runs under the `release` environment again.** `release.yml` passes
-  `environment: release` to the shared workflow, whose pin moves to simtabi/.github `d648d89`
-  (the newest, which takes an environment). Each release is recorded as a deployment, and the
+  `environment: release` to the shared workflow, pinned to simtabi/.github's `v1.0.0` (`767e0c0`,
+  which takes an environment), with the version as the comment so Dependabot can move it. Each release is recorded as a deployment, and the
   environment requires the owner's approval (added 2026-11-13), so a pushed tag publishes nothing
   until it is approved.
 
@@ -47,6 +57,42 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   restore names each key by its path, so a key and its `old/` predecessor are told apart.
 - **`settings show --json` prints JSON with no `authama.json`.** It printed a sentence; it now prints
   `{}`, the settings that file sets.
+- **The manifest schema accepts `reserved_keys`.** `manifest.schema.json` forbids keys it does not
+  list, and it did not list `reserved_keys` (written by `ssh key reserve` since 0.1.4), so an editor or
+  CI step validating against it refused a manifest authama itself wrote. The schema guard now checks
+  the top level and the reserved-key entries too, and a new one checks `inventory.schema.json`.
+- **`doctor` reports what an interrupted run left behind.** A reconcile killed mid-run could leave a
+  `.mint-*` directory holding a private key, and doctor said nothing until the next reconcile swept
+  it. It is now a warning naming each path and `authama ssh clean` (`--strict` fails), and
+  `crash_residue` in `--json`.
+- **`settings validate` checks what `.env` sets, and migration renames old names.** It said "ok" over
+  a `.env` whose settings were never read: old `SSHMGR_`/`SSH_MANAGER_` names, a misspelt `AUTHAMA_`
+  name, and values like `AUTHAMA_SNAPSHOT_RETAIN=abc` or a boolean `maybe` (read as false). It now
+  reports each, naming the `AUTHAMA_` name to use for an old one, and migrating an old home renames
+  them in the copied `.env` so its settings keep applying.
+- **A stale config that could not be removed is reported.** Rendering the config listed an old
+  per-profile config under "removed stale" even when removing it failed; it now stops with the error.
+- **A `Match host` block that covers a managed host is reported.** The shadow check skipped every
+  `Match` block, so a `Match host *.corp` above the managed block quietly gave `api.corp` another
+  user. `Match` blocks made only of `host` and `originalhost` criteria are now evaluated (against
+  the alias, as ssh does there), and `host add`, like any command that changes the manifest, prints a
+  shadow it finds as a warning instead of leaving it to `doctor`.
+- **`ssh import` says what it leaves behind.** After import and reconcile, `doctor` failed at once on
+  the hand-written blocks import had copied (they stay in your config, above the managed block), and
+  `Match` and wildcard `Host` blocks were dropped without a word. The summary now names the blocks
+  left in your config and why doctor will report them, and lists each block it did not import.
+- **A key your own Host block uses is no longer called loose.** The key audit only looked at the
+  manifest, so a key named by a hand-written block in `~/.ssh/config`, or a file it Includes, was
+  reported as "a key in ~/.ssh that no Host block uses", and `doctor --strict` failed on a home
+  that was fine. It now reads those IdentityFile lines too.
+- **A corrupt `revoked.json` or `retired.json` is reported, not read as empty.** The key checklist
+  read an unreadable record as "nothing recorded", so a revoked key was listed as in use with nothing
+  left to do; the rotation's check for a predecessor that still logs in did the same and would evict
+  it. Both now stop with the error.
+- **`doctor` fails on a manifest it cannot load.** It loaded `manifest.json` with the error dropped,
+  skipped the drift checks and said "clean" (`ok: true`) over a file every other command refuses. A
+  manifest that exists and does not load is now a failing finding, in the report and as
+  `manifest_error` in `--json`, naming the way back (fix it, or restore a snapshot).
 - **A refused command no longer uses up a snapshot.** Every command that changes the home snapshots
   `~/.ssh` first, before it checks its input, so each typo or name already taken kept a snapshot, and
   with ten kept, a few typos pushed every real restore point out. A command that fails or is declined
@@ -88,6 +134,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **The install scripts refuse a release with no `checksums.txt`.** `install.sh` and `install.ps1`
+  installed the download unverified, with a warning, when the checksum file was missing. They now
+  stop; `AUTHAMA_INSTALL_NO_VERIFY=1` is the explicit way past that, and CI proves both.
 - **A snapshot restores into `~/.ssh` only, with safe modes.** Restoring a snapshot extracted it into
   your home directory, so a member outside `.ssh/` (a `.zshrc`, say) was written there, and file
   modes came from the archive. An archive with any member outside `.ssh/` is now refused before

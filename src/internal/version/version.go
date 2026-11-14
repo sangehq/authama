@@ -5,13 +5,13 @@
 //
 //   - a release, where GoReleaser stamps all three vars through -ldflags;
 //   - `make build`, which stamps Version from `git describe`;
-//   - `go install github.com/sangehq/authama/src/cmd/authama@latest`,
-//     which applies no ldflags at all.
+//   - a plain `go build` of the module, which applies no ldflags at all.
 //
-// The third is the one the README tells people to use, and it used to report the
-// hardcoded default - "2.0.0-dev", from a binary built out of v3 sources. Go
-// already records the real answer in the binary (`go version -m` shows it), so
-// nothing needed to be threaded through the build: it just had to be read.
+// The third used to report the hardcoded default - "2.0.0-dev", from a binary
+// built out of v3 sources. Go already records the real answer in the binary
+// (`go version -m` shows it), so nothing needed to be threaded through the
+// build: it just had to be read. (Binaries ship on the GitHub release only; no
+// doc offers the module through the Go toolchain.)
 package version
 
 import (

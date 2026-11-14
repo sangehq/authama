@@ -692,7 +692,7 @@ renders `~/.ssh/config`:
 ```sh
 authama settings path              # config home, state home, .env, authama.json
 authama settings show --effective  # every setting, its value and its source
-authama settings validate          # schema-check authama.json, syntax- and mode-check .env
+authama settings validate          # schema-check authama.json; check .env's syntax, mode, names and values
 authama settings init              # write a starter authama.json
 authama settings set web.port 7900 # write one setting into authama.json, keeping the rest
 authama settings unset web.port    # take it out again, back to its default
@@ -703,7 +703,10 @@ authama settings backup-key        # make an age key for backups; sets backup.ag
 
 Releases before 0.1.1 read `SSH_MANAGER_*` and `SSHMGR_*` names. authama read
 them too, with a deprecation notice, until 2026-11-07; it ignores them now, so a
-value set only under an old name has no effect. Rename it: `SSH_MANAGER_HOME`
+value set only under an old name has no effect. `authama settings validate` names
+each one left in `.env`, with the `AUTHAMA_` name to use, along with any `AUTHAMA_`
+name that is not a setting and any value a setting cannot take; migrating an old
+home renames them in the copied `.env` for you. Rename it: `SSH_MANAGER_HOME`
 and `SSH_MANAGER_CONFIG_DIR` → `AUTHAMA_CONFIG_DIR`, `SSHMGR_DEV_ROOT` →
 `AUTHAMA_DEV_ROOT`, `SSHMGR_GIT_MODE` → `AUTHAMA_GIT_MODE`, and
 `SSH_MANAGER_<NAME>` → `AUTHAMA_<NAME>` for the rest. See [Migration](migration.md).

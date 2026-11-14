@@ -144,7 +144,16 @@ $installed = @()
 try {
   $sums = Join-Path $tmp 'checksums.txt'
   $haveSums = $true
-  try { Get-Asset 'checksums.txt' $sums } catch { $haveSums = $false; Write-Warning 'checksums.txt not found; skipping verification.' }
+  # No checksums.txt is no proof the download is the release's, so it stops
+  # the install; AUTHAMA_INSTALL_NO_VERIFY=1 is the explicit way past that.
+  try { Get-Asset 'checksums.txt' $sums } catch {
+    if ($env:AUTHAMA_INSTALL_NO_VERIFY -eq '1') {
+      $haveSums = $false
+      Write-Warning 'checksums.txt not found; installing WITHOUT verification (AUTHAMA_INSTALL_NO_VERIFY=1).'
+    } else {
+      throw 'checksums.txt not found, so the download cannot be verified; nothing was installed. Set AUTHAMA_INSTALL_NO_VERIFY=1 to install unverified.'
+    }
+  }
 
   New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
   foreach ($name in @($binBase)) {
