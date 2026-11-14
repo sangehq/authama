@@ -200,7 +200,10 @@ documentation, the source and the licences.
   that it runs the current build. With `web.auto_restart` (the default) this happens by itself
   when the binary is rebuilt: open pages reload into the new build, or offer **Reload** when
   they hold unsaved input. `serve --restart` and `serve --stop-all` do the same from a
-  terminal for every authama web UI on the machine
+  terminal for every authama web UI on the machine. A server whose binary moved (its checkout was
+  renamed or relocated) restarts from the `authama` on `PATH` instead, and watches that one for the
+  next rebuild; with none on `PATH`, **Restart now** says so rather than waiting for a server that
+  never starts
   ([Restart the web UI after updating](../installation.md#updating)).
 - **Any list in any format.** `/exports/run` writes a selection of a home's records as a file.
   A built-in preset is a list as its page shows it (`?preset=hosts`, `keys`, `profiles`, `tokens`,

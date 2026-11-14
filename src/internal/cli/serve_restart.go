@@ -75,12 +75,9 @@ func relaunch(h serveHandoff, state func(*serveHandoff), stop func()) func() err
 		if state != nil {
 			state(&h)
 		}
-		exe, err := os.Executable()
+		exe, err := ownRestartExecutable()
 		if err != nil {
 			return err
-		}
-		if real, err := filepath.EvalSymlinks(exe); err == nil {
-			exe = real
 		}
 		// The same command line, as `serve` (bare `authama` serves too, but
 		// takes no serve flags), without --restart (the old server is the one
@@ -247,4 +244,34 @@ func handoffSessions(h *serveHandoff) []web.SessionState {
 		return nil
 	}
 	return h.Sessions
+}
+
+// restartExecutable is the binary a restart runs: exe, this process's own
+// path, while a file is there; otherwise the authama lookPath resolves, for a
+// server started from a checkout that has since moved (macOS keeps reporting
+// the old path); otherwise the reason there is nothing to run.
+func restartExecutable(exe string, lookPath func(string) (string, error)) (string, error) {
+	if fi, err := os.Stat(exe); err == nil && !fi.IsDir() {
+		return exe, nil
+	}
+	found, err := lookPath(brand.Command)
+	if err != nil {
+		return "", fmt.Errorf("the binary this server started from (%s) is gone, and no %s is on PATH: start the web UI again from where authama is now", exe, brand.Command)
+	}
+	if real, err := filepath.EvalSymlinks(found); err == nil {
+		found = real
+	}
+	return found, nil
+}
+
+// ownRestartExecutable is restartExecutable for this process.
+func ownRestartExecutable() (string, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	if real, err := filepath.EvalSymlinks(exe); err == nil {
+		exe = real
+	}
+	return restartExecutable(exe, exec.LookPath)
 }

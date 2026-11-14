@@ -34,6 +34,16 @@ func (x restartAPI) handleRestart(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "this server cannot restart itself; stop it and run `authama serve` again"})
 		return
 	}
+	// Nothing to run (the binary moved and none is on PATH): say so now,
+	// rather than answer 202 and leave the page waiting for a server that
+	// never starts.
+	if from := x.s.opts.RestartFrom; from != nil {
+		if _, err := from(); err != nil {
+			w.WriteHeader(http.StatusConflict)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
+	}
 	w.WriteHeader(http.StatusAccepted)
 	// A new link, handed to the next server with the others not yet used, for
 	// a page whose session did not survive the restart.
@@ -104,7 +114,8 @@ func (s *sessions) adopt(states []SessionState, now time.Time) {
 // watchBinary restarts the server when its binary is rebuilt or reinstalled:
 // once the file at its path has changed and then held still for two checks
 // in a row (a build still being written is never launched), Restart runs.
-// A removed binary is waited out, never restarted from.
+// A removed binary is waited out, never restarted from, unless RestartFrom
+// names another (the authama on PATH): that one is watched instead.
 func (s *Server) watchBinary(stop <-chan struct{}, every time.Duration) {
 	if s.opts.Restart == nil || !s.opts.AutoRestart || s.binary.path == "" {
 		return
@@ -118,11 +129,19 @@ func (s *Server) watchBinary(stop <-chan struct{}, every time.Duration) {
 			return
 		case <-t.C:
 		}
-		if s.binary.replaced() == "" {
+		// The path the server started from, or, once that is gone, the
+		// binary a restart would run (a checkout that moved).
+		w := s.binary
+		if _, err := os.Stat(w.path); err != nil && s.opts.RestartFrom != nil {
+			if p, err := s.opts.RestartFrom(); err == nil {
+				w.path = p
+			}
+		}
+		if w.replaced() == "" {
 			last = nil
 			continue
 		}
-		fi, err := os.Stat(s.binary.path)
+		fi, err := os.Stat(w.path)
 		// Windows has no executable bit; elsewhere a file without one is
 		// not a finished build.
 		if err != nil || (runtime.GOOS != "windows" && fi.Mode()&0o111 == 0) {

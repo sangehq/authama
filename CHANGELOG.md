@@ -23,6 +23,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   environment requires the owner's approval (added 2026-11-13), so a pushed tag publishes nothing
   until it is approved.
 
+### Fixed
+
+- **The web UI restarts after its binary moved.** A server started from a checkout that was then
+  moved (macOS keeps reporting the old path) ran a missing file on restart, after already telling the
+  page it was restarting, so the page waited for good; the watcher never restarted from a removed
+  binary either. A restart now runs the `authama` on `PATH` when its own path is gone, the watcher
+  follows that one, and with none on `PATH` the restart is refused with the reason, which the page
+  shows.
+
 ### Documentation
 
 - **The provenance check now works.** `gh attestation verify` in the installation and release pages
