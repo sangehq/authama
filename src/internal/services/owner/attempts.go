@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/sangehq/authama/src/internal/core/pin"
 	"github.com/sangehq/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/lock"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
@@ -27,6 +29,9 @@ func (e LockedError) Error() string {
 	return fmt.Sprintf("too many wrong PINs; try again after %s", e.Until.Local().Format("15:04:05"))
 }
 
+// verifyHook runs just before the hash is checked. Tests only.
+var verifyHook func()
+
 type attempts struct {
 	Failures int       `json:"failures"`
 	Until    time.Time `json:"until,omitempty"`
@@ -40,15 +45,21 @@ func loadAttempts(p paths.Paths) attempts {
 	return a
 }
 
-func saveAttempts(p paths.Paths, a attempts) {
+func saveAttempts(p paths.Paths, a attempts) error {
 	if a.Failures == 0 {
-		_ = os.Remove(attemptsPath(p))
-		return
+		if err := os.Remove(attemptsPath(p)); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		return nil
 	}
-	b, _ := json.Marshal(a)
-	if fs.EnsureDir(p.StateDir(), 0o700) == nil {
-		_ = fs.WriteTextAtomic(attemptsPath(p), string(b)+"\n", 0o600)
+	b, err := json.Marshal(a)
+	if err != nil {
+		return err
 	}
+	if err := fs.EnsureDir(p.StateDir(), 0o700); err != nil {
+		return err
+	}
+	return fs.WriteTextAtomic(attemptsPath(p), string(b)+"\n", 0o600)
 }
 
 // lockout is the wait after n consecutive failures.
@@ -78,26 +89,45 @@ func CheckPIN(p paths.Paths, candidate string, now time.Time) error {
 	if !c.HasPIN() {
 		return ErrNoPIN
 	}
+	// One check at a time, across goroutines and processes: without the lock,
+	// parallel guesses each read the same count and all reached the hash.
+	release, err := lock.Acquire(filepath.Join(p.StateDir(), "pin.lock"))
+	if err != nil {
+		return fmt.Errorf("owner: lock the PIN check: %w", err)
+	}
+	defer release()
 	a := loadAttempts(p)
 	if now.Before(a.Until) {
 		return LockedError{Until: a.Until}
+	}
+	// Count the guess before checking it, so a check killed mid-verify still
+	// counts; a right PIN clears the count below.
+	a.Failures++
+	if err := saveAttempts(p, a); err != nil {
+		return fmt.Errorf("owner: record the PIN attempt: %w", err)
+	}
+	if verifyHook != nil {
+		verifyHook()
 	}
 	ok, stale, err := pin.Verify(c.PIN, candidate)
 	if err != nil {
 		return err
 	}
 	if !ok {
-		a.Failures++
 		if d := lockout(a.Failures); d > 0 {
 			a.Until = now.Add(d)
 		}
-		saveAttempts(p, a)
+		if err := saveAttempts(p, a); err != nil {
+			return fmt.Errorf("owner: record the PIN attempt: %w", err)
+		}
 		if !a.Until.IsZero() && now.Before(a.Until) {
 			return errors.Join(ErrWrongPIN, LockedError{Until: a.Until})
 		}
 		return ErrWrongPIN
 	}
-	saveAttempts(p, attempts{})
+	if err := saveAttempts(p, attempts{}); err != nil {
+		return fmt.Errorf("owner: clear the PIN attempts: %w", err)
+	}
 	if stale {
 		if cc, key, b, err := unlock(p); err == nil {
 			_ = writePIN(p, cc, key, b, candidate, now)

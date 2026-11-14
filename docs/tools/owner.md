@@ -85,7 +85,9 @@ With a PIN set:
 
 Five wrong PINs in a row start a wait of 30 seconds, doubling with each further wrong one up to 15
 minutes. The count is kept in the state home, so restarting the server or the command does not
-reset it.
+reset it. Checks run one at a time under a lock (`pin.lock` in the state home), so guesses sent at
+once, from browser tabs or several commands, are each counted, and a guess is recorded before it
+is checked, so stopping the command mid-check does not skip the count.
 
 ### Forgotten PIN
 

@@ -23,6 +23,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   environment requires the owner's approval (added 2026-11-13), so a pushed tag publishes nothing
   until it is approved.
 
+### Security
+
+- **Wrong PINs sent at once are all counted.** The PIN check read the failure count, checked the
+  hash and wrote the count back with nothing serialising the three, so parallel guesses (browser
+  tabs, several commands) each saw the same count: 50 at once were all checked and one was
+  recorded, which defeated the lockout. Checks now run one at a time under a lock in the state
+  home, and a guess is recorded before its hash is checked. A failure to record it now refuses the
+  check rather than letting it through.
+
 ### Documentation
 
 - **The provenance check now works.** `gh attestation verify` in the installation and release pages
