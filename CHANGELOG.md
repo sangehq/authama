@@ -79,6 +79,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **The install scripts refuse a release with no `checksums.txt`.** `install.sh` and `install.ps1`
+  installed the download unverified, with a warning, when the checksum file was missing. They now
+  stop; `AUTHAMA_INSTALL_NO_VERIFY=1` is the explicit way past that, and CI proves both.
 - **A snapshot restores into `~/.ssh` only, with safe modes.** Restoring a snapshot extracted it into
   your home directory, so a member outside `.ssh/` (a `.zshrc`, say) was written there, and file
   modes came from the archive. An archive with any member outside `.ssh/` is now refused before

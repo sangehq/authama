@@ -125,6 +125,17 @@ jobs:
           "$dir/authama" version
           # The checksum was checked, not skipped.
           if grep -q 'skipping verification' "$rel/out"; then echo "the installer skipped checksum verification"; exit 1; fi
+          # A release with no checksums.txt is refused, not installed unverified;
+          # AUTHAMA_INSTALL_NO_VERIFY=1 is the explicit way past that.
+          mv "$rel/checksums.txt" "$rel/checksums.txt.held"
+          nosums="$(mktemp -d)/bin"
+          if AUTHAMA_INSTALL_DIR="$nosums" bash src/scripts/install.sh v0.1.0; then
+            echo "the installer installed with no checksums.txt"; exit 1
+          fi
+          test ! -e "$nosums/authama"
+          AUTHAMA_INSTALL_NO_VERIFY=1 AUTHAMA_INSTALL_DIR="$nosums" bash src/scripts/install.sh v0.1.0
+          test -x "$nosums/authama"
+          mv "$rel/checksums.txt.held" "$rel/checksums.txt"
           # The sshmgr alias is no longer installed.
           test ! -e "$dir/sshmgr"
           # The deprecated variable name still picks the directory.

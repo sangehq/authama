@@ -121,11 +121,16 @@ sha_check() { # <checksums file> <asset>
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
 
+# No checksums.txt is no proof the download is the release's, so it stops the
+# install. AUTHAMA_INSTALL_NO_VERIFY=1 is the explicit way past that, for a
+# local or mirrored "release" that carries none.
 have_sums=0
 if curl -fsSL "${CURL_RETRY[@]}" "${base}/checksums.txt" -o "${workdir}/checksums.txt" 2>/dev/null; then
   have_sums=1
+elif [ "${AUTHAMA_INSTALL_NO_VERIFY:-}" = 1 ]; then
+  info "warning: checksums.txt not found; installing WITHOUT verification (AUTHAMA_INSTALL_NO_VERIFY=1)."
 else
-  info "warning: checksums.txt not found; skipping verification."
+  err "checksums.txt not found at ${base}, so the download cannot be verified; nothing was installed. Set AUTHAMA_INSTALL_NO_VERIFY=1 to install unverified."
 fi
 
 # fetch <binary>: download and verify ${binary}_${os}_${arch}; non-zero if the
