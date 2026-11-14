@@ -66,10 +66,15 @@ the secret after `whsec_`. Any Standard Webhooks library verifies it. A receiver
 ## Security
 
 - **Off by default.** Nothing is sent until `webhooks.enabled` is on, or you run `webhook deliver`.
-- **https to public addresses only.** An endpoint on this machine or a private network (loopback,
-  10/8, 172.16/12, 192.168/16, 100.64/10, link-local such as `169.254.169.254`) is refused, so a
-  webhook cannot be aimed at a service behind your firewall. The address is checked when it is
-  dialled, after its name resolves, so DNS cannot rebind around it. `webhooks.allow_private` lifts
+- **https to public addresses only.** An endpoint on this machine or a private network is refused,
+  so a webhook cannot be aimed at a service behind your firewall: loopback, 10/8, 172.16/12,
+  192.168/16, 100.64/10, link-local such as `169.254.169.254`, IPv6 unique-local and site-local, and
+  every other IANA special-purpose range (0.0.0.0/8, 192.0.0.0/24, the documentation and
+  benchmarking ranges, multicast, 240/4 and broadcast). An IPv6 address that carries an IPv4 one
+  (NAT64 `64:ff9b::/96`, 6to4 `2002::/16`, IPv4-compatible `::a.b.c.d`) is judged by the IPv4 address
+  inside it. A host written as a bare number, in hex or octal, or shortened (`2130706433`,
+  `0x7f.1`, `127.1`) is refused; write four dotted decimals or a name. The address is checked again
+  when it is dialled, after its name resolves, so DNS cannot rebind around it. `webhooks.allow_private` lifts
   this, and also allows plain `http` to this machine, for a receiver you run locally.
 - **No redirects** are followed, and no proxy from the environment is used.
 - **A user name or password in the address** is refused: the signature authenticates each request.

@@ -25,6 +25,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **Webhooks refuse every non-public address.** The private-address filter missed 0.0.0.0/8,
+  198.18.0.0/15, 240.0.0.0/4, broadcast, 192.0.0.0/24, site-local IPv6, and the NAT64, 6to4 and
+  IPv4-compatible forms that carry a loopback or private IPv4 address. It now refuses every IANA
+  special-purpose range, judges an embedded IPv4 address by itself, and refuses numeric, hex,
+  octal and shortened IPv4 host names, both when an endpoint is added and when it is dialled.
 - **A raw option named `Host` is refused.** `raw_options` and `global_options` refused `Match` and
   the command-running keys but not `Host`, so `{"Host": "*", "ForwardAgent": "yes"}` ended the
   managed block and turned agent forwarding on for every host. `Host` is now refused like `Match`,
