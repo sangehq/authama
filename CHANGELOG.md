@@ -1295,7 +1295,7 @@ needs no migration. See [migration](docs/migration.md).
 - A test parses every `authama`/`sshmgr` command shown in the docs against the
   real command tree, so a renamed verb or flag fails CI.
 
-- **[release](docs/release.md#homebrew-and-scoop)**: the Scoop manifest no longer needs a manual pull request.
+- **[release](docs/release.md#frozen-channels)**: the Scoop manifest no longer needs a manual pull request.
   The bucket's workflow opens and merges the `sshmgr-X.Y.Z` branch the release pushes.
 - **[migration](docs/migration.md#history-audit)** records an audit of every tag, release note and commit
   of sshmgr and auth-token-manager against this release, with what was restored and what was dropped on
