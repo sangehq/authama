@@ -67,7 +67,7 @@ runs. On Windows, use `make install`. To check what is installed:
 ```sh
 command -v authama      # which file runs: ~/.local/bin/authama after make install or make link
 ls -l "$(command -v authama)"   # a link (make link) points into the checkout's build/
-authama version         # the commit it was built from
+authama version         # the version, then the commit and build day: authama v0.1.6 (6c56209, 2026-11-13)
 ```
 
 On a Mac with Xcode's command line tools (`xcode-select --install`), `make build` also builds
@@ -97,7 +97,7 @@ A version is a tag: check one out to build exactly that release.
 
 ```sh
 git -C ~/src/authama fetch --tags
-git -C ~/src/authama checkout v0.1.0
+git -C ~/src/authama checkout v0.1.6       # the release you want; `git tag` lists them
 make -C ~/src/authama build
 ```
 
@@ -108,8 +108,9 @@ git -C ~/src/authama pull --ff-only
 make -C ~/src/authama install
 ```
 
-`authama version` reports the commit it was built from, so a build from a branch
-is still identifiable.
+`authama version` prints the version, then the commit and the day it was made when Go
+recorded them (any build from a git checkout, `make build` or a plain `go build`), so a
+build from a branch is still identifiable.
 
 **The web UI follows a new build by itself.** A running `authama serve` watches its own
 binary. After `make install`, or any `make build` when `PATH` runs a `make link` link, once the new file has

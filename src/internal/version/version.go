@@ -155,3 +155,20 @@ func allHex(s string) bool {
 	}
 	return true
 }
+
+// Summary is the version, then the commit and build day when Go recorded
+// them: "v0.1.7 (abc1234, 2026-11-14)". `authama version` prints it, so a
+// build from a branch says which commit it is.
+func Summary() string {
+	if Commit == "" {
+		return Version
+	}
+	day := Date
+	if len(day) >= len("2006-01-02") {
+		day = day[:len("2006-01-02")]
+	}
+	if day == "" {
+		return Version + " (" + Commit + ")"
+	}
+	return Version + " (" + Commit + ", " + day + ")"
+}

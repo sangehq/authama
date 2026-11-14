@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **`authama version` names the commit and build day.** It printed only the version, so a build from a
+  branch said `authama dev`; it now adds them when Go recorded them, as in
+  `authama v0.1.6 (6c56209, 2026-11-13)`. The line still starts `authama <version>`.
 - **`init --force` keeps a copy and asks first.** It reset `manifest.json`, `inventory.json` and `.env`
   to their defaults with no copy unless `--backup` was given (and `--backup` without `--force` was
   silently ignored), and never asked. It now copies them into the state home's `init-backup-<stamp>/`
