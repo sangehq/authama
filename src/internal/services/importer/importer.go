@@ -862,3 +862,26 @@ func writeNew(dst string, b []byte) error {
 	}
 	return f.Close()
 }
+
+// IdentityFiles is every IdentityFile the ssh config at configPath names, in
+// any block (pattern blocks included) and in any file it Includes, with ~
+// expanded. Another package's check that a key "is used by no Host block"
+// reads this, so it sees the hand-written blocks authama does not manage.
+func IdentityFiles(configPath string) []string {
+	b, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil
+	}
+	blocks, _ := collectBlocks(string(b), filepath.Dir(configPath), map[string]bool{}, true)
+	var out []string
+	for _, bl := range blocks {
+		for _, o := range bl.opts {
+			if strings.EqualFold(o.Key, "IdentityFile") {
+				if arg := firstArg(o.Val); arg != "" {
+					out = append(out, expanduser(arg))
+				}
+			}
+		}
+	}
+	return out
+}

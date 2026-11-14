@@ -38,6 +38,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A key your own Host block uses is no longer called loose.** The key audit only looked at the
+  manifest, so a key named by a hand-written block in `~/.ssh/config`, or a file it Includes, was
+  reported as "a key in ~/.ssh that no Host block uses", and `doctor --strict` failed on a home
+  that was fine. It now reads those IdentityFile lines too.
 - **A corrupt `revoked.json` or `retired.json` is reported, not read as empty.** The key checklist
   read an unreadable record as "nothing recorded", so a revoked key was listed as in use with nothing
   left to do; the rotation's check for a predecessor that still logs in did the same and would evict
