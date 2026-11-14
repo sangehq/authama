@@ -23,9 +23,11 @@ around it.
 
 ```sh
 git clone https://github.com/sangehq/authama && cd authama
-make build               # -> build/<your-os>/authama, e.g. build/macos/authama (empties build/ first)
-make install             # build, then copy it to ~/.local/bin (BINDIR=... for elsewhere)
-make uninstall           # remove that binary again; config, state and keys stay
+make build               # -> build/<your-os>/authama, e.g. build/macos/authama, replaced in one step
+make link                # build, then link ~/.local/bin/authama to it: PATH follows every build
+make install             # or: build, then copy it to ~/.local/bin (BINDIR=... for elsewhere)
+make uninstall           # remove that binary or link again; config, state and keys stay
+make clean               # empty build/ (keeping targets.txt); build no longer does this first
 make doctor              # verify the environment, using the binary you just built
 ```
 

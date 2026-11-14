@@ -256,6 +256,7 @@ func newServeCmd() *cobra.Command {
 				BindAddr:     ln.Addr().String(),
 				BasePath:     basePath,
 				Restart:      restartFn,
+				RestartFrom:  ownRestartExecutable,
 				AutoRestart:  settingOn(envnames.WebAutoRestart, true),
 				API:          settingOn(envnames.API, false),
 				Sessions:     handoffSessions(handoff),

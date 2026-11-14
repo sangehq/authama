@@ -53,10 +53,20 @@ authama doctor          # verify deps, perms, agent, known_hosts, drift, token-f
 
 `make install` builds first, so what lands on `PATH` is the checkout as it is now, and says
 whether `~/.local/bin` is on your `PATH` and whether another `authama` shadows it. Any
-directory works: `make install BINDIR=/usr/local/bin`. To check what is installed:
+directory works: `make install BINDIR=/usr/local/bin`.
+
+**Install or link.** `make install` copies the build, so `PATH` keeps that build until you install
+again. `make link` puts a symbolic link at `~/.local/bin/authama` instead, pointing at the
+checkout's `build/<your-os>/authama`, so every later `make build` is what `PATH` runs, and a running
+`authama serve` restarts into it (see *The web UI follows a new build* below). Use `link` while you
+work on authama itself, `install` otherwise; `link` replaces an installed copy and says so, and
+`make uninstall` removes either. `make build` replaces the binary in one step (it compiles to
+`authama.tmp` beside it and renames it), so the link never points at a missing file while a build
+runs. On Windows, use `make install`. To check what is installed:
 
 ```sh
-command -v authama      # which file runs: ~/.local/bin/authama after make install
+command -v authama      # which file runs: ~/.local/bin/authama after make install or make link
+ls -l "$(command -v authama)"   # a link (make link) points into the checkout's build/
 authama version         # the commit it was built from
 ```
 
@@ -102,13 +112,15 @@ make -C ~/src/authama install
 is still identifiable.
 
 **The web UI follows a new build by itself.** A running `authama serve` watches its own
-binary. After `make install` (or any rebuild of the file it runs from), once the new file has
+binary. After `make install`, or any `make build` when `PATH` runs a `make link` link, once the new file has
 stopped changing, the server restarts itself from it: same address, and every
 signed-in page stays signed in. Open pages notice the new server within a few seconds and
 reload; a green banner then says the page runs the current build, and the header marks the
 build *current*. A page with unsaved input in a form is not reloaded under you: it shows
 *A new build is running* with a **Reload** button. Owner-only changes ask for the PIN again
-after a restart.
+after a restart. A server whose binary moved (the checkout it ran from was renamed or relocated)
+restarts from the `authama` that `PATH` resolves, and watches that one from then on; with none on
+`PATH`, **Restart now** says so.
 
 `web.auto_restart` (`AUTHAMA_WEB_AUTO_RESTART`) set to `false` turns this off. A page from an
 older build then says so in a yellow banner, and **Restart now** in it does the same restart

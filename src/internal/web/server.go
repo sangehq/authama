@@ -90,6 +90,10 @@ type Options struct {
 	// this one; nil when the server cannot (a test, an embedded use). The
 	// stale-build banner offers it as "Restart now".
 	Restart func() error
+	// RestartFrom is the binary Restart would run, or why there is none. A
+	// restart that has nothing to run is refused with the reason, and the
+	// binary watcher follows it when the path the server started from is gone.
+	RestartFrom func() (string, error)
 	// AutoRestart restarts the server by itself when its binary is rebuilt
 	// or reinstalled (web.auto_restart, on by default), and every open page
 	// reloads into the new build. Off, the page says it is older and offers

@@ -23,8 +23,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   environment requires the owner's approval (added 2026-11-13), so a pushed tag publishes nothing
   until it is approved.
 
+### Added
+
+- **`make link`.** Links `~/.local/bin/authama` (and `authama-touchid` on macOS) to the checkout's
+  `build/<your-os>/` binary, so `PATH`, and a running `authama serve`, follow every build. It says
+  whether the directory is on `PATH`, as `make install` does; `make uninstall` removes the link.
+  Windows uses `make install`.
+
 ### Fixed
 
+- **The web UI restarts after its binary moved.** A server started from a checkout that was then
+  moved (macOS keeps reporting the old path) ran a missing file on restart, after already telling the
+  page it was restarting, so the page waited for good; the watcher never restarted from a removed
+  binary either. A restart now runs the `authama` on `PATH` when its own path is gone, the watcher
+  follows that one, and with none on `PATH` the restart is refused with the reason, which the page
+  shows.
+- **`make build` never leaves the binary missing.** It emptied `build/` first, so with
+  `~/.local/bin/authama` linked to the build, `authama` was off `PATH` for the whole compile. It now
+  compiles to `authama.tmp` beside the binary and renames it into place (the Touch ID helper too), and
+  no longer runs `clean`; `make clean` still empties `build/` when asked.
 - **A host without a `user` can be deployed to.** authama reached it as `@host`, which ssh refuses
   with its usage text, so every deploy, check and removal on such a host failed. It now connects to
   the hostname alone, and ssh takes the user from its config or the local account.
