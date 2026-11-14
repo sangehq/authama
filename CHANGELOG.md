@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **CI skips draft pull requests and cancels superseded CodeQL runs.** Every CI and CodeQL job now
+  waits until a draft is marked ready (which starts a run), as sange and imprimatur already did, and
+  CodeQL cancels a pull request's earlier run when a new push supersedes it.
 - **`init --force` keeps a copy and asks first.** It reset `manifest.json`, `inventory.json` and `.env`
   to their defaults with no copy unless `--backup` was given (and `--backup` without `--force` was
   silently ignored), and never asked. It now copies them into the state home's `init-backup-<stamp>/`

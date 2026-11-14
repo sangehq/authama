@@ -4,18 +4,26 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [main]
+    # ready_for_review: a draft marked ready runs, though nothing was pushed.
+    types: [opened, synchronize, reopened, ready_for_review]
   schedule:
     - cron: "0 6 * * 1"   # Mondays 06:00 UTC
 
 permissions:
   contents: read
 
+# Cancel superseded pull-request runs on the same ref; scheduled and manual runs on main finish.
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   analyze:
     # Code scanning needs GitHub Advanced Security on private repos, which this
     # repo does not have. Run only when public, so it self-activates at go-public
     # without failing every push while private.
-    if: github.event.repository.visibility == 'public'
+    # Draft pull requests run nothing; marking one ready starts the run.
+    if: github.event.repository.visibility == 'public' && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

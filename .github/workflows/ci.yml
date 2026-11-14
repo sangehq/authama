@@ -16,6 +16,8 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [main]
+    # ready_for_review: a draft marked ready runs, though nothing was pushed.
+    types: [opened, synchronize, reopened, ready_for_review]
   # Weekly run on main: nothing re-runs after a merge, so this is what catches drift there
   # (a dependency release, two green PRs that interact) and keeps the Tests badge current.
   schedule:
@@ -37,6 +39,8 @@ concurrency:
 
 jobs:
   test:
+    # Draft pull requests run nothing; marking one ready starts the run.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     # The whole product: pure Go, every verb native. Build, vet, test and gofmt
     # across the three first-class OSes - the Windows leg matters because the
     # platform layer (icacls, schtasks, toast, console modes) only runs there.
@@ -205,6 +209,8 @@ jobs:
 
 
   darwin:
+    # Draft pull requests run nothing; marking one ready starts the run.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     # macOS on every pull request without a macOS runner: build and vet every
     # package, tests included, for darwin on both architectures. vet type-checks
     # the build-tagged *_darwin.go files, which a Linux build never compiles.
@@ -231,6 +237,8 @@ jobs:
           done
 
   web-e2e:
+    # Draft pull requests run nothing; marking one ready starts the run.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     # The web UI in a browser: Playwright drives every page of `authama serve` and
     # its write flows against a throwaway home, and axe fails a serious or
     # critical violation in either theme. Linux only, as the plan settled: the
@@ -270,6 +278,8 @@ jobs:
           retention-days: 7
 
   gitleaks:
+    # Draft pull requests run nothing; marking one ready starts the run.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     # The only secret scanner now, and the only one that ever mattered: it runs
     # against the full history, which the pre-commit hook of the same name could
     # not do. That hook, and the interpreter the pre-commit job needed to run
@@ -309,6 +319,8 @@ jobs:
         run: gitleaks detect --source . --redact --no-banner --exit-code 1
 
   scripts:
+    # Draft pull requests run nothing; marking one ready starts the run.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     # The four shell artifacts nothing else exercises. install.sh and install.ps1
     # are user-facing `curl | bash` entry points with no test of any kind - a
     # broken arch detection or a renamed asset would surface as a user report -
