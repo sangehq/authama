@@ -694,6 +694,9 @@ authama settings path              # config home, state home, .env, authama.json
 authama settings show --effective  # every setting, its value and its source
 authama settings validate          # schema-check authama.json, syntax- and mode-check .env
 authama settings init              # write a starter authama.json
+authama settings set web.port 7900 # write one setting into authama.json, keeping the rest
+authama settings unset web.port    # take it out again, back to its default
+authama settings backup-key        # make an age key for backups; sets backup.age_recipient and paths.age_identity_file
 ```
 
 ### Old variable names

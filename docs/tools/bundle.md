@@ -67,7 +67,8 @@ owner-only. The summary lists them. Nothing that a restore overwrites is lost. T
 keys to the agent.
 
 ```sh
-export AUTHAMA_AGE_RECIPIENT="age1..."      # your public key, from age-keygen
+authama settings backup-key                # once: makes an age key and sets the recipient (or set
+                                           # AUTHAMA_AGE_RECIPIENT="age1..." to a key you have)
 authama ssh bundle -o ~/Backups            # writes ~/Backups/authama-<stamp>.age (+ sidecars)
 # ... new machine ...
 authama ssh restore ~/Backups/authama-<stamp>.age -i age-identity.txt
