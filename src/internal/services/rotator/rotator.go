@@ -49,13 +49,24 @@ type RotateReport struct {
 	// Fallback names the software type minted when the hardware *-sk type had
 	// no security key to answer; "" otherwise.
 	Fallback string `json:",omitempty"`
+	// Op is what the report is of: a rotation ("", the default) or OpRollback.
+	Op string `json:",omitempty"`
 }
+
+// OpRollback marks a report of a rollback.
+const OpRollback = "rollback"
 
 // Format renders the rotation summary (mirrors RotateReport.format).
 func (r RotateReport) Format() string {
-	head := "rotation ABORTED"
+	head := "rotation not done"
 	if r.Committed {
 		head = "rotated"
+	}
+	if r.Op == OpRollback {
+		head = "rollback not done"
+		if r.Committed {
+			head = "rolled back"
+		}
 	}
 	lines := []string{head + ": " + r.KeyName}
 	if r.OldFingerprint != "" {
@@ -443,7 +454,9 @@ func (r *Rotator) updateInventory(profile, keyName, keyType, comment string, rep
 
 // Rollback restores the single /old/ predecessor (plain reverse move), re-deploys
 // it, and revokes the rotated-in key. Mirrors Rotator.rollback.
-func (r *Rotator) Rollback(selector string) (RotateReport, error) {
+func (r *Rotator) Rollback(selector string) (rep RotateReport, err error) {
+	// Every report it returns is of a rollback, whichever path returns it.
+	defer func() { rep.Op = OpRollback }()
 	if err := r.p.RefuseOutsideSandbox("rollback"); err != nil {
 		return RotateReport{}, err
 	}

@@ -160,7 +160,7 @@ bounded SSH-level reachability probe first, so a down or VPN-gated host (includi
 | `vm docker-context ALIAS` | Create or update a Docker context `ssh://ALIAS` for a VM host. | U·F |
 | `vm sync [-n] [-y] [-q] [--no-probe] [--repin] [--install-schedule\|--remove-schedule]` | Keep every VM host matching its VM: pin, re-install a missing guest key, refresh its Docker context; remove the host and context of a VM that is gone (backed up first); leave suspended and stopped VMs alone. | U·F |
 | `vm adopt-key [KEY [PROFILE [ALIAS]]] [--hypervisor] [--vm] [-u] [--move] [--docker-context] [-n] [-y]` | Copy a loose `~/.ssh` key into a profile as a new VM host's key; asks for what is missing at a terminal. | U·F |
-| `notify install\|test [-y]` | Scheduled desktop expiry reminders (launchd / systemd-user-or-cron / schtasks). | U·F |
+| `notify install [-y]\|test` | Scheduled desktop expiry reminders (launchd / systemd-user-or-cron / schtasks). | U·F |
 
 Cross-cutting flags: `--yes`/`-y` on destructive verbs (with `--revoke` on deletes);
 `--passphrase` on key generation (a plain flag: leaving it off is the "no" answer; the Python version's

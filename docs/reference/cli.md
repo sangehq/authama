@@ -1535,7 +1535,7 @@ Flags:
 
 ```
       --keep int           after bundling, keep only the newest N bundles (0 keeps all)
-  -o, --output string      destination dir (else config-dir/dist)
+  -o, --output string      destination dir (else dist/ in the state home)
   -r, --recipient string   age recipient (else $AUTHAMA_AGE_RECIPIENT)
 ```
 
@@ -1744,8 +1744,8 @@ authama ssh git resolve <owner>/<repo> [flags]
 Examples:
 
 ```sh
-  authama ssh git resolve simtabi/authama
-  authama ssh git resolve simtabi/authama --json
+  authama ssh git resolve sangehq/authama
+  authama ssh git resolve sangehq/authama --json
 ```
 
 Flags:

@@ -694,6 +694,9 @@ authama settings path              # config home, state home, .env, authama.json
 authama settings show --effective  # every setting, its value and its source
 authama settings validate          # schema-check authama.json; check .env's syntax, mode, names and values
 authama settings init              # write a starter authama.json
+authama settings set web.port 7900 # write one setting into authama.json, keeping the rest
+authama settings unset web.port    # take it out again, back to its default
+authama settings backup-key        # make an age key for backups; sets backup.age_recipient and paths.age_identity_file
 ```
 
 ### Old variable names
@@ -747,7 +750,7 @@ and writes each tool's credential file. It is found in this order:
 
 The file's shape, each entry kind, and `_settings.docker_creds_store` (`login`
 or `refuse` for registries Docker keeps in a credential store;
-`--docker-creds-store` and `$AUTHAMA_DOCKER_CREDS_STORE` take precedence over it) are in
+a command's `--creds-store-mode` and `$AUTHAMA_DOCKER_CREDS_STORE` take precedence over it) are in
 [`token`](tools/tokens.md). The files it writes are the tools' own, at their
 usual paths, honouring `COMPOSER_HOME`, `NPM_CONFIG_USERCONFIG`,
 `DOCKER_CONFIG`, `NETRC` and `XDG_CONFIG_HOME` (and `APPDATA` on Windows).

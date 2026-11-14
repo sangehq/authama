@@ -223,7 +223,7 @@ func newVersionCmd() *cobra.Command {
 		Short: "Print the " + brand.Command + " version",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s %s\n", brand.Command, version.Version)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s %s\n", brand.Command, version.Summary())
 			return nil
 		},
 	}

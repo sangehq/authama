@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **`authama version` names the commit and build day.** It printed only the version, so a build from a
+  branch said `authama dev`; it now adds them when Go recorded them, as in
+  `authama v0.1.6 (6c56209, 2026-11-13)`. The line still starts `authama <version>`.
 - **Go 1.27, golangci-lint v2.15.0 and the current go-notifykit.** The module now declares `go 1.27.0`
   with `toolchain go1.27.4`, as sange and imprimatur do, and CI lints with golangci-lint v2.15.0; the dev
   container defaults to Go 1.27. go-notifykit moves to the build sange uses, which drops the
@@ -48,6 +51,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Rotation, rollback and restore summaries say what happened.** A rotation that did not happen said
+  "rotation ABORTED" (above "replaced" for a forced one), and a failed rollback said "rotation ABORTED"
+  too. Summaries now read "rotated", "rotation not done", "rolled back" or "rollback not done". A
+  restore names each key by its path, so a key and its `old/` predecessor are told apart.
+- **`settings show --json` prints JSON with no `authama.json`.** It printed a sentence; it now prints
+  `{}`, the settings that file sets.
 - **The manifest schema accepts `reserved_keys`.** `manifest.schema.json` forbids keys it does not
   list, and it did not list `reserved_keys` (written by `ssh key reserve` since 0.1.4), so an editor or
   CI step validating against it refused a manifest authama itself wrote. The schema guard now checks
@@ -1335,7 +1344,7 @@ needs no migration. See [migration](docs/migration.md).
 - A test parses every `authama`/`sshmgr` command shown in the docs against the
   real command tree, so a renamed verb or flag fails CI.
 
-- **[release](docs/release.md#homebrew-and-scoop)**: the Scoop manifest no longer needs a manual pull request.
+- **[release](docs/release.md#frozen-channels)**: the Scoop manifest no longer needs a manual pull request.
   The bucket's workflow opens and merges the `sshmgr-X.Y.Z` branch the release pushes.
 - **[migration](docs/migration.md#history-audit)** records an audit of every tag, release note and commit
   of sshmgr and auth-token-manager against this release, with what was restored and what was dropped on
