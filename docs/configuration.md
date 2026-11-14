@@ -548,9 +548,10 @@ Because the manifest is rendered verbatim into `~/.ssh/config` and its names bec
 filesystem paths, values are validated on load: names (profile/alias/key_name) may
 not contain `/`, `\`, `..`, a leading `-`, whitespace, glob `*?`, or control
 characters; `hostname`/`user` may not contain whitespace, newlines, or a leading
-`-`; and `raw_options` (and `global_options`) reject command/code-executing keys
-(`ProxyCommand`, `LocalCommand`, `PermitLocalCommand`, `RemoteCommand`, `Match`,
-`Include`, `KnownHostsCommand`, `PKCS11Provider`, `SecurityKeyProvider`).
+`-`; and `raw_options` (and `global_options`) reject keys that execute commands, load code or
+config, or open a new block (`ProxyCommand`, `LocalCommand`, `PermitLocalCommand`,
+`RemoteCommand`, `Host`, `Match`, `Include`, `KnownHostsCommand`, `PKCS11Provider`,
+`SecurityKeyProvider`, `XAuthLocation`), in any letter case.
 `ProxyJump` (a host, not a command) is allowed. `key_scope` must be `per_service`
 or `shared`.
 

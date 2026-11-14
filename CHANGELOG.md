@@ -25,6 +25,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **A raw option named `Host` is refused.** `raw_options` and `global_options` refused `Match` and
+  the command-running keys but not `Host`, so `{"Host": "*", "ForwardAgent": "yes"}` ended the
+  managed block and turned agent forwarding on for every host. `Host` is now refused like `Match`,
+  in any letter case.
 - **Wrong PINs sent at once are all counted.** The PIN check read the failure count, checked the
   hash and wrote the count back with nothing serialising the three, so parallel guesses (browser
   tabs, several commands) each saw the same count: 50 at once were all checked and one was
