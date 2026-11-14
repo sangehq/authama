@@ -312,6 +312,10 @@ func TestTheToolRunsOnlyTheBinariesItDeclares(t *testing.T) {
 		// prefers an installed authama on PATH over the running binary's own
 		// path so the job survives the binary moving.
 		"authama",
+		// `authama serve --stop-all` checks that a pid another server reports
+		// is an authama process before it signals it: ps on POSIX, tasklist
+		// on Windows. Without either, nothing is signalled.
+		"ps", "tasklist",
 	} {
 		declared[b] = true
 	}

@@ -1,11 +1,14 @@
 package web
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -197,15 +200,21 @@ func (s *Server) auth(next http.Handler) http.Handler {
 		if r.URL.Path == "/healthz" && (r.Method == http.MethodGet || r.Method == http.MethodHead) {
 			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("Cache-Control", "no-store")
-			// To a caller on this machine it also says which process it is and
-			// which build, so `authama serve --stop-all` can stop any authama
-			// web UI it finds, not only the one its record names.
-			if isLoopbackRequest(r) {
-				_, _ = fmt.Fprintf(w, `{"app":"authama","instance":%q,"pid":%d,"version":%q,"started":%q}`+"\n",
-					s.opts.Instance, os.Getpid(), s.opts.Version, s.binary.started.UTC().Format(time.RFC3339))
-				return
+			reply := healthReply{App: "authama", Instance: s.opts.Instance}
+			// To a caller on this machine, not one a proxy passed on, it also
+			// says which process it is and which build, so `authama serve
+			// --stop-all` can stop any authama web UI it finds.
+			if isLoopbackRequest(r) && !forwarded(r) {
+				reply.PID, reply.Version = os.Getpid(), s.opts.Version
+				reply.Started = s.binary.started.UTC().Format(time.RFC3339)
 			}
-			_, _ = fmt.Fprintf(w, `{"app":"authama","instance":%q}`+"\n", s.opts.Instance)
+			// A caller holding the control key sends a challenge and checks
+			// the proof before it sends the key or signals the recorded pid:
+			// the instance id alone is public.
+			if c := r.URL.Query().Get("challenge"); c != "" && len(c) <= maxChallenge && s.opts.Control != "" {
+				reply.Proof = HealthProof(s.opts.Control, c)
+			}
+			_ = json.NewEncoder(w).Encode(reply)
 			return
 		}
 		if r.URL.Path == LinkPath && r.Method == http.MethodPost {
@@ -349,4 +358,33 @@ var localPath = regexp.MustCompile(`^/(?:$|[^/\\])`)
 
 func isLocalURL(target string) bool {
 	return strings.HasPrefix(target, "/") && !strings.HasPrefix(target, "//") && !strings.HasPrefix(target, "/\\")
+}
+
+// HealthProof is what /healthz?challenge= answers under a control key: an
+// HMAC, so a caller holding the key can tell this server from anything else
+// on the port, and a caller without it learns nothing.
+func HealthProof(control, challenge string) string {
+	m := hmac.New(sha256.New, []byte(control))
+	_, _ = m.Write([]byte("authama-healthz\x00" + challenge))
+	return hex.EncodeToString(m.Sum(nil))
+}
+
+// maxChallenge bounds the challenge /healthz will sign.
+const maxChallenge = 128
+
+// forwarded reports a request a proxy passed on: behind a proxy on this
+// machine every caller arrives from loopback, so loopback alone does not say
+// the caller is on this machine.
+func forwarded(r *http.Request) bool {
+	return r.Header.Get("X-Forwarded-For") != "" || r.Header.Get("Forwarded") != "" || r.Header.Get("X-Real-Ip") != ""
+}
+
+// healthReply is what /healthz answers.
+type healthReply struct {
+	App      string `json:"app"`
+	Instance string `json:"instance"`
+	PID      int    `json:"pid,omitempty"`
+	Version  string `json:"version,omitempty"`
+	Started  string `json:"started,omitempty"`
+	Proof    string `json:"proof,omitempty"`
 }

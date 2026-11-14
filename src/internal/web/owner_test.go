@@ -3,6 +3,7 @@ package web
 import (
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -117,5 +118,26 @@ func TestWithoutAPINThereIsNoUnlock(t *testing.T) {
 	}
 	if body := c.change("/changes/preview", addHost("x")).Body.String(); strings.Contains(body, `name="pin"`) {
 		t.Fatal("a PIN field with no PIN set")
+	}
+}
+
+// A home whose owner.json was deleted keeps the PIN gate up: every page waits
+// at /unlock, and the unlock page refuses with the way out rather than
+// letting the browser in (review R-SEC-02).
+func TestADeletedOwnerConfigKeepsThePINGateUp(t *testing.T) {
+	s, _ := pinServer(t)
+	if err := os.Remove(owner.ConfigPath(s.opts.Engine.Home())); err != nil {
+		t.Fatal(err)
+	}
+	c := signIn(t, s)
+	if rec := c.get("/keys"); rec.Code != http.StatusSeeOther || !strings.HasPrefix(rec.Header().Get("Location"), "/unlock") {
+		t.Fatalf("/keys with owner.json gone: %d %s", rec.Code, rec.Header().Get("Location"))
+	}
+	rec := c.change("/unlock", url.Values{"pin": {testcred.Secret("owner")}, "next": {"/keys"}})
+	if rec.Code == http.StatusSeeOther {
+		t.Fatalf("unlocked a home whose owner.json is gone")
+	}
+	if body := rec.Body.String(); !strings.Contains(body, "owner forget") {
+		t.Errorf("the refusal does not name the way out:\n%.400s", body)
 	}
 }
