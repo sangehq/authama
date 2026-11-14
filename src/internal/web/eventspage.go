@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/events"
-	"github.com/simtabi/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/services/events"
+	"github.com/sangehq/authama/src/internal/services/history"
 )
 
 // defaultEventInterval is how often a running server scans for file changes.

@@ -10,13 +10,13 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/core/renderer"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/services/dataset"
-	"github.com/simtabi/authama/src/internal/services/selection"
-	"github.com/simtabi/authama/src/internal/util/encode"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/renderer"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/dataset"
+	"github.com/sangehq/authama/src/internal/services/selection"
+	"github.com/sangehq/authama/src/internal/util/encode"
 )
 
 // exportAPI serves the export pipeline: the dataset, and any selection in

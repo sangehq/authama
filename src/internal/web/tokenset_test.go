@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/services/mutation"
-	"github.com/simtabi/authama/src/internal/util/testcred"
+	"github.com/sangehq/authama/src/internal/services/mutation"
+	"github.com/sangehq/authama/src/internal/util/testcred"
 )
 
 var secretRefField = regexp.MustCompile(`name="secret_ref" value="([A-Za-z0-9_-]{43})"`)

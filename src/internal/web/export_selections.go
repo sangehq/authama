@@ -8,10 +8,10 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/dataset"
-	"github.com/simtabi/authama/src/internal/services/savedsel"
-	"github.com/simtabi/authama/src/internal/services/selection"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/dataset"
+	"github.com/sangehq/authama/src/internal/services/savedsel"
+	"github.com/sangehq/authama/src/internal/services/selection"
 )
 
 // exportSelectionsAPI is the Export page's saved selections: the list from

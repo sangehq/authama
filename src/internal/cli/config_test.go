@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/services/knownhosts"
+	"github.com/sangehq/authama/src/internal/services/knownhosts"
 )
 
 func cmdWithOutput(out *bytes.Buffer) *cobra.Command {

@@ -18,12 +18,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/util/desktop"
-	"github.com/simtabi/authama/src/internal/util/envnames"
-	"github.com/simtabi/authama/src/internal/version"
-	"github.com/simtabi/authama/src/internal/web"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/util/desktop"
+	"github.com/sangehq/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/version"
+	"github.com/sangehq/authama/src/internal/web"
 )
 
 // Seams for tests: the sandbox and CI cannot always bind a socket, and a test

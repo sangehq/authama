@@ -9,12 +9,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/services/mutation"
-	"github.com/simtabi/authama/src/internal/services/owner"
-	"github.com/simtabi/authama/src/internal/util/log"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/mutation"
+	"github.com/sangehq/authama/src/internal/services/owner"
+	"github.com/sangehq/authama/src/internal/util/log"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // Audit events for the owner binding. None carries a PIN or the key.

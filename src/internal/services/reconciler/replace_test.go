@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // A forced rotation's fallback replaces each named key on this computer: a

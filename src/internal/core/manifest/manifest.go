@@ -18,8 +18,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/simtabi/authama/src/internal/core/key"
-	"github.com/simtabi/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/core/key"
+	"github.com/sangehq/authama/src/internal/util/fs"
 )
 
 const (

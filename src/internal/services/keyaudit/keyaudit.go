@@ -20,10 +20,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/core/authkeys"
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/keysvc"
+	"github.com/sangehq/authama/src/internal/core/authkeys"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/keysvc"
 )
 
 // The seven states a key can dangle in.

@@ -14,9 +14,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/simtabi/authama/src/internal/core/tokens"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/tokens"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // Env is where one invocation's token work happens.

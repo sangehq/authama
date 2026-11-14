@@ -31,11 +31,11 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/pin"
-	"github.com/simtabi/authama/src/internal/core/seal"
-	"github.com/simtabi/authama/src/internal/util/fs"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/pin"
+	"github.com/sangehq/authama/src/internal/core/seal"
+	"github.com/sangehq/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // ConfigVersion is owner.json's format.

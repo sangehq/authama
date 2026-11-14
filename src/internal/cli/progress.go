@@ -10,7 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/platform"
 )
 
 // stderrIsTerminal is a variable so tests can say whether a progress line may

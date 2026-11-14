@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/core/renderer"
-	"github.com/simtabi/authama/src/internal/util/encode"
+	"github.com/sangehq/authama/src/internal/core/renderer"
+	"github.com/sangehq/authama/src/internal/util/encode"
 )
 
 // clientsHome is a home with each kind of host the client exports treat

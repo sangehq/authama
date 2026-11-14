@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/services/history"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // A secret that leaves its file is on the record: copying it, or printing it

@@ -27,11 +27,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/authkeys"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/keystore"
-	"github.com/simtabi/authama/src/internal/util/paths"
-	"github.com/simtabi/authama/src/internal/util/perms"
+	"github.com/sangehq/authama/src/internal/core/authkeys"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/keystore"
+	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/perms"
 )
 
 const snapshotGlob = "ssh-*.tar.gz"

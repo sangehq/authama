@@ -8,12 +8,12 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/services/history"
-	"github.com/simtabi/authama/src/internal/util/envnames"
-	"github.com/simtabi/authama/src/internal/util/log"
-	"github.com/simtabi/authama/src/internal/util/paths"
-	"github.com/simtabi/authama/src/internal/version"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/log"
+	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/version"
 )
 
 // Scope is one command a person asked for. It becomes an operation in the

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // fixkeys.sh is now shipped only as the embedded copy - there is no second file

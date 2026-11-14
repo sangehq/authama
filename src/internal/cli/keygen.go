@@ -7,11 +7,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/services/knownhosts"
-	"github.com/simtabi/authama/src/internal/services/reconciler"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/knownhosts"
+	"github.com/sangehq/authama/src/internal/services/reconciler"
 )
 
 // newKeygenCmd is the native keygen verb: targeted key generation for a profile or

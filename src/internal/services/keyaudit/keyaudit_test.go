@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/keysvc"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/keysvc"
 )
 
 const manifestJSON = `{

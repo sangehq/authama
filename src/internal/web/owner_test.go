@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/owner"
-	"github.com/simtabi/authama/src/internal/util/testcred"
+	"github.com/sangehq/authama/src/internal/services/owner"
+	"github.com/sangehq/authama/src/internal/util/testcred"
 )
 
 // pinServer is a test server whose home has a PIN, with a clock the test moves.

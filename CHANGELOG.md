@@ -8,10 +8,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **authama moved to sangehq.** The repository is now `sangehq/authama` (GitHub redirects
+  `simtabi/authama`), and the Go module path is `github.com/sangehq/authama/src`. Release
+  assets, install scripts, the settings schema URL, the web UI's About links and the man
+  page point at the new home. The `retract` in `src/go.mod` is gone: it named versions of
+  the old path, and under the new one it would have retracted this module's own future
+  v0.1.1 to v0.1.3. Unchanged on purpose: the event type `com.simtabi.authama.*` and the
+  event `source` (both identify events to webhook consumers), and the notifier's macOS
+  identity `com.simtabi.authama` (changing it resets the notification permission).
+
 - **A release runs under the `release` environment again.** `release.yml` passes
   `environment: release` to the shared workflow, whose pin moves to simtabi/.github `d648d89`
-  (the newest, which takes an environment). Each release is recorded as a deployment; the
-  environment has no protection rules yet, so a required reviewer added there would gate every tag.
+  (the newest, which takes an environment). Each release is recorded as a deployment, and the
+  environment requires the owner's approval (added 2026-11-13), so a pushed tag publishes nothing
+  until it is approved.
 
 ### Documentation
 

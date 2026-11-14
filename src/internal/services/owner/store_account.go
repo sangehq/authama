@@ -2,7 +2,7 @@
 
 package owner
 
-import "github.com/simtabi/authama/src/internal/util/paths"
+import "github.com/sangehq/authama/src/internal/util/paths"
 
 // account is the home a stored key belongs to, so two homes (a pinned
 // AUTHAMA_CONFIG_DIR beside the default) keep separate keys.

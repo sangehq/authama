@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/simtabi/authama/src/internal/util/paths"
-	"github.com/simtabi/authama/src/internal/util/perms"
+	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/perms"
 )
 
 // Secret modes for the config home.

@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/core/hypervisor"
-	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/hypervisor"
+	"github.com/sangehq/authama/src/internal/core/manifest"
 )
 
 // The structured sections: JSON-only settings with no environment variable.

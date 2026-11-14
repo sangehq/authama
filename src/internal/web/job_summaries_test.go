@@ -4,10 +4,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/services/bundler"
-	"github.com/simtabi/authama/src/internal/services/deployer"
-	"github.com/simtabi/authama/src/internal/services/knownhosts"
-	"github.com/simtabi/authama/src/internal/services/rotator"
+	"github.com/sangehq/authama/src/internal/services/bundler"
+	"github.com/sangehq/authama/src/internal/services/deployer"
+	"github.com/sangehq/authama/src/internal/services/knownhosts"
+	"github.com/sangehq/authama/src/internal/services/rotator"
 )
 
 // The jobs that work on one key, one bundle or a set of hosts draw the same

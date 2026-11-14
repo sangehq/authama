@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/manifest"
 )
 
 const tunnelPub = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEB mac-to-devbox-docker-tunnel\n"

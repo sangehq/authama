@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // dotenvRecipient is a stand-in age recipient, not a key. It is a constant so

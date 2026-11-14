@@ -22,8 +22,8 @@ PKG       := ./cmd/authama
 
 # Our own modules come from git, never proxy.golang.org or sum.golang.org, so a
 # local build cannot feed a version into the public cache. Overridable.
-export GOPRIVATE ?= github.com/simtabi/*
-export GONOSUMDB ?= github.com/simtabi/*
+export GOPRIVATE ?= github.com/sangehq/*,github.com/simtabi/*
+export GONOSUMDB ?= github.com/sangehq/*,github.com/simtabi/*
 
 # A release carries two tags on the same commit, and this matches the first:
 #
@@ -41,7 +41,7 @@ export GONOSUMDB ?= github.com/simtabi/*
 # enough: it excludes v1-final but admits anything else beginning with v,
 # and a tag like v2-migration-record would then be stamped into the binary.
 VERSION := $(shell git describe --tags --match 'v[0-9]*' --always --dirty 2>/dev/null || echo dev)
-LDFLAGS := -s -w -X github.com/simtabi/authama/src/internal/version.Version=$(VERSION)
+LDFLAGS := -s -w -X github.com/sangehq/authama/src/internal/version.Version=$(VERSION)
 GO      := go -C $(MODULE)
 
 .PHONY: help build build-all test vet fmt fmt-check lint lint-tool lint-all ci check gates ci-linux e2e e2e-web feature-check docker-shell docker-run docker-down \

@@ -1,10 +1,10 @@
 package cli
 
 import (
-	"github.com/simtabi/authama/src/internal/core/tokens"
-	"github.com/simtabi/authama/src/internal/services/mutation"
-	"github.com/simtabi/authama/src/internal/services/tokensvc"
-	"github.com/simtabi/authama/src/internal/util/log"
+	"github.com/sangehq/authama/src/internal/core/tokens"
+	"github.com/sangehq/authama/src/internal/services/mutation"
+	"github.com/sangehq/authama/src/internal/services/tokensvc"
+	"github.com/sangehq/authama/src/internal/util/log"
 )
 
 // Access events: a secret that left its file, to the terminal or the

@@ -18,7 +18,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/envnames"
 )
 
 const (

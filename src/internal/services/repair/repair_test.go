@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/owner"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/services/owner"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 var t0 = time.Date(2026, 11, 5, 12, 0, 0, 0, time.UTC)

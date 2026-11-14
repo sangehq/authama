@@ -27,8 +27,8 @@ permissions:
 # Our own modules are fetched from git, never through proxy.golang.org or
 # sum.golang.org, so a CI build can never feed a version into the public cache.
 env:
-  GOPRIVATE: github.com/simtabi/*
-  GONOSUMDB: github.com/simtabi/*
+  GOPRIVATE: github.com/sangehq/*,github.com/simtabi/*
+  GONOSUMDB: github.com/sangehq/*,github.com/simtabi/*
 
 # Cancel superseded pull-request runs on the same ref; scheduled and manual runs on main finish.
 concurrency:
@@ -265,7 +265,7 @@ jobs:
     # it, are gone; its file-hygiene rules are Go tests in cmd/authama.
     #
     # Run the gitleaks binary directly: gitleaks-action@v2 requires a paid
-    # GITLEAKS_LICENSE for organisation-owned repos (simtabi is an org).
+    # GITLEAKS_LICENSE for organisation-owned repos (sangehq is an org).
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

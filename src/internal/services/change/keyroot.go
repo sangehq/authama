@@ -6,9 +6,9 @@ import (
 	"io"
 	"path/filepath"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/editor"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/editor"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // KeyRoot is `authama ssh key root <dir> --yes`: ~/.ssh/<dir>/ made the key

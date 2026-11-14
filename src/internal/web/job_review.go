@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/envnames"
 )
 
 // preflight is one check a job's review makes before it may run. A failed

@@ -22,10 +22,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/util/homeperms"
-	"github.com/simtabi/authama/src/internal/util/paths"
-	"github.com/simtabi/authama/src/internal/util/perms"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/util/homeperms"
+	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/perms"
 )
 
 // Result is the outcome of a migrate run.

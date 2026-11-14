@@ -10,9 +10,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/core/authkeys"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/authkeys"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // fixkeysScript is the shipped interactive recovery tool, kept byte-identical to

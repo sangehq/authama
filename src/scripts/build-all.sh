@@ -42,7 +42,7 @@ REPO_ROOT=".."
 # program an archive holds: authama alone since the sshmgr alias was removed.
 BINARY="authama"
 BINARIES="authama"
-PKG="github.com/simtabi/authama/src/internal/version"
+PKG="github.com/sangehq/authama/src/internal/version"
 BUILD_DIR="${REPO_ROOT}/build"
 OUT="${BUILD_DIR}"
 ARCHIVE_DIR="${OUT}/archives"

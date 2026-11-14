@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/tokens"
-	"github.com/simtabi/authama/src/internal/util/log"
+	"github.com/sangehq/authama/src/internal/core/tokens"
+	"github.com/sangehq/authama/src/internal/util/log"
 )
 
 // Docker reads a registry's credentials from a credential store (credsStore,

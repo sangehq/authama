@@ -7,10 +7,10 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/brand"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/util/envnames"
 )
 
 // ControlDir is the directory under ~/.ssh that holds the shared-connection

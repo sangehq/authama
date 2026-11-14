@@ -21,13 +21,13 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/configsvc"
-	"github.com/simtabi/authama/src/internal/services/editor"
-	"github.com/simtabi/authama/src/internal/services/keysvc"
-	"github.com/simtabi/authama/src/internal/services/knownhosts"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/configsvc"
+	"github.com/sangehq/authama/src/internal/services/editor"
+	"github.com/sangehq/authama/src/internal/services/keysvc"
+	"github.com/sangehq/authama/src/internal/services/knownhosts"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // Options are the destructive opt-ins. Both default off: a delete that only

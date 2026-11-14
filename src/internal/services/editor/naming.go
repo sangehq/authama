@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/util/log"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/util/log"
 )
 
 // keepKeyNames runs change on m, then gives every host whose derived key name

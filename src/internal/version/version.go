@@ -5,7 +5,7 @@
 //
 //   - a release, where GoReleaser stamps all three vars through -ldflags;
 //   - `make build`, which stamps Version from `git describe`;
-//   - `go install github.com/simtabi/authama/src/cmd/authama@latest`,
+//   - `go install github.com/sangehq/authama/src/cmd/authama@latest`,
 //     which applies no ldflags at all.
 //
 // The third is the one the README tells people to use, and it used to report the

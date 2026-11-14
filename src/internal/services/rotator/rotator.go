@@ -14,16 +14,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/core/providers"
-	"github.com/simtabi/authama/src/internal/services/keystore"
-	"github.com/simtabi/authama/src/internal/services/opstore"
-	"github.com/simtabi/authama/src/internal/util/fs"
-	"github.com/simtabi/authama/src/internal/util/log"
-	"github.com/simtabi/authama/src/internal/util/netcheck"
-	"github.com/simtabi/authama/src/internal/util/paths"
-	"github.com/simtabi/authama/src/internal/util/perms"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/providers"
+	"github.com/sangehq/authama/src/internal/services/keystore"
+	"github.com/sangehq/authama/src/internal/services/opstore"
+	"github.com/sangehq/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/log"
+	"github.com/sangehq/authama/src/internal/util/netcheck"
+	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/perms"
 )
 
 // TargetResult is one target's rotation outcome.

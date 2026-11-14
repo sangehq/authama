@@ -11,7 +11,7 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
-	"github.com/simtabi/authama/src/internal/util/csvout"
+	"github.com/sangehq/authama/src/internal/util/csvout"
 )
 
 func init() {

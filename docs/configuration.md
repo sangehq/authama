@@ -630,7 +630,7 @@ every setting stays at its default until you add it.
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/simtabi/authama/main/docs/schema/authama.schema.json",
+  "$schema": "https://raw.githubusercontent.com/sangehq/authama/main/docs/schema/authama.schema.json",
   "version": 1,
   "paths":   { "state_dir": "~/.local/state/authama", "age_identity_file": "~/.config/authama/age-identity.txt" },
   "backup":  { "snapshot_retain": 10, "old_key_max_age_days": 90 },

@@ -27,8 +27,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/core/renderer"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/renderer"
 )
 
 const ageHint = "install age: brew install age  (Linux: apt install age / get from FiloSottile/age)"

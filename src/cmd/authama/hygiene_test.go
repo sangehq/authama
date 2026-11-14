@@ -197,7 +197,7 @@ func TestEveryTrackedJSONFileParses(t *testing.T) {
 // the check that would have caught the tree moving under src/.
 func TestDocumentedRawURLsPointAtFilesThatExist(t *testing.T) {
 	root, files := trackedFiles(t)
-	re := regexp.MustCompile(`https://raw\.githubusercontent\.com/simtabi/authama/[^/]+/([^\s)"'` + "`" + `]+)`)
+	re := regexp.MustCompile(`https://raw\.githubusercontent\.com/sangehq/authama/[^/]+/([^\s)"'` + "`" + `]+)`)
 
 	var checked int
 	for _, name := range files {
@@ -301,7 +301,7 @@ func TestTestsGenerateTheirCredentials(t *testing.T) {
 
 // goFetch is a command that installs or fetches this module through the Go
 // toolchain, which reads the public module proxy.
-var goFetch = regexp.MustCompile(`go (?:install|get) \S*github\.com/simtabi/authama`)
+var goFetch = regexp.MustCompile(`go (?:install|get) \S*github\.com/(?:sangehq|simtabi)/authama`)
 
 // TestNoDocOffersGoInstall keeps every doc, the release page and the migration
 // guide included, from offering `go install` or `go get` of the module: binaries
@@ -369,7 +369,7 @@ func TestAttestationChecksNameTheSharedSigner(t *testing.T) {
 
 // releaseChannel is a command that installs authama from a release channel:
 // the Homebrew cask, the Scoop manifest, go install, or a piped install script.
-var releaseChannel = regexp.MustCompile(`brew install --cask simtabi/|scoop install simtabi/|go install github\.com/simtabi/authama|install\.(?:sh|ps1)\S* *\| *(?:ba)?sh|irm \S+install\.ps1`)
+var releaseChannel = regexp.MustCompile(`brew install --cask simtabi/|scoop install simtabi/|go install github\.com/(?:sangehq|simtabi)/authama|install\.(?:sh|ps1)\S* *\| *(?:ba)?sh|irm \S+install\.ps1`)
 
 // TestDocsOfferNoReleaseChannelAsCurrent keeps the docs to the current ways to
 // install: a binary from the GitHub release, or a build from source. The

@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/services/mutation"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/services/mutation"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // postJSON posts body as the page's script does: JSON, with the CSRF token

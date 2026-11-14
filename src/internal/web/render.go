@@ -15,15 +15,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/core/expiry"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/checklist"
-	"github.com/simtabi/authama/src/internal/services/events"
-	"github.com/simtabi/authama/src/internal/services/history"
-	"github.com/simtabi/authama/src/internal/services/jobs"
-	"github.com/simtabi/authama/src/internal/services/owner"
-	"github.com/simtabi/authama/src/internal/util/highlight"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/core/expiry"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/checklist"
+	"github.com/sangehq/authama/src/internal/services/events"
+	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/services/jobs"
+	"github.com/sangehq/authama/src/internal/services/owner"
+	"github.com/sangehq/authama/src/internal/util/highlight"
 )
 
 // assetSet is the embedded assets with a content hash each, for

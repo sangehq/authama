@@ -25,11 +25,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/envnames"
 )
 
 // SchemaURL is where the published JSON Schema for authama.json lives.
-const SchemaURL = "https://raw.githubusercontent.com/simtabi/authama/main/docs/schema/authama.schema.json"
+const SchemaURL = "https://raw.githubusercontent.com/sangehq/authama/main/docs/schema/authama.schema.json"
 
 // Version is the authama.json format version this build reads.
 const Version = 1

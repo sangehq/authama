@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // home is a home with two profiles, one with a code and named servers, a

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/services/savedsel"
-	"github.com/simtabi/authama/src/internal/services/selection"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/services/savedsel"
+	"github.com/sangehq/authama/src/internal/services/selection"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // ExportSelectionSave is `authama export selections save <name> --to

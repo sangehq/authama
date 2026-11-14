@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/envnames"
 )
 
 func env(m map[string]string) Getenv {

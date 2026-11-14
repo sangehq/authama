@@ -11,8 +11,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/version"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/version"
 )
 
 func newManCmd() *cobra.Command {
@@ -139,6 +139,6 @@ func manPage(c *cobra.Command, now time.Time) string {
 	if c.HasParent() {
 		see = append(see, "\\fB"+roff(manName(c.Parent()))+"\\fR(1)")
 	}
-	w(".SH SEE ALSO\n%s\n", strings.Join(append(see, "https://opensource.simtabi.com/documentation/simtabi/"+brand.Command+"/"), ", "))
+	w(".SH SEE ALSO\n%s\n", strings.Join(append(see, "https://opensource.simtabi.com/documentation/sangehq/"+brand.Command+"/"), ", "))
 	return b.String()
 }

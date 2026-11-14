@@ -2,18 +2,18 @@ package cli
 
 import (
 	"fmt"
-	"github.com/simtabi/authama/src/internal/services/reconciler"
+	"github.com/sangehq/authama/src/internal/services/reconciler"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/services/keysvc"
-	"github.com/simtabi/authama/src/internal/services/rotator"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/keysvc"
+	"github.com/sangehq/authama/src/internal/services/rotator"
 )
 
 func newRotateCmd() *cobra.Command {

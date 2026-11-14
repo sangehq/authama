@@ -8,11 +8,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/services/mutation"
-	"github.com/simtabi/authama/src/internal/services/repair"
-	"github.com/simtabi/authama/src/internal/util/log"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/mutation"
+	"github.com/sangehq/authama/src/internal/services/repair"
+	"github.com/sangehq/authama/src/internal/util/log"
 )
 
 // newRepairCmd is `authama repair`: find what is wrong and fix what can be

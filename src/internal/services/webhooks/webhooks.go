@@ -39,9 +39,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/feed"
-	"github.com/simtabi/authama/src/internal/util/fs"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/services/feed"
+	"github.com/sangehq/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // SecretPrefix starts every endpoint secret, as Standard Webhooks names it.

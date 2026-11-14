@@ -7,12 +7,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/core/tokens"
-	"github.com/simtabi/authama/src/internal/services/tokensvc"
-	"github.com/simtabi/authama/src/internal/util/envnames"
-	"github.com/simtabi/authama/src/internal/util/fs"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/core/tokens"
+	"github.com/sangehq/authama/src/internal/services/tokensvc"
+	"github.com/sangehq/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // The token changes write credential files outside the home - ~/.npmrc,

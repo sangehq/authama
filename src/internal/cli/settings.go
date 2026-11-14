@@ -10,12 +10,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/services/change"
-	"github.com/simtabi/authama/src/internal/services/settings"
-	"github.com/simtabi/authama/src/internal/util/envnames"
-	"github.com/simtabi/authama/src/internal/util/paths"
-	"github.com/simtabi/authama/src/internal/web"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/services/change"
+	"github.com/sangehq/authama/src/internal/services/settings"
+	"github.com/sangehq/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/web"
 )
 
 // settingsGroup is the user-settings command group. It is not `config`: that

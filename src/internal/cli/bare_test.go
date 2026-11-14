@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/mutation"
+	"github.com/sangehq/authama/src/internal/services/mutation"
 )
 
 // whileBareServes, when set, runs while a bare run is serving.

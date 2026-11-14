@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/simtabi/authama/src/internal/core/tokens"
+	"github.com/sangehq/authama/src/internal/core/tokens"
 )
 
 // DockerModeFunc settles the credential-store mode for docker's file at dest.

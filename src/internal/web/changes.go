@@ -10,16 +10,16 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/core/tokens"
-	"github.com/simtabi/authama/src/internal/services/change"
-	"github.com/simtabi/authama/src/internal/services/editor"
-	"github.com/simtabi/authama/src/internal/services/keysvc"
-	"github.com/simtabi/authama/src/internal/services/savedsel"
-	"github.com/simtabi/authama/src/internal/services/settings"
-	"github.com/simtabi/authama/src/internal/services/tokensvc"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/tokens"
+	"github.com/sangehq/authama/src/internal/services/change"
+	"github.com/sangehq/authama/src/internal/services/editor"
+	"github.com/sangehq/authama/src/internal/services/keysvc"
+	"github.com/sangehq/authama/src/internal/services/savedsel"
+	"github.com/sangehq/authama/src/internal/services/settings"
+	"github.com/sangehq/authama/src/internal/services/tokensvc"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // A change is two requests. POST /changes/preview runs it against a private

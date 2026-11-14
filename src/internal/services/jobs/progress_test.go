@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/mutation"
+	"github.com/sangehq/authama/src/internal/services/mutation"
 )
 
 // A job that counts its steps shows how far it has got; one that does not

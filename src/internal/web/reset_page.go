@@ -3,7 +3,7 @@ package web
 import (
 	"net/http"
 
-	"github.com/simtabi/authama/src/internal/services/repair"
+	"github.com/sangehq/authama/src/internal/services/repair"
 )
 
 // resetOption is one row on the Reset page: one way to start something

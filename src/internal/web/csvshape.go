@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/util/csvout"
+	"github.com/sangehq/authama/src/internal/util/csvout"
 )
 
 // PreviewRows is how many rows a CSV preview shows.

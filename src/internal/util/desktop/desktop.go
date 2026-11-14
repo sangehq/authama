@@ -14,8 +14,8 @@ import (
 
 	notifykit "github.com/simtabi/go-notifykit/src"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/util/envnames"
 )
 
 // AppID is the identifier macOS lists authama's notifications under

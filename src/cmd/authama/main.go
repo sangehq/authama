@@ -14,8 +14,8 @@ package main
 import (
 	"os"
 
-	"github.com/simtabi/authama/src/internal/cli"
-	"github.com/simtabi/authama/src/internal/util/askpass"
+	"github.com/sangehq/authama/src/internal/cli"
+	"github.com/sangehq/authama/src/internal/util/askpass"
 )
 
 func main() {

@@ -2,9 +2,9 @@ package web
 
 import (
 	"errors"
-	"github.com/simtabi/authama/src/internal/services/settings"
-	"github.com/simtabi/authama/src/internal/util/envnames"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/services/settings"
+	"github.com/sangehq/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/paths"
 	"net/http"
 	"net/url"
 	"os"
@@ -12,13 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/services/events"
-	"github.com/simtabi/authama/src/internal/services/exports"
-	"github.com/simtabi/authama/src/internal/services/history"
-	"github.com/simtabi/authama/src/internal/services/snapshots"
-	"github.com/simtabi/authama/src/internal/util/csvout"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/services/events"
+	"github.com/sangehq/authama/src/internal/services/exports"
+	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/services/snapshots"
+	"github.com/sangehq/authama/src/internal/util/csvout"
 )
 
 // tokenFilterParam is the history filter for one token, as target/host.

@@ -9,11 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/keystore"
-	"github.com/simtabi/authama/src/internal/services/keysvc"
-	"github.com/simtabi/authama/src/internal/util/testcred"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/keystore"
+	"github.com/sangehq/authama/src/internal/services/keysvc"
+	"github.com/sangehq/authama/src/internal/util/testcred"
 )
 
 // Generated per run (internal/util/testcred), never written down.

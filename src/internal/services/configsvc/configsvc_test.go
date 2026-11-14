@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/manifest"
 )
 
 // profiles deliberately NOT alphabetical, to prove Check reports in file order.

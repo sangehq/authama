@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/manifest"
 )
 
 // The states a reserved key can be in. Only ReservedKept is the expected one;

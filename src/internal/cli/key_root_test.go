@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/inventory"
 )
 
 // Moving the key root takes every key with it in one rename, the inventory

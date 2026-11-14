@@ -7,9 +7,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/change"
-	"github.com/simtabi/authama/src/internal/services/editor"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/change"
+	"github.com/sangehq/authama/src/internal/services/editor"
 )
 
 // newKeyReserveCmd keeps a loose ~/.ssh key on purpose: a standby key for a

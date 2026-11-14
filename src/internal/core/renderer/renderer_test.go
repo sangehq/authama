@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/manifest"
 )
 
 // TestRenderAllInline exercises the shipped config/manifest.json

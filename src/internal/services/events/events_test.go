@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/util/paths"
-	"github.com/simtabi/authama/src/internal/util/testcred"
+	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/testcred"
 )
 
 func home(t *testing.T) (paths.Paths, string) {

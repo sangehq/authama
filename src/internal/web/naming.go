@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/core/naming"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/naming"
 )
 
 // NamingView is the /naming page: `ssh naming show` and `ssh naming check`,

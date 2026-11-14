@@ -7,8 +7,8 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/platform"
 )
 
 // AboutView is the about page: what this build is and where it keeps things.
@@ -96,9 +96,9 @@ func (h systemPages) handleAbout(w http.ResponseWriter, r *http.Request) {
 	v := AboutView{Name: brand.Name, Summary: brand.Summary, Command: brand.Command, Version: h.s.opts.Version,
 		GoVersion: runtime.Version(), OS: runtime.GOOS, Arch: runtime.GOARCH,
 		ConfigHome: p.ConfigDir, StateHome: p.State(), SSHDir: p.SSHDir, DevRoot: p.DevRoot,
-		Repository: "https://github.com/simtabi/authama",
-		Docs:       "https://opensource.simtabi.com/documentation/simtabi/authama/",
-		Issues:     "https://github.com/simtabi/authama/issues",
+		Repository: "https://github.com/sangehq/authama",
+		Docs:       "https://opensource.simtabi.com/documentation/sangehq/authama/",
+		Issues:     "https://github.com/sangehq/authama/issues",
 		User:       h.s.who.user, Host: h.s.who.host, Licences: h.s.licences(), System: platform.System()}
 	if bi, ok := debug.ReadBuildInfo(); ok {
 		for _, s := range bi.Settings {

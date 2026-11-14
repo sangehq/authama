@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/manifest"
 )
 
 // TestRecordSerializationMatchesV1 locks in the byte-for-byte serialization
