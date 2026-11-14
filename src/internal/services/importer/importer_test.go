@@ -627,3 +627,64 @@ Host bad
 		t.Errorf("the summary does not report the skipped host:\n%s", res.Format())
 	}
 }
+
+// A dangling symlink where the adopted key would go read as "nothing there"
+// (Stat follows links), and the copy then wrote the private key through it,
+// out of the profile's directory (review R-SEC-14). Anything at the path, a
+// dangling link included, now counts as occupied, and the copy is exclusive.
+func TestAdoptNeverWritesThroughASymlink(t *testing.T) {
+	im, p, cfgPath := setupImport(t, `Host gh
+    HostName github.com
+    IdentityFile `+filepath.Join(t.TempDir(), "loose_key")+`
+`)
+	mintKey(t, identityIn(t, cfgPath))
+	dst := filepath.Join(p.SSHDir, "profiles", "imported", "imported_gh-ed25519")
+	if err := os.MkdirAll(filepath.Dir(dst), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	outside := filepath.Join(t.TempDir(), "collected")
+	if err := os.Symlink(outside, dst); err != nil {
+		t.Skip("cannot make a symlink here:", err)
+	}
+	res, err := im.Run(cfgPath, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(outside); err == nil {
+		t.Fatal("the private key was written through the symlink, outside the profile")
+	}
+	if res.Adopted != 0 {
+		t.Errorf("Adopted = %d, want 0 - the destination was occupied by a link", res.Adopted)
+	}
+}
+
+// The public half replaces a link beside the new private key rather than
+// writing through it.
+func TestAdoptReplacesASymlinkedPublicKeyRatherThanFollowingIt(t *testing.T) {
+	im, p, cfgPath := setupImport(t, `Host gh
+    HostName github.com
+    IdentityFile `+filepath.Join(t.TempDir(), "loose_key")+`
+`)
+	mintKey(t, identityIn(t, cfgPath))
+	dst := filepath.Join(p.SSHDir, "profiles", "imported", "imported_gh-ed25519")
+	if err := os.MkdirAll(filepath.Dir(dst), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	outside := filepath.Join(t.TempDir(), "collected.pub")
+	if err := os.Symlink(outside, dst+".pub"); err != nil {
+		t.Skip("cannot make a symlink here:", err)
+	}
+	res, err := im.Run(cfgPath, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Adopted != 1 {
+		t.Fatalf("Adopted = %d, want 1", res.Adopted)
+	}
+	if _, err := os.Lstat(outside); err == nil {
+		t.Error("the public key was written through the symlink")
+	}
+	if fi, err := os.Lstat(dst + ".pub"); err != nil || !fi.Mode().IsRegular() {
+		t.Errorf("the .pub beside the adopted key is not a regular file: %v %v", fi, err)
+	}
+}

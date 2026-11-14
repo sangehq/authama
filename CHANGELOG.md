@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **`init --force` keeps a copy and asks first.** It reset `manifest.json`, `inventory.json` and `.env`
+  to their defaults with no copy unless `--backup` was given (and `--backup` without `--force` was
+  silently ignored), and never asked. It now copies them into the state home's `init-backup-<stamp>/`
+  first, and asks at a terminal, saying what it resets and where the copies go; `-y` skips the
+  question, and a run with no terminal proceeds as before, now with the copy. `--no-backup` keeps
+  none. `--backup` still works and is deprecated, since a backup is the default.
 - **authama moved to sangehq.** The repository is now `sangehq/authama` (GitHub redirects
   `simtabi/authama`), and the Go module path is `github.com/sangehq/authama/src`. Release
   assets, install scripts, the settings schema URL, the web UI's About links and the man
@@ -32,6 +38,31 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A refused command no longer uses up a snapshot.** Every command that changes the home snapshots
+  `~/.ssh` first, before it checks its input, so each typo or name already taken kept a snapshot, and
+  with ten kept, a few typos pushed every real restore point out. A command that fails or is declined
+  having changed nothing (the manifest, the inventory and `~/.ssh` as they were) now gives its
+  snapshot back; one that changed something keeps it.
+- **Rotating again keeps a predecessor that still logs in.** Only one previous key is kept in `old/`,
+  so a second rotation evicted the first one's key even while a host it was never removed from still
+  accepted it. The rotation now stops and names those hosts; `rotate --evict-old` replaces it
+  anyway.
+- **A `~/.ssh/config` linked from a dotfiles repository stays a link.** Rendering the config renamed
+  a new file over the link, so the link became a regular file and the linked copy went stale. The
+  render now writes the link's target, atomically, and refuses a link whose target is missing rather
+  than replace it.
+- **Undoing a refused batch rewrites the manifest atomically.** When a batch that created a profile
+  failed, the manifest was put back with an in-place write, which an interruption could leave
+  half-written. It is now written by rename, like every other manifest write, and a guard test fails
+  on any new in-place truncating write outside a short, reasoned list.
+- **A snapshot that fails part-way leaves nothing behind.** It was written in place, so a failure
+  left a broken archive that was listed as a restore point and counted against retention. It is now
+  written to a temporary name, synced, and renamed into place.
+- **Webhook changes made during a delivery stick, and an event is sent once.** A delivery read
+  `webhooks.json`, sent for up to minutes, then wrote back what it had read, so a webhook removed in
+  the meantime came back with its secret and a disable was undone; the server's loop and
+  `authama webhook deliver` running together sent the same event twice. Deliveries now take turns,
+  and each writes back only its own progress, into the file as it is then.
 - **The web UI restarts after its binary moved.** A server started from a checkout that was then
   moved (macOS keeps reporting the old path) ran a missing file on restart, after already telling the
   page it was restarting, so the page waited for good; the watcher never restarted from a removed
@@ -48,6 +79,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **A snapshot restores into `~/.ssh` only, with safe modes.** Restoring a snapshot extracted it into
+  your home directory, so a member outside `.ssh/` (a `.zshrc`, say) was written there, and file
+  modes came from the archive. An archive with any member outside `.ssh/` is now refused before
+  anything is written, directories come back owner-only, and files at most `0644`.
+- **Adopting a key never writes through a symlink.** `ssh import` checked the destination with a call
+  that follows links, so a dangling symlink there read as empty and the private key was written to
+  wherever it pointed. Anything at the path now counts as occupied, the key is created exclusively,
+  and its `.pub` is written by rename, which replaces a link instead of following it.
+- **Restoring an older bundle no longer destroys a newer key.** The prompt said the current tree was
+  snapshotted first, but snapshots never hold private keys, so a key rotated after the bundle was
+  made was overwritten and lost. A restore now keeps every file it replaces with different content,
+  keys, manifest and inventory included, in the state home under `replaced/<stamp>/` before it
+  writes anything, and refuses when it has nowhere to keep them. The summary names each kept file.
 - **A test now proves no web page or API response carries a secret.** Every GET route, read from
   where the server registers it (50 today), is requested signed in, and the read API with a token;
   each body is searched for planted token-file secrets, a webhook signing secret and a read API token.

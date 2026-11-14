@@ -116,6 +116,9 @@ type Rotator struct {
 	// unattended, when set, is where deploys write their ssh output, and
 	// means no prompt can be answered (see providers.Target.Unattended).
 	unattended io.Writer
+	// EvictOld lets a rotation replace the key in old/ even while a host it
+	// was never removed from still authorises it (rotate --evict-old).
+	EvictOld bool
 }
 
 // Unattended makes the rotation's deploys run with nobody to answer a prompt,
@@ -210,6 +213,17 @@ func (r *Rotator) Rotate(selector string, allowUnverified bool, passphrase strin
 		report.OldFingerprint = fp
 	}
 	oldPubText := readFile(curPub)
+
+	// The single old/ slot is about to take the outgoing key. If the one there
+	// now still logs in somewhere, stop rather than evict it.
+	if hosts := predecessorStillLogsIn(r.p, r.m, r.ks, keyRef); len(hosts) > 0 && !r.EvictOld {
+		report.Message = fmt.Sprintf("cannot rotate - the previous key in old/ is still authorised on %s "+
+			"(it was never removed there), and rotating again would replace it. Remove it there first "+
+			"(`authama checklist` lists them), or rotate with --evict-old to replace it anyway",
+			strings.Join(hosts, ", "))
+		log.Audit(r.p.AuditLog(), "rotate.predecessor_live", log.Field{Key: "key", Value: keyName})
+		return report, nil
+	}
 
 	// 0. Preflight: every SSH target must answer before we stage/deploy.
 	if msgs := r.unreachable(hosts); len(msgs) > 0 {
@@ -679,4 +693,24 @@ func deref(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// predecessorStillLogsIn names the hosts the key now in old/ was never removed
+// from, as its retirement recorded them. The archive keeps one predecessor,
+// so rotating again would evict it while those hosts still accept it (review
+// R-BUG-12). A key in old/ with no retirement on record names none.
+func predecessorStillLogsIn(p paths.Paths, m *manifest.Manifest, ks *keystore.KeyStore, keyRef manifest.KeyRef) []string {
+	slot := filepath.Join(manifest.ArchiveDir(m, p.SSHDir, keyRef), keyRef.KeyName)
+	if !exists(slot + ".pub") {
+		return nil
+	}
+	fp, err := ks.Fingerprint(slot + ".pub")
+	if err != nil {
+		return nil
+	}
+	all, err := inventory.LoadRetirements(inventory.RetiredPath(p.Inventory()))
+	if err != nil {
+		return nil
+	}
+	return all[fp].NotRemoved
 }

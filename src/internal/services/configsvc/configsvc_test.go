@@ -392,3 +392,54 @@ func TestCheckFailsWhenSSHCannotParseTheConfig(t *testing.T) {
 		t.Errorf("a config ssh cannot parse was reported in sync:\n%s", res.Format())
 	}
 }
+
+// A ~/.ssh/config kept in a dotfiles repository and linked into place stays a
+// link: the render used to rename a new file over the link, so the dotfiles
+// copy went stale and the link was gone (review R-BUG-07). The link's target
+// is written instead, atomically, and the link is left as it was.
+func TestWriteKeepsASymlinkedConfig(t *testing.T) {
+	ssh := t.TempDir()
+	dotfiles := filepath.Join(t.TempDir(), "dotfiles")
+	if err := os.MkdirAll(dotfiles, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(dotfiles, "ssh_config")
+	if err := os.WriteFile(target, []byte("# mine\nHost legacy\n    HostName legacy.example\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(ssh, "config")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skip("cannot make a symlink here:", err)
+	}
+	if _, err := New(ssh, load(t, manifestJSON), false).Write(false); err != nil {
+		t.Fatal(err)
+	}
+	fi, err := os.Lstat(link)
+	if err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("~/.ssh/config is no longer a link: %v %v", fi, err)
+	}
+	body, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"Host legacy", "Host gh"} {
+		if !strings.Contains(string(body), want) {
+			t.Errorf("the dotfiles copy lacks %q:\n%s", want, body)
+		}
+	}
+}
+
+// A link whose target is missing is refused, not replaced by a regular file.
+func TestWriteRefusesADanglingConfigLink(t *testing.T) {
+	ssh := t.TempDir()
+	link := filepath.Join(ssh, "config")
+	if err := os.Symlink(filepath.Join(t.TempDir(), "gone"), link); err != nil {
+		t.Skip("cannot make a symlink here:", err)
+	}
+	if _, err := New(ssh, load(t, manifestJSON), false).Write(false); err == nil {
+		t.Error("a dangling ~/.ssh/config link was written over")
+	}
+	if fi, err := os.Lstat(link); err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Errorf("the dangling link was replaced: %v %v", fi, err)
+	}
+}

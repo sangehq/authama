@@ -909,8 +909,9 @@ Examples:
 Flags:
 
 ```
-      --backup[=true|false]   with --force, copy the old files into the state home's .state/ before overwriting
-  -f, --force[=true|false]    overwrite manifest/inventory/.env with fresh defaults
+  -f, --force[=true|false]       overwrite manifest/inventory/.env with fresh defaults, keeping a copy of each in the state home's .state/ first
+      --no-backup[=true|false]   with --force, keep no copy of the files it overwrites
+  -y, --yes[=true|false]         skip the confirmation prompt
 ```
 
 ## authama man
@@ -2896,7 +2897,8 @@ Flags:
 Zero-downtime staged key rotation.
 
 The key being replaced is archived to the profile's old/ dir, but only one
-predecessor is kept - so rotating again discards the one before it for good.
+predecessor is kept. Rotating again stops while that predecessor is still
+authorised on a host it was never removed from; --evict-old replaces it anyway.
 An encrypted bundle is written first unless --no-key-backup is given.
 
 Name one key, several, whole profiles or host aliases, every key in a
@@ -2930,6 +2932,7 @@ Flags:
       --category string                 rotate every key in profiles of this category
       --check[=true|false]              test each key's rotation and change nothing: every server answers and the current key logs in, or the target takes it by hand
       --dry-run[=true|false]            list the keys that would rotate, and change nothing
+      --evict-old[=true|false]          replace the previous key in old/ even while a host it was never removed from still accepts it
       --failed[=true|false]             run again the keys the last rotation or dry run left (not rotated, or would fail)
       --force[=true|false]              replace on this computer (as ssh keygen --force) each key that cannot be rotated in place - never deployed, or its host unreachable - to deploy afterwards
       --no-key-backup[=true|false]      rotate without writing an encrypted backup first (the earlier predecessor is lost)

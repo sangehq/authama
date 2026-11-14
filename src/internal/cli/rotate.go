@@ -17,7 +17,7 @@ import (
 )
 
 func newRotateCmd() *cobra.Command {
-	var allowUnverified, passphrase, yes, noKeyBackup, all, dryRun, check, force bool
+	var allowUnverified, passphrase, yes, noKeyBackup, all, dryRun, check, force, evictOld bool
 	var category string
 	var failed bool
 	cmd := &cobra.Command{
@@ -28,7 +28,8 @@ func newRotateCmd() *cobra.Command {
 		Short:   "Zero-downtime staged key rotation",
 		Long: "Zero-downtime staged key rotation.\n\n" +
 			"The key being replaced is archived to the profile's old/ dir, but only one\n" +
-			"predecessor is kept - so rotating again discards the one before it for good.\n" +
+			"predecessor is kept. Rotating again stops while that predecessor is still\n" +
+			"authorised on a host it was never removed from; --evict-old replaces it anyway.\n" +
 			"An encrypted bundle is written first unless --no-key-backup is given.\n\n" +
 			"Name one key, several, whole profiles or host aliases, every key in a\n" +
 			"category, or --all. Each key rotates on its own: one that fails is left\n" +
@@ -50,13 +51,13 @@ func newRotateCmd() *cobra.Command {
 				if len(left) == 0 {
 					return fmt.Errorf("no key was left by the last rotation or dry run, so --failed has nothing to run")
 				}
-				return rotateMany(c, keysvc.Selection{Selectors: left}, allowUnverified, passphrase, yes, noKeyBackup, dryRun, check, force)
+				return rotateMany(c, keysvc.Selection{Selectors: left}, allowUnverified, passphrase, yes, noKeyBackup, dryRun, check, force, evictOld)
 			}
 			if len(args) == 1 && !all && category == "" && !dryRun && !check && namesAKey(c, args[0]) {
-				return rotateOne(c, args[0], allowUnverified, passphrase, yes, noKeyBackup, force)
+				return rotateOne(c, args[0], allowUnverified, passphrase, yes, noKeyBackup, force, evictOld)
 			}
 			return rotateMany(c, keysvc.Selection{Selectors: args, Category: category, All: all},
-				allowUnverified, passphrase, yes, noKeyBackup, dryRun, check, force)
+				allowUnverified, passphrase, yes, noKeyBackup, dryRun, check, force, evictOld)
 		},
 	}
 	cmd.Flags().BoolVar(&allowUnverified, "allow-unverified", false, "commit even if a target can't auto-verify")
@@ -69,6 +70,8 @@ func newRotateCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "list the keys that would rotate, and change nothing")
 	cmd.Flags().BoolVar(&force, "force", false,
 		"replace on this computer (as ssh keygen --force) each key that cannot be rotated in place - never deployed, or its host unreachable - to deploy afterwards")
+	cmd.Flags().BoolVar(&evictOld, "evict-old", false,
+		"replace the previous key in old/ even while a host it was never removed from still accepts it")
 	cmd.Flags().BoolVar(&failed, "failed", false,
 		"run again the keys the last rotation or dry run left (not rotated, or would fail)")
 	cmd.Flags().BoolVar(&check, "check", false,
@@ -95,7 +98,7 @@ func namesAKey(c *cobra.Command, arg string) bool {
 }
 
 // rotateOne is the single-key rotation, unchanged from before batches existed.
-func rotateOne(c *cobra.Command, key string, allowUnverified, passphrase, yes, noKeyBackup, force bool) error {
+func rotateOne(c *cobra.Command, key string, allowUnverified, passphrase, yes, noKeyBackup, force, evictOld bool) error {
 	if err := confirmOrAbort(c, fmt.Sprintf("Rotate %s? (the current key moves to old/, "+
 		"replacing any earlier predecessor)", key), yes); err != nil {
 		return err
@@ -130,7 +133,7 @@ func rotateOne(c *cobra.Command, key string, allowUnverified, passphrase, yes, n
 		pw = secret
 	}
 	snapshotBeforeMutation(p)
-	report, err := withManualPaste(c, rotator.New(p, m, inv)).Rotate(key, allowUnverified, pw)
+	report, err := withManualPaste(c, evicting(rotator.New(p, m, inv), evictOld)).Rotate(key, allowUnverified, pw)
 	if err != nil {
 		return err
 	}
@@ -154,7 +157,7 @@ func rotateOne(c *cobra.Command, key string, allowUnverified, passphrase, yes, n
 // rotateMany rotates a selection of keys one after another: one confirmation,
 // one backup, one snapshot, and the inventory saved after every committed key
 // so an interrupted batch keeps what it finished.
-func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphrase, yes, noKeyBackup, dryRun, check, force bool) error {
+func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphrase, yes, noKeyBackup, dryRun, check, force, evictOld bool) error {
 	out := c.OutOrStdout()
 	p, err := resolvePaths(c)
 	if err != nil {
@@ -244,7 +247,7 @@ func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphr
 		pw = secret
 	}
 	snapshotBeforeMutation(p)
-	rot := withManualPaste(c, rotator.New(p, m, inv))
+	rot := withManualPaste(c, evicting(rotator.New(p, m, inv), evictOld))
 	began := time.Now()
 	failed, err := rot.RotateEach(names, allowUnverified, pw, out, func() error { return inv.Save(p.Inventory()) }, nil)
 	if err != nil {
@@ -339,4 +342,11 @@ func commandLine(c *cobra.Command) string {
 		parts = append(parts, "--"+f.Name, f.Value.String())
 	})
 	return strings.Join(append(parts, c.Flags().Args()...), " ")
+}
+
+// evicting is r, allowed to replace a predecessor in old/ that still logs in
+// when evict is set (--evict-old).
+func evicting(r *rotator.Rotator, evict bool) *rotator.Rotator {
+	r.EvictOld = evict
+	return r
 }

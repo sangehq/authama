@@ -77,6 +77,9 @@ the secret after `whsec_`. Any Standard Webhooks library verifies it. A receiver
   when it is dialled, after its name resolves, so DNS cannot rebind around it. `webhooks.allow_private` lifts
   this, and also allows plain `http` to this machine, for a receiver you run locally.
 - **No redirects** are followed, and no proxy from the environment is used.
+- **One delivery at a time.** The server's loop and `authama webhook deliver` take turns, so an event
+  is sent once, and a webhook removed or disabled while an event is in flight stays removed or
+  disabled.
 - **A user name or password in the address** is refused: the signature authenticates each request.
 - Each endpoint has its own secret; a receiver only needs that one.
 

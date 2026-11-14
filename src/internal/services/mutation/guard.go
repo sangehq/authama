@@ -43,7 +43,7 @@ func SnapshotBeforeMutation(p paths.Paths, retain int) string {
 	LockForMutation(p)
 	snapshots.CleanTempArtifactsIn(p.SSHDir, manifest.KeyRootAt(p.Manifest()))
 	snap, err := snapshots.Snapshot(p.SSHDir, p.SnapshotsDir(), retain, "")
-	recordSnapshot(snap, err)
+	recordSnapshot(p, snap, err)
 	return snap
 }
 

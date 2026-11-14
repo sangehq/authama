@@ -13,6 +13,7 @@ package bundler
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
@@ -110,6 +111,10 @@ type RestoreResult struct {
 	// Skipped lists rendered files an older (or forged) bundle carried, which
 	// restore does not lay down: the caller re-renders them from the manifest.
 	Skipped []string
+	// Replaced lists the files the restore overwrote with different content,
+	// as ssh/<rel> and config/<rel> under ReplacedDir, where each was kept.
+	Replaced    []string
+	ReplacedDir string
 }
 
 // Format renders the restore summary (mirrors RestoreResult.format).
@@ -121,6 +126,12 @@ func (r RestoreResult) Format() string {
 	for _, s := range r.Skipped {
 		lines = append(lines, "  skipped "+s+" (rendered from the manifest, not taken from the bundle)")
 	}
+	if len(r.Replaced) > 0 {
+		lines = append(lines, fmt.Sprintf("  kept the %d file(s) it replaced, as they were, in %s:", len(r.Replaced), r.ReplacedDir))
+		for _, k := range r.Replaced {
+			lines = append(lines, "    "+k)
+		}
+	}
 	return strings.Join(lines, "\n")
 }
 
@@ -129,6 +140,7 @@ type Bundler struct {
 	sshDir, configDir string
 	cipher            Cipher
 	keyRoot           string
+	replacedDir       string
 }
 
 // New builds a Bundler over the default key root, ~/.ssh/profiles.
@@ -472,6 +484,16 @@ func (b *Bundler) layDown(members []member, fingerprintOf func(string) (string, 
 	}
 	defer func() { _ = configRoot.Close() }()
 
+	// Plan every write first: where each member lands, and whether it would
+	// replace a file with different content. Nothing is written until the
+	// files being replaced are kept, or the restore is refused.
+	type write struct {
+		root       *os.Root
+		rel, label string
+		kept       string // ssh/<rel> or config/<rel> under replacedDir, when it replaces a different file
+		data       []byte
+	}
+	var plan []write
 	for _, m := range sorted {
 		// A rendered slot holding anything but a key came from an older bundle
 		// or a forged one. It is never trusted: the caller re-renders it.
@@ -479,25 +501,65 @@ func (b *Bundler) layDown(members []member, fingerprintOf func(string) (string, 
 			res.Skipped = append(res.Skipped, rel)
 			continue
 		}
-		var root *os.Root
-		var rel, label string
+		w := write{data: m.data}
 		switch {
 		case strings.HasPrefix(m.name, sshPrefix):
-			root, rel = sshRoot, strings.TrimPrefix(m.name, sshPrefix)
+			w.root, w.rel = sshRoot, strings.TrimPrefix(m.name, sshPrefix)
 			// checkMember has pinned it under profilesPrefix; the keys go to
 			// the key root the restored manifest names.
-			rel = keyRoot + strings.TrimPrefix(rel, manifest.DefaultKeyRoot)
-			label = rel
+			w.rel = keyRoot + strings.TrimPrefix(w.rel, manifest.DefaultKeyRoot)
+			w.label = w.rel
+			w.kept = "ssh/" + w.rel
 		case strings.HasPrefix(m.name, configPrefix):
 			// checkMember has pinned this to a flat, known name already.
-			root, rel = configRoot, strings.TrimPrefix(m.name, configPrefix)
-			label = configPrefix + rel
+			w.root, w.rel = configRoot, strings.TrimPrefix(m.name, configPrefix)
+			w.label = configPrefix + w.rel
+			w.kept = "config/" + w.rel
 		default:
 			// Unreachable once checkMember has passed every member; kept so a
 			// future change to the allow-list cannot fall through to a write.
 			return res, fmt.Errorf("refusing unexpected member in bundle: %s", m.name)
 		}
-		if err := writeBytesAtomicIn(root, rel, m.data); err != nil {
+		if !replacesDifferent(w.root, w.rel, w.data) {
+			w.kept = ""
+		}
+		plan = append(plan, w)
+	}
+	var replacing []write
+	for _, w := range plan {
+		if w.kept != "" {
+			replacing = append(replacing, w)
+		}
+	}
+	if len(replacing) > 0 {
+		if b.replacedDir == "" {
+			return res, fmt.Errorf("restore would replace %d file(s) holding something else, starting with %s, "+
+				"and has nowhere to keep them; nothing was written", len(replacing), replacing[0].label)
+		}
+		if err := os.MkdirAll(b.replacedDir, 0o700); err != nil {
+			return res, err
+		}
+		keep, err := os.OpenRoot(b.replacedDir)
+		if err != nil {
+			return res, err
+		}
+		defer func() { _ = keep.Close() }()
+		for _, w := range replacing {
+			cur, err := readIn(w.root, w.rel)
+			if err != nil {
+				return res, fmt.Errorf("keeping %s before replacing it: %w", w.label, err)
+			}
+			if err := writeBytesAtomicIn(keep, w.kept, cur); err != nil {
+				return res, fmt.Errorf("keeping %s before replacing it: %w", w.label, err)
+			}
+			res.Replaced = append(res.Replaced, w.kept)
+		}
+		res.ReplacedDir = b.replacedDir
+	}
+
+	for _, w := range plan {
+		root, rel, label := w.root, w.rel, w.label
+		if err := writeBytesAtomicIn(root, rel, w.data); err != nil {
 			return res, err
 		}
 		res.Restored = append(res.Restored, label)
@@ -508,6 +570,28 @@ func (b *Bundler) layDown(members []member, fingerprintOf func(string) (string, 
 		}
 	}
 	return res, nil
+}
+
+// replacesDifferent reports whether writing data at rel would replace a
+// regular file holding something else. A missing file, or one already holding
+// data, replaces nothing worth keeping.
+func replacesDifferent(root *os.Root, rel string, data []byte) bool {
+	fi, err := root.Lstat(rel)
+	if err != nil || !fi.Mode().IsRegular() {
+		return false
+	}
+	cur, err := readIn(root, rel)
+	return err != nil || !bytes.Equal(cur, data)
+}
+
+// readIn reads rel through root.
+func readIn(root *os.Root, rel string) ([]byte, error) {
+	f, err := root.Open(rel)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+	return io.ReadAll(f)
 }
 
 // restoreKeyRoot is where a restore lays the keys down: the key root the
@@ -648,4 +732,14 @@ func stem(name string) string {
 		return name[:i]
 	}
 	return name
+}
+
+// WithReplacedDir is where a restore keeps every file it replaces with
+// different content, as ssh/<rel> and config/<rel>, owner-only. Without it a
+// restore that would replace such a file refuses before writing anything: a
+// bundle older than a rotation would otherwise destroy the newer key, which
+// no snapshot holds (they never carry private keys).
+func (b *Bundler) WithReplacedDir(dir string) *Bundler {
+	b.replacedDir = dir
+	return b
 }

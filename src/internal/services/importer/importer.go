@@ -20,6 +20,7 @@ import (
 	"github.com/sangehq/authama/src/internal/core/key"
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/services/keystore"
+	"github.com/sangehq/authama/src/internal/util/fs"
 	"github.com/sangehq/authama/src/internal/util/paths"
 	"github.com/sangehq/authama/src/internal/util/perms"
 )
@@ -756,7 +757,9 @@ func underProfile(real, profile, root string) bool {
 // destination already exists.
 func (im *Importer) adoptKey(m *manifest.Manifest, srcPriv, profile, keyName string) bool {
 	dstPriv := m.KeyPath(im.p.SSHDir, manifest.KeyRef{Profile: profile, KeyName: keyName})
-	if exists(dstPriv) || !exists(srcPriv) {
+	// occupied, not exists: a dangling symlink at the destination reads as
+	// absent through Stat, and the copy would then follow it out of the tree.
+	if occupied(dstPriv) || !exists(srcPriv) {
 		return false
 	}
 	if err := os.MkdirAll(filepath.Dir(dstPriv), perms.DirMode); err != nil {
@@ -764,15 +767,18 @@ func (im *Importer) adoptKey(m *manifest.Manifest, srcPriv, profile, keyName str
 	}
 	_ = perms.SetPerms(filepath.Dir(dstPriv), perms.DirMode)
 	if im.standIn {
-		if os.WriteFile(dstPriv, nil, 0o600) != nil {
+		if writeNew(dstPriv, nil) != nil {
 			return false
 		}
 	} else if !copyFile(srcPriv, dstPriv) {
 		return false
 	}
 	_ = perms.SetPerms(dstPriv, perms.PrivateKeyMode)
-	if exists(srcPriv + ".pub") {
-		if copyFile(srcPriv+".pub", dstPriv+".pub") {
+	// The public half replaces whatever is beside the new private key, a stale
+	// .pub included, by rename: a rename replaces a symlink there rather than
+	// writing through it.
+	if b, err := os.ReadFile(srcPriv + ".pub"); err == nil {
+		if fs.WriteTextAtomic(dstPriv+".pub", string(b), perms.PublicKeyMode) == nil {
 			_ = perms.SetPerms(dstPriv+".pub", perms.PublicKeyMode)
 		}
 	}
@@ -828,10 +834,31 @@ func isFile(path string) bool {
 	return err == nil && fi.Mode().IsRegular()
 }
 
+// occupied reports whether anything is at path, a symlink included, even one
+// whose target is missing.
+func occupied(path string) bool { _, err := os.Lstat(path); return err == nil }
+
+// copyFile copies src to a new file at dst, never through anything already
+// there: see writeNew.
 func copyFile(src, dst string) bool {
 	b, err := os.ReadFile(src)
 	if err != nil {
 		return false
 	}
-	return os.WriteFile(dst, b, 0o600) == nil
+	return writeNew(dst, b) == nil
+}
+
+// writeNew creates dst, owner-only, and fails if anything is there: O_EXCL
+// refuses an existing file and does not follow a symlink, dangling or not.
+func writeNew(dst string, b []byte) error {
+	f, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err
+	}
+	if _, err := f.Write(b); err != nil {
+		_ = f.Close()
+		_ = os.Remove(dst)
+		return err
+	}
+	return f.Close()
 }
