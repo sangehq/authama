@@ -139,6 +139,6 @@ func manPage(c *cobra.Command, now time.Time) string {
 	if c.HasParent() {
 		see = append(see, "\\fB"+roff(manName(c.Parent()))+"\\fR(1)")
 	}
-	w(".SH SEE ALSO\n%s\n", strings.Join(append(see, "https://opensource.simtabi.com/documentation/sangehq/"+brand.Command+"/"), ", "))
+	w(".SH SEE ALSO\n%s\n", strings.Join(append(see, brand.DocsURL), ", "))
 	return b.String()
 }

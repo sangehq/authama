@@ -64,7 +64,7 @@ func seeAlso(c *cobra.Command) string {
 		refs = append(refs, c.CommandPath()+" help <command>")
 	}
 	refs = append(refs, "man "+manName(c),
-		"https://opensource.simtabi.com/documentation/sangehq/"+brand.Command+"/")
+		brand.DocsURL)
 	return strings.Join(refs, ", ")
 }
 

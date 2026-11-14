@@ -6,6 +6,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security
+
+- **Sign out.** The web UI's user menu has **Sign out**, a `POST /signout` that ends the session on the
+  server and clears the cookie; before, a session ended only by timing out or by stopping the server
+  (review R-GAP-05).
+- **The read API throttles bad tokens.** Ten requests with a bad API token from one address within a
+  minute get `429` with `Retry-After` for the rest of that minute (R-SEC-19).
+- **A restart's handoff no longer rides in the environment.** The control key, sessions and form
+  tokens went to the new server in `AUTHAMA_SERVE_HANDOFF`, which `/proc/<pid>/environ` kept for its
+  whole life; they now go in an owner-only temporary file the new server reads once and removes, and
+  the variable names only the file. A handoff written inline by an older build is still read (R-SEC-21).
+
+### Documentation
+
+- **Docs links point at the repository.** The hosted docs site answers 404, so `--help`, the man pages
+  and the web UI's footer and About page link `github.com/sangehq/authama/tree/main/docs` until it is
+  live; `brand.DocsURL` is the one place to change, and a test fails any other source naming the site
+  (R-DOC-03).
+
 ### Changed
 
 - **`authama version` names the commit and build day.** It printed only the version, so a build from a
