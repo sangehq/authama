@@ -31,6 +31,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **The reachability check before a deploy or rotation no longer pins host keys.** It ran ssh with
+  `StrictHostKeyChecking=no` against your real `known_hosts`, so it recorded whatever key the network
+  offered, even with `AUTHAMA_AUTO_PIN=0`. It now reads and writes the null device instead;
+  `authama ssh knownhosts` is still what pins a key.
 - **A VM name cannot start with `-`.** `vm.name` reaches `prlctl`, `limactl` or `utmctl` as one
   argument, which those tools would read as an option; a manifest naming a VM `--set=…` is now
   refused on load.
