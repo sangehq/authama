@@ -195,3 +195,34 @@ func TestSSHReachableFallsBackToTCPWithNoSSHClient(t *testing.T) {
 		t.Error("a closed port should be unreachable even on the fallback path")
 	}
 }
+
+// The probe never writes to the user's known_hosts: with
+// StrictHostKeyChecking=no against the real file, ssh added whatever key the
+// network offered, so a probe before a deploy pinned an unseen host key even
+// with AUTHAMA_AUTO_PIN=0 (review R-SEC-16). It reads and writes the null
+// device instead; pinning stays the job of `authama ssh knownhosts`.
+func TestTheProbeLeavesKnownHostsAlone(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the stub is a shell script")
+	}
+	dir := t.TempDir()
+	argsFile := filepath.Join(dir, "args")
+	script := "#!/bin/sh\nprintf '%s\\n' \"$@\" > " + shQuote(argsFile) + "\nexit 0\n"
+	if err := os.WriteFile(filepath.Join(dir, "ssh"), []byte(script), 0o755); err != nil { //nolint:gosec // a test stub
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	if !SSHReachable("box", 22, time.Second) {
+		t.Fatal("the stub answered; the host is reachable")
+	}
+	b, err := os.ReadFile(argsFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := string(b)
+	for _, want := range []string{"UserKnownHostsFile=" + os.DevNull, "GlobalKnownHostsFile=" + os.DevNull} {
+		if !strings.Contains(args, want) {
+			t.Errorf("the probe does not pass -o %s:\n%s", want, args)
+		}
+	}
+}

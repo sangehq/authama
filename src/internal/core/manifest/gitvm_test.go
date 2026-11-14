@@ -78,6 +78,9 @@ func TestGitAndVMValidation(t *testing.T) {
 		{"alias github.com shadowed", `"alias": "github-imanimanyara"`, `"alias": "github.com"`, "clashes with the Host github.com"},
 		{"unknown hypervisor", `"hypervisor": "parallels"`, `"hypervisor": "virtualbox"`, "vm.hypervisor"},
 		{"empty vm name", `"name": "Ubuntu 24.04"`, `"name": " "`, "vm.name is empty"},
+		// The name is one argv element to prlctl, limactl or utmctl, which
+		// would read a leading dash as an option (review R-SEC-17).
+		{"vm name like an option", `"name": "Ubuntu 24.04"`, `"name": "--set=.provision+=[]"`, "vm.name"},
 		{"own-key hypervisor as a host", `"hypervisor": "parallels"`, `"hypervisor": "orbstack"`, "own SSH access"},
 	}
 	for _, c := range cases {
