@@ -216,11 +216,15 @@ func (r *Rotator) Rotate(selector string, allowUnverified bool, passphrase strin
 
 	// The single old/ slot is about to take the outgoing key. If the one there
 	// now still logs in somewhere, stop rather than evict it.
-	if hosts := predecessorStillLogsIn(r.p, r.m, r.ks, keyRef); len(hosts) > 0 && !r.EvictOld {
+	live, err := predecessorStillLogsIn(r.p, r.m, r.ks, keyRef)
+	if err != nil && !r.EvictOld {
+		return report, fmt.Errorf("cannot tell whether the previous key in old/ still logs in somewhere: %w", err)
+	}
+	if len(live) > 0 && !r.EvictOld {
 		report.Message = fmt.Sprintf("cannot rotate - the previous key in old/ is still authorised on %s "+
 			"(it was never removed there), and rotating again would replace it. Remove it there first "+
 			"(`authama checklist` lists them), or rotate with --evict-old to replace it anyway",
-			strings.Join(hosts, ", "))
+			strings.Join(live, ", "))
 		log.Audit(r.p.AuditLog(), "rotate.predecessor_live", log.Field{Key: "key", Value: keyName})
 		return report, nil
 	}
@@ -699,18 +703,19 @@ func deref(s *string) string {
 // from, as its retirement recorded them. The archive keeps one predecessor,
 // so rotating again would evict it while those hosts still accept it (review
 // R-BUG-12). A key in old/ with no retirement on record names none.
-func predecessorStillLogsIn(p paths.Paths, m *manifest.Manifest, ks *keystore.KeyStore, keyRef manifest.KeyRef) []string {
+func predecessorStillLogsIn(p paths.Paths, m *manifest.Manifest, ks *keystore.KeyStore, keyRef manifest.KeyRef) ([]string, error) {
 	slot := filepath.Join(manifest.ArchiveDir(m, p.SSHDir, keyRef), keyRef.KeyName)
 	if !exists(slot + ".pub") {
-		return nil
+		return nil, nil
 	}
 	fp, err := ks.Fingerprint(slot + ".pub")
 	if err != nil {
-		return nil
+		return nil, nil // no fingerprint, no retirement to look up
 	}
 	all, err := inventory.LoadRetirements(inventory.RetiredPath(p.Inventory()))
 	if err != nil {
-		return nil
+		// Unreadable is not "nothing recorded": stop rather than evict.
+		return nil, err
 	}
-	return all[fp].NotRemoved
+	return all[fp].NotRemoved, nil
 }

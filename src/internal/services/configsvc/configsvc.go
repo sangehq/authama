@@ -169,10 +169,12 @@ func (s *Service) Write(dryRun bool) (*WriteResult, error) {
 	}
 	for _, rel := range s.configFilesOnDisk() {
 		if _, ok := rendered[rel]; !ok {
-			res.Pruned = append(res.Pruned, rel)
 			if !dryRun {
-				_ = os.Remove(filepath.Join(s.sshDir, filepath.FromSlash(rel)))
+				if err := os.Remove(filepath.Join(s.sshDir, filepath.FromSlash(rel))); err != nil && !os.IsNotExist(err) {
+					return res, fmt.Errorf("could not remove the stale %s, which no longer belongs to any profile: %w", rel, err)
+				}
 			}
+			res.Pruned = append(res.Pruned, rel)
 		}
 	}
 	return res, nil

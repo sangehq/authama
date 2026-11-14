@@ -35,6 +35,9 @@ type foreignBlock struct {
 	line     int
 	header   string
 	patterns []string // nil means "every host" (top-level options, Match all)
+	// match holds a Match block's host/originalhost pattern lists; every one
+	// must match the alias. nil for a Host block or Match all.
+	match    [][]string
 	keywords map[string]bool
 }
 
@@ -42,9 +45,9 @@ type foreignBlock struct {
 // block applies to and that sets a keyword the managed block also sets for it.
 //
 // Only the preamble counts: content below the managed block is read after it,
-// where the managed values have already won. A Match block other than `Match
-// all` is skipped, since authama does not evaluate its conditions and a guess
-// either way would be wrong; an Include is not followed. Both are rare in a
+// where the managed values have already won. A Match block is evaluated when
+// its criteria are host and originalhost only (matchHostLists); any other is
+// skipped, since a guess either way would be wrong. An Include is not followed. Both are rare in a
 // config that `authama ssh import` read, which is where this shadowing comes from.
 func findShadows(file, onDisk string, rendered map[string]string) []Shadow {
 	lines := splitLines(onDisk)
@@ -72,6 +75,9 @@ func findShadows(file, onDisk string, rendered map[string]string) []Shadow {
 			if fb.patterns != nil && !hostMatches(fb.patterns, alias) {
 				continue
 			}
+			if !matchApplies(fb.match, alias) {
+				continue
+			}
 			var shared []string
 			for kw, display := range managed[alias] {
 				if fb.keywords[kw] {
@@ -91,7 +97,8 @@ func findShadows(file, onDisk string, rendered map[string]string) []Shadow {
 
 // parseBlocks splits config lines into blocks the way ssh scopes them: options
 // before the first Host/Match apply to every host, a Host line opens a block
-// for its patterns, and a Match line opens one authama does not evaluate.
+// for its patterns, and a Match line opens one that applies by its host and
+// originalhost criteria, or, with any other criterion, one authama skips.
 func parseBlocks(lines []string) []foreignBlock {
 	var out []foreignBlock
 	var cur *foreignBlock
@@ -109,6 +116,9 @@ func parseBlocks(lines []string) []foreignBlock {
 		case "match":
 			if strings.EqualFold(strings.TrimSpace(args), "all") {
 				out = append(out, foreignBlock{line: i + 1, header: strings.TrimSpace(raw), keywords: map[string]bool{}})
+				cur, skip = &out[len(out)-1], false
+			} else if lists, ok := matchHostLists(args); ok {
+				out = append(out, foreignBlock{line: i + 1, header: strings.TrimSpace(raw), match: lists, keywords: map[string]bool{}})
 				cur, skip = &out[len(out)-1], false
 			} else {
 				cur, skip = nil, true
@@ -133,6 +143,39 @@ func parseBlocks(lines []string) []foreignBlock {
 		}
 	}
 	return kept
+}
+
+// matchHostLists reads a Match line made only of host and originalhost
+// criteria, returning each one's comma-separated pattern list. Anything else
+// (exec, user, a negated criterion, canonical, final) is not evaluated, and
+// ok is false. Above the managed block no HostName has been set yet, so ssh
+// matches both criteria against the alias (checked with ssh -G, 2026-11-14).
+func matchHostLists(args string) ([][]string, bool) {
+	f := strings.Fields(args)
+	if len(f) == 0 || len(f)%2 != 0 {
+		return nil, false
+	}
+	var lists [][]string
+	for i := 0; i < len(f); i += 2 {
+		switch strings.ToLower(f[i]) {
+		case "host", "originalhost":
+			lists = append(lists, strings.Split(strings.Trim(f[i+1], `"`), ","))
+		default:
+			return nil, false
+		}
+	}
+	return lists, true
+}
+
+// matchApplies reports whether every pattern list of a Match block matches
+// alias; a block with none (a Host block, Match all) applies.
+func matchApplies(lists [][]string, alias string) bool {
+	for _, l := range lists {
+		if !hostMatches(l, alias) {
+			return false
+		}
+	}
+	return true
 }
 
 // managedKeywords maps each alias in the rendered managed files to the
