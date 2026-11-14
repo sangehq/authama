@@ -112,6 +112,10 @@ func (r KeyRecord) NeedsRedeploy() bool {
 type Inventory struct {
 	Version int                  `json:"version"`
 	Keys    map[string]KeyRecord `json:"keys"`
+	// Events are the key events, by fingerprint. They live in key-events.json
+	// beside the inventory (EventsPath), never in it: Load reads them and Save
+	// writes them, so a writer that notes one saves it with its records.
+	Events map[string]KeyEvents `json:"-"`
 }
 
 func (inv *Inventory) UnmarshalJSON(b []byte) error {
@@ -143,6 +147,9 @@ func Load(path string) (*Inventory, error) {
 	if inv.Keys == nil {
 		inv.Keys = map[string]KeyRecord{}
 	}
+	if inv.Events, err = loadEvents(EventsPath(path)); err != nil {
+		return nil, err
+	}
 	return &inv, nil
 }
 
@@ -158,7 +165,10 @@ func (inv *Inventory) Save(path string) error {
 	if err != nil {
 		return err
 	}
-	return fs.WriteTextAtomic(path, string(b)+"\n", 0o600)
+	if err := fs.WriteTextAtomic(path, string(b)+"\n", 0o600); err != nil {
+		return err
+	}
+	return saveEvents(EventsPath(path), inv.Events)
 }
 
 // Record stores a key record under its fingerprint.

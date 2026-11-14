@@ -184,6 +184,7 @@ func (e *Editor) RevokeKey(ref manifest.KeyRef, reason string) (RevokeResult, er
 		Key: ref.String(), RevokedOn: inventory.Today(), Reason: reason,
 		Removed: append(prev.Removed, res.Removed...), NotRemoved: res.NotRemoved,
 	}
+	inv.Note(fp, inventory.EventRevoked, inventory.Stamp())
 	if err := inv.Save(e.p.Inventory()); err != nil {
 		return res, err
 	}

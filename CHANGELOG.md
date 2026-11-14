@@ -6,6 +6,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **authama records when each thing happens to a key.** Minting, adopting, importing, deploying,
+  rotating, rolling back and revoking a key now note the time, to the second, in `key-events.json`
+  beside the inventory, written by the same save as the inventory record; a minted key also notes
+  where it came from (`generated`, `adopted` or `imported`) and a rotated one the key it replaced.
+  The inventory's own format is unchanged, so an older authama still reads it, and a key recorded
+  before this release falls back to the days the inventory already holds (R-FEAT-01).
+
 ## [0.1.0] - 2026-11-14
 
 The first release under `sangehq/authama` and the module path `github.com/sangehq/authama/src`. The

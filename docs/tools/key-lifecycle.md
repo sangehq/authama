@@ -76,6 +76,22 @@ revocation.
 targets of what is being deleted first, and reports the same way. Before this release that flag was
 accepted and did nothing.
 
+## When each event happened
+
+authama records the time, to the second, at which each thing happened to a key, in
+`key-events.json` beside the inventory: `created` (minted, by keygen, reconcile or a rotation),
+`added` (entered the inventory, with its origin: `generated`, `adopted` or `imported`), `deployed`
+(the latest deploy that reached a target), `rotated` (on the successor, naming the key it
+replaced), `restored` (brought back by a rollback), `retired` (replaced by a rotation, or rolled
+back), `revoked` and `acknowledged` (`authama ssh key ack`, below). The time is
+written by the same save as the inventory record, and only times and origins are kept: nothing
+about the key's material.
+
+The file is new; nothing older than it needs migrating. A key recorded before it existed falls
+back to the days the inventory already holds (`created`, each deployment's date) and to
+`revoked.json` and `retired.json`, so its ages are shown by the day. Recording is always on; only
+the label and pills built from it are configurable.
+
 ## History and events
 
 Every step is an operation in [`history`](history.md), with a `key.lifetime` or `key.revoke` event,
