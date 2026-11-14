@@ -38,6 +38,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A corrupt `revoked.json` or `retired.json` is reported, not read as empty.** The key checklist
+  read an unreadable record as "nothing recorded", so a revoked key was listed as in use with nothing
+  left to do; the rotation's check for a predecessor that still logs in did the same and would evict
+  it. Both now stop with the error.
 - **`doctor` fails on a manifest it cannot load.** It loaded `manifest.json` with the error dropped,
   skipped the drift checks and said "clean" (`ok: true`) over a file every other command refuses. A
   manifest that exists and does not load is now a failing finding, in the report and as
