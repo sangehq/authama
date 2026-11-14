@@ -38,8 +38,8 @@ Two ways, in this order:
    ```
 
    The provenance was signed by simtabi/.github's shared release workflow, which built the binary,
-   so the check names that workflow; without `--signer-workflow` it fails. v0.1.6 is the first
-   release since the history restarted (see [Earlier binary releases](#earlier-binary-releases)).
+   so the check names that workflow; without `--signer-workflow` it fails. v0.1.0 (2026-11-14) is
+   the first release under `sangehq/authama` (see [Earlier binary releases](#earlier-binary-releases)).
 2. **Build from source.** You need Go (the version `src/go.mod` names), `git` and `make`.
 
 Nothing is published to a package manager, an image registry or the Go module proxy, so this
@@ -67,7 +67,7 @@ runs. On Windows, use `make install`. To check what is installed:
 ```sh
 command -v authama      # which file runs: ~/.local/bin/authama after make install or make link
 ls -l "$(command -v authama)"   # a link (make link) points into the checkout's build/
-authama version         # the version, then the commit and build day: authama v0.1.6 (6c56209, 2026-11-13)
+authama version         # the version, then the commit and build day: authama v0.1.0 (abc1234, 2026-11-14)
 ```
 
 On a Mac with Xcode's command line tools (`xcode-select --install`), `make build` also builds
@@ -97,7 +97,7 @@ A version is a tag: check one out to build exactly that release.
 
 ```sh
 git -C ~/src/authama fetch --tags
-git -C ~/src/authama checkout v0.1.6       # the release you want; `git tag` lists them
+git -C ~/src/authama checkout v0.1.0       # the release you want; `git tag` lists them
 make -C ~/src/authama build
 ```
 
@@ -165,8 +165,9 @@ Before 2026-11-06, versions 0.1.0 to 0.1.3 were published with binaries, archive
 Linux packages, a Homebrew cask and a Scoop manifest. The history was then folded
 into one commit and the version restarted at v0.1.0, and those releases were
 withdrawn: an installed binary keeps working, but the cask and the Scoop manifest
-no longer download. The next release ships on the GitHub release only, and those
-channels stay frozen. Until it does, build from source. Go's module proxy still serves the old `src/v0.1.0` to `src/v0.1.3`
+no longer download. Releases since ship on the GitHub release only, and those
+channels stay frozen. The versions restarted at v0.1.0 once more on 2026-11-14, under
+`sangehq/authama`; v0.1.6 and its tags were withdrawn ([release](release.md#version-numbers-since-the-restart)). Go's module proxy still serves the old `src/v0.1.0` to `src/v0.1.3`
 it cached, which is one more reason this page offers no `go install` path. [Migration](migration.md) covers
 moving an `sshmgr` install to `authama`.
 
