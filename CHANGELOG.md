@@ -38,6 +38,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A stale config that could not be removed is reported.** Rendering the config listed an old
+  per-profile config under "removed stale" even when removing it failed; it now stops with the error.
 - **A `Match host` block that covers a managed host is reported.** The shadow check skipped every
   `Match` block, so a `Match host *.corp` above the managed block quietly gave `api.corp` another
   user. `Match` blocks made only of `host` and `originalhost` criteria are now evaluated (against
