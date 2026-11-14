@@ -301,7 +301,7 @@ func TestTestsGenerateTheirCredentials(t *testing.T) {
 
 // goFetch is a command that installs or fetches this module through the Go
 // toolchain, which reads the public module proxy.
-var goFetch = regexp.MustCompile(`go (?:install|get) \S*github\.com/(?:sangehq|simtabi)/authama`)
+var goFetch = regexp.MustCompile(`go (?:install|get) \S*github\.com/(?:sangehq|simtabi)/authama|go (?:install|get) \.\.\./src@|\bgo install\b.*\bauthama\b`)
 
 // TestNoDocOffersGoInstall keeps every doc, the release page and the migration
 // guide included, from offering `go install` or `go get` of the module: binaries
@@ -311,8 +311,21 @@ var goFetch = regexp.MustCompile(`go (?:install|get) \S*github\.com/(?:sangehq|s
 func TestNoDocOffersGoInstall(t *testing.T) {
 	root, files := trackedFiles(t)
 	pages := 0
+	// Every text a person reads, not only docs/: comments in the Makefile, the
+	// Go source and the workflows offered it too (review R-GAP-04).
+	text := func(name string) bool {
+		if name == "CHANGELOG.md" || strings.HasPrefix(name, ".claude/") || strings.HasSuffix(name, "_test.go") {
+			return false
+		}
+		for _, ext := range []string{".md", ".go", ".yml", ".yaml", ".sh", ".ps1"} {
+			if strings.HasSuffix(name, ext) {
+				return true
+			}
+		}
+		return filepath.Base(name) == "Makefile"
+	}
 	for _, name := range files {
-		if !strings.HasSuffix(name, ".md") || name == "CHANGELOG.md" || strings.HasPrefix(name, ".claude/") {
+		if !text(name) {
 			continue
 		}
 		body, err := os.ReadFile(filepath.Join(root, name))
@@ -326,8 +339,8 @@ func TestNoDocOffersGoInstall(t *testing.T) {
 			}
 		}
 	}
-	if pages < 40 {
-		t.Fatalf("read %d markdown files; the walk is not finding them", pages)
+	if pages < 300 {
+		t.Fatalf("read %d text files; the walk is not finding them", pages)
 	}
 }
 
