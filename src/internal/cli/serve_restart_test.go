@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -171,5 +172,42 @@ func TestARestartRunsTheBinaryOnPATHWhenItsOwnIsGone(t *testing.T) {
 	none := func(string) (string, error) { return "", exec.ErrNotFound }
 	if _, err := restartExecutable(gone, none); err == nil || !strings.Contains(err.Error(), gone) || !strings.Contains(err.Error(), "PATH") {
 		t.Errorf("nothing to run: %v; want the reason naming the old path and PATH", err)
+	}
+}
+
+// The handoff's secrets (control key, sessions, form tokens) no longer ride
+// in the environment, where /proc/<pid>/environ keeps them for the life of
+// the process (R-SEC-21): the variable names an owner-only file, which the
+// new server reads once and removes.
+func TestTheHandoffTravelsInAnOwnerOnlyFile(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+	control := testcred.Secret("control")
+	entry, err := handoffEnv(serveHandoff{Control: control, Port: 7822, Addr: "127.0.0.1:7822", Instance: "aaaa"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	name, value, _ := strings.Cut(entry, "=")
+	if name != envnames.ServeHandoff {
+		t.Fatalf("entry %q sets the wrong variable", name)
+	}
+	if strings.Contains(value, control) {
+		t.Fatal("the control key is in the environment")
+	}
+	path, ok := strings.CutPrefix(value, handoffFilePrefix)
+	if !ok {
+		t.Fatalf("value %q names no file", value)
+	}
+	if info, err := os.Stat(path); err != nil {
+		t.Fatal(err)
+	} else if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
+		t.Errorf("handoff file mode = %v, want 0600", info.Mode().Perm())
+	}
+	t.Setenv(envnames.ServeHandoff, value)
+	h := takeHandoff()
+	if h == nil || h.Control != control || h.Port != 7822 {
+		t.Fatalf("handoff from the file = %+v", h)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Error("the handoff file was left behind")
 	}
 }
