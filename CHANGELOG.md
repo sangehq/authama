@@ -41,6 +41,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Rotation, rollback and restore summaries say what happened.** A rotation that did not happen said
+  "rotation ABORTED" (above "replaced" for a forced one), and a failed rollback said "rotation ABORTED"
+  too. Summaries now read "rotated", "rotation not done", "rolled back" or "rollback not done". A
+  restore names each key by its path, so a key and its `old/` predecessor are told apart.
 - **`settings show --json` prints JSON with no `authama.json`.** It printed a sentence; it now prints
   `{}`, the settings that file sets.
 - **A refused command no longer uses up a snapshot.** Every command that changes the home snapshots

@@ -101,8 +101,9 @@ func (r BundleResult) Format() string {
 	return strings.Join(lines, "\n")
 }
 
-// FP is one restored key's fingerprint (ordered by lay-down).
-type FP struct{ Name, Fingerprint string }
+// FP is one restored public key, in lay-down order: its file name stem (what the web summary
+// looks keys up by), its path under ~/.ssh without .pub, and its fingerprint.
+type FP struct{ Name, Path, Fingerprint string }
 
 // RestoreResult summarizes a restore run.
 type RestoreResult struct {
@@ -121,7 +122,12 @@ type RestoreResult struct {
 func (r RestoreResult) Format() string {
 	lines := []string{fmt.Sprintf("restore: laid down %d file(s)", len(r.Restored))}
 	for _, f := range r.Fingerprints {
-		lines = append(lines, "  "+f.Name+"  "+f.Fingerprint)
+		// The path, not just the name: a key and its old/ predecessor share one.
+		label := f.Name
+		if f.Path != "" {
+			label = f.Path
+		}
+		lines = append(lines, "  "+label+"  "+f.Fingerprint)
 	}
 	for _, s := range r.Skipped {
 		lines = append(lines, "  skipped "+s+" (rendered from the manifest, not taken from the bundle)")
@@ -565,7 +571,7 @@ func (b *Bundler) layDown(members []member, fingerprintOf func(string) (string, 
 		res.Restored = append(res.Restored, label)
 		if strings.HasSuffix(rel, ".pub") {
 			if fp, err := fingerprintOf(filepath.Join(root.Name(), filepath.FromSlash(rel))); err == nil {
-				res.Fingerprints = append(res.Fingerprints, FP{Name: stem(path.Base(rel)), Fingerprint: fp})
+				res.Fingerprints = append(res.Fingerprints, FP{Name: stem(path.Base(rel)), Path: strings.TrimSuffix(rel, ".pub"), Fingerprint: fp})
 			}
 		}
 	}
