@@ -38,6 +38,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The manifest schema accepts `reserved_keys`.** `manifest.schema.json` forbids keys it does not
+  list, and it did not list `reserved_keys` (written by `ssh key reserve` since 0.1.4), so an editor or
+  CI step validating against it refused a manifest authama itself wrote. The schema guard now checks
+  the top level and the reserved-key entries too, and a new one checks `inventory.schema.json`.
 - **A refused command no longer uses up a snapshot.** Every command that changes the home snapshots
   `~/.ssh` first, before it checks its input, so each typo or name already taken kept a snapshot, and
   with ten kept, a few typos pushed every real restore point out. A command that fails or is declined
