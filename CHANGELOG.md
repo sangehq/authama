@@ -48,6 +48,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **A test now proves no web page or API response carries a secret.** Every GET route, read from
+  where the server registers it (50 today), is requested signed in, and the read API with a token;
+  each body is searched for planted token-file secrets, a webhook signing secret and a read API token.
+  Only private keys were checked before. The test also checks it can see a value pages do show, so
+  it cannot pass by reading nothing.
 - **The reachability check before a deploy or rotation no longer pins host keys.** It ran ssh with
   `StrictHostKeyChecking=no` against your real `known_hosts`, so it recorded whatever key the network
   offered, even with `AUTHAMA_AUTO_PIN=0`. It now reads and writes the null device instead;
