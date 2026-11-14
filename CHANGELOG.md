@@ -40,6 +40,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   terminal, `--token-file` or `serve.json` signed in again after every rebuild (auto-restart fires
   on each one). A restart now mints a fresh token, and only links nobody used come across. The
   handoff no longer carries the old token in the environment.
+- **`authama serve` checks it is talking to its own server before it trusts it.** A launch, `--stop`
+  and `--restart` used to accept any listener on the recorded port that repeated the public instance
+  id, then sent it the control key or signalled the recorded pid. `/healthz?challenge=` now answers
+  with an HMAC under the control key, and the key goes out, or the pid is stopped, only after that
+  proof. `--stop-all` signals a pid another server reports only when it is an `authama` process.
+  `/healthz` no longer gives its pid, build and start time to a request a proxy passed on.
 
 ### Documentation
 

@@ -168,6 +168,9 @@ func stopFound(f foundServer, basePath string) error {
 	if f.PID == os.Getpid() {
 		return errors.New("it is this process")
 	}
+	if ok, name := isAuthamaProcess(f.PID); !ok {
+		return fmt.Errorf("pid %d is not an authama process (%s); nothing was signalled - stop the web UI at %s where it runs", f.PID, name, f.Addr)
+	}
 	r := &serveRecord{PID: f.PID, Addr: f.Addr, BasePath: basePath, Instance: f.Instance}
 	if !r.checkAlive() {
 		r.BasePath = ""
