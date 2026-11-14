@@ -652,7 +652,7 @@ every setting stays at its default until you add it.
 | `paths.tokens_config` | `AUTHAMA_TOKENS_CONFIG` | see [Auth tokens](#auth-tokens) |
 | `paths.tokens_catalog` | `AUTHAMA_TOKENS_CATALOG` | the built-in catalog |
 | `backup.age_recipient` | `AUTHAMA_AGE_RECIPIENT` | unset (`ssh bundle` needs it) |
-| `backup.snapshot_retain` | `AUTHAMA_SNAPSHOT_RETAIN` | `10` (at least 1) |
+| `backup.snapshot_retain` | `AUTHAMA_SNAPSHOT_RETAIN` | `10` (at least 1); a command that fails or is declined having changed nothing keeps no snapshot, so refusals do not use the slots up |
 | `backup.old_key_max_age_days` | `AUTHAMA_OLD_KEY_MAX_AGE_DAYS` | `90` (`0` turns the check off) |
 | `ssh.auto_pin` | `AUTHAMA_AUTO_PIN` | `true` |
 | `history.enabled` | `AUTHAMA_HISTORY` | `true` |
