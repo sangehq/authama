@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"strconv"
+	"strings"
 )
 
 // Schema renders the JSON Schema (draft 2020-12) for authama.json from Specs.
@@ -29,6 +30,9 @@ func Schema() ([]byte, error) {
 				p["type"], p["minLength"] = "string", 1
 			case KindEnum:
 				p["type"], p["enum"] = "string", s.Enum
+			case KindList:
+				item := "(" + strings.Join(s.Enum, "|") + ")"
+				p["type"], p["pattern"] = "string", `^ *`+item+` *(, *`+item+` *)*$`
 			case KindInt:
 				p["type"], p["minimum"] = "integer", s.Min
 				if d, err := strconv.Atoi(s.Default); err == nil {

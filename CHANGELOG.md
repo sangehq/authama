@@ -14,6 +14,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   where it came from (`generated`, `adopted` or `imported`) and a rotated one the key it replaced.
   The inventory's own format is unchanged, so an older authama still reads it, and a key recorded
   before this release falls back to the days the inventory already holds (R-FEAT-01).
+- **Two settings say what counts as a new key.** `keys.new_window_days` (`AUTHAMA_KEYS_NEW_WINDOW_DAYS`,
+  default 7, `0` turns the label off) is how long a key stays new, and `keys.new_events`
+  (`AUTHAMA_KEYS_NEW_EVENTS`, default `created,added,rotated,deployed`, `restored` also allowed) which
+  events make it new. `settings set` and `settings validate` refuse an unknown event or a negative
+  window, and the schema checks both.
 
 ## [0.1.0] - 2026-11-14
 
