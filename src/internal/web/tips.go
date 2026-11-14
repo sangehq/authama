@@ -169,6 +169,7 @@ var tips = map[string]string{
 	"menu-events":              "Opens Events: every file change, with filters.",
 	"menu-doctor":              "Opens Doctor: checks this home and offers fixes.",
 	"menu-about":               "Opens About: this build, whether it is current, and this computer.",
+	"menu-signout":             "Signs this browser out: the session ends on the server, and a new sign-in link is needed.",
 	"cancel-change":            "Leaves without making the change. Nothing is written.",
 	"export-grain":             "Switches which list the file is made from.",
 	"export-share":             "Copies a link that opens this page with the same choices. Nothing is saved.",

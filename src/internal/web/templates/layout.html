@@ -71,6 +71,8 @@
             <div class="dropdown-divider"></div>
             <button type="button" class="dropdown-item" data-tour-start{{if eq .Nav "overview"}} data-tour-start-auto="true"{{end}}{{desc "tour"}}>{{icon "route"}}<span class="ms-2">Take the tour</span></button>
             <a href="{{basePath}}/about" class="dropdown-item"{{desc "menu-about"}}>{{icon "info-circle"}}<span class="ms-2">About {{brandCommand}}</span></a>
+            <div class="dropdown-divider"></div>
+            <form method="post" action="{{basePath}}/signout" class="m-0"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit" class="dropdown-item"{{desc "menu-signout"}}>{{icon "lock"}}<span class="ms-2">Sign out</span></button></form>
           </div>
         </div>
         {{end}}
