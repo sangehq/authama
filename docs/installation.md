@@ -262,8 +262,9 @@ the old home in - `~/.config/ssh-manager` (on Windows also
 `%APPDATA%\ssh-manager`), or an older `~/.config/sshmgr` or `~/.sshmgr` - moves
 logs, history, snapshots and bundles into the state home, writes
 `MIGRATED-TO-AUTHAMA.txt` into the old directory and leaves it in place. It says
-so once on stderr. The old `SSH_MANAGER_*` / `SSHMGR_*` variable names keep
-working, with a deprecation notice. See [Migration](migration.md).
+so once on stderr, and renames old `SSH_MANAGER_*` / `SSHMGR_*` names in the copied
+`.env`. Those names are no longer read anywhere else: set the `AUTHAMA_*` ones, and
+`authama settings validate` names any left over. See [Migration](migration.md).
 
 ### Configuration precedence (user first, then shipped default)
 
