@@ -58,29 +58,39 @@ func MoveKeyRoot(e *Editor, root string) (KeyRootResult, error) {
 	if !oneName(res.From) || !oneName(res.To) {
 		return KeyRootResult{}, fmt.Errorf("a key root is one directory name under ~/.ssh, not %q or %q", res.From, res.To)
 	}
-	oldDir := filepath.Join(e.p.SSHDir, filepath.Base(res.From))
-	newDir := filepath.Join(e.p.SSHDir, filepath.Base(res.To))
-	if fi, err := os.Lstat(newDir); err == nil {
+	// Every look and rename goes through an os.Root on ~/.ssh, so even a name
+	// that got past the checks above cannot reach outside it.
+	if err := os.MkdirAll(e.p.SSHDir, perms.DirMode); err != nil {
+		return KeyRootResult{}, err
+	}
+	ssh, err := os.OpenRoot(e.p.SSHDir)
+	if err != nil {
+		return KeyRootResult{}, err
+	}
+	defer func() { _ = ssh.Close() }()
+	oldName, newName := filepath.Base(res.From), filepath.Base(res.To)
+	rootDir := func(name string) bool {
+		fi, err := ssh.Lstat(name)
+		return err == nil && fi.IsDir()
+	}
+	if fi, err := ssh.Lstat(newName); err == nil {
 		if !fi.IsDir() || fi.Mode()&os.ModeSymlink != 0 {
 			return KeyRootResult{}, fmt.Errorf("~/.ssh/%s exists and is not a directory; move it aside first", res.To)
 		}
-		if isDir(oldDir) {
+		if rootDir(oldName) {
 			return KeyRootResult{}, fmt.Errorf("both ~/.ssh/%s and ~/.ssh/%s exist - merge them by hand, then rerun",
 				res.From, res.To)
 		}
 	}
-	if isDir(oldDir) {
-		if err := os.MkdirAll(e.p.SSHDir, perms.DirMode); err != nil {
-			return KeyRootResult{}, err
-		}
-		if err := os.Rename(oldDir, newDir); err != nil {
+	if rootDir(oldName) {
+		if err := ssh.Rename(oldName, newName); err != nil {
 			return KeyRootResult{}, err
 		}
 		res.Moved = true
 	}
 	undo := func() {
 		if res.Moved {
-			_ = os.Rename(newDir, oldDir)
+			_ = ssh.Rename(newName, oldName)
 		}
 	}
 

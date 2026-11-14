@@ -25,6 +25,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **Moving the key root is confined to `~/.ssh`.** `ssh settings` moving `defaults.key_root` checked
+  that both names were one plain directory name, then renamed by full path; it now looks and renames
+  through an `os.Root` on `~/.ssh`, so no name can reach outside it. Code scanning had flagged the
+  three path operations.
 - **Webhooks refuse every non-public address.** The private-address filter missed 0.0.0.0/8,
   198.18.0.0/15, 240.0.0.0/4, broadcast, 192.0.0.0/24, site-local IPv6, and the NAT64, 6to4 and
   IPv4-compatible forms that carry a loopback or private IPv4 address. It now refuses every IANA

@@ -409,7 +409,7 @@ func within(root, dest string) bool {
 // isRooted reports whether p begins at a path separator without naming a
 // volume - the Windows "\somewhere" form.
 func isRooted(p string) bool {
-	return p != "" && (p[0] == '\\' || p[0] == '/') && filepath.VolumeName(p) == ""
+	return p != "" && os.IsPathSeparator(p[0]) && filepath.VolumeName(p) == ""
 }
 
 // IsDev reports whether this layout is a sandbox.
