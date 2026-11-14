@@ -38,6 +38,38 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`doctor` reports what an interrupted run left behind.** A reconcile killed mid-run could leave a
+  `.mint-*` directory holding a private key, and doctor said nothing until the next reconcile swept
+  it. It is now a warning naming each path and `authama ssh clean` (`--strict` fails), and
+  `crash_residue` in `--json`.
+- **`settings validate` checks what `.env` sets, and migration renames old names.** It said "ok" over
+  a `.env` whose settings were never read: old `SSHMGR_`/`SSH_MANAGER_` names, a misspelt `AUTHAMA_`
+  name, and values like `AUTHAMA_SNAPSHOT_RETAIN=abc` or a boolean `maybe` (read as false). It now
+  reports each, naming the `AUTHAMA_` name to use for an old one, and migrating an old home renames
+  them in the copied `.env` so its settings keep applying.
+- **A stale config that could not be removed is reported.** Rendering the config listed an old
+  per-profile config under "removed stale" even when removing it failed; it now stops with the error.
+- **A `Match host` block that covers a managed host is reported.** The shadow check skipped every
+  `Match` block, so a `Match host *.corp` above the managed block quietly gave `api.corp` another
+  user. `Match` blocks made only of `host` and `originalhost` criteria are now evaluated (against
+  the alias, as ssh does there), and `host add`, like any command that changes the manifest, prints a
+  shadow it finds as a warning instead of leaving it to `doctor`.
+- **`ssh import` says what it leaves behind.** After import and reconcile, `doctor` failed at once on
+  the hand-written blocks import had copied (they stay in your config, above the managed block), and
+  `Match` and wildcard `Host` blocks were dropped without a word. The summary now names the blocks
+  left in your config and why doctor will report them, and lists each block it did not import.
+- **A key your own Host block uses is no longer called loose.** The key audit only looked at the
+  manifest, so a key named by a hand-written block in `~/.ssh/config`, or a file it Includes, was
+  reported as "a key in ~/.ssh that no Host block uses", and `doctor --strict` failed on a home
+  that was fine. It now reads those IdentityFile lines too.
+- **A corrupt `revoked.json` or `retired.json` is reported, not read as empty.** The key checklist
+  read an unreadable record as "nothing recorded", so a revoked key was listed as in use with nothing
+  left to do; the rotation's check for a predecessor that still logs in did the same and would evict
+  it. Both now stop with the error.
+- **`doctor` fails on a manifest it cannot load.** It loaded `manifest.json` with the error dropped,
+  skipped the drift checks and said "clean" (`ok: true`) over a file every other command refuses. A
+  manifest that exists and does not load is now a failing finding, in the report and as
+  `manifest_error` in `--json`, naming the way back (fix it, or restore a snapshot).
 - **A refused command no longer uses up a snapshot.** Every command that changes the home snapshots
   `~/.ssh` first, before it checks its input, so each typo or name already taken kept a snapshot, and
   with ten kept, a few typos pushed every real restore point out. A command that fails or is declined

@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/services/settings"
 	"github.com/sangehq/authama/src/internal/util/homeperms"
 	"github.com/sangehq/authama/src/internal/util/paths"
 	"github.com/sangehq/authama/src/internal/util/perms"
@@ -104,6 +105,11 @@ func copyIn(p paths.Paths, legacy string) (Result, error) {
 	if err := copyTree(legacy, home); err != nil {
 		_ = os.RemoveAll(home)
 		return Result{}, fmt.Errorf("copying %s to %s: %w", legacy, home, err)
+	}
+	// The copy's .env may still use the old SSHMGR_ / SSH_MANAGER_ names,
+	// which nothing reads: rename them so its settings keep applying.
+	if _, err := settings.RenameLegacyNames(paths.Paths{ConfigDir: home}.EnvFile()); err != nil {
+		return Result{}, fmt.Errorf("copied %s to %s, but could not rename the old setting names in its .env: %w", legacy, home, err)
 	}
 	note := fmt.Sprintf("%s copied this folder to %s on %s.\n"+
 		"%s no longer reads it. It is kept so an older release still installed\n"+

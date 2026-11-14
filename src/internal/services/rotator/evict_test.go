@@ -66,3 +66,31 @@ func TestASecondRotationKeepsAPredecessorThatStillLogsIn(t *testing.T) {
 		t.Fatalf("rotation told to evict: %+v %v", rep, err)
 	}
 }
+
+// An unreadable retired.json is not "nothing recorded": the rotation stops
+// rather than evict a predecessor it cannot vouch for.
+func TestAnUnreadableRetirementRecordStopsTheRotation(t *testing.T) {
+	if _, err := exec.LookPath("ssh-keygen"); err != nil {
+		t.Skip("ssh-keygen not on PATH")
+	}
+	var m manifest.Manifest
+	if err := json.Unmarshal([]byte(manifestJSON), &m); err != nil {
+		t.Fatal(err)
+	}
+	base := t.TempDir()
+	p := paths.Paths{SSHDir: filepath.Join(base, ".ssh"), ConfigDir: filepath.Join(base, "cfg")}
+	inv := inventory.New()
+	if _, err := reconciler.New(p, &m, inv, false).Reconcile(false, ""); err != nil {
+		t.Fatal(err)
+	}
+	keyName, _ := m.ResolvedKeyName("vcs", m.Profiles["vcs"].Hosts[0])
+	if rep, err := New(p, &m, inv).Rotate(keyName, true, ""); err != nil || !rep.Committed {
+		t.Fatalf("first rotation: %+v %v", rep, err)
+	}
+	if err := os.WriteFile(inventory.RetiredPath(p.Inventory()), []byte(`{"truncated`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if rep, err := New(p, &m, inv).Rotate(keyName, true, ""); err == nil && rep.Committed {
+		t.Error("a rotation evicted the predecessor over an unreadable retired.json")
+	}
+}

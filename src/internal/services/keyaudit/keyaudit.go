@@ -23,6 +23,7 @@ import (
 	"github.com/sangehq/authama/src/internal/core/authkeys"
 	"github.com/sangehq/authama/src/internal/core/inventory"
 	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/importer"
 	"github.com/sangehq/authama/src/internal/services/keysvc"
 )
 
@@ -382,6 +383,14 @@ func (s *Service) loose() []Finding {
 			}
 		}
 	}
+	// Keys a hand-written block in ~/.ssh/config (or a file it Includes)
+	// offers as an IdentityFile are in use, by the user's own config.
+	foreign := map[string]bool{}
+	for _, id := range importer.IdentityFiles(filepath.Join(s.sshDir, "config")) {
+		if dir := filepath.Dir(id); dir == filepath.Clean(s.sshDir) || filepath.Base(dir) == ".ssh" {
+			foreign[filepath.Base(id)] = true
+		}
+	}
 	out := make([]Finding, 0, len(keys))
 	for _, k := range keys {
 		if _, kept := res[k.Name]; kept {
@@ -389,6 +398,9 @@ func (s *Service) loose() []Finding {
 		}
 		if adopted[k.Name] {
 			continue // a declared key adopted where it is: tracked, not loose
+		}
+		if foreign[k.Name] {
+			continue // the user's own Host block uses it
 		}
 		f := Finding{State: Loose, Subject: k.Name,
 			Detail: "a key in ~/.ssh that no Host block uses",
