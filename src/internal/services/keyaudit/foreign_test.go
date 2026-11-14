@@ -25,8 +25,11 @@ func TestAKeyAForeignHostUsesIsNotLoose(t *testing.T) {
 		write(k, "PRIVATE\n")
 		write(k+".pub", pub)
 	}
-	write("config", "Include "+filepath.Join(f.ssh, "conf.d", "*")+"\n\nHost legacy\n    HostName legacy.example\n    IdentityFile "+filepath.Join(f.ssh, "id_legacy")+"\n")
-	write("conf.d/extra", "Host extra\n    IdentityFile "+filepath.Join(f.ssh, "id_included")+"\n")
+	// Forward slashes, as an ssh config is written on every platform: a
+	// backslash in one is an escape to ssh.
+	slash := func(parts ...string) string { return filepath.ToSlash(filepath.Join(parts...)) }
+	write("config", "Include "+slash(f.ssh, "conf.d", "*")+"\n\nHost legacy\n    HostName legacy.example\n    IdentityFile "+slash(f.ssh, "id_legacy")+"\n")
+	write("conf.d/extra", "Host extra\n    IdentityFile "+slash(f.ssh, "id_included")+"\n")
 
 	got := subjects(audit(t, f, false), Loose)
 	if len(got) != 1 || got[0] != "id_unused" {
