@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sangehq/authama/src/internal/core/recency"
 )
 
 // The transforms: what a selection can do to its rows after the filters and
@@ -560,35 +562,8 @@ func parseTime(s string) (time.Time, bool) {
 	return time.Time{}, false
 }
 
-func relative(d time.Duration) string {
-	future := d < 0
-	if future {
-		d = -d
-	}
-	var n int
-	var unit string
-	switch {
-	case d < time.Minute:
-		return "just now"
-	case d < time.Hour:
-		n, unit = int(d/time.Minute), "minute"
-	case d < 24*time.Hour:
-		n, unit = int(d/time.Hour), "hour"
-	case d < 30*24*time.Hour:
-		n, unit = int(d/(24*time.Hour)), "day"
-	case d < 365*24*time.Hour:
-		n, unit = int(d/(30*24*time.Hour)), "month"
-	default:
-		n, unit = int(d/(365*24*time.Hour)), "year"
-	}
-	if n != 1 {
-		unit += "s"
-	}
-	if future {
-		return "in " + strconv.Itoa(n) + " " + unit
-	}
-	return strconv.Itoa(n) + " " + unit + " ago"
-}
+// relative words a duration; recency.Ago is the one implementation.
+func relative(d time.Duration) string { return recency.Ago(d) }
 
 func thousands(n int) string {
 	s := strconv.Itoa(n)
