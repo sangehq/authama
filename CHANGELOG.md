@@ -38,6 +38,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`settings validate` checks what `.env` sets, and migration renames old names.** It said "ok" over
+  a `.env` whose settings were never read: old `SSHMGR_`/`SSH_MANAGER_` names, a misspelt `AUTHAMA_`
+  name, and values like `AUTHAMA_SNAPSHOT_RETAIN=abc` or a boolean `maybe` (read as false). It now
+  reports each, naming the `AUTHAMA_` name to use for an old one, and migrating an old home renames
+  them in the copied `.env` so its settings keep applying.
 - **A stale config that could not be removed is reported.** Rendering the config listed an old
   per-profile config under "removed stale" even when removing it failed; it now stops with the error.
 - **A `Match host` block that covers a managed host is reported.** The shadow check skipped every
