@@ -744,7 +744,7 @@ and writes each tool's credential file. It is found in this order:
 
 The file's shape, each entry kind, and `_settings.docker_creds_store` (`login`
 or `refuse` for registries Docker keeps in a credential store;
-`--docker-creds-store` and `$AUTHAMA_DOCKER_CREDS_STORE` take precedence over it) are in
+a command's `--creds-store-mode` and `$AUTHAMA_DOCKER_CREDS_STORE` take precedence over it) are in
 [`token`](tools/tokens.md). The files it writes are the tools' own, at their
 usual paths, honouring `COMPOSER_HOME`, `NPM_CONFIG_USERCONFIG`,
 `DOCKER_CONFIG`, `NETRC` and `XDG_CONFIG_HOME` (and `APPDATA` on Windows).

@@ -57,7 +57,7 @@ func newBundleCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&recipient, "recipient", "r", "", "age recipient (else $AUTHAMA_AGE_RECIPIENT)")
-	cmd.Flags().StringVarP(&output, "output", "o", "", "destination dir (else config-dir/dist)")
+	cmd.Flags().StringVarP(&output, "output", "o", "", "destination dir (else dist/ in the state home)")
 	cmd.Flags().IntVar(&keep, "keep", 0, "after bundling, keep only the newest N bundles (0 keeps all)")
 	return cmd
 }
