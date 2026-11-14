@@ -424,3 +424,20 @@ func TestDevModeFindsNoLegacyHomeOutsideItsRoot(t *testing.T) {
 		t.Error("outside dev mode ~/.sshmgr should still be found")
 	}
 }
+
+// isRooted is the Windows "\somewhere" form: a separator first and no volume.
+// Pinned when it was rewritten off byte comparisons, which code scanning read
+// as a redirect check (alert 13); it never reaches a redirect.
+func TestIsRootedIsASeparatorWithoutAVolume(t *testing.T) {
+	cases := map[string]bool{"": false, "x": false, "x/y": false, "/x": true}
+	if runtime.GOOS == "windows" {
+		cases[`\x`] = true
+		cases[`C:\x`] = false
+		cases[`C:x`] = false
+	}
+	for in, want := range cases {
+		if got := isRooted(in); got != want {
+			t.Errorf("isRooted(%q) = %v, want %v", in, got, want)
+		}
+	}
+}

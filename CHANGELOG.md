@@ -42,6 +42,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `~/.local/bin/authama` linked to the build, `authama` was off `PATH` for the whole compile. It now
   compiles to `authama.tmp` beside the binary and renames it into place (the Touch ID helper too), and
   no longer runs `clean`; `make clean` still empties `build/` when asked.
+- **A host without a `user` can be deployed to.** authama reached it as `@host`, which ssh refuses
+  with its usage text, so every deploy, check and removal on such a host failed. It now connects to
+  the hostname alone, and ssh takes the user from its config or the local account.
 
 ### Security
 
@@ -50,6 +53,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   made was overwritten and lost. A restore now keeps every file it replaces with different content,
   keys, manifest and inventory included, in the state home under `replaced/<stamp>/` before it
   writes anything, and refuses when it has nowhere to keep them. The summary names each kept file.
+- **The reachability check before a deploy or rotation no longer pins host keys.** It ran ssh with
+  `StrictHostKeyChecking=no` against your real `known_hosts`, so it recorded whatever key the network
+  offered, even with `AUTHAMA_AUTO_PIN=0`. It now reads and writes the null device instead;
+  `authama ssh knownhosts` is still what pins a key.
+- **A VM name cannot start with `-`.** `vm.name` reaches `prlctl`, `limactl` or `utmctl` as one
+  argument, which those tools would read as an option; a manifest naming a VM `--set=…` is now
+  refused on load.
+- **Moving the key root is confined to `~/.ssh`.** `authama ssh key root <dir>` (and the web UI) checked
+  that both names were one plain directory name, then renamed by full path; it now looks and renames
+  through an `os.Root` on `~/.ssh`, so no name can reach outside it. Code scanning had flagged the
+  three path operations.
+- **Webhooks refuse every non-public address.** The private-address filter missed 0.0.0.0/8,
+  198.18.0.0/15, 240.0.0.0/4, broadcast, 192.0.0.0/24, site-local IPv6, and the NAT64, 6to4 and
+  IPv4-compatible forms that carry a loopback or private IPv4 address. It now refuses every IANA
+  special-purpose range, judges an embedded IPv4 address by itself, and refuses numeric, hex,
+  octal and shortened IPv4 host names, both when an endpoint is added and when it is dialled.
+- **A raw option named `Host` is refused.** `raw_options` and `global_options` refused `Match` and
+  the command-running keys but not `Host`, so `{"Host": "*", "ForwardAgent": "yes"}` ended the
+  managed block and turned agent forwarding on for every host. `Host` is now refused like `Match`,
+  in any letter case.
 - **Wrong PINs sent at once are all counted.** The PIN check read the failure count, checked the
   hash and wrote the count back with nothing serialising the three, so parallel guesses (browser
   tabs, several commands) each saw the same count: 50 at once were all checked and one was

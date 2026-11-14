@@ -323,7 +323,7 @@ func newServeCmd() *cobra.Command {
 	f.StringVar(&addr, "addr", "127.0.0.1", "address to listen on, host or host:port (a port here pins it, like --port)")
 	f.IntVar(&port, "port", web.DefaultPort, "port to listen on; when not given and the default is taken, the next free port is used")
 	f.BoolVar(&allowRemote, "allow-remote", false, "allow a non-loopback --addr (plain HTTP; prefer an SSH tunnel)")
-	f.StringArrayVar(&allowHosts, "allow-host", nil, "extra Host header to accept with --allow-remote, e.g. a proxy's name (repeatable)")
+	f.StringArrayVar(&allowHosts, "allow-host", nil, "extra Host header to accept, e.g. the name a proxy on this machine forwards as; it widens the DNS-rebinding check, so name only hosts you control (repeatable)")
 	f.BoolVar(&readOnly, "read-only", false, "serve no route that changes anything, and show no form")
 	f.BoolVar(&noOpen, "no-open", false, "do not open a browser")
 	f.StringVar(&tokenFile, "token-file", "", "also write the sign-in address to this file, mode 0600, for scripts")

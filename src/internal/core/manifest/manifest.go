@@ -53,12 +53,15 @@ const (
 	sshUserRefused = "`;&|<>(){}"
 )
 
-// dangerousOptions run a command, load an object, or pull in further config and
-// are never allowed in raw_options / global_options (ProxyJump is a host, allowed).
-// XAuthLocation is the path of the xauth program ssh runs for X11 forwarding.
+// dangerousOptions run a command, load an object, pull in further config, or
+// open a new block, and are never allowed in raw_options / global_options
+// (ProxyJump is a host, allowed). XAuthLocation is the path of the xauth
+// program ssh runs for X11 forwarding. Host and Match start a section: a raw
+// "Host" key ended the managed block and applied every option after it to the
+// hosts it named (review R-SEC-03).
 var dangerousOptions = map[string]bool{
 	"proxycommand": true, "localcommand": true, "permitlocalcommand": true,
-	"remotecommand": true, "match": true, "include": true,
+	"remotecommand": true, "match": true, "include": true, "host": true,
 	"knownhostscommand": true, "pkcs11provider": true, "securitykeyprovider": true,
 	"xauthlocation": true,
 }
@@ -664,7 +667,7 @@ func checkOptions(field string, opts OrderedOptions) error {
 			return err
 		}
 		if dangerousOptions[strings.ToLower(k)] {
-			return fmt.Errorf("%s key %q is not allowed (it can execute commands)", field, k)
+			return fmt.Errorf("%s key %q is not allowed (it can execute commands, load config or start a new block)", field, k)
 		}
 	}
 	return nil

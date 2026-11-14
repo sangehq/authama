@@ -1281,7 +1281,7 @@ Flags:
 
 ```
       --addr string                 address to listen on, host or host:port (a port here pins it, like --port) (default "127.0.0.1")
-      --allow-host stringArray      extra Host header to accept with --allow-remote, e.g. a proxy's name (repeatable)
+      --allow-host stringArray      extra Host header to accept, e.g. the name a proxy on this machine forwards as; it widens the DNS-rebinding check, so name only hosts you control (repeatable)
       --allow-remote[=true|false]   allow a non-loopback --addr (plain HTTP; prefer an SSH tunnel)
       --new[=true|false]            start another server even when one is already running for this home
       --no-open[=true|false]        do not open a browser
