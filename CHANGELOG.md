@@ -32,6 +32,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A refused command no longer uses up a snapshot.** Every command that changes the home snapshots
+  `~/.ssh` first, before it checks its input, so each typo or name already taken kept a snapshot, and
+  with ten kept, a few typos pushed every real restore point out. A command that fails or is declined
+  having changed nothing (the manifest, the inventory and `~/.ssh` as they were) now gives its
+  snapshot back; one that changed something keeps it.
 - **Rotating again keeps a predecessor that still logs in.** Only one previous key is kept in `old/`,
   so a second rotation evicted the first one's key even while a host it was never removed from still
   accepted it. The rotation now stops and names those hosts; `rotate --evict-old` replaces it

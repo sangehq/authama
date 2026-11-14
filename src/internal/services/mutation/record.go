@@ -10,6 +10,7 @@ import (
 
 	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/services/snapshots"
 	"github.com/sangehq/authama/src/internal/util/envnames"
 	"github.com/sangehq/authama/src/internal/util/log"
 	"github.com/sangehq/authama/src/internal/util/paths"
@@ -45,6 +46,12 @@ type frame struct {
 	store *history.Store
 	p     paths.Paths
 	seal  sealState
+	// snap is the snapshot the guard took for this scope, with the home it
+	// covers and the manifest and inventory as they were then, so a scope
+	// that fails having changed nothing can give the slot back (discardSnap).
+	snap                    string
+	snapHome                paths.Paths
+	manifestAt, inventoryAt string
 }
 
 var (
@@ -81,8 +88,15 @@ func End(o Outcome) {
 	f := stack[len(stack)-1]
 	stack = stack[:len(stack)-1]
 	resealAfter(f)
+	discarded := (o.Err != nil || o.Aborted) && discardSnap(f)
 	if f.op == nil || f.store == nil {
 		return
+	}
+	if discarded {
+		f.op.Snapshot = ""
+		if err := f.store.SetSnapshot(f.op.OpID, ""); err != nil {
+			warn(err)
+		}
 	}
 	defer func() { _ = f.store.Close() }()
 	op := f.op
@@ -191,11 +205,18 @@ func SourcesFor(p paths.Paths) history.Sources {
 // recordSnapshot attaches the guard's snapshot, or the reason there is none,
 // to the open operation. A snapshot that failed used to vanish without a
 // trace; it is now on the record, though the command still runs.
-func recordSnapshot(snap string, snapErr error) {
+func recordSnapshot(p paths.Paths, snap string, snapErr error) {
 	recMu.Lock()
 	defer recMu.Unlock()
 	f := top()
-	if f == nil || f.op == nil {
+	if f == nil {
+		return
+	}
+	if snap != "" && f.snap == "" {
+		f.snap, f.snapHome = snap, p
+		f.manifestAt, f.inventoryAt = hashFile(p.Manifest()), hashFile(p.Inventory())
+	}
+	if f.op == nil {
 		return
 	}
 	if snap != "" {
@@ -314,4 +335,24 @@ func FinishEarly() {
 	_ = f.store.Close()
 	f.op, f.store = nil, nil
 	f.seal = sealState{} // the home is going; nothing to reseal
+}
+
+// discardSnap removes the snapshot a failed or declined scope took, when the
+// scope changed nothing it covers: the manifest and inventory are as they were
+// when it was taken, and ~/.ssh still matches it. Each refused command (a
+// typo, a name already taken) used to keep one, and with a handful kept, a few
+// typos pushed every real restore point out (review R-BUG-06). A scope that
+// failed after changing something keeps its snapshot.
+func discardSnap(f *frame) bool {
+	if f.snap == "" {
+		return false
+	}
+	p := f.snapHome
+	if hashFile(p.Manifest()) != f.manifestAt || hashFile(p.Inventory()) != f.inventoryAt {
+		return false
+	}
+	if !snapshots.MatchesTree(f.snap, p.SSHDir) {
+		return false
+	}
+	return os.Remove(f.snap) == nil
 }
