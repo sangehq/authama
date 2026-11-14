@@ -32,6 +32,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A `~/.ssh/config` linked from a dotfiles repository stays a link.** Rendering the config renamed
+  a new file over the link, so the link became a regular file and the linked copy went stale. The
+  render now writes the link's target, atomically, and refuses a link whose target is missing rather
+  than replace it.
 - **Undoing a refused batch rewrites the manifest atomically.** When a batch that created a profile
   failed, the manifest was put back with an in-place write, which an interruption could leave
   half-written. It is now written by rename, like every other manifest write, and a guard test fails
