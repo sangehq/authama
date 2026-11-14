@@ -31,6 +31,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   binary either. A restart now runs the `authama` on `PATH` when its own path is gone, the watcher
   follows that one, and with none on `PATH` the restart is refused with the reason, which the page
   shows.
+- **`make build` never leaves the binary missing.** It emptied `build/` first, so with
+  `~/.local/bin/authama` linked to the build, `authama` was off `PATH` for the whole compile. It now
+  compiles to `authama.tmp` beside the binary and renames it into place (the Touch ID helper too), and
+  no longer runs `clean`; `make clean` still empties `build/` when asked.
+
+### Added
+
+- **`make link`.** Links `~/.local/bin/authama` (and `authama-touchid` on macOS) to the checkout's
+  `build/<your-os>/` binary, so `PATH`, and a running `authama serve`, follow every build. It says
+  whether the directory is on `PATH`, as `make install` does; `make uninstall` removes the link.
+  Windows uses `make install`.
 
 ### Documentation
 
