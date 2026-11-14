@@ -196,7 +196,8 @@ documentation, the source and the licences.
   the server started. The account menu also says which user and host the server runs as.
   When the `authama` binary is rebuilt, reinstalled or removed after `authama serve` started, every page shows a yellow banner naming the file, with **Restart
   now**: the server relaunches from the binary now installed, on the same address, with the
-  same sessions and every sign-in link not yet used, stops, and the page reloads, still signed in, then says in a green banner
+  same sessions and every sign-in link not yet used (a link already used stays used: the new server
+  prints a fresh one rather than re-arming the old), stops, and the page reloads, still signed in, then says in a green banner
   that it runs the current build. With `web.auto_restart` (the default) this happens by itself
   when the binary is rebuilt: open pages reload into the new build, or offer **Reload** when
   they hold unsaved input. `serve --restart` and `serve --stop-all` do the same from a

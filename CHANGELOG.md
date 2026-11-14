@@ -35,6 +35,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `owner.json` but still holds the seal, the attempt count or a file-store key now reports the
   missing file as a seal problem, keeps the web UI behind `/unlock`, and refuses the PIN with the way
   out. `authama owner forget` finishes unbinding such a home, after a confirmation.
+- **A used sign-in link stays used across a restart.** A restarted server took the old one's first
+  printed token and armed it again for 10 minutes, so the address in a browser's history, the
+  terminal, `--token-file` or `serve.json` signed in again after every rebuild (auto-restart fires
+  on each one). A restart now mints a fresh token, and only links nobody used come across. The
+  handoff no longer carries the old token in the environment.
 
 ### Documentation
 

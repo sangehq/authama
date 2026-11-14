@@ -146,7 +146,8 @@ func newServeCmd() *cobra.Command {
 				running = nil // a record left by a server that is gone
 			}
 			// A server replacing one that restarted: wait for the old one to
-			// let go of its port, then take the same port and token.
+			// let go of its port, then take the same port. The sign-in token is
+			// fresh (serveTokens); unused links come across in the handoff.
 			handoff := takeHandoff()
 			if handoff != nil {
 				handoff.waitGone()
@@ -214,13 +215,7 @@ func newServeCmd() *cobra.Command {
 			}
 			bound := ln.Addr().(*net.TCPAddr).Port
 
-			token, control := web.NewToken(), web.NewToken()
-			if handoff != nil {
-				token = handoff.Token
-				if handoff.Control != "" {
-					control = handoff.Control
-				}
-			}
+			token, control := serveTokens(handoff)
 			instance := web.NewToken()[:16]
 			// Recorded only for the default kind of server, the one a later
 			// `authama serve` would reuse: a pinned or remote one is a choice
@@ -232,7 +227,7 @@ func newServeCmd() *cobra.Command {
 			}
 			var stopServing context.CancelFunc
 			var srvRef *web.Server
-			restartFn := relaunch(serveHandoff{Token: token, Control: control, Port: bound, Record: record,
+			restartFn := relaunch(serveHandoff{Control: control, Port: bound, Record: record,
 				Addr: net.JoinHostPort(displayHost(host), strconv.Itoa(bound)), BasePath: basePath, Instance: instance},
 				func(h *serveHandoff) {
 					if srvRef != nil {

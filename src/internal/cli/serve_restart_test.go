@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -104,5 +105,38 @@ func TestStopAllProbesTheDefaultRangeAndTheConfiguredPort(t *testing.T) {
 	}
 	if got := serverPorts(web.DefaultPort, nil); len(got) != web.DefaultPortAttempts {
 		t.Errorf("the default port was probed twice: %v", got)
+	}
+}
+
+// A restarted server never re-arms the sign-in token the old one printed:
+// a used link stayed used only until the next rebuild (review R-SEC-05). It
+// mints a fresh token, keeps the control key so the record stays valid, and
+// hands the old token on only through Links, which hold unused ones.
+func TestARestartMintsAFreshSignInToken(t *testing.T) {
+	h := &serveHandoff{Token: "printed-before-the-restart", Control: "control-key"}
+	token, control := serveTokens(h)
+	if token == "" || token == h.Token {
+		t.Errorf("restart sign-in token = %q, want a fresh one", token)
+	}
+	if control != h.Control {
+		t.Errorf("control key = %q, want the old one kept", control)
+	}
+	token, control = serveTokens(nil)
+	if token == "" || control == "" || token == control {
+		t.Errorf("a first launch: token %q control %q", token, control)
+	}
+}
+
+// The handoff this build writes, with no token since R-SEC-05, is taken by
+// the next server; without this a restart quietly started from scratch.
+func TestTheHandoffThisBuildWritesIsTaken(t *testing.T) {
+	b, err := json.Marshal(serveHandoff{Control: "control-key", Port: 7822, Record: true, Addr: "127.0.0.1:7822", Instance: "aaaa"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(envnames.ServeHandoff, string(b))
+	h := takeHandoff()
+	if h == nil || h.Control != "control-key" || h.Port != 7822 {
+		t.Fatalf("handoff written without a token was not taken: %+v", h)
 	}
 }

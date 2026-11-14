@@ -26,7 +26,13 @@ import (
 // listening. It travels in one environment variable that the new server
 // clears as soon as it reads it.
 type serveHandoff struct {
-	Token string `json:"token"`
+	// Token was the old server's first printed sign-in token.
+	//
+	// Deprecated: since the 2026-11-13 review (R-SEC-05) a restart mints a
+	// fresh token (serveTokens) and an unused old one travels in Links, so
+	// nothing reads this; it is no longer written either. Kept so a handoff
+	// written by an older build still decodes. Remove no earlier than v0.2.0.
+	Token string `json:"token,omitempty"`
 	// Control is the key for new sign-in links, kept so the record stays valid.
 	Control  string `json:"control,omitempty"`
 	Port     int    `json:"port"`
@@ -49,7 +55,9 @@ func takeHandoff() *serveHandoff {
 	}
 	_ = os.Unsetenv(envnames.ServeHandoff)
 	var h serveHandoff
-	if json.Unmarshal([]byte(v), &h) != nil || h.Token == "" || h.Port <= 0 {
+	// A handoff carries a control key (this build) or a token (an older
+	// one); one with neither, or no port, is not a handoff.
+	if json.Unmarshal([]byte(v), &h) != nil || (h.Control == "" && h.Token == "") || h.Port <= 0 {
 		return nil
 	}
 	return &h
@@ -247,4 +255,17 @@ func handoffSessions(h *serveHandoff) []web.SessionState {
 		return nil
 	}
 	return h.Sessions
+}
+
+// serveTokens is a launch's first sign-in token and its control key. Both are
+// fresh, except that a restarted server keeps the control key so the record a
+// later launch reads stays valid. The old printed token is never reused: if
+// it was unused it is still among the handoff's Links, and if it was used,
+// re-arming it would let the address in a browser's history sign in again.
+func serveTokens(h *serveHandoff) (token, control string) {
+	token, control = web.NewToken(), web.NewToken()
+	if h != nil && h.Control != "" {
+		control = h.Control
+	}
+	return token, control
 }
