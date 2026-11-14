@@ -153,6 +153,7 @@ var goOnly = map[string]string{
 	"webhook add --event":        "owner, 2026-11-12: \"add support for rest api + events + webhooks + mcp securely ... most features are off by default\": event type prefixes an endpoint is sent",
 	"webhook list --json":        "owner, 2026-11-12: \"add support for rest api + events + webhooks + mcp securely ... most features are off by default\": the list as JSON",
 	"rotate --failed":            "owner, 2026-11-12: runs again the keys the last rotation or dry run left, as the summary's re-run line says",
+	"rotate --evict-old":         "review R-BUG-12, 2026-11-14: a rotation stops while the predecessor in old/ still logs in somewhere; this replaces it anyway",
 	"rotate --check":             "owner, 2026-11-11: a dry run that tests each key's rotation (servers answer, the current key logs in) and changes nothing",
 	"doctor --strict":            "settings - CI gate: escalates every dangling-key state to fatal",
 	"list --csv":                 "exports - every host as CSV, the columns the web UI downloads",

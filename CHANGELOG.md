@@ -32,6 +32,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Rotating again keeps a predecessor that still logs in.** Only one previous key is kept in `old/`,
+  so a second rotation evicted the first one's key even while a host it was never removed from still
+  accepted it. The rotation now stops and names those hosts; `rotate --evict-old` replaces it
+  anyway.
 - **A `~/.ssh/config` linked from a dotfiles repository stays a link.** Rendering the config renamed
   a new file over the link, so the link became a regular file and the linked copy went stale. The
   render now writes the link's target, atomically, and refuses a link whose target is missing rather

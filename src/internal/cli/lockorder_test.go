@@ -74,8 +74,12 @@ func TestRotateTakesAProfileOrAliasAndRollbackFailsWhenIncomplete(t *testing.T) 
 	run(t, "ssh", "profile", "add", "w")
 	run(t, "ssh", "host", "add", "w", "panel", "-H", "panel.example", "-u", "u", "--provider", "ploi")
 	run(t, "ssh", "reconcile", "--yes", "--no-pin")
+	// Both selectors name the same key, and a ploi panel never has the old key
+	// removed, so the second rotation would evict a predecessor that still
+	// logs in, which a rotation now refuses (R-BUG-12): --evict-old, as this
+	// test is about the selectors.
 	for _, sel := range []string{"w", "panel"} {
-		if out, err := runErr(t, "ssh", "rotate", sel, "--yes", "--no-key-backup", "--allow-unverified"); err != nil {
+		if out, err := runErr(t, "ssh", "rotate", sel, "--yes", "--no-key-backup", "--allow-unverified", "--evict-old"); err != nil {
 			t.Errorf("rotate %s: %v\n%s", sel, err, out)
 		}
 	}
