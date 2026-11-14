@@ -38,6 +38,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`ssh import` says what it leaves behind.** After import and reconcile, `doctor` failed at once on
+  the hand-written blocks import had copied (they stay in your config, above the managed block), and
+  `Match` and wildcard `Host` blocks were dropped without a word. The summary now names the blocks
+  left in your config and why doctor will report them, and lists each block it did not import.
 - **A key your own Host block uses is no longer called loose.** The key audit only looked at the
   manifest, so a key named by a hand-written block in `~/.ssh/config`, or a file it Includes, was
   reported as "a key in ~/.ssh that no Host block uses", and `doctor --strict` failed on a home
