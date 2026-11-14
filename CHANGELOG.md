@@ -38,6 +38,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The manifest schema accepts `reserved_keys`.** `manifest.schema.json` forbids keys it does not
+  list, and it did not list `reserved_keys` (written by `ssh key reserve` since 0.1.4), so an editor or
+  CI step validating against it refused a manifest authama itself wrote. The schema guard now checks
+  the top level and the reserved-key entries too, and a new one checks `inventory.schema.json`.
 - **`doctor` reports what an interrupted run left behind.** A reconcile killed mid-run could leave a
   `.mint-*` directory holding a private key, and doctor said nothing until the next reconcile swept
   it. It is now a warning naming each path and `authama ssh clean` (`--strict` fails), and
