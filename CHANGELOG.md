@@ -25,7 +25,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
-- **Moving the key root is confined to `~/.ssh`.** `ssh settings` moving `defaults.key_root` checked
+- **Moving the key root is confined to `~/.ssh`.** `authama ssh key root <dir>` (and the web UI) checked
   that both names were one plain directory name, then renamed by full path; it now looks and renames
   through an `os.Root` on `~/.ssh`, so no name can reach outside it. Code scanning had flagged the
   three path operations.
