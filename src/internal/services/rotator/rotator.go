@@ -450,6 +450,11 @@ func (r *Rotator) updateInventory(profile, keyName, keyType, comment string, rep
 		Comment: &comment, Created: &created, RotateAfterDays: r.m.Defaults.RotateAfterDays,
 		ExpiresOn: &exp, Deployments: deployments(results, created),
 	})
+	now := inventory.Stamp()
+	r.inv.NoteRotated(report.NewFingerprint, report.OldFingerprint, now)
+	if report.OldFingerprint != "" {
+		r.inv.Note(report.OldFingerprint, inventory.EventRetired, now)
+	}
 }
 
 // Rollback restores the single /old/ predecessor (plain reverse move), re-deploys
@@ -600,6 +605,13 @@ func (r *Rotator) finishRollback(profile, keyName string, hosts []manifest.Host,
 		rec.Path = ident
 		rec.Deployments = deployments(results, inventory.Today())
 		r.inv.Keys[report.NewFingerprint] = rec
+	}
+	now := inventory.Stamp()
+	if report.NewFingerprint != "" {
+		r.inv.Note(report.NewFingerprint, inventory.EventRestored, now)
+	}
+	if report.OldFingerprint != "" {
+		r.inv.Note(report.OldFingerprint, inventory.EventRetired, now)
 	}
 	// Committed means "the rollback is complete", and it is not while a target
 	// still trusts only the key that was rolled back. Reporting it as done sent

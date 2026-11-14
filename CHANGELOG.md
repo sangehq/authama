@@ -6,6 +6,32 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **authama records when each thing happens to a key.** Minting, adopting, importing, deploying,
+  rotating, rolling back and revoking a key now note the time, to the second, in `key-events.json`
+  beside the inventory, written by the same save as the inventory record; a minted key also notes
+  where it came from (`generated`, `adopted` or `imported`) and a rotated one the key it replaced.
+  The inventory's own format is unchanged, so an older authama still reads it, and a key recorded
+  before this release falls back to the days the inventory already holds (R-FEAT-01).
+- **Two settings say what counts as a new key.** `keys.new_window_days` (`AUTHAMA_KEYS_NEW_WINDOW_DAYS`,
+  default 7, `0` turns the label off) is how long a key stays new, and `keys.new_events`
+  (`AUTHAMA_KEYS_NEW_EVENTS`, default `created,added,rotated,deployed`, `restored` also allowed) which
+  events make it new. `settings set` and `settings validate` refuse an unknown event or a negative
+  window, and the schema checks both.
+- **`ssh key list` shows how new and how old each key is.** Two columns, `AGE` (since it was
+  created, added or rotated in) and `STATUS` (`new`, `current`, `ageing`, `due soon`, `overdue`,
+  `revoked`, `retired`), as words. `--new` keeps the keys labelled new, and `--json` prints each key
+  with its recency: every event with its time, age and constraint, `is_new`, `new_because` and the
+  pill.
+- **`ssh key ack` clears the new label** on the keys it names (or `--category`, `--all`) until their
+  next event, and records when it did in `key-events.json` and the history.
+- **The web UI shows key recency as pills.** The Keys list gains a Status column (the pill and the
+  key's age), and a key's page its status and a Lifecycle card listing every event with its age, a
+  machine-readable `<time>` and its constraint. Each pill carries its word, not colour alone, in the
+  existing badge colours. *Mark as seen* on a new key is `key ack`, previewed and confirmed like any
+  change.
+
 ## [0.1.0] - 2026-11-14
 
 The first release under `sangehq/authama` and the module path `github.com/sangehq/authama/src`. The

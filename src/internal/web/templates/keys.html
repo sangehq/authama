@@ -6,7 +6,7 @@
   <div class="table-responsive" tabindex="0">
     <table class="table table-vcenter card-table table-hover" id="keys-table" data-table="keys">
       <caption class="visually-hidden">Every key the manifest declares or a host uses</caption>
-      <thead><tr><th scope="col">Key</th><th scope="col">Type</th><th scope="col">Fingerprint</th><th scope="col">Expires</th><th scope="col">Hosts</th><th scope="col">On disk</th><th scope="col" class="w-1" data-nosort><span class="visually-hidden">Actions</span></th></tr></thead>
+      <thead><tr><th scope="col">Key</th><th scope="col">Type</th><th scope="col">Fingerprint</th><th scope="col">Expires</th><th scope="col">Status</th><th scope="col">Hosts</th><th scope="col">On disk</th><th scope="col" class="w-1" data-nosort><span class="visually-hidden">Actions</span></th></tr></thead>
       <tbody>
         {{range .Data.Rows}}
         <tr>
@@ -14,6 +14,7 @@
           <td>{{.Type}}</td>
           <td class="text-break"><code>{{orDash .Fingerprint}}</code></td>
           <td class="text-nowrap">{{orDash .ExpiresOn}}</td>
+          <td class="text-nowrap">{{with index $.Data.Recency .Ref.String}}{{if .Pill.Label}}<span class="badge {{toneClass .Pill.Tone}}" data-recency="{{.Pill.Label}}">{{.Pill.Label}}</span>{{with .Age}} <span class="text-secondary small">{{.}}</span>{{end}}{{else}}–{{end}}{{end}}</td>
           <td>{{orDash (join .Hosts ", ")}}</td>
           <td>{{if .Vault}}1Password <span class="text-secondary">({{.Vault}})</span>{{else if .PrivateOnDisk}}<span class="badge badge-ok">yes</span>{{else}}<span class="badge badge-warn">not minted</span>{{end}}</td>
           <td class="text-end">

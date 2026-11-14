@@ -62,6 +62,10 @@ const (
 	// ServeHandoff is set by a restarting `serve` for the one replacing it,
 	// never by a user: the token, port and old instance, as JSON.
 	ServeHandoff = "AUTHAMA_SERVE_HANDOFF"
+	// KeysNewWindowDays is how many days a key stays labelled new; 0 is off.
+	KeysNewWindowDays = "AUTHAMA_KEYS_NEW_WINDOW_DAYS"
+	// KeysNewEvents is which key events make a key new, comma-separated.
+	KeysNewEvents = "AUTHAMA_KEYS_NEW_EVENTS"
 	// OwnerStore set to "file" keeps the owner's sealing key in an owner-only
 	// file instead of the OS credential store (see services/owner).
 	OwnerStore = "AUTHAMA_OWNER_STORE"
@@ -71,7 +75,7 @@ const (
 func Names() []string {
 	out := []string{
 		API, AgeIdentityFile, AgeRecipient, AskpassMode, AskpassSecret, AutoPin, ConfigDir,
-		DevRoot, DockerCredsStore, ExportSaveTo, GitMode, HelloCheck, History, HistoryPermanent, MCP, NoDotenv, Notifications,
+		DevRoot, DockerCredsStore, ExportSaveTo, GitMode, HelloCheck, History, HistoryPermanent, KeysNewEvents, KeysNewWindowDays, MCP, NoDotenv, Notifications,
 		OldKeyMaxAgeDays, OwnerStore, ServeHandoff, SnapshotRetain, StateDir, TokensCatalog, TokensConfig,
 		VMHypervisors, VMMultiplex, VMPruneGone, VMRepin, WebAddr, WebAutoRestart, WebBasePath, WebMenuExport, WebPort, Webhooks, WebhooksAllowPrivate,
 	}

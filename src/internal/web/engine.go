@@ -15,6 +15,7 @@ import (
 	"github.com/sangehq/authama/src/internal/core/expiry"
 	"github.com/sangehq/authama/src/internal/core/inventory"
 	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/recency"
 	"github.com/sangehq/authama/src/internal/core/renderer"
 	"github.com/sangehq/authama/src/internal/core/tokens"
 	"github.com/sangehq/authama/src/internal/platform"
@@ -126,7 +127,10 @@ type KeyView struct {
 	Revoked     string
 	DefaultDays int
 	Expiry      *expiry.Status
-	Ops         []history.Op
+	// Recency is when each thing happened to the key, how long ago, whether
+	// it is new and its pill (core/recency).
+	Recency recency.Status
+	Ops     []history.Op
 	// Checklist is where the key is used and what is left to rotate or
 	// revoke it; nil when it could not be worked out.
 	Checklist *checklist.Checklist
@@ -341,6 +345,8 @@ type KeysView struct {
 	// delete; Categories are the categories profiles are filed under.
 	Picker     []PickerProfile
 	Categories []string
+	// Recency is each key's recency, by its ref, for its pill.
+	Recency map[string]recency.Status
 }
 
 // pickerData is the key picker for one bulk action.
@@ -433,11 +439,13 @@ func (e AppEngine) Keys() (KeysView, error) {
 	if err != nil {
 		return KeysView{}, err
 	}
-	rows, err := keysvc.New(m, e.inventory(), e.P.SSHDir).Rows("")
+	inv := e.inventory()
+	rows, err := keysvc.New(m, inv, e.P.SSHDir).Rows("")
 	if err != nil {
 		return KeysView{}, err
 	}
-	v := KeysView{Rows: rows, Public: map[string]string{}, KeyRoot: manifest.KeyRoot(m)}
+	v := KeysView{Rows: rows, Public: map[string]string{}, KeyRoot: manifest.KeyRoot(m),
+		Recency: keysvc.Recency(m, inv, e.P.Inventory(), rows, recency.FromEnv(nil), time.Now())}
 	for _, r := range rows {
 		if !slices.Contains(v.Profiles, r.Ref.Profile) {
 			v.Profiles = append(v.Profiles, r.Ref.Profile)
@@ -499,11 +507,13 @@ func (e AppEngine) Key(ref string) (KeyView, error) {
 		if r.String() != ref {
 			continue
 		}
-		d, err := keysvc.New(m, e.inventory(), e.P.SSHDir).Detail(r)
+		inv := e.inventory()
+		d, err := keysvc.New(m, inv, e.P.SSHDir).Detail(r)
 		if err != nil {
 			return KeyView{}, err
 		}
 		v := KeyView{Detail: d, PublicKey: publicKeyLine(d.PublicPath), DefaultDays: m.Defaults.RotateAfterDays}
+		v.Recency = keysvc.Recency(m, inv, e.P.Inventory(), []keysvc.Row{d.Row}, recency.FromEnv(nil), time.Now())[r.String()]
 		if revs, err := inventory.LoadRevocations(inventory.RevokedPath(e.P.Inventory())); err == nil && d.Fingerprint != "" {
 			v.Revoked = revs[d.Fingerprint].RevokedOn
 		}

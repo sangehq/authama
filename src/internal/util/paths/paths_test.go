@@ -310,6 +310,8 @@ func TestTheEnvironmentVariableNamesAreTheDocumentedOnes(t *testing.T) {
 		"AUTHAMA_TOKENS_CATALOG":         "a catalog.json replacing the built-in token services and providers",
 		"AUTHAMA_DOCKER_CREDS_STORE":     "login or refuse, for registries in a Docker credential store",
 		"AUTHAMA_NOTIFICATIONS":          "0 turns desktop notifications off",
+		"AUTHAMA_KEYS_NEW_WINDOW_DAYS":   "keys.new_window_days: days a key stays labelled new, 0 off",
+		"AUTHAMA_KEYS_NEW_EVENTS":        "keys.new_events: which key events make a key new",
 		"AUTHAMA_OWNER_STORE":            "file keeps the owner's sealing key in a file, not the OS credential store",
 		"AUTHAMA_ASKPASS_MODE":           "internal: marks the askpass re-execution",
 		"AUTHAMA_ASKPASS_SECRET":         "internal: the passphrase handed to it",

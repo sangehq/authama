@@ -76,6 +76,61 @@ revocation.
 targets of what is being deleted first, and reports the same way. Before this release that flag was
 accepted and did nothing.
 
+## When each event happened
+
+authama records the time, to the second, at which each thing happened to a key, in
+`key-events.json` beside the inventory: `created` (minted, by keygen, reconcile or a rotation),
+`added` (entered the inventory, with its origin: `generated`, `adopted` or `imported`), `deployed`
+(the latest deploy that reached a target), `rotated` (on the successor, naming the key it
+replaced), `restored` (brought back by a rollback), `retired` (replaced by a rotation, or rolled
+back), `revoked` and `acknowledged` (`authama ssh key ack`, below). The time is
+written by the same save as the inventory record, and only times and origins are kept: nothing
+about the key's material.
+
+The file is new; nothing older than it needs migrating. A key recorded before it existed falls
+back to the days the inventory already holds (`created`, each deployment's date) and to
+`revoked.json` and `retired.json`, so its ages are shown by the day. Recording is always on; only
+the label and pills built from it are configurable.
+
+## Recency: new keys and ages
+
+`authama ssh key list` shows how long ago each key was created, added or rotated in (`AGE`) and one
+word for where it stands (`STATUS`):
+
+| Status | When |
+|---|---|
+| `revoked`, `retired` | the key was revoked, or replaced by a rotation (and not rolled back) |
+| `overdue`, `due soon` | its [expiry](expiry.md) says so; expiry always wins over age |
+| `new` | one of `keys.new_events` happened within `keys.new_window_days` |
+| `ageing` | it is past half its lifetime |
+| `current` | otherwise |
+
+```sh
+authama ssh key list                 # AGE and STATUS columns
+authama ssh key list --new           # only the keys labelled new
+authama ssh key list --json          # each key's recency: events, ages, is_new, new_because, pill
+authama ssh key ack work/work_gh-ed25519   # seen it: clear the label
+authama ssh key ack --all
+```
+
+A key is **new** for 7 days after it is created, added, rotated in or deployed. Both are settings:
+`keys.new_window_days` (`0` turns the label off) and `keys.new_events`, which may also name
+`restored` (see [configuration](../configuration.md)). A deploy re-arms the label, and
+`--json`'s `new_because` names the event that set it. `authama ssh key ack` clears it at once and
+records an `acknowledged` time; the next of those events makes the key new again.
+
+Each event also carries its own age against the key's constraints: `fresh` inside the new window,
+`old` past the key's lifetime, `ageing` past half of it, `current` otherwise. A revocation, a
+retirement and an acknowledgement end or note something, so they carry only their time. The table
+and `--json` never carry colour or terminal escapes.
+
+In the web UI the Keys list has a **Status** column with the pill and the key's age, and a key's
+page shows its status and a **Lifecycle** card: every event with how long ago it was (a `<time>`
+carrying the exact time) and its constraint. A new key's card offers **Mark as seen**, which is `key ack` as a
+previewed change. Each pill says its word as well as taking the badge colour (blue for new and
+fresh, green for current, amber for ageing and due soon, red for old and overdue, grey for revoked
+and retired), so nothing depends on colour.
+
 ## History and events
 
 Every step is an operation in [`history`](history.md), with a `key.lifetime` or `key.revoke` event,

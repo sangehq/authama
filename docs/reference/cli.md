@@ -97,6 +97,7 @@ Every command also takes the global flag:
     - [`authama ssh host edit`](#authama-ssh-host-edit) - Edit a host
   - [`authama ssh import`](#authama-ssh-import) - Onboard an existing ssh setup - a config file or any folder of them - into the manifest
   - [`authama ssh key`](#authama-ssh-key) - Manage a profile's keys (add/list/delete)
+    - [`authama ssh key ack`](#authama-ssh-key-ack) - Clear the new label on keys you have seen
     - [`authama ssh key add`](#authama-ssh-key-add) - Declare a key on a profile and mint it
     - [`authama ssh key adopt`](#authama-ssh-key-adopt) - Manage a key where it already is in ~/.ssh, without moving or renaming it
     - [`authama ssh key delete`](#authama-ssh-key-delete) - Delete a key (refuses while a host uses it)
@@ -2024,6 +2025,7 @@ authama ssh key
 
 Subcommands:
 
+- [`ack`](#authama-ssh-key-ack) - Clear the new label on keys you have seen
 - [`add`](#authama-ssh-key-add) - Declare a key on a profile and mint it
 - [`adopt`](#authama-ssh-key-adopt) - Manage a key where it already is in ~/.ssh, without moving or renaming it
 - [`delete`](#authama-ssh-key-delete) - Delete a key (refuses while a host uses it)
@@ -2034,6 +2036,31 @@ Subcommands:
 - [`revoke`](#authama-ssh-key-revoke) - Remove a key from every target it is deployed to, and never deploy it again
 - [`root`](#authama-ssh-key-root) - Show or move the directory under ~/.ssh that holds the profile directories
 - [`unreserve`](#authama-ssh-key-unreserve) - Drop a key's reservation (doctor lists it as loose again)
+
+## authama ssh key ack
+
+A key is labelled new for keys.new_window_days (7 by default) after it is
+created, added, rotated or deployed (keys.new_events chooses which). ack clears
+the label now, and records when in key-events.json and the history. The next
+of those events makes the key new again.
+
+```
+authama ssh key ack [<profile/key>|profile|alias ...] [--category <name>] [--all] [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh key ack work/work_gh-ed25519
+  authama ssh key ack --all
+```
+
+Flags:
+
+```
+      --all[=true|false]   every key
+      --category string    every key of the profiles filed under this category
+```
 
 ## authama ssh key add
 
@@ -2178,7 +2205,9 @@ Examples:
 Flags:
 
 ```
-      --csv[=true|false]   print the keys as CSV, one row each, header first
+      --csv[=true|false]    print the keys as CSV, one row each, header first
+      --json[=true|false]   print the keys as JSON, each with its recency: events, ages, is_new and pill
+      --new[=true|false]    only the keys labelled new (see keys.new_window_days)
 ```
 
 ## authama ssh key regen-pub
