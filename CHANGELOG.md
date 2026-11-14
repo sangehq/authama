@@ -41,6 +41,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`settings show --json` prints JSON with no `authama.json`.** It printed a sentence; it now prints
+  `{}`, the settings that file sets.
 - **A refused command no longer uses up a snapshot.** Every command that changes the home snapshots
   `~/.ssh` first, before it checks its input, so each typo or name already taken kept a snapshot, and
   with ten kept, a few typos pushed every real restore point out. A command that fails or is declined
