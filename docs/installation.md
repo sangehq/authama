@@ -288,8 +288,9 @@ authama token init                # optional: a starter token config, then `auth
 
 `authama init` is safe to re-run: every run (re)creates the directory structure and
 re-asserts perms, and seeds any missing files **without** touching your existing
-manifest/`.env`. To reset the seed files to defaults, use `authama init --force` (it overwrites
-them in place). Add `--backup` to first copy the old ones into the state home's `.state/init-backup-<ts>/`.
+manifest/`.env`. To reset the seed files to defaults, use `authama init --force`: it copies the
+old ones into the state home's `.state/init-backup-<ts>/` first, and asks before it starts when run
+at a terminal (`-y` skips the question). `--no-backup` keeps no copy.
 
 Passphrases are **off by default** but a conscious choice: pass `--passphrase` to
 `reconcile`, `keygen`, `key add` or `rotate` to protect the keys they mint. Without it nothing prompts.

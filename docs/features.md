@@ -44,8 +44,8 @@ when the profile has a category.
 | Command | What it does | Tests |
 |---|---|---|
 | `init` | Create/converge the per-user homes (`~/.config/authama` for config, `~/.local/state/authama` for state): every run (re)creates the dir structure (`log/`, `snapshots/`, `.state/`) + re-asserts perms (dirs 700, secrets 600) and seeds any **missing** starter files (manifest, inventory, `.env`) - never clobbering existing ones. `providers.json` is not seeded (the shipped catalog is used unless you create your own). | U·E·F |
-| `init --force` | Overwrite the seed files with fresh defaults, **in place** (no backup). | U·F |
-| `init --force --backup` | Same, but first copy the old files into `~/.local/state/authama/.state/init-backup-<ts>/` (the state home). | U·F |
+| `init --force` | Overwrite the seed files with fresh defaults, after copying the old ones into `~/.local/state/authama/.state/init-backup-<ts>/` (the state home). Asks first at a terminal (`-y` skips it). | U·F |
+| `init --force --no-backup` | Same, keeping no copy. (`--backup` is still accepted, and deprecated: a backup is the default.) | U·F |
 | `migrate [--force] [-y]` | Copy a pre-0.1.1 home (`~/.config/ssh-manager`, `%APPDATA%\ssh-manager` on Windows, `~/.config/sshmgr`, `~/.sshmgr`) into the **resolved** home and mark the old one `MIGRATED-TO-AUTHAMA.txt` (`$AUTHAMA_CONFIG_DIR` override-aware; auto-migration handles the first run on any command; this resolves the stranded both-exist case `doctor` warns about - `--force` backs up the current home and replaces it). | U |
 | `settings path [--json]` | Print the config home, state home, `.env` and `authama.json` locations and whether each loaded. | U |
 | `settings show [--effective] [--json]` | Print `authama.json`, or with `--effective` every setting's value and where it came from (flag, environment, `.env`, `authama.json`, default). Secret values are never printed. | U |

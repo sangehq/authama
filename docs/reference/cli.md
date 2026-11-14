@@ -909,8 +909,9 @@ Examples:
 Flags:
 
 ```
-      --backup[=true|false]   with --force, copy the old files into the state home's .state/ before overwriting
-  -f, --force[=true|false]    overwrite manifest/inventory/.env with fresh defaults
+  -f, --force[=true|false]       overwrite manifest/inventory/.env with fresh defaults, keeping a copy of each in the state home's .state/ first
+      --no-backup[=true|false]   with --force, keep no copy of the files it overwrites
+  -y, --yes[=true|false]         skip the confirmation prompt
 ```
 
 ## authama man

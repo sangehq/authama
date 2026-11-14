@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **`init --force` keeps a copy and asks first.** It reset `manifest.json`, `inventory.json` and `.env`
+  to their defaults with no copy unless `--backup` was given (and `--backup` without `--force` was
+  silently ignored), and never asked. It now copies them into the state home's `init-backup-<stamp>/`
+  first, and asks at a terminal, saying what it resets and where the copies go; `-y` skips the
+  question, and a run with no terminal proceeds as before, now with the copy. `--no-backup` keeps
+  none. `--backup` still works and is deprecated, since a backup is the default.
 - **authama moved to sangehq.** The repository is now `sangehq/authama` (GitHub redirects
   `simtabi/authama`), and the Go module path is `github.com/sangehq/authama/src`. Release
   assets, install scripts, the settings schema URL, the web UI's About links and the man
