@@ -25,10 +25,12 @@ const pinField = "pin"
 // each request, so setting or removing a PIN applies without a restart.
 func (g ownerGate) pinRequired() bool {
 	s := g.s
-	c, err := owner.Load(s.opts.Engine.Home())
-	// An owner.json that cannot be read gates everything: failing open would
-	// let a damaged file switch the PIN off.
-	return err != nil || c.HasPIN()
+	home := s.opts.Engine.Home()
+	c, err := owner.Load(home)
+	// An owner.json that cannot be read, or one deleted from a home that was
+	// bound, gates everything: failing open would let a damaged or removed
+	// file switch the PIN off.
+	return err != nil || c.HasPIN() || (c == nil && owner.Orphaned(home))
 }
 
 // locked reports whether sess has yet to give the PIN.
@@ -76,6 +78,8 @@ func (g ownerGate) stepUp(w http.ResponseWriter, r *http.Request) bool {
 	switch {
 	case errors.As(err, &locked):
 		s.renderError(w, r, http.StatusTooManyRequests, "Too many wrong PINs", err.Error())
+	case errors.Is(err, owner.ErrOrphaned):
+		s.renderError(w, r, http.StatusConflict, "The owner settings are missing", err.Error())
 	case errors.Is(err, owner.ErrWrongPIN):
 		s.renderError(w, r, http.StatusForbidden, "PIN needed",
 			"This change needs your PIN, and the one given was empty or wrong. Go back, enter it on the confirmation, and confirm again.")
@@ -121,6 +125,8 @@ func (g ownerGate) handleUnlock(w http.ResponseWriter, r *http.Request) {
 		var locked owner.LockedError
 		if errors.As(err, &locked) {
 			status, problem = http.StatusTooManyRequests, err.Error()
+		} else if errors.Is(err, owner.ErrOrphaned) {
+			status, problem = http.StatusConflict, err.Error()
 		} else if !errors.Is(err, owner.ErrWrongPIN) {
 			status, problem = http.StatusInternalServerError, err.Error()
 		}

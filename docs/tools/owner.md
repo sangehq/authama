@@ -96,6 +96,16 @@ from this account's own credential store (on macOS the Keychain may ask for your
 and run on the machine the home was bound on. That is the proof that you are the account the home
 belongs to. The reset is on the record, and any lockout is cleared.
 
+### A missing `owner.json`
+
+Deleting `owner.json` does not switch the seal or the PIN off. While the seal, the attempt count or
+a file-store key is still in the state home, the home counts as bound: `owner verify` and `doctor`
+report that `owner.json` is missing, the web UI keeps every page behind `/unlock` and refuses the
+PIN with the same message, and changes made from the command line warn and do not reseal. Restore
+`owner.json` from a backup, or run `authama owner forget`, which asks before removing the seal and
+the sealing key (there is no PIN left to ask for) and leaves a home that was never bound. The same
+command finishes a `forget` that stopped part-way.
+
 ### Why Argon2id
 
 Argon2id is memory-hard: every guess at a stolen hash costs 64 MiB of memory as well as time, which

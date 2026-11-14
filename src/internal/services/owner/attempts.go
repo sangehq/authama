@@ -84,6 +84,9 @@ func CheckPIN(p paths.Paths, candidate string, now time.Time) error {
 		return err
 	}
 	if c == nil {
+		if Orphaned(p) {
+			return ErrOrphaned
+		}
 		return ErrNotSetUp
 	}
 	if !c.HasPIN() {

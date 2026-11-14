@@ -31,6 +31,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   recorded, which defeated the lockout. Checks now run one at a time under a lock in the state
   home, and a guess is recorded before its hash is checked. A failure to record it now refuses the
   check rather than letting it through.
+- **Deleting `owner.json` no longer switches the seal and the PIN off.** A home that lost
+  `owner.json` but still holds the seal, the attempt count or a file-store key now reports the
+  missing file as a seal problem, keeps the web UI behind `/unlock`, and refuses the PIN with the way
+  out. `authama owner forget` finishes unbinding such a home, after a confirmation.
 
 ### Documentation
 
