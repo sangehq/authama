@@ -97,7 +97,7 @@ func (h systemPages) handleAbout(w http.ResponseWriter, r *http.Request) {
 		GoVersion: runtime.Version(), OS: runtime.GOOS, Arch: runtime.GOARCH,
 		ConfigHome: p.ConfigDir, StateHome: p.State(), SSHDir: p.SSHDir, DevRoot: p.DevRoot,
 		Repository: "https://github.com/sangehq/authama",
-		Docs:       "https://opensource.simtabi.com/documentation/sangehq/authama/",
+		Docs:       brand.DocsURL,
 		Issues:     "https://github.com/sangehq/authama/issues",
 		User:       h.s.who.user, Host: h.s.who.host, Licences: h.s.licences(), System: platform.System()}
 	if bi, ok := debug.ReadBuildInfo(); ok {

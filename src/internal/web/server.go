@@ -110,6 +110,7 @@ type Server struct {
 	assets   *assetSet
 	sessions sessions
 	links    links
+	apiFails failLimiter
 	secrets  secretStash
 	who      whoami
 	jobs     *jobs.Registry

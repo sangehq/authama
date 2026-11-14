@@ -95,6 +95,9 @@ same cursor, so a client that reconnects with `Last-Event-ID` resumes where it s
 - **API tokens only.** The browser's session cookie is never read on `/api/v1/`, so a page in a browser
   cannot use your signed-in session to call it, and the web UI's pages never accept an API token. The
   sign-in link's token is not an API token either.
+- **Bad tokens are throttled.** After 10 requests with a bad token from one address within a minute,
+  that address is answered `429 too_many_failures` with `Retry-After`, valid token or not, until the
+  minute passes.
 - **Programs, not pages.** A request carrying an `Origin` header (which browsers send) is refused, even
   with a good token.
 - **The same host check** as the web UI: only `127.0.0.1`, `localhost`, `::1` and any `--allow-host`,

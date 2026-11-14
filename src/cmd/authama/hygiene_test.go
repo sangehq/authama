@@ -427,3 +427,32 @@ func TestDocsOfferNoReleaseChannelAsCurrent(t *testing.T) {
 		t.Fatalf("read %d docs pages; the walk is not finding them", pages)
 	}
 }
+
+// The hosted docs site answers 404 for every page, so the help, the man pages
+// and the web UI link the repository's docs/ instead (review R-DOC-03, owner
+// 2026-11-14). brand.DocsURL is the one place the address lives; this fails
+// on any other source file naming the hosted site, so switching back is a
+// one-line change.
+func TestDocsLinksComeFromBrandDocsURL(t *testing.T) {
+	root, files := trackedFiles(t)
+	read := 0
+	for _, name := range files {
+		if !strings.HasPrefix(name, "src/") || strings.HasSuffix(name, "_test.go") || name == "src/internal/brand/brand.go" {
+			continue
+		}
+		if !strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, ".html") {
+			continue
+		}
+		b, err := os.ReadFile(filepath.Join(root, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		read++
+		if strings.Contains(string(b), "opensource.simtabi.com/documentation/") {
+			t.Errorf("%s names the hosted docs site; use brand.DocsURL", name)
+		}
+	}
+	if read < 200 {
+		t.Fatalf("read %d source files, want at least 200: the file list is wrong", read)
+	}
+}
