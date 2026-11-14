@@ -3,6 +3,7 @@ package bundler
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"testing"
 )
@@ -59,7 +60,8 @@ func TestRestoreKeepsTheFilesItReplaces(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(kept, "ssh", "profiles", "work", "work_a-ed25519.pub")); err == nil {
 		t.Error("an identical file was kept as if it had been replaced")
 	}
-	if fi, err := os.Stat(filepath.Join(kept, "ssh", "profiles", "work", "work_a-ed25519")); err == nil && fi.Mode().Perm() != 0o600 {
+	// Windows reports 0666 for every file; owner-only is its ACL's job there.
+	if fi, err := os.Stat(filepath.Join(kept, "ssh", "profiles", "work", "work_a-ed25519")); err == nil && runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
 		t.Errorf("a kept private key has mode %v, want 0600", fi.Mode().Perm())
 	}
 	if got, _ := os.ReadFile(filepath.Join(ssh, "profiles", "work", "work_a-ed25519")); string(got) != "PRIV-A\n" {
