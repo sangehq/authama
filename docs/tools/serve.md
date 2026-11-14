@@ -563,7 +563,7 @@ the printed address it works once, within 10 minutes.
 | `--addr` | host, or host:port, to listen on (a port here pins it) |
 | `--port` | port; pinned when given |
 | `--allow-remote` | permit a non-loopback `--addr` |
-| `--allow-host` | an extra Host header to accept, such as a proxy's name (repeatable) |
+| `--allow-host` | an extra Host header to accept, such as the name a proxy forwards as; it needs no `--allow-remote` while the server listens on loopback, and it widens the rebinding check, so name only hosts you control (repeatable) |
 | `--read-only` | serve no route that changes anything, and show no form |
 | `--no-open` | do not open a browser |
 | `--token-file` | also write the sign-in address to this file |
