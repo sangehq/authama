@@ -23,6 +23,30 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   environment requires the owner's approval (added 2026-11-13), so a pushed tag publishes nothing
   until it is approved.
 
+### Security
+
+- **Wrong PINs sent at once are all counted.** The PIN check read the failure count, checked the
+  hash and wrote the count back with nothing serialising the three, so parallel guesses (browser
+  tabs, several commands) each saw the same count: 50 at once were all checked and one was
+  recorded, which defeated the lockout. Checks now run one at a time under a lock in the state
+  home, and a guess is recorded before its hash is checked. A failure to record it now refuses the
+  check rather than letting it through.
+- **Deleting `owner.json` no longer switches the seal and the PIN off.** A home that lost
+  `owner.json` but still holds the seal, the attempt count or a file-store key now reports the
+  missing file as a seal problem, keeps the web UI behind `/unlock`, and refuses the PIN with the way
+  out. `authama owner forget` finishes unbinding such a home, after a confirmation.
+- **A used sign-in link stays used across a restart.** A restarted server took the old one's first
+  printed token and armed it again for 10 minutes, so the address in a browser's history, the
+  terminal, `--token-file` or `serve.json` signed in again after every rebuild (auto-restart fires
+  on each one). A restart now mints a fresh token, and only links nobody used come across. The
+  handoff no longer carries the old token in the environment.
+- **`authama serve` checks it is talking to its own server before it trusts it.** A launch, `--stop`
+  and `--restart` used to accept any listener on the recorded port that repeated the public instance
+  id, then sent it the control key or signalled the recorded pid. `/healthz?challenge=` now answers
+  with an HMAC under the control key, and the key goes out, or the pid is stopped, only after that
+  proof. `--stop-all` signals a pid another server reports only when it is an `authama` process.
+  `/healthz` no longer gives its pid, build and start time to a request a proxy passed on.
+
 ### Documentation
 
 - **The provenance check now works.** `gh attestation verify` in the installation and release pages

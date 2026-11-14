@@ -174,6 +174,9 @@ func Forget(p paths.Paths) error {
 		return err
 	}
 	if c == nil {
+		if Orphaned(p) {
+			return finishForget(p)
+		}
 		return ErrNotSetUp
 	}
 	// owner.json goes first: without it the home is unbound, so a forget
@@ -396,6 +399,9 @@ func Verify(p paths.Paths) State {
 		return State{SetUp: true, Problem: err.Error()}
 	}
 	if c == nil {
+		if Orphaned(p) {
+			return State{SetUp: true, Problem: ErrOrphaned.Error()}
+		}
 		return State{}
 	}
 	st := State{SetUp: true, Config: c}
@@ -462,4 +468,41 @@ func keyFromHex(s string) ([]byte, error) {
 		return nil, errors.New("the stored sealing key is not 32 bytes of hex")
 	}
 	return k, nil
+}
+
+// ErrOrphaned is a check on a home whose owner.json is gone while the seal,
+// the attempt count or a file-store key is still there.
+var ErrOrphaned = errors.New("owner.json is missing, but this home was bound: restore owner.json, or run `authama owner forget` to finish unbinding")
+
+// Orphaned reports a home that lost owner.json but kept what binding left:
+// a forget that stopped part-way, or somebody deleting the file to switch the
+// seal and the PIN off. Only files are consulted, so it is cheap enough for
+// every web request and never prompts an OS key store.
+func Orphaned(p paths.Paths) bool {
+	if _, err := os.Lstat(ConfigPath(p)); !errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+	for _, f := range []string{SealPath(p), attemptsPath(p), fileStore{p}.path()} {
+		if _, err := os.Lstat(f); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// finishForget removes what a binding left once owner.json is gone. The key
+// is taken out of whichever store it could be in; a store that has none is
+// not an error.
+func finishForget(p paths.Paths) error {
+	for _, f := range []string{SealPath(p), attemptsPath(p)} {
+		if err := os.Remove(f); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+	}
+	for _, st := range []Store{fileStore{p}, StoreFor(p)} {
+		if err := st.Remove(); err != nil && !errors.Is(err, ErrNoKey) {
+			return fmt.Errorf("unbound, but the sealing key was not removed from %s: %w", st.Name(), err)
+		}
+	}
+	return nil
 }

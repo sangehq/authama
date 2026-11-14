@@ -85,7 +85,9 @@ With a PIN set:
 
 Five wrong PINs in a row start a wait of 30 seconds, doubling with each further wrong one up to 15
 minutes. The count is kept in the state home, so restarting the server or the command does not
-reset it.
+reset it. Checks run one at a time under a lock (`pin.lock` in the state home), so guesses sent at
+once, from browser tabs or several commands, are each counted, and a guess is recorded before it
+is checked, so stopping the command mid-check does not skip the count.
 
 ### Forgotten PIN
 
@@ -93,6 +95,16 @@ reset it.
 from this account's own credential store (on macOS the Keychain may ask for your login password),
 and run on the machine the home was bound on. That is the proof that you are the account the home
 belongs to. The reset is on the record, and any lockout is cleared.
+
+### A missing `owner.json`
+
+Deleting `owner.json` does not switch the seal or the PIN off. While the seal, the attempt count or
+a file-store key is still in the state home, the home counts as bound: `owner verify` and `doctor`
+report that `owner.json` is missing, the web UI keeps every page behind `/unlock` and refuses the
+PIN with the same message, and changes made from the command line warn and do not reseal. Restore
+`owner.json` from a backup, or run `authama owner forget`, which asks before removing the seal and
+the sealing key (there is no PIN left to ask for) and leaves a home that was never bound. The same
+command finishes a `forget` that stopped part-way.
 
 ### Why Argon2id
 

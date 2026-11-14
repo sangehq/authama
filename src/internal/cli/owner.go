@@ -195,14 +195,22 @@ func newOwnerForgetCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if cfg == nil {
+			switch {
+			case cfg == nil && owner.Orphaned(p):
+				// owner.json is gone, so there is no PIN to ask for: the
+				// confirmation is the only gate, and it never defaults to yes.
+				if err := confirmChange(c, "owner.json is missing, but the seal and the sealing key are still here. Finish unbinding: remove them. The state files are kept.", yes); err != nil {
+					return err
+				}
+			case cfg == nil:
 				return owner.ErrNotSetUp
-			}
-			if err := requireOwner(c, p, "unbinding the home"); err != nil {
-				return err
-			}
-			if err := confirmChange(c, "The sealing key, the seal and the PIN will be removed. The state files are kept.", yes); err != nil {
-				return err
+			default:
+				if err := requireOwner(c, p, "unbinding the home"); err != nil {
+					return err
+				}
+				if err := confirmChange(c, "The sealing key, the seal and the PIN will be removed. The state files are kept.", yes); err != nil {
+					return err
+				}
 			}
 			mutation.LockForMutation(p)
 			if err := owner.Forget(p); err != nil {

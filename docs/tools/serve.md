@@ -54,9 +54,15 @@ authama serve --new      # start another beside it anyway
 The running server leaves an owner-only `serve.json` in the state home's `.state/`, with its pid,
 address, the sign-in address it printed, and a control key. Only a request from this machine that
 presents that key at `/auth/link` gets a new sign-in link. A launch trusts the record only when the server at that address answers
-`/healthz` with the same random instance id, so a stale record (a server that crashed) or a pid or
-port reused by something else is ignored. `/healthz` is the one page that answers without signing
-in, and it says nothing but `{"app":"authama","instance":"…"}`. A pinned `--port`, `--read-only`
+`/healthz` with the same random instance id **and** answers a fresh challenge with an HMAC under
+the control key, so a stale record (a server that crashed), or a pid or port reused by something
+else, is ignored: the instance id is public, but only the recorded server can prove the key, and
+the key is sent, or the recorded pid stopped, only after that proof. `/healthz` is the one page that
+answers without signing in. To a remote caller it says nothing but `{"app":"authama","instance":"…"}`;
+to a caller on this machine that no proxy passed on (no `X-Forwarded-For`, `Forwarded` or
+`X-Real-Ip`), it also gives the pid, build and start time that `serve --stop-all` uses. `--stop-all`
+stops a server it finds only when that pid is an `authama` process, so a listener naming some other
+process of yours is refused, and nothing is signalled. A pinned `--port`, `--read-only`
 when the running server is not, or `--allow-remote` starts a new server rather than reusing one.
 
 **Why not a named address like `http://127.0.0.1/authama`?** A path does not free a port: two
@@ -196,7 +202,8 @@ documentation, the source and the licences.
   the server started. The account menu also says which user and host the server runs as.
   When the `authama` binary is rebuilt, reinstalled or removed after `authama serve` started, every page shows a yellow banner naming the file, with **Restart
   now**: the server relaunches from the binary now installed, on the same address, with the
-  same sessions and every sign-in link not yet used, stops, and the page reloads, still signed in, then says in a green banner
+  same sessions and every sign-in link not yet used (a link already used stays used: the new server
+  prints a fresh one rather than re-arming the old), stops, and the page reloads, still signed in, then says in a green banner
   that it runs the current build. With `web.auto_restart` (the default) this happens by itself
   when the binary is rebuilt: open pages reload into the new build, or offer **Reload** when
   they hold unsaved input. `serve --restart` and `serve --stop-all` do the same from a
