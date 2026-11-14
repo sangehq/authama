@@ -516,7 +516,8 @@ func bundleRestoreJob(j *jobs.Job, p paths.Paths, retain int, path string) error
 	}
 	sum := newSummaryOf(j, "restore", "", "")
 	sum.pending(bundleOwner(path)+"/keys", "restoring")
-	res, err := bundler.New(p.SSHDir, p.ConfigDir, bundler.AgeCipher{}).WithKeyRoot(manifest.KeyRootAt(p.Manifest())).Restore(path, ident, keystore.New().Fingerprint)
+	res, err := bundler.New(p.SSHDir, p.ConfigDir, bundler.AgeCipher{}).WithKeyRoot(manifest.KeyRootAt(p.Manifest())).
+		WithReplacedDir(bundler.ReplacedDir(p, time.Now())).Restore(path, ident, keystore.New().Fingerprint)
 	if err != nil {
 		sum.show([]rotator.SummaryKey{{Ref: bundleOwner(path) + "/keys", Result: "not restored", Severity: 2,
 			Kind: rotator.KindFailed, Note: err.Error()}})

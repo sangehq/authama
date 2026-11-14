@@ -45,6 +45,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **Restoring an older bundle no longer destroys a newer key.** The prompt said the current tree was
+  snapshotted first, but snapshots never hold private keys, so a key rotated after the bundle was
+  made was overwritten and lost. A restore now keeps every file it replaces with different content,
+  keys, manifest and inventory included, in the state home under `replaced/<stamp>/` before it
+  writes anything, and refuses when it has nowhere to keep them. The summary names each kept file.
 - **Wrong PINs sent at once are all counted.** The PIN check read the failure count, checked the
   hash and wrote the count back with nothing serialising the three, so parallel guesses (browser
   tabs, several commands) each saw the same count: 50 at once were all checked and one was

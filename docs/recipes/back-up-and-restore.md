@@ -32,7 +32,9 @@ On the new machine, sign in to 1Password and run `authama ssh key regen-pub --al
 (or `authama ssh reconcile`) to bring their public halves back from the vault.
 
 `restore` overlays: a key already on disk that the bundle does not contain — one
-minted since the backup — survives. It replaces only what it has a copy of.
+minted since the backup — survives. It replaces only what it has a copy of, and
+keeps each file it replaces with different content (a key rotated since the backup,
+say) in the state home under `replaced/<stamp>/` first; the summary says where.
 
 > Set `AUTHAMA_AGE_RECIPIENT` and `AUTHAMA_AGE_IDENTITY_FILE` to skip the
 > flags. The recipient is also what lets `keygen --force` write a backup before
