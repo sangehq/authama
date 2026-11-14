@@ -1744,8 +1744,8 @@ authama ssh git resolve <owner>/<repo> [flags]
 Examples:
 
 ```sh
-  authama ssh git resolve simtabi/authama
-  authama ssh git resolve simtabi/authama --json
+  authama ssh git resolve sangehq/authama
+  authama ssh git resolve sangehq/authama --json
 ```
 
 Flags:
