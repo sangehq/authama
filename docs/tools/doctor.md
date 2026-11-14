@@ -20,6 +20,8 @@ authama doctor --strict  # any warning fails the run (CI)
 | `optional` | which of `age`, `sops`, `gitleaks`, `gh`, `glab`, `age-plugin-yubikey` are missing |
 | `home` / `state` / `ssh` | the resolved config home, the state home (when it is separate) and `~/.ssh`, so an override is visible |
 | `providers` | whether the catalog is the shipped default or a user file |
+| crash residue | what a run killed part-way left under `~/.ssh`: a `.staging` or `.mint-*` directory, or a temp file. It can hold a private key, so it is a warning (`--strict` fails) naming each path; `authama ssh clean` sweeps it, as the next `reconcile` does. `--json`: `crash_residue` |
+| `manifest` | a `manifest.json` that exists but does not load (bad JSON, a value validation refuses): every command that reads it refuses it, so the drift checks are skipped and this fails the verdict. `--json`: `manifest_error` |
 | `agent` | whether `ssh-agent` is running and how many keys it holds |
 | `1Password` | when a profile uses `key_store: 1password`: that `op` is on PATH, the agent socket exists, and the agent serves the profile's vault (`agent.toml`) |
 | `proxy` | every `ProxyCommand` authama rendered names a binary that still exists: the authama binary for VM hosts (an upgrade that moved it fails the verdict, and `authama ssh config render` rewrites the path) and `cloudflared` for Cloudflare Access hosts (install it, then re-render) |
@@ -34,7 +36,7 @@ authama doctor --strict  # any warning fails the run (CI)
 | `config drift` | whether the rendered block still matches the manifest |
 | `perms` | every managed path whose mode is not what it should be |
 | alias collisions | the same Host alias in more than one profile, so ssh applies only the first (warning) |
-| shadowed hosts | a block above the managed block matches a managed alias, so the manifest's values do not apply (fails the verdict) |
+| shadowed hosts | a block above the managed block matches a managed alias, so the manifest's values do not apply (fails the verdict). A `Host` block, top-level options, `Match all`, and a `Match` made only of `host` and `originalhost` criteria (matched against the alias, as ssh does above the managed block) count; a `Match` with any other criterion is not evaluated. A command that changes the manifest prints the same finding as a warning |
 | raw-option overlaps | a `raw_options` key that duplicates a field authama already writes for that host (informational) |
 | dangling keys | declared-but-missing, half a pair, on disk but untracked, unwired |
 | duplicate keys | the same key material under two profiles |
@@ -96,7 +98,8 @@ Keys: `ok`, `home`, `ssh_dir`, `preflight_ok`, `providers_source`, `agent`,
 `unpinned_hosts`, `alias_collisions`, `stale_proxy`, `old_keys`, `stale_old_keys`,
 `dangling_keys`, `stranded_legacy_home`, `shadowed_hosts`, `raw_option_overlaps`, `needed_tools`, `clipboard` (`null` when a
 clipboard tool was found), and since 0.1.3 `unpinned_vm_hosts`, `stale_pins` and `vm` (the VM hosts, their
-state and the pending sync actions).
+state and the pending sync actions), and since 2026-11-14 `manifest_error` (`null` unless the manifest
+fails to load) and `crash_residue`.
 
 `tokens` is `{"ok": bool, "findings": [{"level", "target", "text"}]}`. Its `ok` is
 separate from the top-level `ok`, which stays the SSH verdict; the exit code

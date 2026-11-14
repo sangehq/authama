@@ -91,8 +91,16 @@ func TestShadowMatchingFollowsSSHPatternRules(t *testing.T) {
 		// A block that sets nothing the managed block sets overrides nothing.
 		{"no shared keyword", "Host *\n    ServerAliveInterval 30\n", nil},
 		{"other alias", "Host srv2 legacy\n    HostName x\n", nil},
-		// A Match condition authama does not evaluate is left alone rather than guessed at.
-		{"match block", "Match host srv\n    HostName x\n", nil},
+		// Above the managed block, ssh evaluates `Match host` and `Match
+		// originalhost` against the alias, since no HostName is set yet
+		// (checked with ssh -G, 2026-11-14; review R-GAP-02).
+		{"match host", "Match host srv\n    HostName x\n", []string{"srv"}},
+		{"match originalhost pattern", "Match originalhost s*\n    User root\n", []string{"srv"}},
+		{"match host list", "Match host db,other\n    User root\n", []string{"db"}},
+		{"match host and originalhost", "Match host srv originalhost db\n    User root\n", nil},
+		// A condition authama cannot evaluate is left alone rather than guessed at.
+		{"match exec", "Match exec \"true\"\n    HostName x\n", nil},
+		{"match negated criterion", "Match !host srv\n    HostName x\n", nil},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

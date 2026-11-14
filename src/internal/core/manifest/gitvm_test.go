@@ -164,6 +164,10 @@ func TestSchemaListsEveryManifestField(t *testing.T) {
 		schema []string
 		code   []string
 	}{
+		// The top level too: reserved_keys (0.1.4) was valid in the code and
+		// refused by the schema's additionalProperties:false (review R-INC-01).
+		{"manifest", props(), tags(Manifest{})},
+		{"reserved_keys.*", props("properties", "reserved_keys", "additionalProperties"), tags(ReservedKey{})},
 		{"defaults", props("properties", "defaults"), tags(Defaults{})},
 		{"defaults.git", props("properties", "defaults", "properties", "git"), tags(GitDefaults{})},
 		{"defaults.export", props("properties", "defaults", "properties", "export"), tags(ExportDefaults{})},
@@ -172,7 +176,7 @@ func TestSchemaListsEveryManifestField(t *testing.T) {
 		{"host", props("properties", "profiles", "additionalProperties", "properties", "hosts", "items"), tags(Host{})},
 		{"host.vm", props("properties", "profiles", "additionalProperties", "properties", "hosts", "items", "properties", "vm"), tags(VMSpec{})},
 	}
-	if len(checks) < 7 {
+	if len(checks) < 9 {
 		t.Fatal("inspected fewer types than exist")
 	}
 	for _, c := range checks {
