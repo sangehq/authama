@@ -20,6 +20,7 @@ authama doctor --strict  # any warning fails the run (CI)
 | `optional` | which of `age`, `sops`, `gitleaks`, `gh`, `glab`, `age-plugin-yubikey` are missing |
 | `home` / `state` / `ssh` | the resolved config home, the state home (when it is separate) and `~/.ssh`, so an override is visible |
 | `providers` | whether the catalog is the shipped default or a user file |
+| `manifest` | a `manifest.json` that exists but does not load (bad JSON, a value validation refuses): every command that reads it refuses it, so the drift checks are skipped and this fails the verdict. `--json`: `manifest_error` |
 | `agent` | whether `ssh-agent` is running and how many keys it holds |
 | `1Password` | when a profile uses `key_store: 1password`: that `op` is on PATH, the agent socket exists, and the agent serves the profile's vault (`agent.toml`) |
 | `proxy` | every `ProxyCommand` authama rendered names a binary that still exists: the authama binary for VM hosts (an upgrade that moved it fails the verdict, and `authama ssh config render` rewrites the path) and `cloudflared` for Cloudflare Access hosts (install it, then re-render) |

@@ -38,6 +38,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`doctor` fails on a manifest it cannot load.** It loaded `manifest.json` with the error dropped,
+  skipped the drift checks and said "clean" (`ok: true`) over a file every other command refuses. A
+  manifest that exists and does not load is now a failing finding, in the report and as
+  `manifest_error` in `--json`, naming the way back (fix it, or restore a snapshot).
 - **A refused command no longer uses up a snapshot.** Every command that changes the home snapshots
   `~/.ssh` first, before it checks its input, so each typo or name already taken kept a snapshot, and
   with ten kept, a few typos pushed every real restore point out. A command that fails or is declined
