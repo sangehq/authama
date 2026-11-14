@@ -60,7 +60,9 @@ func TestASecondRotationKeepsAPredecessorThatStillLogsIn(t *testing.T) {
 	}
 
 	// Told to, it evicts.
-	if rep, err := New(p, &m, inv).EvictPredecessor().Rotate(keyName, true, ""); err != nil || !rep.Committed {
+	r := New(p, &m, inv)
+	r.EvictOld = true
+	if rep, err := r.Rotate(keyName, true, ""); err != nil || !rep.Committed {
 		t.Fatalf("rotation told to evict: %+v %v", rep, err)
 	}
 }

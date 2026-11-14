@@ -347,8 +347,6 @@ func commandLine(c *cobra.Command) string {
 // evicting is r, allowed to replace a predecessor in old/ that still logs in
 // when evict is set (--evict-old).
 func evicting(r *rotator.Rotator, evict bool) *rotator.Rotator {
-	if evict {
-		return r.EvictPredecessor()
-	}
+	r.EvictOld = evict
 	return r
 }
