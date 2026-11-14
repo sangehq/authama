@@ -53,6 +53,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **Adopting a key never writes through a symlink.** `ssh import` checked the destination with a call
+  that follows links, so a dangling symlink there read as empty and the private key was written to
+  wherever it pointed. Anything at the path now counts as occupied, the key is created exclusively,
+  and its `.pub` is written by rename, which replaces a link instead of following it.
 - **Restoring an older bundle no longer destroys a newer key.** The prompt said the current tree was
   snapshotted first, but snapshots never hold private keys, so a key rotated after the bundle was
   made was overwritten and lost. A restore now keeps every file it replaces with different content,
