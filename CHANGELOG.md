@@ -24,8 +24,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   identity `com.simtabi.authama` (changing it resets the notification permission).
 
 - **A release runs under the `release` environment again.** `release.yml` passes
-  `environment: release` to the shared workflow, whose pin moves to simtabi/.github `d648d89`
-  (the newest, which takes an environment). Each release is recorded as a deployment, and the
+  `environment: release` to the shared workflow, pinned to simtabi/.github's `v1.0.0` (`767e0c0`,
+  which takes an environment), with the version as the comment so Dependabot can move it. Each release is recorded as a deployment, and the
   environment requires the owner's approval (added 2026-11-13), so a pushed tag publishes nothing
   until it is approved.
 
