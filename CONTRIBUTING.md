@@ -31,7 +31,7 @@ make clean               # empty build/ (keeping targets.txt); build no longer d
 make doctor              # verify the environment, using the binary you just built
 ```
 
-There is no bootstrap step: Go 1.26 is the only prerequisite. authama's config
+There is no bootstrap step: Go 1.27 is the only prerequisite. authama's config
 home is `~/.config/authama` and its state home `~/.local/state/authama`; set
 `AUTHAMA_CONFIG_DIR="$PWD/.devhome"` to sandbox a throwaway one (state included)
 while developing, or use `--dev-root` to sandbox `~/.ssh` as well.

@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Go 1.27, golangci-lint v2.15.0 and the current go-notifykit.** The module now declares `go 1.27.0`
+  with `toolchain go1.27.4`, as sange and imprimatur do, and CI lints with golangci-lint v2.15.0; the dev
+  container defaults to Go 1.27. go-notifykit moves to the build sange uses, which drops the
+  `terminal-notifier` backend (macOS uses its helper app, else `osascript`).
+- **Desktop notifications replace rather than stack.** Each carries a group named after the event, so
+  the same event posted again replaces its banner. With no backend, the message now says to install
+  `notify-send` on Linux and to run `authama notify doctor` elsewhere, not `terminal-notifier`.
 - **CI skips draft pull requests and cancels superseded CodeQL runs.** Every CI and CodeQL job now
   waits until a draft is marked ready (which starts a run), as sange and imprimatur already did, and
   CodeQL cancels a pull request's earlier run when a new push supersedes it.

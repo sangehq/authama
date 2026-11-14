@@ -15,7 +15,7 @@
 # - authama's config home is /home/dev/.config/authama and its state home
 #   /home/dev/.local/state/authama, so both land in that mounted home.
 
-ARG GO_VERSION=1.26
+ARG GO_VERSION=1.27
 FROM golang:${GO_VERSION}
 
 LABEL org.opencontainers.image.title="authama-dev" \

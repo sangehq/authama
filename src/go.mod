@@ -1,10 +1,12 @@
 module github.com/sangehq/authama/src
 
-go 1.26.0
+go 1.27.0
+
+toolchain go1.27.4
 
 require (
 	github.com/modelcontextprotocol/go-sdk v1.8.0
-	github.com/simtabi/go-notifykit/src v0.0.0-20261108132608-322a05ada0ea
+	github.com/simtabi/go-notifykit/src v0.0.0-20261108151612-b1d96c3bd177
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
 	go.yaml.in/yaml/v3 v3.0.6

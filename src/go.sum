@@ -30,6 +30,8 @@ github.com/segmentio/encoding v0.5.4 h1:OW1VRern8Nw6ITAtwSZ7Idrl3MXCFwXHPgqESYfv
 github.com/segmentio/encoding v0.5.4/go.mod h1:HS1ZKa3kSN32ZHVZ7ZLPLXWvOVIiZtyJnO1gPH1sKt0=
 github.com/simtabi/go-notifykit/src v0.0.0-20261108132608-322a05ada0ea h1:P8wZzrpXJoEbVEwaewk+d9uv14mS4agSemZJoUHTD94=
 github.com/simtabi/go-notifykit/src v0.0.0-20261108132608-322a05ada0ea/go.mod h1:IMAhQveOoAMdIbFmXUvHc4hj68YtQIYs4P2DDjDeE20=
+github.com/simtabi/go-notifykit/src v0.0.0-20261108151612-b1d96c3bd177 h1:V0TMYWwWjzoD7M1dnruoLj+V79jseN7Fo+ZOAQngFBo=
+github.com/simtabi/go-notifykit/src v0.0.0-20261108151612-b1d96c3bd177/go.mod h1:IMAhQveOoAMdIbFmXUvHc4hj68YtQIYs4P2DDjDeE20=
 github.com/spf13/cobra v1.10.2 h1:DMTTonx5m65Ic0GOoRY2c16WCbHxOOw6xxezuLaBpcU=
 github.com/spf13/cobra v1.10.2/go.mod h1:7C1pvHqHw5A4vrJfjNwvOdzYu0Gml16OCs2GRiTUUS4=
 github.com/spf13/pflag v1.0.9/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
