@@ -23,8 +23,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   environment requires the owner's approval (added 2026-11-13), so a pushed tag publishes nothing
   until it is approved.
 
+### Fixed
+
+- **A host without a `user` can be deployed to.** authama reached it as `@host`, which ssh refuses
+  with its usage text, so every deploy, check and removal on such a host failed. It now connects to
+  the hostname alone, and ssh takes the user from its config or the local account.
+
 ### Security
 
+- **A VM name cannot start with `-`.** `vm.name` reaches `prlctl`, `limactl` or `utmctl` as one
+  argument, which those tools would read as an option; a manifest naming a VM `--set=…` is now
+  refused on load.
 - **Moving the key root is confined to `~/.ssh`.** `authama ssh key root <dir>` (and the web UI) checked
   that both names were one plain directory name, then renamed by full path; it now looks and renames
   through an `os.Root` on `~/.ssh`, so no name can reach outside it. Code scanning had flagged the

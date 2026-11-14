@@ -40,8 +40,14 @@ func (t Target) identityOpts() []string {
 	return opts
 }
 
-// SSHDest is user@hostname.
-func (t Target) SSHDest() string { return t.User + "@" + t.Hostname }
+// SSHDest is user@hostname, or the hostname alone when the host names no
+// user, so ssh takes the user from its config or the local account.
+func (t Target) SSHDest() string {
+	if t.User == "" {
+		return t.Hostname
+	}
+	return t.User + "@" + t.Hostname
+}
 
 // DeployOutcome is the result of a deploy attempt. Mirrors base.DeployOutcome.
 type DeployOutcome struct {
