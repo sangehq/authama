@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/sangehq/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/testcred"
 	"github.com/sangehq/authama/src/internal/web"
 )
 
@@ -113,7 +114,7 @@ func TestStopAllProbesTheDefaultRangeAndTheConfiguredPort(t *testing.T) {
 // mints a fresh token, keeps the control key so the record stays valid, and
 // hands the old token on only through Links, which hold unused ones.
 func TestARestartMintsAFreshSignInToken(t *testing.T) {
-	h := &serveHandoff{Token: "printed-before-the-restart", Control: "control-key"}
+	h := &serveHandoff{Token: testcred.Secret("printed"), Control: testcred.Secret("control")}
 	token, control := serveTokens(h)
 	if token == "" || token == h.Token {
 		t.Errorf("restart sign-in token = %q, want a fresh one", token)

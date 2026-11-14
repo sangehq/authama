@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sangehq/authama/src/internal/util/testcred"
 	"github.com/sangehq/authama/src/internal/web"
 )
 
@@ -56,7 +57,8 @@ func fakeServer(t *testing.T, key string) *bool {
 // something else that took a dead server's port, answering with the public
 // instance id, used to receive it (review R-SEC-08).
 func TestTheControlKeyGoesOnlyToAServerThatProvesIt(t *testing.T) {
-	rec := &serveRecord{Addr: "127.0.0.1:7822", Instance: "inst", Control: "control-key"}
+	key, other := testcred.Secret("control"), testcred.Secret("other")
+	rec := &serveRecord{Addr: "127.0.0.1:7822", Instance: "inst", Control: key}
 
 	sent := fakeServer(t, "") // an impostor: right instance, no proof
 	if rec.checkAlive() {
@@ -66,12 +68,12 @@ func TestTheControlKeyGoesOnlyToAServerThatProvesIt(t *testing.T) {
 		t.Errorf("newLink to an impostor: err=%v, control key sent=%v", err, *sent)
 	}
 
-	sent = fakeServer(t, "another-key") // a server with a different key
+	sent = fakeServer(t, other) // a server with a different key
 	if _, err := rec.newLink(); err == nil || *sent {
 		t.Errorf("newLink to a server with another key: err=%v, sent=%v", err, *sent)
 	}
 
-	sent = fakeServer(t, "control-key") // the real one
+	sent = fakeServer(t, key) // the real one
 	if !rec.checkAlive() {
 		t.Fatal("the recorded server was not recognised")
 	}
@@ -100,14 +102,15 @@ func TestStopSignalsOnlyAProvenServer(t *testing.T) {
 	go func() { done <- child.Wait() }()
 	t.Cleanup(func() { _ = child.Process.Kill() })
 
+	key := testcred.Secret("control")
 	_ = fakeServer(t, "") // the impostor again
-	rec := &serveRecord{PID: child.Process.Pid, Addr: "127.0.0.1:7822", Instance: "inst", Control: "control-key"}
+	rec := &serveRecord{PID: child.Process.Pid, Addr: "127.0.0.1:7822", Instance: "inst", Control: key}
 	if err := rec.stop(); err == nil {
 		t.Error("stop went ahead against an unproven server")
 	}
 	select {
-	case <-done:
-		t.Fatal("stop signalled a process an impostor pointed at")
+	case err := <-done:
+		t.Fatalf("stop signalled a process an impostor pointed at (%v)", err)
 	case <-time.After(300 * time.Millisecond):
 	}
 }
@@ -132,8 +135,8 @@ func TestStopAllNeverSignalsAProcessThatIsNotAuthama(t *testing.T) {
 		t.Errorf("stopFound on a decoy pid: %v", err)
 	}
 	select {
-	case <-done:
-		t.Fatal("stop-all signalled a decoy process")
+	case err := <-done:
+		t.Fatalf("stop-all signalled a decoy process (%v)", err)
 	case <-time.After(300 * time.Millisecond):
 	}
 	// The lookup itself, where ps may run (a sandbox can refuse it; the

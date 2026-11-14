@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/sangehq/authama/src/internal/util/testcred"
 )
 
 // /healthz answers without a session, with the app and the instance id and
@@ -34,8 +36,9 @@ func TestHealthzSaysOnlyWhichInstanceThisIs(t *testing.T) {
 // anything else that took the port before it sends that key (review R-SEC-08).
 // The proof gives nothing away: it is keyed, and the challenge is the caller's.
 func TestHealthzProvesItHoldsTheControlKey(t *testing.T) {
+	key, other := testcred.Secret("control"), testcred.Secret("other")
 	p, _ := fixtureHome(t)
-	s, err := New(Options{Engine: AppEngine{P: p}, Token: testToken, Control: "control-key",
+	s, err := New(Options{Engine: AppEngine{P: p}, Token: testToken, Control: key,
 		AllowedHosts: AllowedHosts("127.0.0.1", 7822, nil), Instance: "inst-1"})
 	if err != nil {
 		t.Fatal(err)
@@ -44,10 +47,10 @@ func TestHealthzProvesItHoldsTheControlKey(t *testing.T) {
 	if err := json.Unmarshal(do(s, httptestGet("/healthz?challenge=abc123")).Body.Bytes(), &h); err != nil {
 		t.Fatal(err)
 	}
-	if h.Proof == "" || h.Proof != HealthProof("control-key", "abc123") {
+	if h.Proof == "" || h.Proof != HealthProof(key, "abc123") {
 		t.Errorf("proof = %q, want HealthProof(control, challenge)", h.Proof)
 	}
-	if h.Proof == HealthProof("another-key", "abc123") || h.Proof == HealthProof("control-key", "other") {
+	if h.Proof == HealthProof(other, "abc123") || h.Proof == HealthProof(key, "other") {
 		t.Error("the proof does not depend on both the key and the challenge")
 	}
 	if body := do(s, httptestGet("/healthz")).Body.String(); strings.Contains(body, "proof") {
