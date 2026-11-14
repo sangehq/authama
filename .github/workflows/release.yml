@@ -36,7 +36,7 @@ jobs:
       contents: write
       id-token: write
       attestations: write
-    uses: simtabi/.github/.github/workflows/go-release.yml@d648d8998f95a351001979f9c4527badca588bf1 # simtabi/.github main, with #28 (environment) to #30
+    uses: simtabi/.github/.github/workflows/go-release.yml@767e0c01251dbbfc695d03dfdd73db48733e852e # v1.0.0
     with:
       tag: ${{ inputs.tag || github.ref_name }}
       # The job runs under this repository's release environment, so each release is recorded as a

@@ -8,6 +8,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Go 1.27, golangci-lint v2.15.0 and the current go-notifykit.** The module now declares `go 1.27.0`
+  with `toolchain go1.27.4`, as sange and imprimatur do, and CI lints with golangci-lint v2.15.0; the dev
+  container defaults to Go 1.27. go-notifykit moves to the build sange uses, which drops the
+  `terminal-notifier` backend (macOS uses its helper app, else `osascript`).
+- **Desktop notifications replace rather than stack.** Each carries a group named after the event, so
+  the same event posted again replaces its banner. With no backend, the message now says to install
+  `notify-send` on Linux and to run `authama notify doctor` elsewhere, not `terminal-notifier`.
+- **CI skips draft pull requests and cancels superseded CodeQL runs.** Every CI and CodeQL job now
+  waits until a draft is marked ready (which starts a run), as sange and imprimatur already did, and
+  CodeQL cancels a pull request's earlier run when a new push supersedes it.
 - **`init --force` keeps a copy and asks first.** It reset `manifest.json`, `inventory.json` and `.env`
   to their defaults with no copy unless `--backup` was given (and `--backup` without `--force` was
   silently ignored), and never asked. It now copies them into the state home's `init-backup-<stamp>/`
@@ -24,8 +34,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   identity `com.simtabi.authama` (changing it resets the notification permission).
 
 - **A release runs under the `release` environment again.** `release.yml` passes
-  `environment: release` to the shared workflow, whose pin moves to simtabi/.github `d648d89`
-  (the newest, which takes an environment). Each release is recorded as a deployment, and the
+  `environment: release` to the shared workflow, pinned to simtabi/.github's `v1.0.0` (`767e0c0`,
+  which takes an environment), with the version as the comment so Dependabot can move it. Each release is recorded as a deployment, and the
   environment requires the owner's approval (added 2026-11-13), so a pushed tag publishes nothing
   until it is approved.
 
@@ -115,6 +125,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **The install scripts refuse a release with no `checksums.txt`.** `install.sh` and `install.ps1`
+  installed the download unverified, with a warning, when the checksum file was missing. They now
+  stop; `AUTHAMA_INSTALL_NO_VERIFY=1` is the explicit way past that, and CI proves both.
 - **A snapshot restores into `~/.ssh` only, with safe modes.** Restoring a snapshot extracted it into
   your home directory, so a member outside `.ssh/` (a `.zshrc`, say) was written there, and file
   modes came from the archive. An archive with any member outside `.ssh/` is now refused before

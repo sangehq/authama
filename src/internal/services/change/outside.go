@@ -271,7 +271,7 @@ func NotifyTest() Change {
 			if notifier.New(p, m).Test() {
 				_, _ = fmt.Fprintln(out, "sent a test desktop notification.")
 			} else {
-				_, _ = fmt.Fprintln(out, "no notification backend found (install notify-send / terminal-notifier).")
+				_, _ = fmt.Fprintln(out, "no notification backend found: on Linux install notify-send (libnotify); on macOS and Windows, `authama notify doctor` says what is missing.")
 			}
 			return nil
 		},

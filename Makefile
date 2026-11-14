@@ -30,8 +30,8 @@ export GONOSUMDB ?= github.com/sangehq/*,github.com/simtabi/*
 #   v0.1.0      the release. GoReleaser, the installers and `git describe` use
 #               it, and it is what a human reads.
 #   src/v0.1.0  the module alias. Go requires a subdirectory module's tags to be
-#               prefixed with the subdirectory, so `go install .../src@v0.1.0`
-#               resolves through this one and nothing else reads it.
+#               prefixed with the subdirectory, so the Go toolchain resolves
+#               `.../src` at v0.1.0 through this one and nothing else reads it.
 #
 # The split exists because OSS GoReleaser rejects a prefixed tag outright
 # ("current tag is not semver"), and monorepo.tag_prefix is a Pro feature. The
