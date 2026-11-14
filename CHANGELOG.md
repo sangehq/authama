@@ -32,6 +32,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Webhook changes made during a delivery stick, and an event is sent once.** A delivery read
+  `webhooks.json`, sent for up to minutes, then wrote back what it had read, so a webhook removed in
+  the meantime came back with its secret and a disable was undone; the server's loop and
+  `authama webhook deliver` running together sent the same event twice. Deliveries now take turns,
+  and each writes back only its own progress, into the file as it is then.
 - **The web UI restarts after its binary moved.** A server started from a checkout that was then
   moved (macOS keeps reporting the old path) ran a missing file on restart, after already telling the
   page it was restarting, so the page waited for good; the watcher never restarted from a removed

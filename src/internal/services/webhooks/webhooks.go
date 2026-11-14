@@ -41,6 +41,7 @@ import (
 
 	"github.com/sangehq/authama/src/internal/services/feed"
 	"github.com/sangehq/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/lock"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
@@ -93,6 +94,17 @@ func List(p paths.Paths) ([]Endpoint, error) {
 	return out, nil
 }
 
+// lockState holds webhooks.json for one read-modify-write: Add, Remove,
+// SetDisabled and the delivery's write-back each take it, briefly. Without it
+// a delivery that read the file before sending wrote it back afterwards and
+// undid a removal or a disable made meanwhile (review R-BUG-04).
+func lockState(p paths.Paths) (func(), error) {
+	if err := fs.EnsureDir(p.StateDir(), 0o700); err != nil {
+		return nil, err
+	}
+	return lock.Acquire(File(p) + ".lock")
+}
+
 func save(p paths.Paths, eps []Endpoint) error {
 	if err := fs.EnsureDir(p.StateDir(), 0o700); err != nil {
 		return err
@@ -114,6 +126,11 @@ func Add(p paths.Paths, name, rawURL string, events []string, allowPrivate bool,
 	if err := CheckURL(rawURL, allowPrivate); err != nil {
 		return Endpoint{}, err
 	}
+	release, err := lockState(p)
+	if err != nil {
+		return Endpoint{}, err
+	}
+	defer release()
 	eps, err := List(p)
 	if err != nil {
 		return Endpoint{}, err
@@ -148,6 +165,11 @@ func SetDisabled(p paths.Paths, name string, off bool) error {
 }
 
 func update(p paths.Paths, name string, f func([]Endpoint, int) []Endpoint) error {
+	release, err := lockState(p)
+	if err != nil {
+		return err
+	}
+	defer release()
 	eps, err := List(p)
 	if err != nil {
 		return err
@@ -349,6 +371,21 @@ type Result struct {
 // stopping at its first failure: it is tried again after a backoff, from the
 // same event, so an endpoint sees each event once and in order.
 func Deliver(ctx context.Context, p paths.Paths, client *http.Client, now time.Time) ([]Result, error) {
+	// One delivery at a time: the server's loop and `authama webhook deliver`
+	// each sent an event the other had already sent. The second now waits,
+	// then finds the cursor moved on and nothing left to send.
+	if err := fs.EnsureDir(p.StateDir(), 0o700); err != nil {
+		return nil, err
+	}
+	releaseDelivery, err := lock.Acquire(File(p) + ".deliver.lock")
+	if err != nil {
+		return nil, err
+	}
+	defer releaseDelivery()
+
+	// The endpoints as they are now. Sends happen without the state lock held
+	// (they can take minutes), so what each one learns is merged back below
+	// into the file as it is then, never written over it.
 	eps, err := List(p)
 	if err != nil {
 		return nil, err
@@ -392,9 +429,40 @@ func Deliver(ctx context.Context, p paths.Paths, client *http.Client, now time.T
 		if res.Err == nil {
 			ep.Cursor = next
 		}
+		if err := mergeDelivery(p, *ep); err != nil {
+			return out, err
+		}
 		out = append(out, res)
 	}
-	return out, save(p, eps)
+	return out, nil
+}
+
+// mergeDelivery writes what one endpoint's delivery learned into the file as
+// it is now. An endpoint removed meanwhile, or removed and added again under
+// the same name (a new secret), is left as it is. A disable made by hand
+// meanwhile stands; delivery only ever turns one off (a 410, too many
+// failures), never back on.
+func mergeDelivery(p paths.Paths, d Endpoint) error {
+	release, err := lockState(p)
+	if err != nil {
+		return err
+	}
+	defer release()
+	eps, err := List(p)
+	if err != nil {
+		return err
+	}
+	i := slices.IndexFunc(eps, func(e Endpoint) bool { return e.Name == d.Name && e.Secret == d.Secret })
+	if i < 0 {
+		return nil
+	}
+	cur := &eps[i]
+	cur.Cursor, cur.Failures, cur.NextAttempt = d.Cursor, d.Failures, d.NextAttempt
+	cur.LastStatus, cur.LastError, cur.LastSuccess = d.LastStatus, d.LastError, d.LastSuccess
+	if d.Disabled && !cur.Disabled {
+		cur.Disabled, cur.DisabledWhy = true, d.DisabledWhy
+	}
+	return save(p, eps)
 }
 
 func fail(ep *Endpoint, status int, err error, now time.Time) {
