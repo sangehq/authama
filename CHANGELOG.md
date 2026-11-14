@@ -32,6 +32,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Undoing a refused batch rewrites the manifest atomically.** When a batch that created a profile
+  failed, the manifest was put back with an in-place write, which an interruption could leave
+  half-written. It is now written by rename, like every other manifest write, and a guard test fails
+  on any new in-place truncating write outside a short, reasoned list.
 - **A snapshot that fails part-way leaves nothing behind.** It was written in place, so a failure
   left a broken archive that was listed as a restore point and counted against retention. It is now
   written to a temporary name, synced, and renamed into place.
