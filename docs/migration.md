@@ -131,7 +131,7 @@ Nothing you have stops working.
 | `vm` ProxyCommand | `sshmgr vm proxy …` | `authama ssh config render` points it at `authama`; run it before removing an old `sshmgr` |
 | Repository and Go module | `github.com/simtabi/ssh-manager`, module `github.com/simtabi/ssh-manager/src/v3` | `github.com/sangehq/authama`, module `github.com/sangehq/authama/src` (v3.6.1 alone was published as `.../authama/src/v3`). GitHub redirects the old repository URLs, so old clones and the old `install.sh`/`install.ps1` URLs keep working |
 | Version | 3.6.1 | **0.1.0**: authama restarted its version numbers. The 3.x tags and GitHub releases were removed; their history is in the [CHANGELOG](../CHANGELOG.md#pre-010-history-formerly-ssh-manager-1x361-and-auth-token-manager-0x). A package manager may treat 0.1.0 as older than 3.6.x; see below |
-| Install | `install.sh`, `install.ps1`, release archives | binaries ship on the GitHub release only, from v0.1.6 on, or authama is built from source ([installation](installation.md)). The installers, archives and packages of the withdrawn 0.1.x builds carried both binaries until the `sshmgr` alias was [removed](#removing-the-sshmgr-alias); those channels are frozen ([earlier binary releases](installation.md#earlier-binary-releases)) |
+| Install | `install.sh`, `install.ps1`, release archives | binaries ship on the GitHub release only, from v0.1.0 (2026-11-14) on, or authama is built from source ([installation](installation.md)). The installers, archives and packages of the withdrawn 0.1.x builds carried both binaries until the `sshmgr` alias was [removed](#removing-the-sshmgr-alias); those channels are frozen ([earlier binary releases](installation.md#earlier-binary-releases)) |
 
 Because 0.1.0 sorts below 3.6.x, a package manager that only moves forward
 may leave you on 3.6.x. Remove that install, then build authama from source
@@ -143,7 +143,7 @@ scoop uninstall authama sshmgr                     # Scoop
 authama version                                     # after `make install`: the build you made
 ```
 
-v0.1.6, the first release since the history restarted, is on the GitHub release only. The Homebrew cask
+v0.1.0 (2026-11-14), the first release under `sangehq/authama`, is on the GitHub release only. The Homebrew cask
 and the Scoop manifest were withdrawn with the 0.1.x assets they named, and stay frozen.
 
 Behaviour changes to know about:

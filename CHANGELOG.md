@@ -24,6 +24,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and the web UI's footer and About page link `github.com/sangehq/authama/tree/main/docs` until it is
   live; `brand.DocsURL` is the one place to change, and a test fails any other source naming the site
   (R-DOC-03).
+## [0.1.0] - 2026-11-14
+
+The first release under `sangehq/authama` and the module path `github.com/sangehq/authama/src`. The
+version numbers restart here (owner, 2026-11-14): the earlier v0.1.0, v0.1.4, v0.1.5 and v0.1.6 tags and
+the v0.1.6 GitHub release were withdrawn, and their notes stay below as history. Go's module proxy still
+holds the old `src/v0.1.0` and `src/v0.1.6`, whose `go.mod` names `github.com/simtabi/authama/src`, so
+nothing can import them; binaries ship on the GitHub release only.
 
 ### Changed
 
@@ -223,7 +230,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   release workflow signs, and without the flag the check fails against v0.1.6. A test fails any doc
   that shows the command without it. The pages no longer say that no release has been published.
 
-## [0.1.6] - 2026-11-13
+## Withdrawn 0.1.6 - 2026-11-13
 
 The first release since the history restarted at 0.1.0, and the first built by the shared release
 workflow: binaries, archives, deb/rpm/apk packages, SBOMs, the source tarball, `checksums.txt` and a
@@ -816,7 +823,7 @@ no CHANGELOG section for them, the release refused to publish either, and a tag 
 - Installation covers checking what is installed, restarting the web UI after an update (with the
   commands to stop a server on the usual ports), and uninstalling, including what is kept.
 
-## [0.1.0] - 2026-11-06
+## Withdrawn 0.1.0 - 2026-11-06
 
 The first release of authama: SSH keys and config, and package-manager and git auth tokens, from one manifest, at the command line and in a local web UI. It brings together what earlier builds of this history shipped as 0.1.0 to 0.1.4, and the work after them.
 
@@ -2544,6 +2551,5 @@ generalised beyond Composer, packaged for PyPI, and given an interactive UI.
 ##### Security
 - Owner-only hardening now applies on Windows (ACL), not just POSIX `chmod`.
 
-[Unreleased]: https://github.com/simtabi/authama/compare/v0.1.6...HEAD
-[0.1.6]: https://github.com/simtabi/authama/releases/tag/v0.1.6
-[0.1.0]: https://github.com/simtabi/authama/releases/tag/v0.1.0
+[Unreleased]: https://github.com/sangehq/authama/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/sangehq/authama/releases/tag/v0.1.0

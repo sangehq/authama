@@ -3,12 +3,12 @@
 Binaries ship on the GitHub release, and nowhere else. A pushed `vX.Y.Z` tag, or a
 dispatch naming one, runs `release.yml`, which builds a static binary per OS/arch and
 attaches them, with archives, Linux packages, checksums and a provenance attestation,
-to that tag's GitHub Release. v0.1.6 is the first release since the history restarted;
+to that tag's GitHub Release. v0.1.0 (2026-11-14) is the first release under `sangehq/authama`;
 users who prefer can still build from source ([installation](installation.md#install)).
 
 ```bash
-git push origin v0.1.7                                            # builds and publishes v0.1.7
-gh workflow run release.yml --repo sangehq/authama -f tag=v0.1.7   # the same, for a tag already pushed
+git push origin v0.1.1                                            # builds and publishes v0.1.1
+gh workflow run release.yml --repo sangehq/authama -f tag=v0.1.1   # the same, for a tag already pushed
 ```
 
 A pushed tag publishes, and tags are final, so push one only for code that is ready.
@@ -19,8 +19,12 @@ On 2026-11-13 the repository moved from `simtabi/authama` to `sangehq/authama`, 
 module path from `github.com/simtabi/authama/src` to `github.com/sangehq/authama/src`.
 GitHub redirects the old repository URLs. The old module path's versions stay cached by
 the Go module proxy under that path, and nothing points at them; no doc offers either
-path through the Go toolchain. The new path has no published version, so `src/go.mod`
-retracts nothing.
+path through the Go toolchain.
+
+The new path is not empty in the proxy. GitHub redirected `sangehq/authama` to the old tags, so
+the proxy cached `github.com/sangehq/authama/src` at v0.1.0 (`282d76c`) and v0.1.6 (`6c56209`),
+and both copies' `go.mod` declare `github.com/simtabi/authama/src`. Go refuses a module whose
+`go.mod` names another path, so neither can be imported, and the cache cannot be cleared.
 
 Under the old path: v0.1.1 to v0.1.3 were retracted; v0.1.4 and v0.1.5 are tags with no
 release, both pushed on `3bc0a81` before the commit that added their CHANGELOG section
@@ -29,8 +33,12 @@ merge commit that added its section (`6c56209`). That order holds for every rele
 merge the CHANGELOG section first, then tag that merge commit, never `main` before it
 merges.
 
-The versions restart at v0.1.0 under the new module path (owner, 2026-11-13), once the
-old tags are cleared.
+The versions restarted at v0.1.0 under the new module path on 2026-11-14 (owner, 2026-11-13
+and 2026-11-14). Every earlier version tag (v0.1.0, v0.1.4, v0.1.5, v0.1.6, `src/v0.1.0`,
+`src/v0.1.6`) and the v0.1.6 GitHub release were removed, and one v0.1.0 was tagged on the
+merge commit that added its CHANGELOG section. The proxy keeps its old v0.1.0 and v0.1.6
+entries, so `@latest` through the proxy still names v0.1.6 and a proxy fetch of v0.1.0 gets
+the old copy; the next release is v0.1.1, and nothing here is offered through the Go toolchain.
 
 Under the old path, v0.1.0 was kept as a release, not retracted. The proxy's copy of it is the
 first commit tagged `src/v0.1.0` (`f21ef51`), which is not the commit the tag
@@ -86,11 +94,11 @@ publishing block (`TestGoReleaserPublishesOnlyToTheGitHubRelease`); and no doc o
 ## Cut a release
 
 1. Update `CHANGELOG.md` (move Unreleased into a dated, semver-tagged section).
-2. Tag and push: `git tag -a v0.1.7 -m v0.1.7 && git push origin v0.1.7`. The push
+2. Tag and push: `git tag -a v0.1.1 -m v0.1.1 && git push origin v0.1.1`. The push
    starts the release. A tag with a pre-release suffix (`-rc.1`) is published as a
    GitHub pre-release and needs no CHANGELOG section; test with one before a final tag.
 3. To build a tag that is already pushed (a first release of an older tag, or a
-   re-run after a failure): `gh workflow run release.yml --repo sangehq/authama -f tag=v0.1.7`.
+   re-run after a failure): `gh workflow run release.yml --repo sangehq/authama -f tag=v0.1.1`.
 4. The run publishes the per-OS/arch binaries and archives, the deb/rpm/apk packages,
    per-archive SBOMs, the source tarball, the two install scripts, `checksums.txt`, and
    a signed build-provenance attestation. Verify any downloaded artifact with
