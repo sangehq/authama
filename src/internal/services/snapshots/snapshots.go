@@ -151,17 +151,28 @@ func Snapshot(sshDir, snapshotsDir string, retain int, stamp string) (string, er
 		stamp = time.Now().Format("20060102-150405")
 	}
 	dest := uniquePath(filepath.Join(snapshotsDir, "ssh-"+stamp+".tar.gz"))
-	// Owner-only from creation, so there is no window where the archive is
-	// group- or world-readable mid-write.
-	f, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	// Written to a hidden temporary name and renamed into place once synced,
+	// so a snapshot that fails part-way leaves nothing to be listed as a
+	// restore point. CreateTemp makes it owner-only from creation, so there is
+	// no window where the archive is group- or world-readable mid-write.
+	f, err := os.CreateTemp(snapshotsDir, "."+filepath.Base(dest)+".*.tmp")
 	if err != nil {
 		return "", err
 	}
+	tmp := f.Name()
+	defer func() { _ = os.Remove(tmp) }() // a no-op once renamed
 	if err := writeTarGz(f, sshDir); err != nil {
 		_ = f.Close()
 		return "", err
 	}
+	if err := f.Sync(); err != nil {
+		_ = f.Close()
+		return "", err
+	}
 	if err := f.Close(); err != nil {
+		return "", err
+	}
+	if err := os.Rename(tmp, dest); err != nil {
 		return "", err
 	}
 	_ = os.Chmod(dest, 0o600)
@@ -271,7 +282,7 @@ func restore(tarball, sshDir, devRoot string) ([]string, error) {
 		return nil, err
 	}
 	parent := filepath.Dir(sshDir)
-	skipped, err := extractTarGz(tarball, parent, foreignPub(parent))
+	skipped, err := extractTarGz(tarball, parent, filepath.Base(sshDir), foreignPub(parent))
 	if err != nil {
 		return nil, fmt.Errorf("snapshot is corrupt or not a valid archive: %s: %w", tarball, err)
 	}
@@ -343,7 +354,10 @@ func foreignPub(destParent string) func(name string, data []byte, archived map[s
 // extractTarGz lays tarball over destParent. A regular member for which skip
 // returns true is not written, and its name is returned. skip is given the set
 // of regular members, so it can tell which files the archive carries together.
-func extractTarGz(tarball, destParent string, skip func(name string, data []byte, archived map[string]bool) bool) ([]string, error) {
+// within is the one directory under destParent every member must be in (the
+// .ssh the snapshot was taken of): extraction is rooted at its parent, which
+// is the home directory, so a member named .zshrc would otherwise land there.
+func extractTarGz(tarball, destParent, within string, skip func(name string, data []byte, archived map[string]bool) bool) ([]string, error) {
 	f, err := os.Open(tarball)
 	if err != nil {
 		return nil, err
@@ -377,6 +391,9 @@ func extractTarGz(tarball, destParent string, skip func(name string, data []byte
 		name := path.Clean(filepath.ToSlash(hdr.Name))
 		if path.IsAbs(name) || name == ".." || strings.HasPrefix(name, "../") {
 			return nil, fmt.Errorf("refusing path traversal in archive: %s", hdr.Name)
+		}
+		if name != within && !strings.HasPrefix(name, within+"/") {
+			return nil, fmt.Errorf("refusing a member outside %s/ in archive: %s", within, hdr.Name)
 		}
 		var data []byte
 		if hdr.Typeflag == tar.TypeReg {
@@ -417,10 +434,19 @@ func extractTarGz(tarball, destParent string, skip func(name string, data []byte
 
 	var skipped []string
 	for _, m := range members {
-		mode := os.FileMode(m.hdr.Mode).Perm()
+		// The archive's modes are capped, not trusted: directories owner-only,
+		// files at most owner-writable and world-readable (ssh refuses a
+		// config others can write).
+		mode := os.FileMode(m.hdr.Mode).Perm() & 0o644
+		if mode == 0 {
+			mode = 0o600
+		}
 		switch m.hdr.Typeflag {
 		case tar.TypeDir:
-			if err := root.MkdirAll(m.name, mode); err != nil {
+			if err := root.MkdirAll(m.name, 0o700); err != nil {
+				return nil, err
+			}
+			if err := root.Chmod(m.name, 0o700); err != nil {
 				return nil, err
 			}
 		case tar.TypeReg:

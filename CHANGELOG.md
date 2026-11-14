@@ -32,6 +32,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A snapshot that fails part-way leaves nothing behind.** It was written in place, so a failure
+  left a broken archive that was listed as a restore point and counted against retention. It is now
+  written to a temporary name, synced, and renamed into place.
 - **Webhook changes made during a delivery stick, and an event is sent once.** A delivery read
   `webhooks.json`, sent for up to minutes, then wrote back what it had read, so a webhook removed in
   the meantime came back with its secret and a disable was undone; the server's loop and
@@ -53,6 +56,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **A snapshot restores into `~/.ssh` only, with safe modes.** Restoring a snapshot extracted it into
+  your home directory, so a member outside `.ssh/` (a `.zshrc`, say) was written there, and file
+  modes came from the archive. An archive with any member outside `.ssh/` is now refused before
+  anything is written, directories come back owner-only, and files at most `0644`.
 - **Adopting a key never writes through a symlink.** `ssh import` checked the destination with a call
   that follows links, so a dangling symlink there read as empty and the private key was written to
   wherever it pointed. Anything at the path now counts as occupied, the key is created exclusively,
