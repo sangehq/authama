@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/core/providers"
-	"github.com/simtabi/authama/src/internal/util/netcheck"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/providers"
+	"github.com/sangehq/authama/src/internal/util/netcheck"
 )
 
 // HostCheck is what a dry run found for one host a key is deployed to.

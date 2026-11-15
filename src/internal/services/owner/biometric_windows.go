@@ -11,7 +11,7 @@ import (
 	"time"
 	"unicode/utf16"
 
-	"github.com/simtabi/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/envnames"
 )
 
 // helloScript asks Windows Hello through WinRT's UserConsentVerifier, from

@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/services/dataset"
+	"github.com/sangehq/authama/src/internal/services/dataset"
 )
 
 // Version is the Selection shape this package reads. A saved selection of

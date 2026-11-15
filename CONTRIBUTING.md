@@ -22,14 +22,16 @@ around it.
 ## Dev setup
 
 ```sh
-git clone https://github.com/simtabi/authama && cd authama
-make build               # -> build/<your-os>/authama, e.g. build/macos/authama (empties build/ first)
-make install             # build, then copy it to ~/.local/bin (BINDIR=... for elsewhere)
-make uninstall           # remove that binary again; config, state and keys stay
+git clone https://github.com/sangehq/authama && cd authama
+make build               # -> build/<your-os>/authama, e.g. build/macos/authama, replaced in one step
+make link                # build, then link ~/.local/bin/authama to it: PATH follows every build
+make install             # or: build, then copy it to ~/.local/bin (BINDIR=... for elsewhere)
+make uninstall           # remove that binary or link again; config, state and keys stay
+make clean               # empty build/ (keeping targets.txt); build no longer does this first
 make doctor              # verify the environment, using the binary you just built
 ```
 
-There is no bootstrap step: Go 1.26 is the only prerequisite. authama's config
+There is no bootstrap step: Go 1.27 is the only prerequisite. authama's config
 home is `~/.config/authama` and its state home `~/.local/state/authama`; set
 `AUTHAMA_CONFIG_DIR="$PWD/.devhome"` to sandbox a throwaway one (state included)
 while developing, or use `--dev-root` to sandbox `~/.ssh` as well.
@@ -118,7 +120,7 @@ Everything the repository *presents* stays at the top: `README.md`, `LICENSE`,
 | `src/` | `go.mod`, `cmd/`, `internal/`, `config/`, `scripts/`, `.goreleaser.yaml`, `.golangci.yml` |
 | repo root | the README and friends, `docs/`, `.github/`, `Makefile`, `build/` |
 
-Import paths start with the module path, `github.com/simtabi/authama/src/internal/cli`;
+Import paths start with the module path, `github.com/sangehq/authama/src/internal/cli`;
 versions restarted at v0.1.0, so there is no major-version suffix. Package names in
 this document are written relative to the module, so `internal/cli` means
 `src/internal/cli` on disk.
@@ -198,7 +200,7 @@ removing one that the baseline lists means the test fails, which is the point.
 - Pull requests test on Linux and Windows, and run `darwin cross-check`, which
   builds and vets every package for macOS (arm64 and amd64) on Linux. The full
   macOS test runs on the weekly schedule and on `workflow_dispatch`
-  (`gh workflow run ci.yml --repo simtabi/authama --ref <branch>`), because
+  (`gh workflow run ci.yml --repo sangehq/authama --ref <branch>`), because
   GitHub's macOS runners went unscheduled for days and a required macOS leg
   blocked every merge. A `test (macos-latest)` leg that fails after about 15
   minutes with no step run never got a runner; `requeue.yml` re-runs it once.

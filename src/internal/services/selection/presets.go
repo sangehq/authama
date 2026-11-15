@@ -3,7 +3,7 @@ package selection
 import (
 	"sort"
 
-	"github.com/simtabi/authama/src/internal/services/dataset"
+	"github.com/sangehq/authama/src/internal/services/dataset"
 )
 
 // Presets are the built-in selections, one per list the pages download, by

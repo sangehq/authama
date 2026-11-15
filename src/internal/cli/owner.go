@@ -9,12 +9,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/services/mutation"
-	"github.com/simtabi/authama/src/internal/services/owner"
-	"github.com/simtabi/authama/src/internal/util/log"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/mutation"
+	"github.com/sangehq/authama/src/internal/services/owner"
+	"github.com/sangehq/authama/src/internal/util/log"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // Audit events for the owner binding. None carries a PIN or the key.
@@ -195,14 +195,22 @@ func newOwnerForgetCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if cfg == nil {
+			switch {
+			case cfg == nil && owner.Orphaned(p):
+				// owner.json is gone, so there is no PIN to ask for: the
+				// confirmation is the only gate, and it never defaults to yes.
+				if err := confirmChange(c, "owner.json is missing, but the seal and the sealing key are still here. Finish unbinding: remove them. The state files are kept.", yes); err != nil {
+					return err
+				}
+			case cfg == nil:
 				return owner.ErrNotSetUp
-			}
-			if err := requireOwner(c, p, "unbinding the home"); err != nil {
-				return err
-			}
-			if err := confirmChange(c, "The sealing key, the seal and the PIN will be removed. The state files are kept.", yes); err != nil {
-				return err
+			default:
+				if err := requireOwner(c, p, "unbinding the home"); err != nil {
+					return err
+				}
+				if err := confirmChange(c, "The sealing key, the seal and the PIN will be removed. The state files are kept.", yes); err != nil {
+					return err
+				}
 			}
 			mutation.LockForMutation(p)
 			if err := owner.Forget(p); err != nil {

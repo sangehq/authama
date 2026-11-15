@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/services/checklist"
+	"github.com/sangehq/authama/src/internal/services/checklist"
 )
 
 // newChecklistCmd is `authama checklist`: for every key and token, where it is

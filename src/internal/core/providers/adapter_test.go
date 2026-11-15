@@ -172,3 +172,15 @@ func TestACatalogEntryAlwaysResolvesToAnAdapterThatAnswers(t *testing.T) {
 		}
 	}
 }
+
+// A host with no user is reached as just its hostname, so ssh uses the user
+// its config or the local account gives; "@host" made ssh print its usage
+// and every deploy, check and removal fail (review R-BUG-10).
+func TestSSHDestWithoutAUserIsTheHostname(t *testing.T) {
+	if got := (Target{Hostname: "server.example"}).SSHDest(); got != "server.example" {
+		t.Errorf("SSHDest() = %q, want the hostname alone", got)
+	}
+	if got := (Target{User: "deploy", Hostname: "server.example"}).SSHDest(); got != "deploy@server.example" {
+		t.Errorf("SSHDest() = %q", got)
+	}
+}

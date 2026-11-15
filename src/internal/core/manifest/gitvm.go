@@ -206,7 +206,11 @@ func checkVM(profile string, h Host) error {
 		return fmt.Errorf("%s/%s: vm.name is empty", profile, h.Alias)
 	}
 	// Names like "Ubuntu 24.04" carry spaces. The name only ever reaches the hypervisor CLI as one
-	// argv element, never a shell, and the rendered ProxyCommand names the alias, not the VM.
+	// argv element, never a shell, and the rendered ProxyCommand names the alias, not the VM. That
+	// element would still be read as an option if it began with a dash.
+	if strings.HasPrefix(h.VM.Name, "-") {
+		return fmt.Errorf("%s/%s: vm.name %q must not start with '-'", profile, h.Alias, h.VM.Name)
+	}
 	return rejectControl("vm.name", h.VM.Name)
 }
 

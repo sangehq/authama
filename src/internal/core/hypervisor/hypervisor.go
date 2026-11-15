@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/manifest"
 )
 
 // VM is one machine a hypervisor reports.

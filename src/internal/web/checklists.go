@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/services/checklist"
+	"github.com/sangehq/authama/src/internal/services/checklist"
 )
 
 // checklistPages are the revocation checklists: every key's and token's on

@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/core/key"
-	"github.com/simtabi/authama/src/internal/core/naming"
+	"github.com/sangehq/authama/src/internal/core/key"
+	"github.com/sangehq/authama/src/internal/core/naming"
 )
 
 // Naming is defaults.naming: how servers and their keys are named. Every

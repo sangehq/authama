@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/keysvc"
-	"github.com/simtabi/authama/src/internal/services/snapshots"
-	"github.com/simtabi/authama/src/internal/util/perms"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/keysvc"
+	"github.com/sangehq/authama/src/internal/services/snapshots"
+	"github.com/sangehq/authama/src/internal/util/perms"
 )
 
 // Groups a key's steps are shown under.
@@ -50,8 +50,15 @@ func (s *Service) facts() (*keyFacts, error) {
 		return nil, err
 	}
 	f := &keyFacts{m: m, inv: inv, today: s.Now().Format("2006-01-02")}
-	f.revoked, _ = inventory.LoadRevocations(inventory.RevokedPath(s.P.Inventory()))
-	f.retired, _ = inventory.LoadRetirements(inventory.RetiredPath(s.P.Inventory()))
+	// A record that does not parse is an error: read as empty, a revoked key
+	// would be listed as in use with nothing left to do. A missing file is
+	// no records, as the loaders say.
+	if f.revoked, err = inventory.LoadRevocations(inventory.RevokedPath(s.P.Inventory())); err != nil {
+		return nil, err
+	}
+	if f.retired, err = inventory.LoadRetirements(inventory.RetiredPath(s.P.Inventory())); err != nil {
+		return nil, err
+	}
 	if s.AgentFingerprints != nil {
 		f.agent, f.agentOK = s.AgentFingerprints()
 	}

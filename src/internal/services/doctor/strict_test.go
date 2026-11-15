@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/services/preflight"
+	"github.com/sangehq/authama/src/internal/services/preflight"
 )
 
 // --strict turns every warning into a failure, and the verdict says so rather

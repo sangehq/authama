@@ -12,21 +12,29 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/util/envnames"
-	"github.com/simtabi/authama/src/internal/web"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/web"
 )
 
 // serveHandoff is what a restarting server passes the one replacing it: the
 // sign-in token, so a signed-in page signs back in with the address it has;
 // the port, so the address stays the same; whether to keep the home's
 // record; and the old instance, to wait until it stops answering before
-// listening. It travels in one environment variable that the new server
-// clears as soon as it reads it.
+// listening. It travels in an owner-only file named by one environment
+// variable; the new server reads and removes the file, and clears the
+// variable, as soon as it starts.
 type serveHandoff struct {
-	Token string `json:"token"`
+	// Token was the old server's first printed sign-in token.
+	//
+	// Deprecated: since the 2026-11-13 review (R-SEC-05) a restart mints a
+	// fresh token (serveTokens) and an unused old one travels in Links, so
+	// nothing reads this; it is no longer written either. Kept so a handoff
+	// written by an older build still decodes. Remove no earlier than v0.2.0.
+	Token string `json:"token,omitempty"`
 	// Control is the key for new sign-in links, kept so the record stays valid.
 	Control  string `json:"control,omitempty"`
 	Port     int    `json:"port"`
@@ -48,11 +56,51 @@ func takeHandoff() *serveHandoff {
 		return nil
 	}
 	_ = os.Unsetenv(envnames.ServeHandoff)
+	// This build passes a file's name; an older one passed the JSON itself.
+	if path, ok := strings.CutPrefix(v, handoffFilePrefix); ok {
+		b, err := os.ReadFile(path) //nolint:gosec // the file our own predecessor wrote
+		_ = os.Remove(path)
+		if err != nil {
+			return nil
+		}
+		v = string(b)
+	}
 	var h serveHandoff
-	if json.Unmarshal([]byte(v), &h) != nil || h.Token == "" || h.Port <= 0 {
+	// A handoff carries a control key (this build) or a token (an older
+	// one); one with neither, or no port, is not a handoff.
+	if json.Unmarshal([]byte(v), &h) != nil || (h.Control == "" && h.Token == "") || h.Port <= 0 {
 		return nil
 	}
 	return &h
+}
+
+// handoffFilePrefix marks a handoff passed as a file rather than inline.
+const handoffFilePrefix = "file:"
+
+// handoffEnv writes h to an owner-only temporary file and returns the
+// environment entry naming it. The handoff holds the control key, the
+// sessions and their form tokens; inline in the environment they stayed
+// readable in /proc/<pid>/environ for the new server's whole life (review
+// R-SEC-21). The new server reads the file once and removes it.
+func handoffEnv(h serveHandoff) (string, error) {
+	b, err := json.Marshal(h)
+	if err != nil {
+		return "", err
+	}
+	f, err := os.CreateTemp("", "authama-handoff-*.json") // created 0600
+	if err != nil {
+		return "", err
+	}
+	if _, err := f.Write(b); err != nil {
+		_ = f.Close()
+		_ = os.Remove(f.Name())
+		return "", err
+	}
+	if err := f.Close(); err != nil {
+		_ = os.Remove(f.Name())
+		return "", err
+	}
+	return envnames.ServeHandoff + "=" + handoffFilePrefix + f.Name(), nil
 }
 
 // waitGone waits until the old server stops answering as itself, so the
@@ -75,12 +123,9 @@ func relaunch(h serveHandoff, state func(*serveHandoff), stop func()) func() err
 		if state != nil {
 			state(&h)
 		}
-		exe, err := os.Executable()
+		exe, err := ownRestartExecutable()
 		if err != nil {
 			return err
-		}
-		if real, err := filepath.EvalSymlinks(exe); err == nil {
-			exe = real
 		}
 		// The same command line, as `serve` (bare `authama` serves too, but
 		// takes no serve flags), without --restart (the old server is the one
@@ -93,12 +138,12 @@ func relaunch(h serveHandoff, state func(*serveHandoff), stop func()) func() err
 		if !slices.Contains(args, "--no-open") {
 			args = append(args, "--no-open")
 		}
-		b, err := json.Marshal(h)
+		entry, err := handoffEnv(h)
 		if err != nil {
 			return err
 		}
 		cmd := exec.Command(exe, args...) //nolint:gosec // this program's own binary, relaunched with its own arguments
-		cmd.Env = append(os.Environ(), envnames.ServeHandoff+"="+string(b))
+		cmd.Env = append(os.Environ(), entry)
 		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 		if err := cmd.Start(); err != nil {
 			return err
@@ -159,6 +204,9 @@ func stopFound(f foundServer, basePath string) error {
 	}
 	if f.PID == os.Getpid() {
 		return errors.New("it is this process")
+	}
+	if ok, name := isAuthamaProcess(f.PID); !ok {
+		return fmt.Errorf("pid %d is not an authama process (%s); nothing was signalled - stop the web UI at %s where it runs", f.PID, name, f.Addr)
 	}
 	r := &serveRecord{PID: f.PID, Addr: f.Addr, BasePath: basePath, Instance: f.Instance}
 	if !r.checkAlive() {
@@ -247,4 +295,47 @@ func handoffSessions(h *serveHandoff) []web.SessionState {
 		return nil
 	}
 	return h.Sessions
+}
+
+// serveTokens is a launch's first sign-in token and its control key. Both are
+// fresh, except that a restarted server keeps the control key so the record a
+// later launch reads stays valid. The old printed token is never reused: if
+// it was unused it is still among the handoff's Links, and if it was used,
+// re-arming it would let the address in a browser's history sign in again.
+func serveTokens(h *serveHandoff) (token, control string) {
+	token, control = web.NewToken(), web.NewToken()
+	if h != nil && h.Control != "" {
+		control = h.Control
+	}
+	return token, control
+}
+
+// restartExecutable is the binary a restart runs: exe, this process's own
+// path, while a file is there; otherwise the authama lookPath resolves, for a
+// server started from a checkout that has since moved (macOS keeps reporting
+// the old path); otherwise the reason there is nothing to run.
+func restartExecutable(exe string, lookPath func(string) (string, error)) (string, error) {
+	if fi, err := os.Stat(exe); err == nil && !fi.IsDir() {
+		return exe, nil
+	}
+	found, err := lookPath(brand.Command)
+	if err != nil {
+		return "", fmt.Errorf("the binary this server started from (%s) is gone, and no %s is on PATH: start the web UI again from where authama is now", exe, brand.Command)
+	}
+	if real, err := filepath.EvalSymlinks(found); err == nil {
+		found = real
+	}
+	return found, nil
+}
+
+// ownRestartExecutable is restartExecutable for this process.
+func ownRestartExecutable() (string, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	if real, err := filepath.EvalSymlinks(exe); err == nil {
+		exe = real
+	}
+	return restartExecutable(exe, exec.LookPath)
 }

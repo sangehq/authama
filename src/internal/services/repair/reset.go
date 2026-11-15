@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/owner"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/services/owner"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // ResetPlan is what a factory reset would do, for the person to read first.

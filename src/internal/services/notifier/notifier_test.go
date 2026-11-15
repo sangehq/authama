@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 func ptr(s string) *string { return &s }
@@ -150,12 +150,12 @@ func stubBackend(t *testing.T) string {
 	t.Helper()
 	var name string
 	switch runtime.GOOS {
-	case "darwin":
-		name = "terminal-notifier"
 	case "linux":
 		name = "notify-send"
 	default:
-		t.Skip("no scriptable backend to stand in for on " + runtime.GOOS)
+		// macOS: go-notifykit dropped terminal-notifier and runs
+		// /usr/bin/osascript by absolute path, so nothing on PATH stands in.
+		t.Skip("no stubbable backend on " + runtime.GOOS)
 	}
 	t.Setenv("NOTIFYKIT_DESKTOP", "1")
 	t.Setenv("NOTIFYKIT_BACKEND", name)
@@ -179,7 +179,7 @@ func noBackend(t *testing.T) {
 	backend := "notify-send"
 	switch runtime.GOOS {
 	case "darwin":
-		backend = "terminal-notifier"
+		backend = "none" // go-notifykit's own "deliver nothing"
 	case "windows":
 		backend = "powershell"
 	}

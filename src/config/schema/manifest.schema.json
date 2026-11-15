@@ -418,6 +418,32 @@
           }
         }
       }
+    },
+    "reserved_keys": {
+      "type": "object",
+      "description": "Loose ~/.ssh keys kept on purpose, by file name (authama ssh key reserve).",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "for": {
+            "type": "string",
+            "description": "What the key is kept for (free text)."
+          },
+          "note": {
+            "type": "string",
+            "description": "Anything else worth remembering about it."
+          },
+          "fingerprint": {
+            "type": "string",
+            "description": "The public key's SHA256 fingerprint when it was reserved."
+          },
+          "since": {
+            "type": "string",
+            "description": "The day it was reserved (YYYY-MM-DD)."
+          }
+        }
+      }
     }
   },
   "additionalProperties": false

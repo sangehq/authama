@@ -10,12 +10,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/services/change"
-	"github.com/simtabi/authama/src/internal/services/settings"
-	"github.com/simtabi/authama/src/internal/util/envnames"
-	"github.com/simtabi/authama/src/internal/util/paths"
-	"github.com/simtabi/authama/src/internal/web"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/services/change"
+	"github.com/sangehq/authama/src/internal/services/settings"
+	"github.com/sangehq/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/web"
 )
 
 // settingsGroup is the user-settings command group. It is not `config`: that
@@ -208,6 +208,11 @@ func newSettingsShowCmd() *cobra.Command {
 				return nil
 			}
 			b, err := os.ReadFile(p.SettingsFile())
+			if errors.Is(err, os.ErrNotExist) && jsonOut {
+				// No file is no settings: an empty object a script can parse.
+				_, _ = fmt.Fprintln(out, "{}")
+				return nil
+			}
 			if errors.Is(err, os.ErrNotExist) {
 				_, _ = fmt.Fprintf(out, "no %s (every setting is at its default unless the environment or .env sets it;\n"+
 					"`%s settings show --effective` lists them, `%s settings init` creates the file)\n",

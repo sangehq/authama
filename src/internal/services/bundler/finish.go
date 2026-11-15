@@ -3,13 +3,15 @@ package bundler
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"time"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/services/configsvc"
-	"github.com/simtabi/authama/src/internal/util/homeperms"
-	"github.com/simtabi/authama/src/internal/util/paths"
-	"github.com/simtabi/authama/src/internal/util/perms"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/configsvc"
+	"github.com/sangehq/authama/src/internal/util/homeperms"
+	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/perms"
 )
 
 // FinishRestore re-asserts perms on the restored tree and config-home secrets,
@@ -33,4 +35,10 @@ func FinishRestore(p paths.Paths) error {
 		return fmt.Errorf("config render failed: %w", err)
 	}
 	return nil
+}
+
+// ReplacedDir is where a restore at now keeps the files it replaces: a folder
+// of its own in the state home, so a later restore never overwrites it.
+func ReplacedDir(p paths.Paths, now time.Time) string {
+	return filepath.Join(p.StateDir(), "replaced", now.Format("20060102-150405.000"))
 }

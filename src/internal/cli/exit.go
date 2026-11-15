@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/platform"
 
 	"github.com/spf13/cobra"
 )

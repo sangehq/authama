@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security report
-    url: https://github.com/simtabi/authama/security/advisories/new
+    url: https://github.com/sangehq/authama/security/advisories/new
     about: Please report vulnerabilities privately (or email security@simtabi.com).
   - name: Documentation
-    url: https://github.com/simtabi/authama#documentation
+    url: https://github.com/sangehq/authama#documentation
     about: Product documentation and guides.

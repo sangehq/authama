@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/owner"
-	"github.com/simtabi/authama/src/internal/util/testcred"
+	"github.com/sangehq/authama/src/internal/services/owner"
+	"github.com/sangehq/authama/src/internal/util/testcred"
 )
 
 // The owner binding is made from the web like any change: bound, then a PIN

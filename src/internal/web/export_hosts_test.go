@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/util/encode"
+	"github.com/sangehq/authama/src/internal/util/encode"
 )
 
 // /exports/run writes hosts in each host format: ssh_config and termius are

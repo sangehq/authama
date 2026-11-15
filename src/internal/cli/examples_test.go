@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/brand"
 )
 
 // splitExample splits one example line the way a POSIX shell would for the

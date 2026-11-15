@@ -18,12 +18,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/util/desktop"
-	"github.com/simtabi/authama/src/internal/util/envnames"
-	"github.com/simtabi/authama/src/internal/version"
-	"github.com/simtabi/authama/src/internal/web"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/util/desktop"
+	"github.com/sangehq/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/version"
+	"github.com/sangehq/authama/src/internal/web"
 )
 
 // Seams for tests: the sandbox and CI cannot always bind a socket, and a test
@@ -146,7 +146,8 @@ func newServeCmd() *cobra.Command {
 				running = nil // a record left by a server that is gone
 			}
 			// A server replacing one that restarted: wait for the old one to
-			// let go of its port, then take the same port and token.
+			// let go of its port, then take the same port. The sign-in token is
+			// fresh (serveTokens); unused links come across in the handoff.
 			handoff := takeHandoff()
 			if handoff != nil {
 				handoff.waitGone()
@@ -214,13 +215,7 @@ func newServeCmd() *cobra.Command {
 			}
 			bound := ln.Addr().(*net.TCPAddr).Port
 
-			token, control := web.NewToken(), web.NewToken()
-			if handoff != nil {
-				token = handoff.Token
-				if handoff.Control != "" {
-					control = handoff.Control
-				}
-			}
+			token, control := serveTokens(handoff)
 			instance := web.NewToken()[:16]
 			// Recorded only for the default kind of server, the one a later
 			// `authama serve` would reuse: a pinned or remote one is a choice
@@ -232,7 +227,7 @@ func newServeCmd() *cobra.Command {
 			}
 			var stopServing context.CancelFunc
 			var srvRef *web.Server
-			restartFn := relaunch(serveHandoff{Token: token, Control: control, Port: bound, Record: record,
+			restartFn := relaunch(serveHandoff{Control: control, Port: bound, Record: record,
 				Addr: net.JoinHostPort(displayHost(host), strconv.Itoa(bound)), BasePath: basePath, Instance: instance},
 				func(h *serveHandoff) {
 					if srvRef != nil {
@@ -261,6 +256,7 @@ func newServeCmd() *cobra.Command {
 				BindAddr:     ln.Addr().String(),
 				BasePath:     basePath,
 				Restart:      restartFn,
+				RestartFrom:  ownRestartExecutable,
 				AutoRestart:  settingOn(envnames.WebAutoRestart, true),
 				API:          settingOn(envnames.API, false),
 				Sessions:     handoffSessions(handoff),
@@ -327,7 +323,7 @@ func newServeCmd() *cobra.Command {
 	f.StringVar(&addr, "addr", "127.0.0.1", "address to listen on, host or host:port (a port here pins it, like --port)")
 	f.IntVar(&port, "port", web.DefaultPort, "port to listen on; when not given and the default is taken, the next free port is used")
 	f.BoolVar(&allowRemote, "allow-remote", false, "allow a non-loopback --addr (plain HTTP; prefer an SSH tunnel)")
-	f.StringArrayVar(&allowHosts, "allow-host", nil, "extra Host header to accept with --allow-remote, e.g. a proxy's name (repeatable)")
+	f.StringArrayVar(&allowHosts, "allow-host", nil, "extra Host header to accept, e.g. the name a proxy on this machine forwards as; it widens the DNS-rebinding check, so name only hosts you control (repeatable)")
 	f.BoolVar(&readOnly, "read-only", false, "serve no route that changes anything, and show no form")
 	f.BoolVar(&noOpen, "no-open", false, "do not open a browser")
 	f.StringVar(&tokenFile, "token-file", "", "also write the sign-in address to this file, mode 0600, for scripts")

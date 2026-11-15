@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/core/key"
+	"github.com/sangehq/authama/src/internal/core/key"
 )
 
 // Profile is written by a hand-listed wire struct too; a field it omits is

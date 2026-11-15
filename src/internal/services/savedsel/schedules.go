@@ -10,9 +10,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/util/encode"
-	fsutil "github.com/simtabi/authama/src/internal/util/fs"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/encode"
+	fsutil "github.com/sangehq/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // Schedule writes a saved selection to a folder each day, in one format,

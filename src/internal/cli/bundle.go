@@ -7,11 +7,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/bundler"
-	"github.com/simtabi/authama/src/internal/services/keystore"
-	"github.com/simtabi/authama/src/internal/util/envnames"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/bundler"
+	"github.com/sangehq/authama/src/internal/services/keystore"
+	"github.com/sangehq/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 func newBundleCmd() *cobra.Command {
@@ -57,7 +57,7 @@ func newBundleCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&recipient, "recipient", "r", "", "age recipient (else $AUTHAMA_AGE_RECIPIENT)")
-	cmd.Flags().StringVarP(&output, "output", "o", "", "destination dir (else config-dir/dist)")
+	cmd.Flags().StringVarP(&output, "output", "o", "", "destination dir (else dist/ in the state home)")
 	cmd.Flags().IntVar(&keep, "keep", 0, "after bundling, keep only the newest N bundles (0 keeps all)")
 	return cmd
 }
@@ -79,7 +79,7 @@ func newRestoreCmd() *cobra.Command {
 		Short: "Restore keys + state from an encrypted bundle (see bundle)",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			if err := confirmOrAbort(c, "Restore ~/.ssh from this bundle? (current tree is snapshotted first)", yes); err != nil {
+			if err := confirmOrAbort(c, "Restore ~/.ssh from this bundle? Every file it replaces with different content, private keys included, is kept first in the state home's replaced/ folder", yes); err != nil {
 				return err
 			}
 			p, err := resolvePaths(c)
@@ -95,7 +95,8 @@ func newRestoreCmd() *cobra.Command {
 			}
 			snapshotBeforeMutation(p)
 			ks := keystore.New()
-			res, err := bundler.New(p.SSHDir, p.ConfigDir, bundler.AgeCipher{}).WithKeyRoot(manifest.KeyRootAt(p.Manifest())).Restore(args[0], ident, ks.Fingerprint)
+			res, err := bundler.New(p.SSHDir, p.ConfigDir, bundler.AgeCipher{}).WithKeyRoot(manifest.KeyRootAt(p.Manifest())).
+				WithReplacedDir(bundler.ReplacedDir(p, time.Now())).Restore(args[0], ident, ks.Fingerprint)
 			if err != nil {
 				return err
 			}

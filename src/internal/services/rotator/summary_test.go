@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // designRun is the run the summary was designed from: ten keys over four

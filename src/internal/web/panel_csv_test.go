@@ -1,7 +1,7 @@
 package web
 
 import (
-	"github.com/simtabi/authama/src/internal/services/editor"
+	"github.com/sangehq/authama/src/internal/services/editor"
 
 	"encoding/csv"
 	"encoding/json"

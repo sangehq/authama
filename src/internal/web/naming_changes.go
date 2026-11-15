@@ -7,9 +7,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/core/naming"
-	"github.com/simtabi/authama/src/internal/services/change"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/naming"
+	"github.com/sangehq/authama/src/internal/services/change"
 )
 
 // profileCodeRe is the manifest's rule for a profile's code.

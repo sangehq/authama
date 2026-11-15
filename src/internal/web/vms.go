@@ -3,13 +3,13 @@ package web
 import (
 	"sort"
 
-	"github.com/simtabi/authama/src/internal/core/hypervisor"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/dockerctx"
-	"github.com/simtabi/authama/src/internal/services/keyaudit"
-	"github.com/simtabi/authama/src/internal/services/settings"
-	"github.com/simtabi/authama/src/internal/services/vmsync"
-	"github.com/simtabi/authama/src/internal/util/scheduler"
+	"github.com/sangehq/authama/src/internal/core/hypervisor"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/dockerctx"
+	"github.com/sangehq/authama/src/internal/services/keyaudit"
+	"github.com/sangehq/authama/src/internal/services/settings"
+	"github.com/sangehq/authama/src/internal/services/vmsync"
+	"github.com/sangehq/authama/src/internal/util/scheduler"
 )
 
 // VMsView is the /vms page: the VM hosts as their hypervisors see them, what

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/util/testcred"
+	"github.com/sangehq/authama/src/internal/util/testcred"
 )
 
 // Every list the pages show downloads as CSV, header first, and the tokens

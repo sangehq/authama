@@ -3,7 +3,7 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/services/cleaner"
+	"github.com/sangehq/authama/src/internal/services/cleaner"
 )
 
 // newCleanCmd sweeps what deleting things leaves behind: trust-store pins for

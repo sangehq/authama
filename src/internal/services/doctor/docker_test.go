@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/services/dockerctx"
-	"github.com/simtabi/authama/src/internal/services/preflight"
-	"github.com/simtabi/authama/src/internal/services/vmsync"
+	"github.com/sangehq/authama/src/internal/services/dockerctx"
+	"github.com/sangehq/authama/src/internal/services/preflight"
+	"github.com/sangehq/authama/src/internal/services/vmsync"
 )
 
 func swapDocker(t *testing.T, cs []dockerctx.Context, err error, check vmsync.Checker) {

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/apitokens"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/services/apitokens"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 func apiServerFor(t *testing.T, on bool) (*Server, paths.Paths) {

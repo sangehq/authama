@@ -14,16 +14,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/change"
-	"github.com/simtabi/authama/src/internal/services/editor"
-	"github.com/simtabi/authama/src/internal/services/history"
-	"github.com/simtabi/authama/src/internal/services/keysvc"
-	"github.com/simtabi/authama/src/internal/services/mutation"
-	"github.com/simtabi/authama/src/internal/services/snapshots"
-	"github.com/simtabi/authama/src/internal/util/paths"
-	"github.com/simtabi/authama/src/internal/util/testcred"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/change"
+	"github.com/sangehq/authama/src/internal/services/editor"
+	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/services/keysvc"
+	"github.com/sangehq/authama/src/internal/services/mutation"
+	"github.com/sangehq/authama/src/internal/services/snapshots"
+	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/testcred"
 )
 
 // Generated per run (internal/util/testcred), never written down.
@@ -193,6 +193,14 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 			t.Errorf("the two sides made different calls:\n--- cli\n%s--- web\n%s", a, b)
 		}
 	}
+	// The notification both sides send is compared where a stub can record it:
+	// on macOS go-notifykit runs /usr/bin/osascript by absolute path.
+	notifyCalls := func(t *testing.T) {
+		if runtime.GOOS == "darwin" {
+			t.Skip("no stubbable notification backend on macOS")
+		}
+		sameCalls(t)
+	}
 	needsAge := func(t *testing.T, _ string) {
 		if !hasAge() {
 			t.Skip("age not installed")
@@ -249,9 +257,12 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 			stub(t, side)
 		}
 	}
-	notifier := notifierStub("terminal-notifier")
-	if runtime.GOOS != "darwin" {
-		notifier = notifierStub("notify-send")
+	// On macOS go-notifykit runs /usr/bin/osascript by absolute path, which no
+	// stub can stand in for, so both sides deliver nothing ("none") and must
+	// still agree; Linux compares real calls to a stubbed notify-send.
+	notifier := notifierStub("notify-send")
+	if runtime.GOOS == "darwin" {
+		notifier = notifierStub("none")
 	}
 	// A VM host whose VM the (stubbed) hypervisor no longer lists.
 	goneVM := func(p paths.Paths) {
@@ -435,7 +446,7 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 			_, _ = f.WriteString("# edited after the snapshot\n")
 			_ = f.Close()
 		}, nil, nil},
-		{"notify test", []string{"ssh", "notify", "test"}, change.NotifyTest(), nil, notifier, sameCalls},
+		{"notify test", []string{"ssh", "notify", "test"}, change.NotifyTest(), nil, notifier, notifyCalls},
 		{"audit notify", []string{"ssh", "audit", "--notify"}, change.AuditNotify(), nil, notifier, nil},
 		{"token delete", []string{"token", "delete", "npm", "npm.example.com"},
 			change.TokenDelete("npm", "npm.example.com"), nil, tokenSide(true), sameTokenFiles(".npmrc", credSecretA, "npm.example.com")},

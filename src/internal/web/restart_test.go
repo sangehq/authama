@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"os"
@@ -142,15 +143,20 @@ func TestARebuiltBinaryRestartsTheServerOnceItSettles(t *testing.T) {
 	s.opts.Restart = func() error { restarts <- struct{}{}; return nil }
 	s.binary = binaryWatch{path: exe, started: time.Now().Add(-time.Hour)}
 
-	stop := make(chan struct{})
+	// Each watcher has stopped before the options change under it: they are
+	// read without a lock, as a running server never changes them.
+	off, offDone := make(chan struct{}), make(chan struct{})
 	s.opts.AutoRestart = false
-	go s.watchBinary(stop, 5*time.Millisecond)
+	go func() { s.watchBinary(off, 5*time.Millisecond); close(offDone) }()
 	select {
 	case <-restarts:
 		t.Fatal("restarted with auto_restart off")
 	case <-time.After(60 * time.Millisecond):
 	}
+	close(off)
+	<-offDone
 
+	stop := make(chan struct{})
 	s.opts.AutoRestart = true
 	go s.watchBinary(stop, 5*time.Millisecond)
 	select {
@@ -170,5 +176,52 @@ func TestARebuiltBinaryRestartsTheServerOnceItSettles(t *testing.T) {
 	case <-restarts:
 		t.Fatal("restarted from a removed binary")
 	case <-time.After(60 * time.Millisecond):
+	}
+}
+
+// A server whose binary moved and that finds no other to restart from says
+// why, instead of answering 202 and leaving the page waiting for a server
+// that never starts (found 2026-11-13, after the checkout moved to sangehq).
+func TestARestartWithNoBinaryToRunSaysWhy(t *testing.T) {
+	s, _, _ := newTestServer(t)
+	called := make(chan struct{}, 1)
+	s.opts.Restart = func() error { called <- struct{}{}; return nil }
+	s.opts.RestartFrom = func() (string, error) {
+		return "", errors.New("the binary this server started from is gone, and no authama is on PATH")
+	}
+	c := signIn(t, s)
+	rec := c.change("/server/restart", url.Values{})
+	if rec.Code == http.StatusAccepted || !strings.Contains(rec.Body.String(), "no authama is on PATH") {
+		t.Fatalf("restart with nothing to run: %d %s", rec.Code, rec.Body.String())
+	}
+	select {
+	case <-called:
+		t.Fatal("Restart was called with nothing to run")
+	case <-time.After(300 * time.Millisecond):
+	}
+}
+
+// The watcher follows a binary that moved: with the path it started from
+// gone, it watches the one RestartFrom names, and restarts once that one is
+// rebuilt and holds still.
+func TestTheWatcherFollowsAMovedBinary(t *testing.T) {
+	s, _, _ := newTestServer(t)
+	dir := t.TempDir()
+	moved := filepath.Join(dir, "authama")
+	if err := os.WriteFile(moved, []byte("new build"), 0o755); err != nil { //nolint:gosec // a test executable
+		t.Fatal(err)
+	}
+	restarts := make(chan struct{}, 1)
+	s.opts.Restart = func() error { restarts <- struct{}{}; return nil }
+	s.opts.AutoRestart = true
+	s.opts.RestartFrom = func() (string, error) { return moved, nil }
+	s.binary = binaryWatch{path: filepath.Join(dir, "gone", "authama"), started: time.Now().Add(-time.Hour)}
+	stop := make(chan struct{})
+	defer close(stop)
+	go s.watchBinary(stop, 5*time.Millisecond)
+	select {
+	case <-restarts:
+	case <-time.After(2 * time.Second):
+		t.Fatal("a rebuilt binary at its new place did not restart the server")
 	}
 }

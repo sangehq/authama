@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/services/settings"
+	"github.com/sangehq/authama/src/internal/services/settings"
 )
 
 // A saved setting reaches this process at once when the variable is unset or

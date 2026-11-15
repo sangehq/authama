@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/sangehq/authama/src/internal/util/fs"
 )
 
 // ApplyCreatingProfile runs the batch, first creating the profile when asked.
@@ -21,7 +23,9 @@ func (e *Editor) ApplyCreatingProfile(profile, category string, create bool, spe
 		return nil, err
 	}
 	undo := func(cause error) error {
-		if werr := os.WriteFile(manifestPath, before, 0o600); werr != nil {
+		// By rename, as every manifest write is: an undo interrupted part-way
+		// must not leave the manifest half-written.
+		if werr := fs.WriteTextAtomic(manifestPath, string(before), 0o600); werr != nil {
 			return fmt.Errorf("%w (and restoring the manifest failed: %v)", cause, werr)
 		}
 		return cause

@@ -39,9 +39,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/feed"
-	"github.com/simtabi/authama/src/internal/util/fs"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/services/feed"
+	"github.com/sangehq/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/lock"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // SecretPrefix starts every endpoint secret, as Standard Webhooks names it.
@@ -93,6 +94,17 @@ func List(p paths.Paths) ([]Endpoint, error) {
 	return out, nil
 }
 
+// lockState holds webhooks.json for one read-modify-write: Add, Remove,
+// SetDisabled and the delivery's write-back each take it, briefly. Without it
+// a delivery that read the file before sending wrote it back afterwards and
+// undid a removal or a disable made meanwhile (review R-BUG-04).
+func lockState(p paths.Paths) (func(), error) {
+	if err := fs.EnsureDir(p.StateDir(), 0o700); err != nil {
+		return nil, err
+	}
+	return lock.Acquire(File(p) + ".lock")
+}
+
 func save(p paths.Paths, eps []Endpoint) error {
 	if err := fs.EnsureDir(p.StateDir(), 0o700); err != nil {
 		return err
@@ -114,6 +126,11 @@ func Add(p paths.Paths, name, rawURL string, events []string, allowPrivate bool,
 	if err := CheckURL(rawURL, allowPrivate); err != nil {
 		return Endpoint{}, err
 	}
+	release, err := lockState(p)
+	if err != nil {
+		return Endpoint{}, err
+	}
+	defer release()
 	eps, err := List(p)
 	if err != nil {
 		return Endpoint{}, err
@@ -148,6 +165,11 @@ func SetDisabled(p paths.Paths, name string, off bool) error {
 }
 
 func update(p paths.Paths, name string, f func([]Endpoint, int) []Endpoint) error {
+	release, err := lockState(p)
+	if err != nil {
+		return err
+	}
+	defer release()
 	eps, err := List(p)
 	if err != nil {
 		return err
@@ -171,7 +193,9 @@ func CheckURL(rawURL string, allowPrivate bool) error {
 	if u.User != nil {
 		return errors.New("a webhook address cannot carry a user name or password: the secret signs each request instead")
 	}
-	host := u.Hostname()
+	// A trailing dot names the same host (localhost. is localhost), and
+	// letter case never matters to a resolver.
+	host := strings.ToLower(strings.TrimSuffix(u.Hostname(), "."))
 	ip, perr := netip.ParseAddr(host)
 	isIP := perr == nil
 	loopback := host == "localhost" || isIP && ip.IsLoopback()
@@ -184,20 +208,98 @@ func CheckURL(rawURL string, allowPrivate bool) error {
 	default:
 		return fmt.Errorf("a webhook is sent over https, not %q", u.Scheme)
 	}
+	if !allowPrivate && !isIP && numericHost.MatchString(host) {
+		return errors.New("write the address as four dotted decimal numbers, or use a name: a number, hex or shortened form is not accepted")
+	}
 	if !allowPrivate && (host == "localhost" || strings.HasSuffix(host, ".localhost") || isIP && !public(ip)) {
 		return errors.New("that address is on this machine or a private network: turn on webhooks.allow_private to send there")
 	}
 	return nil
 }
 
+// notPublic are the IANA special-purpose ranges (RFC 6890 and its updates)
+// that are not the public internet: this machine, private and shared
+// networks, documentation, benchmarking, reserved and multicast space. The
+// standard library's IsPrivate/IsLoopback covered a few; 0.0.0.0/8,
+// 198.18.0.0/15, 240.0.0.0/4 and the rest passed as public (review R-SEC-06).
+var notPublic = []netip.Prefix{
+	netip.MustParsePrefix("0.0.0.0/8"),       // this network
+	netip.MustParsePrefix("10.0.0.0/8"),      // private
+	netip.MustParsePrefix("100.64.0.0/10"),   // carrier-grade NAT
+	netip.MustParsePrefix("127.0.0.0/8"),     // loopback
+	netip.MustParsePrefix("169.254.0.0/16"),  // link-local
+	netip.MustParsePrefix("172.16.0.0/12"),   // private
+	netip.MustParsePrefix("192.0.0.0/24"),    // IETF protocol assignments
+	netip.MustParsePrefix("192.0.2.0/24"),    // documentation
+	netip.MustParsePrefix("192.88.99.0/24"),  // 6to4 relay anycast
+	netip.MustParsePrefix("192.168.0.0/16"),  // private
+	netip.MustParsePrefix("198.18.0.0/15"),   // benchmarking
+	netip.MustParsePrefix("198.51.100.0/24"), // documentation
+	netip.MustParsePrefix("203.0.113.0/24"),  // documentation
+	netip.MustParsePrefix("224.0.0.0/4"),     // multicast
+	netip.MustParsePrefix("240.0.0.0/4"),     // reserved, and broadcast
+	netip.MustParsePrefix("::/128"),          // unspecified
+	netip.MustParsePrefix("::1/128"),         // loopback
+	netip.MustParsePrefix("100::/64"),        // discard
+	netip.MustParsePrefix("2001::/23"),       // IETF protocol assignments, Teredo
+	netip.MustParsePrefix("2001:db8::/32"),   // documentation
+	netip.MustParsePrefix("fc00::/7"),        // unique local
+	netip.MustParsePrefix("fe80::/10"),       // link-local
+	netip.MustParsePrefix("fec0::/10"),       // site-local (deprecated, still routed by some stacks)
+	netip.MustParsePrefix("ff00::/8"),        // multicast
+}
+
+// Address forms that carry an IPv4 address inside an IPv6 one. A packet to
+// them can reach the embedded address, so that is the one checked.
+var (
+	nat64     = []netip.Prefix{netip.MustParsePrefix("64:ff9b::/96"), netip.MustParsePrefix("64:ff9b:1::/48")}
+	sixToFour = netip.MustParsePrefix("2002::/16")
+	v4Compat  = netip.MustParsePrefix("::/96") // deprecated IPv4-compatible
+)
+
+// embeddedIPv4 is the IPv4 address an IPv6 address carries, if it is one of
+// the forms that route to it.
+func embeddedIPv4(ip netip.Addr) (netip.Addr, bool) {
+	if !ip.Is6() {
+		return netip.Addr{}, false
+	}
+	b := ip.As16()
+	for _, p := range nat64 {
+		if p.Contains(ip) {
+			return netip.AddrFrom4([4]byte{b[12], b[13], b[14], b[15]}), true
+		}
+	}
+	if sixToFour.Contains(ip) {
+		return netip.AddrFrom4([4]byte{b[2], b[3], b[4], b[5]}), true
+	}
+	if v4Compat.Contains(ip) && ip != netip.IPv6Unspecified() && ip != netip.IPv6Loopback() {
+		return netip.AddrFrom4([4]byte{b[12], b[13], b[14], b[15]}), true
+	}
+	return netip.Addr{}, false
+}
+
 // public reports whether ip is an address on the public internet.
 func public(ip netip.Addr) bool {
-	ip = ip.Unmap()
-	return ip.IsValid() && !ip.IsLoopback() && !ip.IsPrivate() && !ip.IsLinkLocalUnicast() && !ip.IsLinkLocalMulticast() &&
-		!ip.IsUnspecified() && !ip.IsMulticast() && !ip.IsInterfaceLocalMulticast() &&
-		!netip.MustParsePrefix("100.64.0.0/10").Contains(ip) && // carrier-grade NAT
-		!netip.MustParsePrefix("169.254.0.0/16").Contains(ip)
+	ip = ip.Unmap().WithZone("")
+	if !ip.IsValid() {
+		return false
+	}
+	if v4, ok := embeddedIPv4(ip); ok {
+		return public(v4)
+	}
+	for _, p := range notPublic {
+		if p.Contains(ip) {
+			return false
+		}
+	}
+	return true
 }
+
+// numericHost matches a host that is an IPv4 address written as a number
+// (2130706433), in hex (0x7f.1) or octal (017700000001), or with parts left
+// out (127.1). netip refuses those, so they would be taken for names, while a
+// resolver may read them as addresses.
+var numericHost = regexp.MustCompile(`(?i)^(0x[0-9a-f]+|[0-9]+)(\.(0x[0-9a-f]+|[0-9]+)){0,3}$`)
 
 // Client is the sender's HTTP client: 10 s per request, no redirect followed
 // (a 3xx is a failure, as the spec says), and, unless allowPrivate, a dialer
@@ -205,17 +307,7 @@ func public(ip netip.Addr) bool {
 func Client(allowPrivate bool) *http.Client {
 	d := &net.Dialer{Timeout: 5 * time.Second}
 	if !allowPrivate {
-		d.Control = func(_, address string, _ syscall.RawConn) error {
-			host, _, err := net.SplitHostPort(address)
-			if err != nil {
-				return err
-			}
-			ip, err := netip.ParseAddr(host)
-			if err != nil || !public(ip) {
-				return fmt.Errorf("refused to connect to %s: not a public address (webhooks.allow_private is off)", host)
-			}
-			return nil
-		}
+		d.Control = func(_, address string, _ syscall.RawConn) error { return checkDial(address) }
 	}
 	tr := &http.Transport{DialContext: d.DialContext, TLSHandshakeTimeout: 5 * time.Second, ResponseHeaderTimeout: 10 * time.Second,
 		Proxy: nil, MaxIdleConns: 4, IdleConnTimeout: 30 * time.Second}
@@ -279,6 +371,21 @@ type Result struct {
 // stopping at its first failure: it is tried again after a backoff, from the
 // same event, so an endpoint sees each event once and in order.
 func Deliver(ctx context.Context, p paths.Paths, client *http.Client, now time.Time) ([]Result, error) {
+	// One delivery at a time: the server's loop and `authama webhook deliver`
+	// each sent an event the other had already sent. The second now waits,
+	// then finds the cursor moved on and nothing left to send.
+	if err := fs.EnsureDir(p.StateDir(), 0o700); err != nil {
+		return nil, err
+	}
+	releaseDelivery, err := lock.Acquire(File(p) + ".deliver.lock")
+	if err != nil {
+		return nil, err
+	}
+	defer releaseDelivery()
+
+	// The endpoints as they are now. Sends happen without the state lock held
+	// (they can take minutes), so what each one learns is merged back below
+	// into the file as it is then, never written over it.
 	eps, err := List(p)
 	if err != nil {
 		return nil, err
@@ -322,9 +429,40 @@ func Deliver(ctx context.Context, p paths.Paths, client *http.Client, now time.T
 		if res.Err == nil {
 			ep.Cursor = next
 		}
+		if err := mergeDelivery(p, *ep); err != nil {
+			return out, err
+		}
 		out = append(out, res)
 	}
-	return out, save(p, eps)
+	return out, nil
+}
+
+// mergeDelivery writes what one endpoint's delivery learned into the file as
+// it is now. An endpoint removed meanwhile, or removed and added again under
+// the same name (a new secret), is left as it is. A disable made by hand
+// meanwhile stands; delivery only ever turns one off (a 410, too many
+// failures), never back on.
+func mergeDelivery(p paths.Paths, d Endpoint) error {
+	release, err := lockState(p)
+	if err != nil {
+		return err
+	}
+	defer release()
+	eps, err := List(p)
+	if err != nil {
+		return err
+	}
+	i := slices.IndexFunc(eps, func(e Endpoint) bool { return e.Name == d.Name && e.Secret == d.Secret })
+	if i < 0 {
+		return nil
+	}
+	cur := &eps[i]
+	cur.Cursor, cur.Failures, cur.NextAttempt = d.Cursor, d.Failures, d.NextAttempt
+	cur.LastStatus, cur.LastError, cur.LastSuccess = d.LastStatus, d.LastError, d.LastSuccess
+	if d.Disabled && !cur.Disabled {
+		cur.Disabled, cur.DisabledWhy = true, d.DisabledWhy
+	}
+	return save(p, eps)
 }
 
 func fail(ep *Endpoint, status int, err error, now time.Time) {
@@ -389,4 +527,19 @@ func Test(ctx context.Context, p paths.Paths, client *http.Client, name string, 
 	e := feed.New(p, "test_"+base64.RawURLEncoding.EncodeToString(raw), feed.TypeWebhookTested, "webhook/"+name, now,
 		map[string]string{"message": "a test from authama: this endpoint receives its webhooks"})
 	return send(ctx, client, eps[i], e, now)
+}
+
+// checkDial is the dialer's check on the address a name resolved to, made
+// after the lookup and just before the connection, so a name that resolves
+// differently between the two cannot slip through.
+func checkDial(address string) error {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return err
+	}
+	ip, err := netip.ParseAddr(host)
+	if err != nil || !public(ip) {
+		return fmt.Errorf("refused to connect to %s: not a public address (webhooks.allow_private is off)", host)
+	}
+	return nil
 }

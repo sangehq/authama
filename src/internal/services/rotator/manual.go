@@ -1,8 +1,8 @@
 package rotator
 
 import (
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/core/providers"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/providers"
 )
 
 // ManualStep is asked, for each target whose provider can only take a pasted key (a web panel such

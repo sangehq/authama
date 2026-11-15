@@ -6,15 +6,15 @@
 # no longer installed; one already there is left alone, and named, so it can be
 # removed by hand.
 #
-#   curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash
-#   curl -fsSL https://raw.githubusercontent.com/simtabi/authama/main/src/scripts/install.sh | bash -s v0.1.0
+#   curl -fsSL https://raw.githubusercontent.com/sangehq/authama/main/src/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/sangehq/authama/main/src/scripts/install.sh | bash -s v0.1.0
 #
 # Windows users: use src/scripts/install.ps1 (irm ... | iex) or download the bare
 # authama_windows_<arch>.exe from the releases page.
 #
 set -euo pipefail
 
-OWNER="simtabi"
+OWNER="sangehq"
 REPO="authama"
 BINARY="authama"
 # The name releases before 0.1.0 shipped as; only ever reported, never installed.
@@ -121,11 +121,16 @@ sha_check() { # <checksums file> <asset>
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
 
+# No checksums.txt is no proof the download is the release's, so it stops the
+# install. AUTHAMA_INSTALL_NO_VERIFY=1 is the explicit way past that, for a
+# local or mirrored "release" that carries none.
 have_sums=0
 if curl -fsSL "${CURL_RETRY[@]}" "${base}/checksums.txt" -o "${workdir}/checksums.txt" 2>/dev/null; then
   have_sums=1
+elif [ "${AUTHAMA_INSTALL_NO_VERIFY:-}" = 1 ]; then
+  info "warning: checksums.txt not found; installing WITHOUT verification (AUTHAMA_INSTALL_NO_VERIFY=1)."
 else
-  info "warning: checksums.txt not found; skipping verification."
+  err "checksums.txt not found at ${base}, so the download cannot be verified; nothing was installed. Set AUTHAMA_INSTALL_NO_VERIFY=1 to install unverified."
 fi
 
 # fetch <binary>: download and verify ${binary}_${os}_${arch}; non-zero if the

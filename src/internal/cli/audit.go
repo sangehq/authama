@@ -10,12 +10,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/exports"
-	"github.com/simtabi/authama/src/internal/services/notifier"
-	"github.com/simtabi/authama/src/internal/util/csvout"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/exports"
+	"github.com/sangehq/authama/src/internal/services/notifier"
+	"github.com/sangehq/authama/src/internal/util/csvout"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // newAuditCmd is the native audit verb: deployment + expiry + hygiene summary plus

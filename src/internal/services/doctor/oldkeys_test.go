@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/manifest"
 )
 
 func archive(t *testing.T, ssh, profile, name string, age time.Duration) {

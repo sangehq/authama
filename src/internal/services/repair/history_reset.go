@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/util/envnames"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // ErrHistoryPermanent is what a history reset says when history.permanent

@@ -6,9 +6,9 @@ import (
 	"io"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/pin"
-	"github.com/simtabi/authama/src/internal/services/owner"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/pin"
+	"github.com/sangehq/authama/src/internal/services/owner"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // The owner binding from the web UI. Every one acts outside the files a

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/inventory"
 )
 
 // State values.

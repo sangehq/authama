@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // TestEmbeddedEnvMatchesShipped pins the embedded .env to the template in the

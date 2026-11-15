@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/services/configsvc"
-	"github.com/simtabi/authama/src/internal/services/preflight"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/services/configsvc"
+	"github.com/sangehq/authama/src/internal/services/preflight"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // After `authama ssh import ~/.ssh/config` and a render, the user's original Host

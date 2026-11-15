@@ -38,6 +38,12 @@ the original had.
 > Nothing is regenerated. `import` never mints over an existing key, so the
 > identities your servers already trust keep working.
 
+`import` does not edit the config it read. Its summary names the hand-written `Host` blocks it
+copied, which stay where they are: ssh reads them before the managed block, so `authama doctor`
+reports them as shadowed until you remove them from that file. It also lists, as written, each
+`Match` block and each `Host` block of wildcards only (`Host *.internal`): authama manages plain
+`Host` blocks, so those are not imported, and they stay in your config and still apply.
+
 Review before reconciling — the derived profile names are a guess:
 
 ```sh

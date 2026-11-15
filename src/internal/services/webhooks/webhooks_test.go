@@ -19,8 +19,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/history"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // The signature is Standard Webhooks' v1: the base64 HMAC-SHA256, keyed with

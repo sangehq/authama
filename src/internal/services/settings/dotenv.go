@@ -9,8 +9,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/util/envnames"
 )
 
 // Pair is one KEY=value assignment read from a .env file.

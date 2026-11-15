@@ -10,11 +10,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/reconciler"
-	"github.com/simtabi/authama/src/internal/services/rotator"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/reconciler"
+	"github.com/sangehq/authama/src/internal/services/rotator"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // Parity reference: v1's deploy tests. The contracts it pinned:

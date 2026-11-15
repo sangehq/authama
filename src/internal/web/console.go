@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/services/jobs"
+	"github.com/sangehq/authama/src/internal/services/jobs"
 )
 
 // consoleLine is one line of a job's output, read for the page: how deep it

@@ -41,7 +41,10 @@ func platformBackend(t *testing.T) string {
 	t.Helper()
 	switch runtime.GOOS {
 	case "darwin":
-		return "terminal-notifier"
+		// go-notifykit dropped terminal-notifier (2026-11-08), and runs its
+		// macOS fallback as /usr/bin/osascript by absolute path, so no stub on
+		// PATH can stand in for it: forcing it here would post real banners.
+		t.Skip("no stubbable backend on macOS: go-notifykit runs /usr/bin/osascript by absolute path")
 	case "linux":
 		return "notify-send"
 	}
@@ -140,5 +143,21 @@ func TestQuotingSurvivesCharactersThatWouldCloseTheLiteral(t *testing.T) {
 			}
 			i++
 		}
+	}
+}
+
+// A notification carries a Group, so the same event posted again replaces its
+// banner rather than stacking another (the go-notifykit rule, one banner per
+// event; review R-INC-10). Different events keep their own banners.
+func TestANotificationIsGroupedByItsTitle(t *testing.T) {
+	a, b := notification("key due soon", "work_gh"), notification("rotation failed", "work_gh")
+	if a.Group == "" || a.Group != notification("key due soon", "another body").Group {
+		t.Errorf("one event's banners are not grouped: %q", a.Group)
+	}
+	if a.Group == b.Group {
+		t.Errorf("two different events share a group: %q", a.Group)
+	}
+	if a.Title != "key due soon" || a.Body != "work_gh" {
+		t.Errorf("notification = %+v", a)
 	}
 }

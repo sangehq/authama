@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/services/history"
-	"github.com/simtabi/authama/src/internal/services/keysvc"
+	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/services/keysvc"
 )
 
 // The preview's copy holds an empty stand-in for each private key, so a .pub

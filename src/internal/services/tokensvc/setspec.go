@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/core/tokens"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/core/tokens"
 )
 
 // SetSpec is one credential to add or replace, as `authama token set` takes

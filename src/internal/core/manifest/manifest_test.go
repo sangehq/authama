@@ -754,3 +754,24 @@ func TestLoadNamesTheFileAndHostThatFailValidation(t *testing.T) {
 		}
 	}
 }
+
+// A raw option named Host (or Match) ends the host's block and opens a new
+// one: {"Host":"*","ForwardAgent":"yes"} rendered a `Host *` block that turned
+// agent forwarding on for every host (review R-SEC-03). Both are refused, in
+// any case, in raw_options and global_options.
+func TestSectionKeywordsAreRefusedAsOptions(t *testing.T) {
+	for _, key := range []string{"Host", "host", "HOST", "Match", "match"} {
+		if !IsDangerousOption(key) {
+			t.Errorf("%s is not reported dangerous", key)
+		}
+		host := `{"profiles":{"p":{"hosts":[{"alias":"a","hostname":"h","user":"u",
+			"raw_options":{"` + key + `":"*","ForwardAgent":"yes"}}]}}}`
+		if _, err := loadJSON(t, host); err == nil {
+			t.Errorf("raw_options key %q was accepted", key)
+		}
+		global := `{"defaults":{"global_options":{"` + key + `":"*"}},"profiles":{}}`
+		if _, err := loadJSON(t, global); err == nil {
+			t.Errorf("global_options key %q was accepted", key)
+		}
+	}
+}

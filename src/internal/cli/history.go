@@ -13,15 +13,15 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/services/exports"
-	"github.com/simtabi/authama/src/internal/services/history"
-	"github.com/simtabi/authama/src/internal/services/mutation"
-	"github.com/simtabi/authama/src/internal/services/repair"
-	"github.com/simtabi/authama/src/internal/util/csvout"
-	"github.com/simtabi/authama/src/internal/util/lock"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/exports"
+	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/services/mutation"
+	"github.com/sangehq/authama/src/internal/services/repair"
+	"github.com/sangehq/authama/src/internal/util/csvout"
+	"github.com/sangehq/authama/src/internal/util/lock"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 func newHistoryCmd() *cobra.Command {

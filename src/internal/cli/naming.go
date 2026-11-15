@@ -8,10 +8,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/core/naming"
-	"github.com/simtabi/authama/src/internal/services/editor"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/naming"
+	"github.com/sangehq/authama/src/internal/services/editor"
 )
 
 // generatedAlias names a new host of profile by its naming rules, and returns

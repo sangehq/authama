@@ -28,10 +28,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/services/events"
-	"github.com/simtabi/authama/src/internal/services/history"
-	"github.com/simtabi/authama/src/internal/util/fs"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/services/events"
+	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // TypePrefix starts every event type: reverse-DNS, as authama's desktop
@@ -47,9 +47,11 @@ const (
 	TypeFileMode      = TypePrefix + "file.mode-changed"
 	TypeWatchStarted  = TypePrefix + "file.watch.started"
 	TypeWebhookTested = TypePrefix + "webhook.tested"
-	sourceBase        = "https://opensource.simtabi.com/products/simtabi/authama/install/"
-	specVersion       = "1.0"
-	jsonContentType   = "application/json"
+	// An install identity, not a link: kept as it was when the repository moved to sangehq, so a
+	// consumer keyed on source sees the same install.
+	sourceBase      = "https://opensource.simtabi.com/products/simtabi/authama/install/"
+	specVersion     = "1.0"
+	jsonContentType = "application/json"
 )
 
 // fileTypes maps a file event's kind to its type.

@@ -41,7 +41,7 @@ state home:    ~/.local/state/authama
 
 A capability is listed when this build has it, whether or not a setting turns it on: the API, webhooks
 and MCP are off by default, and say so when called. The homes are the ones this run resolves, so
-`--config-dir` and `AUTHAMA_CONFIG_DIR` move them as they move everything else.
+`AUTHAMA_CONFIG_DIR` (and `--dev-root`) move them as they move everything else.
 
 Fields are only ever added. A contract version is added when authama implements it, and is dropped
 only by a release whose CHANGELOG says so.

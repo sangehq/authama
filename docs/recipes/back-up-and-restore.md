@@ -3,13 +3,18 @@
 The only path that recovers **the same keys**. Snapshots do not: they carry no
 private key material by design.
 
-Create an age identity and keep it somewhere other than the machine you are
-backing up:
+Make an age key for backups, and keep a copy of its identity somewhere other than
+the machine you are backing up:
 
 ```sh
-age-keygen -o ~/age-identity.txt        # note the "public key:" line
-authama ssh bundle -r age1... -o ~/Backups
+authama settings backup-key             # makes the key, sets backup.age_recipient and paths.age_identity_file
+authama ssh bundle -o ~/Backups
 ```
+
+`backup-key` runs `age-keygen` for you and keeps the identity owner-only in the config home
+(`backup/age-identity.txt`, or where `paths.age_identity_file` already points). Without a
+copy of that file elsewhere, no backup can be decrypted. To use an age key you already have,
+set its public key instead: `authama settings set backup.age_recipient age1...`.
 
 The bundle holds the private keys, the manifest, the inventory and
 `providers.json`. It **never** holds `.env` — that is where provider API tokens
@@ -32,7 +37,9 @@ On the new machine, sign in to 1Password and run `authama ssh key regen-pub --al
 (or `authama ssh reconcile`) to bring their public halves back from the vault.
 
 `restore` overlays: a key already on disk that the bundle does not contain — one
-minted since the backup — survives. It replaces only what it has a copy of.
+minted since the backup — survives. It replaces only what it has a copy of, and
+keeps each file it replaces with different content (a key rotated since the backup,
+say) in the state home under `replaced/<stamp>/` first; the summary says where.
 
 > Set `AUTHAMA_AGE_RECIPIENT` and `AUTHAMA_AGE_IDENTITY_FILE` to skip the
 > flags. The recipient is also what lets `keygen --force` write a backup before

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/brand"
 )
 
 // docsRoot is the repository root, relative to this package.

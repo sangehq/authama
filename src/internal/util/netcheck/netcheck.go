@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"os/exec"
 	"sort"
 	"strconv"
@@ -51,8 +52,14 @@ func SSHReachable(host string, port int, timeout time.Duration) bool {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout+5*time.Second)
 	defer cancel()
+	// The probe only asks whether something answers. It must not touch the
+	// user's known_hosts: StrictHostKeyChecking=no against the real file adds
+	// whatever key the network offers, which would pin an unseen host key
+	// before a deploy even with AUTHAMA_AUTO_PIN=0. Both files are the null
+	// device, so nothing is read or recorded; pinning is `ssh knownhosts`'s job.
 	cmd := exec.CommandContext(ctx, "ssh", "-o", "BatchMode=yes",
 		"-o", "ConnectTimeout="+strconv.Itoa(secs), "-o", "StrictHostKeyChecking=no",
+		"-o", "UserKnownHostsFile="+os.DevNull, "-o", "GlobalKnownHostsFile="+os.DevNull,
 		"-p", strconv.Itoa(port), "--", host, "true")
 	var stderr strings.Builder
 	cmd.Stderr = &stderr

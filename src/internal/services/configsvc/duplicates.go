@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/core/renderer"
+	"github.com/sangehq/authama/src/internal/core/renderer"
 )
 
 // Duplicate is a Host pattern that authama's managed files define more than once.

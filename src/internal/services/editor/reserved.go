@@ -3,7 +3,7 @@ package editor
 import (
 	"fmt"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/manifest"
 )
 
 // ReserveKey records that ~/.ssh/<name> is kept on purpose. It only edits the

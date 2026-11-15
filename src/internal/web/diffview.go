@@ -4,8 +4,8 @@ import (
 	"html/template"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/services/history"
-	"github.com/simtabi/authama/src/internal/util/highlight"
+	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/util/highlight"
 )
 
 // diffView is one file's diff as the "diff" and "file_diff" partials show

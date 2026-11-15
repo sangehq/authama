@@ -11,16 +11,16 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/core/renderer"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/services/dataset"
-	"github.com/simtabi/authama/src/internal/services/savedsel"
-	"github.com/simtabi/authama/src/internal/services/selection"
-	"github.com/simtabi/authama/src/internal/util/encode"
-	"github.com/simtabi/authama/src/internal/util/fs"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/renderer"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/dataset"
+	"github.com/sangehq/authama/src/internal/services/savedsel"
+	"github.com/sangehq/authama/src/internal/services/selection"
+	"github.com/sangehq/authama/src/internal/util/encode"
+	"github.com/sangehq/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // newExportCmd is `export`: any list of the home, filtered, with the columns

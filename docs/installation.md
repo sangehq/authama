@@ -26,38 +26,48 @@ macOS, Linux and Windows are all first-class, each validated on its own CI runne
 
 Two ways, in this order:
 
-1. **Download a binary from the [GitHub release](https://github.com/simtabi/authama/releases).**
+1. **Download a binary from the [GitHub release](https://github.com/sangehq/authama/releases).**
    Each release carries `authama_<os>_<arch>` (`.exe` on Windows), archives, deb/rpm/apk
    packages and `checksums.txt`. Check what you downloaded before running it, then put it on
    your `PATH`:
 
    ```sh
    shasum -a 256 -c checksums.txt --ignore-missing
-   gh attestation verify authama_linux_amd64 --repo simtabi/authama \
+   gh attestation verify authama_linux_amd64 --repo sangehq/authama \
      --signer-workflow simtabi/.github/.github/workflows/go-release.yml   # optional: build provenance
    ```
 
    The provenance was signed by simtabi/.github's shared release workflow, which built the binary,
-   so the check names that workflow; without `--signer-workflow` it fails. v0.1.6 is the first
-   release since the history restarted (see [Earlier binary releases](#earlier-binary-releases)).
+   so the check names that workflow; without `--signer-workflow` it fails. v0.1.0 (2026-11-14) is
+   the first release under `sangehq/authama` (see [Earlier binary releases](#earlier-binary-releases)).
 2. **Build from source.** You need Go (the version `src/go.mod` names), `git` and `make`.
 
 Nothing is published to a package manager, an image registry or the Go module proxy, so this
 page offers no `brew`, `scoop`, `winget` or `go install` path.
 
 ```sh
-git clone https://github.com/simtabi/authama ~/src/authama
+git clone https://github.com/sangehq/authama ~/src/authama
 make -C ~/src/authama install    # builds build/<your-os>/authama, then copies it to ~/.local/bin
 authama doctor          # verify deps, perms, agent, known_hosts, drift, token-file modes
 ```
 
 `make install` builds first, so what lands on `PATH` is the checkout as it is now, and says
 whether `~/.local/bin` is on your `PATH` and whether another `authama` shadows it. Any
-directory works: `make install BINDIR=/usr/local/bin`. To check what is installed:
+directory works: `make install BINDIR=/usr/local/bin`.
+
+**Install or link.** `make install` copies the build, so `PATH` keeps that build until you install
+again. `make link` puts a symbolic link at `~/.local/bin/authama` instead, pointing at the
+checkout's `build/<your-os>/authama`, so every later `make build` is what `PATH` runs, and a running
+`authama serve` restarts into it (see *The web UI follows a new build* below). Use `link` while you
+work on authama itself, `install` otherwise; `link` replaces an installed copy and says so, and
+`make uninstall` removes either. `make build` replaces the binary in one step (it compiles to
+`authama.tmp` beside it and renames it), so the link never points at a missing file while a build
+runs. On Windows, use `make install`. To check what is installed:
 
 ```sh
-command -v authama      # which file runs: ~/.local/bin/authama after make install
-authama version         # the commit it was built from
+command -v authama      # which file runs: ~/.local/bin/authama after make install or make link
+ls -l "$(command -v authama)"   # a link (make link) points into the checkout's build/
+authama version         # the version, then the commit and build day: authama v0.1.0 (abc1234, 2026-11-14)
 ```
 
 On a Mac with Xcode's command line tools (`xcode-select --install`), `make build` also builds
@@ -87,7 +97,7 @@ A version is a tag: check one out to build exactly that release.
 
 ```sh
 git -C ~/src/authama fetch --tags
-git -C ~/src/authama checkout v0.1.0
+git -C ~/src/authama checkout v0.1.0       # the release you want; `git tag` lists them
 make -C ~/src/authama build
 ```
 
@@ -98,17 +108,20 @@ git -C ~/src/authama pull --ff-only
 make -C ~/src/authama install
 ```
 
-`authama version` reports the commit it was built from, so a build from a branch
-is still identifiable.
+`authama version` prints the version, then the commit and the day it was made when Go
+recorded them (any build from a git checkout, `make build` or a plain `go build`), so a
+build from a branch is still identifiable.
 
 **The web UI follows a new build by itself.** A running `authama serve` watches its own
-binary. After `make install` (or any rebuild of the file it runs from), once the new file has
+binary. After `make install`, or any `make build` when `PATH` runs a `make link` link, once the new file has
 stopped changing, the server restarts itself from it: same address, and every
 signed-in page stays signed in. Open pages notice the new server within a few seconds and
 reload; a green banner then says the page runs the current build, and the header marks the
 build *current*. A page with unsaved input in a form is not reloaded under you: it shows
 *A new build is running* with a **Reload** button. Owner-only changes ask for the PIN again
-after a restart.
+after a restart. A server whose binary moved (the checkout it ran from was renamed or relocated)
+restarts from the `authama` that `PATH` resolves, and watches that one from then on; with none on
+`PATH`, **Restart now** says so.
 
 `web.auto_restart` (`AUTHAMA_WEB_AUTO_RESTART`) set to `false` turns this off. A page from an
 older build then says so in a yellow banner, and **Restart now** in it does the same restart
@@ -152,8 +165,9 @@ Before 2026-11-06, versions 0.1.0 to 0.1.3 were published with binaries, archive
 Linux packages, a Homebrew cask and a Scoop manifest. The history was then folded
 into one commit and the version restarted at v0.1.0, and those releases were
 withdrawn: an installed binary keeps working, but the cask and the Scoop manifest
-no longer download. The next release ships on the GitHub release only, and those
-channels stay frozen. Until it does, build from source. Go's module proxy still serves the old `src/v0.1.0` to `src/v0.1.3`
+no longer download. Releases since ship on the GitHub release only, and those
+channels stay frozen. The versions restarted at v0.1.0 once more on 2026-11-14, under
+`sangehq/authama`; v0.1.6 and its tags were withdrawn ([release](release.md#version-numbers-since-the-restart)). Go's module proxy still serves the old `src/v0.1.0` to `src/v0.1.3`
 it cached, which is one more reason this page offers no `go install` path. [Migration](migration.md) covers
 moving an `sshmgr` install to `authama`.
 
@@ -250,8 +264,9 @@ the old home in - `~/.config/ssh-manager` (on Windows also
 `%APPDATA%\ssh-manager`), or an older `~/.config/sshmgr` or `~/.sshmgr` - moves
 logs, history, snapshots and bundles into the state home, writes
 `MIGRATED-TO-AUTHAMA.txt` into the old directory and leaves it in place. It says
-so once on stderr. The old `SSH_MANAGER_*` / `SSHMGR_*` variable names keep
-working, with a deprecation notice. See [Migration](migration.md).
+so once on stderr, and renames old `SSH_MANAGER_*` / `SSHMGR_*` names in the copied
+`.env`. Those names are no longer read anywhere else: set the `AUTHAMA_*` ones, and
+`authama settings validate` names any left over. See [Migration](migration.md).
 
 ### Configuration precedence (user first, then shipped default)
 
@@ -276,8 +291,9 @@ authama token init                # optional: a starter token config, then `auth
 
 `authama init` is safe to re-run: every run (re)creates the directory structure and
 re-asserts perms, and seeds any missing files **without** touching your existing
-manifest/`.env`. To reset the seed files to defaults, use `authama init --force` (it overwrites
-them in place). Add `--backup` to first copy the old ones into the state home's `.state/init-backup-<ts>/`.
+manifest/`.env`. To reset the seed files to defaults, use `authama init --force`: it copies the
+old ones into the state home's `.state/init-backup-<ts>/` first, and asks before it starts when run
+at a terminal (`-y` skips the question). `--no-backup` keeps no copy.
 
 Passphrases are **off by default** but a conscious choice: pass `--passphrase` to
 `reconcile`, `keygen`, `key add` or `rotate` to protect the keys they mint. Without it nothing prompts.

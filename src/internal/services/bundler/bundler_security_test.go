@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/core/renderer"
+	"github.com/sangehq/authama/src/internal/core/renderer"
 )
 
 // tmpResidue lists every regular file currently under dir, so a test can assert

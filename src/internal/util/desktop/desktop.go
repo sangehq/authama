@@ -14,8 +14,8 @@ import (
 
 	notifykit "github.com/simtabi/go-notifykit/src"
 
-	"github.com/simtabi/authama/src/internal/brand"
-	"github.com/simtabi/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/brand"
+	"github.com/sangehq/authama/src/internal/util/envnames"
 )
 
 // AppID is the identifier macOS lists authama's notifications under
@@ -56,8 +56,15 @@ func Notify(title, message string) bool {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	res, err := n.Send(ctx, notifykit.Notification{Title: title, Body: message})
+	res, err := n.Send(ctx, notification(title, message))
 	return err == nil && res.Backend != ""
+}
+
+// notification is what Notify sends. Its Group is the title, so the same
+// event posted again replaces its banner instead of stacking another (one
+// banner per event, as go-notifykit's standard asks).
+func notification(title, message string) notifykit.Notification {
+	return notifykit.Notification{Title: title, Body: message, Group: title}
 }
 
 // legacyNotify is the notifier authama shipped before go-notifykit, kept as the

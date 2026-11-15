@@ -6,10 +6,10 @@ import (
 	"io"
 	"path/filepath"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/services/importer"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/importer"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // ErrImportWouldReplace is import refusing to replace a manifest that has

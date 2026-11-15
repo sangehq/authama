@@ -6,10 +6,10 @@ import (
 	notifykit "github.com/simtabi/go-notifykit/src"
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/notifier"
-	"github.com/simtabi/authama/src/internal/util/desktop"
-	"github.com/simtabi/authama/src/internal/util/scheduler"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/notifier"
+	"github.com/sangehq/authama/src/internal/util/desktop"
+	"github.com/sangehq/authama/src/internal/util/scheduler"
 )
 
 // newNotifyCmd is the native notify verb group: install the scheduled expiry
@@ -96,7 +96,7 @@ func newNotifyCmd() *cobra.Command {
 			if notifier.New(p, m).Test() {
 				_, _ = fmt.Fprintln(c.OutOrStdout(), "sent a test desktop notification.")
 			} else {
-				_, _ = fmt.Fprintln(c.ErrOrStderr(), "no notification backend found (install notify-send / terminal-notifier).")
+				_, _ = fmt.Fprintln(c.ErrOrStderr(), "no notification backend found: on Linux install notify-send (libnotify); on macOS and Windows, `authama notify doctor` says what is missing.")
 			}
 			return nil
 		},

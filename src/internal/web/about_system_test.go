@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/platform"
 )
 
 func TestAboutShowsThisComputer(t *testing.T) {

@@ -149,7 +149,9 @@ func TestRestoreOverlaysAndKeepsWhatItCannotReplace(t *testing.T) {
 	mk(newer, "MINTED-AFTER-THE-BUNDLE\n")
 	mk(filepath.Join(ssh2, "profiles", "work", "work_a-ed25519"), "STALE\n")
 
-	if _, err := New(ssh2, cfg2, fakeCipher{}).Restore(res.AgePath, "", fakeFP); err != nil {
+	// The key it replaces is kept (TestRestoreKeepsTheFilesItReplaces).
+	kept := filepath.Join(base2, "replaced")
+	if _, err := New(ssh2, cfg2, fakeCipher{}).WithReplacedDir(kept).Restore(res.AgePath, "", fakeFP); err != nil {
 		t.Fatal(err)
 	}
 

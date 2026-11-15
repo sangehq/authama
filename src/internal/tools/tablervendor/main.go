@@ -17,7 +17,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/simtabi/authama/src/internal/tabler"
+	"github.com/sangehq/authama/src/internal/tabler"
 )
 
 func main() {

@@ -113,7 +113,7 @@ test('a bundle restore runs as a job and its stream is watched to the end', asyn
   expect(events.headers()['content-type']).toContain('text/event-stream');
   const stream = await events.text();
   expect(stream).toMatch(/event: line\ndata: restore: laid down \d+ file\(s\)/);
-  expect(stream).toContain('event: line\ndata:   work_hpc-ed25519  SHA256:');
+  expect(stream).toContain('event: line\ndata:   profiles/work/work_hpc-ed25519  SHA256:');
   expect(stream.trimEnd()).toMatch(/event: state\ndata: done$/);
 
   // The page follows the same stream and refreshes into the finished job.

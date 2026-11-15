@@ -6,6 +6,223 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security
+
+- **Sign out.** The web UI's user menu has **Sign out**, a `POST /signout` that ends the session on the
+  server and clears the cookie; before, a session ended only by timing out or by stopping the server
+  (review R-GAP-05).
+- **The read API throttles bad tokens.** Ten requests with a bad API token from one address within a
+  minute get `429` with `Retry-After` for the rest of that minute (R-SEC-19).
+- **A restart's handoff no longer rides in the environment.** The control key, sessions and form
+  tokens went to the new server in `AUTHAMA_SERVE_HANDOFF`, which `/proc/<pid>/environ` kept for its
+  whole life; they now go in an owner-only temporary file the new server reads once and removes, and
+  the variable names only the file. A handoff written inline by an older build is still read (R-SEC-21).
+
+### Documentation
+
+- **Docs links point at the repository.** The hosted docs site answers 404, so `--help`, the man pages
+  and the web UI's footer and About page link `github.com/sangehq/authama/tree/main/docs` until it is
+  live; `brand.DocsURL` is the one place to change, and a test fails any other source naming the site
+  (R-DOC-03).
+## [0.1.0] - 2026-11-14
+
+The first release under `sangehq/authama` and the module path `github.com/sangehq/authama/src`. The
+version numbers restart here (owner, 2026-11-14): the earlier v0.1.0, v0.1.4, v0.1.5 and v0.1.6 tags and
+the v0.1.6 GitHub release were withdrawn, and their notes stay below as history. Go's module proxy still
+holds the old `src/v0.1.0` and `src/v0.1.6`, whose `go.mod` names `github.com/simtabi/authama/src`, so
+nothing can import them; binaries ship on the GitHub release only.
+
+### Changed
+
+- **`authama version` names the commit and build day.** It printed only the version, so a build from a
+  branch said `authama dev`; it now adds them when Go recorded them, as in
+  `authama v0.1.6 (6c56209, 2026-11-13)`. The line still starts `authama <version>`.
+- **Go 1.27, golangci-lint v2.15.0 and the current go-notifykit.** The module now declares `go 1.27.0`
+  with `toolchain go1.27.4`, as sange and imprimatur do, and CI lints with golangci-lint v2.15.0; the dev
+  container defaults to Go 1.27. go-notifykit moves to the build sange uses, which drops the
+  `terminal-notifier` backend (macOS uses its helper app, else `osascript`).
+- **Desktop notifications replace rather than stack.** Each carries a group named after the event, so
+  the same event posted again replaces its banner. With no backend, the message now says to install
+  `notify-send` on Linux and to run `authama notify doctor` elsewhere, not `terminal-notifier`.
+- **CI skips draft pull requests and cancels superseded CodeQL runs.** Every CI and CodeQL job now
+  waits until a draft is marked ready (which starts a run), as sange and imprimatur already did, and
+  CodeQL cancels a pull request's earlier run when a new push supersedes it.
+- **`init --force` keeps a copy and asks first.** It reset `manifest.json`, `inventory.json` and `.env`
+  to their defaults with no copy unless `--backup` was given (and `--backup` without `--force` was
+  silently ignored), and never asked. It now copies them into the state home's `init-backup-<stamp>/`
+  first, and asks at a terminal, saying what it resets and where the copies go; `-y` skips the
+  question, and a run with no terminal proceeds as before, now with the copy. `--no-backup` keeps
+  none. `--backup` still works and is deprecated, since a backup is the default.
+- **authama moved to sangehq.** The repository is now `sangehq/authama` (GitHub redirects
+  `simtabi/authama`), and the Go module path is `github.com/sangehq/authama/src`. Release
+  assets, install scripts, the settings schema URL, the web UI's About links and the man
+  page point at the new home. The `retract` in `src/go.mod` is gone: it named versions of
+  the old path, and under the new one it would have retracted this module's own future
+  v0.1.1 to v0.1.3. Unchanged on purpose: the event type `com.simtabi.authama.*` and the
+  event `source` (both identify events to webhook consumers), and the notifier's macOS
+  identity `com.simtabi.authama` (changing it resets the notification permission).
+
+- **A release runs under the `release` environment again.** `release.yml` passes
+  `environment: release` to the shared workflow, pinned to simtabi/.github's `v1.0.0` (`767e0c0`,
+  which takes an environment), with the version as the comment so Dependabot can move it. Each release is recorded as a deployment, and the
+  environment requires the owner's approval (added 2026-11-13), so a pushed tag publishes nothing
+  until it is approved.
+
+### Added
+
+- **`make link`.** Links `~/.local/bin/authama` (and `authama-touchid` on macOS) to the checkout's
+  `build/<your-os>/` binary, so `PATH`, and a running `authama serve`, follow every build. It says
+  whether the directory is on `PATH`, as `make install` does; `make uninstall` removes the link.
+  Windows uses `make install`.
+
+### Fixed
+
+- **Rotation, rollback and restore summaries say what happened.** A rotation that did not happen said
+  "rotation ABORTED" (above "replaced" for a forced one), and a failed rollback said "rotation ABORTED"
+  too. Summaries now read "rotated", "rotation not done", "rolled back" or "rollback not done". A
+  restore names each key by its path, so a key and its `old/` predecessor are told apart.
+- **`settings show --json` prints JSON with no `authama.json`.** It printed a sentence; it now prints
+  `{}`, the settings that file sets.
+- **The manifest schema accepts `reserved_keys`.** `manifest.schema.json` forbids keys it does not
+  list, and it did not list `reserved_keys` (written by `ssh key reserve` since 0.1.4), so an editor or
+  CI step validating against it refused a manifest authama itself wrote. The schema guard now checks
+  the top level and the reserved-key entries too, and a new one checks `inventory.schema.json`.
+- **`doctor` reports what an interrupted run left behind.** A reconcile killed mid-run could leave a
+  `.mint-*` directory holding a private key, and doctor said nothing until the next reconcile swept
+  it. It is now a warning naming each path and `authama ssh clean` (`--strict` fails), and
+  `crash_residue` in `--json`.
+- **`settings validate` checks what `.env` sets, and migration renames old names.** It said "ok" over
+  a `.env` whose settings were never read: old `SSHMGR_`/`SSH_MANAGER_` names, a misspelt `AUTHAMA_`
+  name, and values like `AUTHAMA_SNAPSHOT_RETAIN=abc` or a boolean `maybe` (read as false). It now
+  reports each, naming the `AUTHAMA_` name to use for an old one, and migrating an old home renames
+  them in the copied `.env` so its settings keep applying.
+- **A stale config that could not be removed is reported.** Rendering the config listed an old
+  per-profile config under "removed stale" even when removing it failed; it now stops with the error.
+- **A `Match host` block that covers a managed host is reported.** The shadow check skipped every
+  `Match` block, so a `Match host *.corp` above the managed block quietly gave `api.corp` another
+  user. `Match` blocks made only of `host` and `originalhost` criteria are now evaluated (against
+  the alias, as ssh does there), and `host add`, like any command that changes the manifest, prints a
+  shadow it finds as a warning instead of leaving it to `doctor`.
+- **`ssh import` says what it leaves behind.** After import and reconcile, `doctor` failed at once on
+  the hand-written blocks import had copied (they stay in your config, above the managed block), and
+  `Match` and wildcard `Host` blocks were dropped without a word. The summary now names the blocks
+  left in your config and why doctor will report them, and lists each block it did not import.
+- **A key your own Host block uses is no longer called loose.** The key audit only looked at the
+  manifest, so a key named by a hand-written block in `~/.ssh/config`, or a file it Includes, was
+  reported as "a key in ~/.ssh that no Host block uses", and `doctor --strict` failed on a home
+  that was fine. It now reads those IdentityFile lines too.
+- **A corrupt `revoked.json` or `retired.json` is reported, not read as empty.** The key checklist
+  read an unreadable record as "nothing recorded", so a revoked key was listed as in use with nothing
+  left to do; the rotation's check for a predecessor that still logs in did the same and would evict
+  it. Both now stop with the error.
+- **`doctor` fails on a manifest it cannot load.** It loaded `manifest.json` with the error dropped,
+  skipped the drift checks and said "clean" (`ok: true`) over a file every other command refuses. A
+  manifest that exists and does not load is now a failing finding, in the report and as
+  `manifest_error` in `--json`, naming the way back (fix it, or restore a snapshot).
+- **A refused command no longer uses up a snapshot.** Every command that changes the home snapshots
+  `~/.ssh` first, before it checks its input, so each typo or name already taken kept a snapshot, and
+  with ten kept, a few typos pushed every real restore point out. A command that fails or is declined
+  having changed nothing (the manifest, the inventory and `~/.ssh` as they were) now gives its
+  snapshot back; one that changed something keeps it.
+- **Rotating again keeps a predecessor that still logs in.** Only one previous key is kept in `old/`,
+  so a second rotation evicted the first one's key even while a host it was never removed from still
+  accepted it. The rotation now stops and names those hosts; `rotate --evict-old` replaces it
+  anyway.
+- **A `~/.ssh/config` linked from a dotfiles repository stays a link.** Rendering the config renamed
+  a new file over the link, so the link became a regular file and the linked copy went stale. The
+  render now writes the link's target, atomically, and refuses a link whose target is missing rather
+  than replace it.
+- **Undoing a refused batch rewrites the manifest atomically.** When a batch that created a profile
+  failed, the manifest was put back with an in-place write, which an interruption could leave
+  half-written. It is now written by rename, like every other manifest write, and a guard test fails
+  on any new in-place truncating write outside a short, reasoned list.
+- **A snapshot that fails part-way leaves nothing behind.** It was written in place, so a failure
+  left a broken archive that was listed as a restore point and counted against retention. It is now
+  written to a temporary name, synced, and renamed into place.
+- **Webhook changes made during a delivery stick, and an event is sent once.** A delivery read
+  `webhooks.json`, sent for up to minutes, then wrote back what it had read, so a webhook removed in
+  the meantime came back with its secret and a disable was undone; the server's loop and
+  `authama webhook deliver` running together sent the same event twice. Deliveries now take turns,
+  and each writes back only its own progress, into the file as it is then.
+- **The web UI restarts after its binary moved.** A server started from a checkout that was then
+  moved (macOS keeps reporting the old path) ran a missing file on restart, after already telling the
+  page it was restarting, so the page waited for good; the watcher never restarted from a removed
+  binary either. A restart now runs the `authama` on `PATH` when its own path is gone, the watcher
+  follows that one, and with none on `PATH` the restart is refused with the reason, which the page
+  shows.
+- **`make build` never leaves the binary missing.** It emptied `build/` first, so with
+  `~/.local/bin/authama` linked to the build, `authama` was off `PATH` for the whole compile. It now
+  compiles to `authama.tmp` beside the binary and renames it into place (the Touch ID helper too), and
+  no longer runs `clean`; `make clean` still empties `build/` when asked.
+- **A host without a `user` can be deployed to.** authama reached it as `@host`, which ssh refuses
+  with its usage text, so every deploy, check and removal on such a host failed. It now connects to
+  the hostname alone, and ssh takes the user from its config or the local account.
+
+### Security
+
+- **The install scripts refuse a release with no `checksums.txt`.** `install.sh` and `install.ps1`
+  installed the download unverified, with a warning, when the checksum file was missing. They now
+  stop; `AUTHAMA_INSTALL_NO_VERIFY=1` is the explicit way past that, and CI proves both.
+- **A snapshot restores into `~/.ssh` only, with safe modes.** Restoring a snapshot extracted it into
+  your home directory, so a member outside `.ssh/` (a `.zshrc`, say) was written there, and file
+  modes came from the archive. An archive with any member outside `.ssh/` is now refused before
+  anything is written, directories come back owner-only, and files at most `0644`.
+- **Adopting a key never writes through a symlink.** `ssh import` checked the destination with a call
+  that follows links, so a dangling symlink there read as empty and the private key was written to
+  wherever it pointed. Anything at the path now counts as occupied, the key is created exclusively,
+  and its `.pub` is written by rename, which replaces a link instead of following it.
+- **Restoring an older bundle no longer destroys a newer key.** The prompt said the current tree was
+  snapshotted first, but snapshots never hold private keys, so a key rotated after the bundle was
+  made was overwritten and lost. A restore now keeps every file it replaces with different content,
+  keys, manifest and inventory included, in the state home under `replaced/<stamp>/` before it
+  writes anything, and refuses when it has nowhere to keep them. The summary names each kept file.
+- **A test now proves no web page or API response carries a secret.** Every GET route, read from
+  where the server registers it (50 today), is requested signed in, and the read API with a token;
+  each body is searched for planted token-file secrets, a webhook signing secret and a read API token.
+  Only private keys were checked before. The test also checks it can see a value pages do show, so
+  it cannot pass by reading nothing.
+- **The reachability check before a deploy or rotation no longer pins host keys.** It ran ssh with
+  `StrictHostKeyChecking=no` against your real `known_hosts`, so it recorded whatever key the network
+  offered, even with `AUTHAMA_AUTO_PIN=0`. It now reads and writes the null device instead;
+  `authama ssh knownhosts` is still what pins a key.
+- **A VM name cannot start with `-`.** `vm.name` reaches `prlctl`, `limactl` or `utmctl` as one
+  argument, which those tools would read as an option; a manifest naming a VM `--set=…` is now
+  refused on load.
+- **Moving the key root is confined to `~/.ssh`.** `authama ssh key root <dir>` (and the web UI) checked
+  that both names were one plain directory name, then renamed by full path; it now looks and renames
+  through an `os.Root` on `~/.ssh`, so no name can reach outside it. Code scanning had flagged the
+  three path operations.
+- **Webhooks refuse every non-public address.** The private-address filter missed 0.0.0.0/8,
+  198.18.0.0/15, 240.0.0.0/4, broadcast, 192.0.0.0/24, site-local IPv6, and the NAT64, 6to4 and
+  IPv4-compatible forms that carry a loopback or private IPv4 address. It now refuses every IANA
+  special-purpose range, judges an embedded IPv4 address by itself, and refuses numeric, hex,
+  octal and shortened IPv4 host names, both when an endpoint is added and when it is dialled.
+- **A raw option named `Host` is refused.** `raw_options` and `global_options` refused `Match` and
+  the command-running keys but not `Host`, so `{"Host": "*", "ForwardAgent": "yes"}` ended the
+  managed block and turned agent forwarding on for every host. `Host` is now refused like `Match`,
+  in any letter case.
+- **Wrong PINs sent at once are all counted.** The PIN check read the failure count, checked the
+  hash and wrote the count back with nothing serialising the three, so parallel guesses (browser
+  tabs, several commands) each saw the same count: 50 at once were all checked and one was
+  recorded, which defeated the lockout. Checks now run one at a time under a lock in the state
+  home, and a guess is recorded before its hash is checked. A failure to record it now refuses the
+  check rather than letting it through.
+- **Deleting `owner.json` no longer switches the seal and the PIN off.** A home that lost
+  `owner.json` but still holds the seal, the attempt count or a file-store key now reports the
+  missing file as a seal problem, keeps the web UI behind `/unlock`, and refuses the PIN with the way
+  out. `authama owner forget` finishes unbinding such a home, after a confirmation.
+- **A used sign-in link stays used across a restart.** A restarted server took the old one's first
+  printed token and armed it again for 10 minutes, so the address in a browser's history, the
+  terminal, `--token-file` or `serve.json` signed in again after every rebuild (auto-restart fires
+  on each one). A restart now mints a fresh token, and only links nobody used come across. The
+  handoff no longer carries the old token in the environment.
+- **`authama serve` checks it is talking to its own server before it trusts it.** A launch, `--stop`
+  and `--restart` used to accept any listener on the recorded port that repeated the public instance
+  id, then sent it the control key or signalled the recorded pid. `/healthz?challenge=` now answers
+  with an HMAC under the control key, and the key goes out, or the pid is stopped, only after that
+  proof. `--stop-all` signals a pid another server reports only when it is an `authama` process.
+  `/healthz` no longer gives its pid, build and start time to a request a proxy passed on.
+
 ### Documentation
 
 - **The provenance check now works.** `gh attestation verify` in the installation and release pages
@@ -13,7 +230,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   release workflow signs, and without the flag the check fails against v0.1.6. A test fails any doc
   that shows the command without it. The pages no longer say that no release has been published.
 
-## [0.1.6] - 2026-11-13
+## Withdrawn 0.1.6 - 2026-11-13
 
 The first release since the history restarted at 0.1.0, and the first built by the shared release
 workflow: binaries, archives, deb/rpm/apk packages, SBOMs, the source tarball, `checksums.txt` and a
@@ -606,7 +823,7 @@ no CHANGELOG section for them, the release refused to publish either, and a tag 
 - Installation covers checking what is installed, restarting the web UI after an update (with the
   commands to stop a server on the usual ports), and uninstalling, including what is kept.
 
-## [0.1.0] - 2026-11-06
+## Withdrawn 0.1.0 - 2026-11-06
 
 The first release of authama: SSH keys and config, and package-manager and git auth tokens, from one manifest, at the command line and in a local web UI. It brings together what earlier builds of this history shipped as 0.1.0 to 0.1.4, and the work after them.
 
@@ -1153,7 +1370,7 @@ needs no migration. See [migration](docs/migration.md).
 - A test parses every `authama`/`sshmgr` command shown in the docs against the
   real command tree, so a renamed verb or flag fails CI.
 
-- **[release](docs/release.md#homebrew-and-scoop)**: the Scoop manifest no longer needs a manual pull request.
+- **[release](docs/release.md#frozen-channels)**: the Scoop manifest no longer needs a manual pull request.
   The bucket's workflow opens and merges the `sshmgr-X.Y.Z` branch the release pushes.
 - **[migration](docs/migration.md#history-audit)** records an audit of every tag, release note and commit
   of sshmgr and auth-token-manager against this release, with what was restored and what was dropped on
@@ -2334,6 +2551,5 @@ generalised beyond Composer, packaged for PyPI, and given an interactive UI.
 ##### Security
 - Owner-only hardening now applies on Windows (ACL), not just POSIX `chmod`.
 
-[Unreleased]: https://github.com/simtabi/authama/compare/v0.1.6...HEAD
-[0.1.6]: https://github.com/simtabi/authama/releases/tag/v0.1.6
-[0.1.0]: https://github.com/simtabi/authama/releases/tag/v0.1.0
+[Unreleased]: https://github.com/sangehq/authama/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/sangehq/authama/releases/tag/v0.1.0

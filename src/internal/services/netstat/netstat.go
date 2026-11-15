@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/util/netcheck"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/util/netcheck"
 )
 
 const probeTimeout = 4 * time.Second

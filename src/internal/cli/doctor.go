@@ -10,13 +10,13 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/services/doctor"
-	"github.com/simtabi/authama/src/internal/services/knownhosts"
-	"github.com/simtabi/authama/src/internal/services/tokensvc"
-	"github.com/simtabi/authama/src/internal/services/vmsync"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/doctor"
+	"github.com/sangehq/authama/src/internal/services/knownhosts"
+	"github.com/sangehq/authama/src/internal/services/tokensvc"
+	"github.com/sangehq/authama/src/internal/services/vmsync"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // newDoctorCmd is the native (engine-free) doctor verb: diagnose deps, perms,
@@ -34,7 +34,9 @@ func newDoctorCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			// A missing/invalid manifest is non-fatal: drift checks are skipped.
+			// A manifest that does not load leaves m nil: the drift checks are
+			// skipped, and the doctor reports the load error itself as a
+			// finding that fails the verdict (doctor.Report.ManifestError).
 			m, _ := manifest.Load(p.Manifest())
 			svc := doctor.New(p, m, platform.EmitUseKeychain())
 

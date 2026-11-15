@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/authkeys"
-	"github.com/simtabi/authama/src/internal/util/secrets"
+	"github.com/sangehq/authama/src/internal/core/authkeys"
+	"github.com/sangehq/authama/src/internal/util/secrets"
 )
 
 // runEnv runs argv with an overlaid env (nil = inherit), returning stdout, stderr,

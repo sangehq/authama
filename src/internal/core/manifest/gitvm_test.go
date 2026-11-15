@@ -78,6 +78,9 @@ func TestGitAndVMValidation(t *testing.T) {
 		{"alias github.com shadowed", `"alias": "github-imanimanyara"`, `"alias": "github.com"`, "clashes with the Host github.com"},
 		{"unknown hypervisor", `"hypervisor": "parallels"`, `"hypervisor": "virtualbox"`, "vm.hypervisor"},
 		{"empty vm name", `"name": "Ubuntu 24.04"`, `"name": " "`, "vm.name is empty"},
+		// The name is one argv element to prlctl, limactl or utmctl, which
+		// would read a leading dash as an option (review R-SEC-17).
+		{"vm name like an option", `"name": "Ubuntu 24.04"`, `"name": "--set=.provision+=[]"`, "vm.name"},
 		{"own-key hypervisor as a host", `"hypervisor": "parallels"`, `"hypervisor": "orbstack"`, "own SSH access"},
 	}
 	for _, c := range cases {
@@ -161,6 +164,10 @@ func TestSchemaListsEveryManifestField(t *testing.T) {
 		schema []string
 		code   []string
 	}{
+		// The top level too: reserved_keys (0.1.4) was valid in the code and
+		// refused by the schema's additionalProperties:false (review R-INC-01).
+		{"manifest", props(), tags(Manifest{})},
+		{"reserved_keys.*", props("properties", "reserved_keys", "additionalProperties"), tags(ReservedKey{})},
 		{"defaults", props("properties", "defaults"), tags(Defaults{})},
 		{"defaults.git", props("properties", "defaults", "properties", "git"), tags(GitDefaults{})},
 		{"defaults.export", props("properties", "defaults", "properties", "export"), tags(ExportDefaults{})},
@@ -169,7 +176,7 @@ func TestSchemaListsEveryManifestField(t *testing.T) {
 		{"host", props("properties", "profiles", "additionalProperties", "properties", "hosts", "items"), tags(Host{})},
 		{"host.vm", props("properties", "profiles", "additionalProperties", "properties", "hosts", "items", "properties", "vm"), tags(VMSpec{})},
 	}
-	if len(checks) < 7 {
+	if len(checks) < 9 {
 		t.Fatal("inspected fewer types than exist")
 	}
 	for _, c := range checks {

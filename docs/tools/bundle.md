@@ -57,13 +57,18 @@ and destroying the old.
 | **`restore`** | the encrypted bundle | the **same** keys (same fingerprint) - true recovery |
 | **`reconcile`** | the manifest only | rebuilds structure + **mints new** keys for any missing |
 
-`restore` snapshots `~/.ssh` first (reversible), decrypts, lays the keys back
-down, re-asserts perms (700/600/644), and re-renders the config from the restored
-manifest so `~/.ssh` is immediately usable. Then `authama ssh load <profile>` to add
+`restore` snapshots `~/.ssh` first, decrypts, lays the keys back down, re-asserts
+perms (700/600/644), and re-renders the config from the restored manifest so `~/.ssh`
+is immediately usable. A snapshot never holds private keys, so before it writes
+anything, `restore` also keeps every file it is about to replace with different
+content (a key rotated since the bundle was made, the manifest, the inventory) in
+the state home under `replaced/<stamp>/`, as `ssh/<path>` and `config/<file>`,
+owner-only. The summary lists them. Nothing that a restore overwrites is lost. Then `authama ssh load <profile>` to add
 keys to the agent.
 
 ```sh
-export AUTHAMA_AGE_RECIPIENT="age1..."      # your public key, from age-keygen
+authama settings backup-key                # once: makes an age key and sets the recipient (or set
+                                           # AUTHAMA_AGE_RECIPIENT="age1..." to a key you have)
 authama ssh bundle -o ~/Backups            # writes ~/Backups/authama-<stamp>.age (+ sidecars)
 # ... new machine ...
 authama ssh restore ~/Backups/authama-<stamp>.age -i age-identity.txt

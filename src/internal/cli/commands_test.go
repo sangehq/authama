@@ -1,12 +1,15 @@
 package cli
 
 import (
+	"bytes"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/sangehq/authama/src/internal/services/mutation"
 )
 
 // The CLI half of the command surface, ported from .build/feature-check.sh.
@@ -109,12 +112,63 @@ func TestCommandSurfaceC05Init(t *testing.T) {
 		}
 	})
 
-	t.Run("C05/--force without --backup leaves no backup directory", func(t *testing.T) {
+	// --force backs up by default since review R-BUG-02 (owner, 2026-11-14:
+	// "Yes, change it"): it reset manifest.json and .env with no copy kept.
+	t.Run("C05/--force alone keeps the manifest it replaces", func(t *testing.T) {
 		p := editHome(t)
 		run(t, "init")
+		mine := `{"version":1,"defaults":{"key_type":"ed25519"},"profiles":{}}`
+		if err := os.WriteFile(p.Manifest(), []byte(mine), 0o600); err != nil {
+			t.Fatal(err)
+		}
 		run(t, "init", "--force")
+		saved, _ := filepath.Glob(filepath.Join(p.StateDir(), "init-backup-*", "manifest.json"))
+		if len(saved) == 0 {
+			t.Fatal("init --force kept no backup")
+		}
+		if got, _ := os.ReadFile(saved[0]); string(got) != mine {
+			t.Error("the backup does not hold the manifest that was replaced")
+		}
+	})
+
+	t.Run("C05/--force --no-backup leaves no backup directory", func(t *testing.T) {
+		p := editHome(t)
+		run(t, "init")
+		run(t, "init", "--force", "--no-backup")
 		if dirs, _ := filepath.Glob(filepath.Join(p.StateDir(), "init-backup-*")); len(dirs) != 0 {
-			t.Errorf("--force alone should not write a backup: %v", dirs)
+			t.Errorf("--no-backup should not write a backup: %v", dirs)
+		}
+	})
+
+	// At a terminal, --force asks first, saying what it resets and where the
+	// copies go; "no" leaves everything as it was.
+	t.Run("C05/--force asks at a terminal", func(t *testing.T) {
+		p := editHome(t)
+		run(t, "init")
+		mine := `{"version":1,"defaults":{"key_type":"ed25519"},"profiles":{}}`
+		if err := os.WriteFile(p.Manifest(), []byte(mine), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		prev := stdinIsTerminal
+		stdinIsTerminal = func() bool { return true }
+		t.Cleanup(func() { stdinIsTerminal = prev })
+		mutation.Release()
+		root := newRootCmd()
+		var buf bytes.Buffer
+		root.SetOut(&buf)
+		root.SetErr(&buf)
+		root.SetIn(strings.NewReader("n\n"))
+		root.SetArgs([]string{"init", "--force"})
+		err := root.Execute()
+		out := buf.String()
+		if err == nil {
+			t.Fatalf("declining still ran init --force:\n%s", out)
+		}
+		if !strings.Contains(out, "init-backup-") {
+			t.Errorf("the question does not say where the old files go:\n%s", out)
+		}
+		if got, _ := os.ReadFile(p.Manifest()); string(got) != mine {
+			t.Error("a declined init --force changed the manifest")
 		}
 	})
 }

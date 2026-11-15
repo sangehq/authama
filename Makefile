@@ -22,16 +22,16 @@ PKG       := ./cmd/authama
 
 # Our own modules come from git, never proxy.golang.org or sum.golang.org, so a
 # local build cannot feed a version into the public cache. Overridable.
-export GOPRIVATE ?= github.com/simtabi/*
-export GONOSUMDB ?= github.com/simtabi/*
+export GOPRIVATE ?= github.com/sangehq/*,github.com/simtabi/*
+export GONOSUMDB ?= github.com/sangehq/*,github.com/simtabi/*
 
 # A release carries two tags on the same commit, and this matches the first:
 #
 #   v0.1.0      the release. GoReleaser, the installers and `git describe` use
 #               it, and it is what a human reads.
 #   src/v0.1.0  the module alias. Go requires a subdirectory module's tags to be
-#               prefixed with the subdirectory, so `go install .../src@v0.1.0`
-#               resolves through this one and nothing else reads it.
+#               prefixed with the subdirectory, so the Go toolchain resolves
+#               `.../src` at v0.1.0 through this one and nothing else reads it.
 #
 # The split exists because OSS GoReleaser rejects a prefixed tag outright
 # ("current tag is not semver"), and monorepo.tag_prefix is a Pro feature. The
@@ -41,19 +41,27 @@ export GONOSUMDB ?= github.com/simtabi/*
 # enough: it excludes v1-final but admits anything else beginning with v,
 # and a tag like v2-migration-record would then be stamped into the binary.
 VERSION := $(shell git describe --tags --match 'v[0-9]*' --always --dirty 2>/dev/null || echo dev)
-LDFLAGS := -s -w -X github.com/simtabi/authama/src/internal/version.Version=$(VERSION)
+LDFLAGS := -s -w -X github.com/sangehq/authama/src/internal/version.Version=$(VERSION)
 GO      := go -C $(MODULE)
 
 .PHONY: help build build-all test vet fmt fmt-check lint lint-tool lint-all ci check gates ci-linux e2e e2e-web feature-check docker-shell docker-run docker-down \
-        cross dist release-snapshot clean install uninstall doctor reconcile render rotate bundle settings generate tabler-check tabler-update tabler-vendor man
+        cross dist release-snapshot clean install link uninstall doctor reconcile render rotate bundle settings generate tabler-check tabler-update tabler-vendor man
 
 help:  ## list targets
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | sed -E 's/:.*## /\t/' | sort
 
-# Always from an empty build/. A stale binary is not a hypothetical here: a bug
-# was reported against this tool from a binary built one minute before the fix
-# landed, and it looked exactly like the fix not working. Wiping the output first
-# means the file on disk is always one this invocation wrote.
+# The binary on disk is always one a build that succeeded wrote. A stale binary
+# is not a hypothetical here: a bug was reported against this tool from a binary
+# built one minute before the fix landed, and it looked exactly like the fix not
+# working. That once meant emptying build/ first; it now means compiling to
+# authama.tmp beside the binary and renaming it over the old one only when the
+# compile succeeds, so build/<host-os>/authama is never missing while a build
+# runs. `make link` points ~/.local/bin/authama there and web.auto_restart
+# watches it, so emptying build/ first left authama off PATH for the whole
+# compile. A failed build exits non-zero and leaves the previous binary in
+# place. build no longer runs clean; `make clean` empties build/ when asked. The
+# rename also gives the new binary a fresh inode, which macOS needs to accept a
+# re-signed executable.
 #
 # What it does NOT do is discard Go's build cache. That cache is keyed by a hash
 # of the actual inputs, so a cached object is only reused when recompiling would
@@ -62,12 +70,14 @@ help:  ## list targets
 # toolchain itself.
 #
 # -o is resolved relative to $(MODULE) because of `go -C`, hence the ../.
-build: clean ## compile the binary into build/{host-os}/ (FORCE=1 to rebuild deps too)
+build: ## compile the binary into build/{host-os}/, replacing it in one step (FORCE=1 to rebuild deps too)
 	@mkdir -p build/$(HOST_OS)
-	$(GO) build $(if $(FORCE),-a,) -trimpath -ldflags '$(LDFLAGS)' -o ../$(BIN)$(EXE) $(PKG)
+	$(GO) build $(if $(FORCE),-a,) -trimpath -ldflags '$(LDFLAGS)' -o ../$(BIN).tmp$(EXE) $(PKG)
+	mv -f $(BIN).tmp$(EXE) $(BIN)$(EXE)
 	@echo "built $(BIN)$(EXE)  ->  $$(./$(BIN)$(EXE) version)"
 ifeq ($(HOST_OS),macos)
-	@$(MODULE)/scripts/touchid-helper.sh build/macos/authama-touchid
+	@$(MODULE)/scripts/touchid-helper.sh build/macos/authama-touchid.tmp
+	@if [ -f build/macos/authama-touchid.tmp ]; then mv -f build/macos/authama-touchid.tmp build/macos/authama-touchid; fi
 endif
 
 build-all: ## compile every package (what CI gated on before `ci` existed)
@@ -284,8 +294,34 @@ install: build ## copy build/<host-os>/authama to BINDIR (default ~/.local/bin) 
 	@found="$$(command -v authama 2>/dev/null)"; if [ -n "$$found" ] && [ "$$found" != "$(INSTALLED)" ]; then \
 		echo "note: 'authama' on PATH resolves to $$found, not $(INSTALLED)"; fi
 
-uninstall: ## remove the authama binary from BINDIR (default ~/.local/bin); config, state and keys stay
-	@if [ ! -e "$(INSTALLED)" ]; then echo "nothing to remove: $(INSTALLED) does not exist"; exit 0; fi; \
+# link points BINDIR/authama at this checkout's build/<host-os>/authama instead
+# of copying it, so every `make build` is what PATH runs, and a running
+# `authama serve` restarts into it (web.auto_restart). It replaces whatever is
+# at BINDIR/authama, an installed copy included, and says so. Windows has no
+# symlinks a user can make by default: use `make install` there.
+ifeq ($(OS),Windows_NT)
+link:
+	@echo "make link needs symlinks; on Windows use: make install" >&2; exit 1
+else
+link: build ## point BINDIR/authama (default ~/.local/bin) at this checkout's build, so PATH follows every build
+	@mkdir -p "$(BINDIR)"
+	@if [ -e "$(INSTALLED)" ] && [ ! -L "$(INSTALLED)" ]; then echo "replacing the copy at $(INSTALLED) with a link"; fi
+	ln -sfn "$(CURDIR)/$(BIN)" "$(INSTALLED)"
+	@echo "linked $(INSTALLED) -> $(CURDIR)/$(BIN)  ->  $$("$(INSTALLED)" version | head -1)"
+	@if [ "$(HOST_OS)" = macos ] && [ -f build/macos/authama-touchid ]; then \
+		ln -sfn "$(CURDIR)/build/macos/authama-touchid" "$(BINDIR)/authama-touchid" && \
+		echo "linked $(BINDIR)/authama-touchid (Touch ID)"; fi
+	@case ":$$PATH:" in *":$(BINDIR):"*) ;; *) echo "note: $(BINDIR) is not on PATH; add it to your shell profile";; esac
+	@found="$$(command -v authama 2>/dev/null)"; if [ -n "$$found" ] && [ "$$found" != "$(INSTALLED)" ]; then \
+		echo "note: 'authama' on PATH resolves to $$found, not $(INSTALLED)"; fi
+endif
+
+uninstall: ## remove the authama binary, or this checkout's link, from BINDIR (default ~/.local/bin); config, state and keys stay
+	@if [ -L "$(INSTALLED)" ] && [ "$$(readlink "$(INSTALLED)")" = "$(CURDIR)/$(BIN)" ]; then \
+		unlink "$(INSTALLED)" && echo "removed the link $(INSTALLED)"; \
+		if [ -L "$(BINDIR)/authama-touchid" ]; then unlink "$(BINDIR)/authama-touchid" && echo "removed the link $(BINDIR)/authama-touchid"; fi; \
+		exit 0; fi; \
+	if [ ! -e "$(INSTALLED)" ]; then echo "nothing to remove: $(INSTALLED) does not exist"; exit 0; fi; \
 	case "$$("$(INSTALLED)" version 2>/dev/null | head -1)" in \
 		authama\ *) ;; \
 		*) echo "refusing: $(INSTALLED) does not answer 'version' as authama" >&2; exit 1;; \

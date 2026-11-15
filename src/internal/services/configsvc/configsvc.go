@@ -11,9 +11,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/core/renderer"
-	"github.com/simtabi/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/renderer"
+	"github.com/sangehq/authama/src/internal/util/fs"
 )
 
 const (
@@ -152,7 +152,11 @@ func (s *Service) Write(dryRun bool) (*WriteResult, error) {
 					return nil, err
 				}
 			}
-			if err := fs.WriteTextAtomic(dest, target, configMode); err != nil {
+			out, err := writeTarget(dest)
+			if err != nil {
+				return nil, err
+			}
+			if err := fs.WriteTextAtomic(out, target, configMode); err != nil {
 				return nil, err
 			}
 		}
@@ -165,10 +169,12 @@ func (s *Service) Write(dryRun bool) (*WriteResult, error) {
 	}
 	for _, rel := range s.configFilesOnDisk() {
 		if _, ok := rendered[rel]; !ok {
-			res.Pruned = append(res.Pruned, rel)
 			if !dryRun {
-				_ = os.Remove(filepath.Join(s.sshDir, filepath.FromSlash(rel)))
+				if err := os.Remove(filepath.Join(s.sshDir, filepath.FromSlash(rel))); err != nil && !os.IsNotExist(err) {
+					return res, fmt.Errorf("could not remove the stale %s, which no longer belongs to any profile: %w", rel, err)
+				}
 			}
+			res.Pruned = append(res.Pruned, rel)
 		}
 	}
 	return res, nil
@@ -398,4 +404,21 @@ func rendersControlPath(rendered map[string]string) bool {
 		}
 	}
 	return false
+}
+
+// writeTarget is the file a render of dest writes. A config linked into place
+// (from a dotfiles repository, say) is written at the link's target, so the
+// link stays a link: renaming a new file over dest replaced the link with a
+// regular file and left the linked copy stale. A link whose target is missing
+// is refused rather than replaced.
+func writeTarget(dest string) (string, error) {
+	fi, err := os.Lstat(dest)
+	if err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		return dest, nil
+	}
+	real, err := filepath.EvalSymlinks(dest)
+	if err != nil {
+		return "", fmt.Errorf("%s is a link to a file that does not exist (%v): restore the file it points at, or remove the link, then render again", dest, err)
+	}
+	return real, nil
 }

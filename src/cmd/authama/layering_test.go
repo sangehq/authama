@@ -77,7 +77,7 @@ func importsOf(f *ast.File) []string {
 	return out
 }
 
-const mod = "github.com/simtabi/authama/src/"
+const mod = "github.com/sangehq/authama/src/"
 
 // S1 - the facade is dissolved.
 //
@@ -177,7 +177,7 @@ func TestTheBinaryLinksOnlyItsTwoChosenDependencies(t *testing.T) {
 		t.Fatalf("go list -deps: %v", err)
 	}
 
-	const self = "github.com/simtabi/authama/src"
+	const self = "github.com/sangehq/authama/src"
 	// Two decisions. cobra is the command line; pflag and mousetrap are its
 	// own requirements, and neither renders anything. modernc.org/sqlite is the
 	// operation history's store (web UI plan, D2: pure Go, so CGO_ENABLED=0
@@ -312,6 +312,10 @@ func TestTheToolRunsOnlyTheBinariesItDeclares(t *testing.T) {
 		// prefers an installed authama on PATH over the running binary's own
 		// path so the job survives the binary moving.
 		"authama",
+		// `authama serve --stop-all` checks that a pid another server reports
+		// is an authama process before it signals it: ps on POSIX, tasklist
+		// on Windows. Without either, nothing is signalled.
+		"ps", "tasklist",
 	} {
 		declared[b] = true
 	}

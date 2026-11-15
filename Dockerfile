@@ -15,12 +15,12 @@
 # - authama's config home is /home/dev/.config/authama and its state home
 #   /home/dev/.local/state/authama, so both land in that mounted home.
 
-ARG GO_VERSION=1.26
+ARG GO_VERSION=1.27
 FROM golang:${GO_VERSION}
 
 LABEL org.opencontainers.image.title="authama-dev" \
       org.opencontainers.image.description="Authentication Access Manager: SSH keys and config, and auth tokens - dev container" \
-      org.opencontainers.image.source="https://github.com/simtabi/authama" \
+      org.opencontainers.image.source="https://github.com/sangehq/authama" \
       org.opencontainers.image.licenses="MIT"
 
 ENV DEBIAN_FRONTEND=noninteractive

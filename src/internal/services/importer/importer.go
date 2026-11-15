@@ -16,12 +16,13 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/key"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/services/keystore"
-	"github.com/simtabi/authama/src/internal/util/paths"
-	"github.com/simtabi/authama/src/internal/util/perms"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/key"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/keystore"
+	"github.com/sangehq/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/perms"
 )
 
 // kv is one ordered raw_option carried through from the source config.
@@ -52,6 +53,12 @@ type ImportResult struct {
 	// relative Includes and ~/.ssh/ identity paths resolved against.
 	Sources []string
 	Root    string
+	// LeftInConfig are the aliases imported from hand-written Host blocks,
+	// which stay in the source config: authama does not edit it.
+	LeftInConfig []string
+	// NotImported are the Match blocks and wildcard-only Host blocks, as
+	// written: authama manages plain Host blocks, so these stay and apply.
+	NotImported []string
 }
 
 // Format renders the human-readable import summary (mirrors ImportResult.format).
@@ -78,6 +85,14 @@ func (r ImportResult) Format() string {
 	}
 	for _, s := range r.Skipped {
 		lines = append(lines, "  skipped "+s)
+	}
+	if len(r.LeftInConfig) > 0 {
+		lines = append(lines, "  the hand-written Host blocks for "+strings.Join(r.LeftInConfig, ", ")+" stay in your config: "+
+			"ssh reads them before the managed block, so `authama doctor` reports them shadowed until you remove them "+
+			"(authama does not edit what it did not write)")
+	}
+	for _, n := range r.NotImported {
+		lines = append(lines, "  not imported: "+n+" (authama manages plain Host blocks; it stays in your config and still applies)")
 	}
 	return strings.Join(lines, "\n")
 }
@@ -694,7 +709,12 @@ func (im *Importer) Run(configPath string, dryRun bool) (ImportResult, error) {
 		Sources: src.Files, Root: src.Root}
 	for name, hosts := range byProfile {
 		result.Profiles[name] = len(hosts)
+		for _, h := range hosts {
+			result.LeftInConfig = append(result.LeftInConfig, h.Alias)
+		}
 	}
+	sort.Strings(result.LeftInConfig)
+	result.NotImported = notImported(src.Files)
 	if !dryRun {
 		if err := m.Save(im.p.Manifest()); err != nil {
 			return ImportResult{}, err
@@ -756,7 +776,9 @@ func underProfile(real, profile, root string) bool {
 // destination already exists.
 func (im *Importer) adoptKey(m *manifest.Manifest, srcPriv, profile, keyName string) bool {
 	dstPriv := m.KeyPath(im.p.SSHDir, manifest.KeyRef{Profile: profile, KeyName: keyName})
-	if exists(dstPriv) || !exists(srcPriv) {
+	// occupied, not exists: a dangling symlink at the destination reads as
+	// absent through Stat, and the copy would then follow it out of the tree.
+	if occupied(dstPriv) || !exists(srcPriv) {
 		return false
 	}
 	if err := os.MkdirAll(filepath.Dir(dstPriv), perms.DirMode); err != nil {
@@ -764,15 +786,18 @@ func (im *Importer) adoptKey(m *manifest.Manifest, srcPriv, profile, keyName str
 	}
 	_ = perms.SetPerms(filepath.Dir(dstPriv), perms.DirMode)
 	if im.standIn {
-		if os.WriteFile(dstPriv, nil, 0o600) != nil {
+		if writeNew(dstPriv, nil) != nil {
 			return false
 		}
 	} else if !copyFile(srcPriv, dstPriv) {
 		return false
 	}
 	_ = perms.SetPerms(dstPriv, perms.PrivateKeyMode)
-	if exists(srcPriv + ".pub") {
-		if copyFile(srcPriv+".pub", dstPriv+".pub") {
+	// The public half replaces whatever is beside the new private key, a stale
+	// .pub included, by rename: a rename replaces a symlink there rather than
+	// writing through it.
+	if b, err := os.ReadFile(srcPriv + ".pub"); err == nil {
+		if fs.WriteTextAtomic(dstPriv+".pub", string(b), perms.PublicKeyMode) == nil {
 			_ = perms.SetPerms(dstPriv+".pub", perms.PublicKeyMode)
 		}
 	}
@@ -828,10 +853,89 @@ func isFile(path string) bool {
 	return err == nil && fi.Mode().IsRegular()
 }
 
+// occupied reports whether anything is at path, a symlink included, even one
+// whose target is missing.
+func occupied(path string) bool { _, err := os.Lstat(path); return err == nil }
+
+// copyFile copies src to a new file at dst, never through anything already
+// there: see writeNew.
 func copyFile(src, dst string) bool {
 	b, err := os.ReadFile(src)
 	if err != nil {
 		return false
 	}
-	return os.WriteFile(dst, b, 0o600) == nil
+	return writeNew(dst, b) == nil
+}
+
+// writeNew creates dst, owner-only, and fails if anything is there: O_EXCL
+// refuses an existing file and does not follow a symlink, dangling or not.
+func writeNew(dst string, b []byte) error {
+	f, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err
+	}
+	if _, err := f.Write(b); err != nil {
+		_ = f.Close()
+		_ = os.Remove(dst)
+		return err
+	}
+	return f.Close()
+}
+
+// IdentityFiles is every IdentityFile the ssh config at configPath names, in
+// any block (pattern blocks included) and in any file it Includes, with ~
+// expanded. Another package's check that a key "is used by no Host block"
+// reads this, so it sees the hand-written blocks authama does not manage.
+func IdentityFiles(configPath string) []string {
+	b, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil
+	}
+	blocks, _ := collectBlocks(string(b), filepath.Dir(configPath), map[string]bool{}, true)
+	var out []string
+	for _, bl := range blocks {
+		for _, o := range bl.opts {
+			if strings.EqualFold(o.Key, "IdentityFile") {
+				if arg := firstArg(o.Val); arg != "" {
+					out = append(out, expanduser(arg))
+				}
+			}
+		}
+	}
+	return out
+}
+
+// notImported lists, as written, the Match blocks and the Host blocks whose
+// every pattern is a wildcard in files: what an import cannot turn into a
+// manifest host, and so leaves in place.
+func notImported(files []string) []string {
+	var out []string
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			continue
+		}
+		for _, raw := range strings.Split(string(b), "\n") {
+			line := strings.TrimSpace(raw)
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			keyword, value := splitKV(line)
+			switch keyword {
+			case "match":
+				out = append(out, "Match "+value)
+			case "host":
+				wild := true
+				for _, p := range argvSplit(value) {
+					if !strings.ContainsAny(p, "*?!") {
+						wild = false
+					}
+				}
+				if wild {
+					out = append(out, "Host "+value)
+				}
+			}
+		}
+	}
+	return out
 }

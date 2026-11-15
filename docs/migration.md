@@ -50,20 +50,15 @@ and the Scoop manifest - to `authama`. Your config, keys and `~/.ssh` need nothi
 | Remote lock and temp files on servers | `.ssh-manager.lock`, `authorized_keys.ssh-manager.*` | `.authama.lock`, `authorized_keys.authama.*` |
 | VM `ProxyCommand` | the binary that rendered it | always `authama` |
 
-To move over:
+To move over, install authama from the GitHub release or build it from source
+([installation](installation.md)). The Homebrew cask, the Scoop bucket and the install scripts
+that once carried the rename are frozen and no longer updated
+([earlier binary releases](installation.md#earlier-binary-releases)); a Linux package from the
+release still replaces `sshmgr`:
 
 ```sh
-# Homebrew: the rename is picked up on update; if it is not, swap the casks
-brew update && brew upgrade
-brew list --cask sshmgr >/dev/null 2>&1 && brew uninstall --cask sshmgr && brew install --cask simtabi/tap/authama
-
-# Scoop
-scoop uninstall sshmgr; scoop install simtabi/authama
-
-# deb / rpm / apk: install the authama package; it replaces sshmgr
+# deb / rpm / apk from the GitHub release: install the authama package; it replaces sshmgr
 sudo apt install ./authama_linux_amd64.deb
-
-# install.sh / install.ps1 / go install: nothing changes, they install authama
 
 # then, once:
 authama ssh config render        # rewrites VM ProxyCommand lines to authama
@@ -134,9 +129,9 @@ Nothing you have stops working.
 | Variables | `SSH_MANAGER_*`, `SSHMGR_DEV_ROOT` | `AUTHAMA_*` from 0.1.1; the old names are ignored since 2026-11-07 |
 | `~/.ssh` | managed-block markers, `known_hosts` tags | the managed block's markers are rewritten under the authama name on the next render, with no other diff; new `known_hosts` pins are tagged `authama` from 0.1.2, and `sshmgr`-tagged ones are still recognized |
 | `vm` ProxyCommand | `sshmgr vm proxy …` | `authama ssh config render` points it at `authama`; run it before removing an old `sshmgr` |
-| Repository and Go module | `github.com/simtabi/ssh-manager`, module `github.com/simtabi/ssh-manager/src/v3` | `github.com/simtabi/authama`, module `github.com/simtabi/authama/src` (v3.6.1 alone was published as `.../authama/src/v3`). GitHub redirects the old repository URLs, so old clones and the old `install.sh`/`install.ps1` URLs keep working |
+| Repository and Go module | `github.com/simtabi/ssh-manager`, module `github.com/simtabi/ssh-manager/src/v3` | `github.com/sangehq/authama`, module `github.com/sangehq/authama/src` (v3.6.1 alone was published as `.../authama/src/v3`). GitHub redirects the old repository URLs, so old clones and the old `install.sh`/`install.ps1` URLs keep working |
 | Version | 3.6.1 | **0.1.0**: authama restarted its version numbers. The 3.x tags and GitHub releases were removed; their history is in the [CHANGELOG](../CHANGELOG.md#pre-010-history-formerly-ssh-manager-1x361-and-auth-token-manager-0x). A package manager may treat 0.1.0 as older than 3.6.x; see below |
-| Install | `install.sh`, `install.ps1`, release archives | binaries ship on the GitHub release only, from v0.1.6 on, or authama is built from source ([installation](installation.md)). The installers, archives and packages of the withdrawn 0.1.x builds carried both binaries until the `sshmgr` alias was [removed](#removing-the-sshmgr-alias); those channels are frozen ([earlier binary releases](installation.md#earlier-binary-releases)) |
+| Install | `install.sh`, `install.ps1`, release archives | binaries ship on the GitHub release only, from v0.1.0 (2026-11-14) on, or authama is built from source ([installation](installation.md)). The installers, archives and packages of the withdrawn 0.1.x builds carried both binaries until the `sshmgr` alias was [removed](#removing-the-sshmgr-alias); those channels are frozen ([earlier binary releases](installation.md#earlier-binary-releases)) |
 
 Because 0.1.0 sorts below 3.6.x, a package manager that only moves forward
 may leave you on 3.6.x. Remove that install, then build authama from source
@@ -148,7 +143,7 @@ scoop uninstall authama sshmgr                     # Scoop
 authama version                                     # after `make install`: the build you made
 ```
 
-v0.1.6, the first release since the history restarted, is on the GitHub release only. The Homebrew cask
+v0.1.0 (2026-11-14), the first release under `sangehq/authama`, is on the GitHub release only. The Homebrew cask
 and the Scoop manifest were withdrawn with the 0.1.x assets they named, and stay frozen.
 
 Behaviour changes to know about:

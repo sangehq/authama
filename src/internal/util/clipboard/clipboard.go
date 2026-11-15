@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/simtabi/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/platform"
 )
 
 // Command picks the platform's clipboard writer: pbcopy on macOS,

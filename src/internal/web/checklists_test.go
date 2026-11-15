@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/services/checklist"
+	"github.com/sangehq/authama/src/internal/services/checklist"
 )
 
 // firstKey is the fixture home's first key checklist.

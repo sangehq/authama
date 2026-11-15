@@ -1,6 +1,6 @@
 package web
 
-import "github.com/simtabi/authama/src/internal/services/tokensvc"
+import "github.com/sangehq/authama/src/internal/services/tokensvc"
 
 // auditRow is one tool's line in the token audit card: its file, its mode,
 // and a note that belongs with it (a present auth.json overrides

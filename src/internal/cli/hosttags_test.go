@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/manifest"
 )
 
 // `host edit --tag/--untag` - the only CLI way to take a tag off a host.

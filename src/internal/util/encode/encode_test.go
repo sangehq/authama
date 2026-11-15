@@ -9,7 +9,7 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
-	"github.com/simtabi/authama/src/internal/util/csvout"
+	"github.com/sangehq/authama/src/internal/util/csvout"
 )
 
 // sample holds every hazard a format must survive: a spreadsheet formula, a

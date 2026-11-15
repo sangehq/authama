@@ -72,7 +72,7 @@ docs/  README.md  CHANGELOG.md  LICENSE  Makefile  .github/
 
 Package paths below are written relative to the module, so `internal/cli` is
 `src/internal/cli` on disk; the Go import path is
-`github.com/simtabi/authama/src/internal/cli`.
+`github.com/sangehq/authama/src/internal/cli`.
 
 Two paths deliberately cross that boundary, and both are commented where they
 occur. GoReleaser runs from the repo root with `builds[].dir: src`, because its
@@ -113,9 +113,10 @@ The token feature follows the same layering as the SSH side:
 
 Names (`Authentication Access Manager`, `authama`, and the former `sshmgr`, still recognized in what older releases wrote) come from
 `internal/brand`, so a rename is one edit. Environment variable names come from
-`internal/util/envnames`: each `AUTHAMA_*` name lists its pre-0.1.1 spellings
-(`SSH_MANAGER_*`, `SSHMGR_*`), which are still read with a one-line deprecation
-notice. The Go module path is unchanged.
+`internal/util/envnames`, which reads only the `AUTHAMA_*` names: the pre-0.1.1
+spellings (`SSH_MANAGER_*`, `SSHMGR_*`) stopped being read on 2026-11-07, and
+`authama settings validate` names any left in `.env`. The Go module path is
+`github.com/sangehq/authama/src`, since the move to sangehq.
 
 ## Key flows
 

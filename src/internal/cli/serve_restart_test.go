@@ -2,18 +2,23 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/util/envnames"
-	"github.com/simtabi/authama/src/internal/web"
+	"github.com/sangehq/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/testcred"
+	"github.com/sangehq/authama/src/internal/web"
 )
 
 func healthServer(t *testing.T, body string) (host string, port int) {
@@ -104,5 +109,105 @@ func TestStopAllProbesTheDefaultRangeAndTheConfiguredPort(t *testing.T) {
 	}
 	if got := serverPorts(web.DefaultPort, nil); len(got) != web.DefaultPortAttempts {
 		t.Errorf("the default port was probed twice: %v", got)
+	}
+}
+
+// A restarted server never re-arms the sign-in token the old one printed:
+// a used link stayed used only until the next rebuild (review R-SEC-05). It
+// mints a fresh token, keeps the control key so the record stays valid, and
+// hands the old token on only through Links, which hold unused ones.
+func TestARestartMintsAFreshSignInToken(t *testing.T) {
+	h := &serveHandoff{Token: testcred.Secret("printed"), Control: testcred.Secret("control")}
+	token, control := serveTokens(h)
+	if token == "" || token == h.Token {
+		t.Errorf("restart sign-in token = %q, want a fresh one", token)
+	}
+	if control != h.Control {
+		t.Errorf("control key = %q, want the old one kept", control)
+	}
+	token, control = serveTokens(nil)
+	if token == "" || control == "" || token == control {
+		t.Errorf("a first launch: token %q control %q", token, control)
+	}
+}
+
+// The handoff this build writes, with no token since R-SEC-05, is taken by
+// the next server; without this a restart quietly started from scratch.
+func TestTheHandoffThisBuildWritesIsTaken(t *testing.T) {
+	b, err := json.Marshal(serveHandoff{Control: "control-key", Port: 7822, Record: true, Addr: "127.0.0.1:7822", Instance: "aaaa"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(envnames.ServeHandoff, string(b))
+	h := takeHandoff()
+	if h == nil || h.Control != "control-key" || h.Port != 7822 {
+		t.Fatalf("handoff written without a token was not taken: %+v", h)
+	}
+}
+
+// A restart runs the binary at this executable's path while it is there,
+// else the authama PATH resolves, else it says why (found 2026-11-13: a
+// server started from a checkout that then moved execed a missing file).
+func TestARestartRunsTheBinaryOnPATHWhenItsOwnIsGone(t *testing.T) {
+	dir := t.TempDir()
+	own := filepath.Join(dir, "authama")
+	onPath := filepath.Join(dir, "elsewhere", "authama")
+	for _, f := range []string{own, onPath} {
+		if err := os.MkdirAll(filepath.Dir(f), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(f, []byte("bin"), 0o755); err != nil { //nolint:gosec // a test executable
+			t.Fatal(err)
+		}
+	}
+	look := func(string) (string, error) { return onPath, nil }
+	if got, err := restartExecutable(own, look); err != nil || got != own {
+		t.Errorf("own binary present: %q, %v", got, err)
+	}
+	gone := filepath.Join(dir, "moved-away", "authama")
+	want, _ := filepath.EvalSymlinks(onPath)
+	if got, err := restartExecutable(gone, look); err != nil || got != want {
+		t.Errorf("own binary gone: %q, %v; want the one on PATH", got, err)
+	}
+	none := func(string) (string, error) { return "", exec.ErrNotFound }
+	if _, err := restartExecutable(gone, none); err == nil || !strings.Contains(err.Error(), gone) || !strings.Contains(err.Error(), "PATH") {
+		t.Errorf("nothing to run: %v; want the reason naming the old path and PATH", err)
+	}
+}
+
+// The handoff's secrets (control key, sessions, form tokens) no longer ride
+// in the environment, where /proc/<pid>/environ keeps them for the life of
+// the process (R-SEC-21): the variable names an owner-only file, which the
+// new server reads once and removes.
+func TestTheHandoffTravelsInAnOwnerOnlyFile(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+	control := testcred.Secret("control")
+	entry, err := handoffEnv(serveHandoff{Control: control, Port: 7822, Addr: "127.0.0.1:7822", Instance: "aaaa"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	name, value, _ := strings.Cut(entry, "=")
+	if name != envnames.ServeHandoff {
+		t.Fatalf("entry %q sets the wrong variable", name)
+	}
+	if strings.Contains(value, control) {
+		t.Fatal("the control key is in the environment")
+	}
+	path, ok := strings.CutPrefix(value, handoffFilePrefix)
+	if !ok {
+		t.Fatalf("value %q names no file", value)
+	}
+	if info, err := os.Stat(path); err != nil {
+		t.Fatal(err)
+	} else if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
+		t.Errorf("handoff file mode = %v, want 0600", info.Mode().Perm())
+	}
+	t.Setenv(envnames.ServeHandoff, value)
+	h := takeHandoff()
+	if h == nil || h.Control != control || h.Port != 7822 {
+		t.Fatalf("handoff from the file = %+v", h)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Error("the handoff file was left behind")
 	}
 }

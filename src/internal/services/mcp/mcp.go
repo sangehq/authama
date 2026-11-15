@@ -32,11 +32,11 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/simtabi/authama/src/internal/services/dataset"
-	"github.com/simtabi/authama/src/internal/services/doctor"
-	"github.com/simtabi/authama/src/internal/services/feed"
-	"github.com/simtabi/authama/src/internal/services/history"
-	"github.com/simtabi/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/services/dataset"
+	"github.com/sangehq/authama/src/internal/services/doctor"
+	"github.com/sangehq/authama/src/internal/services/feed"
+	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // Versions are the protocol revisions this server speaks, newest first. A

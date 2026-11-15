@@ -548,9 +548,10 @@ Because the manifest is rendered verbatim into `~/.ssh/config` and its names bec
 filesystem paths, values are validated on load: names (profile/alias/key_name) may
 not contain `/`, `\`, `..`, a leading `-`, whitespace, glob `*?`, or control
 characters; `hostname`/`user` may not contain whitespace, newlines, or a leading
-`-`; and `raw_options` (and `global_options`) reject command/code-executing keys
-(`ProxyCommand`, `LocalCommand`, `PermitLocalCommand`, `RemoteCommand`, `Match`,
-`Include`, `KnownHostsCommand`, `PKCS11Provider`, `SecurityKeyProvider`).
+`-`; and `raw_options` (and `global_options`) reject keys that execute commands, load code or
+config, or open a new block (`ProxyCommand`, `LocalCommand`, `PermitLocalCommand`,
+`RemoteCommand`, `Host`, `Match`, `Include`, `KnownHostsCommand`, `PKCS11Provider`,
+`SecurityKeyProvider`, `XAuthLocation`), in any letter case.
 `ProxyJump` (a host, not a command) is allowed. `key_scope` must be `per_service`
 or `shared`.
 
@@ -630,7 +631,7 @@ every setting stays at its default until you add it.
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/simtabi/authama/main/docs/schema/authama.schema.json",
+  "$schema": "https://raw.githubusercontent.com/sangehq/authama/main/docs/schema/authama.schema.json",
   "version": 1,
   "paths":   { "state_dir": "~/.local/state/authama", "age_identity_file": "~/.config/authama/age-identity.txt" },
   "backup":  { "snapshot_retain": 10, "old_key_max_age_days": 90 },
@@ -651,7 +652,7 @@ every setting stays at its default until you add it.
 | `paths.tokens_config` | `AUTHAMA_TOKENS_CONFIG` | see [Auth tokens](#auth-tokens) |
 | `paths.tokens_catalog` | `AUTHAMA_TOKENS_CATALOG` | the built-in catalog |
 | `backup.age_recipient` | `AUTHAMA_AGE_RECIPIENT` | unset (`ssh bundle` needs it) |
-| `backup.snapshot_retain` | `AUTHAMA_SNAPSHOT_RETAIN` | `10` (at least 1) |
+| `backup.snapshot_retain` | `AUTHAMA_SNAPSHOT_RETAIN` | `10` (at least 1); a command that fails or is declined having changed nothing keeps no snapshot, so refusals do not use the slots up |
 | `backup.old_key_max_age_days` | `AUTHAMA_OLD_KEY_MAX_AGE_DAYS` | `90` (`0` turns the check off) |
 | `ssh.auto_pin` | `AUTHAMA_AUTO_PIN` | `true` |
 | `history.enabled` | `AUTHAMA_HISTORY` | `true` |
@@ -691,15 +692,21 @@ renders `~/.ssh/config`:
 ```sh
 authama settings path              # config home, state home, .env, authama.json
 authama settings show --effective  # every setting, its value and its source
-authama settings validate          # schema-check authama.json, syntax- and mode-check .env
+authama settings validate          # schema-check authama.json; check .env's syntax, mode, names and values
 authama settings init              # write a starter authama.json
+authama settings set web.port 7900 # write one setting into authama.json, keeping the rest
+authama settings unset web.port    # take it out again, back to its default
+authama settings backup-key        # make an age key for backups; sets backup.age_recipient and paths.age_identity_file
 ```
 
 ### Old variable names
 
 Releases before 0.1.1 read `SSH_MANAGER_*` and `SSHMGR_*` names. authama read
 them too, with a deprecation notice, until 2026-11-07; it ignores them now, so a
-value set only under an old name has no effect. Rename it: `SSH_MANAGER_HOME`
+value set only under an old name has no effect. `authama settings validate` names
+each one left in `.env`, with the `AUTHAMA_` name to use, along with any `AUTHAMA_`
+name that is not a setting and any value a setting cannot take; migrating an old
+home renames them in the copied `.env` for you. Rename it: `SSH_MANAGER_HOME`
 and `SSH_MANAGER_CONFIG_DIR` → `AUTHAMA_CONFIG_DIR`, `SSHMGR_DEV_ROOT` →
 `AUTHAMA_DEV_ROOT`, `SSHMGR_GIT_MODE` → `AUTHAMA_GIT_MODE`, and
 `SSH_MANAGER_<NAME>` → `AUTHAMA_<NAME>` for the rest. See [Migration](migration.md).
@@ -743,7 +750,7 @@ and writes each tool's credential file. It is found in this order:
 
 The file's shape, each entry kind, and `_settings.docker_creds_store` (`login`
 or `refuse` for registries Docker keeps in a credential store;
-`--docker-creds-store` and `$AUTHAMA_DOCKER_CREDS_STORE` take precedence over it) are in
+a command's `--creds-store-mode` and `$AUTHAMA_DOCKER_CREDS_STORE` take precedence over it) are in
 [`token`](tools/tokens.md). The files it writes are the tools' own, at their
 usual paths, honouring `COMPOSER_HOME`, `NPM_CONFIG_USERCONFIG`,
 `DOCKER_CONFIG`, `NETRC` and `XDG_CONFIG_HOME` (and `APPDATA` on Windows).

@@ -14,16 +14,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/inventory"
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/core/providers"
-	"github.com/simtabi/authama/src/internal/services/keystore"
-	"github.com/simtabi/authama/src/internal/services/opstore"
-	"github.com/simtabi/authama/src/internal/util/fs"
-	"github.com/simtabi/authama/src/internal/util/log"
-	"github.com/simtabi/authama/src/internal/util/netcheck"
-	"github.com/simtabi/authama/src/internal/util/paths"
-	"github.com/simtabi/authama/src/internal/util/perms"
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/providers"
+	"github.com/sangehq/authama/src/internal/services/keystore"
+	"github.com/sangehq/authama/src/internal/services/opstore"
+	"github.com/sangehq/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/log"
+	"github.com/sangehq/authama/src/internal/util/netcheck"
+	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/perms"
 )
 
 // TargetResult is one target's rotation outcome.
@@ -49,13 +49,24 @@ type RotateReport struct {
 	// Fallback names the software type minted when the hardware *-sk type had
 	// no security key to answer; "" otherwise.
 	Fallback string `json:",omitempty"`
+	// Op is what the report is of: a rotation ("", the default) or OpRollback.
+	Op string `json:",omitempty"`
 }
+
+// OpRollback marks a report of a rollback.
+const OpRollback = "rollback"
 
 // Format renders the rotation summary (mirrors RotateReport.format).
 func (r RotateReport) Format() string {
-	head := "rotation ABORTED"
+	head := "rotation not done"
 	if r.Committed {
 		head = "rotated"
+	}
+	if r.Op == OpRollback {
+		head = "rollback not done"
+		if r.Committed {
+			head = "rolled back"
+		}
 	}
 	lines := []string{head + ": " + r.KeyName}
 	if r.OldFingerprint != "" {
@@ -116,6 +127,9 @@ type Rotator struct {
 	// unattended, when set, is where deploys write their ssh output, and
 	// means no prompt can be answered (see providers.Target.Unattended).
 	unattended io.Writer
+	// EvictOld lets a rotation replace the key in old/ even while a host it
+	// was never removed from still authorises it (rotate --evict-old).
+	EvictOld bool
 }
 
 // Unattended makes the rotation's deploys run with nobody to answer a prompt,
@@ -210,6 +224,21 @@ func (r *Rotator) Rotate(selector string, allowUnverified bool, passphrase strin
 		report.OldFingerprint = fp
 	}
 	oldPubText := readFile(curPub)
+
+	// The single old/ slot is about to take the outgoing key. If the one there
+	// now still logs in somewhere, stop rather than evict it.
+	live, err := predecessorStillLogsIn(r.p, r.m, r.ks, keyRef)
+	if err != nil && !r.EvictOld {
+		return report, fmt.Errorf("cannot tell whether the previous key in old/ still logs in somewhere: %w", err)
+	}
+	if len(live) > 0 && !r.EvictOld {
+		report.Message = fmt.Sprintf("cannot rotate - the previous key in old/ is still authorised on %s "+
+			"(it was never removed there), and rotating again would replace it. Remove it there first "+
+			"(`authama checklist` lists them), or rotate with --evict-old to replace it anyway",
+			strings.Join(live, ", "))
+		log.Audit(r.p.AuditLog(), "rotate.predecessor_live", log.Field{Key: "key", Value: keyName})
+		return report, nil
+	}
 
 	// 0. Preflight: every SSH target must answer before we stage/deploy.
 	if msgs := r.unreachable(hosts); len(msgs) > 0 {
@@ -425,7 +454,9 @@ func (r *Rotator) updateInventory(profile, keyName, keyType, comment string, rep
 
 // Rollback restores the single /old/ predecessor (plain reverse move), re-deploys
 // it, and revokes the rotated-in key. Mirrors Rotator.rollback.
-func (r *Rotator) Rollback(selector string) (RotateReport, error) {
+func (r *Rotator) Rollback(selector string) (rep RotateReport, err error) {
+	// Every report it returns is of a rollback, whichever path returns it.
+	defer func() { rep.Op = OpRollback }()
 	if err := r.p.RefuseOutsideSandbox("rollback"); err != nil {
 		return RotateReport{}, err
 	}
@@ -679,4 +710,25 @@ func deref(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// predecessorStillLogsIn names the hosts the key now in old/ was never removed
+// from, as its retirement recorded them. The archive keeps one predecessor,
+// so rotating again would evict it while those hosts still accept it (review
+// R-BUG-12). A key in old/ with no retirement on record names none.
+func predecessorStillLogsIn(p paths.Paths, m *manifest.Manifest, ks *keystore.KeyStore, keyRef manifest.KeyRef) ([]string, error) {
+	slot := filepath.Join(manifest.ArchiveDir(m, p.SSHDir, keyRef), keyRef.KeyName)
+	if !exists(slot + ".pub") {
+		return nil, nil
+	}
+	fp, err := ks.Fingerprint(slot + ".pub")
+	if err != nil {
+		return nil, nil // no fingerprint, no retirement to look up
+	}
+	all, err := inventory.LoadRetirements(inventory.RetiredPath(p.Inventory()))
+	if err != nil {
+		// Unreadable is not "nothing recorded": stop rather than evict.
+		return nil, err
+	}
+	return all[fp].NotRemoved, nil
 }

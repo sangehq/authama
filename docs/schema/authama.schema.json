@@ -1,5 +1,5 @@
 {
-  "$id": "https://raw.githubusercontent.com/simtabi/authama/main/docs/schema/authama.schema.json",
+  "$id": "https://raw.githubusercontent.com/sangehq/authama/main/docs/schema/authama.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "User settings for authama. Precedence: command-line flags > environment > <config home>/.env > authama.json > defaults.",

@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simtabi/authama/src/internal/core/manifest"
-	"github.com/simtabi/authama/src/internal/util/netcheck"
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/util/netcheck"
 )
 
 // Parity reference: v1's facade (1066-1078)

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/services/dataset"
-	"github.com/simtabi/authama/src/internal/util/encode"
+	"github.com/sangehq/authama/src/internal/services/dataset"
+	"github.com/sangehq/authama/src/internal/util/encode"
 )
 
 // HostSource is the manifest as a host format reads it, and the order its

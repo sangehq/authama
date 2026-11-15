@@ -27,8 +27,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/simtabi/authama/src/internal/platform"
-	"github.com/simtabi/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/util/envnames"
 )
 
 // Folder is the directory name under the config and state bases.
@@ -409,7 +409,7 @@ func within(root, dest string) bool {
 // isRooted reports whether p begins at a path separator without naming a
 // volume - the Windows "\somewhere" form.
 func isRooted(p string) bool {
-	return p != "" && (p[0] == '\\' || p[0] == '/') && filepath.VolumeName(p) == ""
+	return p != "" && os.IsPathSeparator(p[0]) && filepath.VolumeName(p) == ""
 }
 
 // IsDev reports whether this layout is a sandbox.

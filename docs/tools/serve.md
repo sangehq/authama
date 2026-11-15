@@ -32,7 +32,8 @@ answers 401. For another sign-in, run `authama serve` again: it asks the running
 link (see [one server per home](#one-server-per-home)).
 
 A session ends after 8 hours without a request, or 24 hours after you signed in, whichever comes
-first, and when the server stops. The page then answers 401, and `authama serve` gives a new link.
+first, when the server stops, and when you choose **Sign out** in the user menu, which ends it on the
+server as well as in the browser. The page then answers 401, and `authama serve` gives a new link.
 
 If port 7822 is taken, `serve` uses the next free port and says which. If all twenty from 7822 up are
 taken, it uses any free port the system offers. `--port` pins a port and fails when that port is
@@ -54,9 +55,15 @@ authama serve --new      # start another beside it anyway
 The running server leaves an owner-only `serve.json` in the state home's `.state/`, with its pid,
 address, the sign-in address it printed, and a control key. Only a request from this machine that
 presents that key at `/auth/link` gets a new sign-in link. A launch trusts the record only when the server at that address answers
-`/healthz` with the same random instance id, so a stale record (a server that crashed) or a pid or
-port reused by something else is ignored. `/healthz` is the one page that answers without signing
-in, and it says nothing but `{"app":"authama","instance":"…"}`. A pinned `--port`, `--read-only`
+`/healthz` with the same random instance id **and** answers a fresh challenge with an HMAC under
+the control key, so a stale record (a server that crashed), or a pid or port reused by something
+else, is ignored: the instance id is public, but only the recorded server can prove the key, and
+the key is sent, or the recorded pid stopped, only after that proof. `/healthz` is the one page that
+answers without signing in. To a remote caller it says nothing but `{"app":"authama","instance":"…"}`;
+to a caller on this machine that no proxy passed on (no `X-Forwarded-For`, `Forwarded` or
+`X-Real-Ip`), it also gives the pid, build and start time that `serve --stop-all` uses. `--stop-all`
+stops a server it finds only when that pid is an `authama` process, so a listener naming some other
+process of yours is refused, and nothing is signalled. A pinned `--port`, `--read-only`
 when the running server is not, or `--allow-remote` starts a new server rather than reusing one.
 
 **Why not a named address like `http://127.0.0.1/authama`?** A path does not free a port: two
@@ -196,11 +203,15 @@ documentation, the source and the licences.
   the server started. The account menu also says which user and host the server runs as.
   When the `authama` binary is rebuilt, reinstalled or removed after `authama serve` started, every page shows a yellow banner naming the file, with **Restart
   now**: the server relaunches from the binary now installed, on the same address, with the
-  same sessions and every sign-in link not yet used, stops, and the page reloads, still signed in, then says in a green banner
+  same sessions and every sign-in link not yet used (a link already used stays used: the new server
+  prints a fresh one rather than re-arming the old), stops, and the page reloads, still signed in, then says in a green banner
   that it runs the current build. With `web.auto_restart` (the default) this happens by itself
   when the binary is rebuilt: open pages reload into the new build, or offer **Reload** when
   they hold unsaved input. `serve --restart` and `serve --stop-all` do the same from a
-  terminal for every authama web UI on the machine
+  terminal for every authama web UI on the machine. A server whose binary moved (its checkout was
+  renamed or relocated) restarts from the `authama` on `PATH` instead, and watches that one for the
+  next rebuild; with none on `PATH`, **Restart now** says so rather than waiting for a server that
+  never starts
   ([Restart the web UI after updating](../installation.md#updating)).
 - **Any list in any format.** `/exports/run` writes a selection of a home's records as a file.
   A built-in preset is a list as its page shows it (`?preset=hosts`, `keys`, `profiles`, `tokens`,
@@ -530,7 +541,11 @@ Some changes are terminal-only:
   any `--allow-host`. That stops a page on another site from rebinding its name to this machine.
 - **Sign-in links work once.** A link signs one browser in, within 10 minutes; a used or old one is
   refused. A link preview (`HEAD`) does not use it up.
-- **Sessions end.** After 8 hours without a request, or 24 hours after signing in.
+- **Sessions end.** After 8 hours without a request, or 24 hours after signing in, or on **Sign out**
+  (`POST /signout`, held to the same origin and form token as any change).
+- **A restart's handoff stays off the environment.** The sessions, form tokens and control key a
+  restarting server passes on go in an owner-only temporary file, which the new server reads once and
+  removes; the environment carries only its name.
 - **Session cookie.** `HttpOnly` and `SameSite=Strict`. Every change is also held to the page's own
   origin and a per-session form token.
 - **Forms take names, never paths.** Profile, host and key names must be letters, digits, `.`, `_`
@@ -556,7 +571,7 @@ the printed address it works once, within 10 minutes.
 | `--addr` | host, or host:port, to listen on (a port here pins it) |
 | `--port` | port; pinned when given |
 | `--allow-remote` | permit a non-loopback `--addr` |
-| `--allow-host` | an extra Host header to accept, such as a proxy's name (repeatable) |
+| `--allow-host` | an extra Host header to accept, such as the name a proxy forwards as; it needs no `--allow-remote` while the server listens on loopback, and it widens the rebinding check, so name only hosts you control (repeatable) |
 | `--read-only` | serve no route that changes anything, and show no form |
 | `--no-open` | do not open a browser |
 | `--token-file` | also write the sign-in address to this file |

@@ -18,7 +18,9 @@ filename** - so swap-back is a plain move and there's never a name collision.
 3. **Verify** login with the staged key on each target (`ssh ... true`; `ssh -T`
    for GitHub).
 4. **Commit - only after all verify:**
-   - purge any existing predecessor in `/old/` (enforces **≤1 old per key**),
+   - purge any existing predecessor in `/old/` (enforces **≤1 old per key**); a rotation stops
+     before this point when that predecessor is still authorised on a host it was never removed
+     from (as its retirement recorded), naming the hosts, and `--evict-old` replaces it anyway,
    - move the current `<name>(.pub)` → `old/<name>(.pub)` (same filename),
    - promote the staged key to the canonical name,
    - **revoke** the old public key from each target,

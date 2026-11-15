@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/simtabi/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/fs"
 )
 
 // Retirement is one key a rotation replaced: what it was, its successor, when

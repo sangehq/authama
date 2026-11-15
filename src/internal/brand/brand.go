@@ -5,8 +5,9 @@
 // new command with it. Every user-facing mention of either goes through these
 // constants, so the next rename is an edit here and not a search across the tree.
 //
-// The repository (simtabi/authama) and the Go module path
-// (github.com/simtabi/authama/src) followed the name at 0.1.0; the config home
+// The repository (simtabi/authama, moved to sangehq/authama on 2026-11-13) and the Go
+// module path (github.com/simtabi/authama/src, now github.com/sangehq/authama/src)
+// followed the name at 0.1.0; the config home
 // (~/.config/authama) and the environment variables (AUTHAMA_*) at 0.1.1; the
 // release archives, the Linux packages, the Homebrew cask and the Scoop
 // manifest at 0.1.2. The sshmgr binary that shipped beside authama as a
@@ -29,6 +30,13 @@ const (
 
 	// Summary is the one-line description under the name.
 	Summary = "SSH keys & config, and package-manager / git auth tokens, in one tool"
+
+	// DocsURL is where the help, the man pages and the web UI send a reader for
+	// the documentation. The hosted site,
+	// https://opensource.simtabi.com/documentation/sangehq/authama/, answers 404
+	// until it is built, so this is the repository's docs/ (review R-DOC-03,
+	// owner 2026-11-14); point it back here when the site is live.
+	DocsURL = "https://github.com/sangehq/authama/tree/main/docs"
 )
 
 // TopLevel lists the commands that sit directly under Command. Every other

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/simtabi/authama/src/internal/util/testcred"
+	"github.com/sangehq/authama/src/internal/util/testcred"
 )
 
 func cred(target, host, user, secret string) Credential {
