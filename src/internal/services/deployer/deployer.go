@@ -144,6 +144,9 @@ func (d *Deployer) Deploy(selector, targetAlias string) (DeployReport, error) {
 		}
 		outcome := provider.Deploy(tgt)
 		recordDeployment(&rec, host.Alias, outcome.Method, outcome.Verified)
+		if !outcome.Error {
+			d.inv.Note(fpKey, inventory.EventDeployed, inventory.Stamp())
+		}
 		report.Records = append(report.Records, DeployRecord{
 			Target: host.Alias, Provider: provider.Name(), Method: outcome.Method,
 			Verified: outcome.Verified, Detail: outcome.Detail, Error: outcome.Error,

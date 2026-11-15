@@ -217,6 +217,23 @@
       },
       "type": "object"
     },
+    "keys": {
+      "additionalProperties": false,
+      "properties": {
+        "new_events": {
+          "description": "Which events make a key new, comma-separated: created (minted), added (minted, adopted or imported), rotated (the successor a rotation minted), deployed (installed on a target) and restored (brought back by a rollback). Sets $AUTHAMA_KEYS_NEW_EVENTS. Default: created,added,rotated,deployed.",
+          "pattern": "^ *(created|added|deployed|rotated|restored) *(, *(created|added|deployed|rotated|restored) *)*$",
+          "type": "string"
+        },
+        "new_window_days": {
+          "default": 7,
+          "description": "Days a key stays labelled new after one of keys.new_events, in `ssh key list` and the web UI; 0 turns the label off. `authama ssh key ack` clears it sooner. Sets $AUTHAMA_KEYS_NEW_WINDOW_DAYS. Default: 7.",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
     "mcp": {
       "additionalProperties": false,
       "properties": {

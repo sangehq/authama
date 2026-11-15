@@ -290,7 +290,7 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 		t.Fatal("the changes above took no snapshot to offer a restore of")
 	}
 	for _, page := range []string{"/", "/profiles", "/naming", "/import", "/hosts", "/hosts/gh", "/hosts/devbox", "/keys", "/snapshots",
-		"/snapshots/" + openable, "/keys/" + fixtureKey(t, c), "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export"} {
+		"/snapshots/" + openable, "/keys/" + fixtureKey(t, c), "/keys/work/spare", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export"} {
 		for _, m := range action.FindAllStringSubmatch(c.get(page).Body.String(), -1) {
 			seen[m[1]] = true
 			_, change := actionFields[m[1]]

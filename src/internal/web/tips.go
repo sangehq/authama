@@ -116,6 +116,7 @@ var tips = map[string]string{
 	"key-deploy-revoked":       "This key is revoked, so it is never deployed again. Mint or declare a new key instead.",
 	"key-rollback":             "Puts the previous key back on every host and retires this one; use it when a rotation went wrong.",
 	"key-unreserve":            "Previews removing the reservation, so doctor reports this loose key again. The key files stay.",
+	"key-ack":                  "Previews clearing this key's new label: you have seen it. Its next deploy or rotation makes it new again.",
 	"docker-context":           "Previews creating a Docker context that reaches this host's Docker over ssh. Nothing is written until you confirm.",
 	"doctor-fix":               "Previews what doctor --fix repairs (permissions, missing files and folders). Nothing is written until you confirm.",
 	"overview-fix-preview":     "Previews the command beside it as a change: you see what it would do, and nothing is written until you confirm.",

@@ -99,6 +99,7 @@ func stateOf(t *testing.T, p paths.Paths) map[string]string {
 		out["providers.json"] = string(b)
 	}
 	out["inventory.json"] = inventoryShape(t, p)
+	out["key-events.json"] = eventsShape(t, p)
 	// Snapshot counts are compared for prune only (see the case): the web takes
 	// a snapshot before every change it makes, where the CLI's config render,
 	// providers --export and doctor --fix take none.
@@ -149,6 +150,29 @@ func inventoryShape(t *testing.T, p paths.Paths) string {
 	for _, r := range inv.Keys {
 		b, _ := json.Marshal(r)
 		recs = append(recs, volatile(string(b)))
+	}
+	sort.Strings(recs)
+	return strings.Join(recs, "\n")
+}
+
+// eventsShape is key-events.json by each record's path: which events it
+// holds and where the key came from, not when, so two homes that did the
+// same things a second apart compare equal.
+func eventsShape(t *testing.T, p paths.Paths) string {
+	t.Helper()
+	inv, err := inventory.Load(p.Inventory())
+	if err != nil {
+		return "unreadable: " + err.Error()
+	}
+	var recs []string
+	for fp, r := range inv.Keys {
+		ev := inv.Events[fp]
+		var kinds []string
+		for k := range ev.At {
+			kinds = append(kinds, k)
+		}
+		sort.Strings(kinds)
+		recs = append(recs, r.Path+": "+ev.Origin+" "+strings.Join(kinds, ","))
 	}
 	sort.Strings(recs)
 	return strings.Join(recs, "\n")
@@ -465,8 +489,9 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 		{"import", []string{"ssh", "import", importSrc, "--force", "--yes"},
 			change.SSHImport(paths.Paths{}, importSrc, true), nil, nil, nil},
 		{"key root", []string{"ssh", "key", "root", "keys", "--yes"}, change.KeyRoot("keys", "keys"), nil, nil, nil},
+		{"key ack", []string{"ssh", "key", "ack", "work"}, change.KeyAck(keysvc.Selection{Selectors: []string{"work"}}), nil, nil, nil},
 	}
-	if len(cases) != 43 {
+	if len(cases) != 44 {
 		t.Fatalf("%d cases; every change the web offers needs one", len(cases))
 	}
 	for _, tc := range cases {

@@ -23,6 +23,7 @@
           {{if and .Detail.DiskFingerprint (ne .Detail.DiskFingerprint .Detail.Fingerprint)}}<dt class="col-5">On disk</dt><dd class="col-7 text-break"><span class="badge badge-bad">different key</span> <code>{{.Detail.DiskFingerprint}}</code></dd>{{end}}
           {{if .Detail.FingerprintErr}}<dt class="col-5">Public key</dt><dd class="col-7">{{.Detail.FingerprintErr}}</dd>{{end}}
           <dt class="col-5">Created</dt><dd class="col-7">{{orDash .Detail.Created}}</dd>
+          {{with .Recency}}{{if .Pill.Label}}<dt class="col-5">Status {{template "help" (help "Status" "How new or old the key is: new for a while after it is created, added, rotated or deployed (keys.new_window_days, keys.new_events), then current, ageing past half its lifetime; expiry, a revocation or a retirement win over age.")}}</dt><dd class="col-7"><span class="badge {{toneClass .Pill.Tone}}" data-recency="{{.Pill.Label}}">{{.Pill.Label}}</span>{{if .IsNew}} <span class="text-secondary">since it was {{.NewBecause}}</span>{{end}}</dd>{{end}}{{end}}
           <dt class="col-5">Lifetime {{template "help" (help "Lifetime" "How long the key lives before rotation is due. Set it per key, or as the default every key inherits; the expiry date is counted from when the key was made.")}}</dt><dd class="col-7">{{.Detail.RotateAfterDays}} days{{if .Revoked}} <span class="badge badge-bad">revoked {{.Revoked}}</span>{{end}}</dd>
           <dt class="col-5">Expires</dt><dd class="col-7">{{orDash .Detail.ExpiresOn}}{{with .Expiry}} <span class="badge {{statusClass .State}}">{{.State}}</span> <span class="text-secondary">{{expiryDays .}}</span>{{end}}</dd>
           <dt class="col-5">Store</dt><dd class="col-7">{{if .Detail.Vault}}1Password vault <code>{{.Detail.Vault}}</code>{{else}}disk{{end}}</dd>
@@ -51,6 +52,10 @@
       <ul class="list-group list-group-flush">{{range .Detail.Deployments}}<li class="list-group-item d-flex justify-content-between"><span>{{.Target}} <span class="text-secondary">via {{.Method}}{{with deref .Date}}, {{.}}{{end}}</span></span>{{if .Verified}}<span class="badge badge-ok">verified</span>{{else}}<span class="badge badge-warn">unverified</span>{{end}}</li>{{end}}</ul>
       {{else}}{{template "empty" (empty "server" "Not deployed anywhere yet" "")}}{{end}}
     </div>
+    {{if .Recency.Events}}<div class="card mt-3" id="recency">
+      <div class="card-header"><h2 class="card-title">Lifecycle</h2>{{if and .Recency.IsNew (not $.ReadOnly)}}<div class="card-actions">{{template "change_open" $}}<input type="hidden" name="action" value="key-ack"><input type="hidden" name="key" value="{{.Detail.Ref}}"><button type="submit" class="btn btn-sm btn-outline-secondary"{{desc "key-ack"}}>{{icon "check"}}<span class="ms-1">Mark as seen</span></button></form></div>{{end}}</div>
+      <ul class="list-group list-group-flush">{{range .Recency.Events}}<li class="list-group-item d-flex justify-content-between align-items-center"><span><span class="text-capitalize">{{.Kind}}</span> <time datetime="{{.At}}" class="text-secondary">{{.Ago}}</time></span>{{if .Label}}<span class="badge {{toneClass .Tone}}">{{.Label}}</span>{{end}}</li>{{end}}</ul>
+    </div>{{end}}
     <div class="card mt-3">
       <div class="card-header"><h2 class="card-title">History</h2></div>
       {{template "op_table" .Ops}}

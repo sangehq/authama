@@ -639,6 +639,7 @@ every setting stays at its default until you add it.
   "history": { "enabled": true },
   "git":     { "mode": "profile" },
   "tokens":  { "docker_creds_store": "refuse" },
+  "keys":    { "new_window_days": 7, "new_events": "created,added,rotated,deployed" },
   "notifications": { "desktop": true },
   "vm":      { "hypervisors": "parallels,vmpal", "prune_gone": true, "repin_changed": false },
   "web":     { "addr": "127.0.0.1", "port": 7822, "base_path": "/" }
@@ -660,6 +661,8 @@ every setting stays at its default until you add it.
 | `git.mode` | `AUTHAMA_GIT_MODE` | the manifest's `defaults.git.mode`, else `profile` |
 | `export.save_to` | `AUTHAMA_EXPORT_SAVE_TO` | `user` (where a saved export selection goes: `user` or `manifest`; see [tools/export.md](tools/export.md#saved-selections)) |
 | `tokens.docker_creds_store` | `AUTHAMA_DOCKER_CREDS_STORE` | ask at a terminal, else refuse |
+| `keys.new_window_days` | `AUTHAMA_KEYS_NEW_WINDOW_DAYS` | `7` (days a key stays labelled new; `0` turns the label off; see [key lifecycle](tools/key-lifecycle.md#recency-new-keys-and-ages)) |
+| `keys.new_events` | `AUTHAMA_KEYS_NEW_EVENTS` | `created,added,rotated,deployed` (which events make a key new, comma-separated; `restored` may be added) |
 | `notifications.desktop` | `AUTHAMA_NOTIFICATIONS` | `true` |
 | `vm.hypervisors` | `AUTHAMA_VM_HYPERVISORS` | every built-in driver and every custom one |
 | `vm.multiplex` | `AUTHAMA_VM_MULTIPLEX` | `true` (a VM host shares one SSH connection for 10 minutes; ignored on Windows; see [tools/vm.md](tools/vm.md#shared-connections)) |

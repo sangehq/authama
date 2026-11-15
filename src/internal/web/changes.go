@@ -46,6 +46,7 @@ var actionFields = map[string][]string{
 	"key-delete":        {"profile", "key"},
 	"key-reserve":       {"key", "for", "note"},
 	"key-unreserve":     {"key"},
+	"key-ack":           {"key"},
 	"vm-add":            {"profile", "alias", "hypervisor", "vm", "user"},
 	"config-render":     {},
 	"reconcile":         {},
@@ -385,6 +386,10 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch = change.KeyReserve(n("key"), forWhat, note)
 	case "key-unreserve":
 		ch = change.KeyUnreserve(n("key"))
+	case "key-ack":
+		ref, err := keyRef(f)
+		errs = append(errs, err)
+		ch = change.KeyAck(keysvc.Selection{Selectors: []string{ref.String()}})
 	case "providers-export":
 		ch = change.ProvidersExport()
 	case "settings-init":

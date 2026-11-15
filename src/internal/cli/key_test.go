@@ -33,7 +33,7 @@ func TestKeyTableShowsStateAndDanglingNotes(t *testing.T) {
 		},
 	}
 	var out bytes.Buffer
-	writeKeyTable(&out, rows)
+	writeKeyTable(&out, rows, nil)
 	got := out.String()
 
 	for _, want := range []string{
@@ -58,14 +58,14 @@ func TestKeyTableShowsStateAndDanglingNotes(t *testing.T) {
 			dashes++
 		}
 	}
-	if dashes != 3 { // fingerprint, expires, hosts
+	if dashes != 5 { // fingerprint, expires, age, status, hosts
 		t.Errorf("unset columns should render as dashes, found %d in %q", dashes, vault)
 	}
 }
 
 func TestKeyTableEmptyTellsYouWhatToRun(t *testing.T) {
 	var out bytes.Buffer
-	writeKeyTable(&out, nil)
+	writeKeyTable(&out, nil, nil)
 	if !strings.Contains(out.String(), "authama ssh key add") {
 		t.Errorf("an empty table should point at the command that fixes it: %q", out.String())
 	}
