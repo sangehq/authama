@@ -83,6 +83,11 @@ func (a apiServer) signIn(next http.Handler) http.Handler {
 				"The API answers programs, not pages in a browser: a request with an Origin header is refused.")
 			return
 		}
+		host := remoteHost(r)
+		if wait := a.s.apiFails.blocked(host, a.s.now()); wait > 0 {
+			retryAfter(w, wait)
+			return
+		}
 		secret, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if !ok || strings.TrimSpace(secret) == "" {
 			w.Header().Set("WWW-Authenticate", `Bearer realm="authama"`)
@@ -90,6 +95,7 @@ func (a apiServer) signIn(next http.Handler) http.Handler {
 			return
 		}
 		if _, ok := apitokens.Check(a.s.opts.Engine.Home(), strings.TrimSpace(secret), apitokens.ScopeRead, a.s.now()); !ok {
+			a.s.apiFails.fail(host, a.s.now())
 			w.Header().Set("WWW-Authenticate", `Bearer realm="authama", error="invalid_token"`)
 			apiError(w, http.StatusUnauthorized, "invalid_token", "That API token is not valid: it was revoked, has expired, or never existed.")
 			return

@@ -32,7 +32,8 @@ answers 401. For another sign-in, run `authama serve` again: it asks the running
 link (see [one server per home](#one-server-per-home)).
 
 A session ends after 8 hours without a request, or 24 hours after you signed in, whichever comes
-first, and when the server stops. The page then answers 401, and `authama serve` gives a new link.
+first, when the server stops, and when you choose **Sign out** in the user menu, which ends it on the
+server as well as in the browser. The page then answers 401, and `authama serve` gives a new link.
 
 If port 7822 is taken, `serve` uses the next free port and says which. If all twenty from 7822 up are
 taken, it uses any free port the system offers. `--port` pins a port and fails when that port is
@@ -540,7 +541,11 @@ Some changes are terminal-only:
   any `--allow-host`. That stops a page on another site from rebinding its name to this machine.
 - **Sign-in links work once.** A link signs one browser in, within 10 minutes; a used or old one is
   refused. A link preview (`HEAD`) does not use it up.
-- **Sessions end.** After 8 hours without a request, or 24 hours after signing in.
+- **Sessions end.** After 8 hours without a request, or 24 hours after signing in, or on **Sign out**
+  (`POST /signout`, held to the same origin and form token as any change).
+- **A restart's handoff stays off the environment.** The sessions, form tokens and control key a
+  restarting server passes on go in an owner-only temporary file, which the new server reads once and
+  removes; the environment carries only its name.
 - **Session cookie.** `HttpOnly` and `SameSite=Strict`. Every change is also held to the page's own
   origin and a per-session form token.
 - **Forms take names, never paths.** Profile, host and key names must be letters, digits, `.`, `_`

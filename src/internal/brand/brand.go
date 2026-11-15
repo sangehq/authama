@@ -30,6 +30,13 @@ const (
 
 	// Summary is the one-line description under the name.
 	Summary = "SSH keys & config, and package-manager / git auth tokens, in one tool"
+
+	// DocsURL is where the help, the man pages and the web UI send a reader for
+	// the documentation. The hosted site,
+	// https://opensource.simtabi.com/documentation/sangehq/authama/, answers 404
+	// until it is built, so this is the repository's docs/ (review R-DOC-03,
+	// owner 2026-11-14); point it back here when the site is live.
+	DocsURL = "https://github.com/sangehq/authama/tree/main/docs"
 )
 
 // TopLevel lists the commands that sit directly under Command. Every other

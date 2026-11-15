@@ -3,6 +3,7 @@ package inventory
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -54,8 +55,11 @@ func TestNotedEventsAreSavedAndLoadedWithTheInventory(t *testing.T) {
 	if strings.Contains(string(b), "deployed_at") || strings.Contains(string(b), EventRotated) {
 		t.Errorf("events leaked into inventory.json:\n%s", b)
 	}
-	if fi, err := os.Stat(EventsPath(path)); err != nil || fi.Mode().Perm() != 0o600 {
-		t.Errorf("key-events.json not written owner-only: %v %v", fi, err)
+	// Windows has no owner-only permission bits, so the mode is checked elsewhere.
+	if fi, err := os.Stat(EventsPath(path)); err != nil {
+		t.Errorf("key-events.json not written: %v", err)
+	} else if runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
+		t.Errorf("key-events.json not written owner-only: %v", fi.Mode().Perm())
 	}
 }
 

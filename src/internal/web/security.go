@@ -126,6 +126,13 @@ func (s *sessions) get(id string, now time.Time) *session {
 	return sess
 }
 
+// end removes the session id names, so its cookie is refused from now on.
+func (s *sessions) end(id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.byID, id)
+}
+
 func equal(a, b string) bool {
 	return len(a) == len(b) && subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }

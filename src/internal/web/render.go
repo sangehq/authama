@@ -137,6 +137,7 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		// the one place they are decided.
 		"brandName":    func() string { return brand.Name },
 		"brandCommand": func() string { return brand.Command },
+		"brandDocsURL": func() string { return brand.DocsURL },
 		"cmdline":      brand.Line,
 		"when":         func(t time.Time) string { return t.UTC().Format("2006-01-02 15:04 UTC") },
 		// consoleLines reads a job's output into status, subject and text.

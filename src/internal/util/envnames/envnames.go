@@ -60,7 +60,7 @@ const (
 	// ExportSaveTo is where a saved export selection goes: user or manifest.
 	ExportSaveTo = "AUTHAMA_EXPORT_SAVE_TO"
 	// ServeHandoff is set by a restarting `serve` for the one replacing it,
-	// never by a user: the token, port and old instance, as JSON.
+	// never by a user: "file:" and an owner-only file holding the handoff.
 	ServeHandoff = "AUTHAMA_SERVE_HANDOFF"
 	// KeysNewWindowDays is how many days a key stays labelled new; 0 is off.
 	KeysNewWindowDays = "AUTHAMA_KEYS_NEW_WINDOW_DAYS"

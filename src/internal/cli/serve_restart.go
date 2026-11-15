@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sangehq/authama/src/internal/brand"
@@ -23,8 +24,9 @@ import (
 // sign-in token, so a signed-in page signs back in with the address it has;
 // the port, so the address stays the same; whether to keep the home's
 // record; and the old instance, to wait until it stops answering before
-// listening. It travels in one environment variable that the new server
-// clears as soon as it reads it.
+// listening. It travels in an owner-only file named by one environment
+// variable; the new server reads and removes the file, and clears the
+// variable, as soon as it starts.
 type serveHandoff struct {
 	// Token was the old server's first printed sign-in token.
 	//
@@ -54,6 +56,15 @@ func takeHandoff() *serveHandoff {
 		return nil
 	}
 	_ = os.Unsetenv(envnames.ServeHandoff)
+	// This build passes a file's name; an older one passed the JSON itself.
+	if path, ok := strings.CutPrefix(v, handoffFilePrefix); ok {
+		b, err := os.ReadFile(path) //nolint:gosec // the file our own predecessor wrote
+		_ = os.Remove(path)
+		if err != nil {
+			return nil
+		}
+		v = string(b)
+	}
 	var h serveHandoff
 	// A handoff carries a control key (this build) or a token (an older
 	// one); one with neither, or no port, is not a handoff.
@@ -61,6 +72,35 @@ func takeHandoff() *serveHandoff {
 		return nil
 	}
 	return &h
+}
+
+// handoffFilePrefix marks a handoff passed as a file rather than inline.
+const handoffFilePrefix = "file:"
+
+// handoffEnv writes h to an owner-only temporary file and returns the
+// environment entry naming it. The handoff holds the control key, the
+// sessions and their form tokens; inline in the environment they stayed
+// readable in /proc/<pid>/environ for the new server's whole life (review
+// R-SEC-21). The new server reads the file once and removes it.
+func handoffEnv(h serveHandoff) (string, error) {
+	b, err := json.Marshal(h)
+	if err != nil {
+		return "", err
+	}
+	f, err := os.CreateTemp("", "authama-handoff-*.json") // created 0600
+	if err != nil {
+		return "", err
+	}
+	if _, err := f.Write(b); err != nil {
+		_ = f.Close()
+		_ = os.Remove(f.Name())
+		return "", err
+	}
+	if err := f.Close(); err != nil {
+		_ = os.Remove(f.Name())
+		return "", err
+	}
+	return envnames.ServeHandoff + "=" + handoffFilePrefix + f.Name(), nil
 }
 
 // waitGone waits until the old server stops answering as itself, so the
@@ -98,12 +138,12 @@ func relaunch(h serveHandoff, state func(*serveHandoff), stop func()) func() err
 		if !slices.Contains(args, "--no-open") {
 			args = append(args, "--no-open")
 		}
-		b, err := json.Marshal(h)
+		entry, err := handoffEnv(h)
 		if err != nil {
 			return err
 		}
 		cmd := exec.Command(exe, args...) //nolint:gosec // this program's own binary, relaunched with its own arguments
-		cmd.Env = append(os.Environ(), envnames.ServeHandoff+"="+string(b))
+		cmd.Env = append(os.Environ(), entry)
 		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 		if err := cmd.Start(); err != nil {
 			return err
