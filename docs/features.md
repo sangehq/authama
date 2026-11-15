@@ -86,7 +86,8 @@ project-local mode. See [installation.md](installation.md) for the full layout.
 
 | Command | What it does | Tests |
 |---|---|---|
-| `key list [selector]` | Every key with its fingerprint, expiry, the hosts using it, and its state — including keys nothing references. | U |
+| `key list [selector] [--new] [--json\|--csv]` | Every key with its fingerprint, expiry, age, recency status (`new`, `current`, `ageing`, `due soon`, `overdue`, `revoked`, `retired`), the hosts using it, and its state — including keys nothing references. `--new` keeps the keys labelled new; `--json` carries each key's events and ages. See [recency](tools/key-lifecycle.md#recency-new-keys-and-ages). | U |
+| `key ack [selectors...] [--category] [--all]` | Clear the new label on keys you have seen, until their next event. | U·E |
 | `key regen-pub [selectors...] [--category] [--all] [--dry-run]` | Rebuild `.pub` files from the private key or the 1Password item; reports unchanged / created / rewritten / skipped. Never changes a private key. | U |
 | `key add <profile> <name> [--type] [--rotate-after-days] [--host] [--passphrase]` | Declare a key on a profile and mint it. Without `--host` the key is minted **unwired**: it exists and nothing uses it, which `doctor` then reports. | U |
 | `key reserve <name\|path> [--for] [--note] [-n] [-y]` | Keep a loose `~/.ssh` key on purpose (for a devbox you have not made yet): `doctor` lists it as reserved instead of loose. Recorded in the manifest's `reserved_keys` with the public key's fingerprint; the key file is never touched. `vm adopt-key` and `vm sync` release the reservation when they adopt it. | U·E |

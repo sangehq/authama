@@ -332,6 +332,7 @@ func (r *Reconciler) recordExisting(pk plannedKey) bool {
 		RotateAfterDays: rotate,
 		ExpiresOn:       &exp,
 	})
+	r.inv.NoteAdded(fp, inventory.OriginAdopted, inventory.Stamp())
 	log.Audit(r.p.AuditLog(), "reconcile.record",
 		log.Field{Key: "key", Value: ref.KeyName},
 		log.Field{Key: "fingerprint", Value: fp},
@@ -605,6 +606,7 @@ func (r *Reconciler) mintOne(pk plannedKey, passphrase string, overwrite bool) (
 		ExpiresOn:       &exp,
 		Deployments:     nil, // empty == not-deployed
 	})
+	r.inv.NoteAdded(gen.Fingerprint, inventory.OriginGenerated, inventory.Stamp())
 	log.Audit(r.p.AuditLog(), "keygen",
 		log.Field{Key: "key", Value: ref.KeyName},
 		log.Field{Key: "fingerprint", Value: gen.Fingerprint},

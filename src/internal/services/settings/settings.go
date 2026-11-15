@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sangehq/authama/src/internal/core/recency"
 	"github.com/sangehq/authama/src/internal/util/envnames"
 )
 
@@ -43,6 +44,8 @@ const (
 	KindInt    Kind = "integer"
 	KindBool   Kind = "boolean"
 	KindEnum   Kind = "enum"
+	// KindList is a comma-separated list, each item one of Enum.
+	KindList Kind = "list"
 )
 
 // Spec is one user setting: its place in authama.json and the variable it
@@ -94,6 +97,11 @@ var Specs = []Spec{
 		Doc: "Record every change in the history database (`authama history`)."},
 	{Section: "history", Name: "permanent", Env: envnames.HistoryPermanent, Kind: KindBool, Default: "false",
 		Doc: "Keep the history for good: `history reset` and the web UI's Start the history again refuse, so the record of every change cannot be set aside."},
+	{Section: "keys", Name: "new_window_days", Env: envnames.KeysNewWindowDays, Kind: KindInt, Min: 0, Default: "7",
+		Doc: "Days a key stays labelled new after one of keys.new_events, in `ssh key list` and the web UI; 0 turns the label off. `authama ssh key ack` clears it sooner."},
+	{Section: "keys", Name: "new_events", Env: envnames.KeysNewEvents, Kind: KindList, Enum: recency.Eligible,
+		Default: "created,added,rotated,deployed",
+		Doc:     "Which events make a key new, comma-separated: created (minted), added (minted, adopted or imported), rotated (the successor a rotation minted), deployed (installed on a target) and restored (brought back by a rollback)."},
 	{Section: "notifications", Name: "desktop", Env: envnames.Notifications, Kind: KindBool, Default: "true",
 		Doc: "Show desktop notifications for keys due for rotation and dangling keys."},
 	{Section: "vm", Name: "hypervisors", Env: envnames.VMHypervisors, Kind: KindString,
@@ -248,6 +256,25 @@ func (s Spec) convert(raw json.RawMessage) (string, error) {
 			return "", fmt.Errorf("must be one of %s, got %q", strings.Join(s.Enum, ", "), v)
 		}
 		return v, nil
+	case KindList:
+		var v string
+		if err := json.Unmarshal(raw, &v); err != nil {
+			return "", fmt.Errorf("must be a string, got %s", string(raw))
+		}
+		var items []string
+		for _, it := range strings.Split(v, ",") {
+			if it = strings.TrimSpace(it); it == "" {
+				continue
+			}
+			if !contains(s.Enum, it) {
+				return "", fmt.Errorf("each item must be one of %s, got %q", strings.Join(s.Enum, ", "), it)
+			}
+			items = append(items, it)
+		}
+		if len(items) == 0 {
+			return "", fmt.Errorf("must name at least one of %s", strings.Join(s.Enum, ", "))
+		}
+		return strings.Join(items, ","), nil
 	case KindInt:
 		var n json.Number
 		d := json.NewDecoder(bytes.NewReader(raw))

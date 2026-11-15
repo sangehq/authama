@@ -696,6 +696,7 @@ func (im *Importer) Run(configPath string, dryRun bool) (ImportResult, error) {
 				inv.Record(fp, inventory.KeyRecord{
 					Profile: r.h.Profile, Path: ident, Type: "ed25519", RotateAfterDays: 365,
 				})
+				inv.NoteAdded(fp, inventory.OriginImported, inventory.Stamp())
 			}
 		}
 	}

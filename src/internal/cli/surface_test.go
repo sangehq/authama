@@ -210,6 +210,11 @@ var goOnly = map[string]string{
 	"key revoke":                    "key lifecycle - remove a key from every target, never deploy it again",
 	"key revoke --reason":           "key lifecycle - why, recorded with the revocation",
 	"key revoke --yes":              "key lifecycle",
+	"key ack":                       "key recency (R-FEAT-01) - clear the new label on keys you have seen",
+	"key ack --all":                 "key recency",
+	"key ack --category":            "key recency",
+	"key list --json":               "key recency - each key with its events, ages, is_new and pill",
+	"key list --new":                "key recency - only the keys labelled new",
 
 	// Categories group profiles under profiles/<category>/ with one Include per
 	// category. v1 had only the flat layout.
