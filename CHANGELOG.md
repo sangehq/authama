@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Release
+
+- **`release.yml` pins simtabi/.github's shared workflow at v0.1.1.** v0.1.1 publishes a CHANGELOG
+  section longer than GitHub's 125,000-character release body up to the last whole line that fits and
+  links the rest. v0.1.0's notes were 157,941 bytes, so its release was cut and its run stopped before
+  attesting provenance; re-running v0.1.0 under this pin attaches the attestation.
+
 ### Security
 
 - **Sign out.** The web UI's user menu has **Sign out**, a `POST /signout` that ends the session on the
