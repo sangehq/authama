@@ -154,7 +154,9 @@ and `--json` never carry colour or terminal escapes.
 In the web UI the Keys list has a **Status** column with the pill and the key's age, and a key's
 page shows its status and a **Lifecycle** card: every event with how long ago it was (a `<time>`
 carrying the exact time) and its constraint. A new key's card offers **Mark as seen**, which is `key ack` as a
-previewed change. Each pill says its word as well as taking the badge colour (blue for new and
+previewed change. A host's page shows its key's pill beside the key's name, and the overview's
+**Key health** card counts the keys labelled new and lists each with its pill and age; all of them
+are the one pill the Keys pages use. Each pill says its word as well as taking the badge colour (blue for new and
 fresh, green for current, amber for ageing and due soon, red for old and overdue, grey for revoked
 and retired), so nothing depends on colour.
 

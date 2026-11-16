@@ -14,6 +14,7 @@ import (
 
 	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/recency"
 	"github.com/sangehq/authama/src/internal/services/events"
 	"github.com/sangehq/authama/src/internal/services/exports"
 	"github.com/sangehq/authama/src/internal/services/history"
@@ -146,6 +147,14 @@ type dashboard struct {
 	MaxHosts                    int
 	Events                      []EventRow
 	Setup                       Setup
+	// NewKeys are the keys labelled new, with their recency, for their pills.
+	NewKeys []NewKey
+}
+
+// NewKey is one key labelled new, on the overview.
+type NewKey struct {
+	Ref     string
+	Recency recency.Status
 }
 
 func (h pages) handleOverview(w http.ResponseWriter, r *http.Request) {
@@ -160,6 +169,9 @@ func (h pages) handleOverview(w http.ResponseWriter, r *http.Request) {
 		for _, k := range kv.Rows {
 			if k.PrivateOnDisk {
 				d.KeysOnDisk++
+			}
+			if rec := kv.Recency[k.Ref.String()]; rec.IsNew {
+				d.NewKeys = append(d.NewKeys, NewKey{Ref: k.Ref.String(), Recency: rec})
 			}
 		}
 		d.Reserved, d.Loose = len(kv.Reserved), len(kv.Loose)
