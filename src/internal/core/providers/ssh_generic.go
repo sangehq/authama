@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/sangehq/authama/src/internal/core/authkeys"
+	"github.com/sangehq/authama/src/internal/util/envnames"
 )
 
 // removeScript is the remote read-modify-write of authorized_keys, run as one ssh
@@ -59,8 +60,36 @@ func (g GenericSSH) knownHostsOpts(t Target) []string {
 	return nil
 }
 
+// hostKeyOpts is what authama says about an unknown host key: trust on first
+// use while auto-pin is on (the default), and nothing when AUTHAMA_AUTO_PIN
+// (ssh.auto_pin) is off. A -o given here wins over ~/.ssh/config, so passing
+// accept-new regardless overrode a user's own `StrictHostKeyChecking yes` and
+// wrote whatever key the network offered into the real known_hosts (audit
+// S-03; R-SEC-16 is the same rule for the reachability probe). With nothing
+// passed, ssh's own default ("ask") applies, which BatchMode turns into a
+// refusal; pin the host first with `authama ssh knownhosts`.
+func hostKeyOpts() []string {
+	if autoPinOff() {
+		return nil
+	}
+	return []string{"-o", "StrictHostKeyChecking=accept-new"}
+}
+
+// autoPinOff is true when AUTHAMA_AUTO_PIN is a falsy string, the same test
+// knownhosts.autoPinDisabled makes. The ssh.auto_pin setting reaches here
+// through the same variable, which the settings file exports at start.
+func autoPinOff() bool {
+	switch strings.ToLower(strings.TrimSpace(envnames.Get(os.Getenv, envnames.AutoPin))) {
+	case "0", "false", "no", "off":
+		return true
+	}
+	return false
+}
+
 func (g GenericSSH) sshBase(t Target) []string {
-	base := append([]string{"ssh", "-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=10"}, g.knownHostsOpts(t)...)
+	base := append([]string{"ssh"}, hostKeyOpts()...)
+	base = append(base, "-o", "ConnectTimeout=10")
+	base = append(base, g.knownHostsOpts(t)...)
 	if t.Port != 22 {
 		base = append(base, "-p", strconv.Itoa(t.Port))
 	}
@@ -149,7 +178,8 @@ func (g GenericSSH) Verify(t Target) bool {
 		return false
 	}
 	args := append([]string{"ssh"}, t.identityOpts()...)
-	args = append(args, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=accept-new")
+	args = append(args, "-o", "BatchMode=yes")
+	args = append(args, hostKeyOpts()...)
 	args = append(args, g.knownHostsOpts(t)...)
 	if t.Port != 22 {
 		args = append(args, "-p", strconv.Itoa(t.Port))

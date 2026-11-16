@@ -177,7 +177,8 @@ func (g GitHub) sshLogin(t Target) string {
 		return ""
 	}
 	args := append([]string{"ssh", "-T"}, t.identityOpts()...)
-	args = append(args, "-o", "StrictHostKeyChecking=accept-new", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10")
+	args = append(args, hostKeyOpts()...)
+	args = append(args, "-o", "BatchMode=yes", "-o", "ConnectTimeout=10")
 	if t.KnownHosts != "" {
 		args = append(args, "-o", "UserKnownHostsFile="+t.KnownHosts)
 	}

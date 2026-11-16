@@ -23,6 +23,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **`serve` keeps the sign-in link off every command line.** It used to run `open`/`xdg-open` with the
+  single-use link as an argument, where another local user could read it with `ps` and sign in first.
+  The browser is now given an owner-only page in the state directory that redirects to the link, and
+  the page is removed after use (audit S-01).
+- **A revoked API token stays revoked.** `api token create`, `revoke` and the read API's last-used
+  update now take a file lock and re-read the store under it; a request checked during a revoke used to
+  write the token back (S-02).
+- **`AUTHAMA_AUTO_PIN=0` lets your ssh config decide host-key checking.** Deploy, verify, remove and
+  GitHub's greeting check passed `StrictHostKeyChecking=accept-new` regardless, which overrode
+  `StrictHostKeyChecking yes` in `~/.ssh/config`; they now pass it only while auto-pin is on (S-03).
+- **Provider API responses are bounded.** Bodies are read up to 4 MiB and refused past it, and an error
+  quotes at most 200 bytes of one, with control characters removed (S-04).
 - **Sign out.** The web UI's user menu has **Sign out**, a `POST /signout` that ends the session on the
   server and clears the cookie; before, a session ended only by timing out or by stopping the server
   (review R-GAP-05).

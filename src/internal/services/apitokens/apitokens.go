@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/sangehq/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/lock"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
@@ -72,6 +73,18 @@ func List(p paths.Paths) ([]Token, error) {
 	return out, nil
 }
 
+// lockStore holds api-tokens.json for one read-modify-write. Create, Revoke
+// and Check's LastUsed write each take it and read the file again under it,
+// so none of them writes back a list read before another's change: without
+// it a Check that had read the file before a revoke saved the revoked token
+// back (audit S-02, the pattern webhooks took for R-BUG-04).
+func lockStore(p paths.Paths) (func(), error) {
+	if err := fs.EnsureDir(p.StateDir(), 0o700); err != nil {
+		return nil, err
+	}
+	return lock.Acquire(File(p) + ".lock")
+}
+
 func save(p paths.Paths, toks []Token) error {
 	if err := fs.EnsureDir(p.StateDir(), 0o700); err != nil {
 		return err
@@ -93,6 +106,11 @@ func Create(p paths.Paths, name string, days int, now time.Time) (string, Token,
 	if days < 0 {
 		return "", Token{}, errors.New("a token cannot expire in the past")
 	}
+	release, err := lockStore(p)
+	if err != nil {
+		return "", Token{}, err
+	}
+	defer release()
 	toks, err := List(p)
 	if err != nil {
 		return "", Token{}, err
@@ -117,6 +135,11 @@ func Create(p paths.Paths, name string, days int, now time.Time) (string, Token,
 
 // Revoke removes the token named name.
 func Revoke(p paths.Paths, name string) error {
+	release, err := lockStore(p)
+	if err != nil {
+		return err
+	}
+	defer release()
 	toks, err := List(p)
 	if err != nil {
 		return err
@@ -151,11 +174,37 @@ func Check(p paths.Paths, secret, scope string, now time.Time) (Token, bool) {
 	}
 	t := toks[found]
 	if now.Sub(t.LastUsed) > time.Minute {
-		toks[found].LastUsed = now.UTC()
-		_ = save(p, toks)
+		beforeLastUsedWrite()
+		touch(p, t.Hash, now)
 	}
 	return t, true
 }
+
+// touch records that the token hashed h was used at now. It reads the file
+// again under the lock and changes only that record, and only if it is still
+// there: a token revoked since Check read the file stays revoked. A failure
+// is not the caller's: the request was already authenticated.
+func touch(p paths.Paths, h string, now time.Time) {
+	release, err := lockStore(p)
+	if err != nil {
+		return
+	}
+	defer release()
+	toks, err := List(p)
+	if err != nil {
+		return
+	}
+	i := slices.IndexFunc(toks, func(t Token) bool { return t.Hash == h })
+	if i < 0 {
+		return
+	}
+	toks[i].LastUsed = now.UTC()
+	_ = save(p, toks)
+}
+
+// beforeLastUsedWrite runs between Check's read and its LastUsed write,
+// outside the lock: a test seam, so a revoke can be placed exactly there.
+var beforeLastUsedWrite = func() {}
 
 func hash(secret string) string {
 	sum := sha256.Sum256([]byte(secret))

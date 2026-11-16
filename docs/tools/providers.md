@@ -116,6 +116,11 @@ the response (e.g. `"next_field": "links.next"`); authama then follows it. Witho
 `next_field` the list is assumed to be a single page - set a large page size in
 `list_path` if your API needs one, or the listing may be truncated.
 
+Every provider API call reads at most 4 MiB of a response, and fails past that rather than reading
+on, so a broken or hostile endpoint cannot exhaust memory. An error quotes at most 200 bytes of the
+response, with control characters replaced by spaces, so that text cannot forge lines in the
+terminal, the history or the events feed.
+
 ---
 
 [← Docs index](../../README.md#documentation)
