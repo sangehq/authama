@@ -27,7 +27,8 @@ type Finding struct {
 
 // Checkup reports, for each target (the set's, or every one), whether its
 // file exists and is owner-only, that a present auth.json overrides
-// $COMPOSER_AUTH, and whether .gitignore covers the files that hold secrets.
+// $COMPOSER_AUTH, and, for a project, whether its .gitignore covers the files
+// that hold secrets.
 // failed is set when anything needs fixing.
 func (e Env) Checkup(set *tokens.Set, project string) (out []Finding, failed bool) {
 	targets := set.Targets()
@@ -54,11 +55,14 @@ func (e Env) Checkup(set *tokens.Set, project string) (out []Finding, failed boo
 			out = append(out, Finding{Level: "note", Target: t, Text: "a present auth.json OVERRIDES $COMPOSER_AUTH.", Path: path})
 		}
 	}
-	base := e.abs(project)
-	if base == "" {
-		base = e.Cwd
+	// The .gitignore is a project's, so it is judged only for --project. Without
+	// one the audit is about the user's own files, and the directory it happens
+	// to run from is not one of them: reading its .gitignore failed the audit in
+	// any repository that keeps no credentials (audit B-04).
+	if project == "" {
+		return out, failed
 	}
-	gi := filepath.Join(base, ".gitignore")
+	gi := filepath.Join(e.abs(project), ".gitignore")
 	if b, err := os.ReadFile(gi); err == nil {
 		rules := gitignoreRules(string(b))
 		var missing []string

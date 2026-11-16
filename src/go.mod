@@ -4,14 +4,12 @@ go 1.27.0
 
 toolchain go1.27.4
 
-// The Go module proxy cached these two versions from the history that was reset
-// to v0.1.0 on 2026-11-14; what it serves for them is not the code tagged here,
-// and its go.mod still names the module github.com/simtabi/authama/src. Binaries
-// ship on the GitHub release only; this keeps the toolchain from choosing either.
-retract (
-	v0.1.6 // cached by the proxy from the pre-reset history
-	v0.1.0 // the proxy's copy is not the tagged commit; use v0.1.1 or later
-)
+// The Go module proxy cached v0.1.6 from the history that was reset to v0.1.0;
+// what it serves is not this code, and its go.mod names the module
+// github.com/simtabi/authama/src. Binaries ship on the GitHub release only; this
+// keeps the toolchain from choosing it. v0.1.0 is the current release, so it is
+// not retracted (docs/release.md).
+retract v0.1.6 // cached by the proxy from the pre-reset history
 
 require (
 	github.com/modelcontextprotocol/go-sdk v1.8.0

@@ -17,7 +17,7 @@ func gitignoreMissing(t *testing.T, rules string) []string {
 	if err := os.WriteFile(filepath.Join(dir, ".gitignore"), []byte(rules), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	out, _ := e.Checkup(tokens.NewSet(), "")
+	out, _ := e.Checkup(tokens.NewSet(), dir)
 	for _, f := range out {
 		if strings.HasSuffix(f.Path, ".gitignore") {
 			return f.Missing
@@ -48,5 +48,27 @@ func TestGitignoreCoverageFollowsGitignoreSemantics(t *testing.T) {
 				t.Errorf("rules %q: missing = %q, want %q", c.rules, got, c.want)
 			}
 		})
+	}
+}
+
+// Without --project the audit checks only the user's own credential files, as
+// its help says: a .gitignore in whatever directory it runs from is not one of
+// them, so it neither warns nor fails (audit B-04).
+func TestGitignoreIsCheckedOnlyForAProject(t *testing.T) {
+	e, dir := sandbox(t)
+	if err := os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("node_modules/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, failed := e.Checkup(tokens.NewSet(), "")
+	for _, f := range out {
+		if strings.HasSuffix(f.Path, ".gitignore") {
+			t.Errorf("no --project, but the working directory's .gitignore was judged: %+v", f)
+		}
+	}
+	if failed {
+		t.Errorf("no --project and no credential file: the audit failed: %+v", out)
+	}
+	if _, failed := e.Checkup(tokens.NewSet(), dir); !failed {
+		t.Error("with --project, a .gitignore missing every secret file passed")
 	}
 }

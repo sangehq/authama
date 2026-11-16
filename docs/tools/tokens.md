@@ -252,6 +252,9 @@ A file counts as covered only when a rule ignores it, read as git reads `.gitign
 matching rule wins, `!auth.json` un-ignores it, and `auth.json.example` or `auth.json/` (a
 directory) is another name. Globs such as `.npm*` and anchored `/auth.json` count.
 
+Without `--project` the audit reads no `.gitignore`: it checks your own credential files, and the
+directory you run it from is not one of them.
+
 ## Troubleshooting
 
 | Symptom | Fix |
