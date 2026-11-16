@@ -47,9 +47,11 @@ const (
 	TypeFileMode      = TypePrefix + "file.mode-changed"
 	TypeWatchStarted  = TypePrefix + "file.watch.started"
 	TypeWebhookTested = TypePrefix + "webhook.tested"
-	// An install identity, not a link: kept as it was when the repository moved to sangehq, so a
-	// consumer keyed on source sees the same install.
-	sourceBase      = "https://opensource.simtabi.com/products/simtabi/authama/install/"
+	// An install identity, not a link. It named the simtabi org until the first public release
+	// (owner, 2026-11-16: moved to sangehq before anything outside depended on it). A dedicated
+	// product domain is the planned next home; changing it again changes what a consumer keyed on
+	// source sees, so it moves once, with a release note.
+	sourceBase      = "https://opensource.simtabi.com/products/sangehq/authama/install/"
 	specVersion     = "1.0"
 	jsonContentType = "application/json"
 )

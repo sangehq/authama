@@ -80,7 +80,7 @@ sange uses, so one receiver reads both:
 {
   "specversion": "1.0",
   "id": "op_0f9c2e1a7b3d4c5e",
-  "source": "https://opensource.simtabi.com/products/simtabi/authama/install/7f3c2a9e5b1d4c60",
+  "source": "https://opensource.simtabi.com/products/sangehq/authama/install/7f3c2a9e5b1d4c60",
   "type": "com.simtabi.authama.operation.finished",
   "subject": "operation/0f9c2e1a7b3d4c5e",
   "time": "2026-11-12T10:00:05Z",

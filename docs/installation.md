@@ -38,7 +38,7 @@ Two ways, in this order:
    ```
 
    The provenance was signed by simtabi/.github's shared release workflow, which built the binary,
-   so the check names that workflow; without `--signer-workflow` it fails. v0.1.0 (2026-11-14) is
+   so the check names that workflow; without `--signer-workflow` it fails. v0.1.0 (re-tagged 2026-11-16) is
    the first release under `sangehq/authama` (see [Earlier binary releases](#earlier-binary-releases)).
 2. **Build from source.** You need Go (the version `src/go.mod` names), `git` and `make`.
 
@@ -67,7 +67,7 @@ runs. On Windows, use `make install`. To check what is installed:
 ```sh
 command -v authama      # which file runs: ~/.local/bin/authama after make install or make link
 ls -l "$(command -v authama)"   # a link (make link) points into the checkout's build/
-authama version         # the version, then the commit and build day: authama v0.1.0 (abc1234, 2026-11-14)
+authama version         # the version, then the commit and build day: authama v0.1.0 (abc1234, 2026-11-16)
 ```
 
 On a Mac with Xcode's command line tools (`xcode-select --install`), `make build` also builds

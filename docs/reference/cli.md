@@ -153,7 +153,7 @@ Every command also takes the global flag:
     - [`authama ssh vm sync`](#authama-ssh-vm-sync) - Keep VM hosts in step with their hypervisors: pins, guest keys, Docker contexts, gone VMs
 - [`authama token`](#authama-token) - Package-manager and git auth tokens: Composer, npm, Docker, git, netrc
   - [`authama token apply`](#authama-token-apply) - Resolve the token config from the environment and write each tool's credential file
-  - [`authama token audit`](#authama-token-audit) - Check the credential files are owner-only and .gitignore covers them; write nothing
+  - [`authama token audit`](#authama-token-audit) - Check the credential files are owner-only and a project's .gitignore covers them; write nothing
   - [`authama token copy`](#authama-token-copy) - Copy one installed token to the clipboard without printing it
   - [`authama token delete`](#authama-token-delete) - Delete one installed token from its tool's credential file
   - [`authama token examples`](#authama-token-examples) - Show what each tool's credential file looks like, with placeholder values
@@ -3327,7 +3327,7 @@ Aliases: `auth`
 Subcommands:
 
 - [`apply`](#authama-token-apply) - Resolve the token config from the environment and write each tool's credential file
-- [`audit`](#authama-token-audit) - Check the credential files are owner-only and .gitignore covers them; write nothing
+- [`audit`](#authama-token-audit) - Check the credential files are owner-only and a project's .gitignore covers them; write nothing
 - [`copy`](#authama-token-copy) - Copy one installed token to the clipboard without printing it
 - [`delete`](#authama-token-delete) - Delete one installed token from its tool's credential file
 - [`examples`](#authama-token-examples) - Show what each tool's credential file looks like, with placeholder values
@@ -3377,7 +3377,8 @@ Flags:
 
 For each tool (every one, the --target ones, or those a --config uses): is its
 file there, and is it owner-only? With --project, the project's auth.json and
-.npmrc, and whether the project's .gitignore covers every secret file. Exits
+.npmrc, and whether the project's .gitignore covers every secret file; without
+it, no .gitignore is read, whatever directory it runs from. Exits
 non-zero when anything needs fixing; `authama doctor --fix` tightens the modes.
 `token status` is the read-only overview that never fails.
 

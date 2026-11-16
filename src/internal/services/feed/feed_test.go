@@ -113,7 +113,7 @@ func TestTheFeedOrdersEventsAndResumesFromACursor(t *testing.T) {
 	// every time, and names no account.
 	for _, e := range all {
 		if e.SpecVersion != "1.0" || e.DataContentType != "application/json" || e.Subject == "" ||
-			!strings.HasPrefix(e.Source, "https://opensource.simtabi.com/products/simtabi/authama/install/") || e.Source != all[0].Source {
+			!strings.HasPrefix(e.Source, "https://opensource.simtabi.com/products/sangehq/authama/install/") || e.Source != all[0].Source {
 			t.Errorf("not a CloudEvent from this install: %+v", e)
 		}
 	}

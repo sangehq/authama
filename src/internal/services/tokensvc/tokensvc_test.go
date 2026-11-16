@@ -161,7 +161,7 @@ func TestCheckupFlagsAWorldReadableFile(t *testing.T) {
 func TestCheckupFlagsAGitignoreMissingSecretFiles(t *testing.T) {
 	e, dir := sandbox(t)
 	_ = os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("# x\nauth.json\n/.npmrc\n"), 0o644)
-	out, failed := e.Checkup(tokens.NewSet(), "")
+	out, failed := e.Checkup(tokens.NewSet(), dir)
 	last := out[len(out)-1]
 	if !failed || !strings.HasSuffix(last.Text, "is missing: .git-credentials, .netrc") {
 		t.Fatalf("%+v", last)

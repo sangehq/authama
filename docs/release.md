@@ -38,10 +38,16 @@ and 2026-11-14). Every earlier version tag (v0.1.0, v0.1.4, v0.1.5, v0.1.6, `src
 `src/v0.1.6`) and the v0.1.6 GitHub release were removed, and one v0.1.0 was tagged on the
 merge commit that added its CHANGELOG section. The proxy keeps its old v0.1.0 and v0.1.6
 entries, so `@latest` through the proxy still names v0.1.6 and a proxy fetch of v0.1.0 gets
-the old copy; the next release is v0.1.1, and nothing here is offered through the Go toolchain.
+the old copy. On 2026-11-16 v0.1.0 was re-tagged on the merge that brought in everything
+merged since (owner: "rebase to release all at v0.1.0"): the v0.1.0 and `src/v0.1.0` tags and
+the v0.1.0 release were deleted and made again on the new commit, because the first v0.1.0
+binaries reported `-dirty` and lacked 48 commits, the A-SEC security fixes among them. The next
+release is v0.1.1, and nothing here is offered through the Go toolchain.
 
-From v0.1.1, `src/go.mod` retracts v0.1.0 and v0.1.6, so once the proxy has v0.1.1 its
-`@latest` stops naming either cached copy.
+`src/go.mod` retracts v0.1.6, so once the proxy fetches a newer version its `@latest` stops
+naming that cached copy. v0.1.0 is not retracted: it is the current release, re-tagged on
+2026-11-16 (owner: "rebase to release all at v0.1.0"), and the proxy's older v0.1.0 copy stays
+cached whatever git says. Binaries ship on the GitHub release only, so nothing installs from it.
 
 ## Release builds are stamped clean
 
@@ -163,9 +169,12 @@ are frozen, not deleted, and nothing writes to them again:
 - **Winget:** never published. The `simtabi/winget-pkgs` fork it needed does not exist
   (checked 2026-11-02 with `gh api repos/simtabi/winget-pkgs`, which answers 404).
 
-The repository secrets the old pipeline read, `HOMEBREW_TAP_DEPLOY_KEY`,
-`SCOOP_BUCKET_DEPLOY_KEY` and `TAP_GITHUB_TOKEN`, and the variables `SKIP_WINDOWS_PKGS`
-and `SKIP_SCOOP`, are read by nothing now.
+The repository secrets the old pipeline read (`HOMEBREW_TAP_DEPLOY_KEY`,
+`SCOOP_BUCKET_DEPLOY_KEY`, `TAP_GITHUB_TOKEN`) and the variables `SKIP_WINDOWS_PKGS` and
+`SKIP_SCOOP` are deleted, as are the write deploy keys on simtabi/homebrew-tap and
+simtabi/scoop-bucket and the `deploy-key-probe.yml` workflow that tested one (2026-11-16).
+The repository holds no Actions secret or variable; a release needs only the workflow's own
+`GITHUB_TOKEN`.
 
 ## GitHub Actions hygiene
 
