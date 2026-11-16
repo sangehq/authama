@@ -32,6 +32,15 @@ for the hosts they can reach (trust-on-first-use, like ssh's
 - disable it with `reconcile --no-pin` / `keygen --no-pin`, or globally with
   `AUTHAMA_AUTO_PIN=0` (e.g. air-gapped or fully scripted/deterministic runs).
 
+The same setting decides what authama's own ssh commands say about an unknown host key: deploy,
+verify, remove, the `authorized_keys` read and GitHub's greeting check. While auto-pin is on they
+pass `-o StrictHostKeyChecking=accept-new`, so a host seen for the first time is pinned. With
+`AUTHAMA_AUTO_PIN=0` (or `ssh.auto_pin: false`) they pass no `StrictHostKeyChecking` at all, so your
+own `~/.ssh/config` decides; a value on the command line would win over it. Under OpenSSH's default
+(`ask`), an unattended run then refuses an unpinned host instead of trusting it, and you pin it first
+with `authama ssh knownhosts`. `ssh-copy-id` was never given the option. The reachability probe
+never touches `known_hosts` either way.
+
 ### Initialize trust stores: `knownhosts init`
 
 To set up known_hosts (create the file + pin its reachable hosts) in one go -

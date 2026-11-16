@@ -123,6 +123,12 @@ func newResetCmd() *cobra.Command {
 				_, _ = fmt.Fprintln(out, "unbind the owner first: the PIN and the sealing key go")
 			}
 			_, _ = fmt.Fprintln(out, "~/.ssh is not touched.")
+			// A word given on the command line that is not the one asked for
+			// is a mistake to point out, not a "no" to accept quietly (audit
+			// B-10); a declined prompt still ends as an abort.
+			if confirmWord != "" && confirmWord != "reset" {
+				return fmt.Errorf("--confirm must be %q, not %q; nothing was changed", "reset", confirmWord)
+			}
 			if confirmWord == "" {
 				if !platform.StdinIsTerminal() {
 					return errors.New("a reset needs --confirm reset when there is no terminal to ask on")

@@ -61,3 +61,81 @@ func TestATokenIsCheckedByItsHashUntilItGoes(t *testing.T) {
 		t.Error("revoking a token twice did not say it was gone")
 	}
 }
+
+// A revoke that lands while Check is between reading the file and writing
+// LastUsed back must stay revoked: Check used to save the list it had read,
+// which put the revoked token back while the CLI reported success (audit S-02).
+func TestARevokeDuringCheckIsNotUndone(t *testing.T) {
+	p := paths.Paths{ConfigDir: t.TempDir()}
+	now := time.Date(2026, 11, 12, 10, 0, 0, 0, time.UTC)
+	secret, _, err := Create(p, "leaked", 0, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, _, err := Create(p, "kept", 0, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prev := beforeLastUsedWrite
+	revoked := false
+	beforeLastUsedWrite = func() {
+		if !revoked {
+			revoked = true
+			if err := Revoke(p, "leaked"); err != nil {
+				t.Errorf("revoke during check: %v", err)
+			}
+		}
+	}
+	t.Cleanup(func() { beforeLastUsedWrite = prev })
+
+	// The request that was already inside Check is let through, but the
+	// token does not come back.
+	_, _ = Check(p, secret, ScopeRead, now.Add(2*time.Minute))
+	if !revoked {
+		t.Fatal("the interleaving was not exercised: Check wrote nothing back")
+	}
+	toks, err := List(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(toks) != 1 || toks[0].Name != "kept" {
+		t.Fatalf("after the revoke the store holds %+v, want only \"kept\"", toks)
+	}
+	if _, ok := Check(p, secret, ScopeRead, now.Add(3*time.Minute)); ok {
+		t.Error("the revoked token is accepted again")
+	}
+	if _, ok := Check(p, other, ScopeRead, now.Add(3*time.Minute)); !ok {
+		t.Error("the other token was lost")
+	}
+}
+
+// A token made while Check is writing LastUsed is not dropped by that write.
+func TestACreateDuringCheckIsKept(t *testing.T) {
+	p := paths.Paths{ConfigDir: t.TempDir()}
+	now := time.Date(2026, 11, 12, 10, 0, 0, 0, time.UTC)
+	secret, _, err := Create(p, "a", 0, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prev := beforeLastUsedWrite
+	done := false
+	beforeLastUsedWrite = func() {
+		if !done {
+			done = true
+			if _, _, err := Create(p, "b", 0, now); err != nil {
+				t.Errorf("create during check: %v", err)
+			}
+		}
+	}
+	t.Cleanup(func() { beforeLastUsedWrite = prev })
+	if _, ok := Check(p, secret, ScopeRead, now.Add(2*time.Minute)); !ok {
+		t.Fatal("a live token was refused")
+	}
+	toks, _ := List(p)
+	if len(toks) != 2 {
+		t.Fatalf("store holds %d tokens, want 2: %+v", len(toks), toks)
+	}
+	if toks[0].LastUsed.IsZero() {
+		t.Error("LastUsed was not recorded")
+	}
+}

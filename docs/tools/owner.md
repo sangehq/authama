@@ -42,6 +42,12 @@ the OS account, which a browser cannot.
 over ssh, a container). A `--dev-root` sandbox always uses the file inside the sandbox, so a test
 never touches the real Keychain.
 
+> Every store above guards the key from other accounts, not from other programs running as you.
+> On macOS the item is created without an access list, so any process of the same user can read it
+> with `security find-generic-password` and no prompt; the Secret Service and DPAPI behave the same
+> way. The seal proves the files were last written by authama under this account. It does not stop
+> malware already running as you, which could rewrite them and re-seal.
+
 ## The seal
 
 The seal is an HMAC-SHA256, made with the key, over each of these files' content and over the

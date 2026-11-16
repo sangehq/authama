@@ -321,7 +321,7 @@ Each one fixes something auth-token-manager got wrong or left unsafe:
 - **Secrets are not echoed.** A Composer write no longer prints `COMPOSER_AUTH`
   with the token in it.
 - **Usage errors exit 1**, not argparse's 2, and errors start `authama:`.
-- **`token audit` checks all five tools** by default; `--doctor` checked only
+- **`token audit` checks every tool** by default; `--doctor` checked only
   the ones in the config (Composer, with no config). `--target` or `--config`
   narrows it.
 - **A sandbox.** `--dev-root` runs every token command against a throwaway

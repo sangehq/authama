@@ -460,16 +460,30 @@ func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection,
 	}
 	before := failed
 	failed = replaceFailed(j, p, failed, force)
-	_ = rotator.SaveFailed(p, show(nil, "", without(before, failed)).Failed())
+	saveErr := rotator.SaveFailed(p, show(nil, "", without(before, failed)).Failed())
 	for _, n := range failed {
 		j.Failed(n)
 	}
 	j.Progress(len(names), len(names), "")
+	// The CLI fails on this write too: dropping the error left "retry the
+	// failed ones" reading a stale list after a run that looked finished
+	// (audit B-06).
+	var errs []error
 	if len(failed) > 0 {
-		return fmt.Errorf("%d of %d key(s) were not rotated, and are as they were: %s",
-			len(failed), len(names), strings.Join(failed, ", "))
+		errs = append(errs, fmt.Errorf("%d of %d key(s) were not rotated, and are as they were: %s",
+			len(failed), len(names), strings.Join(failed, ", ")))
 	}
-	return nil
+	if saveErr != nil {
+		errs = append(errs, retryListErr(saveErr))
+	}
+	return errors.Join(errs...)
+}
+
+// retryListErr says that the list of keys to retry, rotate --failed's input,
+// was not written, which leaves "retry the failed ones" reading an old one.
+func retryListErr(err error) error {
+	return fmt.Errorf("the list of keys to retry was not saved, so retrying the failed ones "+
+		"would use an old list: %w", err)
 }
 
 // manualPaste is rotate's pause at a target that takes the key by hand.
@@ -986,7 +1000,7 @@ func rotateCheckSpec(names, args []string, subjects []history.Subject, h home) j
 	}
 }
 
-func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string) error {
+func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string) (err error) {
 	m, inv, err := loadState(p)
 	if err != nil {
 		return err
@@ -1004,7 +1018,13 @@ func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string) error {
 		j.SetSummary(sum)
 		return sum
 	}
-	defer func() { _ = rotator.SaveFailed(p, show(nil, "").Failed()) }()
+	// Kept however the job ends, and a failure to keep it fails the job, as
+	// it does the CLI's rotate --check (audit B-06).
+	defer func() {
+		if saveErr := rotator.SaveFailed(p, show(nil, "").Failed()); saveErr != nil {
+			err = errors.Join(err, retryListErr(saveErr))
+		}
+	}()
 	for i, n := range names {
 		if err := j.Step(); err != nil {
 			return err

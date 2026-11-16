@@ -574,6 +574,13 @@ Some changes are terminal-only:
   any `--allow-host`. That stops a page on another site from rebinding its name to this machine.
 - **Sign-in links work once.** A link signs one browser in, within 10 minutes; a used or old one is
   refused. A link preview (`HEAD`) does not use it up.
+- **The link stays off every command line.** Any local user can read another's process arguments
+  (`ps -eo args`), and could use a link seen there before your browser does. So `authama serve`
+  never hands the link to `open`, `xdg-open` or the browser: it writes an owner-only (0600) page,
+  `serve-open-*.html` in the home's state directory, that redirects to the link, and opens that page.
+  The page is removed a minute after the launch or when the server stops; one left by a launch that
+  reused a running server is removed by the next launch once its link has expired. The printed
+  address and `--token-file` are unchanged.
 - **Sessions end.** After 8 hours without a request, or 24 hours after signing in, or on **Sign out**
   (`POST /signout`, held to the same origin and form token as any change).
 - **A restart's handoff stays off the environment.** The sessions, form tokens and control key a

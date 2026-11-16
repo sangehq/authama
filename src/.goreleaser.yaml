@@ -14,9 +14,10 @@ project_name: authama
 # release assets it uploads are flat, as before.
 dist: .goreleaser-dist
 
-before:
-  hooks:
-    - go -C src mod tidy
+# No `go mod tidy` before-hook. Tidying at release time changed go.sum in the
+# checkout, so Go stamped every v0.1.0 binary vcs.modified=true and authama
+# reported "0.1.0-dirty". Tidiness is a pull-request gate instead
+# (`make tidy-check`, part of `make ci`), so the tagged tree is already tidy.
 
 # One pure-Go binary cross-compiled to the full OS/arch matrix: authama
 # (Authentication Access Manager). The sshmgr alias older releases shipped
@@ -55,8 +56,12 @@ builds:
     mod_timestamp: "{{ .CommitTimestamp }}"
     ldflags:
       - -s -w
-      - -X github.com/sangehq/authama/src/internal/version.Version={{ .Version }}
-      - -X github.com/sangehq/authama/src/internal/version.Commit={{ .Commit }}
+      # "v" plus GoReleaser's bare version, and the short commit: the same shape
+      # `make build` stamps from `git describe`, and what the docs show
+      # (authama v0.1.0 (abc1234, 2026-11-14)). v0.1.0 printed "0.1.0" and the
+      # full 40-character SHA.
+      - -X github.com/sangehq/authama/src/internal/version.Version=v{{ .Version }}
+      - -X github.com/sangehq/authama/src/internal/version.Commit={{ .ShortCommit }}
       - -X github.com/sangehq/authama/src/internal/version.Date={{ .CommitDate }}
 
 # A single macOS universal binary (amd64 + arm64) alongside the per-arch ones.
@@ -94,6 +99,8 @@ archives:
       # The web UI embeds Tabler, Bootstrap and Popper; their MIT notices ship
       # with the binary that carries them.
       - third-party-notices.md
+      # The Go modules linked into the binary, and the standard library.
+      - third-party-notices-go.md
 
 # Native Linux packages (nfpm operates on the Linux builds only).
 nfpms:

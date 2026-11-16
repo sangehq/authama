@@ -63,7 +63,7 @@ func fakeServe(t *testing.T, taken ...int) (*[]string, context.CancelFunc) {
 		}
 		return &blockingListener{addr: &net.TCPAddr{IP: net.ParseIP(host), Port: p}, closed: make(chan struct{})}, nil
 	}
-	serveBrowser = func(string) error { return errors.New("no browser in tests") }
+	serveBrowser = func(string, string) (func(), error) { return func() {}, errors.New("no browser in tests") }
 	serveContext = func(context.Context) (context.Context, context.CancelFunc) { return ctx, cancel }
 	t.Cleanup(func() {
 		serveListen, serveBrowser, serveContext, serveNotifications = prevListen, prevBrowser, prevCtx, prevNotify

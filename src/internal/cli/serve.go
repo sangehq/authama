@@ -2,8 +2,10 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"net"
 	"os"
@@ -204,7 +206,10 @@ func newServeCmd() *cobra.Command {
 					}
 				}
 				if !noOpen && platform.StdinIsTerminal() {
-					if err := serveBrowser(link); err != nil {
+					// This process ends now, so the page is not removed
+					// here: the next launch sweeps it once its link has
+					// expired.
+					if _, err := serveBrowser(p.StateDir(), link); err != nil {
 						_, _ = fmt.Fprintf(c.ErrOrStderr(), "could not open a browser (%s); open the address above yourself\n", err)
 					}
 				}
@@ -314,9 +319,15 @@ func newServeCmd() *cobra.Command {
 				}
 			}
 			if !noOpen && platform.StdinIsTerminal() {
-				if err := serveBrowser(url); err != nil {
+				removePage, err := serveBrowser(p.StateDir(), url)
+				if err != nil {
 					_, _ = fmt.Fprintf(c.ErrOrStderr(), "could not open a browser (%s); open the address above yourself\n", err)
 				}
+				// The page is a credential until its link is used or
+				// expires: it goes when the server stops, or once the
+				// browser has had time to read it, whichever is first.
+				defer removePage()
+				time.AfterFunc(launchPageGrace, removePage)
 			}
 
 			ctx, stop := serveContext(c.Context())
@@ -391,15 +402,88 @@ func writeTokenFile(path, url string) error {
 	return os.Chmod(path, 0o600)
 }
 
-func openBrowser(url string) error {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
+// browserStart starts the opener and does not wait for it; a seam so a test
+// can see the argv without starting a browser.
+var browserStart = func(argv []string) error { return exec.Command(argv[0], argv[1:]...).Start() }
+
+// launchPagePattern names the owner-only page openBrowser hands the browser.
+const launchPagePattern = "serve-open-*.html"
+
+// launchPageGrace is how long a page outlives its launch when the server
+// keeps running: long enough for a browser to start and read it.
+const launchPageGrace = time.Minute
+
+func browserArgv(goos, target string) []string {
+	switch goos {
 	case "darwin":
-		cmd = exec.Command("open", url)
+		return []string{"open", target}
 	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+		return []string{"rundll32", "url.dll,FileProtocolHandler", target}
 	default:
-		cmd = exec.Command("xdg-open", url)
+		return []string{"xdg-open", target}
 	}
-	return cmd.Start()
+}
+
+// openBrowser opens url in the browser without putting it on any command
+// line. The link signs in once, and any local user can read another's argv
+// (`ps -eo args` on Linux and macOS), so whoever saw `open …?token=…` first
+// could take the session (audit S-01). Instead an owner-only page in dir
+// redirects to url, and the opener is given the page's path; this is how
+// Jupyter opens its tokened URL. The returned func removes the page. Pages
+// earlier launches left behind are swept once their link has expired.
+func openBrowser(dir, url string) (func(), error) {
+	noop := func() {}
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return noop, err
+	}
+	sweepLaunchPages(dir, time.Now().Add(-web.LinkLifetime))
+	f, err := os.CreateTemp(dir, launchPagePattern)
+	if err != nil {
+		return noop, err
+	}
+	page := f.Name()
+	remove := func() { _ = os.Remove(page) }
+	// CreateTemp makes the file 0600; say so anyway, as writeTokenFile does.
+	if err := f.Chmod(0o600); err != nil && runtime.GOOS != "windows" {
+		_ = f.Close()
+		remove()
+		return noop, err
+	}
+	if _, err := f.WriteString(launchPage(url)); err != nil {
+		_ = f.Close()
+		remove()
+		return noop, err
+	}
+	if err := f.Close(); err != nil {
+		remove()
+		return noop, err
+	}
+	if err := browserStart(browserArgv(runtime.GOOS, page)); err != nil {
+		remove()
+		return noop, err
+	}
+	return remove, nil
+}
+
+// launchPage redirects to url at once: a meta refresh, and location.replace
+// so the page itself does not stay in the tab's history.
+func launchPage(url string) string {
+	js, _ := json.Marshal(url) // escapes <, > and &, so it cannot close the script
+	attr := html.EscapeString(url)
+	return "<!doctype html>\n<html><head><meta charset=\"utf-8\">\n" +
+		"<meta http-equiv=\"refresh\" content=\"0;url=" + attr + "\">\n" +
+		"<title>" + brand.Name + "</title>\n" +
+		"<script>location.replace(" + string(js) + ");</script>\n" +
+		"</head><body><p><a href=\"" + attr + "\">Open " + brand.Name + "</a></p></body></html>\n"
+}
+
+// sweepLaunchPages removes pages last written before cutoff: their links have
+// expired, and a launch that exited at once could not remove its own.
+func sweepLaunchPages(dir string, cutoff time.Time) {
+	old, _ := filepath.Glob(filepath.Join(dir, launchPagePattern))
+	for _, f := range old {
+		if fi, err := os.Lstat(f); err == nil && fi.Mode().IsRegular() && fi.ModTime().Before(cutoff) {
+			_ = os.Remove(f)
+		}
+	}
 }

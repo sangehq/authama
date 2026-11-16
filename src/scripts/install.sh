@@ -25,8 +25,8 @@ INSTALL_DIR="${AUTHAMA_INSTALL_DIR:-${SSHMGR_INSTALL_DIR:-/usr/local/bin}}"
 
 # AUTHAMA_RELEASE_BASE is where the binaries and checksums.txt are read from
 # instead of the GitHub release: a URL, or file:///path to a directory. CI
-# points it at a binary it just built, since binary releases are on hold and
-# the release has none to download.
+# points it at a binary it just built, so the installer is tested before a
+# release exists to download from.
 RELEASE_BASE="${AUTHAMA_RELEASE_BASE:-}"
 
 err()  { printf 'error: %s\n' "$*" >&2; exit 1; }
@@ -91,8 +91,8 @@ if [ -z "$VERSION" ]; then
     latest="$(curl -fsSLI "${CURL_RETRY[@]}" -o /dev/null -w '%{url_effective}' "https://github.com/${OWNER}/${REPO}/releases/latest" || true)"
     case "$latest" in */tag/*) VERSION="${latest##*/tag/}" ;; esac
   fi
-  # No release at all - binary releases are on hold, so the repository may
-  # publish none - leaves the highest version tag: vX.Y.Z only, so neither the
+  # No published release yet (a tag whose release run has not finished, say)
+  # leaves the highest version tag: vX.Y.Z only, so neither the
   # Go module's src/vX.Y.Z alias nor a pre-release is picked.
   if [ -z "$VERSION" ]; then
     tags="https://api.github.com/repos/${OWNER}/${REPO}/git/matching-refs/tags/v"

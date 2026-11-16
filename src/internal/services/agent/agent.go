@@ -44,6 +44,7 @@ func sshAddArgs(useKeychain bool, keyPath string) []string {
 // Load adds a profile's keys to the agent and returns the key names added. A
 // shared key mapped to many hosts is added once. add is the per-key action
 // (Agent.Add in production; injectable for tests). Mirrors facade.load.
+// LoadReport says, as well, which keys were not added and why.
 //
 // Resolved hosts, not KeyRefs - deliberately, and unlike reconcile/validate/
 // keyaudit, which all walk KeyRefs so a declared-but-unwired key is not
@@ -51,11 +52,26 @@ func sshAddArgs(useKeychain bool, keyPath string) []string {
 // connection, so loading it would put an identity in the agent that is offered
 // to every server the user then talks to.
 func Load(m *manifest.Manifest, sshDir, profile string, add func(string) bool) ([]string, error) {
+	r, err := LoadReport(m, sshDir, profile, add)
+	return r.Added, err
+}
+
+// Report is what one Load did, by key name.
+type Report struct {
+	Added   []string // in the agent now
+	Missing []string // no private key file on disk, so not tried
+	Failed  []string // ssh-add was run, or could not be, and did not add it
+}
+
+// LoadReport is Load, naming the keys it skipped and the ones the agent did
+// not take, so the caller can say so instead of reporting a quiet zero
+// (audit B-03).
+func LoadReport(m *manifest.Manifest, sshDir, profile string, add func(string) bool) (Report, error) {
+	var r Report
 	rks, err := m.IterResolved()
 	if err != nil {
-		return nil, err
+		return r, err
 	}
-	var added []string
 	seen := map[string]bool{}
 	for _, rk := range rks {
 		if rk.Profile != profile {
@@ -69,11 +85,16 @@ func Load(m *manifest.Manifest, sshDir, profile string, add func(string) bool) (
 			continue
 		}
 		seen[priv] = true
-		if fileExists(priv) && add(priv) {
-			added = append(added, rk.KeyName)
+		switch {
+		case !fileExists(priv):
+			r.Missing = append(r.Missing, rk.KeyName)
+		case add(priv):
+			r.Added = append(r.Added, rk.KeyName)
+		default:
+			r.Failed = append(r.Failed, rk.KeyName)
 		}
 	}
-	return added, nil
+	return r, nil
 }
 
 func fileExists(path string) bool {

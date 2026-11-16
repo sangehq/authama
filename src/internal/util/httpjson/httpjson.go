@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // sleep is time.Sleep, indirected so a test can exercise the retry path without
@@ -31,6 +32,14 @@ var idempotent = map[string]bool{"GET": true, "HEAD": true, "PUT": true, "DELETE
 // denylist of Authorization/X-Auth-Token/Cookie forwarded Auth-API-Token or
 // X-Api-Key to whatever host a 302 named.
 var crossOriginSafe = map[string]bool{"accept": true, "content-type": true}
+
+// MaxBody is the most of a response body a call reads. Provider APIs answer
+// in kilobytes; a body past this is refused rather than read to the end, so a
+// hostile or broken endpoint cannot exhaust memory (audit S-04).
+const MaxBody = 4 << 20
+
+// ExcerptLen is the most of a response body an error quotes.
+const ExcerptLen = 200
 
 // HTTPError is a failed REST call (non-2xx, or transport error after retries).
 type HTTPError struct{ Msg string }
@@ -105,22 +114,25 @@ func RequestJSON(method, rawURL string, headers map[string]string, body any) (an
 			}
 			return nil, errf("%s %s failed: %v", method, rawURL, err)
 		}
-		raw, _ := io.ReadAll(resp.Body)
+		raw, err := readBody(resp.Body)
 		_ = resp.Body.Close()
+		if err != nil {
+			return nil, errf("%s %s -> %d: %v", method, rawURL, resp.StatusCode, err)
+		}
 		if resp.StatusCode >= 400 {
 			if idempotent[method] && retryStatus[resp.StatusCode] && attempt < retries {
 				sleep(retryWait(resp, attempt))
 				continue
 			}
 			return nil, errf("%s %s -> %d %s", method, rawURL, resp.StatusCode,
-				strings.TrimSpace(truncate(string(raw), 300)))
+				excerpt(raw))
 		}
 		if resp.StatusCode == 204 || len(raw) == 0 {
 			return map[string]any{}, nil
 		}
 		var out any
 		if err := json.Unmarshal(raw, &out); err != nil {
-			return nil, errf("%s %s -> non-JSON response: %s", method, rawURL, truncate(string(raw), 300))
+			return nil, errf("%s %s -> non-JSON response: %s", method, rawURL, excerpt(raw))
 		}
 		return out, nil
 	}
@@ -144,6 +156,33 @@ func bytesReader(data []byte) io.Reader {
 		return nil
 	}
 	return bytes.NewReader(data)
+}
+
+// readBody reads at most MaxBody bytes of r, and fails when there is more.
+func readBody(r io.Reader) ([]byte, error) {
+	raw, err := io.ReadAll(io.LimitReader(r, MaxBody+1))
+	if err != nil {
+		return nil, fmt.Errorf("reading the response: %w", err)
+	}
+	if len(raw) > MaxBody {
+		return nil, fmt.Errorf("the response is larger than %d bytes; refused", MaxBody)
+	}
+	return raw, nil
+}
+
+// excerpt is the start of a body, for an error message: at most ExcerptLen
+// bytes, valid UTF-8, with every control character (escape sequences, CR,
+// LF, NUL) turned into a space, so server-chosen text cannot forge lines in
+// the terminal, the history or the events feed.
+func excerpt(raw []byte) string {
+	s := strings.ToValidUTF8(truncate(string(raw), ExcerptLen), "")
+	s = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return ' '
+		}
+		return r
+	}, s)
+	return strings.TrimSpace(s)
 }
 
 func truncate(s string, n int) string {

@@ -95,6 +95,18 @@ fmt: ## gofmt every file in place
 fmt-check: ## fail if anything is unformatted (what CI gates on)
 	@test -z "$$(gofmt -l $(MODULE)/cmd $(MODULE)/internal)" || { gofmt -l $(MODULE)/cmd $(MODULE)/internal; exit 1; }
 
+# go.mod and go.sum must already be tidy. A release that tidies them at build
+# time builds from a modified tree, and Go stamps every binary vcs.modified=true,
+# which authama reports as "-dirty": v0.1.0 shipped that way.
+tidy-check: ## fail if go.mod or go.sum is not tidy
+	$(GO) mod tidy -diff
+
+notices: ## regenerate third-party-notices-go.md, the licences of every linked Go module
+	$(GO) run ./internal/tools/gonotices -o ../third-party-notices-go.md
+
+notices-check: ## fail if third-party-notices-go.md is stale (a dependency added, bumped or dropped)
+	$(GO) run ./internal/tools/gonotices -check -o ../third-party-notices-go.md
+
 # golangci-lint from PATH, else where `go install` puts it ($GOPATH/bin), which
 # is often not on PATH: a shell without it failed `make gates` with "command not
 # found" while the linter sat installed in ~/go/bin. GOLANGCI_LINT=... overrides.
@@ -119,7 +131,7 @@ lint-all: lint-tool ## lint every GOOS - one run only sees one, so build-tagged 
 # than a copy in ci.yml that drifts from this one. Lint is deliberately NOT in
 # it: CI gets golangci-lint from a pinned action that also annotates the diff,
 # and folding it in here would silently drop both the pin and the cache.
-ci: fmt-check build-all vet test ## the gate CI runs (lint runs there as its own step)
+ci: fmt-check tidy-check notices-check build-all vet test ## the gate CI runs (lint runs there as its own step)
 
 # The gate runs the tests; it never replays a cached result. Caching would also
 # cost more than it saves here: before storing a result, go test hashes every

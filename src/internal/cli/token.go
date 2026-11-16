@@ -705,7 +705,7 @@ func newTokenAuditCmd() *cobra.Command {
 		Example: "  " + brand.Command + " token audit" + "\n" +
 			"  " + brand.Command + " token audit --project . --target composer",
 		Short: "Check the credential files are owner-only and .gitignore covers them; write nothing",
-		Long: "For each tool (all five, the --target ones, or those a --config uses): is its\n" +
+		Long: "For each tool (every one, the --target ones, or those a --config uses): is its\n" +
 			"file there, and is it owner-only? With --project, the project's auth.json and\n" +
 			".npmrc, and whether the project's .gitignore covers every secret file. Exits\n" +
 			"non-zero when anything needs fixing; `" + brand.Command + " doctor --fix` tightens the modes.\n" +
