@@ -26,6 +26,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/sangehq/authama/src/internal/util/fs"
 )
 
 // releaseOSes are the GOOS values the release builds (src/.goreleaser.yaml).
@@ -74,7 +76,7 @@ func main() {
 		_, _ = os.Stdout.WriteString(text)
 		return
 	}
-	if err := os.WriteFile(*out, []byte(text), 0o644); err != nil {
+	if err := fs.WriteTextAtomic(*out, text, 0o644); err != nil {
 		fmt.Fprintln(os.Stderr, "gonotices:", err)
 		os.Exit(1)
 	}
@@ -131,7 +133,8 @@ func render(mainPkg string) (string, error) {
 		}
 		section(&b, m.Path, m.Version, text)
 	}
-	return b.String(), nil
+	// One trailing newline, not the blank line the last section leaves.
+	return strings.TrimRight(b.String(), "\n") + "\n", nil
 }
 
 func section(b *strings.Builder, name, version, text string) {

@@ -45,7 +45,8 @@ From v0.1.1, `src/go.mod` retracts v0.1.0 and v0.1.6, so once the proxy has v0.1
 
 ## Release builds are stamped clean
 
-A release binary prints `authama vX.Y.Z (abc1234, YYYY-MM-DD)`. Go marks a build made from a
+On a release binary, `authama version` prints the version, the short commit and the build day:
+`vX.Y.Z (abc1234, YYYY-MM-DD)`. Go marks a build made from a
 modified tree `vcs.modified=true`, and authama then adds `-dirty`: every v0.1.0 binary prints
 `0.1.0-dirty`, because GoReleaser ran `go mod tidy` before building and it dropped two stale
 `go.sum` lines. So:

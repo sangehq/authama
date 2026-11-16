@@ -316,6 +316,10 @@ func TestTheToolRunsOnlyTheBinariesItDeclares(t *testing.T) {
 		// is an authama process before it signals it: ps on POSIX, tasklist
 		// on Windows. Without either, nothing is signalled.
 		"ps", "tasklist",
+		// The Go toolchain, from the build-time notices generator
+		// (internal/tools/gonotices, run by `make notices`); the shipped binary
+		// never imports that package.
+		"go",
 	} {
 		declared[b] = true
 	}
