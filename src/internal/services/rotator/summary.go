@@ -20,6 +20,9 @@ const (
 	ResultWouldRotate = "would rotate"
 	ResultWouldPause  = "would pause"
 	ResultWouldFail   = "would fail"
+	// ResultWouldReplace is a forced dry run's key that cannot rotate in
+	// place, and that the forced rotation replaces on this computer instead.
+	ResultWouldReplace = "would replace here"
 	// ResultWaiting is a key the run has not reached yet.
 	ResultWaiting = "waiting"
 	// KindReplaced is a key a forced rotation replaced on this computer.
@@ -32,6 +35,8 @@ const (
 	KindTrusted = "trusted"
 	// KindNoHostKeys is a host that answered with no keys to pin.
 	KindNoHostKeys = "no-host-keys"
+	// KindNoHost is a key no host uses, so there is nothing to rotate it on.
+	KindNoHost = "no-host"
 )
 
 // SummaryKey is one key's line in a summary.
@@ -145,6 +150,35 @@ func SummarizeCheck(reports []CheckReport, elapsed time.Duration) Summary {
 	return s
 }
 
+// noHostNote is why a key no host uses cannot be rotated in place.
+const noHostNote = "no host uses it, so there is nothing to rotate it on"
+
+// SummarizeForcedCheck is the dry run of a forced rotation (rotate --check
+// --force): a factory reset of the keys chosen. Each key that would fail or
+// pause - never deployed, its host unreachable, a target that takes the key by
+// hand, no host using it, not on disk - is replaced on this computer instead,
+// so it reads "would replace here", with why, and needs deploying next rather
+// than failing. A key that cannot be found at all still fails: there is
+// nothing to replace.
+func SummarizeForcedCheck(reports []CheckReport, elapsed time.Duration) Summary {
+	s := SummarizeCheck(reports, elapsed)
+	for i, k := range s.Keys {
+		if k.Severity == 0 || k.Kind == KindFailed {
+			continue
+		}
+		why := k.Note
+		switch {
+		case k.Kind == KindNoHost:
+			why = noHostNote
+		case why == "":
+			why = reasons[k.Kind]
+		}
+		s.Keys[i].Result, s.Keys[i].Severity, s.Keys[i].Kind = ResultWouldReplace, 1, KindReplaced
+		s.Keys[i].Note = "forced: replaced on this computer instead (its old key moved to old/), to deploy next from the key's page - " + why
+	}
+	return s
+}
+
 // RunResult is one key's outcome in a batch rotation.
 type RunResult struct {
 	Ref    string
@@ -167,7 +201,7 @@ func SummarizeRun(results []RunResult, replaced []string, elapsed time.Duration)
 		case res.Err == nil && res.Report != nil && res.Report.Committed:
 		case forced[res.Ref]:
 			k.Result, k.Severity, k.Kind = ResultReplaced, 1, KindReplaced
-			k.Note = "replaced on this computer, not deployed: the old key is in old/ and still the one its hosts trust; deploy the new key next, or roll it back"
+			k.Note = "replaced on this computer, not deployed: the old key is in old/ and still the one its hosts trust; deploy the new key next from the key's page (paste it by hand where a target takes it that way), or roll it back"
 		default:
 			k.Result, k.Severity = ResultNotRotated, 2
 			msg := ""
@@ -196,6 +230,8 @@ func classify(msg string) string {
 		return KindNeverDeployed
 	case strings.Contains(m, "not on disk"):
 		return KindNoKey
+	case strings.Contains(m, "no host in the manifest uses"):
+		return KindNoHost
 	}
 	return KindFailed
 }
@@ -206,11 +242,13 @@ var (
 	reasons = map[string]string{KindLogsIn: "logs in", KindManual: "awaiting paste", KindUnreachable: "host unreachable",
 		KindNeverDeployed: "never deployed", KindRemoved: "key removed there", KindNoKey: "not on disk",
 		KindFailed: "failed", KindReplaced: "deploy next", KindNotRemoved: "not removed there",
-		KindUnverified: "not verified", KindTrusted: "already trusted", KindNoHostKeys: "no host keys"}
+		KindUnverified: "not verified", KindTrusted: "already trusted", KindNoHostKeys: "no host keys",
+		KindNoHost: "no host uses it"}
 	needs = map[string]string{KindUnreachable: "check network", KindNeverDeployed: "deploy first",
 		KindRemoved: "deploy again", KindManual: "paste by hand", KindNoKey: "reconcile first",
 		KindFailed: "see the note", KindReplaced: "deploy next", KindNotRemoved: "remove by hand",
-		KindUnverified: "check it logs in", KindNoHostKeys: "check the host"}
+		KindUnverified: "check it logs in", KindNoHostKeys: "check the host",
+		KindNoHost: "add a host first"}
 	marks = [...]string{"✓", "!", "×"}
 )
 

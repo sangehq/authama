@@ -160,10 +160,12 @@ func TestAJobReviewHasGuardrails(t *testing.T) {
 			t.Errorf("the forced review lacks %q", want)
 		}
 	}
-	// A dry run is never forced, whatever the form says.
+	// A dry run keeps Force, so it tests the forced rotation: titled forced,
+	// its command carries --force, and as it changes nothing it asks for no
+	// forced confirmation.
 	body = c.change("/jobs/review", url.Values{"action": {"rotate"}, "key": {key}, "force": {"1"}, "check": {"1"}}).Body.String()
-	if strings.Contains(body, "(forced)") || strings.Contains(body, "Yes, force it") {
-		t.Error("a dry run is labelled forced")
+	if !strings.Contains(body, "(forced)") || !strings.Contains(body, "--check --force") || strings.Contains(body, "Yes, force it") {
+		t.Error("a forced dry run is not labelled forced, drops --force, or asks to force it")
 	}
 }
 

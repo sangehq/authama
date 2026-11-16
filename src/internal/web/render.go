@@ -148,6 +148,8 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		"settingName":     settingName,
 		// tokenAudit lays the token audit out for its card.
 		"tokenAudit": layOutAudit,
+		// jobBadges are the options a job was started with, for its page.
+		"jobBadges": jobBadges,
 		// resetRow pairs a Reset page row with the page's view, for its
 		// CSRF token and whether the server only reads.
 		"resetRow": func(o resetOption, v view) struct {

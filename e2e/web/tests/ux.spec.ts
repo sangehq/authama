@@ -219,3 +219,39 @@ test("a key's row actions open in the side panel, and the list stays where it wa
   await expect(panel.getByRole('link', { name: 'Open as a page' })).toHaveAttribute('href', /\/history\?key=/);
   await expect(page).toHaveURL(/\/keys$/);
 });
+
+// Every menu's colour tiles are square, one size, and never squeezed: a tile
+// is a flex item beside a wrapping description, and without flex: none the
+// browser shrank it toward the icon's width, so tiles in one menu came out
+// narrow and of different widths, and the names beside them started at
+// different places (owner, 2026-11-16, from a screenshot of the SSH menu).
+for (const menu of ['ssh', 'tokens', 'security', 'history', 'system', 'new', 'user']) {
+  test(`the ${menu} menu's tiles are square, ${36}px, and its names line up`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/');
+    await page.locator(`#navbar-${menu}`).click();
+    const box = page.locator(`[aria-labelledby="navbar-${menu}"]`);
+    await expect(box).toBeVisible();
+    const read = await box.locator('.nav-menu-item').evaluateAll((items) =>
+      items.map((it) => {
+        const tile = it.querySelector('.nav-tile')!.getBoundingClientRect();
+        const text = it.querySelector('.nav-menu-text')!.getBoundingClientRect();
+        const col = it.closest('.dropdown-menu-column');
+        return {
+          label: (it.querySelector('.nav-menu-text')?.textContent ?? '').trim().slice(0, 24),
+          w: Math.round(tile.width * 10) / 10,
+          h: Math.round(tile.height * 10) / 10,
+          textX: Math.round(text.left - it.getBoundingClientRect().left),
+          col: col ? Array.from(col.parentElement!.children).indexOf(col) : 0,
+        };
+      }),
+    );
+    expect(read.length, `entries in the ${menu} menu`).toBeGreaterThanOrEqual(2);
+    const bad = read.filter((r) => r.w !== r.h || r.w < 36).map((r) => `${r.label}: ${r.w}x${r.h}`);
+    expect(bad, `squeezed or small tiles in the ${menu} menu`).toEqual([]);
+    for (const col of new Set(read.map((r) => r.col))) {
+      const starts = new Set(read.filter((r) => r.col === col).map((r) => r.textX));
+      expect([...starts], `names start at one place in column ${col} of the ${menu} menu`).toHaveLength(1);
+    }
+  });
+}

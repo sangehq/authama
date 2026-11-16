@@ -6,6 +6,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- The web dry run dropped Force: **Dry run: test every key** with Force on now tests the forced rotation, is titled *(forced)*, and its command line carries every flag chosen (`--force`, `--allow-unverified`, `--no-key-backup`).
+- A rotation that stops on a key no host uses now names it in its summary (`no host uses it`) instead of a generic failure.
+- **Menu tiles keep their shape.** A tile sat beside a description that wraps, and the browser shrank it
+  toward its icon's width, so tiles in one menu were narrow and of different widths and the names
+  beside them started at different places. Tiles are now a fixed 2.25rem square with a larger icon,
+  with more room around each entry; an e2e test checks every menu.
+
+### Added
+
+- `ssh rotate --check --force` previews the forced run: each key reads `would rotate` or `would replace here` with why, the summary counts them, and the dry run passes when every key would be rotated or replaced. Without `--force`, `--check` is unchanged.
+- The web job page shows every option a job was started with as badges under its title (Dry run (check), Force: replace what cannot rotate in place, Go on when a login cannot be verified, Skip the encrypted backup, and the scope), using the review's own labels; deleting keys shows its options the same way.
+
+### Changed
+
+- `ssh rotate --force` is now a factory reset of the keys chosen: every key ends rotated or replaced. A key that cannot rotate in place (never deployed, host unreachable, a target that takes the key by hand, or used by no host) is replaced on this computer, and listed under **Needs you** to deploy next. A forced run no longer stops to ask for a paste, includes keys no host uses instead of skipping them, and exits 0 when every key was rotated or replaced.
+- The forced rotation's confirmation says it is a forced replace, and of how many keys.
+
 ## [0.1.0] - 2026-11-16
 
 The first release under `sangehq/authama`, tagged 2026-11-14 and re-tagged on 2026-11-16 with everything

@@ -13,6 +13,7 @@
         {{else if eq .State "cancelled"}}<span class="badge badge-warn">cancelled</span>
         {{else}}<span class="badge badge-bad">failed</span>{{end}}
       </div>
+      {{with jobBadges .Command .Args}}<div class="d-flex flex-wrap gap-1 mt-2" id="job-chosen"><span class="visually-hidden">Started with: </span>{{range .}}<span class="badge bg-{{.Tone}}-lt">{{.Label}}</span>{{end}}</div>{{end}}
       <p class="text-secondary mb-0 mt-1">{{if .Title}}<code>{{cmdline .Command}}{{range .Args}} {{.}}{{end}}</code> · started{{else}}Started{{end}} {{when .Started}}</p>
     </div>
     <div class="col-12 col-md-auto ms-md-auto d-print-none"><div class="btn-list">

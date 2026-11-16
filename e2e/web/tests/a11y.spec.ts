@@ -8,8 +8,10 @@ import { test, expect, pages } from '../support/fixtures';
 const tags = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const blocking = new Set(['serious', 'critical']);
 
-async function audit(page: Page, info: TestInfo, label: string): Promise<void> {
-  const { violations } = await new AxeBuilder({ page }).withTags(tags).analyze();
+async function audit(page: Page, info: TestInfo, label: string, within?: string[]): Promise<void> {
+  let axe = new AxeBuilder({ page }).withTags(tags);
+  for (const sel of within ?? []) axe = axe.include(sel);
+  const { violations } = await axe.analyze();
   if (violations.length) {
     await info.attach(`axe ${label}`, { body: JSON.stringify(violations, null, 2), contentType: 'application/json' });
   }
@@ -125,7 +127,12 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(page.locator('html')).toHaveAttribute('data-bs-theme', theme);
         await page.locator(`#navbar-${menu}`).click();
         await expect(page.locator(`[aria-labelledby="navbar-${menu}"]`)).toBeVisible();
-        await audit(page, info, `${menu} menu on ${path} (${theme})`);
+        // The headers, which hold the menus. The page under an open menu is
+        // audited with every menu closed above; checking it here judged a page
+        // button the menu happened to cover as a too-small target (axe
+        // target-size, "partially obscured"), which is the menu's overlap, not
+        // the button's size.
+        await audit(page, info, `${menu} menu on ${path} (${theme})`, ['header']);
         // axe measures text, not an icon or the edge of its tile; WCAG 1.4.11
         // asks 3:1 of both, so they are measured here, at rest and with the
         // focus on each entry (its hover and focus tint behind the tile).

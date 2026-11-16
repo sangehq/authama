@@ -34,7 +34,13 @@ func newRotateCmd() *cobra.Command {
 			"Name one key, several, whole profiles or host aliases, every key in a\n" +
 			"category, or --all. Each key rotates on its own: one that fails is left\n" +
 			"untouched and the rest still rotate. A key no host uses is skipped, since\n" +
-			"there is nothing to deploy it to.",
+			"there is nothing to deploy it to.\n\n" +
+			"--force is a factory reset of the keys chosen: every one ends replaced. A key\n" +
+			"that rotates in place rotates as usual; one that cannot - never deployed, its\n" +
+			"host unreachable, a target that takes the key by hand (nothing stops to ask\n" +
+			"for a paste), or used by no host - is replaced on this computer instead, and\n" +
+			"listed under Needs you to deploy next. The run passes when every key was\n" +
+			"rotated or replaced. With --check it says what the forced run would do.",
 		RunE: func(c *cobra.Command, args []string) error {
 			if failed {
 				if len(args) > 0 || all || category != "" {
@@ -69,7 +75,7 @@ func newRotateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&category, "category", "", "rotate every key in profiles of this category")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "list the keys that would rotate, and change nothing")
 	cmd.Flags().BoolVar(&force, "force", false,
-		"replace on this computer (as ssh keygen --force) each key that cannot be rotated in place - never deployed, or its host unreachable - to deploy afterwards")
+		"factory-reset the keys chosen: replace on this computer (as ssh keygen --force) each key that cannot be rotated in place - never deployed, its host unreachable, pasted by hand, or used by no host - to deploy afterwards; with --check, say what that would do")
 	cmd.Flags().BoolVar(&evictOld, "evict-old", false,
 		"replace the previous key in old/ even while a host it was never removed from still accepts it")
 	cmd.Flags().BoolVar(&failed, "failed", false,
@@ -99,8 +105,12 @@ func namesAKey(c *cobra.Command, arg string) bool {
 
 // rotateOne is the single-key rotation, unchanged from before batches existed.
 func rotateOne(c *cobra.Command, key string, allowUnverified, passphrase, yes, noKeyBackup, force, evictOld bool) error {
-	if err := confirmOrAbort(c, fmt.Sprintf("Rotate %s? (the current key moves to old/, "+
-		"replacing any earlier predecessor)", key), yes); err != nil {
+	prompt := fmt.Sprintf("Rotate %s? (the current key moves to old/, replacing any earlier predecessor)", key)
+	if force {
+		prompt = fmt.Sprintf("Rotate %s, with a forced replace of 1 key(s)? (if it cannot rotate in place it is replaced "+
+			"on this computer and must be deployed next; the current key moves to old/, replacing any earlier predecessor)", key)
+	}
+	if err := confirmOrAbort(c, prompt, yes); err != nil {
 		return err
 	}
 	p, err := resolvePaths(c)
@@ -133,9 +143,22 @@ func rotateOne(c *cobra.Command, key string, allowUnverified, passphrase, yes, n
 		pw = secret
 	}
 	snapshotBeforeMutation(p)
-	report, err := withManualPaste(c, evicting(rotator.New(p, m, inv), evictOld)).Rotate(key, allowUnverified, pw)
+	rot := evicting(rotator.New(p, m, inv), evictOld)
+	if !force {
+		rot = withManualPaste(c, rot)
+	}
+	report, err := rot.Rotate(key, allowUnverified, pw)
 	if err != nil {
-		return err
+		if !force {
+			return err
+		}
+		// Forced, a key that cannot rotate at all (no host uses it) is
+		// replaced on this computer, as any other that cannot rotate in place.
+		_, _ = fmt.Fprintf(c.OutOrStdout(), "not rotated: %v\n", err)
+		if _, still := reconciler.ReplaceLocally(p, []string{key}, platform.EmitUseKeychain(), evictOld, c.OutOrStdout()); len(still) == 0 {
+			return nil
+		}
+		return errNotClean
 	}
 	if report.Committed {
 		if err := inv.Save(p.Inventory()); err != nil {
@@ -176,9 +199,11 @@ func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphr
 	if err != nil {
 		return err
 	}
+	// Forced, a key no host uses is chosen too: a factory reset replaces it
+	// on this computer, as it does every key that cannot rotate in place.
 	var todo []keysvc.Row
 	for _, r := range rows {
-		if !r.Wired() {
+		if !r.Wired() && !force {
 			_, _ = fmt.Fprintf(out, "skip     %s - no host uses it, so there is nothing to rotate it on\n", r.Ref)
 			continue
 		}
@@ -193,7 +218,11 @@ func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphr
 		names[i] = r.Ref.String()
 	}
 	if dryRun {
-		for _, n := range names {
+		for i, n := range names {
+			if !todo[i].Wired() {
+				_, _ = fmt.Fprintln(out, "replace  "+n+" - no host uses it, so --force replaces it on this computer")
+				continue
+			}
 			_, _ = fmt.Fprintln(out, "rotate   "+n)
 		}
 		_, _ = fmt.Fprintf(out, "(dry run) %d key(s) would rotate\n", len(names))
@@ -201,7 +230,6 @@ func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphr
 	}
 	if check {
 		r := rotator.New(p, m, inv)
-		var failed []string
 		var reports []rotator.CheckReport
 		began := time.Now()
 		for i, n := range names {
@@ -209,27 +237,43 @@ func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphr
 			rep, err := r.Check(n)
 			stop()
 			if err != nil {
-				return err
+				if !force {
+					return err
+				}
+				// Forced, a key that cannot even be checked (no host uses
+				// it) is still replaced on this computer: say so, and why.
+				rep = rotator.CheckReport{Key: n, Problem: err.Error(), ProblemKind: rotator.Classify(err.Error())}
 			}
 			reports = append(reports, rep)
-			if !rep.OK() {
-				failed = append(failed, n)
-			}
 		}
 		sum := rotator.SummarizeCheck(reports, time.Since(began))
+		if force {
+			sum = rotator.SummarizeForcedCheck(reports, time.Since(began))
+		}
 		sum.Command = commandLine(c)
 		_, _ = fmt.Fprint(out, sum.Format())
 		if err := rotator.SaveFailed(p, sum.Failed()); err != nil {
 			return err
 		}
-		if len(failed) > 0 {
+		if failed := sum.Failed(); len(failed) > 0 {
 			return fmt.Errorf("%d of %d key(s) would not rotate cleanly: %s; nothing was changed", len(failed), len(names), strings.Join(failed, ", "))
+		}
+		if force {
+			_, _ = fmt.Fprintf(out, "(check) %d key(s) would be rotated or replaced; nothing was changed\n", len(names))
+			return nil
 		}
 		_, _ = fmt.Fprintf(out, "(check) %d key(s) would rotate; nothing was changed\n", len(names))
 		return nil
 	}
-	if err := confirmOrAbort(c, fmt.Sprintf("Rotate %d key(s): %s? (each current key moves to old/, "+
-		"replacing any earlier predecessor)", len(names), strings.Join(names, ", ")), yes); err != nil {
+	prompt := fmt.Sprintf("Rotate %d key(s): %s? (each current key moves to old/, "+
+		"replacing any earlier predecessor)", len(names), strings.Join(names, ", "))
+	if force {
+		prompt = fmt.Sprintf("Rotate with a forced replace of %d key(s): %s? (each key that cannot rotate in place - "+
+			"never deployed, its host unreachable, pasted by hand, or used by no host - is replaced on this computer "+
+			"and must be deployed next; each current key moves to old/, replacing any earlier predecessor)",
+			len(names), strings.Join(names, ", "))
+	}
+	if err := confirmOrAbort(c, prompt, yes); err != nil {
 		return err
 	}
 	if err := p.RefuseOutsideSandbox("rotate"); err != nil {
@@ -247,7 +291,13 @@ func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphr
 		pw = secret
 	}
 	snapshotBeforeMutation(p)
-	rot := withManualPaste(c, evicting(rotator.New(p, m, inv), evictOld))
+	rot := evicting(rotator.New(p, m, inv), evictOld)
+	if !force {
+		// Forced, nothing stops to ask for a paste: a target that takes the
+		// key by hand cannot verify, so the key is replaced on this computer
+		// and listed as needing its paste.
+		rot = withManualPaste(c, rot)
+	}
 	began := time.Now()
 	failed, err := rot.RotateEach(names, allowUnverified, pw, out, func() error { return inv.Save(p.Inventory()) }, nil)
 	if err != nil {

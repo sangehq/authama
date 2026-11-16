@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os/exec"
+	"slices"
 	"strings"
 
 	"github.com/sangehq/authama/src/internal/util/envnames"
@@ -58,7 +59,8 @@ func describeJob(f url.Values, spec *jobSpec) {
 	if spec.title == "" {
 		spec.title = "Run the job"
 	}
-	if checked(f, "force") && !spec.check {
+	// Kept on a dry run too: a forced dry run tests the forced rotation.
+	if checked(f, "force") {
 		spec.title, spec.destroy = spec.title+" (forced)", true
 	}
 	if spec.check {
@@ -122,4 +124,75 @@ func lower(s string) string {
 		return s
 	}
 	return strings.ToLower(s[:1]) + s[1:]
+}
+
+// jobBadge is one option a job was started with, as its page shows it under
+// the title: the review's own label for it, and how it reads.
+type jobBadge struct {
+	Label string
+	// Tone is the Tabler colour: red for a danger option, azure for a dry
+	// run, secondary for the rest.
+	Tone string
+}
+
+// optionFlags are the command-line flags the review's switches become, per
+// job command: what a job's page reads back from its command.
+var optionFlags = map[string]struct {
+	action string
+	flags  map[string]string
+}{
+	"rotate":     {"rotate-keys", map[string]string{"--no-key-backup": "no_backup", "--allow-unverified": "allow_unverified", "--force": "force"}},
+	"key delete": {"delete-keys", map[string]string{"--revoke": "revoke", "--purge": "purge"}},
+}
+
+// jobBadges are the options a job was started with, read from its command
+// and arguments as the job recorded them, labelled as its review labelled
+// them: a dry run, each option switched on, and what it works through - every
+// key, a profile, one key, or how many.
+func jobBadges(command string, args []string) []jobBadge {
+	known, ok := optionFlags[command]
+	if !ok {
+		return nil
+	}
+	var out []jobBadge
+	if slices.Contains(args, "--check") {
+		out = append(out, jobBadge{Label: "Dry run (check)", Tone: "azure"})
+	}
+	opts, _ := jobOptions(url.Values{"action": {known.action}}, nil)
+	for _, o := range opts {
+		for flag, name := range known.flags {
+			if name == o.Name && slices.Contains(args, flag) {
+				tone := "secondary"
+				if o.Danger {
+					tone = "red"
+				}
+				out = append(out, jobBadge{Label: o.Label, Tone: tone})
+			}
+		}
+	}
+	var profiles, keys []string
+	all := false
+	for i, a := range args {
+		switch {
+		case a == "--all":
+			all = true
+		case strings.HasPrefix(a, "-"):
+		case i > 0 && args[i-1] == "--reason":
+		case strings.Contains(a, "/"):
+			keys = append(keys, a)
+		default:
+			profiles = append(profiles, a)
+		}
+	}
+	switch {
+	case all:
+		out = append(out, jobBadge{Label: "Scope: every key", Tone: "secondary"})
+	case len(profiles) > 0 && len(keys) == 0:
+		out = append(out, jobBadge{Label: "Scope: profile " + strings.Join(profiles, ", "), Tone: "secondary"})
+	case len(profiles) == 0 && len(keys) == 1:
+		out = append(out, jobBadge{Label: "Scope: key " + keys[0], Tone: "secondary"})
+	case len(profiles)+len(keys) > 0:
+		out = append(out, jobBadge{Label: fmt.Sprintf("Scope: %d keys", len(profiles)+len(keys)), Tone: "secondary"})
+	}
+	return out
 }
