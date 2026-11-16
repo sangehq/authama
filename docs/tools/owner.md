@@ -106,6 +106,35 @@ PIN with the same message, and changes made from the command line warn and do no
 the sealing key (there is no PIN left to ask for) and leaves a home that was never bound. The same
 command finishes a `forget` that stopped part-way.
 
+### A seal removed
+
+Deleting `owner.json`, `seal.json` and `pin-attempts.json` together leaves nothing in the homes
+to say the home was bound, but the sealing key is still in the macOS Keychain or the Secret Service.
+`owner verify`, `doctor` and `serve` (when it starts a server) ask the credential store as well as
+the files, and refuse such a home: they say the seal was removed, what is gone and what is left, and
+what to do. Each asks the store once; the web UI never asks it per page. A bound home whose
+`seal.json` is gone is refused the same way, with `owner reseal` as the way back.
+
+What to do, as the message says:
+
+- **You did not remove them:** put `owner.json` (config home), `seal.json` and `pin-attempts.json`
+  (state home) back from a backup of the home (Time Machine, restic, a copy), then run
+  `authama owner verify`. authama's snapshots and bundles do not carry them.
+- **You meant to start again:** `authama owner init`, then `authama owner pin set`. `init` replaces
+  the key left behind.
+- **You meant to unbind it:** `authama owner forget` removes the key left behind. Nothing else shows
+  the key was yours, so it asks you to type `forget`; a script passes `--confirm forget`. By hand
+  (the account is the config home's path):
+
+  | store | command |
+  |---|---|
+  | macOS Keychain | `security delete-generic-password -a '<config home>' -s authama-owner-key` |
+  | Linux Secret Service | `secret-tool clear service authama-owner-key account '<config home>'` |
+  | Windows | authama keeps nothing in Credential Manager: the key is the DPAPI file `owner.key.dpapi` in the state home; `Remove-Item` it |
+  | the owner-only file | `rm <state home>/owner.key` |
+
+With `AUTHAMA_OWNER_STORE=file`, or in a `--dev-root` sandbox, the credential store is not asked.
+
 ### Why Argon2id
 
 Argon2id is memory-hard: every guess at a stolen hash costs 64 MiB of memory as well as time, which

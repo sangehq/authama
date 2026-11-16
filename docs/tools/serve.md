@@ -59,9 +59,15 @@ presents that key at `/auth/link` gets a new sign-in link. A launch trusts the r
 the control key, so a stale record (a server that crashed), or a pid or port reused by something
 else, is ignored: the instance id is public, but only the recorded server can prove the key, and
 the key is sent, or the recorded pid stopped, only after that proof. `/healthz` is the one page that
-answers without signing in. To a remote caller it says nothing but `{"app":"authama","instance":"…"}`;
-to a caller on this machine that no proxy passed on (no `X-Forwarded-For`, `Forwarded` or
-`X-Real-Ip`), it also gives the pid, build and start time that `serve --stop-all` uses. `--stop-all`
+answers without signing in. To most callers it says nothing but `{"app":"authama","instance":"…"}`.
+It gives the pid, build and start time that `serve --stop-all` uses only to a caller on this machine
+that no proxy passed on (no `X-Forwarded-For`, `Forwarded` or `X-Real-Ip`) **and** that proves it
+holds the control key: alongside its challenge it sends `caller=`, an HMAC of the instance id and the
+challenge under that key. A TCP forwarder such as `ssh -L` or `socat` adds no header, so being on
+this machine alone said nothing about who was asking. `--stop-all` therefore stops the servers of
+this home (whose key its record holds); any other it finds is listed with the commands that stop it
+(`AUTHAMA_CONFIG_DIR=<that home> authama serve --stop`, or `lsof … | xargs kill -INT`), and an older
+build is stopped only when this home's record names it. `--stop-all`
 stops a server it finds only when that pid is an `authama` process serving a web UI (`authama serve`,
 or bare `authama`), so a listener naming some other process of yours, including another authama
 command such as a rotation half-way through, is refused, and nothing is signalled. On Windows, where

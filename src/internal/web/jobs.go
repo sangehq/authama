@@ -497,6 +497,8 @@ func bundleRestoreSpec(f url.Values, h home, retain int) (jobSpec, error) {
 		scope: mutation.Scope{Command: "restore", Args: []string{b, "--yes"}, Source: history.SourceWeb},
 		what: []string{
 			"decrypts " + b + " with the identity in AUTHAMA_AGE_IDENTITY_FILE, which cannot have a passphrase here",
+			"refuses it, writing nothing, if its manifest sets SSH options that could redirect or weaken connections; " +
+				"a bundle you made yourself is restored with `authama ssh restore " + b + " --allow-risky-options`",
 			"lays its keys and config-home files back over what is there, snapshotting ~/.ssh first",
 			"then sets every mode right and renders ~/.ssh/config",
 		},

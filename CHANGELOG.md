@@ -46,9 +46,40 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   tokens went to the new server in `AUTHAMA_SERVE_HANDOFF`, which `/proc/<pid>/environ` kept for its
   whole life; they now go in an owner-only temporary file the new server reads once and removes, and
   the variable names only the file. A handoff written inline by an older build is still read (R-SEC-21).
+- **A seal removed is refused, and says what to do.** Deleting `owner.json`, `seal.json` and
+  `pin-attempts.json` together turned the seal and the PIN off while the sealing key stayed in the OS
+  credential store. `owner verify`, `doctor` and `serve` (when it starts a server) now ask the store as
+  well as the files and refuse such a home, and a bound home whose `seal.json` is gone: they say the
+  seal was removed, and how to put the files back, bind afresh (`owner init`) or clear what is left
+  (`owner forget`, which now removes a key left in the store after you type `forget`, or the exact
+  `security`, `secret-tool` and Windows commands). The web UI never asks the store per page (A-SEC-08).
+- **`/healthz` gives its pid, build and start time only to a caller that proves the control key**,
+  as well as being on this machine with no forwarding header: a TCP forwarder (`ssh -L`, `socat`)
+  adds no header. `serve --stop-all` stops the servers whose key it holds (this home's) and lists any
+  other with the commands that stop it; it no longer takes a pid a server offers without a proof
+  (A-SEC-09).
+- **Webhooks leave out an operation's error text and subjects.** They can name hosts, addresses,
+  users and remote output, and a webhook sends them to another party. `result` still says whether it
+  failed. The new setting `webhooks.include_details` (`AUTHAMA_WEBHOOKS_INCLUDE_DETAILS`, off) sends
+  them; the read API and MCP are unchanged (A-SEC-12).
+- **`ssh restore` refuses a bundle whose manifest sets risky SSH options**: a `ControlPath` or
+  `IdentityAgent` outside `~/.ssh` and `$XDG_RUNTIME_DIR`, or `ForwardAgent` or
+  `StrictHostKeyChecking no` for every host. A bundle does not prove who made it. The bundle is now
+  decrypted and read before the question, which lists the options; `--allow-risky-options` restores
+  one you made yourself, and the summary names what it laid down. The web UI shows the refusal and
+  the command (A-SEC-13).
 
 ### Fixed
 
+- **A refused command no longer evicts a restore point.** Snapshots were pruned to
+  `backup.snapshot_retain` when taken, before the command checked its input, so at the limit each
+  refused command pushed the oldest real snapshot out even though its own was then discarded. The
+  prune now waits until the command's snapshot is kept; while a command runs there can be one more
+  than the limit (A-BUG-04).
+- **A snapshot restore keeps a symlinked `~/.ssh/config` a link** and writes the restored text into
+  the file it points at, as a render does; it used to replace the link with a plain file, leaving the
+  dotfiles copy stale. Only `config` is written through, and only when its link leads to a file that
+  exists; any other link in `~/.ssh` is still replaced (A-BUG-05).
 - **`ssh rotate --force` keeps a predecessor that still logs in.** A rotation stops rather than evict
   the key in `old/` while a host it was never removed from still accepts it, but `--force` then
   replaced the key locally, which evicted it all the same. The local replacement now refuses the same

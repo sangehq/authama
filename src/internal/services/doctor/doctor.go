@@ -214,8 +214,13 @@ func (r Report) Format() string {
 			"the legacy one).", r.StrandedLegacyHome))
 	}
 	if r.OwnerSeal != "" {
-		lines = append(lines, "OWNER SEAL: "+r.OwnerSeal+" - `authama owner verify` shows what changed, "+
-			"`authama owner reseal` accepts it")
+		if strings.HasPrefix(r.OwnerSeal, sealRemovedPrefix) {
+			// It carries its own advice (owner.SealRemovedError).
+			lines = append(lines, "OWNER SEAL: "+r.OwnerSeal)
+		} else {
+			lines = append(lines, "OWNER SEAL: "+r.OwnerSeal+" - `authama owner verify` shows what changed, "+
+				"`authama owner reseal` accepts it")
+		}
 	}
 	lines = append(lines, "agent: "+r.AgentStatus)
 	for _, issue := range r.OnePassword {
@@ -418,6 +423,19 @@ func (s *Service) FixPerms() []string {
 }
 
 // Service runs doctor over a resolved home + (optional) manifest.
+// sealRemovedPrefix starts an owner.SealRemovedError, which says what to do.
+const sealRemovedPrefix = "the seal was removed"
+
+// CheckOwnerStore asks the OS credential store whether the home's seal was
+// removed while its sealing key stayed there (audit A-SEC-08), and fails r if
+// so. Run asks only the files, because it runs for every web page that shows
+// the doctor; this can prompt a keychain, so `authama doctor` calls it once.
+func (s *Service) CheckOwnerStore(r *Report) {
+	if err := owner.SealRemoved(s.p); err != nil {
+		r.OwnerSeal = err.Error()
+	}
+}
+
 type Service struct {
 	p               paths.Paths
 	m               *manifest.Manifest // nil when no/invalid manifest -> drift checks skipped

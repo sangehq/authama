@@ -30,6 +30,7 @@ import (
 	"github.com/sangehq/authama/src/internal/core/authkeys"
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/services/keystore"
+	"github.com/sangehq/authama/src/internal/util/fs"
 	"github.com/sangehq/authama/src/internal/util/paths"
 	"github.com/sangehq/authama/src/internal/util/perms"
 )
@@ -135,7 +136,22 @@ func CleanTempArtifactsIn(sshDir, root string) []string {
 // prunes to the last retain. Private keys are deliberately excluded; see the
 // package doc. Returns the snapshot path, or "" if sshDir does not exist. stamp
 // "" uses the current time.
+//
+// The mutation guard does not call this: it takes the snapshot with Take and
+// prunes only once the command's snapshot is known to be kept (audit A-BUG-04).
 func Snapshot(sshDir, snapshotsDir string, retain int, stamp string) (string, error) {
+	dest, err := Take(sshDir, snapshotsDir, stamp)
+	if err != nil || dest == "" {
+		return dest, err
+	}
+	prune(snapshotsDir, retain)
+	return dest, nil
+}
+
+// Take is Snapshot without the prune: it writes the archive and leaves every
+// earlier snapshot in place. The caller prunes with Prune when it knows the
+// new snapshot is a restore point worth keeping.
+func Take(sshDir, snapshotsDir, stamp string) (string, error) {
 	fi, err := os.Lstat(sshDir)
 	if err != nil {
 		return "", nil
@@ -176,7 +192,6 @@ func Snapshot(sshDir, snapshotsDir string, retain int, stamp string) (string, er
 		return "", err
 	}
 	_ = os.Chmod(dest, 0o600)
-	prune(snapshotsDir, retain)
 	return dest, nil
 }
 
@@ -473,6 +488,14 @@ func extractTarGz(tarball, destParent, within string, skip func(name string, dat
 					return nil, err
 				}
 			}
+			// A config linked into place is restored at the link's target,
+			// as a render writes it, so the link stays a link (audit A-BUG-05).
+			if real := linkedConfig(sshDir, rel); real != "" {
+				if err := fs.WriteTextAtomic(real, string(m.data), mode); err != nil {
+					return nil, err
+				}
+				continue
+			}
 			// Unlink first: the destination may already exist, possibly as a
 			// symlink or read-only, and writing through either is wrong.
 			if err := root.Remove(rel); err != nil && !os.IsNotExist(err) {
@@ -484,6 +507,31 @@ func extractTarGz(tarball, destParent, within string, skip func(name string, dat
 		}
 	}
 	return skipped, nil
+}
+
+// linkedConfig is the file a restore of rel writes in place of the link at
+// sshDir/rel, or "" to replace whatever is there. Only the root config is
+// written through, and only when its link resolves to a regular file: that is
+// the dotfiles layout a render already keeps (configsvc.writeTarget). Any
+// other member, and a link to nothing, is replaced, so a link planted in
+// ~/.ssh cannot carry a restore elsewhere and a restore still recovers when
+// the linked copy is gone.
+func linkedConfig(sshDir, rel string) string {
+	if rel != "config" {
+		return ""
+	}
+	link := filepath.Join(sshDir, rel)
+	if fi, err := os.Lstat(link); err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		return ""
+	}
+	real, err := filepath.EvalSymlinks(link)
+	if err != nil {
+		return ""
+	}
+	if fi, err := os.Stat(real); err != nil || !fi.Mode().IsRegular() {
+		return ""
+	}
+	return real
 }
 
 // Prune keeps the keep most-recent snapshots and removes the rest, returning how

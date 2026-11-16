@@ -86,6 +86,7 @@ func newDoctorCmd() *cobra.Command {
 				svc = doctor.New(p, m, platform.EmitUseKeychain())
 			}
 			rep := svc.Run(strict)
+			svc.CheckOwnerStore(&rep)
 			// The token files (auth.json, .npmrc, docker's config.json, the git
 			// credential store, .netrc) hold secrets, so the doctor checks them
 			// for owner-only perms too; --fix tightens them.

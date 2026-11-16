@@ -394,6 +394,11 @@
           "default": false,
           "description": "Have `serve` send each new event (a change finished, a watched file changed) to the endpoints added with `authama webhook add`, signed as Standard Webhooks do. Off: nothing is sent; `authama webhook deliver` still sends by hand. Sets $AUTHAMA_WEBHOOKS. Default: false.",
           "type": "boolean"
+        },
+        "include_details": {
+          "default": false,
+          "description": "Put an operation's error text and subjects (the hosts, keys and profiles it touched) in webhook payloads. Off: a webhook says which command ran and whether it failed, never why or on what, since an error can name hosts, addresses, users and remote output; the read API and MCP still show both. Sets $AUTHAMA_WEBHOOKS_INCLUDE_DETAILS. Default: false.",
+          "type": "boolean"
         }
       },
       "type": "object"

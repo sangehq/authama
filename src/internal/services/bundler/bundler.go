@@ -28,6 +28,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/core/renderer"
 )
@@ -116,6 +117,9 @@ type RestoreResult struct {
 	// as ssh/<rel> and config/<rel> under ReplacedDir, where each was kept.
 	Replaced    []string
 	ReplacedDir string
+	// Risky lists the risky SSH options laid down because they were allowed
+	// (AllowRiskyOptions), so the summary says so.
+	Risky []string
 }
 
 // Format renders the restore summary (mirrors RestoreResult.format).
@@ -132,6 +136,9 @@ func (r RestoreResult) Format() string {
 	for _, s := range r.Skipped {
 		lines = append(lines, "  skipped "+s+" (rendered from the manifest, not taken from the bundle)")
 	}
+	for _, o := range r.Risky {
+		lines = append(lines, "  allowed SSH option "+o)
+	}
 	if len(r.Replaced) > 0 {
 		lines = append(lines, fmt.Sprintf("  kept the %d file(s) it replaced, as they were, in %s:", len(r.Replaced), r.ReplacedDir))
 		for _, k := range r.Replaced {
@@ -147,6 +154,7 @@ type Bundler struct {
 	cipher            Cipher
 	keyRoot           string
 	replacedDir       string
+	allowRisky        bool
 }
 
 // New builds a Bundler over the default key root, ~/.ssh/profiles.
@@ -363,23 +371,91 @@ func closeAll(tw *tar.Writer, gz *gzip.Writer) {
 }
 
 // Restore decrypts bundlePath and lays the same keys back down (verifying the
-// SHA256 sidecar first). fingerprintOf fingerprints each restored .pub.
+// SHA256 sidecar first). fingerprintOf fingerprints each restored .pub. It is
+// Open then LayDown, for a caller with nothing to show in between.
 //
 // The decrypted stream is read into memory and written straight to its final
 // destination. Reading it whole before writing anything also means a corrupt or
 // wrongly-keyed bundle is rejected before it has half-overwritten the tree.
 func (b *Bundler) Restore(bundlePath, identityFile string, fingerprintOf func(string) (string, error)) (RestoreResult, error) {
-	if _, err := os.Stat(bundlePath); err != nil {
-		return RestoreResult{}, fmt.Errorf("bundle not found: %s", bundlePath)
-	}
-	if err := verifyChecksum(bundlePath); err != nil {
-		return RestoreResult{}, err
-	}
-	members, err := b.decrypt(bundlePath, identityFile)
+	o, err := b.Open(bundlePath, identityFile)
 	if err != nil {
 		return RestoreResult{}, err
 	}
-	return b.layDown(members, fingerprintOf)
+	return b.LayDown(o, fingerprintOf)
+}
+
+// Opened is a bundle decrypted and read, with nothing written yet: what a
+// restore would lay down, for a preview before it does.
+type Opened struct {
+	members []member
+	risky   []manifest.RiskyOption
+}
+
+// Risky lists the SSH options in the bundle's manifest that could redirect or
+// weaken connections (audit A-SEC-13).
+func (o *Opened) Risky() []manifest.RiskyOption { return o.risky }
+
+// Open verifies the SHA256 sidecar, decrypts bundlePath and reads it, writing
+// nothing.
+func (b *Bundler) Open(bundlePath, identityFile string) (*Opened, error) {
+	if _, err := os.Stat(bundlePath); err != nil {
+		return nil, fmt.Errorf("bundle not found: %s", bundlePath)
+	}
+	if err := verifyChecksum(bundlePath); err != nil {
+		return nil, err
+	}
+	members, err := b.decrypt(bundlePath, identityFile)
+	if err != nil {
+		return nil, err
+	}
+	o := &Opened{members: members}
+	for _, m := range members {
+		if m.name != configPrefix+"manifest.json" {
+			continue
+		}
+		// One that does not parse is refused by LayDown, after every
+		// member is vetted, so the refusal names a forged member first.
+		o.risky, _ = manifest.RiskyOptionsInJSON(m.data)
+	}
+	return o, nil
+}
+
+// AllowRiskyOptions has LayDown restore a manifest holding risky SSH options
+// (Opened.Risky) instead of refusing it: for a bundle whose owner set them on
+// purpose. `authama ssh restore --allow-risky-options` is the only caller.
+func (b *Bundler) AllowRiskyOptions() *Bundler {
+	b.allowRisky = true
+	return b
+}
+
+// LayDown writes an opened bundle back. A manifest holding risky SSH options
+// is refused, before anything is written, unless AllowRiskyOptions was set:
+// age does not authenticate a bundle's sender, so anyone holding the public
+// recipient can make one that decrypts cleanly (audit A-SEC-13).
+func (b *Bundler) LayDown(o *Opened, fingerprintOf func(string) (string, error)) (RestoreResult, error) {
+	if len(o.risky) > 0 && !b.allowRisky {
+		return RestoreResult{}, RiskyError(o.risky)
+	}
+	res, err := b.layDown(o.members, fingerprintOf)
+	for _, r := range o.risky {
+		res.Risky = append(res.Risky, r.String())
+	}
+	return res, err
+}
+
+// RiskyError is the refusal of a bundle holding risky SSH options: each one,
+// why it is risky, and how to restore it anyway.
+func RiskyError(risky []manifest.RiskyOption) error {
+	lines := []string{"refusing bundle: its manifest sets SSH options that could redirect or weaken your connections:"}
+	for _, r := range risky {
+		lines = append(lines, "  "+r.String())
+	}
+	lines = append(lines,
+		"A bundle does not prove who made it: anyone with your age recipient can make one that decrypts.",
+		"If you set these yourself, restore from a terminal with: "+brand.Command+" ssh restore <bundle> --allow-risky-options",
+		"Otherwise do not restore this bundle; restore an older one, or ask whoever sent it.")
+	return errors.New(strings.Join(lines, "\n"))
 }
 
 // decrypt streams bundlePath through the cipher and returns the archive members.

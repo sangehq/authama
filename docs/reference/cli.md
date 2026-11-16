@@ -1021,7 +1021,13 @@ Examples:
 
 ## authama owner forget
 
-Unbind the home: remove the key, the seal and the PIN, keep everything else.
+Unbind the home: remove the sealing key, the seal and the PIN, and keep every
+other file. With a PIN set, it asks for it.
+
+It also finishes a binding whose files were removed (owner.json, seal.json,
+pin-attempts.json) while the sealing key stayed in the OS credential store: it
+removes that key. With nothing else left to show the key was yours, it asks you
+to type "forget"; a script passes --confirm forget.
 
 ```
 authama owner forget [flags]
@@ -1036,6 +1042,7 @@ Examples:
 Flags:
 
 ```
+      --confirm string     type "forget" here to skip the question when only the OS-store key is left
   -y, --yes[=true|false]   skip the confirmation prompt
 ```
 
@@ -1254,7 +1261,8 @@ One server per home: when one is already running for this home, serve opens
 it again instead of starting another, so launching twice - or double-clicking
 the app - never piles servers up. --new starts another anyway; --status says
 whether one is running and where; --stop stops it. --stop-all stops every
-authama web UI answering on this machine's usual ports, whichever home or build;
+authama web UI on this machine's usual ports that proves it holds this home's
+control key, and names the others with the command that stops each;
 --restart does that and starts a fresh one, which is how to load a new build.
 A page from an older build says so, and can restart its server itself. When every port from the
 default up is taken, any free port is used.
@@ -1292,7 +1300,7 @@ Flags:
       --restart[=true|false]        stop every authama web UI found, then start a fresh one: how to load a new build
       --status[=true|false]         say whether a server is running for this home, and its address
       --stop[=true|false]           stop the server running for this home
-      --stop-all[=true|false]       stop every authama web UI answering on this machine's usual ports, whichever home or build
+      --stop-all[=true|false]       stop every authama web UI on this machine's usual ports that proves this home's control key; others are listed with how to stop them
       --token-file string           also write the sign-in address to this file, mode 0600, for scripts
 ```
 
@@ -2885,6 +2893,12 @@ Examples:
 
 Restore keys + state from an encrypted bundle (see bundle).
 
+The bundle is decrypted and checked before anything is written. A bundle whose
+manifest sets SSH options that could redirect or weaken connections (a ControlPath
+or IdentityAgent outside ~/.ssh and $XDG_RUNTIME_DIR, ForwardAgent or
+StrictHostKeyChecking no for every host) is refused, naming each one: a bundle does
+not prove who made it. Pass --allow-risky-options to restore one you made yourself.
+
 ```
 authama ssh restore <bundle.age> [flags]
 ```
@@ -2898,8 +2912,9 @@ Examples:
 Flags:
 
 ```
-  -i, --identity string    age identity file (else $AUTHAMA_AGE_IDENTITY_FILE)
-  -y, --yes[=true|false]   skip the confirmation prompt
+      --allow-risky-options[=true|false]   restore a bundle whose manifest sets SSH options that could redirect or weaken connections (you made it yourself)
+  -i, --identity string                    age identity file (else $AUTHAMA_AGE_IDENTITY_FILE)
+  -y, --yes[=true|false]                   skip the confirmation prompt
 ```
 
 ## authama ssh rollback
