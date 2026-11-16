@@ -298,7 +298,22 @@ main:focus { outline: none; }
    is read without hovering; the width keeps lines short. */
 .nav-menu-item { align-items: flex-start; white-space: normal; min-width: 16rem; max-width: 22rem; }
 .nav-menu-item > .icon { margin-top: .125rem; flex: none; }
-.nav-menu-desc { line-height: 1.35; }
+/* Tabler sets min-width 0 on an item in a menu column; the SSH menu's columns
+   keep the entries' width so a description wraps to two lines, not four. */
+.dropdown-menu-column .nav-menu-item { min-width: 16rem; }
+.nav-menu-desc { line-height: 1.35; color: var(--tblr-secondary); }
+/* Contrast on a menu entry's tint. Measured from Tabler 1.7.1's tokens, its
+   grey description falls to 4.32:1 on the hover tint and 4.50:1 on the active
+   one, its red to 4.25:1 and 4.43:1, and in the dark theme its red and blue
+   reach only 3.25:1 and 3.03:1 on the menu itself; WCAG asks for 4.5:1. An
+   entry under the pointer or the current page's shows its description in the
+   body colour, and a destructive entry's name is mixed darker in the light
+   theme and lighter in the dark one, as is the current entry's in any header
+   menu (5.4:1 and 5.3:1 at worst; axe found About at 2.73:1). */
+.nav-menu-item:is(.active, :hover, :focus) .nav-menu-desc { color: var(--tblr-body-color); }
+.nav-menu-item.text-danger { color: color-mix(in oklab, var(--tblr-danger) 90%, black) !important; }
+[data-bs-theme="dark"] .nav-menu-item.text-danger { color: color-mix(in oklab, var(--tblr-danger) 65%, white) !important; }
+[data-bs-theme="dark"] .navbar .dropdown-item.active { color: color-mix(in oklab, var(--tblr-primary) 65%, white); }
 
 /* Header logo mark: the favicon itself, so the tab and the header read as one product. */
 .navbar-brand-mark { width: 2rem; height: 2rem; flex: none; }

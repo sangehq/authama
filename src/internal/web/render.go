@@ -413,6 +413,8 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		"panel": func(label, id, icon string) headerAction {
 			return headerAction{Label: label, Href: "#" + id, Icon: icon, Panel: id}
 		},
+		// Deprecated: the menus are written out in layout.html (2026-11-16);
+		// kept for any caller until v0.2.0.
 		"navGroup": func(_ view, key, icon, label string, items ...navItem) navGroup {
 			g := navGroup{Key: key, Icon: icon, Label: label, Tip: groupTips[key], Items: items}
 			for _, it := range items {
@@ -574,6 +576,10 @@ type stat struct {
 }
 
 // navGroup is a menu in the top bar: its pages, in a dropdown.
+//
+// Deprecated: since 2026-11-16 each menu is written out in layout.html with
+// its headers and Tasks; navGroup still builds a plain dropdown for any
+// caller, and goes in v0.2.0.
 type navGroup struct {
 	Key, Icon, Label string
 	Tip              string // what the menu holds (groupTips)
@@ -581,10 +587,20 @@ type navGroup struct {
 	Items            []navItem
 }
 
+// navItem is one entry in a menu: the page it opens, its icon and name, and
+// what the page shows or does (pageTips).
 type navItem struct {
 	Active            bool
 	Href, Icon, Label string
 	Tip               string // the page's one-line description (pageTips)
+	Danger            bool   // a destructive entry, shown red
+}
+
+// Destructive is the entry marked as one that deletes or starts things again,
+// for the menu to set apart: `(navItem . "reset" "/reset" "restore" "Reset…").Destructive`.
+func (n navItem) Destructive() navItem {
+	n.Danger = true
+	return n
 }
 
 // view is what every page template receives.
@@ -811,23 +827,23 @@ func paletteItems(readOnly bool) []paletteItem {
 	items := []paletteItem{
 		{"overview", "Overview", "/", "layout-dashboard", "Page", "home dashboard state", "g o", ""},
 		{"profiles", "Profiles", "/profiles", "users", "SSH", "profile category key scope", "g p", ""},
-		{"naming", "Naming", "/naming", "license", "SSH", "naming rules alias template key name code env role check", "g n", ""},
+		{"naming", "Naming", "/naming", "tag", "SSH", "naming rules alias template key name code env role check", "g n", ""},
 		{"hosts", "Hosts", "/hosts", "server", "SSH", "host alias hostname", "g h", ""},
 		{"keys", "Keys", "/keys", "key", "SSH", "key fingerprint expiry reserve", "g k", ""},
-		{"vms", "VMs", "/vms", "device-desktop", "SSH", "vm hypervisor devbox sync", "g v", ""},
+		{"vms", "VMs", "/vms", "server-2", "SSH", "vm hypervisor devbox sync", "g v", ""},
 		{"sshconfig", "SSH config", "/ssh-config", "file-code", "SSH", "config render drift check", "g c", ""},
-		{"snapshots", "Snapshots", "/snapshots", "archive", "Backups & export", "snapshot bundle backup restore", "g s", ""},
-		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Auth tokens", "token npm composer docker git netrc pypi cargo gem gradle maven yarn helm gh", "g t", ""},
-		{"audit", "Audit", "/audit", "shield-check", "Security", "audit key age", "g a", ""},
-		{"security", "Owner & PIN", "/security", "lock", "Security", "owner pin seal tamper binding fingerprint", "g w", ""},
-		{"history", "History", "/history", "history", "Activity", "history operations changes log", "g y", ""},
-		{"events", "Events", "/events", "activity", "Activity", "events file changes tracking", "g e", ""},
-		{"export", "Export", "/export", "file-export", "Backups & export", "export download csv json yaml php javascript markdown html filter columns", "g x", ""},
+		{"snapshots", "Snapshots", "/snapshots", "archive", "History", "snapshot bundle backup restore", "g s", ""},
+		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Tokens", "token npm composer docker git netrc pypi cargo gem gradle maven yarn helm gh", "g t", ""},
+		{"audit", "Audit", "/audit", "report-search", "Security", "audit key age", "g a", ""},
+		{"security", "Owner & PIN", "/security", "user-shield", "Security", "owner pin seal tamper binding fingerprint", "g w", ""},
+		{"history", "History", "/history", "history", "History", "history operations changes log", "g y", ""},
+		{"events", "Events", "/events", "file-diff", "History", "events file changes tracking", "g e", ""},
+		{"export", "Export", "/export", "file-export", "History", "export download csv json yaml php javascript markdown html filter columns", "g x", ""},
 		{"doctor", "Doctor", "/doctor", "stethoscope", "System", "doctor checks fix", "g d", ""},
 		{"validate", "Validate", "/validate", "circle-check", "System", "validate check manifest settings keys keypair config schema", "g l", ""},
-		{"repair", "Repair", "/repair", "refresh", "System", "repair fix corrupt permissions", "g r", ""},
-		{"reset", "Reset", "/reset", "refresh", "System", "reset factory start again initialise init defaults settings unbind rotate every key", "g z", ""},
-		{"settings", "Settings", "/settings", "settings", "System", "settings theme appearance env", "g ,", ""},
+		{"repair", "Repair", "/repair", "tool", "System", "repair fix corrupt permissions", "g r", ""},
+		{"reset", "Reset", "/reset", "restore", "System", "reset factory start again initialise init defaults settings unbind rotate every key", "g z", ""},
+		{"settings", "Settings", "/settings", "adjustments", "System", "settings theme appearance env", "g ,", ""},
 		{"about", "About", "/about", "info-circle", "System", "about version licences", "g i", ""},
 	}
 	if !readOnly {

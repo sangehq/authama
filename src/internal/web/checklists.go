@@ -56,7 +56,13 @@ func (h checklistPages) handleList(w http.ResponseWriter, r *http.Request) {
 		}
 		v.Items = append(v.Items, c)
 	}
-	h.s.render(w, http.StatusOK, "checklists", h.s.newView(r, "checklists", "Checklists", v))
+	// Filtered to tokens it is the Tokens menu's Token checklists, so that
+	// menu, not Security, marks it as the current page.
+	nav := "checklists"
+	if show == "tokens" {
+		nav = "token-checklists"
+	}
+	h.s.render(w, http.StatusOK, "checklists", h.s.newView(r, nav, "Checklists", v))
 }
 
 func (h checklistPages) handleItem(w http.ResponseWriter, r *http.Request) {

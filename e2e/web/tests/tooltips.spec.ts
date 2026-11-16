@@ -66,14 +66,14 @@ test('an icon-only control shows its tooltip after a pause, one at a time, and a
 
 test('nav menus show each page\'s description in the menu, with no tooltip over it', async ({ page }) => {
   await page.goto('/');
-  const toggle = page.locator('#navbar-activity');
+  const toggle = page.locator('#navbar-history');
   await toggle.hover();
   await page.waitForTimeout(800);
   await expect(page.getByRole('tooltip')).toHaveCount(0);
   await toggle.click();
-  const menu = page.locator('[aria-labelledby="navbar-activity"]');
+  const menu = page.locator('[aria-labelledby="navbar-history"]');
   await expect(menu).toBeVisible();
-  await expect(menu.getByRole('link', { name: /History/ })).toContainText('Every change made to this home');
+  await expect(menu.getByRole('link', { name: /Changes/ })).toContainText('Every change authama made');
   // While a menu is open, hovering an icon-only control shows nothing.
   await page.getByRole('link', { name: 'Dark theme' }).or(page.getByRole('link', { name: 'Light theme' })).first().hover();
   await page.waitForTimeout(800);

@@ -1,7 +1,6 @@
 package web
 
 import (
-	"regexp"
 	"strings"
 	"testing"
 )
@@ -57,44 +56,45 @@ func TestAPermanentHistoryIsNotOffered(t *testing.T) {
 	}
 }
 
-// navGroupRe reads each main-menu group and its entries from the rendered page.
-var navGroupRe = regexp.MustCompile(`(?s)class="nav-link dropdown-toggle" href="#navbar-([a-z]+)".*?<div class="dropdown-menu"[^>]*>(.*?)</div>\s*</li>`)
-
-// The main menu groups pages by what they are about: SSH holds the rendered
-// ssh config beside the hosts it comes from, Auth tokens is an entry of its
-// own, Backups & export holds the copies, System holds Repair and Reset, and
-// Actions is a menu like the others, not a button.
+// The main menu groups pages by what they are about (owner, 2026-11-16):
+// SSH holds the estate and its tasks, Tokens has its own menu, Security the
+// audit, checklists and owner, History the record and the backups, and
+// System the health tools, Settings and Reset. There is no Actions menu:
+// each job is under its object's Tasks, and About is in the user menu.
 func TestTheMainMenuGroupsPagesByWhatTheyAreAbout(t *testing.T) {
 	s, _, _ := newTestServer(t)
 	c := signIn(t, s)
-	body := c.get("/").Body.String()
-	groups := map[string]string{}
-	for _, m := range navGroupRe.FindAllStringSubmatch(body, -1) {
-		groups[m[1]] = m[2]
+	groups := map[string][]string{}
+	for _, e := range navEntries(t, c.get("/").Body.String()) {
+		if e.Href != "" { // a toggle, Running as, the tour and Sign out open no page
+			groups[e.Menu] = append(groups[e.Menu], e.Href)
+		}
 	}
-	if len(groups) < 5 {
-		t.Fatalf("read %d menu groups, the pattern is not matching the menu", len(groups))
+	if len(groups) < 7 {
+		t.Fatalf("read %d menus, the pattern is not matching the menu", len(groups))
 	}
 	for group, hrefs := range map[string][]string{
-		"actions": {"/jobs/review?action=rotate-keys", "/jobs/review?action=revoke-keys", "/reset"},
-		"ssh":     {"/profiles", "/hosts", "/keys", "/vms", "/naming", "/ssh-config"},
-		"auth":    {"/checklists", "/audit", "/security"},
-		"backups": {"/snapshots", "/export"},
-		"system":  {"/doctor", "/validate", "/repair", "/reset", "/settings", "/about"},
+		"ssh": {"/profiles", "/hosts", "/keys", "/vms", "/naming", "/ssh-config",
+			"/hosts#add-host", "/hosts#knownhosts-init", "/keys#mint-keys",
+			"/jobs/review?action=rotate-keys", "/jobs/review?action=revoke-keys", "/jobs/review?action=delete-keys"},
+		"tokens":   {"/tokens", "/checklists?show=tokens", "/tokens#add-token"},
+		"security": {"/audit", "/checklists", "/security"},
+		"history":  {"/history", "/events", "/snapshots", "/export"},
+		"system":   {"/doctor", "/validate", "/repair", "/settings", "/reset"},
+		"new":      {"/hosts#add-host", "/tokens#add-token", "/keys#mint-keys"},
+		"user":     {"/about"},
 	} {
-		for _, h := range hrefs {
-			if !strings.Contains(groups[group], `href="`+h+`"`) {
-				t.Errorf("menu %s lacks %s", group, h)
+		if len(groups[group]) != len(hrefs) {
+			t.Errorf("menu %s holds %v, want %v", group, groups[group], hrefs)
+			continue
+		}
+		for i, h := range hrefs {
+			if groups[group][i] != h {
+				t.Errorf("menu %s entry %d is %s, want %s", group, i, groups[group][i], h)
 			}
 		}
 	}
-	if strings.Contains(groups["auth"], `href="/tokens"`) {
-		t.Error("Auth tokens is still inside Security, rather than an entry of its own")
-	}
-	if !regexp.MustCompile(`<li class="nav-item[^"]*">\s*<a class="nav-link" href="/tokens"`).MatchString(body) {
-		t.Error("Auth tokens is not a top-level menu entry")
-	}
-	if strings.Contains(body, "nav-actions") {
-		t.Error("the Actions menu is still styled as a button")
+	if _, ok := groups["actions"]; ok {
+		t.Error("there is still an Actions menu")
 	}
 }

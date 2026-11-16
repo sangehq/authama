@@ -95,25 +95,27 @@ accepted. A running server is reused only when its base path is the one asked fo
 
 The layout is Tabler's, in two bars. The top bar holds the name (with a *read-only* badge when the
 server only reads), a search box that opens the command palette, a theme toggle (light or dark), a
-bell listing the newest [file events](events.md), and an account menu named for the system user the
-server runs as. The account menu opens with *Running as <user> on <host>* and holds Settings, Events,
-Doctor, the tour and About. Under it, the main menu groups the pages by what they are about:
+bell listing the newest [file events](events.md), a **New** button for the common creates, and the
+user menu, named for the system user the server runs as. The user menu is personal: it opens with
+*Running as <user> on <host>*, then **Take the tour**, **About authama** and **Sign out**. Under the
+top bar, the main menu holds every page, one kind of thing to a menu:
 
-| Entry | Holds |
+| Menu | Holds |
 |---|---|
 | Overview | What needs attention, counts, and Get started for a new home |
-| **Actions** | Rotate keys, Revoke keys, Delete keys, Mint missing keys, Pin host keys, Add a host, Add a token, Reset… |
-| **SSH** | Profiles, Hosts, Keys, VMs, Naming, and the SSH config rendered from them |
-| Auth tokens | The tokens npm, Composer, Docker, git, PyPI and the rest read |
-| **Security** | Checklists, Audit, Owner & PIN |
-| **Backups & export** | Snapshots (and encrypted bundles), Export |
-| **Activity** | History, Events |
-| **System** | Doctor, Validate, Repair, Reset, Settings, About |
+| **SSH** | *Inventory:* Profiles, Hosts, Keys, VMs. *Configuration:* Naming, SSH config. *Tasks:* Add a host, Pin host keys, Mint missing keys, Rotate keys, Revoke keys, Delete keys |
+| **Tokens** | Tokens, Token checklists (the Checklists page filtered to tokens). *Tasks:* Add a token |
+| **Security** | Audit, Checklists, Owner & PIN |
+| **History** | *Record:* Changes (the history page), File events. *Backups:* Snapshots, Export |
+| **System** | *Health:* Doctor, Validate, Repair. *Configure:* Settings. Then Reset…, set apart in red |
+| **New** | Add a host, Add a token, Mint missing keys |
 
-**Actions** is a menu like the others. Each entry opens its page with the form's panel already open,
-and nothing runs until it is reviewed. A read-only server shows no Actions menu, and a dev sandbox
-leaves out rotate and revoke, which reach real servers. When export is turned off, Snapshots is an
-entry of its own. On a narrow screen it folds behind a button. About shows the build (and whether it is
+Each entry has its own icon and a line under its name saying what the page shows or does; no two
+entries share an icon or open the same page, except that New repeats three entries from the Tasks.
+A job's entry opens its page with the form's panel already open, and nothing runs until it is
+reviewed. A read-only server shows no Tasks and no New button, and a dev sandbox leaves out Rotate
+and Revoke, which reach real servers. When export is turned off, the History menu has no Export. On
+a narrow screen the main menu folds behind a button. About shows the build (and whether it is
 current), this computer, and the third-party licences; following the system's light or dark theme is
 chosen on the Settings page. The footer carries the copyright, the version, and links to About, the
 documentation, the source and the licences.
@@ -167,7 +169,8 @@ documentation, the source and the licences.
   written before the preview is confirmed. Screen readers announce the same text.
 - **Help** sits where it is needed: a hint under each form field, a ? beside a term that needs
   explaining (it opens a popover), and a tooltip on every icon button. **Take the tour**, in the
-  account menu, walks the header, the Actions menu and the overview one step at a time; it offers
+  user menu, walks the header (search, SSH, Tokens, Security, History, New, the bell and the user
+  menu) and the overview one step at a time; it offers
   itself once, on a browser's first visit to the overview, and Escape ends it.
 - **Get started.** Until a home has a profile, a host, a minted key and a token, and nothing needs
   attention, the Overview opens with a **Get started** card: each step with why it matters and a
@@ -198,9 +201,9 @@ documentation, the source and the licences.
   pages. Hosts, keys, profiles, auth tokens, snapshots, key deployments (on the Audit page), history
   and events each download as CSV, with the same columns as `--csv` on their command. The History and
   Events downloads keep the page's filters, so the file holds what the page shows.
-- **A page says whether its build is current.** About (System > About, or the account menu) shows
+- **A page says whether its build is current.** About (in the user menu, or the footer) shows
   the running build's version, marked *current* or *older build*, with when it was built and when
-  the server started. The account menu also says which user and host the server runs as.
+  the server started. The user menu also says which user and host the server runs as.
   When the `authama` binary is rebuilt, reinstalled or removed after `authama serve` started, every page shows a yellow banner naming the file, with **Restart
   now**: the server relaunches from the binary now installed, on the same address, with the
   same sessions and every sign-in link not yet used (a link already used stays used: the new server
@@ -418,8 +421,8 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
 
 1. **Review.** The review is a page of its own, never a slide-in panel. For rotating,
    revoking or deleting chosen keys it is also where the keys are chosen: the picker sits
-   at its top, ticked as chosen, and opens with nothing chosen from Keys, Profiles, the
-   Actions menu or the palette. It is titled for the job
+   at its top, ticked as chosen, and opens with nothing chosen from Keys, Profiles, SSH ›
+   Tasks or the palette. It is titled for the job
    (*Rotate 10 keys*), with a trail back to where the job was chosen; Cancel goes back there.
    The checks, steps and keys are on the left, and a column on the right stays in view as you
    scroll: what the job reaches, whether it writes a backup, how to undo it, its options, and
