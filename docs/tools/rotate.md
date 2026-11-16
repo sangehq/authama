@@ -147,12 +147,15 @@ batch, and `--all` cannot be combined with other selectors.
 ## Forcing a rotation
 
 A rotation replaces a key only once the new one is deployed and logs in, so a key
-it cannot reach is left as it was. Two kinds of key can never rotate in place:
-one that was **never deployed** to a host that uses it (there is no old login to
-replace), and one whose **host cannot be reached** (a VM that is off, a network
-that is down). `rotate --check` names both.
+it cannot reach is left as it was. Some keys can never rotate in place: one that was
+**never deployed** to a host that uses it (there is no old login to replace), one whose
+**host cannot be reached** (a VM that is off, a network that is down), one whose target
+**takes the key by hand** (Ploi and other web panels, where the rotation would stop for a
+paste), and one that **no host uses** at all. `rotate --check` names each of them.
 
-`--force` replaces those keys anyway, on this computer only, as
+`--force` is a **factory reset of the keys chosen**: every one ends replaced, wherever it
+has or has not been used. A key that can rotate in place still does, with the flow above.
+Every other key is replaced on this computer only, as
 `authama ssh keygen <profile/key> --force` does for one key:
 
 ```sh
@@ -160,9 +163,22 @@ authama ssh rotate --all --force --yes
 authama ssh rotate work/work_box-ed25519 --force
 ```
 
-Every key that can rotate in place still does, with the flow above. Each key
-that cannot is minted afresh, its current key moved to `old/`, and nothing is
-deployed; the output marks it `next` and names the command that deploys it.
+- A key no host uses is included rather than skipped, and replaced here.
+- A target that takes the key by hand is not waited on: nothing stops to ask for a paste.
+  The key is replaced here, and listed for you to paste by hand.
+- Each replaced key is minted afresh, its current key moved to `old/`, and nothing is
+  deployed. The summary marks it `replaced`, and **Needs you** lists it under
+  *deploy next* (from the key's page, or `authama ssh deploy <profile/key>`). That is
+  information, not failure: the run exits 0 when every key was rotated or replaced, and
+  fails only for a key it could neither rotate nor replace.
+- The confirmation says it is a forced replace, and of how many keys. The backup before
+  anything is destroyed, the snapshot and the sandbox refusal are as for any rotation.
+
+`--check --force` is the forced run's dry run. Each key reads `would rotate`, or
+`would replace here` with why (never deployed, unreachable, takes the key by hand, no host
+uses it); the summary counts them, and the dry run passes when every key would be rotated
+or replaced. Without `--force`, `--check` is as before: a key that cannot rotate in place
+`would fail` or `would pause`.
 
 `--force` does not go round the `old/` guard: a key whose predecessor in `old/` is still
 authorised on a host it was never removed from is not replaced, and the output names
@@ -178,7 +194,12 @@ forced rotation there never evicts such a key.
 On the web, **Force: replace what cannot rotate in place** is an option on Rotate
 keys and on a rotation's review. A forced review is titled *(forced)*, warns of
 the lockout, starts from a red button, asks in a red dialog (**Yes, force it**),
-and lists the rollback from `old/` as its undo. A dry run is never forced.
+and lists the rollback from `old/` as its undo. **Dry run: test every key** keeps
+Force: the dry run is titled *(forced)* too and tests what the forced rotation would do.
+A job's page shows every option it was started with, as badges under its title (*Dry run
+(check)*, *Force: replace what cannot rotate in place* in red, *Go on when a login cannot
+be verified*, *Skip the encrypted backup*, and the scope: every key, a profile, a key, or
+how many), and its command line carries every flag.
 
 Revoking needs no force: `authama ssh key revoke` always records the key as
 revoked, and lists each target it could not reach as **not removed**, to remove

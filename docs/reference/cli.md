@@ -2951,6 +2951,13 @@ category, or --all. Each key rotates on its own: one that fails is left
 untouched and the rest still rotate. A key no host uses is skipped, since
 there is nothing to deploy it to.
 
+--force is a factory reset of the keys chosen: every one ends replaced. A key
+that rotates in place rotates as usual; one that cannot - never deployed, its
+host unreachable, a target that takes the key by hand (nothing stops to ask
+for a paste), or used by no host - is replaced on this computer instead, and
+listed under Needs you to deploy next. The run passes when every key was
+rotated or replaced. With --check it says what the forced run would do.
+
 ```
 authama ssh rotate [<[profile/]key>|profile|alias ...] [--category <name>] [--all] [flags]
 ```
@@ -2979,7 +2986,7 @@ Flags:
       --dry-run[=true|false]            list the keys that would rotate, and change nothing
       --evict-old[=true|false]          replace the previous key in old/ even while a host it was never removed from still accepts it
       --failed[=true|false]             run again the keys the last rotation or dry run left (not rotated, or would fail)
-      --force[=true|false]              replace on this computer (as ssh keygen --force) each key that cannot be rotated in place - never deployed, or its host unreachable - to deploy afterwards
+      --force[=true|false]              factory-reset the keys chosen: replace on this computer (as ssh keygen --force) each key that cannot be rotated in place - never deployed, its host unreachable, pasted by hand, or used by no host - to deploy afterwards; with --check, say what that would do
       --no-key-backup[=true|false]      rotate without writing an encrypted backup first (the earlier predecessor is lost)
       --passphrase[=true|false]         protect the rotated-in key (prompts without echo)
   -y, --yes[=true|false]                skip the confirmation prompt

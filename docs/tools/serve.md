@@ -469,12 +469,16 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
    and the command it is the same as is shown for reference, with a copy button. **Start: Rotate 10
    keys…** opens a dialog that asks once more; **Dry run: test every key**, beside it, tests the
    rotation and changes nothing (each server answers and the current key logs in; a target that
-   takes keys by hand is named), and the *Skip the encrypted backup* option makes a clean rotation with no
+   takes keys by hand is named; with Force on, it tests the forced rotation, and passes when every
+   key would be rotated or replaced here), and the *Skip the encrypted backup* option makes a clean rotation with no
    bundle, also when the backup check fails for want of a recipient. After a fix started from a review, the done page
    offers **Review the job again**; a job that cannot be undone (revoke, delete) asks in
    red.
 2. **Run.** The job starts, and its page (a page of its own too, as is an operation in the
-   history), titled for the job with its full command beneath, shows
+   history), titled for the job with every option it was started with as badges beneath the title
+   (*Dry run (check)*, *Force: replace what cannot rotate in place* in red, *Go on when a login
+   cannot be verified*, *Skip the encrypted backup*, and the scope), and its full command, every
+   flag included, beneath that, shows
    the output as it comes in a console: each line's status word (ok, FAIL, paste, skip, WARNING)
    in a fixed column as a coloured badge, the host or key in its own colour, nested lines indented,
    and failures tinted; it follows the newest line unless you scroll up. Above it is a progress card: a

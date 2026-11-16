@@ -43,7 +43,7 @@ func TestARotateCheckJobThatCannotSaveTheFailedListSaysSo(t *testing.T) {
 		t.Fatal(err)
 	}
 	j, err := s.jobs.Start(p, mutation.Scope{Command: "rotate", Source: history.SourceWeb, DryRun: true}, func(j *jobs.Job) error {
-		return rotateCheckJob(j, p, []string{"work/no-such-key"})
+		return rotateCheckJob(j, p, []string{"work/no-such-key"}, false)
 	})
 	if err != nil {
 		t.Fatal(err)

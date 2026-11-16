@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -169,20 +170,11 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 			run: func(j *jobs.Job) error { return deployJob(j, h.p, retain, key, target) },
 		}, nil
 	case "rotate":
-		if checked(f, "check") {
-			return rotateCheckSpec([]string{key}, []string{key, "--check"}, subjects, h), nil
-		}
 		allow, skip, force := checked(f, "allow_unverified"), checked(f, "no_backup"), checked(f, "force")
-		args := []string{key, "--yes"}
-		if allow {
-			args = append(args, "--allow-unverified")
+		if checked(f, "check") {
+			return rotateCheckSpec([]string{key}, rotateFlags([]string{key, "--check"}, allow, skip, force), subjects, h, force), nil
 		}
-		if skip {
-			args = append(args, "--no-key-backup")
-		}
-		if force {
-			args = append(args, "--force")
-		}
+		args := rotateFlags([]string{key, "--yes"}, allow, skip, force)
 		return jobSpec{
 			scope: mutation.Scope{Command: "rotate", Args: args, Source: history.SourceWeb, Subjects: subjects},
 			what: append([]string{backupStep(skip)},
@@ -285,7 +277,10 @@ func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, allowUnverifi
 	if err := j.Step(); err != nil {
 		return err
 	}
-	r := rotator.New(p, m, inv).Unattended(j).WithManualStep(manualPaste(j))
+	r := rotator.New(p, m, inv).Unattended(j)
+	if !force {
+		r = r.WithManualStep(manualPaste(j))
+	}
 	began, line := time.Now(), jobLine(j)
 	res := rotator.RunResult{Ref: key, Via: r.Via(key)}
 	// The summary of one key: under way, then how it went.
@@ -301,6 +296,15 @@ func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, allowUnverifi
 	report, err := r.Rotate(key, allowUnverified, "")
 	if err != nil {
 		res.Err = err
+		// Forced, a key that cannot rotate at all (no host uses it) is
+		// replaced on this computer, as any other that cannot rotate in place.
+		if force {
+			_, _ = fmt.Fprintf(j, "not rotated: %v\n", err)
+			if still := replaceFailed(j, p, []string{key}, force); len(still) == 0 {
+				show([]string{key})
+				return nil
+			}
+		}
 		show(nil)
 		return err
 	}
@@ -362,7 +366,7 @@ func rotateKeysSpec(f url.Values, h home, retain int) (jobSpec, error) {
 		return jobSpec{}, err
 	}
 	allow, skip, force := checked(f, "allow_unverified"), checked(f, "no_backup"), checked(f, "force")
-	names, err := selected(h.p, sel)
+	names, err := selected(h.p, sel, force)
 	if err != nil {
 		return jobSpec{}, err
 	}
@@ -370,17 +374,9 @@ func rotateKeysSpec(f url.Values, h home, retain int) (jobSpec, error) {
 		return jobSpec{}, badForm("no key there is used by a host, so there is nothing to rotate")
 	}
 	if checked(f, "check") {
-		return rotateCheckSpec(names, append(args, "--check"), subjects, h), nil
+		return rotateCheckSpec(names, rotateFlags(append(args, "--check"), allow, skip, force), subjects, h, force), nil
 	}
-	if allow {
-		args = append(args, "--allow-unverified")
-	}
-	if skip {
-		args = append(args, "--no-key-backup")
-	}
-	if force {
-		args = append(args, "--force")
-	}
+	args = rotateFlags(args, allow, skip, force)
 	return jobSpec{
 		scope: mutation.Scope{Command: "rotate", Args: append(args, "--yes"), Source: history.SourceWeb, Subjects: subjects},
 		what: []string{
@@ -395,8 +391,26 @@ func rotateKeysSpec(f url.Values, h home, retain int) (jobSpec, error) {
 	}, nil
 }
 
-// selected is the keys a selection rotates: those a host uses.
-func selected(p paths.Paths, sel keysvc.Selection) ([]string, error) {
+// rotateFlags is args with the rotation's options as the CLI spells them, so
+// a job's command line - a dry run's too - names every option chosen.
+func rotateFlags(args []string, allow, skip, force bool) []string {
+	out := slices.Clone(args)
+	if allow {
+		out = append(out, "--allow-unverified")
+	}
+	if skip {
+		out = append(out, "--no-key-backup")
+	}
+	if force {
+		out = append(out, "--force")
+	}
+	return out
+}
+
+// selected is the keys a selection rotates: those a host uses, and, forced
+// (a factory reset), those no host uses too, which are replaced on this
+// computer.
+func selected(p paths.Paths, sel keysvc.Selection, force bool) ([]string, error) {
 	m, inv, err := loadState(p)
 	if err != nil {
 		return nil, err
@@ -407,7 +421,7 @@ func selected(p paths.Paths, sel keysvc.Selection) ([]string, error) {
 	}
 	var names []string
 	for _, r := range rows {
-		if r.Wired() {
+		if r.Wired() || force {
 			names = append(names, r.Ref.String())
 		}
 	}
@@ -426,13 +440,19 @@ func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection,
 		return err
 	}
 	// Worked out again under the lock: the review was a moment ago.
-	names, err := selected(p, sel)
+	names, err := selected(p, sel, force)
 	if err != nil {
 		return err
 	}
 	mutation.SnapshotBeforeMutation(p, retain)
 	j.Plan(names)
-	r := rotator.New(p, m, inv).Unattended(j).WithManualStep(manualPaste(j))
+	r := rotator.New(p, m, inv).Unattended(j)
+	if !force {
+		// Forced, nothing stops to ask for a paste: a target that takes the
+		// key by hand cannot verify, so the key is replaced on this computer
+		// and listed as needing its paste.
+		r = r.WithManualStep(manualPaste(j))
+	}
 	// RotateEach calls next once before each key, so the count it keeps is
 	// the number of keys already finished.
 	at := 0
@@ -600,7 +620,7 @@ func jobOptions(f url.Values, fields []formField) ([]jobOption, []formField) {
 			{Name: "allow_unverified", Label: "Go on when a login cannot be verified",
 				Detail: "Off, a key whose new login cannot be proved stops the job and keeps working as before."},
 			{Name: "force", Label: "Force: replace what cannot rotate in place", Danger: true,
-				Detail: "A key never deployed, or whose host cannot be reached, is replaced on this computer anyway and must be deployed next. Until then a host that trusted the old key cannot be logged in to with it; the old key stays under old/ for a rollback."},
+				Detail: "A factory reset of the keys chosen: a key never deployed, whose host cannot be reached, whose target takes the key by hand, or that no host uses, is replaced on this computer anyway and must be deployed next. Until then a host that trusted the old key cannot be logged in to with it; the old key stays under old/ for a rollback."},
 		}
 	case "revoke-keys":
 		opts = []jobOption{{Name: "reason", Label: "Reason (optional)", Text: true, Placeholder: "laptop lost, contractor left…",
@@ -985,22 +1005,31 @@ func backupStep(skip bool) string {
 // for each key, every server it is used on is asked whether it answers and the
 // current key still logs in, and a target that takes keys by hand is named.
 // Nothing changes, so it takes no backup and no snapshot.
-func rotateCheckSpec(names, args []string, subjects []history.Subject, h home) jobSpec {
+func rotateCheckSpec(names, args []string, subjects []history.Subject, h home, force bool) jobSpec {
+	what := []string{
+		fmt.Sprintf("tests %d key(s), one at a time, and changes nothing", len(names)),
+		"for each server a key is used on: it answers, and the current key still logs in",
+		"names each target that takes a new key by hand, where the real rotation will stop and ask",
+		"a key that would not rotate cleanly is marked failed, with why",
+	}
+	if force {
+		what = []string{
+			fmt.Sprintf("tests %d key(s), one at a time, as the forced rotation would run them, and changes nothing", len(names)),
+			"for each server a key is used on: it answers, and the current key still logs in",
+			"forced: a key that would fail or pause - never deployed, its host unreachable, pasted by hand, or used by no host - would be replaced on this computer instead, and is marked so, with why",
+			"passes when every key would be rotated or replaced",
+		}
+	}
 	return jobSpec{
 		scope: mutation.Scope{Command: "rotate", Args: args, Source: history.SourceWeb, Subjects: subjects},
-		what: []string{
-			fmt.Sprintf("tests %d key(s), one at a time, and changes nothing", len(names)),
-			"for each server a key is used on: it answers, and the current key still logs in",
-			"names each target that takes a new key by hand, where the real rotation will stop and ask",
-			"a key that would not rotate cleanly is marked failed, with why",
-		},
-		run:   func(j *jobs.Job) error { return rotateCheckJob(j, h.p, names) },
+		what:  what,
+		run:   func(j *jobs.Job) error { return rotateCheckJob(j, h.p, names, force) },
 		items: names,
 		check: true,
 	}
 }
 
-func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string) (err error) {
+func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string, force bool) (err error) {
 	m, inv, err := loadState(p)
 	if err != nil {
 		return err
@@ -1013,6 +1042,9 @@ func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string) (err error) {
 	line := jobLine(j)
 	show := func(rest []string, now string) rotator.Summary {
 		sum := rotator.SummarizeCheck(reports, time.Since(began))
+		if force {
+			sum = rotator.SummarizeForcedCheck(reports, time.Since(began))
+		}
 		sum.Command = line
 		sum.Keys = append(sum.Keys, rotator.Pending(rest, now)...)
 		j.SetSummary(sum)
@@ -1033,15 +1065,25 @@ func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string) (err error) {
 		show(names[i:], "testing")
 		rep, err := r.Check(n)
 		if err != nil {
-			reports = append(reports, rotator.CheckReport{Key: n, Problem: err.Error(), ProblemKind: rotator.KindFailed})
-			failed = append(failed, n)
-			j.Failed(n)
+			kind := rotator.KindFailed
+			if force {
+				// Forced, a key no host uses is replaced on this computer:
+				// named for what it is, it reads "would replace here".
+				kind = rotator.Classify(err.Error())
+			}
+			rep = rotator.CheckReport{Key: n, Problem: err.Error(), ProblemKind: kind}
 			_, _ = fmt.Fprintf(j, "FAIL %s\n       %v\n", n, err)
-			continue
+		} else {
+			_, _ = fmt.Fprint(j, rep.Format())
 		}
-		_, _ = fmt.Fprint(j, rep.Format())
 		reports = append(reports, rep)
-		if !rep.OK() {
+		// A forced dry run fails only a key the forced run could not replace
+		// either; any other dry run, each key that would not rotate cleanly.
+		fails := !rep.OK()
+		if force {
+			fails = len(rotator.SummarizeForcedCheck([]rotator.CheckReport{rep}, 0).Failed()) > 0
+		}
+		if fails {
 			failed = append(failed, n)
 			j.Failed(n)
 		}
@@ -1049,6 +1091,10 @@ func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string) (err error) {
 	j.Progress(len(names), len(names), "")
 	if len(failed) > 0 {
 		return fmt.Errorf("%d of %d key(s) would not rotate cleanly: %s; nothing was changed", len(failed), len(names), strings.Join(failed, ", "))
+	}
+	if force {
+		_, _ = fmt.Fprintf(j, "every key would be rotated or replaced; nothing was changed\n")
+		return nil
 	}
 	_, _ = fmt.Fprintf(j, "every key would rotate; nothing was changed\n")
 	return nil
@@ -1093,7 +1139,7 @@ func forceStep(force bool) string {
 	if !force {
 		return ""
 	}
-	return "forced: a key that cannot be rotated in place (never deployed, or its host unreachable) is replaced on this computer instead, its old key moved to old/. Until the new key is deployed, a host that trusted the old one cannot be logged in to with it; deploy it next, or roll back from old/"
+	return "forced, a factory reset of the keys chosen: a key that cannot be rotated in place (never deployed, its host unreachable, a target that takes the key by hand, or used by no host) is replaced on this computer instead, without stopping to ask for a paste, its old key moved to old/. Until the new key is deployed, a host that trusted the old one cannot be logged in to with it; deploy it next, or roll back from old/"
 }
 
 // replaceFailed is a forced rotation's fallback: each key the rotation could

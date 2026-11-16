@@ -17,7 +17,7 @@
 {{if .Forced}}<div class="alert alert-danger" role="alert">
   <div class="d-flex gap-2"><span aria-hidden="true">{{icon "alert-triangle"}}</span><div>
     <h2 class="alert-title h4 mb-1">A forced rotation can lock you out until you deploy</h2>
-    <p class="mb-0">A key that cannot be rotated in place - never deployed, or its host unreachable - is replaced on this computer anyway. Until the new key is deployed, a host that trusted the old key cannot be logged in to with it. Deploy each replaced key next, from its page, or roll it back: the old key is kept under <code>old/</code>.</p>
+    <p class="mb-0">A factory reset of the keys chosen: a key that cannot be rotated in place - never deployed, its host unreachable, a target that takes the key by hand, or used by no host - is replaced on this computer anyway, without stopping to ask for a paste. Until the new key is deployed, a host that trusted the old key cannot be logged in to with it. Deploy each replaced key next, from its page, or roll it back: the old key is kept under <code>old/</code>.</p>
   </div></div>
 </div>{{end}}
 <div class="row g-3">

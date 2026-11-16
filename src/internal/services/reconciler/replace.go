@@ -13,8 +13,9 @@ import (
 // ReplaceLocally is a forced rotation's fallback, as `ssh keygen --force`
 // is for one key: each key named (profile/key) is minted afresh on this
 // computer, its current key moved to old/, with nothing deployed. It is for a
-// key that cannot be rotated in place - never deployed, or its host cannot be
-// reached - and the new key has to be deployed afterwards. The manifest and
+// key that cannot be rotated in place - never deployed, its host cannot be
+// reached, its target takes the key by hand, or no host uses it - and the new
+// key has to be deployed afterwards. The manifest and
 // inventory are read afresh, as a rotation before it may have saved them.
 // replaced is what was minted; failed what could not be, each said in out.
 // A key whose predecessor in old/ is still authorised somewhere is not
