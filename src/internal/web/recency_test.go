@@ -1,6 +1,7 @@
 package web
 
 import (
+	"io/fs"
 	"net/http"
 	"net/url"
 	"strings"
@@ -81,5 +82,75 @@ func TestKeyRecencyPills(t *testing.T) {
 	}
 	if page := c.get("/keys/" + ref).Body.String(); !strings.Contains(page, `<span class="badge badge-muted" data-recency="revoked">revoked</span>`) {
 		t.Error("a revoked key's pill is not muted")
+	}
+}
+
+// The host page shows its key's pill, and the overview the keys labelled
+// new, each with the same pill the keys pages use.
+func TestKeyRecencyPillsOnTheHostAndOverviewPages(t *testing.T) {
+	s, p, _ := newTestServer(t)
+	c := signIn(t, s)
+	ref := fixtureKey(t, c)
+	pill := `<span class="badge badge-info" data-recency="new">new</span>`
+	if strings.Contains(c.get("/").Body.String(), `data-recency=`) {
+		t.Error("the overview shows a pill before any key is new")
+	}
+	recordKey(t, p, ref)
+	m, err := manifest.Load(p.Manifest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	profile, key, _ := strings.Cut(ref, "/")
+	hosts, err := m.HostsForKey(manifest.KeyRef{Profile: profile, KeyName: key})
+	if err != nil || len(hosts) == 0 {
+		t.Fatalf("no host uses %s: %v", ref, err)
+	}
+	alias := hosts[0].Alias
+	if host := c.get("/hosts/" + alias).Body.String(); !strings.Contains(host, pill) {
+		t.Errorf("the host page for %s lacks its key's pill:\n%.3000s", alias, host)
+	}
+	ov := c.get("/").Body.String()
+	if !strings.Contains(ov, pill) || !strings.Contains(ov, `href="/keys/`+ref+`"`) {
+		t.Errorf("the overview does not list %s with its pill", ref)
+	}
+}
+
+// Every recency pill is the one partial: no template draws its own, so the
+// keys list, a key's page, a host's page and the overview cannot drift apart.
+// Positive control: the partial itself is found. Floor: the walk must have
+// read the templates.
+func TestEveryRecencyPillIsThePartial(t *testing.T) {
+	const partial = "templates/partials/recency_pill.html"
+	files, users, own := 0, 0, false
+	err := fs.WalkDir(templateFS, "templates", func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(p, ".html") {
+			return err
+		}
+		files++
+		b, err := fs.ReadFile(templateFS, p)
+		if err != nil {
+			return err
+		}
+		s := string(b)
+		if p == partial {
+			own = strings.Contains(s, `data-recency="{{.Pill.Label}}"`)
+			return nil
+		}
+		if strings.Contains(s, "data-recency=") || strings.Contains(s, "{{toneClass .Pill.Tone}}") {
+			t.Errorf("%s draws a recency pill of its own; use {{template \"recency_pill\" .}}", p)
+		}
+		if strings.Contains(s, `{{template "recency_pill"`) {
+			users++
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if files < 40 || !own {
+		t.Fatalf("read %d templates (want at least 40), partial found: %v", files, own)
+	}
+	if users < 4 {
+		t.Errorf("%d templates use the pill partial, want the keys list, key, host and overview pages", users)
 	}
 }

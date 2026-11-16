@@ -22,7 +22,7 @@
       "openWorldHint": false,
       "readOnlyHint": true
     },
-    "description": "One key by its ref (profile/name), with the hosts that use it.",
+    "description": "One key by its ref (profile/name), with its recency and the hosts that use it.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -155,7 +155,7 @@
       "openWorldHint": false,
       "readOnlyHint": true
     },
-    "description": "Every SSH key, or a profile's: type, fingerprint, when it was made and expires, and whether it is on disk.",
+    "description": "Every SSH key, or a profile's: type, fingerprint, when it was made and expires, whether it is on disk, and its recency: each event with how long ago it was, whether it is new, and its status pill.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {

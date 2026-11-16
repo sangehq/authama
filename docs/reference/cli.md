@@ -2208,6 +2208,7 @@ Flags:
       --csv[=true|false]    print the keys as CSV, one row each, header first
       --json[=true|false]   print the keys as JSON, each with its recency: events, ages, is_new and pill
       --new[=true|false]    only the keys labelled new (see keys.new_window_days)
+      --since string        only the keys created, added, deployed, rotated, restored, retired or revoked since a duration ago (36h, 7d) or a date (2026-11-01)
 ```
 
 ## authama ssh key regen-pub

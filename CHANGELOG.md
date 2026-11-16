@@ -35,7 +35,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **authama records when each thing happens to a key.** Minting, adopting, importing, deploying,
   rotating, rolling back and revoking a key now note the time, to the second, in `key-events.json`
-  beside the inventory, written by the same save as the inventory record; a minted key also notes
+  beside the inventory, written by the same save as the inventory record through a journal
+  (`key-events.json.pending`, which names the inventory it goes with), so a save cut off between the
+  two files still leaves them agreeing; a minted key also notes
   where it came from (`generated`, `adopted` or `imported`) and a rotated one the key it replaced.
   The inventory's own format is unchanged, so an older authama still reads it, and a key recorded
   before this release falls back to the days the inventory already holds (R-FEAT-01).
@@ -44,16 +46,29 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`AUTHAMA_KEYS_NEW_EVENTS`, default `created,added,rotated,deployed`, `restored` also allowed) which
   events make it new. `settings set` and `settings validate` refuse an unknown event or a negative
   window, and the schema checks both.
+- **`keys.new_until` and `keys.age_pills`.** `keys.new_until` (`AUTHAMA_KEYS_NEW_UNTIL`) is `window`,
+  the default (a key is new until the window ends or `ssh key ack`), or `acknowledged` (new until
+  `ssh key ack`, however long). `keys.age_pills` (`AUTHAMA_KEYS_AGE_PILLS`, default `0.5,1.0`) sets
+  when a key turns `ageing` and `old`, as fractions of its `rotate_after_days`; a key past the bad
+  fraction whose expiry has not caught up is now `old` rather than `ageing`. `settings set` and
+  `settings validate` refuse anything else.
 - **`ssh key list` shows how new and how old each key is.** Two columns, `AGE` (since it was
-  created, added or rotated in) and `STATUS` (`new`, `current`, `ageing`, `due soon`, `overdue`,
-  `revoked`, `retired`), as words. `--new` keeps the keys labelled new, and `--json` prints each key
+  created, added or rotated in) and `STATUS` (`new`, `current`, `ageing`, `old`, `due soon`, `overdue`,
+  `revoked`, `retired`), as words. `--new` keeps the keys labelled new, `--since <duration|date>`
+  (`36h`, `7d`, `2026-11-01`) the keys something happened to since then, and `--json` prints each key
   with its recency: every event with its time, age and constraint, `is_new`, `new_because` and the
   pill.
+- **The read API and MCP give each key's recency.** `/api/v1/keys`, `/api/v1/keys/{profile}/{key}` and
+  the MCP tools `list_keys` and `get_key` carry the `recency` object `ssh key list --json` prints:
+  each event with its time, age and constraint, `is_new`, `new_because` and the pill, under the same
+  settings.
 - **`ssh key ack` clears the new label** on the keys it names (or `--category`, `--all`) until their
   next event, and records when it did in `key-events.json` and the history.
 - **The web UI shows key recency as pills.** The Keys list gains a Status column (the pill and the
   key's age), and a key's page its status and a Lifecycle card listing every event with its age, a
-  machine-readable `<time>` and its constraint. Each pill carries its word, not colour alone, in the
+  machine-readable `<time>` and its constraint. A host's page shows its key's pill, and the overview's
+  Key health card counts the keys labelled new and lists each with its pill; every page draws the one
+  pill partial. Each pill carries its word, not colour alone, in the
   existing badge colours. *Mark as seen* on a new key is `key ack`, previewed and confirmed like any
   change.
 

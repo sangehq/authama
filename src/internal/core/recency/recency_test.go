@@ -198,3 +198,124 @@ func TestAgoWording(t *testing.T) {
 		}
 	}
 }
+
+// keys.new_until: under window a key stops being new when the window ends;
+// under acknowledged it stays new, however old the event, until an ack after it.
+func TestUntilAcknowledgedKeepsAKeyNewUntilItIsAcked(t *testing.T) {
+	created := exact(inventory.EventCreated, 40*day)
+	p := DefaultPolicy()
+	if s := Evaluate([]Event{created}, 365, expiry.OK, p, now); s.IsNew {
+		t.Errorf("under window a 40-day-old key is not new: %+v", s)
+	}
+	p.Until = UntilAcknowledged
+	s := Evaluate([]Event{created}, 365, expiry.OK, p, now)
+	if !s.IsNew || s.NewBecause != inventory.EventCreated || s.Pill.Label != "new" {
+		t.Errorf("under acknowledged an unacked key stays new: %+v", s)
+	}
+	if s := Evaluate([]Event{created, exact(inventory.EventAcknowledged, day)}, 365, expiry.OK, p, now); s.IsNew {
+		t.Errorf("an ack ends it: %+v", s)
+	}
+	if s := Evaluate([]Event{created, exact(inventory.EventAcknowledged, 2*day), exact(inventory.EventDeployed, 30*day+day)}, 365, expiry.OK, p, now); s.IsNew {
+		t.Errorf("an event before the ack does not re-arm it: %+v", s)
+	}
+	p.Window = 0
+	if s := Evaluate([]Event{created}, 365, expiry.OK, p, now); s.IsNew {
+		t.Error("a window of 0 turns the label off under acknowledged too")
+	}
+}
+
+// keys.age_pills moves the ageing (warn) and old (bad) thresholds, for the
+// pill and for each event's constraint.
+func TestThePillThresholdsAreConfigurable(t *testing.T) {
+	p := DefaultPolicy()
+	p.Warn, p.Bad = 0.25, 0.75
+	cases := []struct {
+		ago   time.Duration
+		label string
+		tone  string
+	}{
+		{80 * day, "current", ToneOK},
+		{100 * day, "ageing", ToneWarn},
+		{300 * day, "old", ToneBad},
+	}
+	for _, c := range cases {
+		s := Evaluate([]Event{exact(inventory.EventCreated, c.ago)}, 365, expiry.OK, p, now)
+		if s.Pill.Label != c.label || s.Pill.Tone != c.tone {
+			t.Errorf("%v old: pill %+v, want %s/%s", c.ago, s.Pill, c.label, c.tone)
+		}
+		if ev := s.Events[0]; ev.Label != c.label || ev.Tone != c.tone {
+			t.Errorf("%v old: event constraint %s/%s, want %s/%s", c.ago, ev.Label, ev.Tone, c.label, c.tone)
+		}
+	}
+	// The defaults are half and the whole lifetime.
+	if s := Evaluate([]Event{exact(inventory.EventCreated, 100*day)}, 365, expiry.OK, DefaultPolicy(), now); s.Pill.Label != "current" {
+		t.Errorf("default at 100 of 365 days: %+v", s.Pill)
+	}
+}
+
+func TestParsePillsRefusesBadThresholds(t *testing.T) {
+	if w, b, err := ParsePills(" 0.4 , 0.9 "); err != nil || w != 0.4 || b != 0.9 {
+		t.Errorf("got %v %v %v", w, b, err)
+	}
+	for _, bad := range []string{"", "0.5", "0.5,1,2", "x,1", "0,1", "0.9,0.5", "-1,1", "0.5,11"} {
+		if _, _, err := ParsePills(bad); err == nil {
+			t.Errorf("%q accepted", bad)
+		}
+	}
+}
+
+func TestFromEnvReadsUntilAndPills(t *testing.T) {
+	env := map[string]string{"AUTHAMA_KEYS_NEW_UNTIL": "acknowledged", "AUTHAMA_KEYS_AGE_PILLS": "0.3,0.8"}
+	p := FromEnv(func(k string) string { return env[k] })
+	if p.Until != UntilAcknowledged || p.Warn != 0.3 || p.Bad != 0.8 {
+		t.Errorf("got %+v", p)
+	}
+	env = map[string]string{"AUTHAMA_KEYS_NEW_UNTIL": "forever", "AUTHAMA_KEYS_AGE_PILLS": "1,0.5"}
+	if p := FromEnv(func(k string) string { return env[k] }); p.Until != UntilWindow || p.Warn != 0.5 || p.Bad != 1 {
+		t.Errorf("a bad value must leave the default: %+v", p)
+	}
+}
+
+// --since takes a duration (36h, 7d) or a date (2026-11-01, or RFC 3339).
+func TestParseSince(t *testing.T) {
+	cases := map[string]time.Time{
+		"36h":                  now.Add(-36 * time.Hour),
+		"7d":                   now.Add(-7 * day),
+		"2026-11-01":           time.Date(2026, 11, 1, 0, 0, 0, 0, time.Local),
+		"2026-11-10T06:00:00Z": time.Date(2026, 11, 10, 6, 0, 0, 0, time.UTC),
+	}
+	for in, want := range cases {
+		if got, err := ParseSince(in, now); err != nil || !got.Equal(want) {
+			t.Errorf("ParseSince(%q) = %v %v, want %v", in, got, err, want)
+		}
+	}
+	for _, bad := range []string{"", "soon", "-2d", "-1h", "2026-13-01", "d"} {
+		if _, err := ParseSince(bad, now); err == nil {
+			t.Errorf("%q accepted", bad)
+		}
+	}
+}
+
+// ChangedSince is true when anything but an ack happened at or after the
+// cutoff; a day-only event counts for its whole day.
+func TestChangedSince(t *testing.T) {
+	s := Evaluate([]Event{exact(inventory.EventCreated, 10*day), exact(inventory.EventDeployed, 2*day),
+		exact(inventory.EventAcknowledged, time.Hour)}, 365, expiry.OK, DefaultPolicy(), now)
+	if !s.ChangedSince(now.Add(-3 * day)) {
+		t.Error("the deploy two days ago is since three days ago")
+	}
+	if s.ChangedSince(now.Add(-day)) {
+		t.Error("an ack alone is not a change")
+	}
+	created := "2026-11-12"
+	day := Evaluate(Timeline(inventory.KeyRecord{Created: &created}, inventory.KeyEvents{}, "", ""), 365, expiry.OK, DefaultPolicy(), now)
+	if !day.ChangedSince(time.Date(2026, 11, 12, 15, 0, 0, 0, time.Local)) {
+		t.Error("a key created on the 12th was created since 15:00 on the 12th, by the day")
+	}
+	if day.ChangedSince(time.Date(2026, 11, 13, 0, 0, 0, 0, time.Local)) {
+		t.Error("nor since the 13th")
+	}
+	if (Status{}).ChangedSince(now.Add(-100 * 24 * time.Hour)) {
+		t.Error("a key with no events has not changed")
+	}
+}

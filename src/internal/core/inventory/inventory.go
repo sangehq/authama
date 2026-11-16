@@ -10,8 +10,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"github.com/sangehq/authama/src/internal/util/fs"
 )
 
 const schemaVersion = 1
@@ -147,28 +145,33 @@ func Load(path string) (*Inventory, error) {
 	if inv.Keys == nil {
 		inv.Keys = map[string]KeyRecord{}
 	}
-	if inv.Events, err = loadEvents(EventsPath(path)); err != nil {
+	if inv.Events, err = loadEvents(path, data); err != nil {
 		return nil, err
 	}
 	return &inv, nil
 }
 
-// Save writes the inventory as indented JSON, atomically.
+// Save writes the inventory as indented JSON, atomically, with its events.
 //
 // Via a temp file and a rename, not os.WriteFile: WriteFile truncates the target
 // and then writes, so a crash or a full disk mid-write leaves a truncated
 // inventory - the record of every key's expiry and deployments, lost to a
 // partial write. It also keeps whatever mode the file already had, so an
 // inventory that had somehow become group-readable stayed that way.
+//
+// The inventory and key-events.json are two files, so the pair is written
+// through a journal (saveEvents): the inventory's rename is the commit point,
+// and Load reads whichever events go with the inventory on disk.
 func (inv *Inventory) Save(path string) error {
 	b, err := json.MarshalIndent(inv, "", "  ")
 	if err != nil {
 		return err
 	}
-	if err := fs.WriteTextAtomic(path, string(b)+"\n", 0o600); err != nil {
-		return err
+	text := string(b) + "\n"
+	if len(inv.Events) == 0 {
+		return writeAtomic(path, text, 0o600)
 	}
-	return saveEvents(EventsPath(path), inv.Events)
+	return saveEvents(path, text, inv.Events)
 }
 
 // Record stores a key record under its fingerprint.

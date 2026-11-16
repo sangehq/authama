@@ -87,6 +87,14 @@ back), `revoked` and `acknowledged` (`authama ssh key ack`, below). The time is
 written by the same save as the inventory record, and only times and origins are kept: nothing
 about the key's material.
 
+The two files are written as a pair. A save first writes `key-events.json.pending`, holding the new
+events and the SHA-256 of the inventory they go with, then the inventory, then `key-events.json`,
+and removes the pending file last. The inventory's write is the commit point: if a save is cut off
+before it, the pending file names an inventory that is not on disk and is ignored, so the old pair
+stands; if it is cut off after it, the pending file matches the inventory and its events are read.
+Either way the inventory and the events agree, and the next save replaces a pending file left
+behind.
+
 The file is new; nothing older than it needs migrating. A key recorded before it existed falls
 back to the days the inventory already holds (`created`, each deployment's date) and to
 `revoked.json` and `retired.json`, so its ages are shown by the day. Recording is always on; only
@@ -101,13 +109,16 @@ word for where it stands (`STATUS`):
 |---|---|
 | `revoked`, `retired` | the key was revoked, or replaced by a rotation (and not rolled back) |
 | `overdue`, `due soon` | its [expiry](expiry.md) says so; expiry always wins over age |
-| `new` | one of `keys.new_events` happened within `keys.new_window_days` |
-| `ageing` | it is past half its lifetime |
+| `new` | one of `keys.new_events` happened within `keys.new_window_days` (or, under `keys.new_until: acknowledged`, since the last `key ack`) |
+| `old` | it is past its whole lifetime (`keys.age_pills`' bad fraction) and expiry has not said so |
+| `ageing` | it is past half its lifetime (`keys.age_pills`' warn fraction) |
 | `current` | otherwise |
 
 ```sh
 authama ssh key list                 # AGE and STATUS columns
 authama ssh key list --new           # only the keys labelled new
+authama ssh key list --since 7d      # only the keys something happened to in the last 7 days
+authama ssh key list --since 2026-11-01   # ... or since a date (local midnight; RFC 3339 also works)
 authama ssh key list --json          # each key's recency: events, ages, is_new, new_because, pill
 authama ssh key ack work/work_gh-ed25519   # seen it: clear the label
 authama ssh key ack --all
@@ -119,15 +130,33 @@ A key is **new** for 7 days after it is created, added, rotated in or deployed. 
 `--json`'s `new_because` names the event that set it. `authama ssh key ack` clears it at once and
 records an `acknowledged` time; the next of those events makes the key new again.
 
+`keys.new_until` says what ends the label. `window`, the default, is the above: the window or an
+ack, whichever comes first. `acknowledged` keeps a key new until `authama ssh key ack`, however long
+that takes, so nothing new slips by unseen; switching to it labels every key that was never acked,
+and `authama ssh key ack --all` clears them in one go. `keys.new_window_days: 0` turns the label off
+under either.
+
+`--since` takes a duration back from now (`36h`, or whole days as `7d`) or a point in time (a date,
+read as local midnight, or RFC 3339), and keeps the keys that were created, added, deployed, rotated,
+restored, retired or revoked at or after it. An acknowledgement is not a change, so it never brings a
+key back in. A key recorded before `key-events.json` existed is judged by its days, each counting
+for the whole of its day. `--since` combines with `--new` and with `--json`.
+
 Each event also carries its own age against the key's constraints: `fresh` inside the new window,
-`old` past the key's lifetime, `ageing` past half of it, `current` otherwise. A revocation, a
+`old` past the key's lifetime, `ageing` past half of it, `current` otherwise. Both thresholds are
+`keys.age_pills`, two fractions of the key's `rotate_after_days`, warn then bad (default `0.5,1.0`):
+`authama settings set keys.age_pills 0.75,0.9` turns a key `ageing` at three quarters of its
+lifetime and `old` at 90%, for the pill and for each event alike. Each fraction is above 0 and at
+most 10, and warn comes no later than bad. A revocation, a
 retirement and an acknowledgement end or note something, so they carry only their time. The table
 and `--json` never carry colour or terminal escapes.
 
 In the web UI the Keys list has a **Status** column with the pill and the key's age, and a key's
 page shows its status and a **Lifecycle** card: every event with how long ago it was (a `<time>`
 carrying the exact time) and its constraint. A new key's card offers **Mark as seen**, which is `key ack` as a
-previewed change. Each pill says its word as well as taking the badge colour (blue for new and
+previewed change. A host's page shows its key's pill beside the key's name, and the overview's
+**Key health** card counts the keys labelled new and lists each with its pill and age; all of them
+are the one pill the Keys pages use. Each pill says its word as well as taking the badge colour (blue for new and
 fresh, green for current, amber for ageing and due soon, red for old and overdue, grey for revoked
 and retired), so nothing depends on colour.
 

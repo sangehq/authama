@@ -639,7 +639,7 @@ every setting stays at its default until you add it.
   "history": { "enabled": true },
   "git":     { "mode": "profile" },
   "tokens":  { "docker_creds_store": "refuse" },
-  "keys":    { "new_window_days": 7, "new_events": "created,added,rotated,deployed" },
+  "keys":    { "new_window_days": 7, "new_events": "created,added,rotated,deployed", "new_until": "window", "age_pills": "0.5,1.0" },
   "notifications": { "desktop": true },
   "vm":      { "hypervisors": "parallels,vmpal", "prune_gone": true, "repin_changed": false },
   "web":     { "addr": "127.0.0.1", "port": 7822, "base_path": "/" }
@@ -663,6 +663,8 @@ every setting stays at its default until you add it.
 | `tokens.docker_creds_store` | `AUTHAMA_DOCKER_CREDS_STORE` | ask at a terminal, else refuse |
 | `keys.new_window_days` | `AUTHAMA_KEYS_NEW_WINDOW_DAYS` | `7` (days a key stays labelled new; `0` turns the label off; see [key lifecycle](tools/key-lifecycle.md#recency-new-keys-and-ages)) |
 | `keys.new_events` | `AUTHAMA_KEYS_NEW_EVENTS` | `created,added,rotated,deployed` (which events make a key new, comma-separated; `restored` may be added) |
+| `keys.new_until` | `AUTHAMA_KEYS_NEW_UNTIL` | `window` (a key stays new until the window ends or `ssh key ack`; `acknowledged` keeps it new until `ssh key ack`, however long) |
+| `keys.age_pills` | `AUTHAMA_KEYS_AGE_PILLS` | `0.5,1.0` (when a key's age turns its pill `ageing` and `old`, as fractions of its `rotate_after_days`, warn then bad) |
 | `notifications.desktop` | `AUTHAMA_NOTIFICATIONS` | `true` |
 | `vm.hypervisors` | `AUTHAMA_VM_HYPERVISORS` | every built-in driver and every custom one |
 | `vm.multiplex` | `AUTHAMA_VM_MULTIPLEX` | `true` (a VM host shares one SSH connection for 10 minutes; ignored on Windows; see [tools/vm.md](tools/vm.md#shared-connections)) |

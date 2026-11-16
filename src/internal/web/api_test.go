@@ -130,3 +130,58 @@ func TestTheAPIAnswersOnlyAnAPITokenAndOnlyReads(t *testing.T) {
 		t.Errorf("a revoked token: %d", rec.Code)
 	}
 }
+
+// The key endpoints carry each key's recency, as `ssh key list --json` does:
+// its events with their ages, is_new, new_because and the pill.
+func TestTheAPIGivesEachKeysRecency(t *testing.T) {
+	s, p := apiServerFor(t, true)
+	secret, _, err := apitokens.Create(p, "ci", 0, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var keys struct {
+		Keys []struct {
+			Ref     string `json:"ref"`
+			Recency struct {
+				IsNew      bool   `json:"is_new"`
+				NewBecause string `json:"new_because"`
+				Pill       struct{ Label, Tone string }
+				Events     []struct{ Kind, At, Ago string }
+			} `json:"recency"`
+		} `json:"keys"`
+	}
+	read := func(path string, into any) {
+		t.Helper()
+		rec := apiGet(s, path, secret)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s: %d %s", path, rec.Code, rec.Body.String())
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), into); err != nil {
+			t.Fatal(err)
+		}
+	}
+	read("/api/v1/keys", &keys)
+	if len(keys.Keys) == 0 {
+		t.Fatal("the fixture lists no keys")
+	}
+	ref := keys.Keys[0].Ref
+	recordKey(t, p, ref)
+	read("/api/v1/keys", &keys)
+	k := keys.Keys[0]
+	if k.Ref != ref || !k.Recency.IsNew || k.Recency.NewBecause != "created" || k.Recency.Pill.Label != "new" ||
+		k.Recency.Pill.Tone != "info" || len(k.Recency.Events) < 2 || k.Recency.Events[0].At == "" {
+		t.Errorf("/api/v1/keys: %+v", k)
+	}
+	var one struct {
+		Key struct {
+			Recency struct {
+				IsNew bool `json:"is_new"`
+				Pill  struct{ Label string }
+			} `json:"recency"`
+		} `json:"key"`
+	}
+	read("/api/v1/keys/"+ref, &one)
+	if !one.Key.Recency.IsNew || one.Key.Recency.Pill.Label != "new" {
+		t.Errorf("/api/v1/keys/%s: %+v", ref, one.Key)
+	}
+}

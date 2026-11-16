@@ -12,9 +12,11 @@ package dataset
 import (
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/sangehq/authama/src/internal/core/inventory"
 	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/recency"
 	"github.com/sangehq/authama/src/internal/services/events"
 	"github.com/sangehq/authama/src/internal/services/history"
 	"github.com/sangehq/authama/src/internal/services/keysvc"
@@ -81,6 +83,9 @@ type Key struct {
 	State           string   `json:"state"`    // no-key, not-deployed, needs-redeploy, deployed
 	Hosts           []string `json:"hosts"`    // aliases using it
 	Deployments     int      `json:"deployments"`
+	// Recency is how new and how old the key is, as `ssh key list --json`
+	// gives it (core/recency): its events and ages, is_new and the pill.
+	Recency recency.Status `json:"recency"`
 }
 
 // Host is one host with every SSH setting it has.
@@ -141,6 +146,8 @@ type Options struct {
 	// download of a filtered page holds what the page shows.
 	History history.Filter
 	Events  events.Filter
+	// Now is the time keys' recency is judged at; zero is time.Now().
+	Now time.Time
 }
 
 // The optional parts.
@@ -175,10 +182,17 @@ func Build(p paths.Paths, o Options) (*Dataset, error) {
 	if err != nil {
 		return nil, fmt.Errorf("keys: %w", err)
 	}
+	now := o.Now
+	if now.IsZero() {
+		now = time.Now()
+	}
+	rec := keysvc.Recency(m, inv, p.Inventory(), rows, recency.FromEnv(o.Getenv), now)
 	keysPer := map[string]int{}
 	for _, r := range rows {
 		keysPer[r.Ref.Profile]++
-		ds.Keys = append(ds.Keys, keyOf(r))
+		k := keyOf(r)
+		k.Recency = rec[r.Ref.String()]
+		ds.Keys = append(ds.Keys, k)
 	}
 
 	for _, name := range m.ProfileNames() {

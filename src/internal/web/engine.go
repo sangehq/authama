@@ -115,6 +115,9 @@ type HostView struct {
 	Pins   []knownhosts.Entry
 	Token  string
 	VM     bool // a VM host, which can have a Docker context
+	// KeyRecency is the host's key's recency, for its pill; empty when the
+	// host has no key or it was never minted.
+	KeyRecency recency.Status
 }
 
 // KeyView is one key: its row, its detail, and its expiry.
@@ -314,6 +317,12 @@ func (e AppEngine) Host(alias string) (HostView, error) {
 				v.Block = block
 			}
 			v.Pins = knownhosts.New(e.P.SSHDir).EntriesFor(v.Token)
+			if hd.KeyName != "" {
+				inv := e.inventory()
+				if row, err := keysvc.New(m, inv, e.P.SSHDir).Row(manifest.KeyRef{Profile: hd.Profile, KeyName: hd.KeyName}); err == nil {
+					v.KeyRecency = keysvc.Recency(m, inv, e.P.Inventory(), []keysvc.Row{row}, recency.FromEnv(nil), time.Now())[row.Ref.String()]
+				}
+			}
 			return v, nil
 		}
 	}

@@ -50,7 +50,8 @@ func TestSetAndUnsetEditOneSetting(t *testing.T) {
 // typo never silently means the default (R-FEAT-01).
 func TestTheKeyRecencySettingsAreChecked(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "authama.json")
-	for key, value := range map[string]string{"keys.new_window_days": "0", "keys.new_events": "created, deployed"} {
+	for key, value := range map[string]string{"keys.new_window_days": "0", "keys.new_events": "created, deployed",
+		"keys.new_until": "acknowledged", "keys.age_pills": "0.4,0.9"} {
 		if err := Set(path, key, value); err != nil {
 			t.Errorf("Set(%s, %q): %v", key, value, err)
 		}
@@ -58,16 +59,22 @@ func TestTheKeyRecencySettingsAreChecked(t *testing.T) {
 	for _, bad := range [][2]string{
 		{"keys.new_window_days", "-1"}, {"keys.new_window_days", "7d"},
 		{"keys.new_events", "created,revoked"}, {"keys.new_events", "made"}, {"keys.new_events", ","},
+		{"keys.new_until", "first-use"}, {"keys.new_until", "never"},
+		{"keys.age_pills", "0.5"}, {"keys.age_pills", "1,0.5"}, {"keys.age_pills", "0,1"}, {"keys.age_pills", "half,1"},
 	} {
 		if err := Set(path, bad[0], bad[1]); err == nil {
 			t.Errorf("Set(%s, %q) was accepted", bad[0], bad[1])
 		}
 	}
 	env := filepath.Join(t.TempDir(), ".env")
-	if err := os.WriteFile(env, []byte("AUTHAMA_KEYS_NEW_EVENTS=created,whenever\n"), 0o600); err != nil {
+	if err := os.WriteFile(env, []byte("AUTHAMA_KEYS_NEW_EVENTS=created,whenever\nAUTHAMA_KEYS_NEW_UNTIL=forever\n"+
+		"AUTHAMA_KEYS_AGE_PILLS=0.9,0.2\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if got := strings.Join(DotenvProblems(env), "\n"); !strings.Contains(got, "whenever") {
-		t.Errorf("validate missed a bad event list: %q", got)
+	got := strings.Join(DotenvProblems(env), "\n")
+	for _, bad := range []string{"whenever", "AUTHAMA_KEYS_NEW_UNTIL=forever", "AUTHAMA_KEYS_AGE_PILLS=0.9,0.2"} {
+		if !strings.Contains(got, bad) {
+			t.Errorf("validate missed %s: %q", bad, got)
+		}
 	}
 }

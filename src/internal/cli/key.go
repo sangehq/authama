@@ -202,6 +202,7 @@ func newKeyAddCmd() *cobra.Command {
 
 func newKeyListCmd() *cobra.Command {
 	var asCSV, asJSON, onlyNew bool
+	var since string
 	cmd := &cobra.Command{
 		Use:   "list [profile|alias|key]",
 		Short: "Every key with its fingerprint, expiry, hosts and state",
@@ -227,9 +228,17 @@ func newKeyListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			rec := keysvc.Recency(m, inv, p.Inventory(), rows, recency.FromEnv(nil), time.Now())
+			now := time.Now()
+			rec := keysvc.Recency(m, inv, p.Inventory(), rows, recency.FromEnv(nil), now)
 			if onlyNew {
 				rows = slices.DeleteFunc(rows, func(r keysvc.Row) bool { return !rec[r.Ref.String()].IsNew })
+			}
+			if since != "" {
+				cutoff, err := recency.ParseSince(since, now)
+				if err != nil {
+					return err
+				}
+				rows = slices.DeleteFunc(rows, func(r keysvc.Row) bool { return !rec[r.Ref.String()].ChangedSince(cutoff) })
 			}
 			if asCSV {
 				return csvout.Write(c.OutOrStdout(), exports.Keys(rows))
@@ -238,7 +247,7 @@ func newKeyListCmd() *cobra.Command {
 				return writeKeyJSON(c.OutOrStdout(), rows, rec)
 			}
 			writeKeyTable(c.OutOrStdout(), rows, rec)
-			if selector == "" && !onlyNew {
+			if selector == "" && !onlyNew && since == "" {
 				writeReserved(c.OutOrStdout(), m, inv, p.SSHDir, vmConfig(p).PlannedKeys())
 			}
 			return nil
@@ -247,6 +256,8 @@ func newKeyListCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&asCSV, "csv", false, "print the keys as CSV, one row each, header first")
 	cmd.Flags().BoolVar(&asJSON, "json", false, "print the keys as JSON, each with its recency: events, ages, is_new and pill")
 	cmd.Flags().BoolVar(&onlyNew, "new", false, "only the keys labelled new (see keys.new_window_days)")
+	cmd.Flags().StringVar(&since, "since", "",
+		"only the keys created, added, deployed, rotated, restored, retired or revoked since a duration ago (36h, 7d) or a date (2026-11-01)")
 	cmd.MarkFlagsMutuallyExclusive("csv", "json")
 	return cmd
 }
@@ -279,7 +290,7 @@ func writeKeyJSON(out io.Writer, rows []keysvc.Row, rec map[string]recency.Statu
 }
 
 // writeKeyTable renders the key table. AGE is how long ago the key was
-// created, added or rotated in, and STATUS its recency pill (new, current,
+// created, added or rotated in, and STATUS its recency pill (new, current, old,
 // ageing, due soon, overdue, revoked, retired), as words: no colour.
 func writeKeyTable(out io.Writer, rows []keysvc.Row, rec map[string]recency.Status) {
 	if len(rows) == 0 {

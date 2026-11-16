@@ -66,6 +66,11 @@ const (
 	KeysNewWindowDays = "AUTHAMA_KEYS_NEW_WINDOW_DAYS"
 	// KeysNewEvents is which key events make a key new, comma-separated.
 	KeysNewEvents = "AUTHAMA_KEYS_NEW_EVENTS"
+	// KeysNewUntil is how long a key stays new: window or acknowledged.
+	KeysNewUntil = "AUTHAMA_KEYS_NEW_UNTIL"
+	// KeysAgePills is the ageing and old thresholds, "warn,bad", as fractions
+	// of a key's rotate_after_days.
+	KeysAgePills = "AUTHAMA_KEYS_AGE_PILLS"
 	// OwnerStore set to "file" keeps the owner's sealing key in an owner-only
 	// file instead of the OS credential store (see services/owner).
 	OwnerStore = "AUTHAMA_OWNER_STORE"
@@ -75,7 +80,7 @@ const (
 func Names() []string {
 	out := []string{
 		API, AgeIdentityFile, AgeRecipient, AskpassMode, AskpassSecret, AutoPin, ConfigDir,
-		DevRoot, DockerCredsStore, ExportSaveTo, GitMode, HelloCheck, History, HistoryPermanent, KeysNewEvents, KeysNewWindowDays, MCP, NoDotenv, Notifications,
+		DevRoot, DockerCredsStore, ExportSaveTo, GitMode, HelloCheck, History, HistoryPermanent, KeysAgePills, KeysNewEvents, KeysNewUntil, KeysNewWindowDays, MCP, NoDotenv, Notifications,
 		OldKeyMaxAgeDays, OwnerStore, ServeHandoff, SnapshotRetain, StateDir, TokensCatalog, TokensConfig,
 		VMHypervisors, VMMultiplex, VMPruneGone, VMRepin, WebAddr, WebAutoRestart, WebBasePath, WebMenuExport, WebPort, Webhooks, WebhooksAllowPrivate,
 	}

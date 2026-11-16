@@ -29,8 +29,8 @@ Every tool is marked read-only (`readOnlyHint`), and returns JSON as text and as
 | Tool | What it returns |
 |---|---|
 | `list_profiles` | every profile |
-| `list_keys` | every key, or a `profile`'s |
-| `get_key` | one key by its `ref` (`profile/name`), and the hosts that use it |
+| `list_keys` | every key, or a `profile`'s, each with its [recency](api.md#key-recency) |
+| `get_key` | one key by its `ref` (`profile/name`) with its recency, and the hosts that use it |
 | `list_hosts` | every host, or a `profile`'s |
 | `list_tokens` | which auth tokens are set and where; never a value |
 | `list_history` | recorded changes, newest first; `limit`, `since`, `command`, `host`, `profile`, `key` |

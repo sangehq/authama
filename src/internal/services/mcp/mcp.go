@@ -84,10 +84,11 @@ func (s Server) New() *sdk.Server {
 		Description: "Every profile: its category, key scope and store, and how many hosts and keys it has.",
 		InputSchema: schema(nil)}, s.handle(s.listProfiles))
 	srv.AddTool(&sdk.Tool{Name: "list_keys", Title: "List keys", Annotations: readOnly,
-		Description: "Every SSH key, or a profile's: type, fingerprint, when it was made and expires, and whether it is on disk.",
+		Description: "Every SSH key, or a profile's: type, fingerprint, when it was made and expires, whether it is on disk, " +
+			"and its recency: each event with how long ago it was, whether it is new, and its status pill.",
 		InputSchema: schema(map[string]prop{"profile": {"string", "only this profile's keys"}})}, s.handle(s.listKeys))
 	srv.AddTool(&sdk.Tool{Name: "get_key", Title: "Get a key", Annotations: readOnly,
-		Description: "One key by its ref (profile/name), with the hosts that use it.",
+		Description: "One key by its ref (profile/name), with its recency and the hosts that use it.",
 		InputSchema: schema(map[string]prop{"ref": {"string", "the key's ref, profile/name"}})}, s.handle(s.getKey))
 	srv.AddTool(&sdk.Tool{Name: "list_hosts", Title: "List hosts", Annotations: readOnly,
 		Description: "Every SSH host, or a profile's: address, user, port, provider, key and status.",
