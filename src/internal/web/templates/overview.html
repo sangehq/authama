@@ -54,7 +54,7 @@
           <li class="d-flex align-items-center"><span>Due for rotation</span><span class="ms-auto">{{if .Expiry}}<span class="badge badge-warn">{{len .Expiry}}</span>{{else}}<span class="badge badge-ok">0</span>{{end}}</span></li>
           <li class="d-flex align-items-center mt-2"><span>Reserved on purpose</span><span class="ms-auto"><span class="badge badge-muted">{{.Reserved}}</span></span></li>
           <li class="d-flex align-items-center mt-2"><span>Labelled new</span><span class="ms-auto">{{if .NewKeys}}<span class="badge badge-info">{{len .NewKeys}}</span>{{else}}<span class="badge badge-muted">0</span>{{end}}</span></li>
-          {{range .NewKeys}}<li class="d-flex align-items-center mt-2 ms-3"><a class="text-truncate" href="{{basePath}}/keys/{{.Ref}}" data-inline><code>{{.Ref}}</code></a><span class="ms-auto ps-2 text-nowrap">{{template "recency_pill" .Recency}}{{with .Recency.Age}} <span class="text-secondary">{{.}}</span>{{end}}</span></li>{{end}}
+          {{range .NewKeys}}<li class="d-flex align-items-center mt-2 ms-3"><a class="text-truncate" href="{{basePath}}/keys/{{.Ref}}" data-inline><code>{{.Ref}}</code></a><span class="ms-auto ps-2 text-nowrap">{{template "recency_pill" .Recency}}{{with .Recency.Age}} <span>{{.}}</span>{{end}}</span></li>{{end}}
           <li class="d-flex align-items-center mt-2"><span>Loose in ~/.ssh</span><span class="ms-auto">{{if .Loose}}<a class="badge badge-warn" href="{{basePath}}/keys#loose" aria-description="Files under ~/.ssh no profile owns">{{.Loose}}</a>{{else}}<span class="badge badge-ok">0</span>{{end}}</span></li>
         </ul>
       </div>
