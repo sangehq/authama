@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Menu tiles keep their shape.** A tile sat beside a description that wraps, and the browser shrank it
+  toward its icon's width, so tiles in one menu were narrow and of different widths and the names
+  beside them started at different places. Tiles are now a fixed 2.25rem square with a larger icon,
+  with more room around each entry; an e2e test checks every menu.
+
 ## [0.1.0] - 2026-11-16
 
 The first release under `sangehq/authama`, tagged 2026-11-14 and re-tagged on 2026-11-16 with everything

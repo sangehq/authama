@@ -296,7 +296,7 @@ main:focus { outline: none; }
 
 /* Navigation menus: each entry's description sits under its name, so the menu
    is read without hovering; the width keeps lines short. */
-.nav-menu-item { display: flex; align-items: center; gap: .75rem; white-space: normal; min-width: 16rem; max-width: 22rem; }
+.nav-menu-item { display: flex; align-items: center; gap: .875rem; padding-block: .5rem; white-space: normal; min-width: 16rem; max-width: 22rem; }
 .nav-menu-text { flex: 1 1 auto; min-width: 0; }
 .nav-menu-item > .icon { margin-top: .125rem; flex: none; }
 /* Tabler sets min-width 0 on an item in a menu column; the SSH menu's columns
@@ -336,8 +336,13 @@ main:focus { outline: none; }
 :is(.nav-tile.bg-red-lt, .nav-glyph.text-red) { --nav-c: var(--tblr-red); }
 :is(.nav-tile.bg-pink-lt, .nav-glyph.text-pink) { --nav-c: var(--tblr-pink); }
 :is(.nav-tile.bg-purple-lt, .nav-glyph.text-purple) { --nav-c: var(--tblr-purple); }
+/* A tile is a flex item beside a description that wraps, and an avatar's
+   min-width is its content's: without flex: none the browser shrank tiles
+   toward the icon's width, each to a different width, so the names beside
+   them started at different places. 2.25rem square, the icon 1.375rem. */
 .navbar .nav-tile {
-  --tblr-avatar-size: 2rem; --tblr-avatar-icon-size: 1.25rem;
+  --tblr-avatar-size: 2.25rem; --tblr-avatar-icon-size: 1.375rem;
+  flex: none; width: var(--tblr-avatar-size); height: var(--tblr-avatar-size);
   margin: 0; border: 1px solid; border-radius: var(--tblr-border-radius);
   color: color-mix(in oklab, var(--nav-c) 62%, black) !important;
   border-color: color-mix(in oklab, var(--nav-c) 62%, black) !important;
@@ -357,7 +362,7 @@ main:focus { outline: none; }
 .navbar .nav-menu-item:focus-visible { outline: 2px solid var(--tblr-primary); outline-offset: -2px; }
 [data-bs-theme="dark"] .navbar .nav-menu-item.active { box-shadow: inset 3px 0 0 color-mix(in oklab, var(--tblr-primary) 65%, white); }
 [data-bs-theme="dark"] .navbar .nav-menu-item:focus-visible { outline-color: color-mix(in oklab, var(--tblr-primary) 65%, white); }
-/* A column's header lines up with the entries' text, not their tiles' edge. */
+/* A column's header lines up with the tiles' edge, with room above it. */
 .navbar .dropdown-menu .dropdown-header { padding-top: .75rem; }
 
 /* Header logo mark: the favicon itself, so the tab and the header read as one product. */
