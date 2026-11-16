@@ -61,6 +61,10 @@ read-only server offers it too, since it writes nothing.
 - The probe is **SSH-level**: a VPN-gated host that accepts the TCP connection on
   `:443` but never speaks SSH is detected as unreachable (a plain `ssh` would hang
   there - `ConnectTimeout` only covers the TCP connect, not the banner).
+- The probe **offers the host nothing**. It accepts any host key and records none
+  (pinning is `ssh knownhosts`'s job), so it also turns off every way of signing in
+  (keys, the agent, passwords) and every forwarding, whatever `~/.ssh/config` sets for
+  the host: a server answering "permission denied" has answered, and counts as up.
 - As a backstop, every underlying `ssh` / `ssh-copy-id` call is bounded by a hard
   timeout, so no network operation can hang indefinitely.
 

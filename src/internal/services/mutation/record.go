@@ -52,6 +52,9 @@ type frame struct {
 	snap                    string
 	snapHome                paths.Paths
 	manifestAt, inventoryAt string
+	// retain is the retention count to prune to once the scope ends with its
+	// snapshot kept (audit A-BUG-04).
+	retain int
 }
 
 var (
@@ -89,6 +92,10 @@ func End(o Outcome) {
 	stack = stack[:len(stack)-1]
 	resealAfter(f)
 	discarded := (o.Err != nil || o.Aborted) && discardSnap(f)
+	if f.snap != "" && !discarded {
+		// The snapshot is a restore point now, so make room for it.
+		snapshots.Prune(f.snapHome.SnapshotsDir(), f.retain)
+	}
 	if f.op == nil || f.store == nil {
 		return
 	}
@@ -204,20 +211,22 @@ func SourcesFor(p paths.Paths) history.Sources {
 
 // recordSnapshot attaches the guard's snapshot, or the reason there is none,
 // to the open operation. A snapshot that failed used to vanish without a
-// trace; it is now on the record, though the command still runs.
-func recordSnapshot(p paths.Paths, snap string, snapErr error) {
+// trace; it is now on the record, though the command still runs. It reports
+// whether the scope took the snapshot as its own, in which case End prunes.
+func recordSnapshot(p paths.Paths, snap string, retain int, snapErr error) (owned bool) {
 	recMu.Lock()
 	defer recMu.Unlock()
 	f := top()
 	if f == nil {
-		return
+		return false
 	}
 	if snap != "" && f.snap == "" {
-		f.snap, f.snapHome = snap, p
+		f.snap, f.snapHome, f.retain = snap, p, retain
 		f.manifestAt, f.inventoryAt = hashFile(p.Manifest()), hashFile(p.Inventory())
+		owned = true
 	}
 	if f.op == nil {
-		return
+		return owned
 	}
 	if snap != "" {
 		f.op.Snapshot = filepath.Base(snap)
@@ -231,6 +240,7 @@ func recordSnapshot(p paths.Paths, snap string, snapErr error) {
 			warn(err)
 		}
 	}
+	return owned
 }
 
 // sinkEvent files an audit event under the operation that raised it. An

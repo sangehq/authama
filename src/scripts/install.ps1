@@ -128,6 +128,11 @@ if (-not $Version) {
   if (-not $Version) { throw 'could not determine the version to install.' }
 }
 if ($Version -notlike 'v*') { $Version = "v$Version" }
+# The version becomes part of the download URL, so it is a release version or
+# nothing: never a path or a query, wherever it came from.
+if ($Version -cnotmatch '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$') {
+  throw "$Version is not a release version (vX.Y.Z); nothing was installed."
+}
 
 # Bare, ready-to-run executables: <name>_windows_<arch>.exe.
 $base  = if ($ReleaseBase) { $ReleaseBase } else { "https://github.com/$owner/$repo/releases/download/$Version" }

@@ -166,9 +166,6 @@ var tips = map[string]string{
 	"docs":                     "Opens the documentation in a new page.",
 	"source":                   "Opens authama's source code on GitHub.",
 	"report-issue":             "Opens GitHub to report a bug or ask for a feature. Nothing is sent from here.",
-	"menu-settings":            "Opens Settings: theme, defaults, and where authama keeps things.",
-	"menu-events":              "Opens Events: every file change, with filters.",
-	"menu-doctor":              "Opens Doctor: checks this home and offers fixes.",
 	"menu-about":               "Opens About: this build, whether it is current, and this computer.",
 	"menu-signout":             "Signs this browser out: the session ends on the server, and a new sign-in link is needed.",
 	"cancel-change":            "Leaves without making the change. Nothing is written.",
@@ -179,46 +176,59 @@ var tips = map[string]string{
 	"panel-submit":             "Checks the form and shows what it would do. Nothing is written until you confirm.",
 	"events-area":              "Shows only the file events in this area. Nothing changes.",
 	"bell":                     "Recent changes to ~/.ssh, the config home and the token files. A dot means one in the last day.",
-	"account":                  "Who this server runs as, and Settings, Events, Doctor, About and the tour.",
+	"account":                  "Who this server runs as, the tour, About and Sign out.",
+	"nav-ssh":                  "Profiles, hosts, keys and VMs, the naming rules and ssh config, and the key and host tasks.",
+	"nav-tokens":               "The auth tokens, their checklists, and adding a token.",
+	"nav-security":             "The key audit, the retirement checklists, and the owner's PIN and seal.",
+	"nav-history":              "Changes authama made, file events, snapshots of ~/.ssh, and Export.",
+	"nav-system":               "Doctor, Validate and Repair, Settings, and Reset.",
+	"nav-new":                  "Add a host, add a token, or mint the keys hosts are missing.",
 	"licences":                 "Jumps to the licences of the front-end code bundled in this binary.",
 }
 
 // pageTips is the one-line description of each page, keyed as the menu
 // keys it (navItem), shown as the menu entry's tooltip.
 var pageTips = map[string]string{
-	"overview":   "What needs attention, counts of everything, and quick actions.",
-	"profiles":   "Groups of hosts that share a key policy, and their keys' folders.",
-	"naming":     "How new servers and their keys are named, each profile's code, and which servers break the rules.",
-	"hosts":      "Every host by profile, as it is rendered into ~/.ssh/config.",
-	"keys":       "Every key with its fingerprint and expiry, and the loose keys kept on purpose.",
-	"vms":        "Hosts whose address a hypervisor gives each time, and their daily sync.",
-	"sshconfig":  "The config files the manifest renders into ~/.ssh, and whether they match.",
-	"snapshots":  "Copies of ~/.ssh taken before each change, and encrypted bundles.",
-	"tokens":     "The tokens npm, Composer, Docker, git, PyPI and other tools read.",
-	"checklists": "Where every key and token is used, and what is left to rotate or revoke it.",
-	"audit":      "Key age, rotation due dates and where each key is deployed.",
+	"overview":   "What needs attention, counts, and quick actions.",
+	"profiles":   "Groups of hosts that share a key policy.",
+	"hosts":      "Every host by profile, as rendered into ~/.ssh/config.",
+	"keys":       "Every key with its fingerprint, expiry and hosts.",
+	"vms":        "VM hosts, Docker contexts and the hypervisor sync.",
+	"naming":     "How servers and keys are named, and who breaks the rules.",
+	"sshconfig":  "The files rendered into ~/.ssh, and whether they match.",
+	"tokens":     "The tokens npm, Composer, Docker, git and PyPI read.",
+	"audit":      "Where each key is deployed, and when each one expires.",
+	"checklists": "Where each key and token is used, and the steps to retire it.",
 	"security":   "The PIN, the seal and the binding that tie this home to you.",
-	"history":    "Every change made to this home, by whom and from where.",
-	"events":     "Every file change in ~/.ssh, the config home and the token files.",
-	"export":     "Make a file of any list, filtered, in any of nine formats.",
+	"history":    "Every change authama made, by whom and from where.",
+	"events":     "Every file change in ~/.ssh, the config home and tokens.",
+	"snapshots":  "Copies of ~/.ssh taken before each change, and bundles.",
+	"export":     "A file of any list, filtered, in any of nine formats.",
 	"doctor":     "Checks this home and offers fixes.",
-	"validate":   "Checks the manifest, the settings files, every keypair and ~/.ssh, and says what is wrong.",
-	"repair":     "Finds what is wrong with the home and fixes what is safe to fix.",
-	"reset":      "Every way to start something again: keys, settings, the home's files, the owner, or everything.",
+	"validate":   "Checks the manifest, settings, keypairs and ~/.ssh.",
+	"repair":     "Finds what is wrong and fixes what is safe to fix.",
 	"settings":   "Theme, defaults, and where authama keeps things.",
+	"reset":      "Start keys, settings, files or the owner again.",
 	"about":      "This build, this computer, and the licences.",
-	// The Actions menu: the jobs people come back for, one click from any page.
-	"act-rotate":  "Replace keys with new ones, deploying each before the old one goes.",
-	"act-revoke":  "Remove keys from every server they were deployed to, and record them as revoked.",
-	"act-delete":  "Forget keys no host uses; optionally delete their files after a backup.",
-	"act-mint":    "Create the keys hosts need that do not exist yet.",
-	"act-pin":     "Scan hosts and pin their keys into known_hosts.",
+	// The token checklists: the Checklists page filtered to tokens, in the
+	// Tokens menu.
+	"token-checklists": "What is left to rotate or revoke each token.",
+	// The Tasks: the jobs people come back for, in their object's menu and
+	// the New button. Each opens its form; nothing runs until it is reviewed.
 	"act-addhost": "Add a server to a profile's ssh config.",
+	"act-pin":     "Scan hosts and pin their keys into known_hosts.",
+	"act-mint":    "Create the keys hosts need that do not exist yet.",
+	"act-rotate":  "Replace keys, deploying each before the old one goes.",
+	"act-revoke":  "Take keys off every server and record them revoked.",
+	"act-delete":  "Forget keys no host uses, and their files if you choose.",
 	"act-token":   "Store a token npm, Composer, Docker, git or PyPI reads.",
-	"act-reset":   "Choose what to start again: keys, settings, the home's files, the owner, or everything.",
 }
 
 // groupTips says what each menu heading holds, keyed as navGroup keys it.
+//
+// Deprecated: since 2026-11-16 each menu's description is its toggle's
+// catalogue tip ("nav-ssh" and the rest); groupTips is read only by the
+// deprecated navGroup, and goes with it in v0.2.0.
 var groupTips = map[string]string{
 	"ssh":      "Profiles, hosts, keys and VMs, the naming rules, and the rendered ssh config.",
 	"backups":  "Snapshots and encrypted bundles of ~/.ssh, and files of any list.",

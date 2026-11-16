@@ -413,6 +413,8 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		"panel": func(label, id, icon string) headerAction {
 			return headerAction{Label: label, Href: "#" + id, Icon: icon, Panel: id}
 		},
+		// Deprecated: the menus are written out in layout.html (2026-11-16);
+		// kept for any caller until v0.2.0.
 		"navGroup": func(_ view, key, icon, label string, items ...navItem) navGroup {
 			g := navGroup{Key: key, Icon: icon, Label: label, Tip: groupTips[key], Items: items}
 			for _, it := range items {
@@ -420,8 +422,24 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 			}
 			return g
 		},
-		"navItem": func(v view, key, href, icon, label string) navItem {
-			return navItem{Active: v.Nav == key, Href: href, Icon: icon, Label: label, Tip: pageTips[key]}
+		// navItem is a menu entry; its key names its page (pageTips) and its
+		// kind (navKinds), and a key with no kind fails the render.
+		"navItem": func(v view, key, href, icon, label string) (navItem, error) {
+			kind, ok := navKinds[key]
+			if !ok {
+				return navItem{}, fmt.Errorf("menu entry %q has no kind in navKinds", key)
+			}
+			return navItem{Active: v.Nav == key, Href: href, Icon: icon, Label: label, Tip: pageTips[key], Kind: kind}, nil
+		},
+		// navTile is an entry's icon on its kind's colour tile.
+		"navTile": navTile,
+		// navColour is a kind's Tabler colour, for a menu toggle's icon.
+		"navColour": func(kind string) (string, error) {
+			c, ok := kindColours[kind]
+			if !ok {
+				return "", fmt.Errorf("no colour for menu kind %q in kindColours", kind)
+			}
+			return c, nil
 		},
 	}
 }
@@ -574,6 +592,10 @@ type stat struct {
 }
 
 // navGroup is a menu in the top bar: its pages, in a dropdown.
+//
+// Deprecated: since 2026-11-16 each menu is written out in layout.html with
+// its headers and Tasks; navGroup still builds a plain dropdown for any
+// caller, and goes in v0.2.0.
 type navGroup struct {
 	Key, Icon, Label string
 	Tip              string // what the menu holds (groupTips)
@@ -581,10 +603,71 @@ type navGroup struct {
 	Items            []navItem
 }
 
+// navItem is one entry in a menu: the page it opens, its icon and name, and
+// what the page shows or does (pageTips).
 type navItem struct {
 	Active            bool
 	Href, Icon, Label string
 	Tip               string // the page's one-line description (pageTips)
+	Danger            bool   // a destructive entry, shown red
+	Kind              string // what the entry is, for its colour (navKinds)
+}
+
+// navKinds says what each menu entry is, keyed as navItem keys it. A menu's
+// own pages share their menu's kind, so the menu is recognisable by colour;
+// a task's kind is what it does to things. The user menu's entries, written
+// out in layout.html, are "personal".
+var navKinds = map[string]string{
+	"profiles": "ssh", "hosts": "ssh", "keys": "ssh", "vms": "ssh", "naming": "ssh", "sshconfig": "ssh",
+	"tokens": "tokens", "token-checklists": "tokens",
+	"audit": "security", "checklists": "security", "security": "security",
+	"history": "history", "events": "history", "snapshots": "history", "export": "history",
+	"doctor": "health", "validate": "health", "repair": "health",
+	"settings": "settings",
+	"overview": "overview",
+	// Tasks, by what they do.
+	"act-addhost": "create", "act-token": "create", "act-mint": "create",
+	"act-pin": "change", "act-rotate": "change",
+	"act-revoke": "revoke",
+	"act-delete": "delete", "reset": "delete",
+}
+
+// kindColours is each kind's Tabler colour: the tile is bg-<colour>-lt, and a
+// menu's toggle icon is text-<colour>. app.css darkens the foreground in the
+// light theme and lightens it in the dark one, for contrast. The table is in
+// docs/tools/serve.md and nav-redesign.md; TestNavColoursFollowTheMapping
+// holds the rendered menus to it.
+var kindColours = map[string]string{
+	"ssh":      "cyan",
+	"tokens":   "pink",
+	"security": "purple",
+	"history":  "yellow",
+	"health":   "teal",
+	"settings": "secondary",
+	"personal": "secondary",
+	"overview": "blue",
+	"create":   "green",
+	"change":   "blue",
+	"revoke":   "orange",
+	"delete":   "red",
+}
+
+// navTile is icon on kind's colour tile: a small Tabler avatar tinted
+// bg-<colour>-lt. An unknown kind is an error, so a template naming one
+// fails to render.
+func navTile(kind, icon string) (template.HTML, error) {
+	c, ok := kindColours[kind]
+	if !ok {
+		return "", fmt.Errorf("no colour for menu kind %q in kindColours", kind)
+	}
+	return template.HTML(`<span class="avatar avatar-sm nav-tile bg-`+c+`-lt" data-kind="`+kind+`" aria-hidden="true">`) + iconHTML(icon) + `</span>`, nil //nolint:gosec // kind and colour come from the tables above; the icon is [a-z0-9-]
+}
+
+// Destructive is the entry marked as one that deletes or starts things again,
+// for the menu to set apart: `(navItem . "reset" "/reset" "restore" "Reset…").Destructive`.
+func (n navItem) Destructive() navItem {
+	n.Danger = true
+	return n
 }
 
 // view is what every page template receives.
@@ -811,23 +894,23 @@ func paletteItems(readOnly bool) []paletteItem {
 	items := []paletteItem{
 		{"overview", "Overview", "/", "layout-dashboard", "Page", "home dashboard state", "g o", ""},
 		{"profiles", "Profiles", "/profiles", "users", "SSH", "profile category key scope", "g p", ""},
-		{"naming", "Naming", "/naming", "license", "SSH", "naming rules alias template key name code env role check", "g n", ""},
+		{"naming", "Naming", "/naming", "tag", "SSH", "naming rules alias template key name code env role check", "g n", ""},
 		{"hosts", "Hosts", "/hosts", "server", "SSH", "host alias hostname", "g h", ""},
 		{"keys", "Keys", "/keys", "key", "SSH", "key fingerprint expiry reserve", "g k", ""},
-		{"vms", "VMs", "/vms", "device-desktop", "SSH", "vm hypervisor devbox sync", "g v", ""},
+		{"vms", "VMs", "/vms", "box", "SSH", "vm hypervisor devbox sync", "g v", ""},
 		{"sshconfig", "SSH config", "/ssh-config", "file-code", "SSH", "config render drift check", "g c", ""},
-		{"snapshots", "Snapshots", "/snapshots", "archive", "Backups & export", "snapshot bundle backup restore", "g s", ""},
-		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Auth tokens", "token npm composer docker git netrc pypi cargo gem gradle maven yarn helm gh", "g t", ""},
-		{"audit", "Audit", "/audit", "shield-check", "Security", "audit key age", "g a", ""},
-		{"security", "Owner & PIN", "/security", "lock", "Security", "owner pin seal tamper binding fingerprint", "g w", ""},
-		{"history", "History", "/history", "history", "Activity", "history operations changes log", "g y", ""},
-		{"events", "Events", "/events", "activity", "Activity", "events file changes tracking", "g e", ""},
-		{"export", "Export", "/export", "file-export", "Backups & export", "export download csv json yaml php javascript markdown html filter columns", "g x", ""},
+		{"snapshots", "Snapshots", "/snapshots", "archive", "History", "snapshot bundle backup restore", "g s", ""},
+		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Tokens", "token npm composer docker git netrc pypi cargo gem gradle maven yarn helm gh", "g t", ""},
+		{"audit", "Audit", "/audit", "report-search", "Security", "audit key age", "g a", ""},
+		{"security", "Owner & PIN", "/security", "user-shield", "Security", "owner pin seal tamper binding fingerprint", "g w", ""},
+		{"history", "History", "/history", "history", "History", "history operations changes log", "g y", ""},
+		{"events", "Events", "/events", "file-diff", "History", "events file changes tracking", "g e", ""},
+		{"export", "Export", "/export", "file-export", "History", "export download csv json yaml php javascript markdown html filter columns", "g x", ""},
 		{"doctor", "Doctor", "/doctor", "stethoscope", "System", "doctor checks fix", "g d", ""},
 		{"validate", "Validate", "/validate", "circle-check", "System", "validate check manifest settings keys keypair config schema", "g l", ""},
-		{"repair", "Repair", "/repair", "refresh", "System", "repair fix corrupt permissions", "g r", ""},
-		{"reset", "Reset", "/reset", "refresh", "System", "reset factory start again initialise init defaults settings unbind rotate every key", "g z", ""},
-		{"settings", "Settings", "/settings", "settings", "System", "settings theme appearance env", "g ,", ""},
+		{"repair", "Repair", "/repair", "tool", "System", "repair fix corrupt permissions", "g r", ""},
+		{"reset", "Reset", "/reset", "restore", "System", "reset factory start again initialise init defaults settings unbind rotate every key", "g z", ""},
+		{"settings", "Settings", "/settings", "adjustments", "System", "settings theme appearance env", "g ,", ""},
 		{"about", "About", "/about", "info-circle", "System", "about version licences", "g i", ""},
 	}
 	if !readOnly {

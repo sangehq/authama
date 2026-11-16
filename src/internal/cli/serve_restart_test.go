@@ -44,8 +44,12 @@ func healthServer(t *testing.T, body string) (host string, port int) {
 	return h, n
 }
 
-// Every authama answering is found, with its pid when it says it; anything
-// else on a port is not authama, and a closed port is skipped.
+// Every authama answering is found; anything else on a port is not authama,
+// and a closed port is skipped. A pid offered without a proof of a control key
+// held here is not taken (audit A-SEC-09): this test used to expect the first
+// server's unproven 4242, which an older build gave any local caller and a
+// decoy can give too. TestStopAllLearnsThePidOnlyOfAServerItHoldsTheKeyFor
+// covers the proven case.
 func TestStopAllFindsEveryAuthamaWebUI(t *testing.T) {
 	host, current := healthServer(t, `{"app":"authama","instance":"aaaa","pid":4242,"version":"v0.1.0"}`)
 	_, older := healthServer(t, `{"app":"authama","instance":"bbbb"}`)
@@ -57,12 +61,12 @@ func TestStopAllFindsEveryAuthamaWebUI(t *testing.T) {
 	closed := ln.Addr().(*net.TCPAddr).Port
 	_ = ln.Close()
 
-	found := findServers(host, []int{current, older, other, closed}, "")
-	if len(found) != 2 || found[0].PID != 4242 || found[0].Version != "v0.1.0" || found[1].PID != 0 {
+	found := findServers(host, []int{current, older, other, closed}, "", nil)
+	if len(found) != 2 || found[0].PID != 0 || found[0].Version != "" || found[1].PID != 0 {
 		t.Fatalf("found = %+v", found)
 	}
-	// An older build that does not say its pid is reported with the command
-	// that stops it, never guessed at.
+	// A server that proved no key held here is reported with the commands
+	// that stop it, never guessed at.
 	err = stopFound(found[1], "")
 	if err == nil || !strings.Contains(err.Error(), "lsof -ti tcp:"+strconv.Itoa(older)) {
 		t.Errorf("stopping an older build: %v", err)
@@ -209,5 +213,63 @@ func TestTheHandoffTravelsInAnOwnerOnlyFile(t *testing.T) {
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Error("the handoff file was left behind")
+	}
+}
+
+// The handoff file holds the control key and every session's form token. A
+// restart whose new process never starts removed nothing, so the file stayed
+// in the temporary directory; and the variable naming it was trusted to
+// name any file, which the new server read and deleted (audit A-SEC-04,
+// 2026-11-16).
+func TestAFailedRelaunchLeavesNoHandoffBehind(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("TMPDIR", tmp)
+	notRunnable := filepath.Join(t.TempDir(), "authama")
+	if err := os.WriteFile(notRunnable, []byte("not a program"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	old := restartFrom
+	restartFrom = func() (string, error) { return notRunnable, nil }
+	t.Cleanup(func() { restartFrom = old })
+	stopped := false
+	err := relaunch(serveHandoff{Control: "c", Port: 7822}, nil, func() { stopped = true })()
+	if err == nil {
+		t.Fatal("a binary that cannot run was relaunched")
+	}
+	if stopped {
+		t.Error("the old server stopped although the new one never started")
+	}
+	left, _ := filepath.Glob(filepath.Join(tmp, "authama-handoff-*"))
+	if len(left) != 0 {
+		t.Errorf("the handoff was left behind: %v", left)
+	}
+}
+
+func TestTheHandoffNamesOnlyItsOwnFile(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("TMPDIR", tmp)
+	elsewhere := filepath.Join(t.TempDir(), "notes.json")
+	if err := os.WriteFile(elsewhere, []byte(`{"control":"c","port":7822}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{elsewhere, filepath.Join(tmp, "notes.json")} {
+		if err := os.WriteFile(name, []byte(`{"control":"c","port":7822}`), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		t.Setenv(envnames.ServeHandoff, handoffFilePrefix+name)
+		if h := takeHandoff(); h != nil {
+			t.Errorf("a handoff was taken from %s", name)
+		}
+		if _, err := os.Stat(name); err != nil {
+			t.Errorf("%s, which is not a handoff, was removed: %v", name, err)
+		}
+	}
+	entry, err := handoffEnv(serveHandoff{Control: "c", Port: 7822})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(envnames.ServeHandoff, strings.TrimPrefix(entry, envnames.ServeHandoff+"="))
+	if h := takeHandoff(); h == nil || h.Control != "c" {
+		t.Errorf("the handoff this build writes was not taken: %+v", h)
 	}
 }

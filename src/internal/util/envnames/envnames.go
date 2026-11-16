@@ -55,6 +55,9 @@ const (
 	Webhooks = "AUTHAMA_WEBHOOKS"
 	// WebhooksAllowPrivate lets an endpoint be on a loopback or private address.
 	WebhooksAllowPrivate = "AUTHAMA_WEBHOOKS_ALLOW_PRIVATE"
+	// WebhooksIncludeDetails puts an operation's error text and subjects in
+	// webhook payloads; off by default (audit A-SEC-12).
+	WebhooksIncludeDetails = "AUTHAMA_WEBHOOKS_INCLUDE_DETAILS"
 	// MCP lets `authama mcp` serve MCP over stdio.
 	MCP = "AUTHAMA_MCP"
 	// ExportSaveTo is where a saved export selection goes: user or manifest.
@@ -83,6 +86,7 @@ func Names() []string {
 		DevRoot, DockerCredsStore, ExportSaveTo, GitMode, HelloCheck, History, HistoryPermanent, KeysAgePills, KeysNewEvents, KeysNewUntil, KeysNewWindowDays, MCP, NoDotenv, Notifications,
 		OldKeyMaxAgeDays, OwnerStore, ServeHandoff, SnapshotRetain, StateDir, TokensCatalog, TokensConfig,
 		VMHypervisors, VMMultiplex, VMPruneGone, VMRepin, WebAddr, WebAutoRestart, WebBasePath, WebMenuExport, WebPort, Webhooks, WebhooksAllowPrivate,
+		WebhooksIncludeDetails,
 	}
 	sort.Strings(out)
 	return out

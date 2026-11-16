@@ -243,18 +243,27 @@ var notPublic = []netip.Prefix{
 	netip.MustParsePrefix("100::/64"),        // discard
 	netip.MustParsePrefix("2001::/23"),       // IETF protocol assignments, Teredo
 	netip.MustParsePrefix("2001:db8::/32"),   // documentation
-	netip.MustParsePrefix("fc00::/7"),        // unique local
-	netip.MustParsePrefix("fe80::/10"),       // link-local
-	netip.MustParsePrefix("fec0::/10"),       // site-local (deprecated, still routed by some stacks)
-	netip.MustParsePrefix("ff00::/8"),        // multicast
+	netip.MustParsePrefix("3fff::/20"),       // documentation (RFC 9637)
+	netip.MustParsePrefix("5f00::/16"),       // SRv6 SIDs, not globally reachable (RFC 9602)
+	// Local-use NAT64 (RFC 8215): not globally reachable, and a network may
+	// embed the IPv4 address at any RFC 6052 offset, so it is refused whole
+	// rather than decoded (audit A-SEC-03).
+	netip.MustParsePrefix("64:ff9b:1::/48"),
+	netip.MustParsePrefix("fc00::/7"),  // unique local
+	netip.MustParsePrefix("fe80::/10"), // link-local
+	netip.MustParsePrefix("fec0::/10"), // site-local (deprecated, still routed by some stacks)
+	netip.MustParsePrefix("ff00::/8"),  // multicast
 }
 
 // Address forms that carry an IPv4 address inside an IPv6 one. A packet to
 // them can reach the embedded address, so that is the one checked.
 var (
-	nat64     = []netip.Prefix{netip.MustParsePrefix("64:ff9b::/96"), netip.MustParsePrefix("64:ff9b:1::/48")}
+	nat64     = netip.MustParsePrefix("64:ff9b::/96")
 	sixToFour = netip.MustParsePrefix("2002::/16")
 	v4Compat  = netip.MustParsePrefix("::/96") // deprecated IPv4-compatible
+	// v4Translated is SIIT's IPv4-translated form, ::ffff:0:a.b.c.d (RFC
+	// 2765); Unmap only undoes the IPv4-mapped ::ffff:a.b.c.d.
+	v4Translated = netip.MustParsePrefix("::ffff:0:0:0/96")
 )
 
 // embeddedIPv4 is the IPv4 address an IPv6 address carries, if it is one of
@@ -264,10 +273,8 @@ func embeddedIPv4(ip netip.Addr) (netip.Addr, bool) {
 		return netip.Addr{}, false
 	}
 	b := ip.As16()
-	for _, p := range nat64 {
-		if p.Contains(ip) {
-			return netip.AddrFrom4([4]byte{b[12], b[13], b[14], b[15]}), true
-		}
+	if nat64.Contains(ip) || v4Translated.Contains(ip) {
+		return netip.AddrFrom4([4]byte{b[12], b[13], b[14], b[15]}), true
 	}
 	if sixToFour.Contains(ip) {
 		return netip.AddrFrom4([4]byte{b[2], b[3], b[4], b[5]}), true
@@ -370,7 +377,7 @@ type Result struct {
 // Deliver sends each enabled endpoint the events after its cursor, in order,
 // stopping at its first failure: it is tried again after a backoff, from the
 // same event, so an endpoint sees each event once and in order.
-func Deliver(ctx context.Context, p paths.Paths, client *http.Client, now time.Time) ([]Result, error) {
+func Deliver(ctx context.Context, p paths.Paths, client *http.Client, now time.Time, detail Detail) ([]Result, error) {
 	// One delivery at a time: the server's loop and `authama webhook deliver`
 	// each sent an event the other had already sent. The second now waits,
 	// then finds the cursor moved on and nothing left to send.
@@ -413,7 +420,7 @@ func Deliver(ctx context.Context, p paths.Paths, client *http.Client, now time.T
 				ep.Cursor = e.Cursor()
 				continue
 			}
-			status, err := send(ctx, client, *ep, e, now)
+			status, err := send(ctx, client, *ep, forWebhook(e, detail), now)
 			ep.LastStatus = status
 			if err != nil {
 				res.Err = err
@@ -476,6 +483,32 @@ func fail(ep *Endpoint, status int, err error, now time.Time) {
 	default:
 		ep.NextAttempt = now.Add(backoff[min(ep.Failures, len(backoff))-1]).UTC()
 	}
+}
+
+// Detail is how much of an operation a webhook payload carries: the setting
+// webhooks.include_details chooses it.
+type Detail int
+
+const (
+	// DetailRedacted leaves out an operation's error text and subjects, the
+	// default (audit A-SEC-12): an error can hold host names, addresses, user
+	// names and remote stderr, and a webhook hands it to a third party.
+	DetailRedacted Detail = iota
+	// DetailFull sends the operation as the local feed holds it.
+	DetailFull
+)
+
+// forWebhook is e as a webhook may send it. Only an operation's error text
+// and subjects are withheld; its result still says it failed, and the local
+// feed (API, MCP) keeps both.
+func forWebhook(e feed.Event, detail Detail) feed.Event {
+	op, ok := e.Data.(feed.Operation)
+	if detail == DetailFull || !ok {
+		return e
+	}
+	op.Error, op.Subjects = "", nil
+	e.Data = op
+	return e
 }
 
 // send POSTs one event and returns the status it was answered with.

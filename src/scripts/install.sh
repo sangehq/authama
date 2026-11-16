@@ -106,6 +106,10 @@ if [ -z "$VERSION" ]; then
 fi
 [ -n "$VERSION" ] || err "could not determine the version to install."
 case "$VERSION" in v*) ;; *) VERSION="v$VERSION" ;; esac
+# The version becomes part of the download URL, so it is a release version
+# or nothing: never a path or a query, wherever it came from.
+release_version='^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'
+[[ "$VERSION" =~ $release_version ]] || err "${VERSION} is not a release version (vX.Y.Z); nothing was installed."
 
 # Bare, ready-to-run binaries (the release tag carries the version).
 base="${RELEASE_BASE:-https://github.com/${OWNER}/${REPO}/releases/download/${VERSION}}"

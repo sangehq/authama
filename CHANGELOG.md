@@ -20,10 +20,74 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (review R-GAP-05).
 - **The read API throttles bad tokens.** Ten requests with a bad API token from one address within a
   minute get `429` with `Retry-After` for the rest of that minute (R-SEC-19).
+- **The reachability probe offers a host nothing.** It accepts any host key without recording it, and
+  it read `~/.ssh/config`, so it offered every key and, for a host with `ForwardAgent yes`, forwarded
+  the agent to whatever answered. It now turns off every way of signing in and every forwarding; a
+  server that refuses them still counts as reachable (audit A-SEC-01).
+- **`serve --stop-all` stops only a web UI.** A listener on a probed port names the pid to stop, and
+  an `authama` name was enough, so it could have interrupted another authama command, such as a
+  rotation half-way through. The process's command line must now run `serve` (or bare `authama`);
+  Windows still checks the name alone (A-SEC-02).
+- **Webhook endpoints: more addresses refused.** The local-use NAT64 prefix `64:ff9b:1::/48` was
+  decoded as if it were the `/96` form, so `64:ff9b:1:7f00:0:100:808:808` passed as `8.8.8.8`; it is
+  now refused whole. The IPv4-translated form `::ffff:0:a.b.c.d` is judged by its IPv4 address, and
+  `3fff::/20` and `5f00::/16` are refused (A-SEC-03).
+- **A restart that does not start leaves no handoff behind**, and the handoff variable is read only
+  when it names a file the restart itself writes (`authama-handoff-*.json` in the temporary
+  directory); any other file it names is neither read nor removed (A-SEC-04).
+- **Snapshot restores are rooted at `~/.ssh`.** They were rooted at the home, and a directory link
+  inside `~/.ssh` that pointed elsewhere in the home took the restore's writes there (A-SEC-05).
+- **`vm sync` refuses a public key line with a quote outside its comment** rather than embedding it in
+  the script it runs in the guest (A-SEC-06).
+- **The installers take only a release version** (`vX.Y.Z`, with an optional pre-release). The
+  version, from the argument, the environment or GitHub's API, becomes part of the download URL
+  (A-SEC-07).
 - **A restart's handoff no longer rides in the environment.** The control key, sessions and form
   tokens went to the new server in `AUTHAMA_SERVE_HANDOFF`, which `/proc/<pid>/environ` kept for its
   whole life; they now go in an owner-only temporary file the new server reads once and removes, and
   the variable names only the file. A handoff written inline by an older build is still read (R-SEC-21).
+- **A seal removed is refused, and says what to do.** Deleting `owner.json`, `seal.json` and
+  `pin-attempts.json` together turned the seal and the PIN off while the sealing key stayed in the OS
+  credential store. `owner verify`, `doctor` and `serve` (when it starts a server) now ask the store as
+  well as the files and refuse such a home, and a bound home whose `seal.json` is gone: they say the
+  seal was removed, and how to put the files back, bind afresh (`owner init`) or clear what is left
+  (`owner forget`, which now removes a key left in the store after you type `forget`, or the exact
+  `security`, `secret-tool` and Windows commands). The web UI never asks the store per page (A-SEC-08).
+- **`/healthz` gives its pid, build and start time only to a caller that proves the control key**,
+  as well as being on this machine with no forwarding header: a TCP forwarder (`ssh -L`, `socat`)
+  adds no header. `serve --stop-all` stops the servers whose key it holds (this home's) and lists any
+  other with the commands that stop it; it no longer takes a pid a server offers without a proof
+  (A-SEC-09).
+- **Webhooks leave out an operation's error text and subjects.** They can name hosts, addresses,
+  users and remote output, and a webhook sends them to another party. `result` still says whether it
+  failed. The new setting `webhooks.include_details` (`AUTHAMA_WEBHOOKS_INCLUDE_DETAILS`, off) sends
+  them; the read API and MCP are unchanged (A-SEC-12).
+- **`ssh restore` refuses a bundle whose manifest sets risky SSH options**: a `ControlPath` or
+  `IdentityAgent` outside `~/.ssh` and `$XDG_RUNTIME_DIR`, or `ForwardAgent` or
+  `StrictHostKeyChecking no` for every host. A bundle does not prove who made it. The bundle is now
+  decrypted and read before the question, which lists the options; `--allow-risky-options` restores
+  one you made yourself, and the summary names what it laid down. The web UI shows the refusal and
+  the command (A-SEC-13).
+
+### Fixed
+
+- **A refused command no longer evicts a restore point.** Snapshots were pruned to
+  `backup.snapshot_retain` when taken, before the command checked its input, so at the limit each
+  refused command pushed the oldest real snapshot out even though its own was then discarded. The
+  prune now waits until the command's snapshot is kept; while a command runs there can be one more
+  than the limit (A-BUG-04).
+- **A snapshot restore keeps a symlinked `~/.ssh/config` a link** and writes the restored text into
+  the file it points at, as a render does; it used to replace the link with a plain file, leaving the
+  dotfiles copy stale. Only `config` is written through, and only when its link leads to a file that
+  exists; any other link in `~/.ssh` is still replaced (A-BUG-05).
+- **`ssh rotate --force` keeps a predecessor that still logs in.** A rotation stops rather than evict
+  the key in `old/` while a host it was never removed from still accepts it, but `--force` then
+  replaced the key locally, which evicted it all the same. The local replacement now refuses the same
+  way, naming the hosts, unless `--evict-old` is given; the web UI never evicts it (A-BUG-01).
+- **One failed restart no longer ends the web UI's auto-restart.** The failure is printed, the same
+  build is not tried again, and the next build is restarted from (review R-BUG-16).
+- **A failed `migrate --force` puts the home back.** The current home was moved aside and, when the
+  copy failed, left at its `.replaced-` name (review R-BUG-14).
 
 ### Documentation
 
@@ -71,6 +135,44 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   pill partial. Each pill carries its word, not colour alone, in the
   existing badge colours. *Mark as seen* on a new key is `key ack`, previewed and confirmed like any
   change.
+
+### Changed
+
+- **The web UI's menus are colour-coded.** Each entry's icon sits on a Tabler tile coloured by what it
+  is: a menu's own pages share a colour (SSH cyan, Tokens pink, Security purple, History yellow), and
+  a task's colour says what it does (create or add green, change blue, revoke orange, delete or reset
+  red); Doctor, Validate and Repair are teal, Settings and the user menu grey. Each menu's toggle shows
+  its icon in its colour. The colours are darkened in the light theme and lightened in the dark one,
+  so icons and tile edges reach 5.4:1 or more in both. VMs has its own icon (`box`), no longer one
+  that reads as Hosts. The current page's entry has a bar at its start edge, and keyboard focus a
+  visible ring. Guards fail on an entry without a tile, a kind in two colours, a task in the wrong
+  colour, a red entry that is not a delete, a description over 62 characters, and an Overview link
+  that does not reach the dashboard (with or without `--base-path`); the accessibility suite also
+  measures the tiles' contrast on every menu open, in both themes.
+- **The main menu's list is closed.** Its `<ul>` had no `</ul>`.
+
+- **The web UI's menus are regrouped, one kind of thing to a menu.** The main menu is Overview,
+  **SSH**, **Tokens**, **Security**, **History** and **System**, with a **New** button and a personal
+  user menu in the top bar. The Actions menu is gone: each job sits under its object's **Tasks**
+  header (SSH › Tasks for host and key jobs, Tokens › Tasks for Add a token), and New repeats Add a
+  host, Add a token and Mint missing keys. Auth tokens has its own Tokens menu with the token
+  checklists; Activity and Backups & export are one History menu (Changes, File events, Snapshots,
+  Export); System holds Doctor, Validate, Repair, Settings and Reset, which is listed once, in red.
+  The user menu keeps Running as, the tour, About and Sign out, and no longer repeats Settings,
+  Events and Doctor. Read-only still hides every task (and now New); the dev sandbox still leaves
+  out Rotate and Revoke.
+- **Every menu entry has its own icon and a one-line description of what its page shows.** No two
+  entries share an icon (Naming is a tag, Repair a tool, VMs a server rack, Reset a restore arrow,
+  Sign out a logout arrow), sixteen icons were added to the sprite through `icons.txt` and
+  `make tabler-vendor`, and the descriptions were rewritten to one shape of about 60 characters.
+  The command palette shows each page with its menu's icon and under its menu's name.
+  The tour follows the new menus: search, SSH, Tokens, Security, History, New, the bell and the user
+  menu. Guards fail on a shared icon or page, an icon missing from the sprite, a task or New on a
+  read-only server, and Rotate or Revoke in the dev sandbox.
+- **Menu entries keep 4.5:1 contrast on their tint.** Tabler's grey description, red destructive
+  entry and blue current entry fell to between 2.7:1 and 4.48:1 on the hover and current-page tints,
+  and in the dark theme; they now use the body colour there, or a darker or lighter mix. The e2e
+  accessibility suite runs axe on every menu open, in both themes.
 
 ## [0.1.0] - 2026-11-14
 

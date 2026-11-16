@@ -43,6 +43,13 @@ webhook-signature: v1,<base64 HMAC-SHA256>
  "datacontenttype":"application/json","data":{...},"authamasub":"ops"}
 ```
 
+An operation's `data` leaves out its `error` text and its `subjects` (the hosts, keys and profiles
+it touched): an error can name hosts, addresses, users and what a remote server printed, and a
+webhook hands it to somebody else's server. `result` still says whether it failed. Set
+`webhooks.include_details` (`AUTHAMA_WEBHOOKS_INCLUDE_DETAILS=1`) to send both; the
+[read API](api.md#the-event-feed) and MCP always show them, since only a token holder on this
+machine reads those.
+
 `webhook-id` is the event's `id`, the same on every retry. `authamasub` is the endpoint's name,
 inside the signed body, so a delivery captured from one endpoint cannot be replayed to another that
 checks it. Every attribute is inside the signature: no `ce-*` header is sent. This is sange's wire
@@ -70,9 +77,11 @@ the secret after `whsec_`. Any Standard Webhooks library verifies it. A receiver
   so a webhook cannot be aimed at a service behind your firewall: loopback, 10/8, 172.16/12,
   192.168/16, 100.64/10, link-local such as `169.254.169.254`, IPv6 unique-local and site-local, and
   every other IANA special-purpose range (0.0.0.0/8, 192.0.0.0/24, the documentation and
-  benchmarking ranges, multicast, 240/4 and broadcast). An IPv6 address that carries an IPv4 one
-  (NAT64 `64:ff9b::/96`, 6to4 `2002::/16`, IPv4-compatible `::a.b.c.d`) is judged by the IPv4 address
-  inside it. A host written as a bare number, in hex or octal, or shortened (`2130706433`,
+  benchmarking ranges, multicast, 240/4 and broadcast, and IPv6's `3fff::/20` documentation and
+  `5f00::/16` SRv6 ranges). An IPv6 address that carries an IPv4 one (NAT64 `64:ff9b::/96`, 6to4
+  `2002::/16`, IPv4-compatible `::a.b.c.d`, IPv4-translated `::ffff:0:a.b.c.d`) is judged by the IPv4
+  address inside it. The local-use NAT64 prefix `64:ff9b:1::/48` is refused whole: it is not
+  globally reachable, and a network can place the IPv4 address anywhere in it. A host written as a bare number, in hex or octal, or shortened (`2130706433`,
   `0x7f.1`, `127.1`) is refused; write four dotted decimals or a name. The address is checked again
   when it is dialled, after its name resolves, so DNS cannot rebind around it. `webhooks.allow_private` lifts
   this, and also allows plain `http` to this machine, for a receiver you run locally.

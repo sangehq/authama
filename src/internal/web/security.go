@@ -208,18 +208,23 @@ func (s *Server) auth(next http.Handler) http.Handler {
 			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("Cache-Control", "no-store")
 			reply := healthReply{App: "authama", Instance: s.opts.Instance}
-			// To a caller on this machine, not one a proxy passed on, it also
-			// says which process it is and which build, so `authama serve
-			// --stop-all` can stop any authama web UI it finds.
-			if isLoopbackRequest(r) && !forwarded(r) {
-				reply.PID, reply.Version = os.Getpid(), s.opts.Version
-				reply.Started = s.binary.started.UTC().Format(time.RFC3339)
-			}
 			// A caller holding the control key sends a challenge and checks
 			// the proof before it sends the key or signals the recorded pid:
 			// the instance id alone is public.
 			if c := r.URL.Query().Get("challenge"); c != "" && len(c) <= maxChallenge && s.opts.Control != "" {
 				reply.Proof = HealthProof(s.opts.Control, c)
+				// Which process it is and which build go only to a caller on
+				// this machine that proves it holds the key too, so
+				// `authama serve --stop-all` can stop the servers it holds
+				// keys for. Loopback alone was the test before, and a TCP
+				// forwarder (ssh -L, socat) adds no header to tell it from
+				// one (audit A-SEC-09).
+				caller := r.URL.Query().Get("caller")
+				if isLoopbackRequest(r) && !forwarded(r) &&
+					hmac.Equal([]byte(caller), []byte(HealthCallerProof(s.opts.Control, s.opts.Instance, c))) {
+					reply.PID, reply.Version = os.Getpid(), s.opts.Version
+					reply.Started = s.binary.started.UTC().Format(time.RFC3339)
+				}
 			}
 			_ = json.NewEncoder(w).Encode(reply)
 			return
@@ -373,6 +378,17 @@ func isLocalURL(target string) bool {
 func HealthProof(control, challenge string) string {
 	m := hmac.New(sha256.New, []byte(control))
 	_, _ = m.Write([]byte("authama-healthz\x00" + challenge))
+	return hex.EncodeToString(m.Sum(nil))
+}
+
+// HealthCallerProof is what a caller sends as /healthz?caller= to prove it
+// holds the control key: an HMAC of the server's instance and the caller's
+// own challenge, under a label apart from HealthProof's so neither proof can
+// stand in for the other. Only with it does /healthz give its pid, build and
+// start time (audit A-SEC-09).
+func HealthCallerProof(control, instance, challenge string) string {
+	m := hmac.New(sha256.New, []byte(control))
+	_, _ = m.Write([]byte("authama-healthz-caller\x00" + instance + "\x00" + challenge))
 	return hex.EncodeToString(m.Sum(nil))
 }
 

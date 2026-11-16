@@ -1,12 +1,14 @@
 package cli
 
 import (
+	"crypto/hmac"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -58,6 +60,11 @@ func takeHandoff() *serveHandoff {
 	_ = os.Unsetenv(envnames.ServeHandoff)
 	// This build passes a file's name; an older one passed the JSON itself.
 	if path, ok := strings.CutPrefix(v, handoffFilePrefix); ok {
+		// Only a file handoffEnv could have made is read, and removed: the
+		// variable is not trusted to name any file (audit A-SEC-04).
+		if !isHandoffFile(path) {
+			return nil
+		}
 		b, err := os.ReadFile(path) //nolint:gosec // the file our own predecessor wrote
 		_ = os.Remove(path)
 		if err != nil {
@@ -77,6 +84,22 @@ func takeHandoff() *serveHandoff {
 // handoffFilePrefix marks a handoff passed as a file rather than inline.
 const handoffFilePrefix = "file:"
 
+// handoffPattern is the name handoffEnv gives its file in os.TempDir.
+const handoffPattern = "authama-handoff-*.json"
+
+// isHandoffFile reports whether path is a file handoffEnv makes: in the
+// temporary directory, named by handoffPattern, a regular file.
+func isHandoffFile(path string) bool {
+	if filepath.Clean(filepath.Dir(path)) != filepath.Clean(os.TempDir()) {
+		return false
+	}
+	if ok, _ := filepath.Match(handoffPattern, filepath.Base(path)); !ok {
+		return false
+	}
+	fi, err := os.Lstat(path)
+	return err == nil && fi.Mode().IsRegular()
+}
+
 // handoffEnv writes h to an owner-only temporary file and returns the
 // environment entry naming it. The handoff holds the control key, the
 // sessions and their form tokens; inline in the environment they stayed
@@ -87,7 +110,7 @@ func handoffEnv(h serveHandoff) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	f, err := os.CreateTemp("", "authama-handoff-*.json") // created 0600
+	f, err := os.CreateTemp("", handoffPattern) // created 0600
 	if err != nil {
 		return "", err
 	}
@@ -123,7 +146,7 @@ func relaunch(h serveHandoff, state func(*serveHandoff), stop func()) func() err
 		if state != nil {
 			state(&h)
 		}
-		exe, err := ownRestartExecutable()
+		exe, err := restartFrom()
 		if err != nil {
 			return err
 		}
@@ -146,6 +169,9 @@ func relaunch(h serveHandoff, state func(*serveHandoff), stop func()) func() err
 		cmd.Env = append(os.Environ(), entry)
 		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 		if err := cmd.Start(); err != nil {
+			// Nothing will read the handoff: take the control key and the
+			// sessions' form tokens out of the temporary directory.
+			_ = os.Remove(strings.TrimPrefix(entry, envnames.ServeHandoff+"="+handoffFilePrefix))
 			return err
 		}
 		_ = cmd.Process.Release()
@@ -158,37 +184,66 @@ func relaunch(h serveHandoff, state func(*serveHandoff), stop func()) func() err
 type foundServer struct {
 	Addr     string
 	Instance string
-	PID      int // 0 when it is an older build that does not say
+	PID      int // 0 when it did not prove a key held here, or is an older build
 	Version  string
+	// Key is the control key it proved it holds, "" for none.
+	Key string
 }
 
 // probeClient asks a port whether authama answers there: a refused
 // connection returns at once, so probing the default range is quick.
 var probeClient = &http.Client{Timeout: 700 * time.Millisecond}
 
+// healthAnswer is what findServers reads from /healthz.
+type healthAnswer struct {
+	App      string `json:"app"`
+	Instance string `json:"instance"`
+	PID      int    `json:"pid"`
+	Version  string `json:"version"`
+	Proof    string `json:"proof"`
+}
+
+// askHealth reads /healthz at u; ok is false when nothing answers there or
+// what answers is not authama. err is set only when nothing listens.
+func askHealth(u string) (h healthAnswer, ok bool, err error) {
+	resp, err := probeClient.Get(u)
+	if err != nil {
+		return h, false, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	ok = resp.StatusCode == http.StatusOK && json.NewDecoder(io.LimitReader(resp.Body, 4096)).Decode(&h) == nil && h.App == "authama"
+	return h, ok, nil
+}
+
 // findServers asks /healthz on host at each port, under basePath and at the
-// root, and lists every authama that answers.
-func findServers(host string, ports []int, basePath string) []foundServer {
+// root, and lists every authama that answers. A server gives its pid and
+// build only to a caller proving its control key (audit A-SEC-09), so each
+// key in keys is offered in turn; one that proves none of them is listed
+// without a pid, and --stop-all leaves it alone.
+func findServers(host string, ports []int, basePath string, keys []string) []foundServer {
 	var out []foundServer
 	seen := map[string]bool{}
 	for _, port := range ports {
 		addr := net.JoinHostPort(host, strconv.Itoa(port))
 		for _, base := range slices.Compact([]string{basePath, ""}) {
-			resp, err := probeClient.Get("http://" + addr + base + "/healthz")
+			u := "http://" + addr + base + "/healthz"
+			h, ok, err := askHealth(u)
 			if err != nil {
 				break // nothing listens on this port
 			}
-			var h struct {
-				App      string `json:"app"`
-				Instance string `json:"instance"`
-				PID      int    `json:"pid"`
-				Version  string `json:"version"`
-			}
-			ok := resp.StatusCode == http.StatusOK && json.NewDecoder(io.LimitReader(resp.Body, 4096)).Decode(&h) == nil && h.App == "authama"
-			_ = resp.Body.Close()
 			if ok && !seen[h.Instance] {
 				seen[h.Instance] = true
-				out = append(out, foundServer{Addr: addr, Instance: h.Instance, PID: h.PID, Version: h.Version})
+				// A pid offered without a proof is not taken: an older build
+				// gave one to any local caller, and so can anything listening
+				// on the port (audit A-SEC-09).
+				f := foundServer{Addr: addr, Instance: h.Instance}
+				for _, key := range keys {
+					if pid, version, proven := proveKey(u, h.Instance, key); proven {
+						f.PID, f.Version, f.Key = pid, version, key
+						break
+					}
+				}
+				out = append(out, f)
 				break
 			}
 		}
@@ -196,11 +251,31 @@ func findServers(host string, ports []int, basePath string) []foundServer {
 	return out
 }
 
+// proveKey asks /healthz at u for its pid, proving key, and checks the
+// server's own proof of the same key, so a pid comes only from a server that
+// holds it.
+func proveKey(u, instance, key string) (pid int, version string, proven bool) {
+	if key == "" {
+		return 0, "", false
+	}
+	challenge := web.NewToken()
+	h, ok, err := askHealth(u + "?challenge=" + url.QueryEscape(challenge) +
+		"&caller=" + url.QueryEscape(web.HealthCallerProof(key, instance, challenge)))
+	if err != nil || !ok || h.Instance != instance ||
+		!hmac.Equal([]byte(h.Proof), []byte(web.HealthProof(key, challenge))) || h.PID <= 0 {
+		return 0, "", false
+	}
+	return h.PID, h.Version, true
+}
+
 // stopFound stops a found server as `serve --stop` stops the recorded one,
 // and waits for it to stop answering.
 func stopFound(f foundServer, basePath string) error {
 	if f.PID <= 0 {
-		return fmt.Errorf("it is an older build that does not say which process it is; stop it where it runs, or: lsof -ti tcp:%s -sTCP:LISTEN | xargs kill -INT", portOf(f.Addr))
+		return fmt.Errorf("it did not prove a control key this home holds, so it was not told which process it is: "+
+			"it belongs to another home or is an older build. Stop it from its own home (%s=<that home> %s serve --stop), "+
+			"where it runs, or: lsof -ti tcp:%s -sTCP:LISTEN | xargs kill -INT",
+			envnames.ConfigDir, brand.Command, portOf(f.Addr))
 	}
 	if f.PID == os.Getpid() {
 		return errors.New("it is this process")
@@ -208,7 +283,10 @@ func stopFound(f foundServer, basePath string) error {
 	if ok, name := isAuthamaProcess(f.PID); !ok {
 		return fmt.Errorf("pid %d is not an authama process (%s); nothing was signalled - stop the web UI at %s where it runs", f.PID, name, f.Addr)
 	}
-	r := &serveRecord{PID: f.PID, Addr: f.Addr, BasePath: basePath, Instance: f.Instance}
+	if ok, cmdline := isServingProcess(f.PID); !ok {
+		return fmt.Errorf("pid %d is authama but not serving a web UI (%s); nothing was signalled - stop the web UI at %s where it runs", f.PID, cmdline, f.Addr)
+	}
+	r := &serveRecord{PID: f.PID, Addr: f.Addr, BasePath: basePath, Instance: f.Instance, Control: f.Key}
 	if !r.checkAlive() {
 		r.BasePath = ""
 	}
@@ -243,11 +321,17 @@ func serverPorts(configured int, rec *serveRecord) []int {
 
 // stopAll stops every authama web UI found, says what it did, and returns
 // how many it could not stop.
-// A server that does not say its pid (one from before /healthz did) is
-// still stopped when the home's record names it: the record's instance
-// matches the one /healthz answers, and the record holds its pid.
+// Only servers that prove the home's control key say their pid (audit
+// A-SEC-09). One that does not (an older build) is still stopped when the
+// home's record names it: the record's instance matches the one /healthz
+// answers, and the record holds its pid. Any other is listed with the
+// commands that stop it.
 func stopAll(out io.Writer, host string, ports []int, basePath string, rec *serveRecord) int {
-	found := findServers(host, ports, basePath)
+	var keys []string
+	if rec != nil && rec.Control != "" {
+		keys = append(keys, rec.Control)
+	}
+	found := findServers(host, ports, basePath, keys)
 	for i := range found {
 		if found[i].PID == 0 && rec != nil && rec.PID > 0 && rec.Instance == found[i].Instance {
 			found[i].PID = rec.PID
@@ -261,7 +345,7 @@ func stopAll(out io.Writer, host string, ports []int, basePath string, rec *serv
 	for _, f := range found {
 		version := f.Version
 		if version == "" {
-			version = "an older build"
+			version = "build not disclosed"
 		}
 		if err := stopFound(f, basePath); err != nil {
 			failed++
@@ -327,6 +411,9 @@ func restartExecutable(exe string, lookPath func(string) (string, error)) (strin
 	}
 	return found, nil
 }
+
+// restartFrom is ownRestartExecutable, swappable in tests.
+var restartFrom = ownRestartExecutable
 
 // ownRestartExecutable is restartExecutable for this process.
 func ownRestartExecutable() (string, error) {

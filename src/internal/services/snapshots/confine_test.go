@@ -97,3 +97,42 @@ func TestASnapshotThatFailsLeavesNothing(t *testing.T) {
 		t.Errorf("a failed snapshot left %s behind", e.Name())
 	}
 }
+
+// Extraction was rooted at the home directory, and os.Root follows a
+// symlink that stays inside its root: a directory link in ~/.ssh pointing
+// elsewhere in the home took the restore's writes there (audit A-SEC-05,
+// 2026-11-16). Rooted at ~/.ssh itself, the link leads out of the root and
+// the write is refused.
+func TestRestoreDoesNotFollowALinkOutOfTheSSHDir(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on Windows")
+	}
+	base := t.TempDir()
+	ssh := filepath.Join(base, ".ssh")
+	writeTree(t, ssh)
+	docs := filepath.Join(base, "docs")
+	if err := os.Mkdir(docs, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join("..", "docs"), filepath.Join(ssh, "d")); err != nil {
+		t.Fatal(err)
+	}
+	tarball := filepath.Join(base, "linked.tar.gz")
+	craftArchive(t, tarball, map[string]string{".ssh/d/x": "planted\n"})
+	_ = Restore(tarball, ssh)
+	if _, err := os.Lstat(filepath.Join(docs, "x")); err == nil {
+		t.Fatal("the restore wrote through a link in ~/.ssh into ~/docs")
+	}
+	// An ordinary restore still writes ~/.ssh.
+	plain := filepath.Join(base, "plain.tar.gz")
+	craftArchive(t, plain, map[string]string{".ssh/config": "# restored\n", ".ssh/sub/f": "f\n"})
+	if err := Restore(plain, ssh); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(filepath.Join(ssh, "config")); string(got) != "# restored\n" {
+		t.Errorf("config = %q", got)
+	}
+	if got, _ := os.ReadFile(filepath.Join(ssh, "sub", "f")); string(got) != "f\n" {
+		t.Errorf("sub/f = %q", got)
+	}
+}

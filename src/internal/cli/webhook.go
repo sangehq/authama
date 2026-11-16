@@ -19,6 +19,15 @@ import (
 // webhooksAllowPrivate is webhooks.allow_private.
 func webhooksAllowPrivate() bool { return settingOn(envnames.WebhooksAllowPrivate, false) }
 
+// webhooksDetail is how much of an operation a webhook carries: its error
+// text and subjects only when webhooks.include_details is on (audit A-SEC-12).
+func webhooksDetail() webhooks.Detail {
+	if settingOn(envnames.WebhooksIncludeDetails, false) {
+		return webhooks.DetailFull
+	}
+	return webhooks.DetailRedacted
+}
+
 // newWebhookCmd is `authama webhook`: the endpoints the event feed is sent to.
 func newWebhookCmd() *cobra.Command {
 	c := &cobra.Command{
@@ -199,7 +208,7 @@ func newWebhookDeliverCmd() *cobra.Command {
 				return err
 			}
 			lockForMutation(p)
-			res, err := webhooks.Deliver(c.Context(), p, webhooks.Client(webhooksAllowPrivate()), time.Now())
+			res, err := webhooks.Deliver(c.Context(), p, webhooks.Client(webhooksAllowPrivate()), time.Now(), webhooksDetail())
 			if err != nil {
 				return err
 			}
@@ -249,7 +258,7 @@ func serveWebhooks(ctx context.Context, p paths.Paths, errOut io.Writer) {
 		tick := time.NewTicker(DeliverEvery)
 		defer tick.Stop()
 		for {
-			res, err := webhooks.Deliver(ctx, p, client, time.Now())
+			res, err := webhooks.Deliver(ctx, p, client, time.Now(), webhooksDetail())
 			if err != nil {
 				_, _ = fmt.Fprintf(errOut, "webhooks: %v\n", err)
 			}

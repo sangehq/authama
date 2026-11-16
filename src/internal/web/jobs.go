@@ -497,6 +497,8 @@ func bundleRestoreSpec(f url.Values, h home, retain int) (jobSpec, error) {
 		scope: mutation.Scope{Command: "restore", Args: []string{b, "--yes"}, Source: history.SourceWeb},
 		what: []string{
 			"decrypts " + b + " with the identity in AUTHAMA_AGE_IDENTITY_FILE, which cannot have a passphrase here",
+			"refuses it, writing nothing, if its manifest sets SSH options that could redirect or weaken connections; " +
+				"a bundle you made yourself is restored with `authama ssh restore " + b + " --allow-risky-options`",
 			"lays its keys and config-home files back over what is there, snapshotting ~/.ssh first",
 			"then sets every mode right and renders ~/.ssh/config",
 		},
@@ -1082,6 +1084,8 @@ func replaceFailed(j *jobs.Job, p paths.Paths, failed []string, force bool) []st
 		return failed
 	}
 	_, _ = fmt.Fprintf(j, "forced: replacing %d key(s) the rotation could not rotate, on this computer\n", len(failed))
-	_, still := reconciler.ReplaceLocally(p, failed, platform.EmitUseKeychain(), j)
+	// The page offers no --evict-old, so a predecessor that still logs in is
+	// never evicted from here (audit A-BUG-01).
+	_, still := reconciler.ReplaceLocally(p, failed, platform.EmitUseKeychain(), false, j)
 	return still
 }

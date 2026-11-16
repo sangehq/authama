@@ -118,12 +118,59 @@ func TestRestoreLeavesUnarchivedFilesAlone(t *testing.T) {
 	}
 }
 
-// Restoring over a symlink must replace the link, not write through it to
-// whatever it points at.
-func TestRestoreReplacesSymlinkedTarget(t *testing.T) {
+// A ~/.ssh/config linked into place (from a dotfiles repository, say) stays a
+// link through a restore, and the restored text lands in the file it points
+// at, as a render already does (audit A-BUG-05). This test used to assert the
+// opposite (TestRestoreReplacesSymlinkedTarget): restore removed the link and
+// wrote a regular file, which left the dotfiles copy stale and the link gone.
+// The owner chose on 2026-11-16 to keep the link. Only config is written
+// through, and only when its link resolves to a regular file; every other
+// member still replaces a link (TestRestoreStillReplacesOtherLinks).
+func TestRestoreWritesThroughASymlinkedConfig(t *testing.T) {
 	base := t.TempDir()
 	ssh := filepath.Join(base, ".ssh")
 	writeTree(t, ssh)
+	tarball, err := Snapshot(ssh, filepath.Join(base, "snapshots"), 10, "20260101-000000")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dotfiles := filepath.Join(base, "dotfiles", "ssh_config")
+	if err := os.MkdirAll(filepath.Dir(dotfiles), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(dotfiles, []byte("# edited since\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := filepath.Join(ssh, "config")
+	if err := os.Remove(cfg); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(dotfiles, cfg); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	if err := Restore(tarball, ssh); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Lstat(cfg); err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("~/.ssh/config is no longer a link after restore: %v", err)
+	}
+	if got, _ := os.ReadFile(dotfiles); string(got) != "# root config\n" {
+		t.Errorf("the linked file was not restored: %q", got)
+	}
+}
+
+// Members other than config never write through a link: a link planted at a
+// known_hosts path must not carry the restore anywhere else (audit A-BUG-05 kept the
+// narrow scope), and a config link to nothing is replaced, so a restore still
+// recovers when the dotfiles copy is gone.
+func TestRestoreStillReplacesOtherLinks(t *testing.T) {
+	base := t.TempDir()
+	ssh := filepath.Join(base, ".ssh")
+	writeTree(t, ssh)
+	pub := filepath.Join(ssh, "known_hosts")
+	if err := os.WriteFile(pub, []byte("h.example ssh-ed25519 AAAA\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	tarball, err := Snapshot(ssh, filepath.Join(base, "snapshots"), 10, "20260101-000000")
 	if err != nil {
 		t.Fatal(err)
@@ -133,20 +180,27 @@ func TestRestoreReplacesSymlinkedTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg := filepath.Join(ssh, "config")
-	if err := os.Remove(cfg); err != nil {
-		t.Fatal(err)
+	for _, p := range []string{pub, cfg} {
+		if err := os.Remove(p); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if err := os.Symlink(outside, cfg); err != nil {
+	if err := os.Symlink(outside, pub); err != nil {
 		t.Skipf("symlinks unavailable: %v", err)
+	}
+	if err := os.Symlink(filepath.Join(base, "gone"), cfg); err != nil {
+		t.Fatal(err)
 	}
 	if err := Restore(tarball, ssh); err != nil {
 		t.Fatal(err)
 	}
 	if got, _ := os.ReadFile(outside); string(got) != "UNTOUCHED\n" {
-		t.Errorf("restore wrote through a symlink: %q", got)
+		t.Errorf("restore wrote through a linked known_hosts: %q", got)
 	}
-	if fi, err := os.Lstat(cfg); err != nil || fi.Mode()&os.ModeSymlink != 0 {
-		t.Errorf("config should be a regular file after restore: %v", err)
+	for _, p := range []string{pub, cfg} {
+		if fi, err := os.Lstat(p); err != nil || !fi.Mode().IsRegular() {
+			t.Errorf("%s should be a regular file after restore: %v", p, err)
+		}
 	}
 }
 

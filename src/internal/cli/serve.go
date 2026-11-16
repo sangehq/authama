@@ -20,6 +20,7 @@ import (
 
 	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/owner"
 	"github.com/sangehq/authama/src/internal/util/desktop"
 	"github.com/sangehq/authama/src/internal/util/envnames"
 	"github.com/sangehq/authama/src/internal/version"
@@ -90,7 +91,8 @@ func newServeCmd() *cobra.Command {
 			"it again instead of starting another, so launching twice - or double-clicking\n" +
 			"the app - never piles servers up. --new starts another anyway; --status says\n" +
 			"whether one is running and where; --stop stops it. --stop-all stops every\n" +
-			"authama web UI answering on this machine's usual ports, whichever home or build;\n" +
+			"authama web UI on this machine's usual ports that proves it holds this home's\n" +
+			"control key, and names the others with the command that stops each;\n" +
 			"--restart does that and starts a fresh one, which is how to load a new build.\n" +
 			"A page from an older build says so, and can restart its server itself. When every port from the\n" +
 			"default up is taken, any free port is used.\n\n" +
@@ -209,6 +211,12 @@ func newServeCmd() *cobra.Command {
 				return nil
 			}
 
+			// A home whose seal was removed is not served: the web UI would
+			// run unsealed and without its PIN while the key that bound it
+			// is still kept (audit A-SEC-08). The error says what to do.
+			if err := owner.SealRemoved(p); err != nil {
+				return err
+			}
 			ln, err := web.Listen(serveListen, host, pinnedPort, pinned || handoff != nil, web.DefaultPortAttempts)
 			if err != nil {
 				return err
@@ -330,7 +338,7 @@ func newServeCmd() *cobra.Command {
 	f.BoolVar(&fresh, "new", false, "start another server even when one is already running for this home")
 	f.BoolVar(&status, "status", false, "say whether a server is running for this home, and its address")
 	f.BoolVar(&stopRunning, "stop", false, "stop the server running for this home")
-	f.BoolVar(&stopEvery, "stop-all", false, "stop every authama web UI answering on this machine's usual ports, whichever home or build")
+	f.BoolVar(&stopEvery, "stop-all", false, "stop every authama web UI on this machine's usual ports that proves this home's control key; others are listed with how to stop them")
 	f.BoolVar(&restart, "restart", false, "stop every authama web UI found, then start a fresh one: how to load a new build")
 	cmd.MarkFlagsMutuallyExclusive("new", "status", "stop", "stop-all", "restart")
 	return cmd

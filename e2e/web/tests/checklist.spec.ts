@@ -112,10 +112,10 @@ test('the key picker filters, clears, counts per profile and names what Review w
   }
 });
 
-test('the Actions menu opens the rotate form from any page, and the Overview offers Get started', async ({ page }) => {
+test('SSH › Tasks opens the rotate form from any page, and the Overview offers Get started', async ({ page }) => {
   await page.goto('/hosts');
-  await page.getByRole('button', { name: 'Actions', exact: true }).click();
-  await page.getByRole('link', { name: /Rotate keys/ }).click();
+  await page.locator('#navbar-ssh').click();
+  await page.locator('[aria-labelledby="navbar-ssh"]').getByRole('link', { name: /Rotate keys/ }).click();
   // Its keys are chosen on the rotation's review page, not in a slide-in.
   await expect(page).toHaveURL(/\/jobs\/review\?action=rotate-keys$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Rotate keys');
@@ -147,8 +147,9 @@ test('the Reset page opens the rotate picker with every key already chosen', asy
   await expect(page.locator('#job-options [data-pick-all]')).not.toBeChecked();
 
   await page.goto('/hosts');
-  await page.getByRole('button', { name: 'Actions', exact: true }).click();
-  await page.locator('header.navbar-expand-md:not(.navbar)').screenshot({ path: 'test-results/main-menu-actions.png' });
+  await page.locator('#navbar-ssh').click();
+  await expect(page.locator('[aria-labelledby="navbar-ssh"]')).toBeVisible();
+  await page.screenshot({ path: 'test-results/main-menu-ssh.png' });
 });
 
 test('the token audit counts its findings and offers each tool with no file', async ({ page }) => {

@@ -59,11 +59,19 @@ presents that key at `/auth/link` gets a new sign-in link. A launch trusts the r
 the control key, so a stale record (a server that crashed), or a pid or port reused by something
 else, is ignored: the instance id is public, but only the recorded server can prove the key, and
 the key is sent, or the recorded pid stopped, only after that proof. `/healthz` is the one page that
-answers without signing in. To a remote caller it says nothing but `{"app":"authama","instance":"…"}`;
-to a caller on this machine that no proxy passed on (no `X-Forwarded-For`, `Forwarded` or
-`X-Real-Ip`), it also gives the pid, build and start time that `serve --stop-all` uses. `--stop-all`
-stops a server it finds only when that pid is an `authama` process, so a listener naming some other
-process of yours is refused, and nothing is signalled. A pinned `--port`, `--read-only`
+answers without signing in. To most callers it says nothing but `{"app":"authama","instance":"…"}`.
+It gives the pid, build and start time that `serve --stop-all` uses only to a caller on this machine
+that no proxy passed on (no `X-Forwarded-For`, `Forwarded` or `X-Real-Ip`) **and** that proves it
+holds the control key: alongside its challenge it sends `caller=`, an HMAC of the instance id and the
+challenge under that key. A TCP forwarder such as `ssh -L` or `socat` adds no header, so being on
+this machine alone said nothing about who was asking. `--stop-all` therefore stops the servers of
+this home (whose key its record holds); any other it finds is listed with the commands that stop it
+(`AUTHAMA_CONFIG_DIR=<that home> authama serve --stop`, or `lsof … | xargs kill -INT`), and an older
+build is stopped only when this home's record names it. `--stop-all`
+stops a server it finds only when that pid is an `authama` process serving a web UI (`authama serve`,
+or bare `authama`), so a listener naming some other process of yours, including another authama
+command such as a rotation half-way through, is refused, and nothing is signalled. On Windows, where
+the command line cannot be read, the process name is all it checks. A pinned `--port`, `--read-only`
 when the running server is not, or `--allow-remote` starts a new server rather than reusing one.
 
 **Why not a named address like `http://127.0.0.1/authama`?** A path does not free a port: two
@@ -95,25 +103,49 @@ accepted. A running server is reused only when its base path is the one asked fo
 
 The layout is Tabler's, in two bars. The top bar holds the name (with a *read-only* badge when the
 server only reads), a search box that opens the command palette, a theme toggle (light or dark), a
-bell listing the newest [file events](events.md), and an account menu named for the system user the
-server runs as. The account menu opens with *Running as <user> on <host>* and holds Settings, Events,
-Doctor, the tour and About. Under it, the main menu groups the pages by what they are about:
+bell listing the newest [file events](events.md), a **New** button for the common creates, and the
+user menu, named for the system user the server runs as. The user menu is personal: it opens with
+*Running as <user> on <host>*, then **Take the tour**, **About authama** and **Sign out**. Under the
+top bar, the main menu holds every page, one kind of thing to a menu:
 
-| Entry | Holds |
+| Menu | Holds |
 |---|---|
 | Overview | What needs attention, counts, and Get started for a new home |
-| **Actions** | Rotate keys, Revoke keys, Delete keys, Mint missing keys, Pin host keys, Add a host, Add a token, Reset… |
-| **SSH** | Profiles, Hosts, Keys, VMs, Naming, and the SSH config rendered from them |
-| Auth tokens | The tokens npm, Composer, Docker, git, PyPI and the rest read |
-| **Security** | Checklists, Audit, Owner & PIN |
-| **Backups & export** | Snapshots (and encrypted bundles), Export |
-| **Activity** | History, Events |
-| **System** | Doctor, Validate, Repair, Reset, Settings, About |
+| **SSH** | *Inventory:* Profiles, Hosts, Keys, VMs. *Configuration:* Naming, SSH config. *Tasks:* Add a host, Pin host keys, Mint missing keys, Rotate keys, Revoke keys, Delete keys |
+| **Tokens** | Tokens, Token checklists (the Checklists page filtered to tokens). *Tasks:* Add a token |
+| **Security** | Audit, Checklists, Owner & PIN |
+| **History** | *Record:* Changes (the history page), File events. *Backups:* Snapshots, Export |
+| **System** | *Health:* Doctor, Validate, Repair. *Configure:* Settings. Then Reset…, set apart in red |
+| **New** | Add a host, Add a token, Mint missing keys |
 
-**Actions** is a menu like the others. Each entry opens its page with the form's panel already open,
-and nothing runs until it is reviewed. A read-only server shows no Actions menu, and a dev sandbox
-leaves out rotate and revoke, which reach real servers. When export is turned off, Snapshots is an
-entry of its own. On a narrow screen it folds behind a button. About shows the build (and whether it is
+Each entry has its own icon and a line under its name saying what the page shows or does; no two
+entries share an icon or open the same page, except that New repeats three entries from the Tasks.
+The icon sits on a small tile coloured by what the entry is: a menu's own pages share one colour, so
+the menu is recognisable, and a task's colour says what it does. Each menu's toggle shows its icon
+in the same colour (System's is Health's).
+
+| Kind | Colour (Tabler) | Entries |
+|---|---|---|
+| SSH pages | cyan | Profiles, Hosts, Keys, VMs, Naming, SSH config |
+| Tokens pages | pink | Tokens, Token checklists |
+| Security | purple | Audit, Checklists, Owner & PIN |
+| History | yellow | Changes, File events, Snapshots, Export |
+| Health | teal | Doctor, Validate, Repair |
+| Settings | secondary (grey) | Settings |
+| Personal (user menu) | secondary (grey) | Running as, Take the tour, About, Sign out |
+| Create or add | green | Add a host, Add a token, Mint missing keys (in Tasks and New) |
+| Change | blue | Pin host keys, Rotate keys |
+| Revoke | orange | Revoke keys |
+| Delete or start again | red | Delete keys, Reset… |
+| Overview (top link) | blue | Overview's icon |
+
+The tile's icon and edge are the colour darkened in the light theme and lightened in the dark one,
+so both stay at 3:1 or more against the menu (measured at 5.4:1 or more). The current page's entry
+has a bar at its start edge, and the keyboard's focus is a ring around the entry.
+A job's entry opens its page with the form's panel already open, and nothing runs until it is
+reviewed. A read-only server shows no Tasks and no New button, and a dev sandbox leaves out Rotate
+and Revoke, which reach real servers. When export is turned off, the History menu has no Export. On
+a narrow screen the main menu folds behind a button. About shows the build (and whether it is
 current), this computer, and the third-party licences; following the system's light or dark theme is
 chosen on the Settings page. The footer carries the copyright, the version, and links to About, the
 documentation, the source and the licences.
@@ -167,7 +199,8 @@ documentation, the source and the licences.
   written before the preview is confirmed. Screen readers announce the same text.
 - **Help** sits where it is needed: a hint under each form field, a ? beside a term that needs
   explaining (it opens a popover), and a tooltip on every icon button. **Take the tour**, in the
-  account menu, walks the header, the Actions menu and the overview one step at a time; it offers
+  user menu, walks the header (search, SSH, Tokens, Security, History, New, the bell and the user
+  menu) and the overview one step at a time; it offers
   itself once, on a browser's first visit to the overview, and Escape ends it.
 - **Get started.** Until a home has a profile, a host, a minted key and a token, and nothing needs
   attention, the Overview opens with a **Get started** card: each step with why it matters and a
@@ -198,9 +231,9 @@ documentation, the source and the licences.
   pages. Hosts, keys, profiles, auth tokens, snapshots, key deployments (on the Audit page), history
   and events each download as CSV, with the same columns as `--csv` on their command. The History and
   Events downloads keep the page's filters, so the file holds what the page shows.
-- **A page says whether its build is current.** About (System > About, or the account menu) shows
+- **A page says whether its build is current.** About (in the user menu, or the footer) shows
   the running build's version, marked *current* or *older build*, with when it was built and when
-  the server started. The account menu also says which user and host the server runs as.
+  the server started. The user menu also says which user and host the server runs as.
   When the `authama` binary is rebuilt, reinstalled or removed after `authama serve` started, every page shows a yellow banner naming the file, with **Restart
   now**: the server relaunches from the binary now installed, on the same address, with the
   same sessions and every sign-in link not yet used (a link already used stays used: the new server
@@ -418,8 +451,8 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
 
 1. **Review.** The review is a page of its own, never a slide-in panel. For rotating,
    revoking or deleting chosen keys it is also where the keys are chosen: the picker sits
-   at its top, ticked as chosen, and opens with nothing chosen from Keys, Profiles, the
-   Actions menu or the palette. It is titled for the job
+   at its top, ticked as chosen, and opens with nothing chosen from Keys, Profiles, SSH ›
+   Tasks or the palette. It is titled for the job
    (*Rotate 10 keys*), with a trail back to where the job was chosen; Cancel goes back there.
    The checks, steps and keys are on the left, and a column on the right stays in view as you
    scroll: what the job reaches, whether it writes a backup, how to undo it, its options, and

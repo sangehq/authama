@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -122,7 +123,9 @@ func (s *Server) watchBinary(stop <-chan struct{}, every time.Duration) {
 	}
 	t := time.NewTicker(every)
 	defer t.Stop()
-	var last os.FileInfo
+	// failed is the build a restart from failed: it is not tried again, but
+	// the next build is (review R-BUG-16, where one failure ended the watch).
+	var last, failed os.FileInfo
 	for {
 		select {
 		case <-stop:
@@ -148,10 +151,22 @@ func (s *Server) watchBinary(stop <-chan struct{}, every time.Duration) {
 			last = nil
 			continue
 		}
-		if last != nil && fi.Size() == last.Size() && fi.ModTime().Equal(last.ModTime()) {
-			_ = s.opts.Restart()
+		if failed != nil && sameBuild(fi, failed) {
+			continue
+		}
+		if last != nil && sameBuild(fi, last) {
+			if err := s.opts.Restart(); err != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "authama: the web UI could not restart from %s (%v); it keeps running and restarts from the next build\n", w.path, err)
+				failed, last = fi, nil
+				continue
+			}
 			return
 		}
 		last = fi
 	}
+}
+
+// sameBuild reports whether two looks at the binary saw the same file.
+func sameBuild(a, b os.FileInfo) bool {
+	return a.Size() == b.Size() && a.ModTime().Equal(b.ModTime())
 }

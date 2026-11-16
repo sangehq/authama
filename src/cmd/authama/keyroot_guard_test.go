@@ -26,7 +26,7 @@ var keyRootExempt = map[string]struct {
 	"internal/cli/config.go":                     {1, "legacy per-profile known_hosts migration: those files only ever existed under profiles/, before key_root"},
 	"internal/services/knownhosts/knownhosts.go": {1, "legacy per-profile known_hosts migration, as above"},
 	"internal/services/change/actions.go":        {1, "legacy per-profile known_hosts migration, as above"},
-	"internal/web/render.go":                     {1, "the Profiles page's nav key and URL, not a path under ~/.ssh"},
+	"internal/web/render.go":                     {2, "the Profiles page's nav key and URL (paletteItems) and its menu kind (navKinds), not a path under ~/.ssh (measured 2026-11-16)"},
 	"internal/web/routes.go":                     {1, "the Profiles page's template and view name"},
 	"internal/web/sshimport.go":                  {1, "the Profiles nav section the import page sits under, not a path (measured 2026-11-07)"},
 	"internal/web/tips.go":                       {1, "the Profiles page's menu key in pageTips, not a path (measured 2026-11-06)"},

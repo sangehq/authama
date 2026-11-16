@@ -3,7 +3,6 @@ package owner
 import (
 	"errors"
 	"os"
-	"path/filepath"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -20,7 +19,7 @@ type dpapi struct{ p paths.Paths }
 func osStore(p paths.Paths) Store { return dpapi{p} }
 
 func (dpapi) Name() string       { return StoreDPAPI }
-func (d dpapi) path() string     { return filepath.Join(d.p.StateDir(), "owner.key.dpapi") }
+func (d dpapi) path() string     { return dpapiPath(d.p) }
 func entropy() *windows.DataBlob { return blob([]byte(service)) }
 
 func blob(b []byte) *windows.DataBlob {
