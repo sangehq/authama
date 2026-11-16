@@ -218,3 +218,49 @@ func isAuthamaProcess(pid int) (bool, string) {
 	base := strings.ToLower(strings.TrimSuffix(filepath.Base(name), ".exe"))
 	return strings.HasPrefix(base, brand.Command), name
 }
+
+// processArgs is the command line of pid, split on spaces, swappable in
+// tests. Windows' tasklist does not give one; there it answers nil.
+var processArgs = func(pid int) ([]string, error) {
+	if runtime.GOOS == "windows" {
+		return nil, nil
+	}
+	out, err := exec.Command("ps", "-o", "args=", "-p", strconv.Itoa(pid)).Output()
+	return strings.Fields(string(out)), err
+}
+
+// servesWebUI reports whether a command line runs the web UI: `serve` among
+// its words, or bare authama with only flags after it (which serves too). A
+// flag's value read as a word errs on the side of not stopping.
+func servesWebUI(args []string) bool {
+	if len(args) == 0 {
+		return false
+	}
+	for _, a := range args[1:] {
+		if a == "serve" {
+			return true
+		}
+	}
+	for _, a := range args[1:] {
+		if !strings.HasPrefix(a, "-") {
+			return false
+		}
+	}
+	return true
+}
+
+// isServingProcess reports whether pid, already known to be authama, runs its
+// web UI. A listener on a probed port names the pid that --stop-all signals,
+// and any authama process of yours - a rotation half-way through - would do
+// (audit A-SEC-02). Where the command line cannot be read (Windows), the name
+// check is all there is.
+func isServingProcess(pid int) (bool, string) {
+	args, err := processArgs(pid)
+	if err != nil {
+		return false, "its command line could not be read"
+	}
+	if args == nil && runtime.GOOS == "windows" {
+		return true, ""
+	}
+	return servesWebUI(args), strings.Join(args, " ")
+}
