@@ -40,6 +40,26 @@ merge commit that added its CHANGELOG section. The proxy keeps its old v0.1.0 an
 entries, so `@latest` through the proxy still names v0.1.6 and a proxy fetch of v0.1.0 gets
 the old copy; the next release is v0.1.1, and nothing here is offered through the Go toolchain.
 
+From v0.1.1, `src/go.mod` retracts v0.1.0 and v0.1.6, so once the proxy has v0.1.1 its
+`@latest` stops naming either cached copy.
+
+## Release builds are stamped clean
+
+A release binary prints `authama vX.Y.Z (abc1234, YYYY-MM-DD)`. Go marks a build made from a
+modified tree `vcs.modified=true`, and authama then adds `-dirty`: every v0.1.0 binary prints
+`0.1.0-dirty`, because GoReleaser ran `go mod tidy` before building and it dropped two stale
+`go.sum` lines. So:
+
+- GoReleaser runs no `go mod tidy`. `make tidy-check` (part of `make ci`) fails a pull request
+  whose `go.mod` or `go.sum` is not tidy, so the tagged tree is already tidy.
+- It stamps `v{{ .Version }}` and `{{ .ShortCommit }}`, the shape `make build` stamps from
+  `git describe`.
+- Every archive carries `third-party-notices-go.md`, the licences of the linked Go modules and
+  the standard library. `make notices` regenerates it; `make notices-check` (part of `make ci`)
+  fails when a dependency change leaves it stale.
+
+`TestReleaseBuildsStampACleanVersion` pins all three.
+
 Under the old path, v0.1.0 was kept as a release, not retracted. The proxy's copy of it is the
 first commit tagged `src/v0.1.0` (`f21ef51`), which is not the commit the tag
 names today (`282d76c`), so a module fetch of v0.1.0 gets the older code. Building

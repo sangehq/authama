@@ -25,7 +25,7 @@ param(
   [string]$InstallDir,
   # Where the executables and checksums.txt are read from instead of the GitHub
   # release: a URL, or a local directory. CI points it at a binary it just built,
-  # since binary releases are on hold and the release has none to download.
+  # so the installer is tested before a release exists to download from.
   [string]$ReleaseBase
 )
 
@@ -111,8 +111,8 @@ if (-not $Version) {
     } catch { $location = $null }
     if ($location -match '/releases/tag/([^/?#]+)$') { $Version = $Matches[1] }
   }
-  # No release at all - binary releases are on hold, so the repository may
-  # publish none - leaves the highest version tag: vX.Y.Z only, so neither the
+  # No published release yet (a tag whose release run has not finished, say)
+  # leaves the highest version tag: vX.Y.Z only, so neither the
   # Go module's src/vX.Y.Z alias nor a pre-release is picked.
   if (-not $Version) {
     try {
