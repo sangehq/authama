@@ -4,7 +4,7 @@ import { test, expect } from '../support/fixtures';
 
 test('the Export page filters, chooses columns and formats, and downloads what it previews', async ({ page }) => {
   await page.goto('/export');
-  // Export sits in the Backups & export menu, marked as the current page.
+  // Export sits in the History menu, under Backups, marked as the current page.
   await expect(page.locator('nav[aria-label="Main"] a[href="/export"]')).toHaveAttribute('aria-current', 'page');
   const preview = page.getByRole('region', { name: 'Preview of the first rows' });
   await expect(preview.locator('tbody tr').first()).toBeVisible();
@@ -67,10 +67,10 @@ test('Export columns reorder by keyboard and by dragging', async ({ page }) => {
   await expect(preview.locator('thead th').nth(0)).toHaveText(first);
 });
 
-test('Export is in the Backups & export menu and the palette', async ({ page }) => {
+test('Export is in the History menu and the palette', async ({ page }) => {
   await page.goto('/');
   const nav = page.getByRole('navigation', { name: 'Main' });
-  await nav.getByRole('button', { name: 'Backups & export' }).click();
+  await nav.getByRole('button', { name: 'History', exact: true }).click();
   await nav.getByRole('link', { name: /^Export/ }).click();
   await expect(page).toHaveURL(/\/export/);
   await expect(page.getByRole('heading', { name: 'Export', level: 1 })).toBeVisible();

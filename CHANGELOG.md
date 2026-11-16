@@ -72,6 +72,31 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   existing badge colours. *Mark as seen* on a new key is `key ack`, previewed and confirmed like any
   change.
 
+### Changed
+
+- **The web UI's menus are regrouped, one kind of thing to a menu.** The main menu is Overview,
+  **SSH**, **Tokens**, **Security**, **History** and **System**, with a **New** button and a personal
+  user menu in the top bar. The Actions menu is gone: each job sits under its object's **Tasks**
+  header (SSH › Tasks for host and key jobs, Tokens › Tasks for Add a token), and New repeats Add a
+  host, Add a token and Mint missing keys. Auth tokens has its own Tokens menu with the token
+  checklists; Activity and Backups & export are one History menu (Changes, File events, Snapshots,
+  Export); System holds Doctor, Validate, Repair, Settings and Reset, which is listed once, in red.
+  The user menu keeps Running as, the tour, About and Sign out, and no longer repeats Settings,
+  Events and Doctor. Read-only still hides every task (and now New); the dev sandbox still leaves
+  out Rotate and Revoke.
+- **Every menu entry has its own icon and a one-line description of what its page shows.** No two
+  entries share an icon (Naming is a tag, Repair a tool, VMs a server rack, Reset a restore arrow,
+  Sign out a logout arrow), sixteen icons were added to the sprite through `icons.txt` and
+  `make tabler-vendor`, and the descriptions were rewritten to one shape of about 60 characters.
+  The command palette shows each page with its menu's icon and under its menu's name.
+  The tour follows the new menus: search, SSH, Tokens, Security, History, New, the bell and the user
+  menu. Guards fail on a shared icon or page, an icon missing from the sprite, a task or New on a
+  read-only server, and Rotate or Revoke in the dev sandbox.
+- **Menu entries keep 4.5:1 contrast on their tint.** Tabler's grey description, red destructive
+  entry and blue current entry fell to between 2.7:1 and 4.48:1 on the hover and current-page tints,
+  and in the dark theme; they now use the body colour there, or a darker or lighter mix. The e2e
+  accessibility suite runs axe on every menu open, in both themes.
+
 ## [0.1.0] - 2026-11-14
 
 The first release under `sangehq/authama` and the module path `github.com/sangehq/authama/src`. The

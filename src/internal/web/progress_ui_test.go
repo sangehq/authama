@@ -79,15 +79,16 @@ func TestTheOverviewOffersGetStartedUntilEveryStepIsDone(t *testing.T) {
 	}
 }
 
-// Every page carries the Actions menu, whose entries open the forms people
-// come back for; a read-only server hides it, since it can do none of them.
+// Every page carries the Tasks of the SSH and Tokens menus, whose entries
+// open the forms people come back for; a read-only server hides them, since
+// it can do none of them.
 func TestTheActionsMenuOpensTheKeyJobs(t *testing.T) {
 	s, _, _ := newTestServer(t)
 	c := signIn(t, s)
 	body := c.get("/hosts").Body.String()
 	for _, href := range []string{"/jobs/review?action=rotate-keys", "/jobs/review?action=revoke-keys", "/jobs/review?action=delete-keys", "/hosts#knownhosts-init", "/tokens#add-token"} {
 		if !strings.Contains(body, `href="`+href+`"`) {
-			t.Errorf("the Actions menu lacks %s", href)
+			t.Errorf("the menus' Tasks lack %s", href)
 		}
 	}
 	keys := c.get("/keys").Body.String()
@@ -105,8 +106,8 @@ func TestTheActionsMenuOpensTheKeyJobs(t *testing.T) {
 		t.Fatal(err)
 	}
 	roBody := signIn(t, ro).get("/").Body.String()
-	if strings.Contains(roBody, "/keys#rotate-keys") || strings.Contains(roBody, "data-setup-card") {
-		t.Error("a read-only server offers the Actions menu or the Get started card")
+	if strings.Contains(roBody, "/jobs/review?action=rotate-keys") || strings.Contains(roBody, "data-setup-card") {
+		t.Error("a read-only server offers the menus' Tasks or the Get started card")
 	}
 }
 

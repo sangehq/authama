@@ -35,6 +35,28 @@ for (const theme of ['light', 'dark'] as const) {
       });
     }
 
+    // Each menu open, on a page it holds so one entry is the current one:
+    // a closed dropdown is display:none, which axe skips, so the entries'
+    // colours (a description on the active tint, a red destructive entry)
+    // are only checked like this.
+    for (const { menu, path } of [
+      { menu: 'ssh', path: '/hosts' },
+      { menu: 'tokens', path: '/tokens' },
+      { menu: 'security', path: '/audit' },
+      { menu: 'history', path: '/history' },
+      { menu: 'system', path: '/reset' },
+      { menu: 'new', path: '/' },
+      { menu: 'user', path: '/about' },
+    ]) {
+      test(`the ${menu} menu, open on ${path}, has no serious or critical violations`, async ({ page }, info) => {
+        await page.goto(`${path}?theme=${theme}`);
+        await expect(page.locator('html')).toHaveAttribute('data-bs-theme', theme);
+        await page.locator(`#navbar-${menu}`).click();
+        await expect(page.locator(`[aria-labelledby="navbar-${menu}"]`)).toBeVisible();
+        await audit(page, info, `${menu} menu on ${path} (${theme})`);
+      });
+    }
+
     test('a change preview has no serious or critical violations', async ({ page }, info) => {
       await page.goto(`/?theme=${theme}`);
       await page.getByRole('button', { name: 'Re-render ~/.ssh/config' }).click();
