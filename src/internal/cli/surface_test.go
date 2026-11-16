@@ -358,6 +358,8 @@ var goOnly = map[string]string{
 	"rotate --yes":                   "confirmation flag",
 	"rollback --yes":                 "confirmation flag",
 	"restore --yes":                  "confirmation flag",
+	"owner forget --confirm":         "audit A-SEC-08 (2026-11-16): the typed word that clears a sealing key left in the OS store",
+	"restore --allow-risky-options":  "audit A-SEC-13 (2026-11-16): restore a bundle whose manifest sets risky SSH options, refused without it",
 	"snapshots restore --yes":        "confirmation flag",
 	"profile delete --yes":           "confirmation flag",
 	"profile delete --purge":         "D1 - removes the key files, not just the manifest entry",

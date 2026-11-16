@@ -42,8 +42,15 @@ var heldLock func()
 func SnapshotBeforeMutation(p paths.Paths, retain int) string {
 	LockForMutation(p)
 	snapshots.CleanTempArtifactsIn(p.SSHDir, manifest.KeyRootAt(p.Manifest()))
-	snap, err := snapshots.Snapshot(p.SSHDir, p.SnapshotsDir(), retain, "")
-	recordSnapshot(p, snap, err)
+	snap, err := snapshots.Take(p.SSHDir, p.SnapshotsDir(), "")
+	// Pruning waits for the scope to end when the scope owns this snapshot:
+	// a command refused before it changes anything discards its snapshot, and
+	// had the prune run now it would already have evicted the oldest real
+	// restore point to make room (audit A-BUG-04). Outside a scope, or for a
+	// scope's second snapshot, nothing will prune later, so it prunes now.
+	if !recordSnapshot(p, snap, retain, err) && snap != "" {
+		snapshots.Prune(p.SnapshotsDir(), retain)
+	}
 	return snap
 }
 

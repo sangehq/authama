@@ -12,6 +12,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/sangehq/authama/src/internal/util/testcred"
 )
 
 // "Restart now" answers with the old instance and how to sign back in, then
@@ -59,7 +61,8 @@ func TestAServerRestartsItselfFromTheBanner(t *testing.T) {
 
 // About marks the running build current or older, and every page's banner
 // offers a restart when it is older; the header carries no build strip any
-// more. /healthz names its process only to this machine.
+// more. /healthz names its process only to a caller on this machine that
+// proves the control key (audit A-SEC-09), never to another machine.
 func TestThePageSaysWhetherItsBuildIsCurrent(t *testing.T) {
 	s, _, _ := newTestServer(t)
 	s.opts.Restart = func() error { return nil }
@@ -93,7 +96,10 @@ func TestThePageSaysWhetherItsBuildIsCurrent(t *testing.T) {
 		t.Error("About does not mark a rebuilt binary older")
 	}
 
-	local := httptestGet("/healthz")
+	if s.opts.Control == "" {
+		s.opts.Control = testcred.Secret("control")
+	}
+	local := httptestGet("/healthz?challenge=abc123&caller=" + HealthCallerProof(s.opts.Control, s.opts.Instance, "abc123"))
 	local.RemoteAddr = "127.0.0.1:50000"
 	var h struct {
 		App, Instance, Version string
@@ -102,7 +108,7 @@ func TestThePageSaysWhetherItsBuildIsCurrent(t *testing.T) {
 	if err := json.Unmarshal(do(s, local).Body.Bytes(), &h); err != nil || h.PID != os.Getpid() || h.Version != "test" {
 		t.Errorf("local healthz = %+v, %v", h, err)
 	}
-	remote := httptestGet("/healthz")
+	remote := httptestGet("/healthz?challenge=abc123&caller=" + HealthCallerProof(s.opts.Control, s.opts.Instance, "abc123"))
 	remote.RemoteAddr = "192.0.2.10:50000"
 	if body := do(s, remote).Body.String(); strings.Contains(body, `"pid"`) || strings.Contains(body, strconv.Itoa(os.Getpid())) {
 		t.Errorf("healthz told another machine its pid: %s", body)

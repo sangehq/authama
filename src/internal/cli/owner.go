@@ -127,6 +127,11 @@ func newOwnerVerifyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// Asked of the OS store too: a key left there with the files
+			// deleted is a seal removed, not a home never bound (A-SEC-08).
+			if err := owner.SealRemoved(p); err != nil {
+				return err
+			}
 			st := owner.Verify(p)
 			out := c.OutOrStdout()
 			if !st.SetUp {
@@ -182,10 +187,17 @@ func newOwnerResealCmd() *cobra.Command {
 
 func newOwnerForgetCmd() *cobra.Command {
 	var yes bool
+	var confirmWord string
 	cmd := &cobra.Command{
 		Use:   "forget",
 		Short: "Unbind the home: remove the key, the seal and the PIN, keep everything else",
-		Args:  cobra.NoArgs,
+		Long: "Unbind the home: remove the sealing key, the seal and the PIN, and keep every\n" +
+			"other file. With a PIN set, it asks for it.\n\n" +
+			"It also finishes a binding whose files were removed (owner.json, seal.json,\n" +
+			"pin-attempts.json) while the sealing key stayed in the OS credential store: it\n" +
+			"removes that key. With nothing else left to show the key was yours, it asks you\n" +
+			"to type \"forget\"; a script passes --confirm forget.",
+		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			p, err := resolvePaths(c)
 			if err != nil {
@@ -200,6 +212,14 @@ func newOwnerForgetCmd() *cobra.Command {
 				// owner.json is gone, so there is no PIN to ask for: the
 				// confirmation is the only gate, and it never defaults to yes.
 				if err := confirmChange(c, "owner.json is missing, but the seal and the sealing key are still here. Finish unbinding: remove them. The state files are kept.", yes); err != nil {
+					return err
+				}
+			case cfg == nil && owner.SealRemoved(p) != nil:
+				// Only the key in the OS store is left: nothing on disk says
+				// this home was bound, so the gate is a typed word (A-SEC-08).
+				_, _ = fmt.Fprintln(c.OutOrStdout(), "owner.json, the seal and the attempt count are gone, but the sealing key for this home "+
+					"is still in the OS credential store. Finish unbinding: remove that key. The state files are kept.")
+				if err := typedConfirm(c, "forget", confirmWord); err != nil {
 					return err
 				}
 			case cfg == nil:
@@ -222,7 +242,29 @@ func newOwnerForgetCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the confirmation prompt")
+	cmd.Flags().StringVar(&confirmWord, "confirm", "", `type "forget" here to skip the question when only the OS-store key is left`)
 	return cmd
+}
+
+// typedConfirm asks for word to be typed, as `reset` does, unless given is
+// it already. With no terminal it refuses rather than proceeding: --yes is
+// not enough for what it guards.
+func typedConfirm(c *cobra.Command, word, given string) error {
+	if given == "" {
+		if !platform.StdinIsTerminal() {
+			return fmt.Errorf("this needs --confirm %s when there is no terminal to ask on", word)
+		}
+		_, _ = fmt.Fprintf(c.OutOrStdout(), "Type %q to go on: ", word)
+		line, err := platform.ReadLine(c.InOrStdin())
+		if err != nil {
+			return err
+		}
+		given = strings.TrimSpace(line)
+	}
+	if given != word {
+		return errAborted
+	}
+	return nil
 }
 
 func newOwnerPINCmd() *cobra.Command {

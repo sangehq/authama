@@ -66,6 +66,23 @@ the state home under `replaced/<stamp>/`, as `ssh/<path>` and `config/<file>`,
 owner-only. The summary lists them. Nothing that a restore overwrites is lost. Then `authama ssh load <profile>` to add
 keys to the agent.
 
+A bundle does not prove who made it: anyone holding your age recipient can make one that decrypts
+with your identity. So `restore` decrypts and reads the whole bundle before it writes anything, and
+refuses one whose manifest sets an SSH option that could redirect or weaken your connections, naming
+each option, where it is and why:
+
+| option | refused when |
+|---|---|
+| `ControlPath` | it is outside `~/.ssh` (or `%d/.ssh`) and `$XDG_RUNTIME_DIR`, or holds `..`: another local user could host the shared connection |
+| `IdentityAgent` | it is not `none`, `SSH_AUTH_SOCK`, the 1Password agent, or a socket under those directories: another agent would sign as you |
+| `ForwardAgent` | it is anything but `no` in `global_options`, for every host |
+| `StrictHostKeyChecking` | it is `no` or `off` in `global_options`, for every host |
+
+If you set them yourself, `authama ssh restore <bundle> --allow-risky-options` restores it: the
+question before it writes lists the options, and the summary says which it laid down. The web UI has
+no such switch; it shows the refusal and the command. A manifest you edit by hand is not checked:
+these options are yours to set.
+
 ```sh
 authama settings backup-key                # once: makes an age key and sets the recipient (or set
                                            # AUTHAMA_AGE_RECIPIENT="age1..." to a key you have)

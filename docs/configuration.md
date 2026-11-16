@@ -49,6 +49,11 @@ Host *
 To add your own static SSH directives, put them outside the managed block (above
 or below it) - they will be preserved. `~/.ssh/config` is also snapshotted before
 every mutating command, so a render is always reversible via `snapshots restore`.
+When `~/.ssh/config` is a link to a file kept elsewhere (a dotfiles repository), a
+restore writes the snapshot's text into the file the link points at and leaves the
+link in place, as a render does. Only `config` is written through, and only when its
+link leads to a file that exists; anything else in `~/.ssh` that is a link is
+replaced by a plain file.
 
 ## Multiple identities on one host: prefix aliases to avoid collisions
 
@@ -653,7 +658,7 @@ every setting stays at its default until you add it.
 | `paths.tokens_config` | `AUTHAMA_TOKENS_CONFIG` | see [Auth tokens](#auth-tokens) |
 | `paths.tokens_catalog` | `AUTHAMA_TOKENS_CATALOG` | the built-in catalog |
 | `backup.age_recipient` | `AUTHAMA_AGE_RECIPIENT` | unset (`ssh bundle` needs it) |
-| `backup.snapshot_retain` | `AUTHAMA_SNAPSHOT_RETAIN` | `10` (at least 1); a command that fails or is declined having changed nothing keeps no snapshot, so refusals do not use the slots up |
+| `backup.snapshot_retain` | `AUTHAMA_SNAPSHOT_RETAIN` | `10` (at least 1); a command that fails or is declined having changed nothing keeps no snapshot, and the oldest snapshots are pruned only once a command's own is kept, so refusals never push a restore point out (while a command runs there can be one more than the limit) |
 | `backup.old_key_max_age_days` | `AUTHAMA_OLD_KEY_MAX_AGE_DAYS` | `90` (`0` turns the check off) |
 | `ssh.auto_pin` | `AUTHAMA_AUTO_PIN` | `true` |
 | `history.enabled` | `AUTHAMA_HISTORY` | `true` |
@@ -676,6 +681,7 @@ every setting stays at its default until you add it.
 | `api.enabled` | `AUTHAMA_API` | `false` (serve the read API at `/api/v1/` for API tokens; see [read API](tools/api.md)) |
 | `webhooks.enabled` | `AUTHAMA_WEBHOOKS` | `false` (`serve` sends each new event to your endpoints; see [webhooks](tools/webhooks.md)) |
 | `webhooks.allow_private` | `AUTHAMA_WEBHOOKS_ALLOW_PRIVATE` | `false` (allow endpoints on this machine or a private network, and plain http to loopback) |
+| `webhooks.include_details` | `AUTHAMA_WEBHOOKS_INCLUDE_DETAILS` | `false` (put an operation's error text and subjects in webhook payloads; see [webhooks](tools/webhooks.md#what-is-sent)) |
 | `mcp.enabled` | `AUTHAMA_MCP` | `false` (let `authama mcp` serve MCP over stdio; see [MCP server](tools/mcp.md)) |
 | `web.base_path` | `AUTHAMA_WEB_BASE_PATH` | `/` (serve the UI under a path such as `/authama`; see [tools/serve.md](tools/serve.md#address)) |
 | `web.auto_restart` | `AUTHAMA_WEB_AUTO_RESTART` | `true` (restart `serve` by itself when its binary is rebuilt, and reload open pages into the new build; see [installation.md](installation.md#updating)) |

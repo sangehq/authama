@@ -61,7 +61,7 @@ func TestAWebhookRemovedDuringDeliveryStaysRemoved(t *testing.T) {
 	h := newHoldFirst()
 	done := make(chan struct{})
 	go func() {
-		_, _ = Deliver(context.Background(), p, &http.Client{Transport: h}, t0.Add(10*time.Second))
+		_, _ = Deliver(context.Background(), p, &http.Client{Transport: h}, t0.Add(10*time.Second), DetailRedacted)
 		close(done)
 	}()
 	<-h.entered
@@ -81,7 +81,7 @@ func TestAWebhookDisabledDuringDeliveryStaysDisabled(t *testing.T) {
 	h := newHoldFirst()
 	done := make(chan struct{})
 	go func() {
-		_, _ = Deliver(context.Background(), p, &http.Client{Transport: h}, t0.Add(10*time.Second))
+		_, _ = Deliver(context.Background(), p, &http.Client{Transport: h}, t0.Add(10*time.Second), DetailRedacted)
 		close(done)
 	}()
 	<-h.entered
@@ -107,10 +107,16 @@ func TestTwoDeliveriesAtOnceSendAnEventOnce(t *testing.T) {
 	h := newHoldFirst()
 	cl := &http.Client{Transport: h}
 	first := make(chan struct{})
-	go func() { _, _ = Deliver(context.Background(), p, cl, t0.Add(10*time.Second)); close(first) }()
+	go func() {
+		_, _ = Deliver(context.Background(), p, cl, t0.Add(10*time.Second), DetailRedacted)
+		close(first)
+	}()
 	<-h.entered
 	second := make(chan struct{})
-	go func() { _, _ = Deliver(context.Background(), p, cl, t0.Add(10*time.Second)); close(second) }()
+	go func() {
+		_, _ = Deliver(context.Background(), p, cl, t0.Add(10*time.Second), DetailRedacted)
+		close(second)
+	}()
 	time.Sleep(100 * time.Millisecond) // the second is waiting its turn
 	close(h.release)
 	<-first

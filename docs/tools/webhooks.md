@@ -43,6 +43,13 @@ webhook-signature: v1,<base64 HMAC-SHA256>
  "datacontenttype":"application/json","data":{...},"authamasub":"ops"}
 ```
 
+An operation's `data` leaves out its `error` text and its `subjects` (the hosts, keys and profiles
+it touched): an error can name hosts, addresses, users and what a remote server printed, and a
+webhook hands it to somebody else's server. `result` still says whether it failed. Set
+`webhooks.include_details` (`AUTHAMA_WEBHOOKS_INCLUDE_DETAILS=1`) to send both; the
+[read API](api.md#the-event-feed) and MCP always show them, since only a token holder on this
+machine reads those.
+
 `webhook-id` is the event's `id`, the same on every retry. `authamasub` is the endpoint's name,
 inside the signed body, so a delivery captured from one endpoint cannot be replayed to another that
 checks it. Every attribute is inside the signature: no `ce-*` header is sent. This is sange's wire

@@ -174,7 +174,7 @@ func Forget(p paths.Paths) error {
 		return err
 	}
 	if c == nil {
-		if Orphaned(p) {
+		if Orphaned(p) || keyLeftInOSStore(p) != "" {
 			return finishForget(p)
 		}
 		return ErrNotSetUp
@@ -482,7 +482,7 @@ func Orphaned(p paths.Paths) bool {
 	if _, err := os.Lstat(ConfigPath(p)); !errors.Is(err, os.ErrNotExist) {
 		return false
 	}
-	for _, f := range []string{SealPath(p), attemptsPath(p), fileStore{p}.path()} {
+	for _, f := range []string{SealPath(p), attemptsPath(p), fileStore{p}.path(), dpapiPath(p)} {
 		if _, err := os.Lstat(f); err == nil {
 			return true
 		}
@@ -491,15 +491,16 @@ func Orphaned(p paths.Paths) bool {
 }
 
 // finishForget removes what a binding left once owner.json is gone. The key
-// is taken out of whichever store it could be in; a store that has none is
-// not an error.
+// is taken out of whichever store it could be in, including the OS store
+// SealRemoved found it in (orphanStores); a store that has none is not an
+// error.
 func finishForget(p paths.Paths) error {
 	for _, f := range []string{SealPath(p), attemptsPath(p)} {
 		if err := os.Remove(f); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
 	}
-	for _, st := range []Store{fileStore{p}, StoreFor(p)} {
+	for _, st := range append([]Store{fileStore{p}, StoreFor(p)}, orphanStores(p)...) {
 		if err := st.Remove(); err != nil && !errors.Is(err, ErrNoKey) {
 			return fmt.Errorf("unbound, but the sealing key was not removed from %s: %w", st.Name(), err)
 		}

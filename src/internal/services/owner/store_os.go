@@ -2,5 +2,6 @@
 
 package owner
 
-// service is the name the key is kept under in an OS store.
-const service = "authama-owner-key"
+// service is the name the key is kept under in an OS store (ServiceName,
+// which the advice for a removed seal spells out on every platform).
+const service = ServiceName

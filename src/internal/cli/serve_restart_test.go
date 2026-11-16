@@ -44,8 +44,12 @@ func healthServer(t *testing.T, body string) (host string, port int) {
 	return h, n
 }
 
-// Every authama answering is found, with its pid when it says it; anything
-// else on a port is not authama, and a closed port is skipped.
+// Every authama answering is found; anything else on a port is not authama,
+// and a closed port is skipped. A pid offered without a proof of a control key
+// held here is not taken (audit A-SEC-09): this test used to expect the first
+// server's unproven 4242, which an older build gave any local caller and a
+// decoy can give too. TestStopAllLearnsThePidOnlyOfAServerItHoldsTheKeyFor
+// covers the proven case.
 func TestStopAllFindsEveryAuthamaWebUI(t *testing.T) {
 	host, current := healthServer(t, `{"app":"authama","instance":"aaaa","pid":4242,"version":"v0.1.0"}`)
 	_, older := healthServer(t, `{"app":"authama","instance":"bbbb"}`)
@@ -57,12 +61,12 @@ func TestStopAllFindsEveryAuthamaWebUI(t *testing.T) {
 	closed := ln.Addr().(*net.TCPAddr).Port
 	_ = ln.Close()
 
-	found := findServers(host, []int{current, older, other, closed}, "")
-	if len(found) != 2 || found[0].PID != 4242 || found[0].Version != "v0.1.0" || found[1].PID != 0 {
+	found := findServers(host, []int{current, older, other, closed}, "", nil)
+	if len(found) != 2 || found[0].PID != 0 || found[0].Version != "" || found[1].PID != 0 {
 		t.Fatalf("found = %+v", found)
 	}
-	// An older build that does not say its pid is reported with the command
-	// that stops it, never guessed at.
+	// A server that proved no key held here is reported with the commands
+	// that stop it, never guessed at.
 	err = stopFound(found[1], "")
 	if err == nil || !strings.Contains(err.Error(), "lsof -ti tcp:"+strconv.Itoa(older)) {
 		t.Errorf("stopping an older build: %v", err)

@@ -377,7 +377,7 @@ type Result struct {
 // Deliver sends each enabled endpoint the events after its cursor, in order,
 // stopping at its first failure: it is tried again after a backoff, from the
 // same event, so an endpoint sees each event once and in order.
-func Deliver(ctx context.Context, p paths.Paths, client *http.Client, now time.Time) ([]Result, error) {
+func Deliver(ctx context.Context, p paths.Paths, client *http.Client, now time.Time, detail Detail) ([]Result, error) {
 	// One delivery at a time: the server's loop and `authama webhook deliver`
 	// each sent an event the other had already sent. The second now waits,
 	// then finds the cursor moved on and nothing left to send.
@@ -420,7 +420,7 @@ func Deliver(ctx context.Context, p paths.Paths, client *http.Client, now time.T
 				ep.Cursor = e.Cursor()
 				continue
 			}
-			status, err := send(ctx, client, *ep, e, now)
+			status, err := send(ctx, client, *ep, forWebhook(e, detail), now)
 			ep.LastStatus = status
 			if err != nil {
 				res.Err = err
@@ -483,6 +483,32 @@ func fail(ep *Endpoint, status int, err error, now time.Time) {
 	default:
 		ep.NextAttempt = now.Add(backoff[min(ep.Failures, len(backoff))-1]).UTC()
 	}
+}
+
+// Detail is how much of an operation a webhook payload carries: the setting
+// webhooks.include_details chooses it.
+type Detail int
+
+const (
+	// DetailRedacted leaves out an operation's error text and subjects, the
+	// default (audit A-SEC-12): an error can hold host names, addresses, user
+	// names and remote stderr, and a webhook hands it to a third party.
+	DetailRedacted Detail = iota
+	// DetailFull sends the operation as the local feed holds it.
+	DetailFull
+)
+
+// forWebhook is e as a webhook may send it. Only an operation's error text
+// and subjects are withheld; its result still says it failed, and the local
+// feed (API, MCP) keeps both.
+func forWebhook(e feed.Event, detail Detail) feed.Event {
+	op, ok := e.Data.(feed.Operation)
+	if detail == DetailFull || !ok {
+		return e
+	}
+	op.Error, op.Subjects = "", nil
+	e.Data = op
+	return e
 }
 
 // send POSTs one event and returns the status it was answered with.

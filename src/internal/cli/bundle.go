@@ -73,15 +73,18 @@ func pruneBundles(dir string, keep int) []string { return bundler.Prune(dir, kee
 
 func newRestoreCmd() *cobra.Command {
 	var identity string
-	var yes bool
+	var yes, allowRisky bool
 	cmd := &cobra.Command{
 		Use:   "restore <bundle.age>",
 		Short: "Restore keys + state from an encrypted bundle (see bundle)",
-		Args:  cobra.ExactArgs(1),
+		Long: "Restore keys + state from an encrypted bundle (see bundle).\n\n" +
+			"The bundle is decrypted and checked before anything is written. A bundle whose\n" +
+			"manifest sets SSH options that could redirect or weaken connections (a ControlPath\n" +
+			"or IdentityAgent outside ~/.ssh and $XDG_RUNTIME_DIR, ForwardAgent or\n" +
+			"StrictHostKeyChecking no for every host) is refused, naming each one: a bundle does\n" +
+			"not prove who made it. Pass --allow-risky-options to restore one you made yourself.",
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			if err := confirmOrAbort(c, "Restore ~/.ssh from this bundle? Every file it replaces with different content, private keys included, is kept first in the state home's replaced/ folder", yes); err != nil {
-				return err
-			}
 			p, err := resolvePaths(c)
 			if err != nil {
 				return err
@@ -93,10 +96,33 @@ func newRestoreCmd() *cobra.Command {
 					ident = env
 				}
 			}
+			b := bundler.New(p.SSHDir, p.ConfigDir, bundler.AgeCipher{}).WithKeyRoot(manifest.KeyRootAt(p.Manifest())).
+				WithReplacedDir(bundler.ReplacedDir(p, time.Now()))
+			if allowRisky {
+				b = b.AllowRiskyOptions()
+			}
+			// Decrypted and read first, writing nothing, so the question
+			// below can say what the bundle would set (audit A-SEC-13).
+			opened, err := b.Open(args[0], ident)
+			if err != nil {
+				return err
+			}
+			question := "Restore ~/.ssh from this bundle? Every file it replaces with different content, private keys included, is kept first in the state home's replaced/ folder"
+			if risky := opened.Risky(); len(risky) > 0 {
+				if !allowRisky {
+					return bundler.RiskyError(risky)
+				}
+				question += "\nIt sets these SSH options, which you allowed with --allow-risky-options:"
+				for _, r := range risky {
+					question += "\n  " + r.String()
+				}
+			}
+			if err := confirmOrAbort(c, question, yes); err != nil {
+				return err
+			}
 			snapshotBeforeMutation(p)
 			ks := keystore.New()
-			res, err := bundler.New(p.SSHDir, p.ConfigDir, bundler.AgeCipher{}).WithKeyRoot(manifest.KeyRootAt(p.Manifest())).
-				WithReplacedDir(bundler.ReplacedDir(p, time.Now())).Restore(args[0], ident, ks.Fingerprint)
+			res, err := b.LayDown(opened, ks.Fingerprint)
 			if err != nil {
 				return err
 			}
@@ -110,6 +136,7 @@ func newRestoreCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&identity, "identity", "i", "", "age identity file (else $AUTHAMA_AGE_IDENTITY_FILE)")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the confirmation prompt")
+	cmd.Flags().BoolVar(&allowRisky, "allow-risky-options", false, "restore a bundle whose manifest sets SSH options that could redirect or weaken connections (you made it yourself)")
 	return cmd
 }
 

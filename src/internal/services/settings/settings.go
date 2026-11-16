@@ -126,6 +126,8 @@ var Specs = []Spec{
 		Doc: "Have `serve` send each new event (a change finished, a watched file changed) to the endpoints added with `authama webhook add`, signed as Standard Webhooks do. Off: nothing is sent; `authama webhook deliver` still sends by hand."},
 	{Section: "webhooks", Name: "allow_private", Env: envnames.WebhooksAllowPrivate, Kind: KindBool, Default: "false",
 		Doc: "Let an endpoint be on this machine or a private network (loopback, 10/8, 172.16/12, 192.168/16, link-local), and use plain http on loopback. Off: only https to public addresses, so a webhook cannot be aimed at services behind your firewall."},
+	{Section: "webhooks", Name: "include_details", Env: envnames.WebhooksIncludeDetails, Kind: KindBool, Default: "false",
+		Doc: "Put an operation's error text and subjects (the hosts, keys and profiles it touched) in webhook payloads. Off: a webhook says which command ran and whether it failed, never why or on what, since an error can name hosts, addresses, users and remote output; the read API and MCP still show both."},
 	{Section: "mcp", Name: "enabled", Env: envnames.MCP, Kind: KindBool, Default: "false",
 		Doc: "Let `authama mcp` serve the Model Context Protocol over stdio, for an AI client that starts it. Its tools read only, as the API does. Off: `authama mcp` refuses to start."},
 	{Section: "web", Name: "addr", Env: envnames.WebAddr, Kind: KindString, Default: "127.0.0.1",
