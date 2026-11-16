@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"os"
+	"path"
 	"strings"
 	"testing"
 
@@ -143,5 +144,48 @@ func TestARevokedKeyIsListedAsRevoked(t *testing.T) {
 	}
 	if _, err := os.Stat(inventory.EventsPath(p.Inventory())); err != nil {
 		t.Error(err)
+	}
+}
+
+// --since keeps the keys something happened to since a duration ago or a
+// date; an ack is not a change, and a value that is neither is refused.
+func TestSinceKeepsTheKeysThatChangedSince(t *testing.T) {
+	p := recencyHome(t)
+	keys := listedKeys(t)
+	inv, err := inventory.Load(p.Inventory())
+	if err != nil {
+		t.Fatal(err)
+	}
+	old := inventory.Stamp().AddDate(0, 0, -10)
+	var oldFP string
+	for fp, rec := range inv.Keys {
+		if strings.HasSuffix(keys[0].Key, "/"+path.Base(rec.Path)) {
+			oldFP = fp
+		}
+	}
+	if oldFP == "" {
+		t.Fatalf("no record for %s in %+v", keys[0].Key, inv.Keys)
+	}
+	inv.Note(oldFP, inventory.EventCreated, old)
+	inv.Note(oldFP, inventory.EventAdded, old)
+	if err := inv.Save(p.Inventory()); err != nil {
+		t.Fatal(err)
+	}
+	run(t, "ssh", "key", "ack", keys[0].Key)
+	got := listedKeys(t, "--since", "2d")
+	if len(got) != 1 || got[0].Key == keys[0].Key {
+		t.Errorf("--since 2d kept %+v, want only %s", got, keys[1].Key)
+	}
+	if n := len(listedKeys(t, "--since", "30d")); n != 2 {
+		t.Errorf("--since 30d kept %d keys, want 2", n)
+	}
+	if n := len(listedKeys(t, "--since", old.AddDate(0, 0, -1).Format("2006-01-02"))); n != 2 {
+		t.Errorf("--since a date before both kept %d keys, want 2", n)
+	}
+	if table := run(t, "ssh", "key", "list", "--since", "48h"); strings.Contains(table, keys[0].Key) || !strings.Contains(table, keys[1].Key) {
+		t.Errorf("the table ignores --since:\n%s", table)
+	}
+	if _, err := runIn(t, "", "ssh", "key", "list", "--since", "soon"); err == nil {
+		t.Error("--since soon was accepted")
 	}
 }

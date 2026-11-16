@@ -54,7 +54,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `settings validate` refuse anything else.
 - **`ssh key list` shows how new and how old each key is.** Two columns, `AGE` (since it was
   created, added or rotated in) and `STATUS` (`new`, `current`, `ageing`, `old`, `due soon`, `overdue`,
-  `revoked`, `retired`), as words. `--new` keeps the keys labelled new, and `--json` prints each key
+  `revoked`, `retired`), as words. `--new` keeps the keys labelled new, `--since <duration|date>`
+  (`36h`, `7d`, `2026-11-01`) the keys something happened to since then, and `--json` prints each key
   with its recency: every event with its time, age and constraint, `is_new`, `new_because` and the
   pill.
 - **`ssh key ack` clears the new label** on the keys it names (or `--category`, `--all`) until their

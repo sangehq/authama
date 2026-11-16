@@ -275,3 +275,47 @@ func TestFromEnvReadsUntilAndPills(t *testing.T) {
 		t.Errorf("a bad value must leave the default: %+v", p)
 	}
 }
+
+// --since takes a duration (36h, 7d) or a date (2026-11-01, or RFC 3339).
+func TestParseSince(t *testing.T) {
+	cases := map[string]time.Time{
+		"36h":                  now.Add(-36 * time.Hour),
+		"7d":                   now.Add(-7 * day),
+		"2026-11-01":           time.Date(2026, 11, 1, 0, 0, 0, 0, time.Local),
+		"2026-11-10T06:00:00Z": time.Date(2026, 11, 10, 6, 0, 0, 0, time.UTC),
+	}
+	for in, want := range cases {
+		if got, err := ParseSince(in, now); err != nil || !got.Equal(want) {
+			t.Errorf("ParseSince(%q) = %v %v, want %v", in, got, err, want)
+		}
+	}
+	for _, bad := range []string{"", "soon", "-2d", "-1h", "2026-13-01", "d"} {
+		if _, err := ParseSince(bad, now); err == nil {
+			t.Errorf("%q accepted", bad)
+		}
+	}
+}
+
+// ChangedSince is true when anything but an ack happened at or after the
+// cutoff; a day-only event counts for its whole day.
+func TestChangedSince(t *testing.T) {
+	s := Evaluate([]Event{exact(inventory.EventCreated, 10*day), exact(inventory.EventDeployed, 2*day),
+		exact(inventory.EventAcknowledged, time.Hour)}, 365, expiry.OK, DefaultPolicy(), now)
+	if !s.ChangedSince(now.Add(-3 * day)) {
+		t.Error("the deploy two days ago is since three days ago")
+	}
+	if s.ChangedSince(now.Add(-day)) {
+		t.Error("an ack alone is not a change")
+	}
+	created := "2026-11-12"
+	day := Evaluate(Timeline(inventory.KeyRecord{Created: &created}, inventory.KeyEvents{}, "", ""), 365, expiry.OK, DefaultPolicy(), now)
+	if !day.ChangedSince(time.Date(2026, 11, 12, 15, 0, 0, 0, time.Local)) {
+		t.Error("a key created on the 12th was created since 15:00 on the 12th, by the day")
+	}
+	if day.ChangedSince(time.Date(2026, 11, 13, 0, 0, 0, 0, time.Local)) {
+		t.Error("nor since the 13th")
+	}
+	if (Status{}).ChangedSince(now.Add(-100 * 24 * time.Hour)) {
+		t.Error("a key with no events has not changed")
+	}
+}

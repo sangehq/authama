@@ -143,6 +143,38 @@ func FromEnv(get envnames.Getenv) Policy {
 	return p
 }
 
+// ParseSince reads --since: a duration back from now (36h, or 7d in whole
+// days) or a point in time (a date, at local midnight, or RFC 3339).
+func ParseSince(s string, now time.Time) (time.Time, error) {
+	s = strings.TrimSpace(s)
+	if t, err := time.ParseInLocation(time.DateOnly, s, time.Local); err == nil {
+		return t, nil
+	}
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return t, nil
+	}
+	var d time.Duration
+	if n, ok := strings.CutSuffix(s, "d"); ok {
+		days, err := strconv.Atoi(n)
+		if err != nil {
+			return time.Time{}, sinceError(s)
+		}
+		d = time.Duration(days) * day
+	} else if v, err := time.ParseDuration(s); err == nil {
+		d = v
+	} else {
+		return time.Time{}, sinceError(s)
+	}
+	if d < 0 {
+		return time.Time{}, sinceError(s)
+	}
+	return now.Add(-d), nil
+}
+
+func sinceError(s string) error {
+	return fmt.Errorf("--since %q: give a duration (36h, 7d) or a date (2026-11-01, or RFC 3339)", s)
+}
+
 // Event is one thing that happened to a key. DayOnly marks a time read from
 // a day field: midnight, local time, of that day.
 type Event struct {
@@ -206,6 +238,23 @@ type Status struct {
 	IsNew      bool    `json:"is_new"`
 	NewBecause string  `json:"new_because,omitempty"`
 	Pill       Pill    `json:"pill"`
+}
+
+// ChangedSince is true when something other than an ack happened to the key
+// at or after cutoff. A day-only event counts for the whole of its day.
+func (s Status) ChangedSince(cutoff time.Time) bool {
+	for _, e := range s.Events {
+		if e.Kind == inventory.EventAcknowledged {
+			continue
+		}
+		if t, err := time.Parse(time.RFC3339, e.At); err == nil && !t.Before(cutoff) {
+			return true
+		}
+		if t, err := time.ParseInLocation(time.DateOnly, e.At, time.Local); err == nil && cutoff.Before(t.AddDate(0, 0, 1)) {
+			return true
+		}
+	}
+	return false
 }
 
 // Evaluate judges a timeline against the policy. lifetimeDays is the key's

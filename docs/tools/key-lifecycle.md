@@ -117,6 +117,8 @@ word for where it stands (`STATUS`):
 ```sh
 authama ssh key list                 # AGE and STATUS columns
 authama ssh key list --new           # only the keys labelled new
+authama ssh key list --since 7d      # only the keys something happened to in the last 7 days
+authama ssh key list --since 2026-11-01   # ... or since a date (local midnight; RFC 3339 also works)
 authama ssh key list --json          # each key's recency: events, ages, is_new, new_because, pill
 authama ssh key ack work/work_gh-ed25519   # seen it: clear the label
 authama ssh key ack --all
@@ -133,6 +135,12 @@ ack, whichever comes first. `acknowledged` keeps a key new until `authama ssh ke
 that takes, so nothing new slips by unseen; switching to it labels every key that was never acked,
 and `authama ssh key ack --all` clears them in one go. `keys.new_window_days: 0` turns the label off
 under either.
+
+`--since` takes a duration back from now (`36h`, or whole days as `7d`) or a point in time (a date,
+read as local midnight, or RFC 3339), and keeps the keys that were created, added, deployed, rotated,
+restored, retired or revoked at or after it. An acknowledgement is not a change, so it never brings a
+key back in. A key recorded before `key-events.json` existed is judged by its days, each counting
+for the whole of its day. `--since` combines with `--new` and with `--json`.
 
 Each event also carries its own age against the key's constraints: `fresh` inside the new window,
 `old` past the key's lifetime, `ageing` past half of it, `current` otherwise. Both thresholds are
