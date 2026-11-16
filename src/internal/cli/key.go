@@ -279,7 +279,7 @@ func writeKeyJSON(out io.Writer, rows []keysvc.Row, rec map[string]recency.Statu
 }
 
 // writeKeyTable renders the key table. AGE is how long ago the key was
-// created, added or rotated in, and STATUS its recency pill (new, current,
+// created, added or rotated in, and STATUS its recency pill (new, current, old,
 // ageing, due soon, overdue, revoked, retired), as words: no colour.
 func writeKeyTable(out io.Writer, rows []keysvc.Row, rec map[string]recency.Status) {
 	if len(rows) == 0 {

@@ -46,8 +46,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`AUTHAMA_KEYS_NEW_EVENTS`, default `created,added,rotated,deployed`, `restored` also allowed) which
   events make it new. `settings set` and `settings validate` refuse an unknown event or a negative
   window, and the schema checks both.
+- **`keys.new_until` and `keys.age_pills`.** `keys.new_until` (`AUTHAMA_KEYS_NEW_UNTIL`) is `window`,
+  the default (a key is new until the window ends or `ssh key ack`), or `acknowledged` (new until
+  `ssh key ack`, however long). `keys.age_pills` (`AUTHAMA_KEYS_AGE_PILLS`, default `0.5,1.0`) sets
+  when a key turns `ageing` and `old`, as fractions of its `rotate_after_days`; a key past the bad
+  fraction whose expiry has not caught up is now `old` rather than `ageing`. `settings set` and
+  `settings validate` refuse anything else.
 - **`ssh key list` shows how new and how old each key is.** Two columns, `AGE` (since it was
-  created, added or rotated in) and `STATUS` (`new`, `current`, `ageing`, `due soon`, `overdue`,
+  created, added or rotated in) and `STATUS` (`new`, `current`, `ageing`, `old`, `due soon`, `overdue`,
   `revoked`, `retired`), as words. `--new` keeps the keys labelled new, and `--json` prints each key
   with its recency: every event with its time, age and constraint, `is_new`, `new_because` and the
   pill.

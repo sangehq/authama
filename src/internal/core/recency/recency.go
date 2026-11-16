@@ -39,16 +39,64 @@ const day = 24 * time.Hour
 var Eligible = []string{inventory.EventCreated, inventory.EventAdded, inventory.EventDeployed,
 	inventory.EventRotated, inventory.EventRestored}
 
-// Policy is what counts as new and for how long.
+// How long a key stays new (keys.new_until).
+const (
+	// UntilWindow: new until the window ends, or an ack, whichever is first.
+	UntilWindow = "window"
+	// UntilAcknowledged: new until an ack, however long that takes.
+	UntilAcknowledged = "acknowledged"
+)
+
+// Untils are the values keys.new_until takes, the default first.
+var Untils = []string{UntilWindow, UntilAcknowledged}
+
+// The default pill thresholds (keys.age_pills), as fractions of the key's
+// lifetime (rotate_after_days): ageing from half of it, old from all of it.
+const (
+	DefaultWarn = 0.5
+	DefaultBad  = 1.0
+	// maxFraction bounds a threshold: ten lifetimes is already never.
+	maxFraction = 10
+)
+
+// Policy is what counts as new and for how long, and when an age turns
+// ageing (Warn) and old (Bad), as fractions of the key's lifetime.
 type Policy struct {
 	Window time.Duration // 0 turns the label off
 	Events []string      // a subset of Eligible
+	Until  string        // UntilWindow or UntilAcknowledged
+	Warn   float64
+	Bad    float64
 }
 
-// DefaultPolicy is seven days, after a key is created, added, rotated or deployed.
+// DefaultPolicy is seven days, after a key is created, added, rotated or
+// deployed, or until an ack if sooner; ageing at half the key's lifetime and
+// old at all of it.
 func DefaultPolicy() Policy {
 	return Policy{Window: DefaultWindowDays * day, Events: []string{inventory.EventCreated,
-		inventory.EventAdded, inventory.EventRotated, inventory.EventDeployed}}
+		inventory.EventAdded, inventory.EventRotated, inventory.EventDeployed},
+		Until: UntilWindow, Warn: DefaultWarn, Bad: DefaultBad}
+}
+
+// ParsePills reads keys.age_pills: "warn,bad", two fractions of the key's
+// lifetime, each above 0 and at most 10, warn no later than bad.
+func ParsePills(s string) (warn, bad float64, err error) {
+	parts := strings.Split(s, ",")
+	if len(parts) != 2 {
+		return 0, 0, errors.New("give two fractions of the key's lifetime, warn then bad, such as 0.5,1.0")
+	}
+	var f [2]float64
+	for i, part := range parts {
+		v, perr := strconv.ParseFloat(strings.TrimSpace(part), 64)
+		if perr != nil || v <= 0 || v > maxFraction {
+			return 0, 0, fmt.Errorf("%q is not a fraction above 0 and at most %d", strings.TrimSpace(part), maxFraction)
+		}
+		f[i] = v
+	}
+	if f[0] > f[1] {
+		return 0, 0, fmt.Errorf("warn (%g) must not come after bad (%g)", f[0], f[1])
+	}
+	return f[0], f[1], nil
 }
 
 // ParseEvents reads a comma-separated list of events, each one of Eligible.
@@ -82,6 +130,14 @@ func FromEnv(get envnames.Getenv) Policy {
 	if raw := envnames.Get(get, envnames.KeysNewEvents); raw != "" {
 		if evs, err := ParseEvents(raw); err == nil {
 			p.Events = evs
+		}
+	}
+	if raw := strings.TrimSpace(envnames.Get(get, envnames.KeysNewUntil)); slices.Contains(Untils, raw) {
+		p.Until = raw
+	}
+	if raw := envnames.Get(get, envnames.KeysAgePills); raw != "" {
+		if w, b, err := ParsePills(raw); err == nil {
+			p.Warn, p.Bad = w, b
 		}
 	}
 	return p
@@ -186,7 +242,7 @@ func Evaluate(events []Event, lifetimeDays int, expiryState string, p Policy, no
 		switch e.Kind {
 		case inventory.EventRevoked, inventory.EventRetired, inventory.EventAcknowledged:
 		default:
-			sh.Label, sh.Tone = constraint(age, p.Window, lifetime)
+			sh.Label, sh.Tone = constraint(age, p, lifetime)
 		}
 		if e.At.Equal(born) {
 			bornAge, s.Age = age, sh.Ago
@@ -194,7 +250,8 @@ func Evaluate(events []Event, lifetimeDays int, expiryState string, p Policy, no
 		s.Events = append(s.Events, sh)
 		// The latest qualifying event names the reason; at a tie (a key minted
 		// is created and added at once) the first, the more specific, stays.
-		if p.Window > 0 && slices.Contains(p.Events, e.Kind) && age <= p.Window && e.At.After(ack) &&
+		inWindow := age <= p.Window || p.Until == UntilAcknowledged
+		if p.Window > 0 && slices.Contains(p.Events, e.Kind) && inWindow && e.At.After(ack) &&
 			(!s.IsNew || e.At.After(newAt)) {
 			s.IsNew, s.NewBecause, newAt = true, e.Kind, e.At
 		}
@@ -213,7 +270,9 @@ func Evaluate(events []Event, lifetimeDays int, expiryState string, p Policy, no
 		s.Pill = Pill{"new", ToneInfo}
 	case born.IsZero():
 		s.Pill = Pill{"unknown", ToneMuted}
-	case lifetime > 0 && bornAge >= lifetime/2:
+	case lifetime > 0 && bornAge >= fraction(lifetime, p.Bad):
+		s.Pill = Pill{"old", ToneBad}
+	case lifetime > 0 && bornAge >= fraction(lifetime, p.Warn):
 		s.Pill = Pill{"ageing", ToneWarn}
 	default:
 		s.Pill = Pill{"current", ToneOK}
@@ -222,17 +281,27 @@ func Evaluate(events []Event, lifetimeDays int, expiryState string, p Policy, no
 }
 
 // constraint judges one event's age: fresh inside the new window, old past
-// the key's lifetime, ageing past half of it, current otherwise.
-func constraint(age, window, lifetime time.Duration) (label, tone string) {
+// the policy's bad fraction of the key's lifetime, ageing past its warn
+// fraction, current otherwise.
+func constraint(age time.Duration, p Policy, lifetime time.Duration) (label, tone string) {
 	switch {
-	case window > 0 && age <= window:
+	case p.Window > 0 && age <= p.Window:
 		return "fresh", ToneInfo
-	case lifetime > 0 && age >= lifetime:
+	case lifetime > 0 && age >= fraction(lifetime, p.Bad):
 		return "old", ToneBad
-	case lifetime > 0 && age >= lifetime/2:
+	case lifetime > 0 && age >= fraction(lifetime, p.Warn):
 		return "ageing", ToneWarn
 	}
 	return "current", ToneOK
+}
+
+// fraction is f of the lifetime; a zero f (a Policy built by hand) is the
+// default it stands for, so the zero value never makes every key old.
+func fraction(lifetime time.Duration, f float64) time.Duration {
+	if f <= 0 {
+		return lifetime
+	}
+	return time.Duration(float64(lifetime) * f)
 }
 
 // ageOf is how long ago the event was. A day-only event is counted in whole

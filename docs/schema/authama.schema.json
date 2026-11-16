@@ -220,9 +220,22 @@
     "keys": {
       "additionalProperties": false,
       "properties": {
+        "age_pills": {
+          "description": "When a key's age turns its pill ageing (warn) and old (bad): two fractions of the key's rotate_after_days, warn then bad, comma-separated, each above 0 and at most 10. Expiry (due soon, overdue), a revocation or a retirement still win over age. Sets $AUTHAMA_KEYS_AGE_PILLS. Default: 0.5,1.0.",
+          "minLength": 1,
+          "type": "string"
+        },
         "new_events": {
           "description": "Which events make a key new, comma-separated: created (minted), added (minted, adopted or imported), rotated (the successor a rotation minted), deployed (installed on a target) and restored (brought back by a rollback). Sets $AUTHAMA_KEYS_NEW_EVENTS. Default: created,added,rotated,deployed.",
           "pattern": "^ *(created|added|deployed|rotated|restored) *(, *(created|added|deployed|rotated|restored) *)*$",
+          "type": "string"
+        },
+        "new_until": {
+          "description": "How long a key stays new: window ends the label after keys.new_window_days, or sooner on `authama ssh key ack`; acknowledged keeps it until `authama ssh key ack`, however long that takes. keys.new_window_days 0 turns the label off under either. Sets $AUTHAMA_KEYS_NEW_UNTIL. Default: window.",
+          "enum": [
+            "window",
+            "acknowledged"
+          ],
           "type": "string"
         },
         "new_window_days": {

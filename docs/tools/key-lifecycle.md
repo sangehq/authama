@@ -109,8 +109,9 @@ word for where it stands (`STATUS`):
 |---|---|
 | `revoked`, `retired` | the key was revoked, or replaced by a rotation (and not rolled back) |
 | `overdue`, `due soon` | its [expiry](expiry.md) says so; expiry always wins over age |
-| `new` | one of `keys.new_events` happened within `keys.new_window_days` |
-| `ageing` | it is past half its lifetime |
+| `new` | one of `keys.new_events` happened within `keys.new_window_days` (or, under `keys.new_until: acknowledged`, since the last `key ack`) |
+| `old` | it is past its whole lifetime (`keys.age_pills`' bad fraction) and expiry has not said so |
+| `ageing` | it is past half its lifetime (`keys.age_pills`' warn fraction) |
 | `current` | otherwise |
 
 ```sh
@@ -127,8 +128,18 @@ A key is **new** for 7 days after it is created, added, rotated in or deployed. 
 `--json`'s `new_because` names the event that set it. `authama ssh key ack` clears it at once and
 records an `acknowledged` time; the next of those events makes the key new again.
 
+`keys.new_until` says what ends the label. `window`, the default, is the above: the window or an
+ack, whichever comes first. `acknowledged` keeps a key new until `authama ssh key ack`, however long
+that takes, so nothing new slips by unseen; switching to it labels every key that was never acked,
+and `authama ssh key ack --all` clears them in one go. `keys.new_window_days: 0` turns the label off
+under either.
+
 Each event also carries its own age against the key's constraints: `fresh` inside the new window,
-`old` past the key's lifetime, `ageing` past half of it, `current` otherwise. A revocation, a
+`old` past the key's lifetime, `ageing` past half of it, `current` otherwise. Both thresholds are
+`keys.age_pills`, two fractions of the key's `rotate_after_days`, warn then bad (default `0.5,1.0`):
+`authama settings set keys.age_pills 0.75,0.9` turns a key `ageing` at three quarters of its
+lifetime and `old` at 90%, for the pill and for each event alike. Each fraction is above 0 and at
+most 10, and warn comes no later than bad. A revocation, a
 retirement and an acknowledgement end or note something, so they carry only their time. The table
 and `--json` never carry colour or terminal escapes.
 

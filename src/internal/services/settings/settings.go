@@ -58,6 +58,9 @@ type Spec struct {
 	Min           int
 	Default       string
 	Doc           string
+	// Check, when set, is a string setting's own rule, applied wherever
+	// the value is checked (settings set, settings validate, Parse).
+	Check func(string) error
 }
 
 // Key is the dotted authama.json path, e.g. "backup.age_recipient".
@@ -102,6 +105,10 @@ var Specs = []Spec{
 	{Section: "keys", Name: "new_events", Env: envnames.KeysNewEvents, Kind: KindList, Enum: recency.Eligible,
 		Default: "created,added,rotated,deployed",
 		Doc:     "Which events make a key new, comma-separated: created (minted), added (minted, adopted or imported), rotated (the successor a rotation minted), deployed (installed on a target) and restored (brought back by a rollback)."},
+	{Section: "keys", Name: "new_until", Env: envnames.KeysNewUntil, Kind: KindEnum, Enum: recency.Untils, Default: "window",
+		Doc: "How long a key stays new: window ends the label after keys.new_window_days, or sooner on `authama ssh key ack`; acknowledged keeps it until `authama ssh key ack`, however long that takes. keys.new_window_days 0 turns the label off under either."},
+	{Section: "keys", Name: "age_pills", Env: envnames.KeysAgePills, Kind: KindString, Default: "0.5,1.0", Check: checkPills,
+		Doc: "When a key's age turns its pill ageing (warn) and old (bad): two fractions of the key's rotate_after_days, warn then bad, comma-separated, each above 0 and at most 10. Expiry (due soon, overdue), a revocation or a retirement still win over age."},
 	{Section: "notifications", Name: "desktop", Env: envnames.Notifications, Kind: KindBool, Default: "true",
 		Doc: "Show desktop notifications for keys due for rotation and dangling keys."},
 	{Section: "vm", Name: "hypervisors", Env: envnames.VMHypervisors, Kind: KindString,
@@ -255,6 +262,11 @@ func (s Spec) convert(raw json.RawMessage) (string, error) {
 		if s.Kind == KindEnum && !contains(s.Enum, v) {
 			return "", fmt.Errorf("must be one of %s, got %q", strings.Join(s.Enum, ", "), v)
 		}
+		if s.Check != nil {
+			if err := s.Check(v); err != nil {
+				return "", err
+			}
+		}
 		return v, nil
 	case KindList:
 		var v string
@@ -403,4 +415,10 @@ func namesIn(section string) []string {
 		}
 	}
 	return out
+}
+
+// checkPills is keys.age_pills' rule: recency's own parser.
+func checkPills(v string) error {
+	_, _, err := recency.ParsePills(v)
+	return err
 }

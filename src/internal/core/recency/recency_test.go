@@ -198,3 +198,80 @@ func TestAgoWording(t *testing.T) {
 		}
 	}
 }
+
+// keys.new_until: under window a key stops being new when the window ends;
+// under acknowledged it stays new, however old the event, until an ack after it.
+func TestUntilAcknowledgedKeepsAKeyNewUntilItIsAcked(t *testing.T) {
+	created := exact(inventory.EventCreated, 40*day)
+	p := DefaultPolicy()
+	if s := Evaluate([]Event{created}, 365, expiry.OK, p, now); s.IsNew {
+		t.Errorf("under window a 40-day-old key is not new: %+v", s)
+	}
+	p.Until = UntilAcknowledged
+	s := Evaluate([]Event{created}, 365, expiry.OK, p, now)
+	if !s.IsNew || s.NewBecause != inventory.EventCreated || s.Pill.Label != "new" {
+		t.Errorf("under acknowledged an unacked key stays new: %+v", s)
+	}
+	if s := Evaluate([]Event{created, exact(inventory.EventAcknowledged, day)}, 365, expiry.OK, p, now); s.IsNew {
+		t.Errorf("an ack ends it: %+v", s)
+	}
+	if s := Evaluate([]Event{created, exact(inventory.EventAcknowledged, 2*day), exact(inventory.EventDeployed, 30*day+day)}, 365, expiry.OK, p, now); s.IsNew {
+		t.Errorf("an event before the ack does not re-arm it: %+v", s)
+	}
+	p.Window = 0
+	if s := Evaluate([]Event{created}, 365, expiry.OK, p, now); s.IsNew {
+		t.Error("a window of 0 turns the label off under acknowledged too")
+	}
+}
+
+// keys.age_pills moves the ageing (warn) and old (bad) thresholds, for the
+// pill and for each event's constraint.
+func TestThePillThresholdsAreConfigurable(t *testing.T) {
+	p := DefaultPolicy()
+	p.Warn, p.Bad = 0.25, 0.75
+	cases := []struct {
+		ago   time.Duration
+		label string
+		tone  string
+	}{
+		{80 * day, "current", ToneOK},
+		{100 * day, "ageing", ToneWarn},
+		{300 * day, "old", ToneBad},
+	}
+	for _, c := range cases {
+		s := Evaluate([]Event{exact(inventory.EventCreated, c.ago)}, 365, expiry.OK, p, now)
+		if s.Pill.Label != c.label || s.Pill.Tone != c.tone {
+			t.Errorf("%v old: pill %+v, want %s/%s", c.ago, s.Pill, c.label, c.tone)
+		}
+		if ev := s.Events[0]; ev.Label != c.label || ev.Tone != c.tone {
+			t.Errorf("%v old: event constraint %s/%s, want %s/%s", c.ago, ev.Label, ev.Tone, c.label, c.tone)
+		}
+	}
+	// The defaults are half and the whole lifetime.
+	if s := Evaluate([]Event{exact(inventory.EventCreated, 100*day)}, 365, expiry.OK, DefaultPolicy(), now); s.Pill.Label != "current" {
+		t.Errorf("default at 100 of 365 days: %+v", s.Pill)
+	}
+}
+
+func TestParsePillsRefusesBadThresholds(t *testing.T) {
+	if w, b, err := ParsePills(" 0.4 , 0.9 "); err != nil || w != 0.4 || b != 0.9 {
+		t.Errorf("got %v %v %v", w, b, err)
+	}
+	for _, bad := range []string{"", "0.5", "0.5,1,2", "x,1", "0,1", "0.9,0.5", "-1,1", "0.5,11"} {
+		if _, _, err := ParsePills(bad); err == nil {
+			t.Errorf("%q accepted", bad)
+		}
+	}
+}
+
+func TestFromEnvReadsUntilAndPills(t *testing.T) {
+	env := map[string]string{"AUTHAMA_KEYS_NEW_UNTIL": "acknowledged", "AUTHAMA_KEYS_AGE_PILLS": "0.3,0.8"}
+	p := FromEnv(func(k string) string { return env[k] })
+	if p.Until != UntilAcknowledged || p.Warn != 0.3 || p.Bad != 0.8 {
+		t.Errorf("got %+v", p)
+	}
+	env = map[string]string{"AUTHAMA_KEYS_NEW_UNTIL": "forever", "AUTHAMA_KEYS_AGE_PILLS": "1,0.5"}
+	if p := FromEnv(func(k string) string { return env[k] }); p.Until != UntilWindow || p.Warn != 0.5 || p.Bad != 1 {
+		t.Errorf("a bad value must leave the default: %+v", p)
+	}
+}
