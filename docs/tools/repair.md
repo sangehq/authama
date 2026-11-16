@@ -31,6 +31,8 @@ authama reset                  # shows what it will move, then asks you to type 
 authama reset --confirm reset  # a script
 ```
 
+Any other `--confirm` word is refused with a message naming the one it wants, and nothing moves.
+
 1. A home [bound to its owner](owner.md) is unbound first: the PIN and the sealing key in the OS
    store go. A home renamed back later is then simply unbound, never bound to a key that is gone.
 2. The config home, and the state home when it is separate, are renamed to `<name>.reset-<time>`.

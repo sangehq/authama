@@ -57,7 +57,7 @@ is listed under System Settings › Notifications as `authama`. Linux uses
 |---|---|
 | `AUTHAMA_NOTIFICATIONS=off` | no desktop notifications from authama (as before) |
 | `AUTHAMA_NOTIFY_DESKTOP=0` / `NOTIFYKIT_DESKTOP=0` | the same, through go-notifykit's own switch (the second covers every program using it) |
-| `AUTHAMA_NOTIFY_BACKEND=osascript` | force a backend: `helper`, `terminal-notifier`, `osascript`, `notify-send`, `powershell` |
+| `AUTHAMA_NOTIFY_BACKEND=osascript` | force a backend: `helper`, `osascript`, `notify-send`, `powershell`, or `none` for no banner; any other value makes every banner fail |
 
 Nothing is shown under `go test` or when `CI` is set.
 

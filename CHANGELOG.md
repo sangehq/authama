@@ -91,6 +91,33 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`history` records a command's events in the default layout.** With config in `~/.config/authama` and
+  state in `~/.local/state/authama`, the sink compared the config home with a home derived from the audit
+  log's path, so no locked operation got its events: `history show` listed none, `--key`/`--host` missed
+  operations named only by their events, and `history` warned of a gap every time. It now compares the
+  audit logs, and an event raised before the lock opens the operation against the command's real homes,
+  so its manifest hashes are read (audit B-01).
+- **`token audit` reads `.gitignore` as git does.** A rule that merely contained a secret file's name
+  counted as covering it, so `!.npmrc` (which forces the file into git), `.npmrc.example` and
+  `auth.json.dist` passed. Coverage now follows the last matching rule, with `!` un-ignoring, a trailing
+  `/` matching only directories, and globs such as `.npm*` counting (B-02).
+- **`ssh load` fails when `ssh-add` added nothing.** With no agent running, or no `ssh-add`, it printed
+  `loaded 0 key(s)` and exited 0. It now exits non-zero naming the keys `ssh-add` did not add (a partial
+  load warns and exits 0), and names each key whose private file is not on disk instead of skipping it
+  silently (B-03).
+- **A rotation says when it could not keep the retirement record.** A `retired.json` that could not be
+  read or written was ignored, hiding where the old key can still log in; the rotation summary, on the
+  terminal and in the web job, now ends with a warning naming the file (B-05).
+- **Web rotate jobs fail when the retry list cannot be saved**, as the CLI's do. The bulk rotate and
+  rotate-check jobs dropped the error, leaving "retry the failed ones" on a stale list (B-06).
+- **`services/owner` tests compile on FreeBSD, OpenBSD and NetBSD.** A test named a constant declared
+  only for darwin, linux and windows (B-07).
+- **`docs/tools/expiry.md` lists the notification backends go-notifykit accepts**: `helper`, `osascript`,
+  `notify-send`, `powershell` and `none`. It listed `terminal-notifier`, which makes every banner fail (B-08).
+- **`token audit` help and `migration.md` say it checks every tool**, not "all five"; it checks 14 (B-09).
+- **A wrong `--confirm` word is explained.** `reset --confirm nope` and `history reset --confirm nope`
+  exited 1 with no message; they now say which word is wanted and that nothing changed (B-10).
+
 - **A refused command no longer evicts a restore point.** Snapshots were pruned to
   `backup.snapshot_retain` when taken, before the command checked its input, so at the limit each
   refused command pushed the oldest real snapshot out even though its own was then discarded. The

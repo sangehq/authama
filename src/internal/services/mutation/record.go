@@ -28,6 +28,11 @@ type Scope struct {
 	DryRun   bool
 	Subjects []history.Subject
 	OpID     string // optional: the id to record under, so a caller can link to it
+	// Paths is the layout the command runs against, when the caller knows it.
+	// An audit event raised before the command takes the lock opens the
+	// operation against it; without it, only the state home is known (from
+	// the event's audit-log path), not the config home.
+	Paths paths.Paths
 }
 
 // ErrDeclined marks an error that means the person, or the state, said no:
@@ -258,21 +263,33 @@ func sinkEvent(e log.Event) {
 	if f == nil {
 		return
 	}
-	home := filepath.Dir(filepath.Dir(e.AuditLog))
 	if f.op == nil {
 		// An event means the scope changed something even if it never took
 		// the lock (W6, W8); open its operation so the event has a home.
-		openLocked(f, paths.Paths{ConfigDir: home})
+		openLocked(f, eventHome(f.scope, e.AuditLog))
 		if f.op == nil {
 			return
 		}
 	}
-	if filepath.Clean(f.p.ConfigDir) != filepath.Clean(home) {
+	// Compare the audit logs, not a home derived from one: the log is under
+	// the state home, which is not the config home in the default layout, so
+	// comparing it with ConfigDir dropped every event there (audit B-01).
+	if filepath.Clean(f.p.AuditLog()) != filepath.Clean(e.AuditLog) {
 		return
 	}
 	if err := f.store.AddEvent(f.op.OpID, e.TS, e.Name, e.Fields, f.op.Source, ""); err != nil {
 		warn(err)
 	}
+}
+
+// eventHome is the layout an event written to auditLog belongs to: the
+// scope's own when it writes that log, else one rebuilt from the log's path,
+// which knows the state home and nothing else.
+func eventHome(s Scope, auditLog string) paths.Paths {
+	if s.Paths.ConfigDir != "" && filepath.Clean(s.Paths.AuditLog()) == filepath.Clean(auditLog) {
+		return s.Paths
+	}
+	return paths.Paths{ConfigDir: filepath.Dir(filepath.Dir(auditLog))}
 }
 
 // Suspend stops recording until the returned function is called. A preview

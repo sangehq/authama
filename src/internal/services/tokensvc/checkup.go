@@ -3,6 +3,7 @@ package tokensvc
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -24,7 +25,7 @@ type Finding struct {
 	Missing []string
 }
 
-// Checkup reports, for each target (the set's, or all five), whether its
+// Checkup reports, for each target (the set's, or every one), whether its
 // file exists and is owner-only, that a present auth.json overrides
 // $COMPOSER_AUTH, and whether .gitignore covers the files that hold secrets.
 // failed is set when anything needs fixing.
@@ -59,22 +60,10 @@ func (e Env) Checkup(set *tokens.Set, project string) (out []Finding, failed boo
 	}
 	gi := filepath.Join(base, ".gitignore")
 	if b, err := os.ReadFile(gi); err == nil {
-		var rules []string
-		for _, ln := range strings.Split(strings.ReplaceAll(string(b), "\r\n", "\n"), "\n") {
-			ln = strings.TrimSpace(ln)
-			if ln != "" && !strings.HasPrefix(ln, "#") {
-				rules = append(rules, ln)
-			}
-		}
+		rules := gitignoreRules(string(b))
 		var missing []string
 		for _, s := range []string{"auth.json", ".npmrc", ".git-credentials", ".netrc"} {
-			covered := false
-			for _, r := range rules {
-				if strings.Contains(r, s) {
-					covered = true
-				}
-			}
-			if !covered {
+			if !gitignored(rules, s) {
 				missing = append(missing, s)
 			}
 		}
@@ -84,6 +73,62 @@ func (e Env) Checkup(set *tokens.Set, project string) (out []Finding, failed boo
 		}
 	}
 	return out, failed
+}
+
+// gitignoreRules is a .gitignore's rules in order, blank lines and comments
+// dropped.
+func gitignoreRules(text string) []string {
+	var rules []string
+	for _, ln := range strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n") {
+		ln = strings.TrimSpace(ln)
+		if ln != "" && !strings.HasPrefix(ln, "#") {
+			rules = append(rules, ln)
+		}
+	}
+	return rules
+}
+
+// gitignored reports whether rules ignore the file name sitting next to the
+// .gitignore, by git's rules for that case: the last matching rule decides,
+// "!" un-ignores, a trailing "/" matches only directories, and a pattern with
+// a slash elsewhere is a path from the .gitignore's directory, so only an
+// anchored "/name" or a "**/" prefix reaches a file at the top. A rule that
+// merely contains the name ("!.npmrc", ".npmrc.example") no longer counts
+// (audit B-02).
+func gitignored(rules []string, name string) bool {
+	ignored := false
+	for _, r := range rules {
+		negate := strings.HasPrefix(r, "!")
+		if negate {
+			r = r[1:]
+		} else if strings.HasPrefix(r, `\!`) || strings.HasPrefix(r, `\#`) {
+			r = r[1:]
+		}
+		if gitignoreMatches(r, name) {
+			ignored = !negate
+		}
+	}
+	return ignored
+}
+
+// gitignoreMatches reports whether one pattern, its "!" removed, matches a
+// file at the .gitignore's own level.
+func gitignoreMatches(pattern, name string) bool {
+	if pattern == "" || strings.HasSuffix(pattern, "/") {
+		return false
+	}
+	for strings.HasPrefix(pattern, "**/") {
+		pattern = pattern[len("**/"):]
+	}
+	pattern = strings.TrimPrefix(pattern, "/")
+	if pattern == "**" {
+		return true
+	}
+	if strings.Contains(pattern, "/") {
+		return false
+	}
+	ok, err := path.Match(pattern, name)
+	return err == nil && ok
 }
 
 // ownerOnly is "no group or other access" on POSIX; on Windows the ACL

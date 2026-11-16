@@ -52,6 +52,9 @@ type RotateReport struct {
 	Fallback string `json:",omitempty"`
 	// Op is what the report is of: a rotation ("", the default) or OpRollback.
 	Op string `json:",omitempty"`
+	// Warnings are things the run could not do that did not stop it, such as
+	// keeping the retirement record; the summary prints each one.
+	Warnings []string `json:",omitempty"`
 }
 
 // OpRollback marks a report of a rollback.
@@ -90,6 +93,9 @@ func (r RotateReport) Format() string {
 	}
 	if r.Message != "" {
 		lines = append(lines, "  "+r.Message)
+	}
+	for _, w := range r.Warnings {
+		lines = append(lines, "  WARNING: "+w)
 	}
 	return strings.Join(lines, "\n")
 }
@@ -368,7 +374,10 @@ func (r *Rotator) Rotate(selector string, allowUnverified bool, passphrase strin
 		results[i].Revoked = r.provider(hosts[i]).Remove(tgt)
 	}
 	report.Targets = results
-	r.recordRetirement(profile+"/"+keyName, report, results)
+	if err := r.recordRetirement(profile+"/"+keyName, report, results); err != nil {
+		report.Warnings = append(report.Warnings, "the retirement record was not kept, so the key's checklist "+
+			"cannot say where the old key still logs in: "+err.Error())
+	}
 
 	r.updateInventory(profile, keyName, keyType, comment, report, results)
 	report.Committed = true
@@ -381,15 +390,17 @@ func (r *Rotator) Rotate(selector string, allowUnverified bool, passphrase strin
 // targets it was removed from, those it was not, and where the by-hand ones
 // are managed. It used to live only in the report, so once the job's output
 // was gone nothing said where the old key could still log in; the key's
-// checklist reads it from retired.json. Best-effort, like the removal itself.
-func (r *Rotator) recordRetirement(key string, report RotateReport, results []TargetResult) {
+// checklist reads it from retired.json. It does not stop the rotation, which
+// has already happened, but an error is returned for the summary to carry:
+// dropping it made the old key's remaining access invisible (audit B-05).
+func (r *Rotator) recordRetirement(key string, report RotateReport, results []TargetResult) error {
 	if report.OldFingerprint == "" {
-		return
+		return nil
 	}
 	path := inventory.RetiredPath(r.p.Inventory())
 	all, err := inventory.LoadRetirements(path)
 	if err != nil {
-		return
+		return err
 	}
 	rec := inventory.Retirement{Key: key, Successor: report.NewFingerprint, RetiredOn: inventory.Today()}
 	for _, t := range results {
@@ -407,7 +418,10 @@ func (r *Rotator) recordRetirement(key string, report RotateReport, results []Ta
 		}
 	}
 	all[report.OldFingerprint] = rec
-	_ = all.Save(path)
+	if err := all.Save(path); err != nil {
+		return fmt.Errorf("saving %s: %w", path, err)
+	}
+	return nil
 }
 
 // keyType and comment are what the new key is and carries, so the record names it the way

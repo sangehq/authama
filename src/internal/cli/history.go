@@ -295,6 +295,12 @@ func newHistoryResetCmd() *cobra.Command {
 			for _, mv := range moves {
 				_, _ = fmt.Fprintf(out, "move  %s\n  ->  %s\n", mv[0], mv[1])
 			}
+			// A word given on the command line that is not the one asked for
+			// is a mistake to point out, not a "no" to accept quietly (audit
+			// B-10); a declined prompt still ends as an abort.
+			if confirmWord != "" && confirmWord != "history" {
+				return fmt.Errorf("--confirm must be %q, not %q; nothing was changed", "history", confirmWord)
+			}
 			if confirmWord == "" {
 				if !platform.StdinIsTerminal() {
 					return errors.New("a history reset needs --confirm history when there is no terminal to ask on")

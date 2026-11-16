@@ -3375,7 +3375,7 @@ Flags:
 
 ## authama token audit
 
-For each tool (all five, the --target ones, or those a --config uses): is its
+For each tool (every one, the --target ones, or those a --config uses): is its
 file there, and is it owner-only? With --project, the project's auth.json and
 .npmrc, and whether the project's .gitignore covers every secret file. Exits
 non-zero when anything needs fixing; `authama doctor --fix` tightens the modes.

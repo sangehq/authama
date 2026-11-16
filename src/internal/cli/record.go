@@ -127,6 +127,12 @@ func scopeFor(c *cobra.Command, args []string) mutation.Scope {
 	name = strings.TrimPrefix(name, sshGroup+" ")
 	s := mutation.Scope{Command: name, Source: history.SourceCLI, Args: append([]string{}, args...),
 		Subjects: positionalSubjects(name, args)}
+	// The layout lets an event raised before the lock open the operation
+	// against the real config home. A dev root that does not resolve leaves
+	// it unset; the command reports that error itself.
+	if p, err := quietPaths(c); err == nil {
+		s.Paths = p
+	}
 	c.Flags().Visit(func(f *pflag.Flag) {
 		if f.Name == devRootFlag {
 			return

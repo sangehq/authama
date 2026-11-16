@@ -248,6 +248,10 @@ printf 'auth.json\n.npmrc\n' >> .gitignore
 authama token audit --project .     # fails if .gitignore misses one
 ```
 
+A file counts as covered only when a rule ignores it, read as git reads `.gitignore`: the last
+matching rule wins, `!auth.json` un-ignores it, and `auth.json.example` or `auth.json/` (a
+directory) is another name. Globs such as `.npm*` and anchored `/auth.json` count.
+
 ## Troubleshooting
 
 | Symptom | Fix |

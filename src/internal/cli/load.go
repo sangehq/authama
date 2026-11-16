@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -32,15 +33,30 @@ func newLoadCmd() *cobra.Command {
 				return fmt.Errorf("unknown profile: %q", profile)
 			}
 			a := agent.New(platform.EmitUseKeychain())
-			added, err := agent.Load(m, p.SSHDir, profile, a.Add)
+			r, err := agent.LoadReport(m, p.SSHDir, profile, a.Add)
 			if err != nil {
 				return err
 			}
-			names := "(none)"
-			if len(added) > 0 {
-				names = strings.Join(added, ", ")
+			for _, k := range r.Missing {
+				_, _ = fmt.Fprintf(c.ErrOrStderr(), "skipped %s: its private key is not on disk (`ssh reconcile` mints it)\n", k)
 			}
-			_, _ = fmt.Fprintf(c.OutOrStdout(), "loaded %d key(s) into the agent: %s\n", len(added), names)
+			names := "(none)"
+			if len(r.Added) > 0 {
+				names = strings.Join(r.Added, ", ")
+			}
+			_, _ = fmt.Fprintf(c.OutOrStdout(), "loaded %d key(s) into the agent: %s\n", len(r.Added), names)
+			if len(r.Failed) == 0 {
+				return nil
+			}
+			// A partial load still loaded something the person can use, so it
+			// warns; a load that added nothing because ssh-add failed is an
+			// error, not a quiet zero (audit B-03).
+			msg := fmt.Sprintf("ssh-add did not add %s (is ssh-add installed and an agent running? SSH_AUTH_SOCK names it)",
+				strings.Join(r.Failed, ", "))
+			if len(r.Added) == 0 {
+				return errors.New(msg)
+			}
+			_, _ = fmt.Fprintln(c.ErrOrStderr(), "WARN: "+msg)
 			return nil
 		},
 	}

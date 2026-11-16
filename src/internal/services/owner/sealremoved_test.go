@@ -76,8 +76,8 @@ func TestAKeyLeftInTheOSStoreIsASealRemoved(t *testing.T) {
 		"seal was removed", StoreKeychain,
 		ConfigPath(p), SealPath(p), // where to restore them
 		"owner init", "owner forget", // re-seal on purpose, or clear it
-		"security delete-generic-password -a '" + p.ConfigDir + "' -s " + service,
-		"secret-tool clear service " + service + " account '" + p.ConfigDir + "'",
+		"security delete-generic-password -a '" + p.ConfigDir + "' -s " + ServiceName,
+		"secret-tool clear service " + ServiceName + " account '" + p.ConfigDir + "'",
 		"owner.key.dpapi",
 	} {
 		if !strings.Contains(msg, want) {
