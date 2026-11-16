@@ -74,6 +74,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The web UI's menus are colour-coded.** Each entry's icon sits on a Tabler tile coloured by what it
+  is: a menu's own pages share a colour (SSH cyan, Tokens pink, Security purple, History yellow), and
+  a task's colour says what it does (create or add green, change blue, revoke orange, delete or reset
+  red); Doctor, Validate and Repair are teal, Settings and the user menu grey. Each menu's toggle shows
+  its icon in its colour. The colours are darkened in the light theme and lightened in the dark one,
+  so icons and tile edges reach 5.4:1 or more in both. VMs has its own icon (`box`), no longer one
+  that reads as Hosts. The current page's entry has a bar at its start edge, and keyboard focus a
+  visible ring. Guards fail on an entry without a tile, a kind in two colours, a task in the wrong
+  colour, a red entry that is not a delete, a description over 62 characters, and an Overview link
+  that does not reach the dashboard (with or without `--base-path`); the accessibility suite also
+  measures the tiles' contrast on every menu open, in both themes.
+- **The main menu's list is closed.** Its `<ul>` had no `</ul>`.
+
 - **The web UI's menus are regrouped, one kind of thing to a menu.** The main menu is Overview,
   **SSH**, **Tokens**, **Security**, **History** and **System**, with a **New** button and a personal
   user menu in the top bar. The Actions menu is gone: each job sits under its object's **Tasks**

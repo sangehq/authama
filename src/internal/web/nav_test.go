@@ -13,6 +13,7 @@ import (
 type navEntry struct {
 	Menu, Label, Href, Icon string
 	Toggle                  bool
+	attrs, inner            string // the entry's attributes and markup, as rendered
 }
 
 var (
@@ -71,10 +72,10 @@ func navEntries(t *testing.T, body string) []navEntry {
 				if h := navHrefRe.FindStringSubmatch(it[1]); h != nil {
 					href = h[1]
 				}
-				out = append(out, navEntry{Menu: menu, Label: navText(it[2]), Href: href, Icon: firstIcon(it[2])})
+				out = append(out, navEntry{Menu: menu, Label: navText(it[2]), Href: href, Icon: firstIcon(it[2]), attrs: it[1], inner: it[2]})
 			}
 			if ra := navRunningAs.FindStringSubmatch(region); ra != nil {
-				out = append(out, navEntry{Menu: menu, Label: "Running as", Icon: firstIcon(ra[1])})
+				out = append(out, navEntry{Menu: menu, Label: "Running as", Icon: firstIcon(ra[1]), inner: ra[0]})
 			}
 		}
 	}

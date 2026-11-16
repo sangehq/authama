@@ -112,6 +112,28 @@ top bar, the main menu holds every page, one kind of thing to a menu:
 
 Each entry has its own icon and a line under its name saying what the page shows or does; no two
 entries share an icon or open the same page, except that New repeats three entries from the Tasks.
+The icon sits on a small tile coloured by what the entry is: a menu's own pages share one colour, so
+the menu is recognisable, and a task's colour says what it does. Each menu's toggle shows its icon
+in the same colour (System's is Health's).
+
+| Kind | Colour (Tabler) | Entries |
+|---|---|---|
+| SSH pages | cyan | Profiles, Hosts, Keys, VMs, Naming, SSH config |
+| Tokens pages | pink | Tokens, Token checklists |
+| Security | purple | Audit, Checklists, Owner & PIN |
+| History | yellow | Changes, File events, Snapshots, Export |
+| Health | teal | Doctor, Validate, Repair |
+| Settings | secondary (grey) | Settings |
+| Personal (user menu) | secondary (grey) | Running as, Take the tour, About, Sign out |
+| Create or add | green | Add a host, Add a token, Mint missing keys (in Tasks and New) |
+| Change | blue | Pin host keys, Rotate keys |
+| Revoke | orange | Revoke keys |
+| Delete or start again | red | Delete keys, Reset… |
+| Overview (top link) | blue | Overview's icon |
+
+The tile's icon and edge are the colour darkened in the light theme and lightened in the dark one,
+so both stay at 3:1 or more against the menu (measured at 5.4:1 or more). The current page's entry
+has a bar at its start edge, and the keyboard's focus is a ring around the entry.
 A job's entry opens its page with the form's panel already open, and nothing runs until it is
 reviewed. A read-only server shows no Tasks and no New button, and a dev sandbox leaves out Rotate
 and Revoke, which reach real servers. When export is turned off, the History menu has no Export. On
