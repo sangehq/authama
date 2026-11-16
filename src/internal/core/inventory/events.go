@@ -1,6 +1,8 @@
 package inventory
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -92,8 +94,69 @@ func (inv *Inventory) NoteRotated(fingerprint, from string, at time.Time) {
 	inv.Events[fingerprint] = e
 }
 
-// loadEvents reads key-events.json; a missing file is no events.
-func loadEvents(path string) (map[string]KeyEvents, error) {
+// journalPath is the journal a save writes before the inventory: the events
+// it is about to save, and the hash of the inventory they go with.
+func journalPath(inventoryPath string) string { return EventsPath(inventoryPath) + ".pending" }
+
+// journal is key-events.json.pending.
+type journal struct {
+	Inventory string               `json:"inventory_sha256"`
+	Events    map[string]KeyEvents `json:"events"`
+}
+
+// writeAtomic is the one way the pair is written, so a test can interrupt a
+// save between its writes.
+var writeAtomic = fs.WriteTextAtomic
+
+func hashOf(text []byte) string {
+	sum := sha256.Sum256(text)
+	return hex.EncodeToString(sum[:])
+}
+
+// saveEvents writes the inventory text and its events as a pair, in three
+// steps: the journal (the events and the hash of the inventory they go
+// with), the inventory, then key-events.json, after which the journal goes.
+// An interruption before the inventory is written leaves the old pair, which
+// Load reads because the journal's hash does not match; one after it leaves
+// the new inventory, which Load pairs with the journal's events. The next
+// save replaces any journal left behind.
+func saveEvents(inventoryPath, text string, ev map[string]KeyEvents) error {
+	b, err := json.MarshalIndent(ev, "", "  ")
+	if err != nil {
+		return err
+	}
+	j, err := json.MarshalIndent(journal{Inventory: hashOf([]byte(text)), Events: ev}, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := writeAtomic(journalPath(inventoryPath), string(j)+"\n", 0o600); err != nil {
+		return err
+	}
+	if err := writeAtomic(inventoryPath, text, 0o600); err != nil {
+		return err
+	}
+	if err := writeAtomic(EventsPath(inventoryPath), string(b)+"\n", 0o600); err != nil {
+		return err
+	}
+	if err := os.Remove(journalPath(inventoryPath)); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
+}
+
+// loadEvents reads the events that go with the inventory at inventoryPath,
+// whose bytes are data: the journal's when a save was interrupted after
+// writing this inventory, else key-events.json. A missing file is no events.
+func loadEvents(inventoryPath string, data []byte) (map[string]KeyEvents, error) {
+	if b, err := os.ReadFile(journalPath(inventoryPath)); err == nil {
+		var j journal
+		if json.Unmarshal(b, &j) == nil && j.Inventory == hashOf(data) && j.Events != nil {
+			return j.Events, nil
+		}
+		// A journal for an inventory that was never written, or one cut off
+		// mid-write: the save it belongs to did not commit, so it is ignored.
+	}
+	path := EventsPath(inventoryPath)
 	b, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return map[string]KeyEvents{}, nil
@@ -109,17 +172,4 @@ func loadEvents(path string) (map[string]KeyEvents, error) {
 		ev = map[string]KeyEvents{}
 	}
 	return ev, nil
-}
-
-// saveEvents writes key-events.json owner-only. With no events it writes
-// nothing, so a home that never recorded one gains no file.
-func saveEvents(path string, ev map[string]KeyEvents) error {
-	if len(ev) == 0 {
-		return nil
-	}
-	b, err := json.MarshalIndent(ev, "", "  ")
-	if err != nil {
-		return err
-	}
-	return fs.WriteTextAtomic(path, string(b)+"\n", 0o600)
 }

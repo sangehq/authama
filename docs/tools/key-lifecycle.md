@@ -87,6 +87,14 @@ back), `revoked` and `acknowledged` (`authama ssh key ack`, below). The time is
 written by the same save as the inventory record, and only times and origins are kept: nothing
 about the key's material.
 
+The two files are written as a pair. A save first writes `key-events.json.pending`, holding the new
+events and the SHA-256 of the inventory they go with, then the inventory, then `key-events.json`,
+and removes the pending file last. The inventory's write is the commit point: if a save is cut off
+before it, the pending file names an inventory that is not on disk and is ignored, so the old pair
+stands; if it is cut off after it, the pending file matches the inventory and its events are read.
+Either way the inventory and the events agree, and the next save replaces a pending file left
+behind.
+
 The file is new; nothing older than it needs migrating. A key recorded before it existed falls
 back to the days the inventory already holds (`created`, each deployment's date) and to
 `revoked.json` and `retired.json`, so its ages are shown by the day. Recording is always on; only

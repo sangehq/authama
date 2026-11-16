@@ -1,12 +1,15 @@
 package inventory
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/sangehq/authama/src/internal/util/fs"
 )
 
 var at = time.Date(2026, 11, 14, 9, 30, 0, 0, time.UTC)
@@ -104,5 +107,65 @@ func TestALaterNoteReplacesTheEarlierOne(t *testing.T) {
 	inv.Note("fp", EventDeployed, at.Add(48*time.Hour))
 	if g, _ := inv.Events["fp"].Time(EventDeployed); !g.Equal(at.Add(48 * time.Hour)) {
 		t.Errorf("got %v", g)
+	}
+}
+
+// A save interrupted between its writes leaves inventory.json and
+// key-events.json agreeing: a crash before the inventory is written keeps the
+// old pair, and one after it keeps the new pair, read from the journal.
+func TestAnInterruptedSaveLeavesThePairConsistent(t *testing.T) {
+	cases := []struct {
+		name, failOn string
+		wantNew      bool
+	}{
+		{"the journal is not written", "key-events.json.pending", false},
+		{"the inventory is not written", "inventory.json", false},
+		{"the events are not written", "key-events.json", true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "inventory.json")
+			inv := New()
+			inv.Record("fp-old", KeyRecord{Profile: "work", Path: "~/.ssh/profiles/work/old"})
+			inv.NoteAdded("fp-old", OriginGenerated, at)
+			if err := inv.Save(path); err != nil {
+				t.Fatal(err)
+			}
+			inv.Record("fp-new", KeyRecord{Profile: "work", Path: "~/.ssh/profiles/work/new"})
+			inv.NoteAdded("fp-new", OriginGenerated, at.Add(time.Hour))
+			inv.Note("fp-old", EventRetired, at.Add(time.Hour))
+			writeAtomic = func(p, text string, mode os.FileMode) error {
+				if filepath.Base(p) == c.failOn {
+					return errors.New("interrupted")
+				}
+				return fs.WriteTextAtomic(p, text, mode)
+			}
+			err := inv.Save(path)
+			writeAtomic = fs.WriteTextAtomic
+			if err == nil {
+				t.Fatal("the interrupted save reported success")
+			}
+			got, err := Load(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, key := got.Keys["fp-new"]
+			_, added := got.Events["fp-new"]
+			_, retired := got.Events["fp-old"].Time(EventRetired)
+			if key != c.wantNew || added != c.wantNew || retired != c.wantNew {
+				t.Errorf("inventory and events disagree: new key recorded %v, its events %v, the old key's retirement %v; want all %v",
+					key, added, retired, c.wantNew)
+			}
+			if _, ok := got.Events["fp-old"].Time(EventCreated); !ok {
+				t.Error("the events saved before the interruption were lost")
+			}
+			// The next save completes normally and leaves no journal behind.
+			if err := got.Save(path); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Stat(journalPath(path)); !os.IsNotExist(err) {
+				t.Errorf("a completed save left %s: %v", journalPath(path), err)
+			}
+		})
 	}
 }
