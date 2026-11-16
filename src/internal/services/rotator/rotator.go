@@ -19,6 +19,7 @@ import (
 	"github.com/sangehq/authama/src/internal/core/providers"
 	"github.com/sangehq/authama/src/internal/services/keystore"
 	"github.com/sangehq/authama/src/internal/services/opstore"
+	"github.com/sangehq/authama/src/internal/services/reconciler"
 	"github.com/sangehq/authama/src/internal/util/fs"
 	"github.com/sangehq/authama/src/internal/util/log"
 	"github.com/sangehq/authama/src/internal/util/netcheck"
@@ -724,23 +725,8 @@ func deref(s *string) string {
 	return *s
 }
 
-// predecessorStillLogsIn names the hosts the key now in old/ was never removed
-// from, as its retirement recorded them. The archive keeps one predecessor,
-// so rotating again would evict it while those hosts still accept it (review
-// R-BUG-12). A key in old/ with no retirement on record names none.
+// predecessorStillLogsIn is reconciler.PredecessorStillLogsIn, which a
+// forced rotation's local replacement asks too.
 func predecessorStillLogsIn(p paths.Paths, m *manifest.Manifest, ks *keystore.KeyStore, keyRef manifest.KeyRef) ([]string, error) {
-	slot := filepath.Join(manifest.ArchiveDir(m, p.SSHDir, keyRef), keyRef.KeyName)
-	if !exists(slot + ".pub") {
-		return nil, nil
-	}
-	fp, err := ks.Fingerprint(slot + ".pub")
-	if err != nil {
-		return nil, nil // no fingerprint, no retirement to look up
-	}
-	all, err := inventory.LoadRetirements(inventory.RetiredPath(p.Inventory()))
-	if err != nil {
-		// Unreadable is not "nothing recorded": stop rather than evict.
-		return nil, err
-	}
-	return all[fp].NotRemoved, nil
+	return reconciler.PredecessorStillLogsIn(p, m, ks, keyRef)
 }

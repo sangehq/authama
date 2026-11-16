@@ -1082,6 +1082,8 @@ func replaceFailed(j *jobs.Job, p paths.Paths, failed []string, force bool) []st
 		return failed
 	}
 	_, _ = fmt.Fprintf(j, "forced: replacing %d key(s) the rotation could not rotate, on this computer\n", len(failed))
-	_, still := reconciler.ReplaceLocally(p, failed, platform.EmitUseKeychain(), j)
+	// The page offers no --evict-old, so a predecessor that still logs in is
+	// never evicted from here (audit A-BUG-01).
+	_, still := reconciler.ReplaceLocally(p, failed, platform.EmitUseKeychain(), false, j)
 	return still
 }

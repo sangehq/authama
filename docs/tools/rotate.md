@@ -164,6 +164,11 @@ Every key that can rotate in place still does, with the flow above. Each key
 that cannot is minted afresh, its current key moved to `old/`, and nothing is
 deployed; the output marks it `next` and names the command that deploys it.
 
+`--force` does not go round the `old/` guard: a key whose predecessor in `old/` is still
+authorised on a host it was never removed from is not replaced, and the output names
+the hosts, unless `--evict-old` is given too. The web UI offers no `--evict-old`, so a
+forced rotation there never evicts such a key.
+
 > **A forced rotation can lock you out until you deploy.** A host that trusted the
 > old key does not trust the new one. Deploy each replaced key next
 > (`authama ssh deploy <profile/key>`, or **Deploy** on its page), or roll it back

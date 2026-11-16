@@ -20,10 +20,43 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (review R-GAP-05).
 - **The read API throttles bad tokens.** Ten requests with a bad API token from one address within a
   minute get `429` with `Retry-After` for the rest of that minute (R-SEC-19).
+- **The reachability probe offers a host nothing.** It accepts any host key without recording it, and
+  it read `~/.ssh/config`, so it offered every key and, for a host with `ForwardAgent yes`, forwarded
+  the agent to whatever answered. It now turns off every way of signing in and every forwarding; a
+  server that refuses them still counts as reachable (audit A-SEC-01).
+- **`serve --stop-all` stops only a web UI.** A listener on a probed port names the pid to stop, and
+  an `authama` name was enough, so it could have interrupted another authama command, such as a
+  rotation half-way through. The process's command line must now run `serve` (or bare `authama`);
+  Windows still checks the name alone (A-SEC-02).
+- **Webhook endpoints: more addresses refused.** The local-use NAT64 prefix `64:ff9b:1::/48` was
+  decoded as if it were the `/96` form, so `64:ff9b:1:7f00:0:100:808:808` passed as `8.8.8.8`; it is
+  now refused whole. The IPv4-translated form `::ffff:0:a.b.c.d` is judged by its IPv4 address, and
+  `3fff::/20` and `5f00::/16` are refused (A-SEC-03).
+- **A restart that does not start leaves no handoff behind**, and the handoff variable is read only
+  when it names a file the restart itself writes (`authama-handoff-*.json` in the temporary
+  directory); any other file it names is neither read nor removed (A-SEC-04).
+- **Snapshot restores are rooted at `~/.ssh`.** They were rooted at the home, and a directory link
+  inside `~/.ssh` that pointed elsewhere in the home took the restore's writes there (A-SEC-05).
+- **`vm sync` refuses a public key line with a quote outside its comment** rather than embedding it in
+  the script it runs in the guest (A-SEC-06).
+- **The installers take only a release version** (`vX.Y.Z`, with an optional pre-release). The
+  version, from the argument, the environment or GitHub's API, becomes part of the download URL
+  (A-SEC-07).
 - **A restart's handoff no longer rides in the environment.** The control key, sessions and form
   tokens went to the new server in `AUTHAMA_SERVE_HANDOFF`, which `/proc/<pid>/environ` kept for its
   whole life; they now go in an owner-only temporary file the new server reads once and removes, and
   the variable names only the file. A handoff written inline by an older build is still read (R-SEC-21).
+
+### Fixed
+
+- **`ssh rotate --force` keeps a predecessor that still logs in.** A rotation stops rather than evict
+  the key in `old/` while a host it was never removed from still accepts it, but `--force` then
+  replaced the key locally, which evicted it all the same. The local replacement now refuses the same
+  way, naming the hosts, unless `--evict-old` is given; the web UI never evicts it (A-BUG-01).
+- **One failed restart no longer ends the web UI's auto-restart.** The failure is printed, the same
+  build is not tried again, and the next build is restarted from (review R-BUG-16).
+- **A failed `migrate --force` puts the home back.** The current home was moved aside and, when the
+  copy failed, left at its `.replaced-` name (review R-BUG-14).
 
 ### Documentation
 

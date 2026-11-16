@@ -604,6 +604,11 @@ func readPubLine(path string) (string, error) {
 	if strings.ContainsAny(line, "'\\") {
 		line = f[0] + " " + f[1]
 	}
+	// A quote left in the type or the key itself is no key ssh-keygen
+	// wrote, and it would close the script's quote (audit A-SEC-06).
+	if strings.ContainsAny(line, "'\\") {
+		return "", fmt.Errorf("%s holds a quote or backslash outside its comment, so it is not installed by script", path)
+	}
 	return line, nil
 }
 

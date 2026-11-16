@@ -62,8 +62,10 @@ the key is sent, or the recorded pid stopped, only after that proof. `/healthz` 
 answers without signing in. To a remote caller it says nothing but `{"app":"authama","instance":"…"}`;
 to a caller on this machine that no proxy passed on (no `X-Forwarded-For`, `Forwarded` or
 `X-Real-Ip`), it also gives the pid, build and start time that `serve --stop-all` uses. `--stop-all`
-stops a server it finds only when that pid is an `authama` process, so a listener naming some other
-process of yours is refused, and nothing is signalled. A pinned `--port`, `--read-only`
+stops a server it finds only when that pid is an `authama` process serving a web UI (`authama serve`,
+or bare `authama`), so a listener naming some other process of yours, including another authama
+command such as a rotation half-way through, is refused, and nothing is signalled. On Windows, where
+the command line cannot be read, the process name is all it checks. A pinned `--port`, `--read-only`
 when the running server is not, or `--allow-remote` starts a new server rather than reusing one.
 
 **Why not a named address like `http://127.0.0.1/authama`?** A path does not free a port: two

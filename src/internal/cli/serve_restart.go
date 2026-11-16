@@ -58,6 +58,11 @@ func takeHandoff() *serveHandoff {
 	_ = os.Unsetenv(envnames.ServeHandoff)
 	// This build passes a file's name; an older one passed the JSON itself.
 	if path, ok := strings.CutPrefix(v, handoffFilePrefix); ok {
+		// Only a file handoffEnv could have made is read, and removed: the
+		// variable is not trusted to name any file (audit A-SEC-04).
+		if !isHandoffFile(path) {
+			return nil
+		}
 		b, err := os.ReadFile(path) //nolint:gosec // the file our own predecessor wrote
 		_ = os.Remove(path)
 		if err != nil {
@@ -77,6 +82,22 @@ func takeHandoff() *serveHandoff {
 // handoffFilePrefix marks a handoff passed as a file rather than inline.
 const handoffFilePrefix = "file:"
 
+// handoffPattern is the name handoffEnv gives its file in os.TempDir.
+const handoffPattern = "authama-handoff-*.json"
+
+// isHandoffFile reports whether path is a file handoffEnv makes: in the
+// temporary directory, named by handoffPattern, a regular file.
+func isHandoffFile(path string) bool {
+	if filepath.Clean(filepath.Dir(path)) != filepath.Clean(os.TempDir()) {
+		return false
+	}
+	if ok, _ := filepath.Match(handoffPattern, filepath.Base(path)); !ok {
+		return false
+	}
+	fi, err := os.Lstat(path)
+	return err == nil && fi.Mode().IsRegular()
+}
+
 // handoffEnv writes h to an owner-only temporary file and returns the
 // environment entry naming it. The handoff holds the control key, the
 // sessions and their form tokens; inline in the environment they stayed
@@ -87,7 +108,7 @@ func handoffEnv(h serveHandoff) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	f, err := os.CreateTemp("", "authama-handoff-*.json") // created 0600
+	f, err := os.CreateTemp("", handoffPattern) // created 0600
 	if err != nil {
 		return "", err
 	}
@@ -123,7 +144,7 @@ func relaunch(h serveHandoff, state func(*serveHandoff), stop func()) func() err
 		if state != nil {
 			state(&h)
 		}
-		exe, err := ownRestartExecutable()
+		exe, err := restartFrom()
 		if err != nil {
 			return err
 		}
@@ -146,6 +167,9 @@ func relaunch(h serveHandoff, state func(*serveHandoff), stop func()) func() err
 		cmd.Env = append(os.Environ(), entry)
 		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 		if err := cmd.Start(); err != nil {
+			// Nothing will read the handoff: take the control key and the
+			// sessions' form tokens out of the temporary directory.
+			_ = os.Remove(strings.TrimPrefix(entry, envnames.ServeHandoff+"="+handoffFilePrefix))
 			return err
 		}
 		_ = cmd.Process.Release()
@@ -207,6 +231,9 @@ func stopFound(f foundServer, basePath string) error {
 	}
 	if ok, name := isAuthamaProcess(f.PID); !ok {
 		return fmt.Errorf("pid %d is not an authama process (%s); nothing was signalled - stop the web UI at %s where it runs", f.PID, name, f.Addr)
+	}
+	if ok, cmdline := isServingProcess(f.PID); !ok {
+		return fmt.Errorf("pid %d is authama but not serving a web UI (%s); nothing was signalled - stop the web UI at %s where it runs", f.PID, cmdline, f.Addr)
 	}
 	r := &serveRecord{PID: f.PID, Addr: f.Addr, BasePath: basePath, Instance: f.Instance}
 	if !r.checkAlive() {
@@ -327,6 +354,9 @@ func restartExecutable(exe string, lookPath func(string) (string, error)) (strin
 	}
 	return found, nil
 }
+
+// restartFrom is ownRestartExecutable, swappable in tests.
+var restartFrom = ownRestartExecutable
 
 // ownRestartExecutable is restartExecutable for this process.
 func ownRestartExecutable() (string, error) {

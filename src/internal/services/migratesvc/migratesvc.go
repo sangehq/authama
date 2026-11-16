@@ -70,6 +70,14 @@ func Migrate(p paths.Paths, force bool, stamp string) (Result, error) {
 	}
 	res, err := copyIn(p, legacy)
 	if err != nil {
+		// The migration failed: what it moved aside comes back (review
+		// R-BUG-14). copyIn removed its copy, or what was left of it.
+		if backup != "" {
+			_ = os.RemoveAll(home)
+			if rerr := os.Rename(backup, home); rerr != nil {
+				return Result{}, fmt.Errorf("%w; the previous home is at %s and could not be moved back: %v", err, backup, rerr)
+			}
+		}
 		return Result{}, err
 	}
 	res.Backup = backup

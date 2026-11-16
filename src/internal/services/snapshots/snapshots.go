@@ -355,8 +355,9 @@ func foreignPub(destParent string) func(name string, data []byte, archived map[s
 // returns true is not written, and its name is returned. skip is given the set
 // of regular members, so it can tell which files the archive carries together.
 // within is the one directory under destParent every member must be in (the
-// .ssh the snapshot was taken of): extraction is rooted at its parent, which
-// is the home directory, so a member named .zshrc would otherwise land there.
+// .ssh the snapshot was taken of). Names are checked against it, and the
+// writes are rooted at it, so neither a member named .zshrc nor a link inside
+// it can reach the rest of the home.
 func extractTarGz(tarball, destParent, within string, skip func(name string, data []byte, archived map[string]bool) bool) ([]string, error) {
 	f, err := os.Open(tarball)
 	if err != nil {
@@ -410,7 +411,8 @@ func extractTarGz(tarball, destParent, within string, skip func(name string, dat
 			archived[m.name] = true
 		}
 	}
-	if err := os.MkdirAll(destParent, 0o700); err != nil {
+	sshDir := filepath.Join(destParent, within)
+	if err := os.MkdirAll(sshDir, 0o700); err != nil {
 		return nil, err
 	}
 
@@ -426,7 +428,11 @@ func extractTarGz(tarball, destParent, within string, skip func(name string, dat
 	// which is why CodeQL's zipslip rule reported the sink as unsanitized (alert
 	// #9) - and an alert nobody can discharge by reading the code is how real
 	// ones start getting waved through.
-	root, err := os.OpenRoot(destParent)
+	//
+	// The root is the .ssh itself, not its parent: os.Root follows a link
+	// that stays inside the root, so rooted at the home a directory link in
+	// ~/.ssh took writes anywhere else in the home (audit A-SEC-05).
+	root, err := os.OpenRoot(sshDir)
 	if err != nil {
 		return nil, err
 	}
@@ -441,12 +447,17 @@ func extractTarGz(tarball, destParent, within string, skip func(name string, dat
 		if mode == 0 {
 			mode = 0o600
 		}
+		// The member's name inside the root: ".ssh/x" is "x", ".ssh" is ".".
+		rel := "."
+		if r, ok := strings.CutPrefix(m.name, within+"/"); ok {
+			rel = r
+		}
 		switch m.hdr.Typeflag {
 		case tar.TypeDir:
-			if err := root.MkdirAll(m.name, 0o700); err != nil {
+			if err := root.MkdirAll(rel, 0o700); err != nil {
 				return nil, err
 			}
-			if err := root.Chmod(m.name, 0o700); err != nil {
+			if err := root.Chmod(rel, 0o700); err != nil {
 				return nil, err
 			}
 		case tar.TypeReg:
@@ -454,17 +465,20 @@ func extractTarGz(tarball, destParent, within string, skip func(name string, dat
 				skipped = append(skipped, m.name)
 				continue
 			}
-			if dir := path.Dir(m.name); dir != "." {
+			if rel == "." {
+				return nil, fmt.Errorf("refusing a file in place of %s/ in archive", within)
+			}
+			if dir := path.Dir(rel); dir != "." {
 				if err := root.MkdirAll(dir, 0o700); err != nil {
 					return nil, err
 				}
 			}
 			// Unlink first: the destination may already exist, possibly as a
 			// symlink or read-only, and writing through either is wrong.
-			if err := root.Remove(m.name); err != nil && !os.IsNotExist(err) {
+			if err := root.Remove(rel); err != nil && !os.IsNotExist(err) {
 				return nil, err
 			}
-			if err := root.WriteFile(m.name, m.data, mode); err != nil {
+			if err := root.WriteFile(rel, m.data, mode); err != nil {
 				return nil, err
 			}
 		}

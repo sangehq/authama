@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -223,5 +224,59 @@ func TestTheWatcherFollowsAMovedBinary(t *testing.T) {
 	case <-restarts:
 	case <-time.After(2 * time.Second):
 		t.Fatal("a rebuilt binary at its new place did not restart the server")
+	}
+}
+
+// One failed restart ended the watcher for good, silently: the next rebuild
+// restarted nothing (review R-BUG-16). A failed restart is not retried for
+// the same build, but the next build is restarted from.
+func TestAFailedRestartWaitsForTheNextBuild(t *testing.T) {
+	s, _, _ := newTestServer(t)
+	exe := filepath.Join(t.TempDir(), "authama")
+	if err := os.WriteFile(exe, []byte("broken build"), 0o755); err != nil { //nolint:gosec // a test executable
+		t.Fatal(err)
+	}
+	tries := make(chan struct{}, 16)
+	fail := true
+	var mu sync.Mutex
+	s.opts.Restart = func() error {
+		mu.Lock()
+		defer mu.Unlock()
+		tries <- struct{}{}
+		if fail {
+			return errors.New("the new build would not start")
+		}
+		return nil
+	}
+	s.binary = binaryWatch{path: exe, started: time.Now().Add(-time.Hour)}
+	s.opts.AutoRestart = true
+	stop, done := make(chan struct{}), make(chan struct{})
+	go func() { s.watchBinary(stop, 5*time.Millisecond); close(done) }()
+	defer func() { close(stop); <-done }()
+
+	select {
+	case <-tries:
+	case <-time.After(2 * time.Second):
+		t.Fatal("a settled build was not restarted from")
+	}
+	select {
+	case <-tries:
+		t.Fatal("the same failing build was restarted from again")
+	case <-time.After(80 * time.Millisecond):
+	}
+	mu.Lock()
+	fail = false
+	mu.Unlock()
+	later := time.Now().Add(time.Minute)
+	if err := os.WriteFile(exe, []byte("fixed build, longer"), 0o755); err != nil { //nolint:gosec // a test executable
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(exe, later, later); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-tries:
+	case <-time.After(2 * time.Second):
+		t.Fatal("after one failed restart, the next build restarted nothing")
 	}
 }

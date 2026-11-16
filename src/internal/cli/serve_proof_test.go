@@ -152,3 +152,54 @@ func TestStopAllNeverSignalsAProcessThatIsNotAuthama(t *testing.T) {
 		t.Error("sleep was taken for authama")
 	}
 }
+
+// A listener on a probed port names the pid --stop-all signals. Being named
+// authama is not enough: a running `authama ssh rotate`, interrupted
+// half-way, is an authama process too. Only one serving the web UI (`serve`,
+// or bare authama) is stopped (audit A-SEC-02, 2026-11-16).
+func TestStopAllSignalsOnlyAProcessServingTheWebUI(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses a POSIX child process")
+	}
+	child := exec.Command("sleep", "30")
+	if err := child.Start(); err != nil {
+		t.Skip("no sleep here:", err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- child.Wait() }()
+	t.Cleanup(func() { _ = child.Process.Kill() })
+
+	oldName, oldArgs := processName, processArgs
+	t.Cleanup(func() { processName, processArgs = oldName, oldArgs })
+	processName = func(int) (string, error) { return "/usr/local/bin/authama", nil }
+	processArgs = func(int) ([]string, error) {
+		return []string{"/usr/local/bin/authama", "ssh", "rotate", "--all", "-y"}, nil
+	}
+	_ = fakeServer(t, "")
+	err := stopFound(foundServer{Addr: "127.0.0.1:7822", Instance: "inst", PID: child.Process.Pid}, "")
+	if err == nil || !strings.Contains(err.Error(), "not serving") {
+		t.Errorf("stopFound on an authama rotation: %v", err)
+	}
+	select {
+	case err := <-done:
+		t.Fatalf("stop-all interrupted an authama process that was not a web UI (%v)", err)
+	case <-time.After(300 * time.Millisecond):
+	}
+
+	for _, tc := range []struct {
+		args  []string
+		serve bool
+	}{
+		{[]string{"/usr/local/bin/authama", "serve", "--no-open"}, true},
+		{[]string{"authama", "--read-only", "serve"}, true},
+		{[]string{"/opt/authama"}, true},
+		{[]string{"authama", "--no-open"}, true},
+		{[]string{"authama", "ssh", "rotate"}, false},
+		{[]string{"authama", "mcp"}, false},
+		{[]string{}, false},
+	} {
+		if got := servesWebUI(tc.args); got != tc.serve {
+			t.Errorf("servesWebUI(%q) = %v, want %v", tc.args, got, tc.serve)
+		}
+	}
+}

@@ -211,3 +211,61 @@ func TestTheHandoffTravelsInAnOwnerOnlyFile(t *testing.T) {
 		t.Error("the handoff file was left behind")
 	}
 }
+
+// The handoff file holds the control key and every session's form token. A
+// restart whose new process never starts removed nothing, so the file stayed
+// in the temporary directory; and the variable naming it was trusted to
+// name any file, which the new server read and deleted (audit A-SEC-04,
+// 2026-11-16).
+func TestAFailedRelaunchLeavesNoHandoffBehind(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("TMPDIR", tmp)
+	notRunnable := filepath.Join(t.TempDir(), "authama")
+	if err := os.WriteFile(notRunnable, []byte("not a program"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	old := restartFrom
+	restartFrom = func() (string, error) { return notRunnable, nil }
+	t.Cleanup(func() { restartFrom = old })
+	stopped := false
+	err := relaunch(serveHandoff{Control: "c", Port: 7822}, nil, func() { stopped = true })()
+	if err == nil {
+		t.Fatal("a binary that cannot run was relaunched")
+	}
+	if stopped {
+		t.Error("the old server stopped although the new one never started")
+	}
+	left, _ := filepath.Glob(filepath.Join(tmp, "authama-handoff-*"))
+	if len(left) != 0 {
+		t.Errorf("the handoff was left behind: %v", left)
+	}
+}
+
+func TestTheHandoffNamesOnlyItsOwnFile(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("TMPDIR", tmp)
+	elsewhere := filepath.Join(t.TempDir(), "notes.json")
+	if err := os.WriteFile(elsewhere, []byte(`{"control":"c","port":7822}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{elsewhere, filepath.Join(tmp, "notes.json")} {
+		if err := os.WriteFile(name, []byte(`{"control":"c","port":7822}`), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		t.Setenv(envnames.ServeHandoff, handoffFilePrefix+name)
+		if h := takeHandoff(); h != nil {
+			t.Errorf("a handoff was taken from %s", name)
+		}
+		if _, err := os.Stat(name); err != nil {
+			t.Errorf("%s, which is not a handoff, was removed: %v", name, err)
+		}
+	}
+	entry, err := handoffEnv(serveHandoff{Control: "c", Port: 7822})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(envnames.ServeHandoff, strings.TrimPrefix(entry, envnames.ServeHandoff+"="))
+	if h := takeHandoff(); h == nil || h.Control != "c" {
+		t.Errorf("the handoff this build writes was not taken: %+v", h)
+	}
+}

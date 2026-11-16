@@ -145,7 +145,7 @@ func rotateOne(c *cobra.Command, key string, allowUnverified, passphrase, yes, n
 	_, _ = fmt.Fprintln(c.OutOrStdout(), report.Format())
 	if !report.Committed {
 		if force {
-			if _, still := reconciler.ReplaceLocally(p, []string{key}, platform.EmitUseKeychain(), c.OutOrStdout()); len(still) == 0 {
+			if _, still := reconciler.ReplaceLocally(p, []string{key}, platform.EmitUseKeychain(), evictOld, c.OutOrStdout()); len(still) == 0 {
 				return nil
 			}
 		}
@@ -256,7 +256,7 @@ func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphr
 	var replaced []string
 	if force && len(failed) > 0 {
 		_, _ = fmt.Fprintf(out, "forced: replacing %d key(s) the rotation could not rotate, on this computer\n", len(failed))
-		replaced, failed = reconciler.ReplaceLocally(p, failed, platform.EmitUseKeychain(), out)
+		replaced, failed = reconciler.ReplaceLocally(p, failed, platform.EmitUseKeychain(), evictOld, out)
 	}
 	sum := rotator.SummarizeRun(rot.Results(), replaced, time.Since(began))
 	sum.Command = commandLine(c)

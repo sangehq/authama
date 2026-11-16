@@ -226,3 +226,51 @@ func TestTheProbeLeavesKnownHostsAlone(t *testing.T) {
 		}
 	}
 }
+
+// The probe asks only whether something answers, and it accepts any host key
+// (it pins nothing), so it must give the host nothing: no key offered, no
+// agent forwarded, no forwarding opened. With the user's config read and
+// StrictHostKeyChecking=no, a block with ForwardAgent yes handed the agent to
+// whatever answered on the network, and every key was offered to it (audit
+// A-SEC-01, 2026-11-16). A server that refuses every method still counts as
+// reachable.
+func TestTheProbeOffersTheHostNothing(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the stub is a shell script")
+	}
+	dir := t.TempDir()
+	argsFile := filepath.Join(dir, "args")
+	script := "#!/bin/sh\nprintf '%s\\n' \"$@\" > " + shQuote(argsFile) + "\n" +
+		"echo 'box: Permission denied (publickey).' >&2\nexit 255\n"
+	if err := os.WriteFile(filepath.Join(dir, "ssh"), []byte(script), 0o755); err != nil { //nolint:gosec // a test stub
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	if !SSHReachable("box", 22, time.Second) {
+		t.Fatal("a server that refuses every method is still reachable")
+	}
+	b, err := os.ReadFile(argsFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := strings.Split(strings.TrimSpace(string(b)), "\n")
+	want := []string{
+		"PubkeyAuthentication=no", "PasswordAuthentication=no", "KbdInteractiveAuthentication=no",
+		"HostbasedAuthentication=no", "GSSAPIAuthentication=no", "IdentityAgent=none",
+		"ForwardAgent=no", "ForwardX11=no", "ClearAllForwardings=yes", "PermitLocalCommand=no",
+	}
+	if len(args) < 2*len(want) {
+		t.Fatalf("the probe passed %d arguments, fewer than the %d options it must set:\n%s", len(args), len(want), b)
+	}
+	for _, w := range want {
+		found := false
+		for i := 1; i < len(args); i++ {
+			if args[i-1] == "-o" && args[i] == w {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("the probe does not pass -o %s:\n%s", w, b)
+		}
+	}
+}

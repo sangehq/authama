@@ -28,6 +28,15 @@ var unreachableMarkers = []string{
 	"connection closed by", "no address associated with hostname",
 }
 
+// probeOffersNothing are the options that keep SSHReachable from
+// authenticating to, or forwarding anything to, a host whose key it has not
+// verified.
+var probeOffersNothing = []string{
+	"PubkeyAuthentication=no", "PasswordAuthentication=no", "KbdInteractiveAuthentication=no",
+	"HostbasedAuthentication=no", "GSSAPIAuthentication=no", "IdentityAgent=none",
+	"ForwardAgent=no", "ForwardX11=no", "ClearAllForwardings=yes", "PermitLocalCommand=no",
+}
+
 // TCPReachable is true if a TCP connection to host:port opens within timeout.
 func TCPReachable(host string, port int, timeout time.Duration) bool {
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, strconv.Itoa(port)), timeout)
@@ -57,10 +66,20 @@ func SSHReachable(host string, port int, timeout time.Duration) bool {
 	// whatever key the network offers, which would pin an unseen host key
 	// before a deploy even with AUTHAMA_AUTO_PIN=0. Both files are the null
 	// device, so nothing is read or recorded; pinning is `ssh knownhosts`'s job.
-	cmd := exec.CommandContext(ctx, "ssh", "-o", "BatchMode=yes",
-		"-o", "ConnectTimeout="+strconv.Itoa(secs), "-o", "StrictHostKeyChecking=no",
-		"-o", "UserKnownHostsFile="+os.DevNull, "-o", "GlobalKnownHostsFile="+os.DevNull,
-		"-p", strconv.Itoa(port), "--", host, "true")
+	//
+	// Since any host key is accepted, the host is offered nothing either: no
+	// key, no password, no agent, no forwarding (audit A-SEC-01). The user's
+	// config is still read, for the ProxyJump or ProxyCommand a host needs,
+	// and a value given here wins over it (ssh keeps the first it obtains). A
+	// server that refuses every method has answered, so it counts as up.
+	args := []string{"-o", "BatchMode=yes",
+		"-o", "ConnectTimeout=" + strconv.Itoa(secs), "-o", "StrictHostKeyChecking=no",
+		"-o", "UserKnownHostsFile=" + os.DevNull, "-o", "GlobalKnownHostsFile=" + os.DevNull}
+	for _, o := range probeOffersNothing {
+		args = append(args, "-o", o)
+	}
+	args = append(args, "-p", strconv.Itoa(port), "--", host, "true")
+	cmd := exec.CommandContext(ctx, "ssh", args...)
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
 	_ = cmd.Run()
