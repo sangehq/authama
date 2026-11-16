@@ -55,3 +55,28 @@ func TestSpecialPurposeAddressesAreNotPublic(t *testing.T) {
 		t.Errorf("a plain name was refused: %v", err)
 	}
 }
+
+// The local-use NAT64 prefix 64:ff9b:1::/48 is not globally reachable (RFC
+// 8215), and a network may place the IPv4 address anywhere a /48../96
+// layout puts it, so the whole prefix is refused rather than decoded: read
+// as the /96 form, 64:ff9b:1:7f00:0:100:808:808 looked like 8.8.8.8 and passed
+// while a /48 network maps it to 127.0.0.1. The IPv4-translated form
+// ::ffff:0:a.b.c.d (RFC 2765), documentation 3fff::/20 (RFC 9637) and SRv6
+// 5f00::/16 (RFC 9602) are refused too (audit A-SEC-03, 2026-11-16).
+func TestLocalNAT64AndTranslatedFormsAreNotPublic(t *testing.T) {
+	for _, a := range []string{
+		"64:ff9b:1:7f00:0:100:808:808", "64:ff9b:1::808:808", "64:ff9b:1:ffff::1",
+		"::ffff:0:7f00:1", "::ffff:0:a00:1", "3fff::1", "3fff:fff:ffff::1", "5f00::1",
+	} {
+		if err := CheckURL("https://["+a+"]/hook", false); err == nil {
+			t.Errorf("CheckURL accepted %s", a)
+		}
+		if err := checkDial(net.JoinHostPort(a, "443")); err == nil {
+			t.Errorf("the dialer would connect to %s", a)
+		}
+	}
+	// The well-known /96 NAT64 prefix still reaches a public IPv4 address.
+	if err := checkDial(net.JoinHostPort("64:ff9b::808:808", "443")); err != nil {
+		t.Errorf("the dialer refused NAT64 of a public address: %v", err)
+	}
+}
