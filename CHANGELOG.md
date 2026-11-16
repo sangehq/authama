@@ -58,6 +58,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`36h`, `7d`, `2026-11-01`) the keys something happened to since then, and `--json` prints each key
   with its recency: every event with its time, age and constraint, `is_new`, `new_because` and the
   pill.
+- **The read API and MCP give each key's recency.** `/api/v1/keys`, `/api/v1/keys/{profile}/{key}` and
+  the MCP tools `list_keys` and `get_key` carry the `recency` object `ssh key list --json` prints:
+  each event with its time, age and constraint, `is_new`, `new_because` and the pill, under the same
+  settings.
 - **`ssh key ack` clears the new label** on the keys it names (or `--category`, `--all`) until their
   next event, and records when it did in `key-events.json` and the history.
 - **The web UI shows key recency as pills.** The Keys list gains a Status column (the pill and the

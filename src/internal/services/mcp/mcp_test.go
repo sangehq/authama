@@ -18,6 +18,8 @@ import (
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/sangehq/authama/src/internal/core/inventory"
+	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/services/doctor"
 	"github.com/sangehq/authama/src/internal/services/history"
 	"github.com/sangehq/authama/src/internal/util/paths"
@@ -476,5 +478,65 @@ func TestARequestBeforeInitializeIsRefused(t *testing.T) {
 	got := wire(t, s, `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
 	if _, ok := got["2"]["error"]; !ok {
 		t.Errorf("tools/list before initialize: %v", got["2"])
+	}
+}
+
+// list_keys and get_key carry each key's recency, as `ssh key list --json`
+// does: its events with their ages, is_new, new_because and the pill.
+func TestTheKeyToolsGiveEachKeysRecency(t *testing.T) {
+	s, _ := fixture(t)
+	m, err := manifest.Load(s.Home.Manifest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	inv, err := inventory.Load(s.Home.Inventory())
+	if err != nil {
+		t.Fatal(err)
+	}
+	inv.Record("SHA256:mcp-recency", inventory.KeyRecord{Profile: "work", Path: m.IdentityFile("work", "work_gh-ed25519"),
+		Type: "ed25519", RotateAfterDays: 365})
+	inv.NoteAdded("SHA256:mcp-recency", inventory.OriginGenerated, time.Now().Add(-time.Hour))
+	if err := inv.Save(s.Home.Inventory()); err != nil {
+		t.Fatal(err)
+	}
+	cs := connect(t, s)
+	type recency struct {
+		IsNew      bool   `json:"is_new"`
+		NewBecause string `json:"new_because"`
+		Pill       struct{ Label, Tone string }
+		Events     []struct{ Kind, At, Ago string }
+	}
+	call := func(name string, args map[string]any, into any) {
+		t.Helper()
+		res, err := cs.CallTool(context.Background(), &sdk.CallToolParams{Name: name, Arguments: args})
+		if err != nil || res.IsError {
+			t.Fatalf("%s: %v %v", name, res, err)
+		}
+		if err := json.Unmarshal([]byte(res.Content[0].(*sdk.TextContent).Text), into); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var list struct {
+		Keys []struct {
+			Ref     string  `json:"ref"`
+			Recency recency `json:"recency"`
+		} `json:"keys"`
+	}
+	call("list_keys", map[string]any{"profile": "work"}, &list)
+	if len(list.Keys) != 1 {
+		t.Fatalf("list_keys: %+v", list)
+	}
+	if r := list.Keys[0].Recency; !r.IsNew || r.NewBecause != "created" || r.Pill.Label != "new" || r.Pill.Tone != "info" ||
+		len(r.Events) < 2 || r.Events[0].Ago != "1 hour ago" {
+		t.Errorf("list_keys: %+v", r)
+	}
+	var one struct {
+		Key struct {
+			Recency recency `json:"recency"`
+		} `json:"key"`
+	}
+	call("get_key", map[string]any{"ref": "work/work_gh-ed25519"}, &one)
+	if r := one.Key.Recency; !r.IsNew || r.Pill.Label != "new" {
+		t.Errorf("get_key: %+v", r)
 	}
 }

@@ -38,8 +38,8 @@ Every route is `GET` (or `HEAD`) and answers JSON.
 |---|---|
 | `/api/v1` | the app, its version and these routes |
 | `/api/v1/profiles` | every profile, as the [export](export.md) dataset has it |
-| `/api/v1/keys` | every key: type, fingerprint, created, expiry, store, whether it is on disk |
-| `/api/v1/keys/{profile}/{key}` | one key, and the hosts that use it |
+| `/api/v1/keys` | every key: type, fingerprint, created, expiry, store, whether it is on disk, and its [recency](#key-recency) |
+| `/api/v1/keys/{profile}/{key}` | one key with its recency, and the hosts that use it |
 | `/api/v1/hosts` | every host with its SSH settings and status |
 | `/api/v1/tokens` | which auth tokens are set and where; never a secret |
 | `/api/v1/history` | operations, newest first; filters `since`, `until`, `command`, `source`, `host`, `profile`, `key`, `limit` (up to 500) |
@@ -49,6 +49,25 @@ Every route is `GET` (or `HEAD`) and answers JSON.
 | `/api/v1/doctor` | doctor's report: `ok`, the text, and the details |
 
 An error is `{"error": {"code": "...", "message": "..."}}` with a matching status.
+
+### Key recency
+
+Each key carries a `recency` object, the same one `authama ssh key list --json` prints (see
+[key lifecycle](key-lifecycle.md#recency-new-keys-and-ages)): `age` (since it was created, added or
+rotated in), `events` (each with `kind`, `at` in RFC 3339 or a date, `ago`, its constraint `label`
+and `tone`), `is_new`, `new_because` and `pill` (`label` and `tone`). The key-recency settings
+(`keys.new_window_days`, `keys.new_events`, `keys.new_until`, `keys.age_pills`) apply as they do on
+the command line. A key never minted has no events and an empty pill.
+
+```json
+"recency": {
+  "age": "2 days ago",
+  "events": [{"kind": "created", "at": "2026-11-14T09:30:00Z", "ago": "2 days ago", "label": "fresh", "tone": "info"}],
+  "is_new": true,
+  "new_because": "created",
+  "pill": {"label": "new", "tone": "info"}
+}
+```
 
 ## The event feed
 

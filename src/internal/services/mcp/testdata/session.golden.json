@@ -410,7 +410,7 @@
     "result": {
       "content": [
         {
-          "text": "{\"keys\":[{\"ref\":\"simtabi/simtabi_simbi-prd-web-00-ed25519\",\"profile\":\"simtabi\",\"name\":\"simtabi_simbi-prd-web-00-ed25519\",\"type\":\"ed25519\",\"fingerprint\":\"\",\"created\":\"\",\"expires_on\":\"\",\"rotate_after_days\":365,\"store\":\"disk\",\"on_disk\":false,\"recorded\":false,\"state\":\"no-key\",\"hosts\":[\"simbi-prd-web-00\"],\"deployments\":0},{\"ref\":\"simtabi/simtabi_oribi-web-ed25519\",\"profile\":\"simtabi\",\"name\":\"simtabi_oribi-web-ed25519\",\"type\":\"ed25519\",\"fingerprint\":\"\",\"created\":\"\",\"expires_on\":\"\",\"rotate_after_days\":365,\"store\":\"disk\",\"on_disk\":false,\"recorded\":false,\"state\":\"no-key\",\"hosts\":[\"oribi-web\"],\"deployments\":0},{\"ref\":\"work/work_gh-ed25519\",\"profile\":\"work\",\"name\":\"work_gh-ed25519\",\"type\":\"ed25519\",\"fingerprint\":\"\",\"created\":\"\",\"expires_on\":\"\",\"rotate_after_days\":365,\"store\":\"disk\",\"on_disk\":true,\"recorded\":false,\"state\":\"no-key\",\"hosts\":[\"gh\"],\"deployments\":0}]}",
+          "text": "{\"keys\":[{\"ref\":\"simtabi/simtabi_simbi-prd-web-00-ed25519\",\"profile\":\"simtabi\",\"name\":\"simtabi_simbi-prd-web-00-ed25519\",\"type\":\"ed25519\",\"fingerprint\":\"\",\"created\":\"\",\"expires_on\":\"\",\"rotate_after_days\":365,\"store\":\"disk\",\"on_disk\":false,\"recorded\":false,\"state\":\"no-key\",\"hosts\":[\"simbi-prd-web-00\"],\"deployments\":0,\"recency\":{\"events\":[],\"is_new\":false,\"pill\":{\"label\":\"\",\"tone\":\"\"}}},{\"ref\":\"simtabi/simtabi_oribi-web-ed25519\",\"profile\":\"simtabi\",\"name\":\"simtabi_oribi-web-ed25519\",\"type\":\"ed25519\",\"fingerprint\":\"\",\"created\":\"\",\"expires_on\":\"\",\"rotate_after_days\":365,\"store\":\"disk\",\"on_disk\":false,\"recorded\":false,\"state\":\"no-key\",\"hosts\":[\"oribi-web\"],\"deployments\":0,\"recency\":{\"events\":[],\"is_new\":false,\"pill\":{\"label\":\"\",\"tone\":\"\"}}},{\"ref\":\"work/work_gh-ed25519\",\"profile\":\"work\",\"name\":\"work_gh-ed25519\",\"type\":\"ed25519\",\"fingerprint\":\"\",\"created\":\"\",\"expires_on\":\"\",\"rotate_after_days\":365,\"store\":\"disk\",\"on_disk\":true,\"recorded\":false,\"state\":\"no-key\",\"hosts\":[\"gh\"],\"deployments\":0,\"recency\":{\"events\":[],\"is_new\":false,\"pill\":{\"label\":\"\",\"tone\":\"\"}}}]}",
           "type": "text"
         }
       ],
@@ -427,6 +427,14 @@
             "name": "simtabi_simbi-prd-web-00-ed25519",
             "on_disk": false,
             "profile": "simtabi",
+            "recency": {
+              "events": [],
+              "is_new": false,
+              "pill": {
+                "label": "",
+                "tone": ""
+              }
+            },
             "recorded": false,
             "ref": "simtabi/simtabi_simbi-prd-web-00-ed25519",
             "rotate_after_days": 365,
@@ -445,6 +453,14 @@
             "name": "simtabi_oribi-web-ed25519",
             "on_disk": false,
             "profile": "simtabi",
+            "recency": {
+              "events": [],
+              "is_new": false,
+              "pill": {
+                "label": "",
+                "tone": ""
+              }
+            },
             "recorded": false,
             "ref": "simtabi/simtabi_oribi-web-ed25519",
             "rotate_after_days": 365,
@@ -463,6 +479,14 @@
             "name": "work_gh-ed25519",
             "on_disk": true,
             "profile": "work",
+            "recency": {
+              "events": [],
+              "is_new": false,
+              "pill": {
+                "label": "",
+                "tone": ""
+              }
+            },
             "recorded": false,
             "ref": "work/work_gh-ed25519",
             "rotate_after_days": 365,
@@ -479,7 +503,7 @@
     "result": {
       "content": [
         {
-          "text": "{\"keys\":[{\"ref\":\"work/work_gh-ed25519\",\"profile\":\"work\",\"name\":\"work_gh-ed25519\",\"type\":\"ed25519\",\"fingerprint\":\"\",\"created\":\"\",\"expires_on\":\"\",\"rotate_after_days\":365,\"store\":\"disk\",\"on_disk\":true,\"recorded\":false,\"state\":\"no-key\",\"hosts\":[\"gh\"],\"deployments\":0}]}",
+          "text": "{\"keys\":[{\"ref\":\"work/work_gh-ed25519\",\"profile\":\"work\",\"name\":\"work_gh-ed25519\",\"type\":\"ed25519\",\"fingerprint\":\"\",\"created\":\"\",\"expires_on\":\"\",\"rotate_after_days\":365,\"store\":\"disk\",\"on_disk\":true,\"recorded\":false,\"state\":\"no-key\",\"hosts\":[\"gh\"],\"deployments\":0,\"recency\":{\"events\":[],\"is_new\":false,\"pill\":{\"label\":\"\",\"tone\":\"\"}}}]}",
           "type": "text"
         }
       ],
@@ -496,6 +520,14 @@
             "name": "work_gh-ed25519",
             "on_disk": true,
             "profile": "work",
+            "recency": {
+              "events": [],
+              "is_new": false,
+              "pill": {
+                "label": "",
+                "tone": ""
+              }
+            },
             "recorded": false,
             "ref": "work/work_gh-ed25519",
             "rotate_after_days": 365,
@@ -524,7 +556,7 @@
     "result": {
       "content": [
         {
-          "text": "{\"hosts\":[{\"alias\":\"gh\",\"profile\":\"work\",\"hostname\":\"github.com\",\"user\":\"git\",\"port\":22,\"provider\":\"server\",\"key\":\"work_gh-ed25519\",\"key_ref\":\"work/work_gh-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"\",\"role\":\"\",\"code\":\"\",\"number\":\"\",\"named\":false,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[]}],\"key\":{\"ref\":\"work/work_gh-ed25519\",\"profile\":\"work\",\"name\":\"work_gh-ed25519\",\"type\":\"ed25519\",\"fingerprint\":\"\",\"created\":\"\",\"expires_on\":\"\",\"rotate_after_days\":365,\"store\":\"disk\",\"on_disk\":true,\"recorded\":false,\"state\":\"no-key\",\"hosts\":[\"gh\"],\"deployments\":0}}",
+          "text": "{\"hosts\":[{\"alias\":\"gh\",\"profile\":\"work\",\"hostname\":\"github.com\",\"user\":\"git\",\"port\":22,\"provider\":\"server\",\"key\":\"work_gh-ed25519\",\"key_ref\":\"work/work_gh-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"\",\"role\":\"\",\"code\":\"\",\"number\":\"\",\"named\":false,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[]}],\"key\":{\"ref\":\"work/work_gh-ed25519\",\"profile\":\"work\",\"name\":\"work_gh-ed25519\",\"type\":\"ed25519\",\"fingerprint\":\"\",\"created\":\"\",\"expires_on\":\"\",\"rotate_after_days\":365,\"store\":\"disk\",\"on_disk\":true,\"recorded\":false,\"state\":\"no-key\",\"hosts\":[\"gh\"],\"deployments\":0,\"recency\":{\"events\":[],\"is_new\":false,\"pill\":{\"label\":\"\",\"tone\":\"\"}}}}",
           "type": "text"
         }
       ],
@@ -565,6 +597,14 @@
           "name": "work_gh-ed25519",
           "on_disk": true,
           "profile": "work",
+          "recency": {
+            "events": [],
+            "is_new": false,
+            "pill": {
+              "label": "",
+              "tone": ""
+            }
+          },
           "recorded": false,
           "ref": "work/work_gh-ed25519",
           "rotate_after_days": 365,
