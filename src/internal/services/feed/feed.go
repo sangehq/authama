@@ -2,8 +2,8 @@
 // for the API, webhooks and MCP, each event a CloudEvents 1.0 event in
 // structured JSON (https://github.com/cloudevents/spec). An operation that
 // finished (any change, made from the CLI or the web) is a
-// com.simtabi.authama.operation.finished event; a change to a watched file is
-// com.simtabi.authama.file.added, .changed, .removed or .mode-changed.
+// sh.sange.authama.operation.finished event; a change to a watched file is
+// sh.sange.authama.file.added, .changed, .removed or .mode-changed.
 //
 // The envelope is sange's (its design, webhooks-and-events.md section 3.1),
 // so one receiver reads both: the type is reverse-DNS from authama's own
@@ -34,9 +34,19 @@ import (
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
-// TypePrefix starts every event type: reverse-DNS, as authama's desktop
-// notifier's app id is (com.simtabi.authama).
-const TypePrefix = "com.simtabi.authama."
+// TypePrefix starts every event type: reverse-DNS from authama's product
+// domain, sange.sh, as its desktop notifier's app id is (sh.sange.authama).
+// It was com.simtabi.authama. until 2026-11-16 (owner: "Under sange.sh").
+const TypePrefix = "sh.sange.authama."
+
+// LegacyTypePrefix is the prefix event types carried before they moved under
+// sange.sh. A type filter written with it (an --event flag, a saved webhook's
+// events, the API's and MCP's type filter) is read as the same filter on
+// TypePrefix, so a webhook saved before the move keeps matching.
+//
+// Deprecated: write filters with TypePrefix, or without a prefix (file.).
+// Accepted until v1.0.0 at the earliest (.claude/design/authama/audits/deprecations.md).
+const LegacyTypePrefix = "com.simtabi.authama."
 
 // The event types.
 const (
@@ -47,11 +57,11 @@ const (
 	TypeFileMode      = TypePrefix + "file.mode-changed"
 	TypeWatchStarted  = TypePrefix + "file.watch.started"
 	TypeWebhookTested = TypePrefix + "webhook.tested"
-	// An install identity, not a link. It named the simtabi org until the first public release
-	// (owner, 2026-11-16: moved to sangehq before anything outside depended on it). A dedicated
-	// product domain is the planned next home; changing it again changes what a consumer keyed on
-	// source sees, so it moves once, with a release note.
-	sourceBase      = "https://opensource.simtabi.com/products/sangehq/authama/install/"
+	// An install identity, not a link, under authama's product domain (owner, 2026-11-16:
+	// "Under sange.sh"; sange's own is https://sange.sh/install/<id>). It was
+	// https://opensource.simtabi.com/products/sangehq/authama/install/ until then. A consumer
+	// keyed on source sees the change, so it moves only with a release note.
+	sourceBase      = "https://sange.sh/authama/install/"
 	specVersion     = "1.0"
 	jsonContentType = "application/json"
 )
@@ -316,16 +326,33 @@ func fromHome(path string) string {
 }
 
 // Matches reports whether e's type starts with one of prefixes, each given
-// whole (com.simtabi.authama.file.) or without the common prefix (file.); no
-// prefixes match every event.
+// whole (sh.sange.authama.file.) or without the common prefix (file.); no
+// prefixes match every event. A prefix written with the deprecated
+// LegacyTypePrefix (com.simtabi.authama.file.) is read as the same prefix on
+// TypePrefix.
 func Matches(e Event, prefixes []string) bool {
 	if len(prefixes) == 0 {
 		return true
 	}
 	short := strings.TrimPrefix(e.Type, TypePrefix)
 	return slices.ContainsFunc(prefixes, func(pre string) bool {
+		pre = currentPrefix(pre)
 		return strings.HasPrefix(e.Type, pre) || strings.HasPrefix(short, pre)
 	})
+}
+
+// currentPrefix rewrites a filter written with LegacyTypePrefix onto
+// TypePrefix, and returns any other filter as it is. A filter shorter than
+// the old prefix and part of it (com.simtabi.authama, without the dot)
+// matched every event before the move, so it is TypePrefix: it still does.
+func currentPrefix(pre string) string {
+	if rest, ok := strings.CutPrefix(pre, LegacyTypePrefix); ok {
+		return TypePrefix + rest
+	}
+	if strings.HasPrefix(LegacyTypePrefix, pre) {
+		return TypePrefix
+	}
+	return pre
 }
 
 func nonNil(s []string) []string {

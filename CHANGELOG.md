@@ -8,12 +8,159 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.1.0] - 2026-11-16
 
-The first release under `sangehq/authama`, tagged 2026-11-14 and re-tagged on 2026-11-16 (twice) with everything
+The first release under `sangehq/authama`, tagged 2026-11-14 and re-tagged on 2026-11-16 (three times) with everything
 merged since (owner: "rebase to release all at v0.1.0"), and the module path `github.com/sangehq/authama/src`. The
 version numbers restart here (owner, 2026-11-14): the earlier v0.1.0, v0.1.4, v0.1.5 and v0.1.6 tags and
 the v0.1.6 GitHub release were withdrawn, and their notes stay below as history. Go's module proxy still
 holds the old `src/v0.1.0` and `src/v0.1.6`, whose `go.mod` names `github.com/simtabi/authama/src`, so
 nothing can import them; binaries ship on the GitHub release only.
+
+### Changed
+
+- **go-notifykit is pinned to its first release, v0.1.0** (simtabi/go-notifykit#7), instead of a pseudo-version
+  of the same code.
+- **The event identity moved under sange.sh.** Feed and webhook events now carry
+  `source` `https://sange.sh/authama/install/<id>` (was
+  `https://opensource.simtabi.com/products/sangehq/authama/install/<id>`, which never resolved) and
+  types `sh.sange.authama.*` (was `com.simtabi.authama.*`); the install id is unchanged. A receiver
+  that matches on `source` or `type` must accept the new values. See docs/tools/api.md, "The event
+  identity moved to sange.sh".
+- **The desktop notifier's app id is `sh.sange.authama`** (was `com.simtabi.authama`), as
+  go-notifykit's standard asks for a product with its own domain. macOS remembers notification
+  permission by that id, so the first notification after updating may ask for permission again; the
+  old entry can stay under System Settings > Notifications until removed there. The helper app is
+  rebuilt in place at the same path. The macOS `Authama.app` bundle id is `sh.sange.authama` too.
+- **The dev container's base image is pinned by tag and digest**
+  (`golang:1.27@sha256:205c7636…`), so every build starts from the same bytes and Dependabot moves
+  the tag and digest together.
+
+- `ssh rotate --force` is now a factory reset of the keys chosen: every key ends rotated or replaced. A key that cannot rotate in place (never deployed, host unreachable, a target that takes the key by hand, or used by no host) is replaced on this computer, and listed under **Needs you** to deploy next. A forced run no longer stops to ask for a paste, includes keys no host uses instead of skipping them, and exits 0 when every key was rotated or replaced.
+- The forced rotation's confirmation says it is a forced replace, and of how many keys.
+- Each rotation now has an explicit policy for the previous key in `old/`: keep it (the default) or
+  evict it, which takes it off every host it was never removed from and then drops it, naming any
+  host it could not be taken off. `--force` evicts by default, so a factory reset leaves only the new
+  key; `--keep-old` keeps it. `--evict-old` still works without `--force`, and now takes the key off
+  the servers instead of only overwriting `old/`.
+- `rotate --check` previews the policy: a key whose previous key still logs in would fail when it is
+  kept, and reads "would evict old from N host(s)" when it is evicted. A forced dry run no longer
+  passes a key the forced run would refuse.
+- `authama ssh import` of this machine's own config now adopts each plain `Host` block it imports:
+  the block leaves `~/.ssh/config` (or the file under `~/.ssh` it was Included from) and the
+  managed block is rendered in its place in the same write, so the documented onboarding
+  (`import -y`, `reconcile`) leaves one definition of every host and `doctor` clean. Edited files
+  are copied to `<state>/.state/import-backup-<time>/ssh/` first; `--dry-run` writes nothing.
+  A block the manifest cannot reproduce (a `ProxyCommand`, a second `IdentityFile`, its own
+  `UserKnownHostsFile`, a wildcard on the `Host` line, an `Include`, a file outside `~/.ssh`) is
+  left as it is and its host is not imported; the summary says why. The user's `Host *` values for
+  the options authama's `Host *` also sets are carried into `defaults.global_options`. Importing
+  another machine's copy edits nothing, as before (R-BUG-09).
+- `doctor`, `ssh config check`: a hand-written `Host` block outside the managed block that names a
+  managed alias is a config collision and fails the verdict; `doctor --json` gains
+  `config_collisions`. `reconcile`, `config render` and manifest edits print it as a warning.
+
+- **Webhook and feed events name `products/sangehq/authama` in `source`**, not
+  `products/simtabi/authama`: the install identity moved with the repository before anything
+  outside depended on it. The `com.simtabi.authama.*` event types are unchanged.
+- **`token audit` reads a `.gitignore` only with `--project`**, as its help said. Run from any other
+  directory it judged that directory's `.gitignore` and exited 1 in a repository that keeps no
+  credentials; the web page did the same with the server's directory (audit B-04).
+
+- **The web UI's menus are colour-coded.** Each entry's icon sits on a Tabler tile coloured by what it
+  is: a menu's own pages share a colour (SSH cyan, Tokens pink, Security purple, History yellow), and
+  a task's colour says what it does (create or add green, change blue, revoke orange, delete or reset
+  red); Doctor, Validate and Repair are teal, Settings and the user menu grey. Each menu's toggle shows
+  its icon in its colour. The colours are darkened in the light theme and lightened in the dark one,
+  so icons and tile edges reach 5.4:1 or more in both. VMs has its own icon (`box`), no longer one
+  that reads as Hosts. The current page's entry has a bar at its start edge, and keyboard focus a
+  visible ring. Guards fail on an entry without a tile, a kind in two colours, a task in the wrong
+  colour, a red entry that is not a delete, a description over 62 characters, and an Overview link
+  that does not reach the dashboard (with or without `--base-path`); the accessibility suite also
+  measures the tiles' contrast on every menu open, in both themes.
+- **The main menu's list is closed.** Its `<ul>` had no `</ul>`.
+
+- **The web UI's menus are regrouped, one kind of thing to a menu.** The main menu is Overview,
+  **SSH**, **Tokens**, **Security**, **History** and **System**, with a **New** button and a personal
+  user menu in the top bar. The Actions menu is gone: each job sits under its object's **Tasks**
+  header (SSH › Tasks for host and key jobs, Tokens › Tasks for Add a token), and New repeats Add a
+  host, Add a token and Mint missing keys. Auth tokens has its own Tokens menu with the token
+  checklists; Activity and Backups & export are one History menu (Changes, File events, Snapshots,
+  Export); System holds Doctor, Validate, Repair, Settings and Reset, which is listed once, in red.
+  The user menu keeps Running as, the tour, About and Sign out, and no longer repeats Settings,
+  Events and Doctor. Read-only still hides every task (and now New); the dev sandbox still leaves
+  out Rotate and Revoke.
+- **Every menu entry has its own icon and a one-line description of what its page shows.** No two
+  entries share an icon (Naming is a tag, Repair a tool, VMs a server rack, Reset a restore arrow,
+  Sign out a logout arrow), sixteen icons were added to the sprite through `icons.txt` and
+  `make tabler-vendor`, and the descriptions were rewritten to one shape of about 60 characters.
+  The command palette shows each page with its menu's icon and under its menu's name.
+  The tour follows the new menus: search, SSH, Tokens, Security, History, New, the bell and the user
+  menu. Guards fail on a shared icon or page, an icon missing from the sprite, a task or New on a
+  read-only server, and Rotate or Revoke in the dev sandbox.
+- **Menu entries keep 4.5:1 contrast on their tint.** Tabler's grey description, red destructive
+  entry and blue current entry fell to between 2.7:1 and 4.48:1 on the hover and current-page tints,
+  and in the dark theme; they now use the body colour there, or a darker or lighter mix. The e2e
+  accessibility suite runs axe on every menu open, in both themes.
+
+- **`authama version` names the commit and build day.** It printed only the version, so a build from a
+  branch said `authama dev`; it now adds them when Go recorded them, as in
+  `authama v0.1.6 (6c56209, 2026-11-13)`. The line still starts `authama <version>`.
+- **Go 1.27, golangci-lint v2.15.0 and the current go-notifykit.** The module now declares `go 1.27.0`
+  with `toolchain go1.27.4`, as sange and imprimatur do, and CI lints with golangci-lint v2.15.0; the dev
+  container defaults to Go 1.27. go-notifykit moves to the build sange uses, which drops the
+  `terminal-notifier` backend (macOS uses its helper app, else `osascript`).
+- **Desktop notifications replace rather than stack.** Each carries a group named after the event, so
+  the same event posted again replaces its banner. With no backend, the message now says to install
+  `notify-send` on Linux and to run `authama notify doctor` elsewhere, not `terminal-notifier`.
+- **CI skips draft pull requests and cancels superseded CodeQL runs.** Every CI and CodeQL job now
+  waits until a draft is marked ready (which starts a run), as sange and imprimatur already did, and
+  CodeQL cancels a pull request's earlier run when a new push supersedes it.
+- **`init --force` keeps a copy and asks first.** It reset `manifest.json`, `inventory.json` and `.env`
+  to their defaults with no copy unless `--backup` was given (and `--backup` without `--force` was
+  silently ignored), and never asked. It now copies them into the state home's `init-backup-<stamp>/`
+  first, and asks at a terminal, saying what it resets and where the copies go; `-y` skips the
+  question, and a run with no terminal proceeds as before, now with the copy. `--no-backup` keeps
+  none. `--backup` still works and is deprecated, since a backup is the default.
+- **authama moved to sangehq.** The repository is now `sangehq/authama` (GitHub redirects
+  `simtabi/authama`), and the Go module path is `github.com/sangehq/authama/src`. Release
+  assets, install scripts, the settings schema URL, the web UI's About links and the man
+  page point at the new home. The `retract` in `src/go.mod` is gone: it named versions of
+  the old path, and under the new one it would have retracted this module's own future
+  v0.1.1 to v0.1.3. Unchanged on purpose: the event type `com.simtabi.authama.*` and the
+  event `source` (both identify events to webhook consumers), and the notifier's macOS
+  identity `com.simtabi.authama` (changing it resets the notification permission).
+
+- **A release runs under the `release` environment again.** `release.yml` passes
+  `environment: release` to the shared workflow, pinned to simtabi/.github's `v1.0.0` (`767e0c0`,
+  which takes an environment), with the version as the comment so Dependabot can move it. Each release is recorded as a deployment, and the
+  environment requires the owner's approval (added 2026-11-13), so a pushed tag publishes nothing
+  until it is approved.
+
+### Deprecated
+
+- **Type filters written with `com.simtabi.authama.`** (`webhook add --event`, a saved webhook's
+  `events`, `/api/v1/events?type=`, MCP `list_events`) are read as the same filter on
+  `sh.sange.authama.`, so webhooks saved before the move keep receiving what they asked for. Write
+  `sh.sange.authama.` or the short form (`file.`). Removable no earlier than v1.0.0.
+- **`AUTHAMA_GO_VERSION`** still builds the dev container on an unpinned `golang:<version>`, through
+  the Dockerfile's `base-unpinned` stage that compose selects only when the variable is set.
+  Removable no earlier than v1.0.0.
+
+- `importer.ImportResult.LeftInConfig` (internal): always empty now; see `Moved` and `Kept`.
+
+### Documentation
+
+- `docs/architecture.md` says why the managed block lives in `~/.ssh/config` rather than behind an
+  `Include` (some tools ignore `Include`, and an `Include` would not stop a user block colliding).
+
+- **Docs links point at the repository.** The hosted docs site answers 404, so `--help`, the man pages
+  and the web UI's footer and About page link `github.com/sangehq/authama/tree/main/docs` until it is
+  live; `brand.DocsURL` is the one place to change, and a test fails any other source naming the site
+  (R-DOC-03).
+
+- **The provenance check now works.** `gh attestation verify` in the installation and release pages
+  names the signer, `--signer-workflow simtabi/.github/.github/workflows/go-release.yml`: the shared
+  release workflow signs, and without the flag the check fails against v0.1.6. A test fails any doc
+  that shows the command without it. The pages no longer say that no release has been published.
 
 ### Fixed
 
@@ -208,109 +355,6 @@ nothing can import them; binaries ship on the GitHub release only.
   whether the directory is on `PATH`, as `make install` does; `make uninstall` removes the link.
   Windows uses `make install`.
 
-### Changed
-
-- `ssh rotate --force` is now a factory reset of the keys chosen: every key ends rotated or replaced. A key that cannot rotate in place (never deployed, host unreachable, a target that takes the key by hand, or used by no host) is replaced on this computer, and listed under **Needs you** to deploy next. A forced run no longer stops to ask for a paste, includes keys no host uses instead of skipping them, and exits 0 when every key was rotated or replaced.
-- The forced rotation's confirmation says it is a forced replace, and of how many keys.
-- Each rotation now has an explicit policy for the previous key in `old/`: keep it (the default) or
-  evict it, which takes it off every host it was never removed from and then drops it, naming any
-  host it could not be taken off. `--force` evicts by default, so a factory reset leaves only the new
-  key; `--keep-old` keeps it. `--evict-old` still works without `--force`, and now takes the key off
-  the servers instead of only overwriting `old/`.
-- `rotate --check` previews the policy: a key whose previous key still logs in would fail when it is
-  kept, and reads "would evict old from N host(s)" when it is evicted. A forced dry run no longer
-  passes a key the forced run would refuse.
-- `authama ssh import` of this machine's own config now adopts each plain `Host` block it imports:
-  the block leaves `~/.ssh/config` (or the file under `~/.ssh` it was Included from) and the
-  managed block is rendered in its place in the same write, so the documented onboarding
-  (`import -y`, `reconcile`) leaves one definition of every host and `doctor` clean. Edited files
-  are copied to `<state>/.state/import-backup-<time>/ssh/` first; `--dry-run` writes nothing.
-  A block the manifest cannot reproduce (a `ProxyCommand`, a second `IdentityFile`, its own
-  `UserKnownHostsFile`, a wildcard on the `Host` line, an `Include`, a file outside `~/.ssh`) is
-  left as it is and its host is not imported; the summary says why. The user's `Host *` values for
-  the options authama's `Host *` also sets are carried into `defaults.global_options`. Importing
-  another machine's copy edits nothing, as before (R-BUG-09).
-- `doctor`, `ssh config check`: a hand-written `Host` block outside the managed block that names a
-  managed alias is a config collision and fails the verdict; `doctor --json` gains
-  `config_collisions`. `reconcile`, `config render` and manifest edits print it as a warning.
-
-- **Webhook and feed events name `products/sangehq/authama` in `source`**, not
-  `products/simtabi/authama`: the install identity moved with the repository before anything
-  outside depended on it. The `com.simtabi.authama.*` event types are unchanged.
-- **`token audit` reads a `.gitignore` only with `--project`**, as its help said. Run from any other
-  directory it judged that directory's `.gitignore` and exited 1 in a repository that keeps no
-  credentials; the web page did the same with the server's directory (audit B-04).
-
-- **The web UI's menus are colour-coded.** Each entry's icon sits on a Tabler tile coloured by what it
-  is: a menu's own pages share a colour (SSH cyan, Tokens pink, Security purple, History yellow), and
-  a task's colour says what it does (create or add green, change blue, revoke orange, delete or reset
-  red); Doctor, Validate and Repair are teal, Settings and the user menu grey. Each menu's toggle shows
-  its icon in its colour. The colours are darkened in the light theme and lightened in the dark one,
-  so icons and tile edges reach 5.4:1 or more in both. VMs has its own icon (`box`), no longer one
-  that reads as Hosts. The current page's entry has a bar at its start edge, and keyboard focus a
-  visible ring. Guards fail on an entry without a tile, a kind in two colours, a task in the wrong
-  colour, a red entry that is not a delete, a description over 62 characters, and an Overview link
-  that does not reach the dashboard (with or without `--base-path`); the accessibility suite also
-  measures the tiles' contrast on every menu open, in both themes.
-- **The main menu's list is closed.** Its `<ul>` had no `</ul>`.
-
-- **The web UI's menus are regrouped, one kind of thing to a menu.** The main menu is Overview,
-  **SSH**, **Tokens**, **Security**, **History** and **System**, with a **New** button and a personal
-  user menu in the top bar. The Actions menu is gone: each job sits under its object's **Tasks**
-  header (SSH › Tasks for host and key jobs, Tokens › Tasks for Add a token), and New repeats Add a
-  host, Add a token and Mint missing keys. Auth tokens has its own Tokens menu with the token
-  checklists; Activity and Backups & export are one History menu (Changes, File events, Snapshots,
-  Export); System holds Doctor, Validate, Repair, Settings and Reset, which is listed once, in red.
-  The user menu keeps Running as, the tour, About and Sign out, and no longer repeats Settings,
-  Events and Doctor. Read-only still hides every task (and now New); the dev sandbox still leaves
-  out Rotate and Revoke.
-- **Every menu entry has its own icon and a one-line description of what its page shows.** No two
-  entries share an icon (Naming is a tag, Repair a tool, VMs a server rack, Reset a restore arrow,
-  Sign out a logout arrow), sixteen icons were added to the sprite through `icons.txt` and
-  `make tabler-vendor`, and the descriptions were rewritten to one shape of about 60 characters.
-  The command palette shows each page with its menu's icon and under its menu's name.
-  The tour follows the new menus: search, SSH, Tokens, Security, History, New, the bell and the user
-  menu. Guards fail on a shared icon or page, an icon missing from the sprite, a task or New on a
-  read-only server, and Rotate or Revoke in the dev sandbox.
-- **Menu entries keep 4.5:1 contrast on their tint.** Tabler's grey description, red destructive
-  entry and blue current entry fell to between 2.7:1 and 4.48:1 on the hover and current-page tints,
-  and in the dark theme; they now use the body colour there, or a darker or lighter mix. The e2e
-  accessibility suite runs axe on every menu open, in both themes.
-
-- **`authama version` names the commit and build day.** It printed only the version, so a build from a
-  branch said `authama dev`; it now adds them when Go recorded them, as in
-  `authama v0.1.6 (6c56209, 2026-11-13)`. The line still starts `authama <version>`.
-- **Go 1.27, golangci-lint v2.15.0 and the current go-notifykit.** The module now declares `go 1.27.0`
-  with `toolchain go1.27.4`, as sange and imprimatur do, and CI lints with golangci-lint v2.15.0; the dev
-  container defaults to Go 1.27. go-notifykit moves to the build sange uses, which drops the
-  `terminal-notifier` backend (macOS uses its helper app, else `osascript`).
-- **Desktop notifications replace rather than stack.** Each carries a group named after the event, so
-  the same event posted again replaces its banner. With no backend, the message now says to install
-  `notify-send` on Linux and to run `authama notify doctor` elsewhere, not `terminal-notifier`.
-- **CI skips draft pull requests and cancels superseded CodeQL runs.** Every CI and CodeQL job now
-  waits until a draft is marked ready (which starts a run), as sange and imprimatur already did, and
-  CodeQL cancels a pull request's earlier run when a new push supersedes it.
-- **`init --force` keeps a copy and asks first.** It reset `manifest.json`, `inventory.json` and `.env`
-  to their defaults with no copy unless `--backup` was given (and `--backup` without `--force` was
-  silently ignored), and never asked. It now copies them into the state home's `init-backup-<stamp>/`
-  first, and asks at a terminal, saying what it resets and where the copies go; `-y` skips the
-  question, and a run with no terminal proceeds as before, now with the copy. `--no-backup` keeps
-  none. `--backup` still works and is deprecated, since a backup is the default.
-- **authama moved to sangehq.** The repository is now `sangehq/authama` (GitHub redirects
-  `simtabi/authama`), and the Go module path is `github.com/sangehq/authama/src`. Release
-  assets, install scripts, the settings schema URL, the web UI's About links and the man
-  page point at the new home. The `retract` in `src/go.mod` is gone: it named versions of
-  the old path, and under the new one it would have retracted this module's own future
-  v0.1.1 to v0.1.3. Unchanged on purpose: the event type `com.simtabi.authama.*` and the
-  event `source` (both identify events to webhook consumers), and the notifier's macOS
-  identity `com.simtabi.authama` (changing it resets the notification permission).
-
-- **A release runs under the `release` environment again.** `release.yml` passes
-  `environment: release` to the shared workflow, pinned to simtabi/.github's `v1.0.0` (`767e0c0`,
-  which takes an environment), with the version as the comment so Dependabot can move it. Each release is recorded as a deployment, and the
-  environment requires the owner's approval (added 2026-11-13), so a pushed tag publishes nothing
-  until it is approved.
-
 ### Security
 
 - **The installers check who built the binary, not only that it downloaded intact.** With `gh` installed and
@@ -456,10 +500,6 @@ nothing can import them; binaries ship on the GitHub release only.
   proof. `--stop-all` signals a pid another server reports only when it is an `authama` process.
   `/healthz` no longer gives its pid, build and start time to a request a proxy passed on.
 
-### Deprecated
-
-- `importer.ImportResult.LeftInConfig` (internal): always empty now; see `Moved` and `Kept`.
-
 ### Release
 
 - **Release binaries no longer report `-dirty`.** Every v0.1.0 binary printed `0.1.0-dirty` and a
@@ -476,18 +516,6 @@ nothing can import them; binaries ship on the GitHub release only.
   section longer than GitHub's 125,000-character release body up to the last whole line that fits and
   links the rest. v0.1.0's notes were 157,941 bytes, so its release was cut and its run stopped before
   attesting provenance; re-running v0.1.0 under this pin attaches the attestation.
-
-### Documentation
-
-- **Docs links point at the repository.** The hosted docs site answers 404, so `--help`, the man pages
-  and the web UI's footer and About page link `github.com/sangehq/authama/tree/main/docs` until it is
-  live; `brand.DocsURL` is the one place to change, and a test fails any other source naming the site
-  (R-DOC-03).
-
-- **The provenance check now works.** `gh attestation verify` in the installation and release pages
-  names the signer, `--signer-workflow simtabi/.github/.github/workflows/go-release.yml`: the shared
-  release workflow signs, and without the flag the check fails against v0.1.6. A test fails any doc
-  that shows the command without it. The pages no longer say that no release has been published.
 
 ## Withdrawn 0.1.6 - 2026-11-13
 

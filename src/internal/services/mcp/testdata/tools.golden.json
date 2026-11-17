@@ -77,7 +77,7 @@
           "type": "integer"
         },
         "type": {
-          "description": "only types starting with this, whole or without com.simtabi.authama.: operation.finished, file.",
+          "description": "only types starting with this, whole or without sh.sange.authama.: operation.finished, file.",
           "type": "string"
         }
       },

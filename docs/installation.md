@@ -223,6 +223,16 @@ which fails with `EBUSY` over a single-file bind mount. If you run into trouble:
 - **`docker compose` not found:** the Make targets use Compose v2;
   `make COMPOSE=docker-compose docker-shell` uses the legacy binary.
 
+The image starts from `golang` pinned by tag and digest
+(`golang:1.27@sha256:…` in the `Dockerfile`), so every build starts from the
+same bytes, and Dependabot moves the tag and the digest together.
+`AUTHAMA_GO_VERSION` (e.g. `AUTHAMA_GO_VERSION=1.26 make docker-shell`) still
+builds on `golang:<version>` instead, through the `Dockerfile`'s
+`base-unpinned` stage. That override is **deprecated**: it is unpinned, so what
+it pulls can change under the same tag, and it goes no earlier than v1.0.0.
+Selecting the stage relies on Compose's `${VAR:+value}` interpolation, which
+Compose v2 supports.
+
 The `.env` and the rest of the per-user home are created by `authama init`, which
 seeds `.env` from the shipped `.env-example` at mode `0600`.
 

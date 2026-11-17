@@ -107,7 +107,7 @@ func (s Server) New() *sdk.Server {
 	srv.AddTool(&sdk.Tool{Name: "list_events", Title: "List events", Annotations: readOnly,
 		Description: "The event feed: changes that finished and watched files that changed, oldest first. Pass the returned next to read on.",
 		InputSchema: schema(map[string]prop{"after": {"string", "the next value a previous call returned"}, "limit": {"integer", "at most this many, up to 200 (default 50)"},
-			"type": {"string", "only types starting with this, whole or without com.simtabi.authama.: operation.finished, file."}})}, s.handle(s.listEvents))
+			"type": {"string", "only types starting with this, whole or without sh.sange.authama.: operation.finished, file."}})}, s.handle(s.listEvents))
 	srv.AddTool(&sdk.Tool{Name: "doctor", Title: "Run doctor", Annotations: readOnly,
 		Description: "authama's health report for this home: permissions, the agent, known_hosts, old keys, the config.",
 		InputSchema: schema(nil)}, s.handle(s.doctor))

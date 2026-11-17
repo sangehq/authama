@@ -13,7 +13,7 @@ retract v0.1.6 // cached by the proxy from the pre-reset history
 
 require (
 	github.com/modelcontextprotocol/go-sdk v1.8.0
-	github.com/simtabi/go-notifykit/src v0.0.0-20261108151612-b1d96c3bd177
+	github.com/simtabi/go-notifykit/src v0.1.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
 	go.yaml.in/yaml/v3 v3.0.6

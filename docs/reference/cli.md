@@ -3788,7 +3788,7 @@ Examples:
 Flags:
 
 ```
-      --event strings   send only events whose type starts with this, whole or without com.simtabi.authama. (repeatable): operation.finished, file.
+      --event strings   send only events whose type starts with this, whole or without sh.sange.authama. (repeatable): operation.finished, file.
 ```
 
 ## authama webhook deliver

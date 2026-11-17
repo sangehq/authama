@@ -43,7 +43,8 @@ merged since (owner: "rebase to release all at v0.1.0"): the v0.1.0 and `src/v0.
 the v0.1.0 release were deleted and made again on the new commit, because the first v0.1.0
 binaries reported `-dirty` and lacked 48 commits, the A-SEC security fixes among them. It was
 re-tagged once more the same day (owner, 2026-11-16) to carry the import, job step-up and evict
-changes merged after it. The next
+changes merged after it, and a third time to carry the sange.sh event identity, the pinned dev
+image and go-notifykit v0.1.0. The next
 release is v0.1.1, and nothing here is offered through the Go toolchain.
 
 `src/go.mod` retracts v0.1.6, so once the proxy fetches a newer version its `@latest` stops

@@ -113,7 +113,7 @@ func TestTheFeedOrdersEventsAndResumesFromACursor(t *testing.T) {
 	// every time, and names no account.
 	for _, e := range all {
 		if e.SpecVersion != "1.0" || e.DataContentType != "application/json" || e.Subject == "" ||
-			!strings.HasPrefix(e.Source, "https://opensource.simtabi.com/products/sangehq/authama/install/") || e.Source != all[0].Source {
+			!strings.HasPrefix(e.Source, "https://sange.sh/authama/install/") || e.Source != all[0].Source {
 			t.Errorf("not a CloudEvent from this install: %+v", e)
 		}
 	}
@@ -122,6 +122,43 @@ func TestTheFeedOrdersEventsAndResumesFromACursor(t *testing.T) {
 	}
 	if !Matches(all[1], []string{"file."}) || !Matches(all[1], []string{TypePrefix + "file."}) || Matches(all[0], []string{"file."}) || !Matches(all[0], nil) {
 		t.Error("type prefixes do not filter as they should")
+	}
+}
+
+// The event identity lives under authama's product domain, sange.sh (owner,
+// 2026-11-16: "Under sange.sh"): a receiver keyed on source or type sees these
+// values, so they change only with a release note.
+func TestTheEventIdentityIsUnderSangeSh(t *testing.T) {
+	if TypePrefix != "sh.sange.authama." {
+		t.Errorf("TypePrefix is %q", TypePrefix)
+	}
+	if sourceBase != "https://sange.sh/authama/install/" {
+		t.Errorf("sourceBase is %q", sourceBase)
+	}
+	if TypeOperation != "sh.sange.authama.operation.finished" || TypeWebhookTested != "sh.sange.authama.webhook.tested" {
+		t.Errorf("types are %q, %q", TypeOperation, TypeWebhookTested)
+	}
+}
+
+// A filter written with the old com.simtabi.authama. prefix, as a webhook saved
+// before the move holds it, still matches the event it meant, and only that.
+func TestAnOldPrefixFilterStillMatches(t *testing.T) {
+	file := Event{Type: TypeFileAdded}
+	op := Event{Type: TypeOperation}
+	for _, f := range []string{"com.simtabi.authama.file.", "com.simtabi.authama.file.added", "com.simtabi.authama.", "com.simtabi.authama"} {
+		if !Matches(file, []string{f}) {
+			t.Errorf("the old-prefix filter %q does not match %s", f, file.Type)
+		}
+	}
+	if Matches(op, []string{"com.simtabi.authama.file."}) {
+		t.Error("an old-prefix file filter matched an operation")
+	}
+	if Matches(file, []string{"com.simtabi.authama.operation."}) {
+		t.Error("an old-prefix operation filter matched a file event")
+	}
+	// The new prefix and the short form go on working as they did.
+	if !Matches(file, []string{"sh.sange.authama.file."}) || !Matches(file, []string{"file."}) {
+		t.Error("the current forms stopped matching")
 	}
 }
 
