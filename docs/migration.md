@@ -279,7 +279,7 @@ commands) and `--list --json` (with and without secrets).
 | `docs/tools/{composer,npm,docker,git,netrc}.md` | [tools/tokens/](tools/tokens/composer.md) | |
 | `docs/tools/ui.md` | [`serve`](tools/serve.md) (the terminal menu that first replaced it was [removed](tools/tui.md)) | |
 | Make targets `run`, `ui`, `services`, `aliases-*`, `docker-build`/`up`/`check`/`clean`, `venv`, `pyz`, `binary` | dropped | each is one `authama` command (`token apply`, `serve`, `token providers`, `token shell-aliases`); the container is `make docker-shell`/`docker-run`/`docker-down`; there is no venv or zipapp to build |
-| `.env.example` `ATM_*` container variables | `AUTHAMA_*` in `compose.yaml` (`ATM_AUTH_HOME` is `AUTHAMA_DEV_HOME`, `ATM_UBUNTU_VERSION` is `AUTHAMA_GO_VERSION`) | [installation](installation.md#dev-container) |
+| `.env.example` `ATM_*` container variables | `AUTHAMA_*` in `compose.yaml` (`ATM_AUTH_HOME` is `AUTHAMA_DEV_HOME`, `ATM_UBUNTU_VERSION` is `AUTHAMA_GO_VERSION`, itself deprecated since 2026-11-16: the base is pinned by digest) | [installation](installation.md#dev-container) |
 | `docs/aliases.md` | [`token` › Shell aliases](tools/tokens.md#shell-aliases); the Make shortcuts are the repo's `make help` | |
 | `docs/container.md` | [installation › Dev container](installation.md#dev-container) | |
 | `docs/installation.md`, `release.md`, `shipping-checklist.md`, `architecture.md` | [installation](installation.md), [release](release.md), [architecture](architecture.md) | |

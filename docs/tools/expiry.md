@@ -50,7 +50,11 @@ Notifications go through [go-notifykit](https://github.com/simtabi/go-notifykit)
 so on macOS a banner says **authama** with authama's logo mark rather than
 "Script Editor". The first notification builds a small helper app in
 `~/.local/state/authama/notifykit/`, and macOS asks once whether to allow it; it
-is listed under System Settings › Notifications as `authama`. Linux uses
+is listed under System Settings › Notifications as `authama`. Its app id is `sh.sange.authama`
+(`com.simtabi.authama` before 2026-11-16): macOS remembers the permission by that id, so the first
+notification after updating may ask again, and the old entry can stay listed under Notifications
+until you remove it there. The helper app is rebuilt in place, so nothing else is left behind.
+Linux uses
 `notify-send` with the same icon, Windows a PowerShell toast.
 
 | Switch | Effect |

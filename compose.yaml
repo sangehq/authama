@@ -29,6 +29,10 @@ services:
     build:
       context: .
       args:
+        # AUTHAMA_GO_VERSION is deprecated: unset, the image starts from the
+        # Dockerfile's digest-pinned golang base; set, from the unpinned
+        # golang:<AUTHAMA_GO_VERSION> stage instead (removable no earlier than v1.0.0).
+        BASE_STAGE: base${AUTHAMA_GO_VERSION:+-unpinned}
         GO_VERSION: ${AUTHAMA_GO_VERSION:-1.27}
         UID: ${AUTHAMA_UID:-1000}
         GID: ${AUTHAMA_GID:-1000}

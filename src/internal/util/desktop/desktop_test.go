@@ -161,3 +161,13 @@ func TestANotificationIsGroupedByItsTitle(t *testing.T) {
 		t.Errorf("notification = %+v", a)
 	}
 }
+
+// The notifier's app id is reverse-DNS from authama's product domain, sange.sh,
+// as go-notifykit's standard asks (owner, 2026-11-16). macOS remembers the
+// notification permission by AppID+".notifier", so this changes only with a
+// release note.
+func TestTheAppIDIsUnderSangeSh(t *testing.T) {
+	if AppID != "sh.sange.authama" {
+		t.Errorf("AppID is %q", AppID)
+	}
+}

@@ -80,8 +80,8 @@ sange uses, so one receiver reads both:
 {
   "specversion": "1.0",
   "id": "op_0f9c2e1a7b3d4c5e",
-  "source": "https://opensource.simtabi.com/products/sangehq/authama/install/7f3c2a9e5b1d4c60",
-  "type": "com.simtabi.authama.operation.finished",
+  "source": "https://sange.sh/authama/install/7f3c2a9e5b1d4c60",
+  "type": "sh.sange.authama.operation.finished",
   "subject": "operation/0f9c2e1a7b3d4c5e",
   "time": "2026-11-12T10:00:05Z",
   "datacontenttype": "application/json",
@@ -91,23 +91,44 @@ sange uses, so one receiver reads both:
 
 | Type | When | Subject | Data |
 |---|---|---|---|
-| `com.simtabi.authama.operation.finished` | a change finished, from the command line or the web | `operation/<op_id>` | `op_id`, `command`, `args`, `made_from`, `result`, `error`, `subjects`, `snapshot` |
-| `com.simtabi.authama.file.added`, `.file.changed`, `.file.removed`, `.file.mode-changed` | a watched file changed | `file/<path>` | `kind`, `area`, `path`, `changed_at`, `size`, `mode` |
-| `com.simtabi.authama.file.watch.started` | watching began | | `detail` |
-| `com.simtabi.authama.webhook.tested` | `authama webhook test` | `webhook/<name>` | `message` |
+| `sh.sange.authama.operation.finished` | a change finished, from the command line or the web | `operation/<op_id>` | `op_id`, `command`, `args`, `made_from`, `result`, `error`, `subjects`, `snapshot` |
+| `sh.sange.authama.file.added`, `.file.changed`, `.file.removed`, `.file.mode-changed` | a watched file changed | `file/<path>` | `kind`, `area`, `path`, `changed_at`, `size`, `mode` |
+| `sh.sange.authama.file.watch.started` | watching began | | `detail` |
+| `sh.sange.authama.webhook.tested` | `authama webhook test` | `webhook/<name>` | `message` |
 
 - **`source`** names this install by a random id, made once and kept in the state home. It never
   names the host or the user.
 - **A path in your home** is written from `~` (`~/.ssh/config`), so no event names your account.
 - **`time`** is when it happened: when a change finished, or when authama noticed a file change (the
   file's own time is `changed_at`).
-- A `type` filter takes a type whole or without `com.simtabi.authama.`: `file.` matches every file
-  event. `/events` returns `next`: pass it as
+- A `type` filter takes a type whole or without `sh.sange.authama.`: `file.` matches every file
+  event. A filter written with the old `com.simtabi.authama.` prefix is read as the same filter on
+  `sh.sange.authama.` (deprecated; see [the event identity](#event-identity)). `/events` returns `next`: pass it as
 `after` to read on, and each event is read once. A file event is ordered by when authama noticed it, so
 a change made while nothing was watching still comes after your cursor. The stream's SSE `id` is the
 same cursor, so a client that reconnects with `Last-Event-ID` resumes where it stopped.
 One token holds at most four streams open at once; a fifth is answered `429 too_many_streams`. A
 stream's place is given back when it closes.
+
+
+### <a name="event-identity"></a>The event identity moved to sange.sh
+
+On 2026-11-16 the event identity moved under authama's product domain, `sange.sh`, the way sange's
+own events are (`https://sange.sh/install/<id>`, `sh.sange.*`):
+
+| | Before | Now |
+|---|---|---|
+| `source` | `https://opensource.simtabi.com/products/sangehq/authama/install/<id>` | `https://sange.sh/authama/install/<id>` |
+| `type` | `com.simtabi.authama.*` | `sh.sange.authama.*` |
+| desktop notifier app id | `com.simtabi.authama` | `sh.sange.authama` |
+
+The install id after `install/` is unchanged. **A receiver that matches on `source` or `type` must
+accept the new values.** authama's own filters (`webhook add --event`, a saved webhook's `events`,
+`/api/v1/events?type=`, MCP's `list_events`) still read a filter written with
+`com.simtabi.authama.` as the same filter on `sh.sange.authama.`, so a webhook saved before the move
+keeps receiving what it asked for. That reading is deprecated and goes no earlier than v1.0.0; write
+filters without the prefix (`file.`) and they never need changing. On macOS, the first notification
+after the move may ask for permission again ([expiry](expiry.md#how-a-notification-is-shown)).
 
 ## Security
 

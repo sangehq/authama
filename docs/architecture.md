@@ -347,6 +347,25 @@ layering test fails any `filepath.Join` that builds `profiles/<computed>` by han
 That is the defect categories expose: a hand-built path is right for a flat
 profile and silently one directory too high for a categorized one.
 
+### Why does the managed block live in `~/.ssh/config`?
+
+Many tools write their hosts to a file of their own and add one `Include` line to
+`~/.ssh/config` (OrbStack, Colima, Lima). authama keeps its managed block in
+`~/.ssh/config` itself, for two reasons:
+
+- **Not every reader follows `Include`.** paramiko-based tools and several GUI
+  clients and host pickers read `~/.ssh/config` alone, so every managed host
+  would disappear from them.
+- **An `Include` would not stop a collision.** OpenSSH uses the first value it
+  reads, so a hand-written block for the same alias above the `Include` still
+  wins. What prevents that is import adopting the block into the manifest and
+  `config check` / `doctor` failing on a second definition, which work the same
+  wherever the managed hosts live.
+
+The block is still a part of the file only authama writes: every line it owns
+is tagged, and nothing outside it is rewritten except by an import or
+`authama ssh config adopt` you run.
+
 ### Why can keys live in 1Password, and why per profile?
 
 A key file on disk is only as safe as the disk, and every copy of `~/.ssh` (a
