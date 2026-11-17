@@ -58,6 +58,8 @@ const (
 	// WebhooksIncludeDetails puts an operation's error text and subjects in
 	// webhook payloads; off by default (audit A-SEC-12).
 	WebhooksIncludeDetails = "AUTHAMA_WEBHOOKS_INCLUDE_DETAILS"
+	// EventsSource picks the base of the event source URL: sange.sh or simtabi.com.
+	EventsSource = "AUTHAMA_EVENTS_SOURCE"
 	// MCP lets `authama mcp` serve MCP over stdio.
 	MCP = "AUTHAMA_MCP"
 	// ExportSaveTo is where a saved export selection goes: user or manifest.
@@ -83,7 +85,7 @@ const (
 func Names() []string {
 	out := []string{
 		API, AgeIdentityFile, AgeRecipient, AskpassMode, AskpassSecret, AutoPin, ConfigDir,
-		DevRoot, DockerCredsStore, ExportSaveTo, GitMode, HelloCheck, History, HistoryPermanent, KeysAgePills, KeysNewEvents, KeysNewUntil, KeysNewWindowDays, MCP, NoDotenv, Notifications,
+		DevRoot, DockerCredsStore, EventsSource, ExportSaveTo, GitMode, HelloCheck, History, HistoryPermanent, KeysAgePills, KeysNewEvents, KeysNewUntil, KeysNewWindowDays, MCP, NoDotenv, Notifications,
 		OldKeyMaxAgeDays, OwnerStore, ServeHandoff, SnapshotRetain, StateDir, TokensCatalog, TokensConfig,
 		VMHypervisors, VMMultiplex, VMPruneGone, VMRepin, WebAddr, WebAutoRestart, WebBasePath, WebMenuExport, WebPort, Webhooks, WebhooksAllowPrivate,
 		WebhooksIncludeDetails,

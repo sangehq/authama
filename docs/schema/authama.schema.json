@@ -108,6 +108,20 @@
       },
       "type": "object"
     },
+    "events": {
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "description": "The base of each event's source, the URL naming this install by a random id in the event feed, webhooks, the read API and MCP: sange.sh gives https://sange.sh/authama/install/<id>, simtabi.com gives https://simtabi.com/sange/authama/install/<id>. The id is the same under both. A receiver keyed on source sees a change. Sets $AUTHAMA_EVENTS_SOURCE. Default: sange.sh.",
+          "enum": [
+            "sange.sh",
+            "simtabi.com"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "export": {
       "additionalProperties": false,
       "properties": {

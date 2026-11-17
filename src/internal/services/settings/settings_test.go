@@ -51,13 +51,13 @@ func TestParseAcceptsAFullFile(t *testing.T) {
 
 func TestParseListsEveryProblem(t *testing.T) {
 	_, err := Parse("a.json", []byte(`{"version": 2, "bogus": {}, "backup": {"snapshot_retain": 0, "nope": 1},
-		"git": {"mode": "ftp"}, "ssh": {"auto_pin": "yes"}}`))
+		"git": {"mode": "ftp"}, "ssh": {"auto_pin": "yes"}, "events": {"source": "example.com"}}`))
 	var ve *ValidationError
 	if !errors.As(err, &ve) {
 		t.Fatalf("want a ValidationError, got %v", err)
 	}
 	msg := err.Error()
-	for _, want := range []string{"version", "bogus", "backup.snapshot_retain", "backup.nope", "git.mode", "ssh.auto_pin", "a.json"} {
+	for _, want := range []string{"version", "bogus", "backup.snapshot_retain", "backup.nope", "git.mode", "ssh.auto_pin", "events.source", "a.json"} {
 		if !strings.Contains(msg, want) {
 			t.Errorf("error does not mention %s:\n%s", want, msg)
 		}

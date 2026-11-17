@@ -20,13 +20,14 @@ import (
 
 // AppID is the identifier macOS lists authama's notifications under
 // (System Settings > Notifications), with ".notifier" appended by notifykit:
-// reverse-DNS from authama's product domain, sange.sh (owner, 2026-11-16).
-// It was com.simtabi.authama until then. macOS remembers the notification
+// reverse-DNS under com.simtabi, since Simtabi LLC owns sange (owner,
+// 2026-11-17). It was com.simtabi.authama until 2026-11-16, then
+// sh.sange.authama for a day. macOS remembers the notification
 // permission by that bundle id, so the first banner after the change may ask
 // for permission again; the helper app itself is rebuilt in place, at the
 // same path (it is named after AppName, not AppID), so nothing is left behind
 // but the old entry in System Settings > Notifications.
-const AppID = "sh.sange.authama"
+const AppID = "com.simtabi.sange.authama"
 
 // NewNotifier returns the notifier every authama surface shares: the one-shot
 // alert, `authama notify send|ping|doctor`, and the listener `authama serve`

@@ -6,6 +6,34 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`events.source` picks the base of each event's `source`** (`AUTHAMA_EVENTS_SOURCE`): `sange.sh`,
+  the default, gives `https://sange.sh/authama/install/<id>`, and `simtabi.com` gives
+  `https://simtabi.com/sange/authama/install/<id>`. The install id is the same under both. Any other
+  value is refused by `settings set` and reported by `settings validate`.
+
+### Changed
+
+- **The event identity is under `com.simtabi`**, since Simtabi LLC owns sange (owner, 2026-11-17).
+  Feed and webhook event types are `com.simtabi.sange.authama.*` (were `sh.sange.authama.*` in
+  v0.1.0, and `com.simtabi.authama.*` before it). The default `source` is unchanged. A receiver that
+  matches on `type` must accept the new values. See docs/tools/api.md, "The event identity is under
+  com.simtabi", for all three generations.
+- **The desktop notifier's app id and the macOS `Authama.app` bundle id are
+  `com.simtabi.sange.authama`** (were `sh.sange.authama`). macOS remembers notification permission
+  by that id, so the first notification after updating may ask for permission again; the old entry
+  can stay under System Settings > Notifications until removed there.
+
+### Deprecated
+
+- **Type filters written with `sh.sange.authama.`** (`webhook add --event`, a saved webhook's
+  `events`, `/api/v1/events?type=`, MCP `list_events`) are read as the same filter on
+  `com.simtabi.sange.authama.`, as filters written with `com.simtabi.authama.` already are, so a
+  webhook saved under either earlier prefix keeps receiving what it asked for. Write the new prefix
+  or the short form (`file.`). `feed.SangeShPrefix` and `feed.LegacyTypePrefix` are both deprecated.
+  Removable no earlier than v1.0.0.
+
 ## [0.1.0] - 2026-11-16
 
 The first release under `sangehq/authama`, tagged 2026-11-14 and re-tagged on 2026-11-16 (three times) with everything

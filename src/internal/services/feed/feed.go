@@ -2,8 +2,9 @@
 // for the API, webhooks and MCP, each event a CloudEvents 1.0 event in
 // structured JSON (https://github.com/cloudevents/spec). An operation that
 // finished (any change, made from the CLI or the web) is a
-// sh.sange.authama.operation.finished event; a change to a watched file is
-// sh.sange.authama.file.added, .changed, .removed or .mode-changed.
+// com.simtabi.sange.authama.operation.finished event; a change to a watched
+// file is com.simtabi.sange.authama.file.added, .changed, .removed or
+// .mode-changed.
 //
 // The envelope is sange's (its design, webhooks-and-events.md section 3.1),
 // so one receiver reads both: the type is reverse-DNS from authama's own
@@ -30,23 +31,59 @@ import (
 
 	"github.com/sangehq/authama/src/internal/services/events"
 	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/util/envnames"
 	"github.com/sangehq/authama/src/internal/util/fs"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
-// TypePrefix starts every event type: reverse-DNS from authama's product
-// domain, sange.sh, as its desktop notifier's app id is (sh.sange.authama).
-// It was com.simtabi.authama. until 2026-11-16 (owner: "Under sange.sh").
-const TypePrefix = "sh.sange.authama."
+// TypePrefix starts every event type: reverse-DNS under com.simtabi, since
+// Simtabi LLC owns sange (owner, 2026-11-17: "Sange is owned by Simtabi so
+// add Simtabi in the com namespace"), as the desktop notifier's app id is
+// (com.simtabi.sange.authama). It was com.simtabi.authama. until 2026-11-16,
+// then sh.sange.authama. for a day.
+const TypePrefix = "com.simtabi.sange.authama."
 
-// LegacyTypePrefix is the prefix event types carried before they moved under
-// sange.sh. A type filter written with it (an --event flag, a saved webhook's
-// events, the API's and MCP's type filter) is read as the same filter on
-// TypePrefix, so a webhook saved before the move keeps matching.
+// SangeShPrefix is the prefix event types carried from 2026-11-16 to
+// 2026-11-17, under sange.sh. A type filter written with it (an --event flag,
+// a saved webhook's events, the API's and MCP's type filter) is read as the
+// same filter on TypePrefix, so a webhook saved then keeps matching.
+//
+// Deprecated: write filters with TypePrefix, or without a prefix (file.).
+// Accepted until v1.0.0 at the earliest (.claude/design/authama/audits/deprecations.md).
+const SangeShPrefix = "sh.sange.authama."
+
+// LegacyTypePrefix is the prefix event types carried first, before
+// 2026-11-16. A type filter written with it is read as the same filter on
+// TypePrefix, as one written with SangeShPrefix is.
 //
 // Deprecated: write filters with TypePrefix, or without a prefix (file.).
 // Accepted until v1.0.0 at the earliest (.claude/design/authama/audits/deprecations.md).
 const LegacyTypePrefix = "com.simtabi.authama."
+
+// earlierPrefixes are the prefixes a filter may still be written with.
+var earlierPrefixes = []string{LegacyTypePrefix, SangeShPrefix}
+
+// The values of the events.source setting (AUTHAMA_EVENTS_SOURCE), each
+// naming the base of an install's source URL. The install id after install/
+// is the same under both.
+const (
+	SourceSangeSh    = "sange.sh"
+	SourceSimtabiCom = "simtabi.com"
+)
+
+// Sources lists the events.source values, the default first.
+var Sources = []string{SourceSangeSh, SourceSimtabiCom}
+
+// sourceBases maps an events.source value to its base. An install identity,
+// not a link (owner, 2026-11-17: "support both"): sange.sh, the default, as
+// sange's own is (https://sange.sh/install/<id>), or the same under
+// simtabi.com. It was https://opensource.simtabi.com/products/sangehq/authama/install/
+// until 2026-11-16. A consumer keyed on source sees a change, so the default
+// moves only with a release note.
+var sourceBases = map[string]string{
+	SourceSangeSh:    "https://sange.sh/authama/install/",
+	SourceSimtabiCom: "https://simtabi.com/sange/authama/install/",
+}
 
 // The event types.
 const (
@@ -57,13 +94,8 @@ const (
 	TypeFileMode      = TypePrefix + "file.mode-changed"
 	TypeWatchStarted  = TypePrefix + "file.watch.started"
 	TypeWebhookTested = TypePrefix + "webhook.tested"
-	// An install identity, not a link, under authama's product domain (owner, 2026-11-16:
-	// "Under sange.sh"; sange's own is https://sange.sh/install/<id>). It was
-	// https://opensource.simtabi.com/products/sangehq/authama/install/ until then. A consumer
-	// keyed on source sees the change, so it moves only with a release note.
-	sourceBase      = "https://sange.sh/authama/install/"
-	specVersion     = "1.0"
-	jsonContentType = "application/json"
+	specVersion       = "1.0"
+	jsonContentType   = "application/json"
 )
 
 // fileTypes maps a file event's kind to its type.
@@ -99,9 +131,20 @@ func New(p paths.Paths, id, typ, subject string, t time.Time, data any) Event {
 }
 
 // Source is this install's CloudEvents source: a URL naming it by a random
-// id, made the first time it is asked for and kept in the state home. It
-// names neither the host nor the user.
-func Source(p paths.Paths) string { return sourceBase + installID(p) }
+// id, made the first time it is asked for and kept in the state home, under
+// the base events.source chooses. It names neither the host nor the user.
+func Source(p paths.Paths) string { return SourceBase(nil) + installID(p) }
+
+// SourceBase is the source URL up to the install id, as the events.source
+// setting (AUTHAMA_EVENTS_SOURCE, read through get; nil reads the
+// environment) chooses: sange.sh by default, or simtabi.com. Any other value
+// is the default; settings validate refuses it before it gets here.
+func SourceBase(get envnames.Getenv) string {
+	if base, ok := sourceBases[strings.TrimSpace(envnames.Get(get, envnames.EventsSource))]; ok {
+		return base
+	}
+	return sourceBases[SourceSangeSh]
+}
 
 func installID(p paths.Paths) string {
 	f := filepath.Join(p.StateDir(), "install-id")
@@ -326,10 +369,10 @@ func fromHome(path string) string {
 }
 
 // Matches reports whether e's type starts with one of prefixes, each given
-// whole (sh.sange.authama.file.) or without the common prefix (file.); no
-// prefixes match every event. A prefix written with the deprecated
-// LegacyTypePrefix (com.simtabi.authama.file.) is read as the same prefix on
-// TypePrefix.
+// whole (com.simtabi.sange.authama.file.) or without the common prefix
+// (file.); no prefixes match every event. A prefix written with either
+// deprecated earlier prefix (com.simtabi.authama.file., sh.sange.authama.file.)
+// is read as the same prefix on TypePrefix.
 func Matches(e Event, prefixes []string) bool {
 	if len(prefixes) == 0 {
 		return true
@@ -341,16 +384,21 @@ func Matches(e Event, prefixes []string) bool {
 	})
 }
 
-// currentPrefix rewrites a filter written with LegacyTypePrefix onto
-// TypePrefix, and returns any other filter as it is. A filter shorter than
-// the old prefix and part of it (com.simtabi.authama, without the dot)
-// matched every event before the move, so it is TypePrefix: it still does.
+// currentPrefix rewrites a filter written with an earlier prefix onto
+// TypePrefix, and returns any other filter as it is. A filter shorter than an
+// earlier prefix and part of it (com.simtabi.authama, without the dot)
+// matched every event while that prefix was current, so it is TypePrefix: it
+// still does.
 func currentPrefix(pre string) string {
-	if rest, ok := strings.CutPrefix(pre, LegacyTypePrefix); ok {
-		return TypePrefix + rest
+	for _, old := range earlierPrefixes {
+		if rest, ok := strings.CutPrefix(pre, old); ok {
+			return TypePrefix + rest
+		}
 	}
-	if strings.HasPrefix(LegacyTypePrefix, pre) {
-		return TypePrefix
+	for _, old := range earlierPrefixes {
+		if strings.HasPrefix(old, pre) {
+			return TypePrefix
+		}
 	}
 	return pre
 }

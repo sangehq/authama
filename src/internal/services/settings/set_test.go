@@ -20,12 +20,15 @@ func TestSetAndUnsetEditOneSetting(t *testing.T) {
 	if err := Set(path, "ssh.auto_pin", "false"); err != nil {
 		t.Fatal(err)
 	}
-	for key, want := range map[string]string{"web.port": "8000", "git.mode": "ssh", "ssh.auto_pin": "0"} {
+	if err := Set(path, "events.source", "simtabi.com"); err != nil {
+		t.Fatal(err)
+	}
+	for key, want := range map[string]string{"web.port": "8000", "git.mode": "ssh", "ssh.auto_pin": "0", "events.source": "simtabi.com"} {
 		if v, ok := FileValue(path, key); !ok || v != want {
 			t.Errorf("%s = %q, %v; want %q", key, v, ok, want)
 		}
 	}
-	for _, bad := range [][2]string{{"web.port", "zero"}, {"web.port", "0"}, {"git.mode", "ftp"}, {"ssh.auto_pin", "maybe"}, {"no.such", "x"}} {
+	for _, bad := range [][2]string{{"web.port", "zero"}, {"web.port", "0"}, {"git.mode", "ftp"}, {"events.source", "example.com"}, {"ssh.auto_pin", "maybe"}, {"no.such", "x"}} {
 		if err := Set(path, bad[0], bad[1]); err == nil {
 			t.Errorf("Set(%s, %q) was accepted", bad[0], bad[1])
 		}

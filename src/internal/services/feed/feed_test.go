@@ -125,40 +125,86 @@ func TestTheFeedOrdersEventsAndResumesFromACursor(t *testing.T) {
 	}
 }
 
-// The event identity lives under authama's product domain, sange.sh (owner,
-// 2026-11-16: "Under sange.sh"): a receiver keyed on source or type sees these
-// values, so they change only with a release note.
-func TestTheEventIdentityIsUnderSangeSh(t *testing.T) {
-	if TypePrefix != "sh.sange.authama." {
+// The event identity is under com.simtabi, since Simtabi LLC owns sange (owner,
+// 2026-11-17: "Sange is owned by Simtabi so add Simtabi in the com
+// namespace"): a receiver keyed on source or type sees these values, so they
+// change only with a release note. The source base defaults to sange.sh.
+func TestTheEventIdentityIsUnderComSimtabi(t *testing.T) {
+	if TypePrefix != "com.simtabi.sange.authama." {
 		t.Errorf("TypePrefix is %q", TypePrefix)
 	}
-	if sourceBase != "https://sange.sh/authama/install/" {
-		t.Errorf("sourceBase is %q", sourceBase)
-	}
-	if TypeOperation != "sh.sange.authama.operation.finished" || TypeWebhookTested != "sh.sange.authama.webhook.tested" {
+	if TypeOperation != "com.simtabi.sange.authama.operation.finished" || TypeWebhookTested != "com.simtabi.sange.authama.webhook.tested" {
 		t.Errorf("types are %q, %q", TypeOperation, TypeWebhookTested)
+	}
+	if SangeShPrefix != "sh.sange.authama." || LegacyTypePrefix != "com.simtabi.authama." {
+		t.Errorf("earlier prefixes are %q, %q", SangeShPrefix, LegacyTypePrefix)
+	}
+	if got := SourceBase(func(string) string { return "" }); got != "https://sange.sh/authama/install/" {
+		t.Errorf("the default source base is %q", got)
 	}
 }
 
-// A filter written with the old com.simtabi.authama. prefix, as a webhook saved
-// before the move holds it, still matches the event it meant, and only that.
+// events.source picks the source base: sange.sh (the default) or simtabi.com.
+// The install id after install/ is the same under both; a value that is not a
+// base falls back to the default (settings validate refuses it before then).
+func TestTheSourceSettingSwitchesTheBase(t *testing.T) {
+	for v, want := range map[string]string{
+		"":            "https://sange.sh/authama/install/",
+		"sange.sh":    "https://sange.sh/authama/install/",
+		"simtabi.com": "https://simtabi.com/sange/authama/install/",
+		"example.com": "https://sange.sh/authama/install/",
+	} {
+		if got := SourceBase(func(string) string { return v }); got != want {
+			t.Errorf("events.source %q: base %q, want %q", v, got, want)
+		}
+	}
+	p := paths.Paths{ConfigDir: t.TempDir()}
+	t.Setenv("AUTHAMA_EVENTS_SOURCE", "sange.sh")
+	a := Source(p)
+	t.Setenv("AUTHAMA_EVENTS_SOURCE", "simtabi.com")
+	b := Source(p)
+	idA, okA := strings.CutPrefix(a, "https://sange.sh/authama/install/")
+	idB, okB := strings.CutPrefix(b, "https://simtabi.com/sange/authama/install/")
+	if !okA || !okB || idA != idB || len(idA) != 16 {
+		t.Fatalf("sources %q and %q do not share one install id under the two bases", a, b)
+	}
+	if e := New(p, "x", TypeOperation, "", time.Now(), nil); e.Source != b {
+		t.Errorf("an event's source is %q, want %q", e.Source, b)
+	}
+}
+
+// A filter written with either earlier prefix, as a webhook saved before a
+// move holds it, still matches the event it meant, and only that:
+// com.simtabi.authama. (the original) and sh.sange.authama. (released briefly
+// on 2026-11-16).
 func TestAnOldPrefixFilterStillMatches(t *testing.T) {
 	file := Event{Type: TypeFileAdded}
 	op := Event{Type: TypeOperation}
-	for _, f := range []string{"com.simtabi.authama.file.", "com.simtabi.authama.file.added", "com.simtabi.authama.", "com.simtabi.authama"} {
-		if !Matches(file, []string{f}) {
-			t.Errorf("the old-prefix filter %q does not match %s", f, file.Type)
+	checked := 0
+	for _, old := range []string{"com.simtabi.authama.", "sh.sange.authama."} {
+		for _, f := range []string{old + "file.", old + "file.added", old, strings.TrimSuffix(old, ".")} {
+			if !Matches(file, []string{f}) {
+				t.Errorf("the old-prefix filter %q does not match %s", f, file.Type)
+			}
+			checked++
+		}
+		if Matches(op, []string{old + "file."}) {
+			t.Errorf("an old-prefix (%s) file filter matched an operation", old)
+		}
+		if Matches(file, []string{old + "operation."}) {
+			t.Errorf("an old-prefix (%s) operation filter matched a file event", old)
 		}
 	}
-	if Matches(op, []string{"com.simtabi.authama.file."}) {
-		t.Error("an old-prefix file filter matched an operation")
+	if checked != 8 {
+		t.Fatalf("checked %d filters, want 8", checked)
 	}
-	if Matches(file, []string{"com.simtabi.authama.operation."}) {
-		t.Error("an old-prefix operation filter matched a file event")
-	}
-	// The new prefix and the short form go on working as they did.
-	if !Matches(file, []string{"sh.sange.authama.file."}) || !Matches(file, []string{"file."}) {
+	// The current prefix and the short form go on working as they did.
+	if !Matches(file, []string{"com.simtabi.sange.authama.file."}) || !Matches(file, []string{"file."}) {
 		t.Error("the current forms stopped matching")
+	}
+	// A filter that is neither old prefix nor part of one is not rewritten.
+	if Matches(file, []string{"com.simtabi.other."}) || Matches(file, []string{"sh.sange.other."}) {
+		t.Error("an unrelated prefix matched")
 	}
 }
 
@@ -194,7 +240,7 @@ func TestAPathInTheHomeIsWrittenFromTilde(t *testing.T) {
 func TestTheSourceIsMadeOnceAndKept(t *testing.T) {
 	p := paths.Paths{ConfigDir: t.TempDir()}
 	a, b := Source(p), Source(p)
-	if a != b || len(strings.TrimPrefix(a, sourceBase)) != 16 {
+	if a != b || len(strings.TrimPrefix(a, SourceBase(nil))) != 16 {
 		t.Fatalf("sources %q and %q", a, b)
 	}
 	if other := Source(paths.Paths{ConfigDir: t.TempDir()}); other == a {
