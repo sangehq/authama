@@ -41,7 +41,7 @@ Two ways, in this order:
    so the check names that workflow; without `--signer-workflow` it fails. The release's `install.sh`
    and `install.ps1` check the checksum and, when `gh` is installed and signed in, the provenance too;
    a binary whose provenance does not verify is not installed. Without `gh` they say only the checksum
-   was checked; `AUTHAMA_INSTALL_REQUIRE_ATTESTATION=1` makes the provenance check required. v0.1.0 (re-tagged 2026-11-16) is
+   was checked; `AUTHAMA_INSTALL_REQUIRE_ATTESTATION=1` makes the provenance check required. v0.1.0 (re-tagged 2026-11-17) is
    the first release under `sangehq/authama` (see [Earlier binary releases](#earlier-binary-releases)).
 2. **Build from source.** You need Go (the version `src/go.mod` names), `git` and `make`.
 
@@ -70,7 +70,7 @@ runs. On Windows, use `make install`. To check what is installed:
 ```sh
 command -v authama      # which file runs: ~/.local/bin/authama after make install or make link
 ls -l "$(command -v authama)"   # a link (make link) points into the checkout's build/
-authama version         # the version, then the commit and build day: authama v0.1.0 (abc1234, 2026-11-16)
+authama version         # the version, then the commit and build day: authama v0.1.0 (abc1234, 2026-11-17)
 ```
 
 On a Mac with Xcode's command line tools (`xcode-select --install`), `make build` also builds
