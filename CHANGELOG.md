@@ -6,12 +6,77 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-17
+
+The first release under `sangehq/authama`, tagged 2026-11-14 and re-tagged on 2026-11-16 and 2026-11-17 with everything
+merged since (owner: "rebase to release all at v0.1.0"), and the module path `github.com/sangehq/authama/src`. The
+version numbers restart here (owner, 2026-11-14): the earlier v0.1.0, v0.1.4, v0.1.5 and v0.1.6 tags and
+the v0.1.6 GitHub release were withdrawn, and their notes stay below as history. Go's module proxy still
+holds the old `src/v0.1.0` and `src/v0.1.6`, whose `go.mod` names `github.com/simtabi/authama/src`, so
+nothing can import them; binaries ship on the GitHub release only.
+
 ### Added
 
 - **`events.source` picks the base of each event's `source`** (`AUTHAMA_EVENTS_SOURCE`): `sange.sh`,
   the default, gives `https://sange.sh/authama/install/<id>`, and `simtabi.com` gives
   `https://simtabi.com/sange/authama/install/<id>`. The install id is the same under both. Any other
   value is refused by `settings set` and reported by `settings validate`.
+
+- `ssh rotate --check --force` previews the forced run: each key reads `would rotate` or `would replace here` with why, the summary counts them, and the dry run passes when every key would be rotated or replaced. Without `--force`, `--check` is unchanged.
+- The web job page shows every option a job was started with as badges under its title (Dry run (check), Force: replace what cannot rotate in place, Go on when a login cannot be verified, Skip the encrypted backup, and the scope), using the review's own labels; deleting keys shows its options the same way.
+- `authama ssh rotate --keep-old`.
+- The web rotation review has a **Take the previous key off servers** switch, with or without Force
+  (on by default under Force); the command line carries `--evict-old` or `--keep-old`, the review
+  says what happens to the previous key, and the job page shows it as a badge.
+- `authama ssh config adopt [--dry-run] [-y]`: removes from `~/.ssh/config` the hand-written
+  `Host` blocks that duplicate a managed host and that the managed block already reproduces, after
+  a snapshot and a copy to `<state>/.state/config-adopt-<time>/config`. Blocks that differ are
+  listed, not removed; a second run is a no-op. The migration for homes onboarded before this
+  release.
+
+- **authama records when each thing happens to a key.** Minting, adopting, importing, deploying,
+  rotating, rolling back and revoking a key now note the time, to the second, in `key-events.json`
+  beside the inventory, written by the same save as the inventory record through a journal
+  (`key-events.json.pending`, which names the inventory it goes with), so a save cut off between the
+  two files still leaves them agreeing; a minted key also notes
+  where it came from (`generated`, `adopted` or `imported`) and a rotated one the key it replaced.
+  The inventory's own format is unchanged, so an older authama still reads it, and a key recorded
+  before this release falls back to the days the inventory already holds (R-FEAT-01).
+- **Two settings say what counts as a new key.** `keys.new_window_days` (`AUTHAMA_KEYS_NEW_WINDOW_DAYS`,
+  default 7, `0` turns the label off) is how long a key stays new, and `keys.new_events`
+  (`AUTHAMA_KEYS_NEW_EVENTS`, default `created,added,rotated,deployed`, `restored` also allowed) which
+  events make it new. `settings set` and `settings validate` refuse an unknown event or a negative
+  window, and the schema checks both.
+- **`keys.new_until` and `keys.age_pills`.** `keys.new_until` (`AUTHAMA_KEYS_NEW_UNTIL`) is `window`,
+  the default (a key is new until the window ends or `ssh key ack`), or `acknowledged` (new until
+  `ssh key ack`, however long). `keys.age_pills` (`AUTHAMA_KEYS_AGE_PILLS`, default `0.5,1.0`) sets
+  when a key turns `ageing` and `old`, as fractions of its `rotate_after_days`; a key past the bad
+  fraction whose expiry has not caught up is now `old` rather than `ageing`. `settings set` and
+  `settings validate` refuse anything else.
+- **`ssh key list` shows how new and how old each key is.** Two columns, `AGE` (since it was
+  created, added or rotated in) and `STATUS` (`new`, `current`, `ageing`, `old`, `due soon`, `overdue`,
+  `revoked`, `retired`), as words. `--new` keeps the keys labelled new, `--since <duration|date>`
+  (`36h`, `7d`, `2026-11-01`) the keys something happened to since then, and `--json` prints each key
+  with its recency: every event with its time, age and constraint, `is_new`, `new_because` and the
+  pill.
+- **The read API and MCP give each key's recency.** `/api/v1/keys`, `/api/v1/keys/{profile}/{key}` and
+  the MCP tools `list_keys` and `get_key` carry the `recency` object `ssh key list --json` prints:
+  each event with its time, age and constraint, `is_new`, `new_because` and the pill, under the same
+  settings.
+- **`ssh key ack` clears the new label** on the keys it names (or `--category`, `--all`) until their
+  next event, and records when it did in `key-events.json` and the history.
+- **The web UI shows key recency as pills.** The Keys list gains a Status column (the pill and the
+  key's age), and a key's page its status and a Lifecycle card listing every event with its age, a
+  machine-readable `<time>` and its constraint. A host's page shows its key's pill, and the overview's
+  Key health card counts the keys labelled new and lists each with its pill; every page draws the one
+  pill partial. Each pill carries its word, not colour alone, in the
+  existing badge colours. *Mark as seen* on a new key is `key ack`, previewed and confirmed like any
+  change.
+
+- **`make link`.** Links `~/.local/bin/authama` (and `authama-touchid` on macOS) to the checkout's
+  `build/<your-os>/` binary, so `PATH`, and a running `authama serve`, follow every build. It says
+  whether the directory is on `PATH`, as `make install` does; `make uninstall` removes the link.
+  Windows uses `make install`.
 
 ### Changed
 
@@ -24,26 +89,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `com.simtabi.sange.authama`** (were `sh.sange.authama`). macOS remembers notification permission
   by that id, so the first notification after updating may ask for permission again; the old entry
   can stay under System Settings > Notifications until removed there.
-
-### Deprecated
-
-- **Type filters written with `sh.sange.authama.`** (`webhook add --event`, a saved webhook's
-  `events`, `/api/v1/events?type=`, MCP `list_events`) are read as the same filter on
-  `com.simtabi.sange.authama.`, as filters written with `com.simtabi.authama.` already are, so a
-  webhook saved under either earlier prefix keeps receiving what it asked for. Write the new prefix
-  or the short form (`file.`). `feed.SangeShPrefix` and `feed.LegacyTypePrefix` are both deprecated.
-  Removable no earlier than v1.0.0.
-
-## [0.1.0] - 2026-11-16
-
-The first release under `sangehq/authama`, tagged 2026-11-14 and re-tagged on 2026-11-16 (three times) with everything
-merged since (owner: "rebase to release all at v0.1.0"), and the module path `github.com/sangehq/authama/src`. The
-version numbers restart here (owner, 2026-11-14): the earlier v0.1.0, v0.1.4, v0.1.5 and v0.1.6 tags and
-the v0.1.6 GitHub release were withdrawn, and their notes stay below as history. Go's module proxy still
-holds the old `src/v0.1.0` and `src/v0.1.6`, whose `go.mod` names `github.com/simtabi/authama/src`, so
-nothing can import them; binaries ship on the GitHub release only.
-
-### Changed
 
 - **go-notifykit is pinned to its first release, v0.1.0** (simtabi/go-notifykit#7), instead of a pseudo-version
   of the same code.
@@ -164,6 +209,13 @@ nothing can import them; binaries ship on the GitHub release only.
   until it is approved.
 
 ### Deprecated
+
+- **Type filters written with `sh.sange.authama.`** (`webhook add --event`, a saved webhook's
+  `events`, `/api/v1/events?type=`, MCP `list_events`) are read as the same filter on
+  `com.simtabi.sange.authama.`, as filters written with `com.simtabi.authama.` already are, so a
+  webhook saved under either earlier prefix keeps receiving what it asked for. Write the new prefix
+  or the short form (`file.`). `feed.SangeShPrefix` and `feed.LegacyTypePrefix` are both deprecated.
+  Removable no earlier than v1.0.0.
 
 - **Type filters written with `com.simtabi.authama.`** (`webhook add --event`, a saved webhook's
   `events`, `/api/v1/events?type=`, MCP `list_events`) are read as the same filter on
@@ -324,64 +376,6 @@ nothing can import them; binaries ship on the GitHub release only.
 - **A host without a `user` can be deployed to.** authama reached it as `@host`, which ssh refuses
   with its usage text, so every deploy, check and removal on such a host failed. It now connects to
   the hostname alone, and ssh takes the user from its config or the local account.
-
-### Added
-
-- `ssh rotate --check --force` previews the forced run: each key reads `would rotate` or `would replace here` with why, the summary counts them, and the dry run passes when every key would be rotated or replaced. Without `--force`, `--check` is unchanged.
-- The web job page shows every option a job was started with as badges under its title (Dry run (check), Force: replace what cannot rotate in place, Go on when a login cannot be verified, Skip the encrypted backup, and the scope), using the review's own labels; deleting keys shows its options the same way.
-- `authama ssh rotate --keep-old`.
-- The web rotation review has a **Take the previous key off servers** switch, with or without Force
-  (on by default under Force); the command line carries `--evict-old` or `--keep-old`, the review
-  says what happens to the previous key, and the job page shows it as a badge.
-- `authama ssh config adopt [--dry-run] [-y]`: removes from `~/.ssh/config` the hand-written
-  `Host` blocks that duplicate a managed host and that the managed block already reproduces, after
-  a snapshot and a copy to `<state>/.state/config-adopt-<time>/config`. Blocks that differ are
-  listed, not removed; a second run is a no-op. The migration for homes onboarded before this
-  release.
-
-- **authama records when each thing happens to a key.** Minting, adopting, importing, deploying,
-  rotating, rolling back and revoking a key now note the time, to the second, in `key-events.json`
-  beside the inventory, written by the same save as the inventory record through a journal
-  (`key-events.json.pending`, which names the inventory it goes with), so a save cut off between the
-  two files still leaves them agreeing; a minted key also notes
-  where it came from (`generated`, `adopted` or `imported`) and a rotated one the key it replaced.
-  The inventory's own format is unchanged, so an older authama still reads it, and a key recorded
-  before this release falls back to the days the inventory already holds (R-FEAT-01).
-- **Two settings say what counts as a new key.** `keys.new_window_days` (`AUTHAMA_KEYS_NEW_WINDOW_DAYS`,
-  default 7, `0` turns the label off) is how long a key stays new, and `keys.new_events`
-  (`AUTHAMA_KEYS_NEW_EVENTS`, default `created,added,rotated,deployed`, `restored` also allowed) which
-  events make it new. `settings set` and `settings validate` refuse an unknown event or a negative
-  window, and the schema checks both.
-- **`keys.new_until` and `keys.age_pills`.** `keys.new_until` (`AUTHAMA_KEYS_NEW_UNTIL`) is `window`,
-  the default (a key is new until the window ends or `ssh key ack`), or `acknowledged` (new until
-  `ssh key ack`, however long). `keys.age_pills` (`AUTHAMA_KEYS_AGE_PILLS`, default `0.5,1.0`) sets
-  when a key turns `ageing` and `old`, as fractions of its `rotate_after_days`; a key past the bad
-  fraction whose expiry has not caught up is now `old` rather than `ageing`. `settings set` and
-  `settings validate` refuse anything else.
-- **`ssh key list` shows how new and how old each key is.** Two columns, `AGE` (since it was
-  created, added or rotated in) and `STATUS` (`new`, `current`, `ageing`, `old`, `due soon`, `overdue`,
-  `revoked`, `retired`), as words. `--new` keeps the keys labelled new, `--since <duration|date>`
-  (`36h`, `7d`, `2026-11-01`) the keys something happened to since then, and `--json` prints each key
-  with its recency: every event with its time, age and constraint, `is_new`, `new_because` and the
-  pill.
-- **The read API and MCP give each key's recency.** `/api/v1/keys`, `/api/v1/keys/{profile}/{key}` and
-  the MCP tools `list_keys` and `get_key` carry the `recency` object `ssh key list --json` prints:
-  each event with its time, age and constraint, `is_new`, `new_because` and the pill, under the same
-  settings.
-- **`ssh key ack` clears the new label** on the keys it names (or `--category`, `--all`) until their
-  next event, and records when it did in `key-events.json` and the history.
-- **The web UI shows key recency as pills.** The Keys list gains a Status column (the pill and the
-  key's age), and a key's page its status and a Lifecycle card listing every event with its age, a
-  machine-readable `<time>` and its constraint. A host's page shows its key's pill, and the overview's
-  Key health card counts the keys labelled new and lists each with its pill; every page draws the one
-  pill partial. Each pill carries its word, not colour alone, in the
-  existing badge colours. *Mark as seen* on a new key is `key ack`, previewed and confirmed like any
-  change.
-
-- **`make link`.** Links `~/.local/bin/authama` (and `authama-touchid` on macOS) to the checkout's
-  `build/<your-os>/` binary, so `PATH`, and a running `authama serve`, follow every build. It says
-  whether the directory is on `PATH`, as `make install` does; `make uninstall` removes the link.
-  Windows uses `make install`.
 
 ### Security
 
