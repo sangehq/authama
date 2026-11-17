@@ -168,6 +168,23 @@ func (o OrderedOptions) Len() int            { return len(o.keys) }
 func (o OrderedOptions) Keys() []string      { return o.keys }
 func (o OrderedOptions) Get(k string) string { return o.vals[k] }
 
+// Set gives key k the value v, in place when the key is there in any case
+// (ssh keywords are case-insensitive), else at the end. Import uses it to keep
+// a user's own Host * values for the options authama's Host * also sets.
+func (o *OrderedOptions) Set(k, v string) {
+	if o.vals == nil {
+		o.vals = map[string]string{}
+	}
+	for _, have := range o.keys {
+		if strings.EqualFold(have, k) {
+			o.vals[have] = v
+			return
+		}
+	}
+	o.keys = append(o.keys, k)
+	o.vals[k] = v
+}
+
 func stringifyJSON(raw json.RawMessage) string {
 	s := strings.TrimSpace(string(raw))
 	if len(s) >= 1 && s[0] == '"' {

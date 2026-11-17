@@ -32,7 +32,14 @@ func newImportCmd() *cobra.Command {
 			"~/.ssh. Importing another machine's copy of ~/.ssh, an IdentityFile under\n" +
 			"~/.ssh/ is looked for in that copy, and its keys are adopted into the\n" +
 			"profile directories here (~/.ssh/profiles/, or the directory\n" +
-			"defaults.key_root names).",
+			"defaults.key_root names).\n\n" +
+			"Importing this machine's own config adopts each Host block it imports: the\n" +
+			"block leaves ~/.ssh/config (or the file under ~/.ssh it was in) and authama's\n" +
+			"block is rendered in its place, so ssh reads one definition of every host. The\n" +
+			"edited files are copied to <state>/.state/import-backup-<time>/ssh/ first. A\n" +
+			"block the manifest cannot reproduce (a ProxyCommand, a second IdentityFile, a\n" +
+			"Host line with a wildcard) stays, and its host is not imported; Match and\n" +
+			"wildcard blocks stay as they are. Another machine's copy is never edited.",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			configPath := "~/.ssh/config"
@@ -48,7 +55,8 @@ func newImportCmd() *cobra.Command {
 			if !dryRun {
 				if err := confirmChange(c,
 					"import replaces "+p.Manifest()+" with what it reads from "+configPath+
-						",\nand copies any key it finds outside the managed tree into it.", yes); err != nil {
+						",\ncopies any key it finds outside the managed tree into it, and moves each Host\n"+
+						"block it imports out of the config under "+p.SSHDir+" (backed up first).", yes); err != nil {
 					return err
 				}
 			}

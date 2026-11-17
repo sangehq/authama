@@ -40,7 +40,7 @@ authama ssh host apply work \
   --host "acme-prd-web-00 203.0.113.10 deploy web" \
   --host "acme-prd-db-00  203.0.113.11 deploy db" --reconcile
 authama ssh host apply work -f hosts.txt     # one spec per line, # comments, - for stdin
-authama ssh import ~/.ssh/config                        # or onboard an existing setup
+authama ssh import ~/.ssh/config                        # or onboard an existing setup (moves each imported Host block into the manifest)
 ```
 
 Then build the tree:

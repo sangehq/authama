@@ -49,7 +49,11 @@ func NewToken() string {
 }
 
 type session struct {
-	csrf    string
+	csrf string
+	// owner names the session to the jobs it starts (jobs.Job.OwnedBy). It
+	// is its own random value, not the cookie, so a job never holds what
+	// signs a browser in; a new sign-in is a new owner (review R-GAP-06).
+	owner   string
 	created time.Time
 	// seen is when the session last made a request; guarded by sessions.mu.
 	seen time.Time
@@ -103,7 +107,7 @@ func (s *sessions) create(now time.Time) (id string, sess *session) {
 		delete(s.byID, oldest)
 	}
 	id = NewToken()
-	sess = &session{csrf: NewToken(), created: now, seen: now}
+	sess = &session{csrf: NewToken(), owner: NewToken(), created: now, seen: now}
 	s.byID[id] = sess
 	return id, sess
 }

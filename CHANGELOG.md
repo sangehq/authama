@@ -19,11 +19,61 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `ssh rotate --check --force` previews the forced run: each key reads `would rotate` or `would replace here` with why, the summary counts them, and the dry run passes when every key would be rotated or replaced. Without `--force`, `--check` is unchanged.
 - The web job page shows every option a job was started with as badges under its title (Dry run (check), Force: replace what cannot rotate in place, Go on when a login cannot be verified, Skip the encrypted backup, and the scope), using the review's own labels; deleting keys shows its options the same way.
+- `authama ssh rotate --keep-old`.
+- The web rotation review has a **Take the previous key off servers** switch, with or without Force
+  (on by default under Force); the command line carries `--evict-old` or `--keep-old`, the review
+  says what happens to the previous key, and the job page shows it as a badge.
+- `authama ssh config adopt [--dry-run] [-y]`: removes from `~/.ssh/config` the hand-written
+  `Host` blocks that duplicate a managed host and that the managed block already reproduces, after
+  a snapshot and a copy to `<state>/.state/config-adopt-<time>/config`. Blocks that differ are
+  listed, not removed; a second run is a no-op. The migration for homes onboarded before this
+  release.
 
 ### Changed
 
 - `ssh rotate --force` is now a factory reset of the keys chosen: every key ends rotated or replaced. A key that cannot rotate in place (never deployed, host unreachable, a target that takes the key by hand, or used by no host) is replaced on this computer, and listed under **Needs you** to deploy next. A forced run no longer stops to ask for a paste, includes keys no host uses instead of skipping them, and exits 0 when every key was rotated or replaced.
 - The forced rotation's confirmation says it is a forced replace, and of how many keys.
+- Each rotation now has an explicit policy for the previous key in `old/`: keep it (the default) or
+  evict it, which takes it off every host it was never removed from and then drops it, naming any
+  host it could not be taken off. `--force` evicts by default, so a factory reset leaves only the new
+  key; `--keep-old` keeps it. `--evict-old` still works without `--force`, and now takes the key off
+  the servers instead of only overwriting `old/`.
+- `rotate --check` previews the policy: a key whose previous key still logs in would fail when it is
+  kept, and reads "would evict old from N host(s)" when it is evicted. A forced dry run no longer
+  passes a key the forced run would refuse.
+- `authama ssh import` of this machine's own config now adopts each plain `Host` block it imports:
+  the block leaves `~/.ssh/config` (or the file under `~/.ssh` it was Included from) and the
+  managed block is rendered in its place in the same write, so the documented onboarding
+  (`import -y`, `reconcile`) leaves one definition of every host and `doctor` clean. Edited files
+  are copied to `<state>/.state/import-backup-<time>/ssh/` first; `--dry-run` writes nothing.
+  A block the manifest cannot reproduce (a `ProxyCommand`, a second `IdentityFile`, its own
+  `UserKnownHostsFile`, a wildcard on the `Host` line, an `Include`, a file outside `~/.ssh`) is
+  left as it is and its host is not imported; the summary says why. The user's `Host *` values for
+  the options authama's `Host *` also sets are carried into `defaults.global_options`. Importing
+  another machine's copy edits nothing, as before (R-BUG-09).
+- `doctor`, `ssh config check`: a hand-written `Host` block outside the managed block that names a
+  managed alias is a config collision and fails the verdict; `doctor --json` gains
+  `config_collisions`. `reconcile`, `config render` and manifest edits print it as a warning.
+
+### Security
+
+- **The installers check who built the binary, not only that it downloaded intact.** With `gh` installed and
+  signed in, `install.sh` and `install.ps1` run `gh attestation verify` against the shared release workflow and
+  refuse a binary that does not verify; without `gh` they install and say only the checksum was checked.
+  `AUTHAMA_INSTALL_REQUIRE_ATTESTATION=1` makes the provenance check required (audit A-SEC-14).
+- **One API token holds at most four event streams open at once.** A fifth is answered `429 too_many_streams`;
+  each stream polls the feed for as long as it lives, so one leaked token could otherwise open them without
+  bound (audit P-05).
+- A job's question and its Cancel now need the same PIN step-up as every other change, and only the
+  sign-in that started a job can answer or cancel it; any other sign-in sees the job read-only and is
+  refused with 403. Signing out and in again is a new sign-in. Checklist ticks and export selections
+  stay without a PIN, by decision (review R-GAP-06).
+- `ssh import` refuses to adopt a key when a directory between `~/.ssh` and the profile directory
+  is a symbolic link, instead of creating and chmodding 0700 through it (A-SEC-15).
+
+### Deprecated
+
+- `importer.ImportResult.LeftInConfig` (internal): always empty now; see `Moved` and `Kept`.
 
 ## [0.1.0] - 2026-11-16
 

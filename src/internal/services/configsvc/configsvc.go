@@ -51,6 +51,10 @@ type CheckResult struct {
 	Shadowed []Shadow
 	// Duplicates lists Host patterns the managed files define more than once.
 	Duplicates []Duplicate
+	// Collisions lists hand-written Host blocks outside the managed block
+	// that define a managed alias again (`authama ssh config adopt` fixes the
+	// ones the manifest reproduces).
+	Collisions []Collision
 }
 
 // BlockInSync reports whether every managed file on disk matches the manifest
@@ -65,7 +69,8 @@ func (r *CheckResult) BlockInSync() bool {
 // a foreign block ssh reads first overrides a managed alias: the bytes match,
 // but ssh resolves something else.
 func (r *CheckResult) InSync() bool {
-	return r.BlockInSync() && len(r.SSHErrors) == 0 && len(r.Shadowed) == 0 && len(r.Duplicates) == 0
+	return r.BlockInSync() && len(r.SSHErrors) == 0 && len(r.Shadowed) == 0 && len(r.Duplicates) == 0 &&
+		len(r.Collisions) == 0
 }
 
 // Format renders a human report.
@@ -92,11 +97,19 @@ func (r *CheckResult) Format() string {
 	for _, d := range r.Duplicates {
 		fmt.Fprintf(&b, "DUPLICATE %s\n", d)
 	}
+	for _, c := range r.Collisions {
+		fmt.Fprintf(&b, "COLLISION %s\n", c)
+	}
+	if len(r.Collisions) > 0 {
+		b.WriteString("config: a host is defined both by you and by authama - " + CollisionFix + "\n")
+	}
 	if r.BlockInSync() {
 		// The managed block already matches, so rendering again would not
 		// help - the fault is in content authama does not own.
 		if len(r.SSHErrors) > 0 {
 			b.WriteString("config: ssh cannot parse the config - fix the lines reported above")
+		} else if len(r.Shadowed) == 0 && len(r.Duplicates) == 0 {
+			return strings.TrimRight(b.String(), "\n")
 		} else if len(r.Shadowed) == 0 {
 			b.WriteString("config: managed block in sync, but it defines a Host more than once - " +
 				"rename or remove the duplicate alias in the manifest")
@@ -118,6 +131,11 @@ type WriteResult struct {
 	Pruned    []string
 	Unchanged []string
 	DryRun    bool
+	// Collisions are the hand-written Host blocks that define a managed alias
+	// again in the root config as it is (or, in a dry run, would be) written.
+	// Render writes anyway - the managed block is right either way - and says
+	// so, with the command that resolves it.
+	Collisions []Collision
 }
 
 // Write renders the config to disk (or previews with dryRun), preserving foreign
@@ -140,6 +158,7 @@ func (s *Service) Write(dryRun bool) (*WriteResult, error) {
 			} else {
 				target = renderer.ComposeRootConfig("", content)
 			}
+			res.Collisions = findCollisions(dest, target, rendered)
 		}
 		if exists && current == target {
 			res.Unchanged = append(res.Unchanged, rel)
@@ -204,6 +223,7 @@ func (s *Service) Check(validateSSH bool) (*CheckResult, error) {
 			// Read from what is on disk: foreign content above the block stays
 			// above it through a render, so the verdict holds either way.
 			res.Shadowed = findShadows(dest, current, rendered)
+			res.Collisions = findCollisions(dest, current, rendered)
 		}
 		if current != target {
 			res.FileDiffs[rel] = unifiedDiff(current, target, rel)
@@ -411,6 +431,18 @@ func rendersControlPath(rendered map[string]string) bool {
 // link stays a link: renaming a new file over dest replaced the link with a
 // regular file and left the linked copy stale. A link whose target is missing
 // is refused rather than replaced.
+// WriteConfigFile replaces an ssh config file atomically, owner-only, and
+// through a symlink the way a render does (writeTarget): the link stays and
+// the file it points at changes. Import uses it for the hand-written files it
+// takes adopted Host blocks out of.
+func WriteConfigFile(dest, content string) error {
+	out, err := writeTarget(dest)
+	if err != nil {
+		return err
+	}
+	return fs.WriteTextAtomic(out, content, configMode)
+}
+
 func writeTarget(dest string) (string, error) {
 	fi, err := os.Lstat(dest)
 	if err != nil || fi.Mode()&os.ModeSymlink == 0 {

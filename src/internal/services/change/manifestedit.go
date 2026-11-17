@@ -52,6 +52,9 @@ func ApplyManifestEdit(out io.Writer, p paths.Paths) error {
 		for _, sh := range chk.Shadowed {
 			_, _ = fmt.Fprintf(out, "warning: %s; %s\n", sh, configsvc.ShadowFix)
 		}
+		for _, col := range chk.Collisions {
+			_, _ = fmt.Fprintf(out, "warning: %s; %s\n", col, configsvc.CollisionFix)
+		}
 	}
 	if len(res.Written) > 0 {
 		_, _ = fmt.Fprintf(out, "re-rendered %s\n", strings.Join(res.Written, ", "))

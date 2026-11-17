@@ -17,7 +17,7 @@
 {{if .Forced}}<div class="alert alert-danger" role="alert">
   <div class="d-flex gap-2"><span aria-hidden="true">{{icon "alert-triangle"}}</span><div>
     <h2 class="alert-title h4 mb-1">A forced rotation can lock you out until you deploy</h2>
-    <p class="mb-0">A factory reset of the keys chosen: a key that cannot be rotated in place - never deployed, its host unreachable, a target that takes the key by hand, or used by no host - is replaced on this computer anyway, without stopping to ask for a paste. Until the new key is deployed, a host that trusted the old key cannot be logged in to with it. Deploy each replaced key next, from its page, or roll it back: the old key is kept under <code>old/</code>.</p>
+    <p class="mb-0">A factory reset of the keys chosen: a key that cannot be rotated in place - never deployed, its host unreachable, a target that takes the key by hand, or used by no host - is replaced on this computer anyway, without stopping to ask for a paste. Until the new key is deployed, a host that trusted the old key cannot be logged in to with it. Deploy each replaced key next, from its page, or roll it back: the old key is kept under <code>old/</code>.{{if eq .OldKey "evicted"}} The key that was in <code>old/</code> before is taken off every server it still logs in to, then dropped, so only the new key is left (Take the previous key off servers, under Options).{{end}}</p>
   </div></div>
 </div>{{end}}
 <div class="row g-3">
@@ -68,6 +68,7 @@
           {{if .Empty}}<p class="text-secondary mb-0">Choose the keys to {{.Picker.Action}} first; this column then says what the job reaches, what it writes first and how to undo it.</p>{{else}}<dl class="job-facts mb-0">
             {{if .Items}}<dt>Keys</dt><dd>{{len .Items}}, one at a time</dd>{{end}}
             <dt>Servers</dt><dd>{{if .Remote}}reaches real servers{{else}}stays on this computer{{end}}</dd>
+            {{if .OldKey}}<dt>Previous key</dt><dd id="job-old-key">{{if eq .OldKey "evicted"}}taken off servers, then dropped{{else}}kept in <code>old/</code>{{end}}</dd>{{end}}
             {{if not .Check}}<dt>Backup</dt><dd>{{if .Backup}}encrypted bundle first{{else}}none{{end}}</dd>
             <dt>Undo</dt><dd>{{if .Forced}}roll back each key from <code>old/</code>{{else if .Destroy}}cannot be undone from authama{{else}}roll back from <code>old/</code>{{end}}</dd>{{end}}
           </dl>{{end}}
@@ -80,9 +81,9 @@
               {{if .Text}}<label class="form-label mb-1" for="opt-{{.Name}}">{{.Label}}</label>
               <input class="form-control form-control-sm" id="opt-{{.Name}}" name="{{.Name}}" value="{{.Value}}" placeholder="{{.Placeholder}}" maxlength="200" autocomplete="off"{{if $.Data.Picker}} form="job-options"{{end}} data-autosubmit aria-description="{{.Detail}}">
               {{else}}<label class="form-check form-switch mb-0{{if .Danger}} is-danger{{end}}">
-                <input class="form-check-input" type="checkbox" name="{{.Name}}" value="1"{{if .On}} checked{{end}}{{if $.Data.Picker}} form="job-options"{{end}} data-autosubmit aria-description="{{.Detail}}">
+                <input class="form-check-input" type="checkbox" name="{{.Name}}" value="{{with .Send}}{{.}}{{else}}1{{end}}"{{if .On}} checked{{end}}{{if $.Data.Picker}} form="job-options"{{end}} data-autosubmit aria-description="{{.Detail}}">
                 <span class="form-check-label">{{.Label}}</span>
-              </label>{{end}}
+              </label>{{if .Sticky}}<input type="hidden" name="{{.Name}}" value="0"{{if $.Data.Picker}} form="job-options"{{end}}>{{end}}{{end}}
               <p class="small text-secondary mb-0{{if not .Text}} ms-5{{end}}" aria-hidden="true">{{.Detail}}</p>
             </div>{{end}}
             {{if not .Picker}}<noscript><button type="submit" class="btn btn-sm btn-outline-secondary"{{desc "job-options"}}>Review again</button></noscript>

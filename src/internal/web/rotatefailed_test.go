@@ -23,7 +23,7 @@ func TestARotateJobThatCannotSaveTheFailedListSaysSo(t *testing.T) {
 	}
 	sel := keysvc.Selection{Selectors: []string{"work"}}
 	j, err := s.jobs.Start(p, mutation.Scope{Command: "rotate", Source: history.SourceWeb}, func(j *jobs.Job) error {
-		return rotateKeysJob(j, p, 3, sel, true, true, false)
+		return rotateKeysJob(j, p, 3, sel, rotateOpts{allow: true, skip: true})
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -43,7 +43,7 @@ func TestARotateCheckJobThatCannotSaveTheFailedListSaysSo(t *testing.T) {
 		t.Fatal(err)
 	}
 	j, err := s.jobs.Start(p, mutation.Scope{Command: "rotate", Source: history.SourceWeb, DryRun: true}, func(j *jobs.Job) error {
-		return rotateCheckJob(j, p, []string{"work/no-such-key"}, false)
+		return rotateCheckJob(j, p, []string{"work/no-such-key"}, rotateOpts{})
 	})
 	if err != nil {
 		t.Fatal(err)

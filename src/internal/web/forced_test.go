@@ -90,7 +90,7 @@ func TestAForcedDryRunJobPassesAndSaysWhatItWouldReplace(t *testing.T) {
 		t.Errorf("an unforced selection = %v, want only the keys a host uses", plain)
 	}
 	j, err := s.jobs.Start(p, mutation.Scope{Command: "rotate", Args: []string{"--all", "--check", "--force"}, Source: history.SourceWeb, DryRun: true},
-		func(j *jobs.Job) error { return rotateCheckJob(j, p, names, true) })
+		func(j *jobs.Job) error { return rotateCheckJob(j, p, names, rotateOpts{force: true, evict: true}) })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,9 @@ func TestAForcedRotateJobReplacesEveryKeyWithoutAskingForAPaste(t *testing.T) {
 		before[n] = pub(n)
 	}
 	j, err := s.jobs.Start(p, mutation.Scope{Command: "rotate", Args: []string{"--all", "--force"}, Source: history.SourceWeb},
-		func(j *jobs.Job) error { return rotateKeysJob(j, p, 3, keysvc.Selection{All: true}, false, true, true) })
+		func(j *jobs.Job) error {
+			return rotateKeysJob(j, p, 3, keysvc.Selection{All: true}, rotateOpts{skip: true, force: true, evict: true})
+		})
 	if err != nil {
 		t.Fatal(err)
 	}

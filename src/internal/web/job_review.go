@@ -141,7 +141,8 @@ var optionFlags = map[string]struct {
 	action string
 	flags  map[string]string
 }{
-	"rotate":     {"rotate-keys", map[string]string{"--no-key-backup": "no_backup", "--allow-unverified": "allow_unverified", "--force": "force"}},
+	"rotate": {"rotate-keys", map[string]string{"--no-key-backup": "no_backup", "--allow-unverified": "allow_unverified", "--force": "force",
+		"--evict-old": "evict_old"}},
 	"key delete": {"delete-keys", map[string]string{"--revoke": "revoke", "--purge": "purge"}},
 }
 
@@ -169,6 +170,11 @@ func jobBadges(command string, args []string) []jobBadge {
 				out = append(out, jobBadge{Label: o.Label, Tone: tone})
 			}
 		}
+	}
+	// A forced run that keeps the previous key says so: --keep-old has no
+	// switch of its own, it is Take the previous key off servers turned off.
+	if command == "rotate" && slices.Contains(args, "--keep-old") {
+		out = append(out, jobBadge{Label: "Keep the previous key in old/", Tone: "secondary"})
 	}
 	var profiles, keys []string
 	all := false

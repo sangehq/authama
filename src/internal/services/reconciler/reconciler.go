@@ -86,6 +86,12 @@ func (r *ReconcileResult) Format() string {
 		if len(r.Config.Written) == 0 && len(r.Config.Pruned) == 0 {
 			lines = append(lines, "  config: already in sync")
 		}
+		for _, c := range r.Config.Collisions {
+			lines = append(lines, "  warning: "+c.String())
+		}
+		if len(r.Config.Collisions) > 0 {
+			lines = append(lines, "    -> "+configsvc.CollisionFix)
+		}
 	}
 	if !r.DryRun {
 		if r.PermsFixed == 0 {

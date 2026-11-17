@@ -18,9 +18,10 @@ filename** - so swap-back is a plain move and there's never a name collision.
 3. **Verify** login with the staged key on each target (`ssh ... true`; `ssh -T`
    for GitHub).
 4. **Commit - only after all verify:**
-   - purge any existing predecessor in `/old/` (enforces **≤1 old per key**); a rotation stops
-     before this point when that predecessor is still authorised on a host it was never removed
-     from (as its retirement recorded), naming the hosts, and `--evict-old` replaces it anyway,
+   - purge any existing predecessor in `/old/` (enforces **≤1 old per key**); a rotation that
+     keeps the previous key stops before this point when it is still authorised on a host it was
+     never removed from (as its retirement recorded), naming the hosts; one that evicts it takes
+     it off those hosts first (see [The previous key](#the-previous-key-keep-or-evict)),
    - move the current `<name>(.pub)` → `old/<name>(.pub)` (same filename),
    - promote the staged key to the canonical name,
    - **revoke** the old public key from each target,
@@ -180,16 +181,48 @@ uses it); the summary counts them, and the dry run passes when every key would b
 or replaced. Without `--force`, `--check` is as before: a key that cannot rotate in place
 `would fail` or `would pause`.
 
-`--force` does not go round the `old/` guard: a key whose predecessor in `old/` is still
-authorised on a host it was never removed from is not replaced, and the output names
-the hosts, unless `--evict-old` is given too. The web UI offers no `--evict-old`, so a
-forced rotation there never evicts such a key.
+A factory reset should leave only the new key, so `--force` **evicts the previous key** by
+default (see [below](#the-previous-key-keep-or-evict)): a key whose previous key in `old/` still
+logs in somewhere is no longer a failure under `--force`; the previous key is taken off those hosts,
+then dropped. `--force --keep-old` keeps it instead, and then such a key is not replaced and the
+output names the hosts, as before.
 
 > **A forced rotation can lock you out until you deploy.** A host that trusted the
 > old key does not trust the new one. Deploy each replaced key next
 > (`authama ssh deploy <profile/key>`, or **Deploy** on its page), or roll it back
 > with `authama ssh rollback <profile/key>`: the old key is kept under `old/`
 > until the next rotation replaces it.
+
+## The previous key: keep or evict
+
+Each rotation keeps one predecessor per key in `old/`, the **previous key**. Every run has a policy
+for it:
+
+| Policy | The previous key | Chosen by |
+|---|---|---|
+| **keep** | stays in `old/`. A key whose previous key is still authorised on a host it was never removed from (its retirement record says so) is not rotated: the run stops and names the hosts | the default; `--keep-old` under `--force` |
+| **evict** | taken off every host it was never removed from, the record updated, then dropped as the current key takes its slot. A host it cannot be taken off - one that takes keys by hand, one that does not answer, one gone from the manifest - is named: it still accepts the dropped key until you remove it there, and the key's checklist keeps listing it | `--evict-old`; the default under `--force` |
+
+```sh
+authama ssh rotate work/work_box-ed25519 --evict-old   # evict, without forcing
+authama ssh rotate --all --force                       # a factory reset: evicts
+authama ssh rotate --all --force --keep-old            # forced, keeping the previous key
+```
+
+`--keep-old` with `--evict-old` is refused. `--evict-old` before 2026-11-16 only overwrote the
+`old/` slot; it now takes the previous key off the hosts first.
+
+`--check` previews the policy. Keeping it, a key whose previous key still logs in `would fail`,
+saying where (a forced dry run does not turn that into *would replace here*, since the forced run
+would not replace it either). Evicting it, the key passes and says *would evict old from N
+host(s)* with their names.
+
+On the web the review's options carry **Take the previous key off servers**, with or without
+Force: off by default, on by default under Force and explained there. Unticked under Force, the
+command line carries `--keep-old`; ticked, `--evict-old`. The job's page shows it as a badge
+(*Take the previous key off servers*, or *Keep the previous key in old/*).
+
+## Forcing on the web
 
 On the web, **Force: replace what cannot rotate in place** is an option on Rotate
 keys and on a rotation's review. A forced review is titled *(forced)*, warns of

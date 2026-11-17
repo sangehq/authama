@@ -12,6 +12,7 @@ package jobs
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -133,6 +134,19 @@ type Job struct {
 	items    []string
 	failed   map[string]bool
 	title    string
+	// owner is who may answer and cancel the job: an opaque id the web gives
+	// the session that started it (never its cookie). "" is a job started
+	// with no owner, which nobody answers or cancels from the web.
+	owner string
+}
+
+// OwnedBy reports whether owner, an id from StartFor, started the job. An
+// empty owner owns nothing, so a job with no owner is read-only to all.
+func (j *Job) OwnedBy(owner string) bool {
+	if owner == "" || j.owner == "" {
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(owner), []byte(j.owner)) == 1
 }
 
 // SetSummary gives the job a result for its page to draw as its output; a
@@ -317,6 +331,13 @@ func (e ErrBusy) Error() string {
 // history. It refuses while another job runs, and waits briefly for a preview
 // or change in flight. The job runs on after Start returns.
 func (r *Registry) Start(p paths.Paths, scope mutation.Scope, run func(j *Job) error) (*Job, error) {
+	return r.StartFor("", p, scope, run)
+}
+
+// StartFor is Start for a job that belongs to owner: only OwnedBy(owner)
+// answers or cancels it from the web (review R-GAP-06). The owner is set
+// before the job runs, so it can never ask a question nobody may answer.
+func (r *Registry) StartFor(owner string, p paths.Paths, scope mutation.Scope, run func(j *Job) error) (*Job, error) {
 	r.mu.Lock()
 	if r.running != nil {
 		busy := ErrBusy{ID: r.running.id, Command: r.running.command}
@@ -332,7 +353,7 @@ func (r *Registry) Start(p paths.Paths, scope mutation.Scope, run func(j *Job) e
 		scope.OpID = history.NewOpID()
 	}
 	j := &Job{id: newID(), command: scope.Command, args: scope.Args, started: time.Now(),
-		state: Running, opID: scope.OpID, changed: make(chan struct{}), answer: make(chan bool, 1)}
+		state: Running, opID: scope.OpID, changed: make(chan struct{}), answer: make(chan bool, 1), owner: owner}
 	r.mu.Lock()
 	r.running = j
 	r.jobs[j.id] = j

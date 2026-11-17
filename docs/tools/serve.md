@@ -457,8 +457,11 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
    The checks, steps and keys are on the left, and a column on the right stays in view as you
    scroll: what the job reaches, whether it writes a backup, how to undo it, its options, and
    its Start button. A rotation's options (*Skip the encrypted backup*, *Go on when a login
-   cannot be verified*, *Force: replace what cannot rotate in place*) review it again as soon as
-   one is turned. A forced rotation is titled *(forced)*, warns that it can lock you out of a host
+   cannot be verified*, *Force: replace what cannot rotate in place*, *Take the previous key off
+   servers*) review it again as soon as one is turned. *Take the previous key off servers* is off
+   by default and on by default under Force, where it says why; the column's **Previous key** line
+   says whether the key in `old/` is kept or taken off servers, then dropped (see
+   [rotate](rotate.md#the-previous-key-keep-or-evict)). A forced rotation is titled *(forced)*, warns that it can lock you out of a host
    until the replaced key is deployed, starts from a red button and asks in a red dialog;
    see [rotate](rotate.md#forcing-a-rotation). **Before it starts** lists the
    checks it must pass: no other job running, and, for one that writes an encrypted backup first, a
@@ -488,7 +491,9 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
    finished. A job that works through keys lists each one below the bar, in order: waiting,
    running (with a spinner), done or failed, updated as it goes. When the job needs you (pasting a
    key where a target takes it by hand), a card says it is waiting, which step it is on, and what to
-   do, with the text to copy. A job that is one step shows a moving bar and says it gives no percentage.
+   do, with the text to copy. Only the sign-in that started a job can answer or cancel it, after the
+   same PIN step-up as any change; any other sign-in sees the page read-only, with a note saying so
+   (see [Security](#security)). A job that is one step shows a moving bar and says it gives no percentage.
    Every job shows its output as a **summary**, drawn as it goes: a rotation (of one key or
    many) and its dry run, revoking or deleting chosen keys, a deploy and a rollback (a row per
    host), restoring a bundle (a row per key it laid back, with its fingerprint), and pinning
@@ -540,6 +545,8 @@ hosts for theirs, so no copy can preview them. Each runs as a **job**:
   as the terminal needs `--force`, and it is backed up first. A key the import would copy in from
   outside the managed tree is listed in the preview, which copies none.
 - **Cancel** stops a job at its next step, never inside one. A rotate waiting on you is answered no.
+  Like an answer, it is open only to the sign-in that started the job, and asks for the PIN once
+  five minutes have passed.
 
 Some changes are terminal-only:
 
@@ -565,7 +572,18 @@ Some changes are terminal-only:
 
 - **PIN.** When the home has an owner PIN (see [owner binding](owner.md)), the sign-in link opens an
   unlock page first, and no other page opens until the PIN is given. Every change and job confirmation
-  asks for it again once five minutes have passed. Wrong PINs share the command line's lockout.
+  asks for it again once five minutes have passed, and so do answering a job's question and
+  cancelling a job (`POST /jobs/{id}/answer` and `/cancel`, review R-GAP-06). Wrong PINs share the
+  command line's lockout. Without a PIN set there is no step-up anywhere.
+- **Jobs belong to the sign-in that started them.** A job records the session that started it, by a
+  random id of its own (never the session cookie). Only that session answers or cancels it; every
+  other signed-in session watches it read-only: its page shows no answer or cancel controls and says
+  why, and a post answers 403. Signing out and in again is a new session, and not the owner. A job
+  with no web session behind it (none is started that way today) is read-only to every session.
+- **What the PIN does not guard, by decision.** Ticking a checklist item and saving an export
+  selection (`/checklist/*`, `/api/export/selections*`) change only authama's own notes and saved
+  views, never a key, a host or a server, so they take no PIN step-up: the owner's decision on
+  R-GAP-06 (2026-11-16). They still need the session and its CSRF token.
 - **Bounded requests.** A request body over 1 MiB is refused with 413 before it is parsed; headers
   are held to 64 KiB, a body must arrive within 30 seconds, and `Permissions-Policy` turns off every
   device API (camera, microphone, location, USB and the rest).

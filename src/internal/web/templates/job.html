@@ -22,6 +22,7 @@
     </div></div>
   </div>
 </div>
+{{if and (not .Mine) (or (eq .State "running") (eq .State "waiting"))}}<div class="alert alert-info" role="status" id="job-not-yours">{{icon "info-circle"}}<span class="ms-1">You can watch this job, but not answer or cancel it: it was started from another sign-in - another browser, or this one before it signed in again. Only the sign-in that started a job can answer or cancel it.</span></div>{{end}}
 {{with .Question}}
 <div class="card mb-3 job-question" role="region" aria-labelledby="job-question-title">
   <div class="card-status-top bg-warning"></div>
@@ -29,11 +30,12 @@
     <div class="d-flex align-items-center gap-2 mb-2"><span class="text-warning" aria-hidden="true">{{icon "clock"}}</span><h2 class="card-title mb-0" id="job-question-title">The job is waiting for you</h2>{{with $.Data.Progress}}{{if .Total}}<span class="ms-auto small text-secondary">step {{add .Done 1}} of {{.Total}}{{with .Label}} · {{.}}{{end}}</span>{{end}}{{end}}</div>
     <p class="mb-2">{{.Prompt}}</p>
     {{if .Text}}<div class="d-flex align-items-start gap-2 mb-3"><pre class="code-block flex-grow-1 mb-0" tabindex="0">{{.Text}}</pre>{{template "copy" (copy .Text "it")}}</div>{{end}}
-    <p class="small text-secondary">Nothing goes on until you answer. Answering no stops the job here: the steps already done stay done, and nothing after this one runs.</p>
-    <div class="d-flex gap-2">
-      <form method="post" action="{{basePath}}/jobs/{{$.Data.ID}}/answer"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="answer" value="yes"><button type="submit" class="btn btn-primary"{{desc "job-yes"}}>{{with $.Data.Question.Yes}}{{.}}{{else}}Done, carry on{{end}}</button></form>
-      <form method="post" action="{{basePath}}/jobs/{{$.Data.ID}}/answer"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="answer" value="no"><button type="submit" class="btn btn-outline-secondary"{{desc "job-no"}}>{{with $.Data.Question.No}}{{.}}{{else}}Not done, stop here{{end}}</button></form>
-    </div>
+    {{if $.Data.Mine}}<p class="small text-secondary">Nothing goes on until you answer. Answering no stops the job here: the steps already done stay done, and nothing after this one runs.</p>
+    <form method="post" action="{{basePath}}/jobs/{{$.Data.ID}}/answer" class="d-flex flex-wrap align-items-center gap-2"><input type="hidden" name="csrf" value="{{$.CSRF}}">
+      {{if $.PINNeeded}}<label class="visually-hidden" for="job-answer-pin">PIN</label><input class="form-control w-auto" type="password" id="job-answer-pin" name="pin" required autocomplete="current-password" minlength="6" maxlength="128" placeholder="Your PIN" aria-describedby="job-pin-hint">{{end}}
+      <button type="submit" name="answer" value="yes" class="btn btn-primary"{{desc "job-yes"}}>{{with $.Data.Question.Yes}}{{.}}{{else}}Done, carry on{{end}}</button>
+      <button type="submit" name="answer" value="no" class="btn btn-outline-secondary"{{desc "job-no"}}>{{with $.Data.Question.No}}{{.}}{{else}}Not done, stop here{{end}}</button>
+    </form>{{else}}<p class="small text-secondary mb-0">Only the sign-in that started this job can answer it.</p>{{end}}
   </div>
 </div>
 {{end}}
@@ -54,9 +56,12 @@
   <div class="card-body p-0"><div class="console" id="job-log" tabindex="0" role="log" aria-live="polite" aria-label="Job output" data-job-stream data-job-stream-events="{{basePath}}/jobs/{{.ID}}/events" data-job-stream-state="#job-state">{{range consoleLines .Lines}}{{template "console_line" .}}{{else}}<div class="console-empty" data-console-empty>Waiting for the first line…</div>{{end}}</div></div>
 </details>
 {{if or (eq .State "running") (eq .State "waiting")}}
-<form method="post" action="{{basePath}}/jobs/{{.ID}}/cancel"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit" class="btn btn-outline-danger"{{desc "job-cancel"}}>Cancel at the next step</button></form>
+{{if .Mine}}<form method="post" action="{{basePath}}/jobs/{{.ID}}/cancel" class="d-flex flex-wrap align-items-center gap-2"><input type="hidden" name="csrf" value="{{$.CSRF}}">
+  {{if $.PINNeeded}}<label class="visually-hidden" for="job-cancel-pin">PIN</label><input class="form-control w-auto" type="password" id="job-cancel-pin" name="pin" required autocomplete="current-password" minlength="6" maxlength="128" placeholder="Your PIN" aria-describedby="job-pin-hint">{{end}}
+  <button type="submit" class="btn btn-outline-danger"{{desc "job-cancel"}}>Cancel at the next step</button></form>{{end}}
 <p class="text-secondary small mt-2">The page updates as the job runs. Without JavaScript, reload it.</p>
 {{end}}
+{{if and .Mine $.PINNeeded (or (eq .State "running") (eq .State "waiting"))}}<span id="job-pin-hint" class="visually-hidden">Answering or cancelling a job needs your authama PIN. It is asked again five minutes after you last gave it.</span>{{end}}
 {{end}}{{end}}
 
 {{/* One line of a job's output: its status word in a fixed column, coloured

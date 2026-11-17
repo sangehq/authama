@@ -53,6 +53,7 @@ var commandExamples = map[string][]string{
 	"ssh audit":           {"ssh audit", "ssh audit --notify"},
 	"ssh bundle":          {"ssh bundle", "ssh bundle --recipient age1... --output /Volumes/backup --keep 5"},
 	"ssh clean":           {"ssh clean --dry-run", "ssh clean --adopt --yes"},
+	"ssh config adopt":    {"ssh config adopt --dry-run   # which duplicate Host blocks the manifest reproduces", "ssh config adopt --yes"},
 	"ssh config check":    {"ssh config check   # exit 1 when the files drift from the manifest"},
 	"ssh config export":   {"ssh config export --flat --out -", "ssh config export --out ./ssh_config"},
 	"ssh config render":   {"ssh config render --dry-run", "ssh config render --yes"},
