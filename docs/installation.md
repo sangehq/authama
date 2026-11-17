@@ -38,7 +38,10 @@ Two ways, in this order:
    ```
 
    The provenance was signed by simtabi/.github's shared release workflow, which built the binary,
-   so the check names that workflow; without `--signer-workflow` it fails. v0.1.0 (re-tagged 2026-11-16) is
+   so the check names that workflow; without `--signer-workflow` it fails. The release's `install.sh`
+   and `install.ps1` check the checksum and, when `gh` is installed and signed in, the provenance too;
+   a binary whose provenance does not verify is not installed. Without `gh` they say only the checksum
+   was checked; `AUTHAMA_INSTALL_REQUIRE_ATTESTATION=1` makes the provenance check required. v0.1.0 (re-tagged 2026-11-16) is
    the first release under `sangehq/authama` (see [Earlier binary releases](#earlier-binary-releases)).
 2. **Build from source.** You need Go (the version `src/go.mod` names), `git` and `make`.
 

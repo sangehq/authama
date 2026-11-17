@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sangehq/authama/src/internal/services/apitokens"
@@ -94,14 +96,57 @@ func (a apiServer) signIn(next http.Handler) http.Handler {
 			apiError(w, http.StatusUnauthorized, "unauthorized", "Send an API token: Authorization: Bearer ama_… (make one with `authama api token create <name>`).")
 			return
 		}
-		if _, ok := apitokens.Check(a.s.opts.Engine.Home(), strings.TrimSpace(secret), apitokens.ScopeRead, a.s.now()); !ok {
+		tok, ok := apitokens.Check(a.s.opts.Engine.Home(), strings.TrimSpace(secret), apitokens.ScopeRead, a.s.now())
+		if !ok {
 			a.s.apiFails.fail(host, a.s.now())
 			w.Header().Set("WWW-Authenticate", `Bearer realm="authama", error="invalid_token"`)
 			apiError(w, http.StatusUnauthorized, "invalid_token", "That API token is not valid: it was revoked, has expired, or never existed.")
 			return
 		}
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), apiTokenKey{}, tok.Name)))
 	})
+}
+
+// apiTokenKey carries the name of the token a request was let in with.
+type apiTokenKey struct{}
+
+// apiStreamLimit is how many event streams one token may hold open at once
+// (audit P-05). Each stream polls the feed every StreamEvery for as long as it
+// lives; without a limit one leaked or misbehaving token could open them
+// without bound. Four covers a program reconnecting while its old stream ends.
+const apiStreamLimit = 4
+
+// streamLimiter counts the open event streams per token name, for the life of
+// the server process.
+type streamLimiter struct {
+	mu     sync.Mutex
+	byName map[string]int
+}
+
+// acquire takes a place for one more stream on token name, or reports false
+// when it already holds apiStreamLimit.
+func (l *streamLimiter) acquire(name string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.byName == nil {
+		l.byName = map[string]int{}
+	}
+	if l.byName[name] >= apiStreamLimit {
+		return false
+	}
+	l.byName[name]++
+	return true
+}
+
+// release gives a stream's place back.
+func (l *streamLimiter) release(name string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.byName[name] <= 1 {
+		delete(l.byName, name)
+		return
+	}
+	l.byName[name]--
 }
 
 func (a apiServer) index(w http.ResponseWriter, r *http.Request) {
@@ -265,6 +310,13 @@ func (a apiServer) stream(w http.ResponseWriter, r *http.Request) {
 		apiError(w, http.StatusBadRequest, "bad_cursor", err.Error())
 		return
 	}
+	name, _ := r.Context().Value(apiTokenKey{}).(string)
+	if !a.s.streams.acquire(name) {
+		apiError(w, http.StatusTooManyRequests, "too_many_streams",
+			fmt.Sprintf("This token already holds %d event streams open; close one, or resume with Last-Event-ID on the one you have.", apiStreamLimit))
+		return
+	}
+	defer a.s.streams.release(name)
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("X-Accel-Buffering", "no")
 	tick := time.NewTicker(StreamEvery)

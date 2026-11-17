@@ -106,6 +106,8 @@ sange uses, so one receiver reads both:
 `after` to read on, and each event is read once. A file event is ordered by when authama noticed it, so
 a change made while nothing was watching still comes after your cursor. The stream's SSE `id` is the
 same cursor, so a client that reconnects with `Last-Event-ID` resumes where it stopped.
+One token holds at most four streams open at once; a fifth is answered `429 too_many_streams`. A
+stream's place is given back when it closes.
 
 ## Security
 

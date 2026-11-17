@@ -110,9 +110,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Binary releases are on hold, so the release carries no binary: build
-          # this commit's into a local "release" with a real checksums.txt, and
-          # install from it. The installs name their version, so nothing here
+          # Test this commit's installer against this commit's binary: build it
+          # into a local "release" with a real checksums.txt, and install from it. The installs name their version, so nothing here
           # waits on github.com, whose 504s failed this step on 2026-11-08; the
           # version lookup is tested at the end against stand-ins for GitHub.
           case "$(uname -s)" in Darwin) os=macos ;; *) os=linux ;; esac
@@ -141,6 +140,14 @@ jobs:
           AUTHAMA_INSTALL_NO_VERIFY=1 AUTHAMA_INSTALL_DIR="$nosums" bash src/scripts/install.sh v0.1.0
           test -x "$nosums/authama"
           mv "$rel/checksums.txt.held" "$rel/checksums.txt"
+          # A required build-provenance check that cannot pass stops the install:
+          # this locally built binary has no attestation, and without a signed-in
+          # gh the check cannot run at all (audit A-SEC-14).
+          noattest="$(mktemp -d)/bin"
+          if AUTHAMA_INSTALL_REQUIRE_ATTESTATION=1 AUTHAMA_INSTALL_DIR="$noattest" bash src/scripts/install.sh v0.1.0; then
+            echo "the installer installed although a required attestation was not verified"; exit 1
+          fi
+          test ! -e "$noattest/authama"
           # The sshmgr alias is no longer installed.
           test ! -e "$dir/sshmgr"
           # The deprecated variable name still picks the directory.

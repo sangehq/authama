@@ -111,6 +111,7 @@ type Server struct {
 	sessions sessions
 	links    links
 	apiFails failLimiter
+	streams  streamLimiter
 	secrets  secretStash
 	who      whoami
 	jobs     *jobs.Registry

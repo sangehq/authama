@@ -178,6 +178,31 @@ try {
       $got  = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
       if ($got -ne $want) { throw "checksum mismatch for $asset" }
     }
+    # The checksum proves the download is the file the release lists, not who
+    # built it: checksums.txt comes from the same place. Each release binary
+    # carries a build-provenance attestation that `gh attestation verify`
+    # checks (audit A-SEC-14). With gh installed and signed in, a binary that
+    # does not verify is not installed; without gh the install goes on and says
+    # what was not checked. AUTHAMA_INSTALL_REQUIRE_ATTESTATION=1 makes it
+    # required. A local -ReleaseBase has no attestation, so it is checked only
+    # when required.
+    $signer = 'simtabi/.github/.github/workflows/go-release.yml'
+    $requireAttest = $env:AUTHAMA_INSTALL_REQUIRE_ATTESTATION -eq '1'
+    $gh = Get-Command gh -ErrorAction SilentlyContinue
+    $ghReady = $false
+    if ($gh) { & gh auth status *> $null; $ghReady = ($LASTEXITCODE -eq 0) }
+    if ($ReleaseBase -and -not $requireAttest) {
+    } elseif ($ghReady) {
+      Write-Host 'Verifying the build provenance with gh ...'
+      & gh attestation verify $exe --repo "$owner/$repo" --signer-workflow $signer *> $null
+      if ($LASTEXITCODE -ne 0) { throw "the build-provenance attestation of $asset did not verify; nothing was installed" }
+      Write-Host "Build provenance verified: built by $signer from $owner/$repo."
+    } elseif ($requireAttest) {
+      throw 'AUTHAMA_INSTALL_REQUIRE_ATTESTATION=1, but gh is not installed or not signed in, so the build provenance cannot be checked; nothing was installed'
+    } else {
+      Write-Host 'note: checked the checksum only. To check who built it, install gh (https://cli.github.com), sign in, and run:'
+      Write-Host "  gh attestation verify $asset --repo $owner/$repo --signer-workflow $signer"
+    }
     Copy-Item $exe (Join-Path $InstallDir "$name.exe") -Force
     $installed += $name
   }
