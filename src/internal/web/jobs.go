@@ -38,20 +38,22 @@ import (
 // from GET /jobs/{id}/events. One job runs at a time, under the lock for as
 // long as it runs. A job can ask a question (rotate's "pasted the key?"),
 // answered at POST /jobs/{id}/answer, and be cancelled between its steps at
-// POST /jobs/{id}/cancel. Nothing a job runs can prompt: ssh and ssh-copy-id
+// POST /jobs/{id}/cancel - both only by the session that started it, and
+// with the PIN step-up every write needs (review R-GAP-06). Any other
+// session watches it read-only. Nothing a job runs can prompt: ssh and ssh-copy-id
 // run with stdin closed and BatchMode=yes (W12), and passphrases are never
 // taken.
 
 // jobFields are the form fields each job reads.
 var jobFields = map[string][]string{
 	"deploy":   {"key", "target"},
-	"rotate":   {"key", "allow_unverified", "no_backup", "check", "force"},
+	"rotate":   {"key", "allow_unverified", "no_backup", "check", "force", "evict_old"},
 	"rollback": {"key"},
 	// revoke removes a key from every target and records it as revoked.
 	"revoke": {"key", "reason"},
 	// rotate-keys rotates the chosen keys (sel: keys, profiles, categories),
 	// a profile's keys, or every key, one after another.
-	"rotate-keys": {"sel", "profile", "all", "allow_unverified", "no_backup", "check", "force"},
+	"rotate-keys": {"sel", "profile", "all", "allow_unverified", "no_backup", "check", "force", "evict_old"},
 	// revoke-keys revokes each chosen key, as `authama ssh key revoke` does.
 	"revoke-keys": {"sel", "all", "reason"},
 	// delete-keys deletes each chosen key, as `authama ssh key delete` does.
@@ -170,19 +172,19 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 			run: func(j *jobs.Job) error { return deployJob(j, h.p, retain, key, target) },
 		}, nil
 	case "rotate":
-		allow, skip, force := checked(f, "allow_unverified"), checked(f, "no_backup"), checked(f, "force")
+		o := rotateOptsOf(f)
 		if checked(f, "check") {
-			return rotateCheckSpec([]string{key}, rotateFlags([]string{key, "--check"}, allow, skip, force), subjects, h, force), nil
+			return rotateCheckSpec([]string{key}, rotateFlags([]string{key, "--check"}, o), subjects, h, o), nil
 		}
-		args := rotateFlags([]string{key, "--yes"}, allow, skip, force)
+		args := rotateFlags([]string{key, "--yes"}, o)
 		return jobSpec{
 			scope: mutation.Scope{Command: "rotate", Args: args, Source: history.SourceWeb, Subjects: subjects},
-			what: append([]string{backupStep(skip)},
+			what: append([]string{backupStep(o.skip)},
 				"mints a new "+key+", deploys it to every host that uses the key, and proves each login",
 				"moves the current key to old/, replacing any earlier predecessor, once every target is done",
 				"asks you to paste the new public key where a target takes it by hand, and waits",
-				forceStep(force)),
-			run:   func(j *jobs.Job) error { return rotateJob(j, h.p, retain, key, allow, skip, force) },
+				forceStep(o.force), evictStep(o.evict)),
+			run:   func(j *jobs.Job) error { return rotateJob(j, h.p, retain, key, o) },
 			items: []string{key},
 		}, nil
 	case "revoke":
@@ -262,11 +264,12 @@ func deployJob(j *jobs.Job, p paths.Paths, retain int, key, target string) error
 
 // rotateJob is rotate's single-key path after its confirmation. A target that
 // takes the key by hand pauses the job with the new public key to paste.
-func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, allowUnverified, skipBackup, force bool) error {
+func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, o rotateOpts) error {
+	allowUnverified, force := o.allow, o.force
 	if err := p.RefuseOutsideSandbox("rotate"); err != nil {
 		return err
 	}
-	if err := bundler.BackupBeforeDestroying(p, j, skipBackup); err != nil {
+	if err := bundler.BackupBeforeDestroying(p, j, o.skip); err != nil {
 		return err
 	}
 	m, inv, err := loadState(p)
@@ -278,6 +281,7 @@ func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, allowUnverifi
 		return err
 	}
 	r := rotator.New(p, m, inv).Unattended(j)
+	r.EvictOld = o.evict
 	if !force {
 		r = r.WithManualStep(manualPaste(j))
 	}
@@ -300,7 +304,7 @@ func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, allowUnverifi
 		// replaced on this computer, as any other that cannot rotate in place.
 		if force {
 			_, _ = fmt.Fprintf(j, "not rotated: %v\n", err)
-			if still := replaceFailed(j, p, []string{key}, force); len(still) == 0 {
+			if still := replaceFailed(j, p, []string{key}, o); len(still) == 0 {
 				show([]string{key})
 				return nil
 			}
@@ -316,7 +320,7 @@ func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, allowUnverifi
 	}
 	_, _ = fmt.Fprintln(j, report.Format())
 	if !report.Committed {
-		if still := replaceFailed(j, p, []string{key}, force); len(still) == 0 {
+		if still := replaceFailed(j, p, []string{key}, o); len(still) == 0 {
 			show([]string{key})
 			return nil
 		}
@@ -365,8 +369,8 @@ func rotateKeysSpec(f url.Values, h home, retain int) (jobSpec, error) {
 	if err != nil {
 		return jobSpec{}, err
 	}
-	allow, skip, force := checked(f, "allow_unverified"), checked(f, "no_backup"), checked(f, "force")
-	names, err := selected(h.p, sel, force)
+	o := rotateOptsOf(f)
+	names, err := selected(h.p, sel, o.force)
 	if err != nil {
 		return jobSpec{}, err
 	}
@@ -374,35 +378,71 @@ func rotateKeysSpec(f url.Values, h home, retain int) (jobSpec, error) {
 		return jobSpec{}, badForm("no key there is used by a host, so there is nothing to rotate")
 	}
 	if checked(f, "check") {
-		return rotateCheckSpec(names, rotateFlags(append(args, "--check"), allow, skip, force), subjects, h, force), nil
+		return rotateCheckSpec(names, rotateFlags(append(args, "--check"), o), subjects, h, o), nil
 	}
-	args = rotateFlags(args, allow, skip, force)
+	args = rotateFlags(args, o)
 	return jobSpec{
 		scope: mutation.Scope{Command: "rotate", Args: append(args, "--yes"), Source: history.SourceWeb, Subjects: subjects},
 		what: []string{
-			backupStep(skip),
+			backupStep(o.skip),
 			fmt.Sprintf("rotates %d key(s), one at a time, in the order listed: each is minted, deployed and logged in with before the next", len(names)),
 			"a key that fails is left as it was, and the rest go on",
 			"asks you to paste a new public key wherever a target takes it by hand, and waits",
-			forceStep(force),
+			forceStep(o.force),
+			evictStep(o.evict),
 		},
-		run:   func(j *jobs.Job) error { return rotateKeysJob(j, h.p, retain, sel, allow, skip, force) },
+		run:   func(j *jobs.Job) error { return rotateKeysJob(j, h.p, retain, sel, o) },
 		items: names,
 	}, nil
 }
 
+// rotateOpts are a rotation's options as the review chose them: go on
+// unverified, skip the backup, force, and the previous-key policy (evict the
+// key in old/, or keep it).
+type rotateOpts struct{ allow, skip, force, evict bool }
+
+// rotateOptsOf reads a rotation's options from its form.
+func rotateOptsOf(f url.Values) rotateOpts {
+	return rotateOpts{allow: checked(f, "allow_unverified"), skip: checked(f, "no_backup"),
+		force: checked(f, "force"), evict: evictOld(f)}
+}
+
+// evictOld is the previous-key policy a form chose: evict_old=1 evicts,
+// evict_old=0 keeps, and with neither (or "auto", the switch left at its
+// default) a forced rotation - a factory reset - evicts and any other keeps,
+// as `authama ssh rotate` decides it. The review's switch sends 1 when ticked
+// (auto under Force, until changed), and under Force a 0 after it, so
+// unticking it sticks: the first value wins.
+func evictOld(f url.Values) bool {
+	switch f.Get("evict_old") {
+	case "1":
+		return true
+	case "0":
+		return false
+	}
+	return checked(f, "force")
+}
+
 // rotateFlags is args with the rotation's options as the CLI spells them, so
-// a job's command line - a dry run's too - names every option chosen.
-func rotateFlags(args []string, allow, skip, force bool) []string {
+// a job's command line - a dry run's too - names every option chosen,
+// including the previous-key policy: --evict-old when it is evicted, and
+// --keep-old when a forced run keeps it.
+func rotateFlags(args []string, o rotateOpts) []string {
 	out := slices.Clone(args)
-	if allow {
+	if o.allow {
 		out = append(out, "--allow-unverified")
 	}
-	if skip {
+	if o.skip {
 		out = append(out, "--no-key-backup")
 	}
-	if force {
+	if o.force {
 		out = append(out, "--force")
+	}
+	switch {
+	case o.evict:
+		out = append(out, "--evict-old")
+	case o.force:
+		out = append(out, "--keep-old")
 	}
 	return out
 }
@@ -428,11 +468,12 @@ func selected(p paths.Paths, sel keysvc.Selection, force bool) ([]string, error)
 	return names, nil
 }
 
-func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection, allowUnverified, skipBackup, force bool) error {
+func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection, o rotateOpts) error {
+	allowUnverified, force := o.allow, o.force
 	if err := p.RefuseOutsideSandbox("rotate"); err != nil {
 		return err
 	}
-	if err := bundler.BackupBeforeDestroying(p, j, skipBackup); err != nil {
+	if err := bundler.BackupBeforeDestroying(p, j, o.skip); err != nil {
 		return err
 	}
 	m, inv, err := loadState(p)
@@ -447,6 +488,7 @@ func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection,
 	mutation.SnapshotBeforeMutation(p, retain)
 	j.Plan(names)
 	r := rotator.New(p, m, inv).Unattended(j)
+	r.EvictOld = o.evict
 	if !force {
 		// Forced, nothing stops to ask for a paste: a target that takes the
 		// key by hand cannot verify, so the key is replaced on this computer
@@ -479,7 +521,7 @@ func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection,
 		return err
 	}
 	before := failed
-	failed = replaceFailed(j, p, failed, force)
+	failed = replaceFailed(j, p, failed, o)
 	saveErr := rotator.SaveFailed(p, show(nil, "", without(before, failed)).Failed())
 	for _, n := range failed {
 		j.Failed(n)
@@ -596,6 +638,9 @@ type jobReview struct {
 	Picker *pickerData
 	Empty  bool
 	Action string
+	// OldKey is a rotation's previous-key policy, as its facts show it:
+	// "evicted" or "kept"; "" for any other job.
+	OldKey string
 }
 
 // jobOption is one switch on a job's review: turning it reviews the job
@@ -606,6 +651,12 @@ type jobOption struct {
 	// Text is a text field rather than a switch, holding Value.
 	Text               bool
 	Value, Placeholder string
+	// Sticky is a switch that is on by default: its form sends a 0 after it,
+	// so turning it off is kept when the review is done again. Send is what
+	// it sends when on, "1" when empty: "auto" is on only by that default,
+	// so it follows Force if Force is turned off again.
+	Sticky bool
+	Send   string
 }
 
 // jobOptions are the switches a job's review offers, and the fields carried
@@ -621,6 +672,7 @@ func jobOptions(f url.Values, fields []formField) ([]jobOption, []formField) {
 				Detail: "Off, a key whose new login cannot be proved stops the job and keeps working as before."},
 			{Name: "force", Label: "Force: replace what cannot rotate in place", Danger: true,
 				Detail: "A factory reset of the keys chosen: a key never deployed, whose host cannot be reached, whose target takes the key by hand, or that no host uses, is replaced on this computer anyway and must be deployed next. Until then a host that trusted the old key cannot be logged in to with it; the old key stays under old/ for a rollback."},
+			evictOption(checked(f, "force")),
 		}
 	case "revoke-keys":
 		opts = []jobOption{{Name: "reason", Label: "Reason (optional)", Text: true, Placeholder: "laptop lost, contractor left…",
@@ -636,6 +688,12 @@ func jobOptions(f url.Values, fields []formField) ([]jobOption, []formField) {
 	names := map[string]bool{}
 	for i := range opts {
 		opts[i].On = checked(f, opts[i].Name)
+		if opts[i].Name == "evict_old" {
+			opts[i].On = evictOld(f)
+			if v := f.Get("evict_old"); opts[i].Sticky && (v == "" || v == "auto") {
+				opts[i].Send = "auto"
+			}
+		}
 		opts[i].Value = f.Get(opts[i].Name)
 		names[opts[i].Name] = true
 	}
@@ -646,6 +704,21 @@ func jobOptions(f url.Values, fields []formField) ([]jobOption, []formField) {
 		}
 	}
 	return opts, kept
+}
+
+// evictOption is the previous-key switch on a rotation's review: off, the key
+// in old/ is kept, and a key whose previous key still logs in somewhere does
+// not rotate; on, that previous key is taken off those servers first. Under
+// Force it is on by default, since a factory reset should leave only the
+// new key, and it says so.
+func evictOption(forced bool) jobOption {
+	o := jobOption{Name: "evict_old", Label: "Take the previous key off servers",
+		Detail: "The key a rotation leaves in old/ is kept unless this is on. On, where that previous key still logs in, it is taken off those servers first, then dropped; a server it cannot be taken off (one that takes keys by hand, or does not answer) is named, to remove it there yourself. Off, a key whose previous key still logs in somewhere is not rotated."}
+	if forced {
+		o.Sticky = true
+		o.Detail = "On by default with Force: a factory reset leaves only the new key, so the key in old/ is taken off every server it still logs in to, then dropped; a server it cannot be taken off is named, to remove it there yourself. Turn it off to keep the previous key: a key whose previous key still logs in somewhere is then not replaced."
+	}
+	return o
 }
 
 // jobBack is the page a job was chosen on: a key's own page, the list it
@@ -671,6 +744,13 @@ func jobCommand(s mutation.Scope) string {
 func carriedJob(f url.Values) []formField {
 	out := []formField{{"action", f.Get("action")}}
 	for _, k := range jobFields[f.Get("action")] {
+		// The switch and the 0 after it: the first value is the choice.
+		if k == "evict_old" {
+			if v := f.Get(k); v != "" {
+				out = append(out, formField{k, v})
+			}
+			continue
+		}
 		// sel holds every key chosen, so every value goes on.
 		for _, v := range f[k] {
 			out = append(out, formField{k, v})
@@ -794,6 +874,12 @@ func (h jobPages) handleJobReview(w http.ResponseWriter, r *http.Request) {
 		rev.Kept = withoutPicked(rev.Kept)
 	}
 	rev.Forced, rev.Backup = checked(f, "force") && !spec.check, spec.backup
+	if a := f.Get("action"); a == "rotate" || a == "rotate-keys" {
+		rev.OldKey = "kept"
+		if evictOld(f) {
+			rev.OldKey = "evicted"
+		}
+	}
 	rev.Checks = preflights(f, spec, rev.Busy != nil)
 	rev.Blocked = blocked(rev.Checks)
 	h.s.render(w, http.StatusOK, "job_review", h.s.newView(r, "", spec.title, rev))
@@ -819,7 +905,8 @@ func (h jobPages) handleJobStart(w http.ResponseWriter, r *http.Request) {
 	if !ok || !ownerGate(h).stepUp(w, r) {
 		return
 	}
-	j, err := h.s.jobs.Start(h.s.opts.Engine.Home(), spec.scope, spec.run)
+	// The job is this session's: only it answers or cancels it (R-GAP-06).
+	j, err := h.s.jobs.StartFor(sessionOwner(r), h.s.opts.Engine.Home(), spec.scope, spec.run)
 	var busy jobs.ErrBusy
 	switch {
 	case errors.As(err, &busy):
@@ -850,7 +937,48 @@ func (h jobPages) handleJob(w http.ResponseWriter, r *http.Request) {
 	}
 	v, _ := j.View()
 	v.Summary = pageSummary(v)
-	h.s.render(w, http.StatusOK, "job", h.s.newView(r, "", brand.Line(v.Command), v))
+	page := jobPage{View: v, Mine: j.OwnedBy(sessionOwner(r))}
+	h.s.render(w, http.StatusOK, "job", h.s.newView(r, "", brand.Line(v.Command), page))
+}
+
+// jobPage is a job's page: the job, and whether the session viewing it is
+// the one that started it. Only that session is offered Answer and Cancel;
+// any other sees the job read-only (review R-GAP-06).
+type jobPage struct {
+	jobs.View
+	Mine bool
+}
+
+// sessionOwner is the owner id of the request's session, "" without one.
+func sessionOwner(r *http.Request) string {
+	if sess := sessionFrom(r.Context()); sess != nil {
+		return sess.owner
+	}
+	return ""
+}
+
+// ownedJob is the job a POST names, when the session posting it started it
+// and has given the PIN within the step-up window, as every other write
+// needs; otherwise it renders the refusal and returns nil.
+func (h jobPages) ownedJob(w http.ResponseWriter, r *http.Request) *jobs.Job {
+	j := h.job(w, r)
+	if j == nil {
+		return nil
+	}
+	if !j.OwnedBy(sessionOwner(r)) {
+		h.s.renderError(w, r, http.StatusForbidden, "Not your job",
+			"This job was started from another sign-in: another browser, or this one before it signed in again. "+
+				"Only the sign-in that started a job can answer or cancel it; here it can only be watched.")
+		return nil
+	}
+	if err := r.ParseForm(); err != nil {
+		h.s.renderError(w, r, http.StatusBadRequest, "Unreadable form", err.Error())
+		return nil
+	}
+	if !ownerGate(h).stepUp(w, r) {
+		return nil
+	}
+	return j
 }
 
 // pageSummary is the summary a job's page draws: the job's own, or, before
@@ -949,7 +1077,7 @@ func writeEvent(w io.Writer, event, data string) {
 }
 
 func (h jobPages) handleJobAnswer(w http.ResponseWriter, r *http.Request) {
-	j := h.job(w, r)
+	j := h.ownedJob(w, r)
 	if j == nil {
 		return
 	}
@@ -962,7 +1090,7 @@ func (h jobPages) handleJobAnswer(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h jobPages) handleJobCancel(w http.ResponseWriter, r *http.Request) {
-	j := h.job(w, r)
+	j := h.ownedJob(w, r)
 	if j == nil {
 		return
 	}
@@ -1005,7 +1133,8 @@ func backupStep(skip bool) string {
 // for each key, every server it is used on is asked whether it answers and the
 // current key still logs in, and a target that takes keys by hand is named.
 // Nothing changes, so it takes no backup and no snapshot.
-func rotateCheckSpec(names, args []string, subjects []history.Subject, h home, force bool) jobSpec {
+func rotateCheckSpec(names, args []string, subjects []history.Subject, h home, o rotateOpts) jobSpec {
+	force := o.force
 	what := []string{
 		fmt.Sprintf("tests %d key(s), one at a time, and changes nothing", len(names)),
 		"for each server a key is used on: it answers, and the current key still logs in",
@@ -1020,21 +1149,28 @@ func rotateCheckSpec(names, args []string, subjects []history.Subject, h home, f
 			"passes when every key would be rotated or replaced",
 		}
 	}
+	if o.evict {
+		what = append(what, "the previous key in old/: where it still logs in, it would be evicted - taken off those hosts, then dropped - and each key says from how many")
+	} else {
+		what = append(what, "the previous key in old/ is kept: a key whose previous key still logs in somewhere would stop, and is marked failed")
+	}
 	return jobSpec{
 		scope: mutation.Scope{Command: "rotate", Args: args, Source: history.SourceWeb, Subjects: subjects},
 		what:  what,
-		run:   func(j *jobs.Job) error { return rotateCheckJob(j, h.p, names, force) },
+		run:   func(j *jobs.Job) error { return rotateCheckJob(j, h.p, names, o) },
 		items: names,
 		check: true,
 	}
 }
 
-func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string, force bool) (err error) {
+func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string, o rotateOpts) (err error) {
+	force := o.force
 	m, inv, err := loadState(p)
 	if err != nil {
 		return err
 	}
 	r := rotator.New(p, m, inv)
+	r.EvictOld = o.evict
 	j.Plan(names)
 	var failed []string
 	var reports []rotator.CheckReport
@@ -1144,14 +1280,22 @@ func forceStep(force bool) string {
 
 // replaceFailed is a forced rotation's fallback: each key the rotation could
 // not rotate is replaced on this computer instead. It returns the keys still
-// failed.
-func replaceFailed(j *jobs.Job, p paths.Paths, failed []string, force bool) []string {
-	if !force || len(failed) == 0 {
+// failed. A previous key that still logs in is evicted first when the review
+// chose to (Take the previous key off servers, on by default under Force),
+// and otherwise keeps its key from being replaced (audit A-BUG-01).
+func replaceFailed(j *jobs.Job, p paths.Paths, failed []string, o rotateOpts) []string {
+	if !o.force || len(failed) == 0 {
 		return failed
 	}
 	_, _ = fmt.Fprintf(j, "forced: replacing %d key(s) the rotation could not rotate, on this computer\n", len(failed))
-	// The page offers no --evict-old, so a predecessor that still logs in is
-	// never evicted from here (audit A-BUG-01).
-	_, still := reconciler.ReplaceLocally(p, failed, platform.EmitUseKeychain(), false, j)
+	_, still := reconciler.ReplaceLocally(p, failed, platform.EmitUseKeychain(), o.evict, j)
 	return still
+}
+
+// evictStep is what the evict policy adds to a rotation's steps, or "".
+func evictStep(evict bool) string {
+	if !evict {
+		return ""
+	}
+	return "evicts the previous key in old/: where it still logs in, it is taken off those servers first, then dropped; a server it cannot be taken off (by hand, or not answering) is named, to remove it there yourself"
 }

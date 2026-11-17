@@ -19,7 +19,9 @@ import (
 // inventory are read afresh, as a rotation before it may have saved them.
 // replaced is what was minted; failed what could not be, each said in out.
 // A key whose predecessor in old/ is still authorised somewhere is not
-// replaced unless evictOld, the rotation's --evict-old.
+// replaced unless evictOld (the rotation's evict policy: --evict-old, or
+// --force without --keep-old), which takes that predecessor off every host
+// still accepting it first, and names any it could not be taken off.
 func ReplaceLocally(p paths.Paths, names []string, emitUseKeychain, evictOld bool, out io.Writer) (replaced, failed []string) {
 	m, err := manifest.Load(p.Manifest())
 	if err != nil {
@@ -42,7 +44,12 @@ func ReplaceLocally(p paths.Paths, names []string, emitUseKeychain, evictOld boo
 		// The current key is about to take the one old/ slot. A key there that
 		// a host still accepts is kept unless told to evict it, as a rotation
 		// keeps it (audit A-BUG-01).
-		if !evictOld {
+		if evictOld {
+			// Evict: the previous key comes off every host that still
+			// accepts it before the slot takes the current key.
+			ev, err := EvictPredecessor(p, m, r.ks, ref)
+			sayEviction(out, n, ev, err)
+		} else {
 			live, err := PredecessorStillLogsIn(p, m, r.ks, ref)
 			if err != nil || len(live) > 0 {
 				failed = append(failed, n)
@@ -51,7 +58,7 @@ func ReplaceLocally(p paths.Paths, names []string, emitUseKeychain, evictOld boo
 					why = "cannot tell whether the previous key in old/ still logs in somewhere: " + err.Error()
 				}
 				_, _ = fmt.Fprintf(out, "FAIL  %s\n  FAIL  not replaced: %s, and replacing would evict it. "+
-					"Remove it there first (`authama checklist` lists them), or add --evict-old\n", n, why)
+					"Remove it there first (`authama checklist` lists them), or add --evict-old to take it off and drop it\n", n, why)
 				continue
 			}
 		}
@@ -64,4 +71,19 @@ func ReplaceLocally(p paths.Paths, names []string, emitUseKeychain, evictOld boo
 		_, _ = fmt.Fprintf(out, "ok    %s\n  next  replaced on this computer (the old key is in old/): deploy it next, from the key's page or `ssh deploy %s`\n", n, n)
 	}
 	return replaced, failed
+}
+
+// sayEviction is one key's eviction as ReplaceLocally's output shows it.
+func sayEviction(out io.Writer, key string, ev Eviction, err error) {
+	if err != nil {
+		_, _ = fmt.Fprintf(out, "warn  %s: cannot tell where the previous key in old/ still logs in (%v); it is dropped from old/ anyway\n", key, err)
+		return
+	}
+	if len(ev.Removed) > 0 {
+		_, _ = fmt.Fprintf(out, "evict %s: the previous key was taken off %s\n", key, strings.Join(ev.Removed, ", "))
+	}
+	if len(ev.Still) > 0 {
+		_, _ = fmt.Fprintf(out, "warn  %s: the previous key could not be taken off %s and still logs in there; remove it by hand (`authama checklist` lists them)\n",
+			key, strings.Join(ev.Still, ", "))
+	}
 }

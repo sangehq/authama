@@ -109,3 +109,42 @@ func TestImportWillNotReplaceAManifestUnasked(t *testing.T) {
 		t.Error("a refused import changed the manifest")
 	}
 }
+
+// Importing this machine's own config moves the blocks it imports out of it.
+// The preview does that in its copy, so it shows the edit, and the real
+// config is untouched until apply (review R-BUG-09).
+func TestImportPreviewShowsTheConfigEditAndMakesItOnlyOnApply(t *testing.T) {
+	p := home(t)
+	cfg := filepath.Join(p.SSHDir, "config")
+	original := "Host legacy\n    HostName legacy.example\n    User ops\n\nHost *.lab\n    User lab\n"
+	if err := os.WriteFile(cfg, []byte(original), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ch := SSHImport(p, cfg, true)
+	plan, err := Preview(p, ch)
+	if err != nil || plan.Err != "" {
+		t.Fatalf("preview: %v %s", err, plan.Err)
+	}
+	if b, _ := os.ReadFile(cfg); string(b) != original {
+		t.Fatalf("the preview edited the real config:\n%s", b)
+	}
+	var shown bool
+	for _, f := range plan.Files {
+		if f.Path != "~/.ssh/config" {
+			continue
+		}
+		for _, l := range f.Lines {
+			shown = shown || strings.Contains(l.Text, "Host legacy")
+		}
+	}
+	if !shown {
+		t.Errorf("the preview does not show Host legacy leaving ~/.ssh/config: %+v", plan.Files)
+	}
+	if _, _, err := Apply(p, ch, plan.Hash, 10, history.SourceWeb); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	b, _ := os.ReadFile(cfg)
+	if strings.Count(string(b), "Host legacy\n") != 1 || !strings.Contains(string(b), "Host *.lab") {
+		t.Errorf("after apply the config should define legacy once, in the managed block:\n%s", b)
+	}
+}

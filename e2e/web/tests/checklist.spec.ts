@@ -229,7 +229,17 @@ test('a rotation is reviewed on its own page, forced from its options, and dry-r
   await expect(page.getByRole('button', { name: /^Start: Rotate .*\(forced\)…$/ })).toHaveClass(/btn-danger/);
   await expect(page.locator('#m-job')).toContainText('until you deploy it');
   await expect(page.locator('#m-job').getByRole('button', { name: 'Yes, force it', includeHidden: true })).toHaveCount(1);
+  // Forced, the previous key is taken off servers by default; turning that
+  // off keeps it, and the command line says so either way.
+  const evict = page.getByLabel('Take the previous key off servers');
+  await expect(evict).toBeChecked();
+  await expect(page.locator('.command-card')).toContainText('--evict-old');
+  await expect(page.locator('#job-old-key')).toContainText('taken off servers');
+  await evict.uncheck();
+  await expect(page.locator('.command-card')).toContainText('--keep-old');
+  await expect(page.getByLabel('Take the previous key off servers')).not.toBeChecked();
   await page.getByLabel('Force: replace what cannot rotate in place').uncheck();
+  await expect(page.locator('.command-card')).not.toContainText('--keep-old');
   await expect(page.getByRole('heading', { level: 1 })).not.toHaveText(/forced/);
 
   // The dry run opens the job as a page too.

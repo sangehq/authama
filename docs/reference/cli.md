@@ -79,6 +79,7 @@ Every command also takes the global flag:
   - [`authama ssh bundle`](#authama-ssh-bundle) - Write an encrypted backup of keys + state (read back with restore)
   - [`authama ssh clean`](#authama-ssh-clean) - Remove stale known_hosts pins, stale records and write residue
   - [`authama ssh config`](#authama-ssh-config) - Render, check, or show the SSH config
+    - [`authama ssh config adopt`](#authama-ssh-config-adopt) - Move hand-written Host blocks that duplicate managed hosts out of ~/.ssh/config
     - [`authama ssh config check`](#authama-ssh-config-check) - Verify the config matches the manifest (read-only; exit non-zero on drift)
     - [`authama ssh config export`](#authama-ssh-config-export) - Write the config as one file for another tool (never touches ~/.ssh)
     - [`authama ssh config render`](#authama-ssh-config-render) - Render the config files from the manifest
@@ -1585,10 +1586,38 @@ authama ssh config
 
 Subcommands:
 
+- [`adopt`](#authama-ssh-config-adopt) - Move hand-written Host blocks that duplicate managed hosts out of ~/.ssh/config
 - [`check`](#authama-ssh-config-check) - Verify the config matches the manifest (read-only; exit non-zero on drift)
 - [`export`](#authama-ssh-config-export) - Write the config as one file for another tool (never touches ~/.ssh)
 - [`render`](#authama-ssh-config-render) - Render the config files from the manifest
 - [`show`](#authama-ssh-config-show) - Print the rendered config, or ssh -G for one alias
+
+## authama ssh config adopt
+
+Finds each hand-written Host block in ~/.ssh/config, outside authama's block, that
+defines a host the manifest also renders, and removes the ones whose every line the
+managed block already reproduces - so ssh reads one definition of each host and
+resolves it exactly as before. A block that sets anything the manifest does not
+(another key, a ProxyCommand, a different value) is kept and listed with that line.
+The config is snapshotted and copied to the state home first; --dry-run shows the diff.
+
+```
+authama ssh config adopt [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh config adopt --dry-run   # which duplicate Host blocks the manifest reproduces
+  authama ssh config adopt --yes
+```
+
+Flags:
+
+```
+  -n, --dry-run[=true|false]   show what would be removed, as a diff, without writing
+  -y, --yes[=true|false]       adopt without confirming (implied when there is no terminal)
+```
 
 ## authama ssh config check
 
@@ -2002,6 +2031,14 @@ Relative Includes resolve against the folder, as ssh resolves them against
 ~/.ssh/ is looked for in that copy, and its keys are adopted into the
 profile directories here (~/.ssh/profiles/, or the directory
 defaults.key_root names).
+
+Importing this machine's own config adopts each Host block it imports: the
+block leaves ~/.ssh/config (or the file under ~/.ssh it was in) and authama's
+block is rendered in its place, so ssh reads one definition of every host. The
+edited files are copied to <state>/.state/import-backup-<time>/ssh/ first. A
+block the manifest cannot reproduce (a ProxyCommand, a second IdentityFile, a
+Host line with a wildcard) stays, and its host is not imported; Match and
+wildcard blocks stay as they are. Another machine's copy is never edited.
 
 ```
 authama ssh import [PATH] [flags]
@@ -2942,8 +2979,12 @@ Flags:
 Zero-downtime staged key rotation.
 
 The key being replaced is archived to the profile's old/ dir, but only one
-predecessor is kept. Rotating again stops while that predecessor is still
-authorised on a host it was never removed from; --evict-old replaces it anyway.
+predecessor is kept: the previous key. Each run keeps it or evicts it. Kept (the
+default), rotating again stops while it is still authorised on a host it was
+never removed from. Evicted (--evict-old, and the default under --force), it is
+taken off every such host first, then dropped; a host it cannot be taken off
+(a target that takes keys by hand, one that does not answer) is named, to remove
+it there by hand. --keep-old keeps it under --force.
 An encrypted bundle is written first unless --no-key-backup is given.
 
 Name one key, several, whole profiles or host aliases, every key in a
@@ -2984,9 +3025,10 @@ Flags:
       --category string                 rotate every key in profiles of this category
       --check[=true|false]              test each key's rotation and change nothing: every server answers and the current key logs in, or the target takes it by hand
       --dry-run[=true|false]            list the keys that would rotate, and change nothing
-      --evict-old[=true|false]          replace the previous key in old/ even while a host it was never removed from still accepts it
+      --evict-old[=true|false]          evict the previous key in old/: take it off every host it was never removed from, then drop it (the default under --force)
       --failed[=true|false]             run again the keys the last rotation or dry run left (not rotated, or would fail)
       --force[=true|false]              factory-reset the keys chosen: replace on this computer (as ssh keygen --force) each key that cannot be rotated in place - never deployed, its host unreachable, pasted by hand, or used by no host - to deploy afterwards; with --check, say what that would do
+      --keep-old[=true|false]           keep the previous key in old/ under --force: a key whose previous key still logs in somewhere is then not replaced
       --no-key-backup[=true|false]      rotate without writing an encrypted backup first (the earlier predecessor is lost)
       --passphrase[=true|false]         protect the rotated-in key (prompts without echo)
   -y, --yes[=true|false]                skip the confirmation prompt

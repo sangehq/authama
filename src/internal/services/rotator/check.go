@@ -37,6 +37,12 @@ const (
 	KindRemoved       = "removed"
 	KindNoKey         = "no-key"
 	KindFailed        = "failed"
+	// KindOldLive is a key whose previous key in old/ still logs in
+	// somewhere, kept by the policy: the rotation would stop rather than
+	// drop it. KindEvict is the same key under the evict policy: it would be
+	// taken off those hosts first.
+	KindOldLive = "old-live"
+	KindEvict   = "evict-old"
 )
 
 // CheckReport is a dry run of one key's rotation.
@@ -46,6 +52,9 @@ type CheckReport struct {
 	// Problem is set when the key cannot be rotated at all (no key file);
 	// ProblemKind names it.
 	Problem, ProblemKind string
+	// Evict names the hosts the previous key in old/ would be taken off
+	// before it is dropped (the evict policy, Rotator.EvictOld).
+	Evict []string
 }
 
 // OK reports whether the rotation would go through without a failure.
@@ -109,7 +118,27 @@ func (r *Rotator) Check(selector string) (CheckReport, error) {
 		}
 		rep.Hosts = append(rep.Hosts, hc)
 	}
+	checkPredecessor(r, &rep, ref)
 	return rep, nil
+}
+
+// checkPredecessor is the dry run of the previous-key policy: where the key
+// in old/ still logs in, a rotation that keeps it would stop, and one that
+// evicts it would take it off those hosts first.
+func checkPredecessor(r *Rotator, rep *CheckReport, ref manifest.KeyRef) {
+	live, err := predecessorStillLogsIn(r.p, r.m, r.ks, ref)
+	switch {
+	case r.EvictOld:
+		rep.Evict = live
+	case rep.Problem != "":
+	case err != nil:
+		rep.Problem, rep.ProblemKind = "cannot tell whether the previous key in old/ still logs in somewhere: "+err.Error(), KindOldLive
+	case len(live) > 0:
+		rep.Problem = "the previous key in old/ still logs in on " + strings.Join(live, ", ") +
+			", and the rotation keeps it, so it would stop rather than drop it: take it off there first " +
+			"(`authama checklist` lists them), or rotate with --evict-old (--force evicts it unless --keep-old)"
+		rep.ProblemKind = KindOldLive
+	}
 }
 
 // Format is the dry run as lines: the key, then each host with what was found.
@@ -122,6 +151,9 @@ func (c CheckReport) Format() string {
 	fmt.Fprintf(&b, "%-5s %s\n", mark, c.Key)
 	if c.Problem != "" {
 		fmt.Fprintf(&b, "  %-5s %s\n", "FAIL", c.Problem)
+	}
+	if len(c.Evict) > 0 {
+		fmt.Fprintf(&b, "  %-5s would evict old from %d host(s): %s\n", "evict", len(c.Evict), strings.Join(c.Evict, ", "))
 	}
 	for _, h := range c.Hosts {
 		tag := "ok"

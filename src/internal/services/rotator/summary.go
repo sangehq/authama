@@ -143,6 +143,12 @@ func SummarizeCheck(reports []CheckReport, elapsed time.Duration) Summary {
 		if rep.Problem != "" {
 			k.Severity, k.Kind, k.Note = 2, rep.ProblemKind, rep.Problem
 		}
+		if len(rep.Evict) > 0 {
+			if k.Severity == 0 {
+				k.Kind = KindEvict
+			}
+			k.Note = joinNote(k.Note, evictNote(rep.Evict))
+		}
 		k.Via = strings.Join(vias, ", ")
 		k.Result = [...]string{ResultWouldRotate, ResultWouldPause, ResultWouldFail}[k.Severity]
 		s.Keys = append(s.Keys, k)
@@ -162,8 +168,14 @@ const noHostNote = "no host uses it, so there is nothing to rotate it on"
 // nothing to replace.
 func SummarizeForcedCheck(reports []CheckReport, elapsed time.Duration) Summary {
 	s := SummarizeCheck(reports, elapsed)
+	evicts := map[string][]string{}
+	for _, rep := range reports {
+		evicts[rep.Key] = rep.Evict
+	}
 	for i, k := range s.Keys {
-		if k.Severity == 0 || k.Kind == KindFailed {
+		// A previous key kept while it still logs in stops the forced
+		// replacement as it stops the rotation (--keep-old): still failed.
+		if k.Severity == 0 || k.Kind == KindFailed || k.Kind == KindOldLive {
 			continue
 		}
 		why := k.Note
@@ -175,8 +187,25 @@ func SummarizeForcedCheck(reports []CheckReport, elapsed time.Duration) Summary 
 		}
 		s.Keys[i].Result, s.Keys[i].Severity, s.Keys[i].Kind = ResultWouldReplace, 1, KindReplaced
 		s.Keys[i].Note = "forced: replaced on this computer instead (its old key moved to old/), to deploy next from the key's page - " + why
+		if ev := evicts[k.Ref]; len(ev) > 0 {
+			s.Keys[i].Note = joinNote(s.Keys[i].Note, evictNote(ev))
+		}
 	}
 	return s
+}
+
+// evictNote is a dry run's word on the previous key the run would evict.
+func evictNote(hosts []string) string {
+	return fmt.Sprintf("would evict old from %d host(s) (%s): the previous key in old/ is taken off there before it is dropped",
+		len(hosts), strings.Join(hosts, ", "))
+}
+
+// joinNote is two explanations as one note.
+func joinNote(a, b string) string {
+	if a == "" {
+		return b
+	}
+	return a + "; " + b
 }
 
 // RunResult is one key's outcome in a batch rotation.
@@ -199,6 +228,14 @@ func SummarizeRun(results []RunResult, replaced []string, elapsed time.Duration)
 		k := SummaryKey{Ref: res.Ref, Via: res.Via, Result: ResultRotated, Kind: KindLogsIn}
 		switch {
 		case res.Err == nil && res.Report != nil && res.Report.Committed:
+			if rep := res.Report; len(rep.StillTrusted) > 0 {
+				k.Kind = KindNotRemoved
+				k.Note = "the previous key was dropped from old/ but could not be taken off " + strings.Join(rep.StillTrusted, ", ") +
+					", where it still logs in: remove it there by hand (`authama checklist` lists them)"
+			} else if len(rep.Evicted) > 0 {
+				k.Kind = KindEvict
+				k.Note = "the previous key in old/ was taken off " + strings.Join(rep.Evicted, ", ") + ", then dropped"
+			}
 		case forced[res.Ref]:
 			k.Result, k.Severity, k.Kind = ResultReplaced, 1, KindReplaced
 			k.Note = "replaced on this computer, not deployed: the old key is in old/ and still the one its hosts trust; deploy the new key next from the key's page (paste it by hand where a target takes it that way), or roll it back"
@@ -243,12 +280,12 @@ var (
 		KindNeverDeployed: "never deployed", KindRemoved: "key removed there", KindNoKey: "not on disk",
 		KindFailed: "failed", KindReplaced: "deploy next", KindNotRemoved: "not removed there",
 		KindUnverified: "not verified", KindTrusted: "already trusted", KindNoHostKeys: "no host keys",
-		KindNoHost: "no host uses it"}
+		KindNoHost: "no host uses it", KindOldLive: "old key still trusted", KindEvict: "old key evicted"}
 	needs = map[string]string{KindUnreachable: "check network", KindNeverDeployed: "deploy first",
 		KindRemoved: "deploy again", KindManual: "paste by hand", KindNoKey: "reconcile first",
 		KindFailed: "see the note", KindReplaced: "deploy next", KindNotRemoved: "remove by hand",
 		KindUnverified: "check it logs in", KindNoHostKeys: "check the host",
-		KindNoHost: "add a host first"}
+		KindNoHost: "add a host first", KindOldLive: "remove the old key first"}
 	marks = [...]string{"✓", "!", "×"}
 )
 

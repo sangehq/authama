@@ -2,8 +2,10 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/sangehq/authama/src/internal/platform"
 	"github.com/sangehq/authama/src/internal/services/configsvc"
 	"github.com/sangehq/authama/src/internal/services/knownhosts"
+	"github.com/sangehq/authama/src/internal/util/log"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
@@ -126,6 +129,7 @@ func newConfigCmd() *cobra.Command {
 			if len(res.Written) == 0 && len(res.Pruned) == 0 {
 				_, _ = fmt.Fprintln(out, "config: already in sync")
 			}
+			printCollisions(out, res.Collisions)
 			return nil
 		},
 	}
@@ -152,6 +156,72 @@ func newConfigCmd() *cobra.Command {
 		},
 	})
 
+	cmd.AddCommand(newConfigAdoptCmd())
 	cmd.AddCommand(newConfigExportCmd())
+	return cmd
+}
+
+// printCollisions warns about hand-written Host blocks that define a managed
+// alias again, with the command that resolves them.
+func printCollisions(out io.Writer, cs []configsvc.Collision) {
+	for _, col := range cs {
+		_, _ = fmt.Fprintf(out, "warning: %s\n", col)
+	}
+	if len(cs) > 0 {
+		_, _ = fmt.Fprintln(out, "  -> "+configsvc.CollisionFix)
+	}
+}
+
+// newConfigAdoptCmd is `ssh config adopt`: take out of ~/.ssh/config the
+// hand-written Host blocks that define a managed host again and that the
+// managed block already reproduces. It brings a home onboarded before import
+// moved the blocks it imported (review R-BUG-09) in line, and is idempotent.
+func newConfigAdoptCmd() *cobra.Command {
+	var dryRun, yes bool
+	cmd := &cobra.Command{
+		Use:   "adopt",
+		Short: "Move hand-written Host blocks that duplicate managed hosts out of ~/.ssh/config",
+		Long: "Finds each hand-written Host block in ~/.ssh/config, outside authama's block, that\n" +
+			"defines a host the manifest also renders, and removes the ones whose every line the\n" +
+			"managed block already reproduces - so ssh reads one definition of each host and\n" +
+			"resolves it exactly as before. A block that sets anything the manifest does not\n" +
+			"(another key, a ProxyCommand, a different value) is kept and listed with that line.\n" +
+			"The config is snapshotted and copied to the state home first; --dry-run shows the diff.",
+		Args: cobra.NoArgs,
+		RunE: func(c *cobra.Command, _ []string) error {
+			p, _, svc, err := loadConfigService(c)
+			if err != nil {
+				return err
+			}
+			if !dryRun {
+				if err := confirmChange(c, "adopt removes, from "+filepath.Join(p.SSHDir, "config")+
+					", the hand-written Host blocks the manifest already renders the same way.", yes); err != nil {
+					return err
+				}
+				lockForMutation(p)
+				if p, _, svc, err = loadConfigService(c); err != nil {
+					return err
+				}
+				snapshotBeforeMutation(p)
+			}
+			backup := filepath.Join(p.StateDir(), "config-adopt-"+time.Now().Format("20060102-150405"))
+			res, err := svc.Adopt(dryRun, backup)
+			if err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintln(c.OutOrStdout(), res.Format())
+			if !dryRun && len(res.Moved) > 0 {
+				aliases := make([]string, 0, len(res.Moved))
+				for _, m := range res.Moved {
+					aliases = append(aliases, m.Alias)
+				}
+				log.Audit(p.AuditLog(), "config.adopt", log.Field{Key: "hosts", Value: strings.Join(aliases, ",")},
+					log.Field{Key: "backup", Value: res.Backup})
+			}
+			return nil
+		},
+	}
+	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "show what would be removed, as a diff, without writing")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "adopt without confirming (implied when there is no terminal)")
 	return cmd
 }

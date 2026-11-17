@@ -82,6 +82,10 @@ type Report struct {
 	// block overrides: ssh reads it first, so the manifest's values never
 	// apply. authama does not edit that content, so the user has to.
 	ShadowedHosts []string
+	// ConfigCollisions lists hand-written Host blocks outside the managed
+	// block that define a managed alias again: two definitions of one host.
+	// `authama ssh config adopt` moves the ones the manifest reproduces.
+	ConfigCollisions []string
 	// RawOptionOverlaps lists raw_options keys that duplicate a managed line.
 	// The rendered config already resolves the managed value; this is advice.
 	RawOptionOverlaps []string
@@ -167,7 +171,7 @@ func (r Report) OK() bool {
 		return false
 	}
 	if !r.Preflight.OK() || len(r.PermIssues) > 0 || !r.ConfigInSync || len(r.OnePassword) > 0 || len(r.StaleProxy) > 0 ||
-		len(r.ShadowedHosts) > 0 || len(r.NeededTools) > 0 || r.OwnerSeal != "" || r.ManifestError != "" {
+		len(r.ShadowedHosts) > 0 || len(r.ConfigCollisions) > 0 || len(r.NeededTools) > 0 || r.OwnerSeal != "" || r.ManifestError != "" {
 		return false
 	}
 	if !r.Dangling.OK() {
@@ -267,6 +271,14 @@ func (r Report) Format() string {
 			lines = append(lines, "  "+s)
 		}
 		lines = append(lines, "  -> "+configsvc.ShadowFix)
+	}
+	if len(r.ConfigCollisions) > 0 {
+		lines = append(lines, "FAIL a host is defined both by a hand-written block and by authama - ssh reads "+
+			"two definitions of it:")
+		for _, c := range r.ConfigCollisions {
+			lines = append(lines, "  "+c)
+		}
+		lines = append(lines, "  -> "+configsvc.CollisionFix)
 	}
 	if len(r.RawOptionOverlaps) > 0 {
 		lines = append(lines, "raw_options that duplicate a field authama manages:")
@@ -370,6 +382,8 @@ func (r Report) JSON() ([]byte, error) {
 		// Added 2026-11-14 (review R-BUG-03, R-GAP-07).
 		ManifestError *string  `json:"manifest_error"`
 		CrashResidue  []string `json:"crash_residue"`
+		// Added 2026-11-16 (review R-BUG-09).
+		ConfigCollisions []string `json:"config_collisions"`
 	}
 	nz := func(s []string) []string {
 		if s == nil {
@@ -399,6 +413,7 @@ func (r Report) JSON() ([]byte, error) {
 		DockerContexts:     dockerRows(r.DockerContexts),
 		ManifestError:      strOrNil(r.ManifestError),
 		CrashResidue:       nz(r.CrashResidue),
+		ConfigCollisions:   nz(r.ConfigCollisions),
 	})
 }
 
@@ -503,6 +518,9 @@ func (s *Service) Run(strict bool) Report {
 			rep.ConfigInSync = chk.BlockInSync()
 			for _, sh := range chk.Shadowed {
 				rep.ShadowedHosts = append(rep.ShadowedHosts, sh.String())
+			}
+			for _, c := range chk.Collisions {
+				rep.ConfigCollisions = append(rep.ConfigCollisions, c.String())
 			}
 		}
 		rep.RawOptionOverlaps = manifest.RawOptionOverlaps(s.m)

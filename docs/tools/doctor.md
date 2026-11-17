@@ -37,6 +37,7 @@ authama doctor --strict  # any warning fails the run (CI)
 | `perms` | every managed path whose mode is not what it should be |
 | alias collisions | the same Host alias in more than one profile, so ssh applies only the first (warning) |
 | shadowed hosts | a block above the managed block matches a managed alias, so the manifest's values do not apply (fails the verdict). A `Host` block, top-level options, `Match all`, and a `Match` made only of `host` and `originalhost` criteria (matched against the alias, as ssh does above the managed block) count; a `Match` with any other criterion is not evaluated. A command that changes the manifest prints the same finding as a warning |
+| config collisions | a hand-written `Host` block outside the managed block, above or below it, that names a managed alias: ssh then reads two definitions of one host (fails the verdict). `authama ssh config adopt --dry-run` shows which of those blocks the manifest already reproduces and `authama ssh config adopt` moves them out; one that differs is listed with the line, for you to resolve. `reconcile`, `config render` and every manifest edit print the same finding as a warning. `--json`: `config_collisions` |
 | raw-option overlaps | a `raw_options` key that duplicates a field authama already writes for that host (informational) |
 | dangling keys | declared-but-missing, half a pair, on disk but untracked, unwired |
 | duplicate keys | the same key material under two profiles |
@@ -99,7 +100,7 @@ Keys: `ok`, `home`, `ssh_dir`, `preflight_ok`, `providers_source`, `agent`,
 `dangling_keys`, `stranded_legacy_home`, `shadowed_hosts`, `raw_option_overlaps`, `needed_tools`, `clipboard` (`null` when a
 clipboard tool was found), and since 0.1.3 `unpinned_vm_hosts`, `stale_pins` and `vm` (the VM hosts, their
 state and the pending sync actions), and since 2026-11-14 `manifest_error` (`null` unless the manifest
-fails to load) and `crash_residue`.
+fails to load) and `crash_residue`, and since 2026-11-16 `config_collisions`.
 
 `tokens` is `{"ok": bool, "findings": [{"level", "target", "text"}]}`. Its `ok` is
 separate from the top-level `ok`, which stays the SSH verdict; the exit code

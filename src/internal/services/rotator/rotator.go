@@ -55,6 +55,11 @@ type RotateReport struct {
 	// Warnings are things the run could not do that did not stop it, such as
 	// keeping the retirement record; the summary prints each one.
 	Warnings []string `json:",omitempty"`
+	// Evicted are the hosts the previous key in old/ was taken off before
+	// this rotation dropped it (the evict policy); StillTrusted those it
+	// could not be taken off, where it still logs in until removed by hand.
+	Evicted      []string `json:",omitempty"`
+	StillTrusted []string `json:",omitempty"`
 }
 
 // OpRollback marks a report of a rollback.
@@ -93,6 +98,13 @@ func (r RotateReport) Format() string {
 	}
 	if r.Message != "" {
 		lines = append(lines, "  "+r.Message)
+	}
+	if len(r.Evicted) > 0 {
+		lines = append(lines, "  previous key evicted: taken off "+strings.Join(r.Evicted, ", ")+", then dropped from old/")
+	}
+	if len(r.StillTrusted) > 0 {
+		lines = append(lines, "  previous key dropped from old/, but it could not be taken off "+strings.Join(r.StillTrusted, ", ")+
+			" and still logs in there: remove it by hand (`authama checklist` lists them)")
 	}
 	for _, w := range r.Warnings {
 		lines = append(lines, "  WARNING: "+w)
@@ -134,8 +146,10 @@ type Rotator struct {
 	// unattended, when set, is where deploys write their ssh output, and
 	// means no prompt can be answered (see providers.Target.Unattended).
 	unattended io.Writer
-	// EvictOld lets a rotation replace the key in old/ even while a host it
-	// was never removed from still authorises it (rotate --evict-old).
+	// EvictOld is the previous-key policy: set, a rotation takes the key in
+	// old/ off every host it was never removed from, then drops it for the
+	// outgoing key (rotate --evict-old, and --force unless --keep-old);
+	// unset, it keeps it, and stops while a host still accepts it.
 	EvictOld bool
 }
 
@@ -241,7 +255,7 @@ func (r *Rotator) Rotate(selector string, allowUnverified bool, passphrase strin
 	if len(live) > 0 && !r.EvictOld {
 		report.Message = fmt.Sprintf("cannot rotate - the previous key in old/ is still authorised on %s "+
 			"(it was never removed there), and rotating again would replace it. Remove it there first "+
-			"(`authama checklist` lists them), or rotate with --evict-old to replace it anyway",
+			"(`authama checklist` lists them), or rotate with --evict-old to take it off and drop it",
 			strings.Join(live, ", "))
 		log.Audit(r.p.AuditLog(), "rotate.predecessor_live", log.Field{Key: "key", Value: keyName})
 		return report, nil
@@ -329,6 +343,16 @@ func (r *Rotator) Rotate(selector string, allowUnverified bool, passphrase strin
 	// renamed *over* the canonical path - which POSIX defines as atomic. A crash
 	// between any two steps leaves a complete, working key behind, and a failure
 	// puts back whatever had already moved.
+	//
+	// Evict first: the previous key in old/ comes off every host still
+	// accepting it, before the outgoing key takes its slot.
+	if r.EvictOld && len(live) > 0 {
+		ev, err := reconciler.EvictPredecessor(r.p, r.m, r.ks, keyRef)
+		if err != nil {
+			report.Warnings = append(report.Warnings, "the previous key in old/ could not be evicted cleanly: "+err.Error())
+		}
+		report.Evicted, report.StillTrusted = ev.Removed, ev.Still
+	}
 	oldDir := manifest.ArchiveDir(r.m, r.p.SSHDir, keyRef)
 	if err := fs.EnsureDir(oldDir, perms.DirMode); err != nil {
 		return RotateReport{}, fmt.Errorf("could not prepare the archive directory, so the rotation "+

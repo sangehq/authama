@@ -6,10 +6,10 @@ import (
 	"testing"
 )
 
-// Import says what it leaves in the user's config and what it does not take:
-// the hand-written blocks it copied stay where they are (ssh reads them first,
-// so doctor reports them shadowed until they go), and Match and wildcard Host
-// blocks were dropped without a word (review R-BUG-09).
+// Import says what it moves out of the user's config and what it does not
+// take: the hand-written block it imported leaves the config (ssh reads one
+// definition of the host), and Match and wildcard Host blocks, which used to
+// be dropped without a word, are named and stay (review R-BUG-09).
 func TestImportSaysWhatItLeavesAndWhatItSkips(t *testing.T) {
 	im, _, cfgPath := setupImport(t, `Host *
     ServerAliveInterval 30
@@ -28,8 +28,11 @@ Host *.internal
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Contains(res.LeftInConfig, "legacy") {
-		t.Errorf("LeftInConfig = %v, want legacy", res.LeftInConfig)
+	if !slices.Contains(res.Moved, "legacy") {
+		t.Errorf("Moved = %v, want legacy", res.Moved)
+	}
+	if len(res.LeftInConfig) != 0 {
+		t.Errorf("LeftInConfig = %v, want nothing left defined twice", res.LeftInConfig)
 	}
 	for _, want := range []string{"Match host *.corp", "Host *.internal"} {
 		if !slices.Contains(res.NotImported, want) {
@@ -37,7 +40,7 @@ Host *.internal
 		}
 	}
 	out := res.Format()
-	for _, want := range []string{"legacy", "Match host *.corp", "Host *.internal", "doctor"} {
+	for _, want := range []string{"would move", "legacy", "Match host *.corp", "Host *.internal"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("the summary does not mention %q:\n%s", want, out)
 		}

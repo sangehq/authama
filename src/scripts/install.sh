@@ -151,6 +151,32 @@ fetch() {
 fetch "$BINARY" || err "${VERSION} has no ${BINARY}_${os}_${arch} (releases before 0.1.0 shipped as ${LEGACY})."
 installed="$BINARY"
 
+# The checksum proves the download is the file the release lists; it does not
+# prove who built it, because checksums.txt comes from the same place. Each
+# release binary carries a build-provenance attestation signed by the shared
+# release workflow, and `gh attestation verify` checks it (audit A-SEC-14).
+# With gh installed and signed in, a binary whose attestation does not verify
+# is not installed. Without gh the install goes on and says what was not
+# checked; AUTHAMA_INSTALL_REQUIRE_ATTESTATION=1 makes the check required. A
+# local AUTHAMA_RELEASE_BASE has no attestation, so it is checked only when
+# required.
+SIGNER="simtabi/.github/.github/workflows/go-release.yml"
+attest_cmd="gh attestation verify ${BINARY}_${os}_${arch} --repo ${OWNER}/${REPO} --signer-workflow ${SIGNER}"
+require_attest="${AUTHAMA_INSTALL_REQUIRE_ATTESTATION:-0}"
+if [ -n "$RELEASE_BASE" ] && [ "$require_attest" != 1 ]; then
+  :
+elif command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+  info "Verifying the build provenance with gh ..."
+  ( cd "$workdir" && gh attestation verify "${BINARY}_${os}_${arch}" --repo "${OWNER}/${REPO}" --signer-workflow "$SIGNER" >/dev/null ) ||
+    err "the build-provenance attestation of ${BINARY}_${os}_${arch} did not verify; nothing was installed."
+  info "Build provenance verified: built by ${SIGNER} from ${OWNER}/${REPO}."
+elif [ "$require_attest" = 1 ]; then
+  err "AUTHAMA_INSTALL_REQUIRE_ATTESTATION=1, but gh is not installed or not signed in, so the build provenance cannot be checked; nothing was installed."
+else
+  info "note: checked the checksum only. To check who built it, install gh (https://cli.github.com), sign in, and run:"
+  info "  ${attest_cmd}"
+fi
+
 sudo=""
 if [ ! -d "$INSTALL_DIR" ]; then
   mkdir -p "$INSTALL_DIR" 2>/dev/null || { sudo="sudo"; $sudo mkdir -p "$INSTALL_DIR"; }

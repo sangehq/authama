@@ -17,7 +17,7 @@ import (
 )
 
 func newRotateCmd() *cobra.Command {
-	var allowUnverified, passphrase, yes, noKeyBackup, all, dryRun, check, force, evictOld bool
+	var allowUnverified, passphrase, yes, noKeyBackup, all, dryRun, check, force, evictOld, keepOld bool
 	var category string
 	var failed bool
 	cmd := &cobra.Command{
@@ -28,8 +28,12 @@ func newRotateCmd() *cobra.Command {
 		Short:   "Zero-downtime staged key rotation",
 		Long: "Zero-downtime staged key rotation.\n\n" +
 			"The key being replaced is archived to the profile's old/ dir, but only one\n" +
-			"predecessor is kept. Rotating again stops while that predecessor is still\n" +
-			"authorised on a host it was never removed from; --evict-old replaces it anyway.\n" +
+			"predecessor is kept: the previous key. Each run keeps it or evicts it. Kept (the\n" +
+			"default), rotating again stops while it is still authorised on a host it was\n" +
+			"never removed from. Evicted (--evict-old, and the default under --force), it is\n" +
+			"taken off every such host first, then dropped; a host it cannot be taken off\n" +
+			"(a target that takes keys by hand, one that does not answer) is named, to remove\n" +
+			"it there by hand. --keep-old keeps it under --force.\n" +
 			"An encrypted bundle is written first unless --no-key-backup is given.\n\n" +
 			"Name one key, several, whole profiles or host aliases, every key in a\n" +
 			"category, or --all. Each key rotates on its own: one that fails is left\n" +
@@ -42,6 +46,13 @@ func newRotateCmd() *cobra.Command {
 			"listed under Needs you to deploy next. The run passes when every key was\n" +
 			"rotated or replaced. With --check it says what the forced run would do.",
 		RunE: func(c *cobra.Command, args []string) error {
+			// The previous-key policy, settled once: evictOld from here on
+			// is what this run does with the key in old/.
+			evict, err := oldKeyPolicy(c, force, evictOld, keepOld)
+			if err != nil {
+				return err
+			}
+			evictOld = evict
 			if failed {
 				if len(args) > 0 || all || category != "" {
 					return fmt.Errorf("--failed runs the keys the last rotation left; name no keys, --all or --category with it")
@@ -77,7 +88,9 @@ func newRotateCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&force, "force", false,
 		"factory-reset the keys chosen: replace on this computer (as ssh keygen --force) each key that cannot be rotated in place - never deployed, its host unreachable, pasted by hand, or used by no host - to deploy afterwards; with --check, say what that would do")
 	cmd.Flags().BoolVar(&evictOld, "evict-old", false,
-		"replace the previous key in old/ even while a host it was never removed from still accepts it")
+		"evict the previous key in old/: take it off every host it was never removed from, then drop it (the default under --force)")
+	cmd.Flags().BoolVar(&keepOld, "keep-old", false,
+		"keep the previous key in old/ under --force: a key whose previous key still logs in somewhere is then not replaced")
 	cmd.Flags().BoolVar(&failed, "failed", false,
 		"run again the keys the last rotation or dry run left (not rotated, or would fail)")
 	cmd.Flags().BoolVar(&check, "check", false,
@@ -110,7 +123,7 @@ func rotateOne(c *cobra.Command, key string, allowUnverified, passphrase, yes, n
 		prompt = fmt.Sprintf("Rotate %s, with a forced replace of 1 key(s)? (if it cannot rotate in place it is replaced "+
 			"on this computer and must be deployed next; the current key moves to old/, replacing any earlier predecessor)", key)
 	}
-	if err := confirmOrAbort(c, prompt, yes); err != nil {
+	if err := confirmOrAbort(c, prompt+oldKeyNote(evictOld), yes); err != nil {
 		return err
 	}
 	p, err := resolvePaths(c)
@@ -229,7 +242,7 @@ func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphr
 		return nil
 	}
 	if check {
-		r := rotator.New(p, m, inv)
+		r := evicting(rotator.New(p, m, inv), evictOld)
 		var reports []rotator.CheckReport
 		began := time.Now()
 		for i, n := range names {
@@ -273,7 +286,7 @@ func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphr
 			"and must be deployed next; each current key moves to old/, replacing any earlier predecessor)",
 			len(names), strings.Join(names, ", "))
 	}
-	if err := confirmOrAbort(c, prompt, yes); err != nil {
+	if err := confirmOrAbort(c, prompt+oldKeyNote(evictOld), yes); err != nil {
 		return err
 	}
 	if err := p.RefuseOutsideSandbox("rotate"); err != nil {
@@ -394,8 +407,35 @@ func commandLine(c *cobra.Command) string {
 	return strings.Join(append(parts, c.Flags().Args()...), " ")
 }
 
-// evicting is r, allowed to replace a predecessor in old/ that still logs in
-// when evict is set (--evict-old).
+// oldKeyPolicy is what a run does with the previous key in old/: evict it
+// (true) or keep it. --evict-old as given wins; without it, a forced run (a
+// factory reset, which should leave only the new key) evicts and any other
+// keeps. --keep-old keeps it, and contradicts --evict-old.
+func oldKeyPolicy(c *cobra.Command, force, evictOld, keepOld bool) (bool, error) {
+	given := c.Flags().Changed("evict-old")
+	if keepOld {
+		if given && evictOld {
+			return false, fmt.Errorf("--keep-old and --evict-old contradict each other: choose one")
+		}
+		return false, nil
+	}
+	if given {
+		return evictOld, nil
+	}
+	return force, nil
+}
+
+// oldKeyNote is what the confirmation adds for the evict policy, "" when
+// the previous key is kept.
+func oldKeyNote(evict bool) string {
+	if !evict {
+		return ""
+	}
+	return " The previous key in old/ is evicted: taken off every host it was never removed from, then dropped."
+}
+
+// evicting is r with the previous-key policy set: evict, when set, takes the
+// key in old/ off the hosts still accepting it before dropping it.
 func evicting(r *rotator.Rotator, evict bool) *rotator.Rotator {
 	r.EvictOld = evict
 	return r

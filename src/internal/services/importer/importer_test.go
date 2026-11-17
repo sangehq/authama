@@ -560,7 +560,10 @@ func TestAQuotedIdentityFileIsFoundAndAdopted(t *testing.T) {
 // The same alias declared twice with IdentityFiles in two different profiles
 // used to import as two hosts - one per profile - which authama's own validation
 // rejects ("declared more than once"), so import reported success and every
-// later command failed. ssh honours the first block; so does import.
+// later command failed. ssh reads both IdentityFile lines (it tries every key
+// it is given), and a manifest host holds one key, so the host cannot be moved
+// into the manifest without changing what ssh offers: it stays the user's, is
+// not imported, and the manifest is still valid (review R-BUG-09).
 func TestTheSameAliasInTwoProfilesImportsOnce(t *testing.T) {
 	im, p, cfgPath := setupImport(t, `Host gh
     HostName github.com
@@ -569,19 +572,20 @@ Host gh
     HostName github.example.invalid
     IdentityFile ~/.ssh/profiles/beta/beta_gh-ed25519
 `)
+	before, _ := os.ReadFile(cfgPath)
 	res, err := im.Run(cfgPath, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Profiles["alpha"] != 1 || res.Profiles["beta"] != 0 {
-		t.Errorf("Profiles = %+v, want gh once, under alpha", res.Profiles)
-	}
 	m := mustLoad(t, p) // Load validates: a duplicate alias fails here
-	if _, ok := m.Profiles["beta"]; ok {
-		t.Error("the second block's profile was imported too")
+	if len(m.Profiles) != 0 || res.Profiles["alpha"]+res.Profiles["beta"] != 0 {
+		t.Errorf("Profiles = %+v, want gh left the user's", res.Profiles)
 	}
-	if hosts := m.Profiles["alpha"].Hosts; len(hosts) != 1 || hosts[0].Hostname != "github.com" {
-		t.Errorf("alpha hosts = %+v, want the first block", hosts)
+	if len(res.Kept) != 1 || !strings.Contains(res.Kept[0], "gh") || !strings.Contains(strings.ToLower(res.Kept[0]), "identityfile") {
+		t.Errorf("Kept = %v, want gh and the IdentityFile it would lose", res.Kept)
+	}
+	if after, _ := os.ReadFile(cfgPath); string(after) != string(before) {
+		t.Errorf("a host left the user's had its config edited:\n%s", after)
 	}
 }
 

@@ -117,7 +117,8 @@ func TestShadowMatchingFollowsSSHPatternRules(t *testing.T) {
 }
 
 // Content below the managed block is read after it, so the managed values win
-// there and nothing is shadowed.
+// there and nothing is shadowed. A Host block there for a managed alias is
+// still a second definition of it, so it is reported as a collision.
 func TestForeignBlocksBelowTheManagedBlockShadowNothing(t *testing.T) {
 	ssh := t.TempDir()
 	svc := New(ssh, load(t, shadowManifest), false)
@@ -130,7 +131,10 @@ func TestForeignBlocksBelowTheManagedBlockShadowNothing(t *testing.T) {
 		t.Fatal(err)
 	}
 	res := mustCheck(t, svc)
-	if len(res.Shadowed) != 0 || !res.InSync() {
-		t.Errorf("trailer content cannot shadow: shadowed=%+v in sync=%v", res.Shadowed, res.InSync())
+	if len(res.Shadowed) != 0 || !res.BlockInSync() {
+		t.Errorf("trailer content cannot shadow: shadowed=%+v block in sync=%v", res.Shadowed, res.BlockInSync())
+	}
+	if len(res.Collisions) != 1 || res.Collisions[0].Alias != "srv" || res.InSync() {
+		t.Errorf("a second Host srv below the block is not reported as a collision: %+v", res.Collisions)
 	}
 }

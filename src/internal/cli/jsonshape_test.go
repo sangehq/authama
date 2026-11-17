@@ -33,6 +33,9 @@ var doctorKeysDocker = []string{"docker_contexts"}
 // Added 2026-11-14 with the manifest check (review R-BUG-03), after every earlier key.
 var doctorKeysManifest = []string{"manifest_error", "crash_residue"}
 
+// Added 2026-11-16 with the config collision check (review R-BUG-09), after every earlier key.
+var doctorKeysCollisions = []string{"config_collisions"}
+
 func orderedKeys(t *testing.T, js string) []string {
 	t.Helper()
 	dec := json.NewDecoder(strings.NewReader(js))
@@ -70,6 +73,7 @@ func TestMachineReadableOutputKeepsTheV3Shape(t *testing.T) {
 	got := orderedKeys(t, js)
 	want := append(append(append(append(append([]string{}, doctorKeys3x...), doctorKeys013...), doctorKeys014...), doctorKeys015...), doctorKeysDocker...)
 	want = append(want, doctorKeysManifest...)
+	want = append(want, doctorKeysCollisions...)
 	want = append(want, "tokens")
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("doctor --json keys changed:\n got %v\nwant %v", got, want)

@@ -47,7 +47,11 @@ Host *
 ```
 
 To add your own static SSH directives, put them outside the managed block (above
-or below it) - they will be preserved. `~/.ssh/config` is also snapshotted before
+or below it) - they will be preserved. Do not define a managed alias there too: a
+second `Host` block for a host the manifest renders is a collision (ssh reads two
+definitions), which `doctor` fails and `authama ssh config adopt` resolves when the
+manifest already says the same thing. `authama ssh import` of this machine's config
+moves each block it imports into the manifest, so onboarding never leaves one. `~/.ssh/config` is also snapshotted before
 every mutating command, so a render is always reversible via `snapshots restore`.
 When `~/.ssh/config` is a link to a file kept elsewhere (a dotfiles repository), a
 restore writes the snapshot's text into the file the link points at and leaves the

@@ -38,11 +38,39 @@ the original had.
 > Nothing is regenerated. `import` never mints over an existing key, so the
 > identities your servers already trust keep working.
 
-`import` does not edit the config it read. Its summary names the hand-written `Host` blocks it
-copied, which stay where they are: ssh reads them before the managed block, so `authama doctor`
-reports them as shadowed until you remove them from that file. It also lists, as written, each
-`Match` block and each `Host` block of wildcards only (`Host *.internal`): authama manages plain
-`Host` blocks, so those are not imported, and they stay in your config and still apply.
+Importing this machine's own config **adopts** each plain `Host` block it imports: the block leaves
+`~/.ssh/config` (or the file under `~/.ssh` it was Included from) and authama's managed block is
+rendered in the place of the first one, in the same write. ssh reads one definition of every host,
+so `authama doctor` is clean after `reconcile`. Every file it edits is copied first to
+`<state>/.state/import-backup-<time>/ssh/`, and the run is snapshotted, so `authama ssh snapshots`
+can undo it. `--dry-run` says what it would move and writes nothing.
+
+| In your config | What import does |
+|---|---|
+| `Host web` whose every line the manifest reproduces | imported, block moved out |
+| `Host jump` with a `ProxyCommand`, a second `IdentityFile`, its own `UserKnownHostsFile`, or an `Include` | **not imported**, block left as it is, listed under "kept in your config" with the line |
+| `Host web *.lab` (a literal and a wildcard on one line) | not imported, left as it is |
+| `Match ...`, `Host *.internal` | left as they are, listed under "not imported"; they still apply |
+| a block in a file outside `~/.ssh` (e.g. `~/.orbstack/ssh/config`) | not imported; that tool owns it |
+
+The managed block goes where your first adopted host was, so what you wrote after your hosts (a
+`Host *` of defaults) is still read after them. For the options authama's own `Host *` sets
+(`ServerAliveInterval`, `AddKeysToAgent`, `IdentitiesOnly`, `HashKnownHosts`, ...), import copies
+your values into `defaults.global_options`, so they still apply. Importing another machine's copy
+edits nothing.
+
+### A home onboarded before import adopted
+
+An `import` from before this change left your blocks beside the managed ones, and `doctor` reports
+each as a config collision. Move the duplicates out:
+
+```sh
+authama ssh config adopt --dry-run   # which blocks the manifest already reproduces, as a diff
+authama ssh config adopt             # snapshot, back up, remove only those
+```
+
+A block that differs from the manifest is kept and listed with the line that differs: fix the
+manifest (`authama ssh host edit`) or the block, then run it again. A second run changes nothing.
 
 Review before reconciling — the derived profile names are a guess:
 
@@ -56,7 +84,8 @@ and the config home's `ssh/config`, and previews the import first. The preview l
 would copy in, without copying one. Another machine's copy is imported from the terminal.
 
 A second `import` replaces the manifest, so it is safe to re-run after editing
-the source config. It will not overwrite keys it adopted the first time.
+the source config. It will not overwrite keys it adopted the first time, and the hosts already in
+the managed block are read from it, so a re-run moves nothing.
 
 ---
 

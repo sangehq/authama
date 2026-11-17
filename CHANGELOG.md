@@ -6,6 +6,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-16
+
+The first release under `sangehq/authama`, tagged 2026-11-14 and re-tagged on 2026-11-16 (twice) with everything
+merged since (owner: "rebase to release all at v0.1.0"), and the module path `github.com/sangehq/authama/src`. The
+version numbers restart here (owner, 2026-11-14): the earlier v0.1.0, v0.1.4, v0.1.5 and v0.1.6 tags and
+the v0.1.6 GitHub release were withdrawn, and their notes stay below as history. Go's module proxy still
+holds the old `src/v0.1.0` and `src/v0.1.6`, whose `go.mod` names `github.com/simtabi/authama/src`, so
+nothing can import them; binaries ship on the GitHub release only.
+
 ### Fixed
 
 - The web dry run dropped Force: **Dry run: test every key** with Force on now tests the forced rotation, is titled *(forced)*, and its command line carries every flag chosen (`--force`, `--allow-unverified`, `--no-key-backup`).
@@ -15,43 +24,308 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   beside them started at different places. Tiles are now a fixed 2.25rem square with a larger icon,
   with more room around each entry; an e2e test checks every menu.
 
+- **`history` records a command's events in the default layout.** With config in `~/.config/authama` and
+  state in `~/.local/state/authama`, the sink compared the config home with a home derived from the audit
+  log's path, so no locked operation got its events: `history show` listed none, `--key`/`--host` missed
+  operations named only by their events, and `history` warned of a gap every time. It now compares the
+  audit logs, and an event raised before the lock opens the operation against the command's real homes,
+  so its manifest hashes are read (audit B-01).
+- **`token audit` reads `.gitignore` as git does.** A rule that merely contained a secret file's name
+  counted as covering it, so `!.npmrc` (which forces the file into git), `.npmrc.example` and
+  `auth.json.dist` passed. Coverage now follows the last matching rule, with `!` un-ignoring, a trailing
+  `/` matching only directories, and globs such as `.npm*` counting (B-02).
+- **`ssh load` fails when `ssh-add` added nothing.** With no agent running, or no `ssh-add`, it printed
+  `loaded 0 key(s)` and exited 0. It now exits non-zero naming the keys `ssh-add` did not add (a partial
+  load warns and exits 0), and names each key whose private file is not on disk instead of skipping it
+  silently (B-03).
+- **A rotation says when it could not keep the retirement record.** A `retired.json` that could not be
+  read or written was ignored, hiding where the old key can still log in; the rotation summary, on the
+  terminal and in the web job, now ends with a warning naming the file (B-05).
+- **Web rotate jobs fail when the retry list cannot be saved**, as the CLI's do. The bulk rotate and
+  rotate-check jobs dropped the error, leaving "retry the failed ones" on a stale list (B-06).
+- **`services/owner` tests compile on FreeBSD, OpenBSD and NetBSD.** A test named a constant declared
+  only for darwin, linux and windows (B-07).
+- **`docs/tools/expiry.md` lists the notification backends go-notifykit accepts**: `helper`, `osascript`,
+  `notify-send`, `powershell` and `none`. It listed `terminal-notifier`, which makes every banner fail (B-08).
+- **`token audit` help and `migration.md` say it checks every tool**, not "all five"; it checks 14 (B-09).
+- **A wrong `--confirm` word is explained.** `reset --confirm nope` and `history reset --confirm nope`
+  exited 1 with no message; they now say which word is wanted and that nothing changed (B-10).
+
+- **A refused command no longer evicts a restore point.** Snapshots were pruned to
+  `backup.snapshot_retain` when taken, before the command checked its input, so at the limit each
+  refused command pushed the oldest real snapshot out even though its own was then discarded. The
+  prune now waits until the command's snapshot is kept; while a command runs there can be one more
+  than the limit (A-BUG-04).
+- **A snapshot restore keeps a symlinked `~/.ssh/config` a link** and writes the restored text into
+  the file it points at, as a render does; it used to replace the link with a plain file, leaving the
+  dotfiles copy stale. Only `config` is written through, and only when its link leads to a file that
+  exists; any other link in `~/.ssh` is still replaced (A-BUG-05).
+- **`ssh rotate --force` keeps a predecessor that still logs in.** A rotation stops rather than evict
+  the key in `old/` while a host it was never removed from still accepts it, but `--force` then
+  replaced the key locally, which evicted it all the same. The local replacement now refuses the same
+  way, naming the hosts, unless `--evict-old` is given; the web UI never evicts it (A-BUG-01).
+- **One failed restart no longer ends the web UI's auto-restart.** The failure is printed, the same
+  build is not tried again, and the next build is restarted from (review R-BUG-16).
+- **A failed `migrate --force` puts the home back.** The current home was moved aside and, when the
+  copy failed, left at its `.replaced-` name (review R-BUG-14).
+
+- **Rotation, rollback and restore summaries say what happened.** A rotation that did not happen said
+  "rotation ABORTED" (above "replaced" for a forced one), and a failed rollback said "rotation ABORTED"
+  too. Summaries now read "rotated", "rotation not done", "rolled back" or "rollback not done". A
+  restore names each key by its path, so a key and its `old/` predecessor are told apart.
+- **`settings show --json` prints JSON with no `authama.json`.** It printed a sentence; it now prints
+  `{}`, the settings that file sets.
+- **The manifest schema accepts `reserved_keys`.** `manifest.schema.json` forbids keys it does not
+  list, and it did not list `reserved_keys` (written by `ssh key reserve` since 0.1.4), so an editor or
+  CI step validating against it refused a manifest authama itself wrote. The schema guard now checks
+  the top level and the reserved-key entries too, and a new one checks `inventory.schema.json`.
+- **`doctor` reports what an interrupted run left behind.** A reconcile killed mid-run could leave a
+  `.mint-*` directory holding a private key, and doctor said nothing until the next reconcile swept
+  it. It is now a warning naming each path and `authama ssh clean` (`--strict` fails), and
+  `crash_residue` in `--json`.
+- **`settings validate` checks what `.env` sets, and migration renames old names.** It said "ok" over
+  a `.env` whose settings were never read: old `SSHMGR_`/`SSH_MANAGER_` names, a misspelt `AUTHAMA_`
+  name, and values like `AUTHAMA_SNAPSHOT_RETAIN=abc` or a boolean `maybe` (read as false). It now
+  reports each, naming the `AUTHAMA_` name to use for an old one, and migrating an old home renames
+  them in the copied `.env` so its settings keep applying.
+- **A stale config that could not be removed is reported.** Rendering the config listed an old
+  per-profile config under "removed stale" even when removing it failed; it now stops with the error.
+- **A `Match host` block that covers a managed host is reported.** The shadow check skipped every
+  `Match` block, so a `Match host *.corp` above the managed block quietly gave `api.corp` another
+  user. `Match` blocks made only of `host` and `originalhost` criteria are now evaluated (against
+  the alias, as ssh does there), and `host add`, like any command that changes the manifest, prints a
+  shadow it finds as a warning instead of leaving it to `doctor`.
+- **`ssh import` says what it leaves behind.** After import and reconcile, `doctor` failed at once on
+  the hand-written blocks import had copied (they stay in your config, above the managed block), and
+  `Match` and wildcard `Host` blocks were dropped without a word. The summary now names the blocks
+  left in your config and why doctor will report them, and lists each block it did not import.
+- **A key your own Host block uses is no longer called loose.** The key audit only looked at the
+  manifest, so a key named by a hand-written block in `~/.ssh/config`, or a file it Includes, was
+  reported as "a key in ~/.ssh that no Host block uses", and `doctor --strict` failed on a home
+  that was fine. It now reads those IdentityFile lines too.
+- **A corrupt `revoked.json` or `retired.json` is reported, not read as empty.** The key checklist
+  read an unreadable record as "nothing recorded", so a revoked key was listed as in use with nothing
+  left to do; the rotation's check for a predecessor that still logs in did the same and would evict
+  it. Both now stop with the error.
+- **`doctor` fails on a manifest it cannot load.** It loaded `manifest.json` with the error dropped,
+  skipped the drift checks and said "clean" (`ok: true`) over a file every other command refuses. A
+  manifest that exists and does not load is now a failing finding, in the report and as
+  `manifest_error` in `--json`, naming the way back (fix it, or restore a snapshot).
+- **A refused command no longer uses up a snapshot.** Every command that changes the home snapshots
+  `~/.ssh` first, before it checks its input, so each typo or name already taken kept a snapshot, and
+  with ten kept, a few typos pushed every real restore point out. A command that fails or is declined
+  having changed nothing (the manifest, the inventory and `~/.ssh` as they were) now gives its
+  snapshot back; one that changed something keeps it.
+- **Rotating again keeps a predecessor that still logs in.** Only one previous key is kept in `old/`,
+  so a second rotation evicted the first one's key even while a host it was never removed from still
+  accepted it. The rotation now stops and names those hosts; `rotate --evict-old` replaces it
+  anyway.
+- **A `~/.ssh/config` linked from a dotfiles repository stays a link.** Rendering the config renamed
+  a new file over the link, so the link became a regular file and the linked copy went stale. The
+  render now writes the link's target, atomically, and refuses a link whose target is missing rather
+  than replace it.
+- **Undoing a refused batch rewrites the manifest atomically.** When a batch that created a profile
+  failed, the manifest was put back with an in-place write, which an interruption could leave
+  half-written. It is now written by rename, like every other manifest write, and a guard test fails
+  on any new in-place truncating write outside a short, reasoned list.
+- **A snapshot that fails part-way leaves nothing behind.** It was written in place, so a failure
+  left a broken archive that was listed as a restore point and counted against retention. It is now
+  written to a temporary name, synced, and renamed into place.
+- **Webhook changes made during a delivery stick, and an event is sent once.** A delivery read
+  `webhooks.json`, sent for up to minutes, then wrote back what it had read, so a webhook removed in
+  the meantime came back with its secret and a disable was undone; the server's loop and
+  `authama webhook deliver` running together sent the same event twice. Deliveries now take turns,
+  and each writes back only its own progress, into the file as it is then.
+- **The web UI restarts after its binary moved.** A server started from a checkout that was then
+  moved (macOS keeps reporting the old path) ran a missing file on restart, after already telling the
+  page it was restarting, so the page waited for good; the watcher never restarted from a removed
+  binary either. A restart now runs the `authama` on `PATH` when its own path is gone, the watcher
+  follows that one, and with none on `PATH` the restart is refused with the reason, which the page
+  shows.
+- **`make build` never leaves the binary missing.** It emptied `build/` first, so with
+  `~/.local/bin/authama` linked to the build, `authama` was off `PATH` for the whole compile. It now
+  compiles to `authama.tmp` beside the binary and renames it into place (the Touch ID helper too), and
+  no longer runs `clean`; `make clean` still empties `build/` when asked.
+- **A host without a `user` can be deployed to.** authama reached it as `@host`, which ssh refuses
+  with its usage text, so every deploy, check and removal on such a host failed. It now connects to
+  the hostname alone, and ssh takes the user from its config or the local account.
+
 ### Added
 
 - `ssh rotate --check --force` previews the forced run: each key reads `would rotate` or `would replace here` with why, the summary counts them, and the dry run passes when every key would be rotated or replaced. Without `--force`, `--check` is unchanged.
 - The web job page shows every option a job was started with as badges under its title (Dry run (check), Force: replace what cannot rotate in place, Go on when a login cannot be verified, Skip the encrypted backup, and the scope), using the review's own labels; deleting keys shows its options the same way.
+- `authama ssh rotate --keep-old`.
+- The web rotation review has a **Take the previous key off servers** switch, with or without Force
+  (on by default under Force); the command line carries `--evict-old` or `--keep-old`, the review
+  says what happens to the previous key, and the job page shows it as a badge.
+- `authama ssh config adopt [--dry-run] [-y]`: removes from `~/.ssh/config` the hand-written
+  `Host` blocks that duplicate a managed host and that the managed block already reproduces, after
+  a snapshot and a copy to `<state>/.state/config-adopt-<time>/config`. Blocks that differ are
+  listed, not removed; a second run is a no-op. The migration for homes onboarded before this
+  release.
+
+- **authama records when each thing happens to a key.** Minting, adopting, importing, deploying,
+  rotating, rolling back and revoking a key now note the time, to the second, in `key-events.json`
+  beside the inventory, written by the same save as the inventory record through a journal
+  (`key-events.json.pending`, which names the inventory it goes with), so a save cut off between the
+  two files still leaves them agreeing; a minted key also notes
+  where it came from (`generated`, `adopted` or `imported`) and a rotated one the key it replaced.
+  The inventory's own format is unchanged, so an older authama still reads it, and a key recorded
+  before this release falls back to the days the inventory already holds (R-FEAT-01).
+- **Two settings say what counts as a new key.** `keys.new_window_days` (`AUTHAMA_KEYS_NEW_WINDOW_DAYS`,
+  default 7, `0` turns the label off) is how long a key stays new, and `keys.new_events`
+  (`AUTHAMA_KEYS_NEW_EVENTS`, default `created,added,rotated,deployed`, `restored` also allowed) which
+  events make it new. `settings set` and `settings validate` refuse an unknown event or a negative
+  window, and the schema checks both.
+- **`keys.new_until` and `keys.age_pills`.** `keys.new_until` (`AUTHAMA_KEYS_NEW_UNTIL`) is `window`,
+  the default (a key is new until the window ends or `ssh key ack`), or `acknowledged` (new until
+  `ssh key ack`, however long). `keys.age_pills` (`AUTHAMA_KEYS_AGE_PILLS`, default `0.5,1.0`) sets
+  when a key turns `ageing` and `old`, as fractions of its `rotate_after_days`; a key past the bad
+  fraction whose expiry has not caught up is now `old` rather than `ageing`. `settings set` and
+  `settings validate` refuse anything else.
+- **`ssh key list` shows how new and how old each key is.** Two columns, `AGE` (since it was
+  created, added or rotated in) and `STATUS` (`new`, `current`, `ageing`, `old`, `due soon`, `overdue`,
+  `revoked`, `retired`), as words. `--new` keeps the keys labelled new, `--since <duration|date>`
+  (`36h`, `7d`, `2026-11-01`) the keys something happened to since then, and `--json` prints each key
+  with its recency: every event with its time, age and constraint, `is_new`, `new_because` and the
+  pill.
+- **The read API and MCP give each key's recency.** `/api/v1/keys`, `/api/v1/keys/{profile}/{key}` and
+  the MCP tools `list_keys` and `get_key` carry the `recency` object `ssh key list --json` prints:
+  each event with its time, age and constraint, `is_new`, `new_because` and the pill, under the same
+  settings.
+- **`ssh key ack` clears the new label** on the keys it names (or `--category`, `--all`) until their
+  next event, and records when it did in `key-events.json` and the history.
+- **The web UI shows key recency as pills.** The Keys list gains a Status column (the pill and the
+  key's age), and a key's page its status and a Lifecycle card listing every event with its age, a
+  machine-readable `<time>` and its constraint. A host's page shows its key's pill, and the overview's
+  Key health card counts the keys labelled new and lists each with its pill; every page draws the one
+  pill partial. Each pill carries its word, not colour alone, in the
+  existing badge colours. *Mark as seen* on a new key is `key ack`, previewed and confirmed like any
+  change.
+
+- **`make link`.** Links `~/.local/bin/authama` (and `authama-touchid` on macOS) to the checkout's
+  `build/<your-os>/` binary, so `PATH`, and a running `authama serve`, follow every build. It says
+  whether the directory is on `PATH`, as `make install` does; `make uninstall` removes the link.
+  Windows uses `make install`.
 
 ### Changed
 
 - `ssh rotate --force` is now a factory reset of the keys chosen: every key ends rotated or replaced. A key that cannot rotate in place (never deployed, host unreachable, a target that takes the key by hand, or used by no host) is replaced on this computer, and listed under **Needs you** to deploy next. A forced run no longer stops to ask for a paste, includes keys no host uses instead of skipping them, and exits 0 when every key was rotated or replaced.
 - The forced rotation's confirmation says it is a forced replace, and of how many keys.
+- Each rotation now has an explicit policy for the previous key in `old/`: keep it (the default) or
+  evict it, which takes it off every host it was never removed from and then drops it, naming any
+  host it could not be taken off. `--force` evicts by default, so a factory reset leaves only the new
+  key; `--keep-old` keeps it. `--evict-old` still works without `--force`, and now takes the key off
+  the servers instead of only overwriting `old/`.
+- `rotate --check` previews the policy: a key whose previous key still logs in would fail when it is
+  kept, and reads "would evict old from N host(s)" when it is evicted. A forced dry run no longer
+  passes a key the forced run would refuse.
+- `authama ssh import` of this machine's own config now adopts each plain `Host` block it imports:
+  the block leaves `~/.ssh/config` (or the file under `~/.ssh` it was Included from) and the
+  managed block is rendered in its place in the same write, so the documented onboarding
+  (`import -y`, `reconcile`) leaves one definition of every host and `doctor` clean. Edited files
+  are copied to `<state>/.state/import-backup-<time>/ssh/` first; `--dry-run` writes nothing.
+  A block the manifest cannot reproduce (a `ProxyCommand`, a second `IdentityFile`, its own
+  `UserKnownHostsFile`, a wildcard on the `Host` line, an `Include`, a file outside `~/.ssh`) is
+  left as it is and its host is not imported; the summary says why. The user's `Host *` values for
+  the options authama's `Host *` also sets are carried into `defaults.global_options`. Importing
+  another machine's copy edits nothing, as before (R-BUG-09).
+- `doctor`, `ssh config check`: a hand-written `Host` block outside the managed block that names a
+  managed alias is a config collision and fails the verdict; `doctor --json` gains
+  `config_collisions`. `reconcile`, `config render` and manifest edits print it as a warning.
 
-## [0.1.0] - 2026-11-16
+- **Webhook and feed events name `products/sangehq/authama` in `source`**, not
+  `products/simtabi/authama`: the install identity moved with the repository before anything
+  outside depended on it. The `com.simtabi.authama.*` event types are unchanged.
+- **`token audit` reads a `.gitignore` only with `--project`**, as its help said. Run from any other
+  directory it judged that directory's `.gitignore` and exited 1 in a repository that keeps no
+  credentials; the web page did the same with the server's directory (audit B-04).
 
-The first release under `sangehq/authama`, tagged 2026-11-14 and re-tagged on 2026-11-16 with everything
-merged since (owner: "rebase to release all at v0.1.0"), and the module path `github.com/sangehq/authama/src`. The
-version numbers restart here (owner, 2026-11-14): the earlier v0.1.0, v0.1.4, v0.1.5 and v0.1.6 tags and
-the v0.1.6 GitHub release were withdrawn, and their notes stay below as history. Go's module proxy still
-holds the old `src/v0.1.0` and `src/v0.1.6`, whose `go.mod` names `github.com/simtabi/authama/src`, so
-nothing can import them; binaries ship on the GitHub release only.
+- **The web UI's menus are colour-coded.** Each entry's icon sits on a Tabler tile coloured by what it
+  is: a menu's own pages share a colour (SSH cyan, Tokens pink, Security purple, History yellow), and
+  a task's colour says what it does (create or add green, change blue, revoke orange, delete or reset
+  red); Doctor, Validate and Repair are teal, Settings and the user menu grey. Each menu's toggle shows
+  its icon in its colour. The colours are darkened in the light theme and lightened in the dark one,
+  so icons and tile edges reach 5.4:1 or more in both. VMs has its own icon (`box`), no longer one
+  that reads as Hosts. The current page's entry has a bar at its start edge, and keyboard focus a
+  visible ring. Guards fail on an entry without a tile, a kind in two colours, a task in the wrong
+  colour, a red entry that is not a delete, a description over 62 characters, and an Overview link
+  that does not reach the dashboard (with or without `--base-path`); the accessibility suite also
+  measures the tiles' contrast on every menu open, in both themes.
+- **The main menu's list is closed.** Its `<ul>` had no `</ul>`.
 
-### Release
+- **The web UI's menus are regrouped, one kind of thing to a menu.** The main menu is Overview,
+  **SSH**, **Tokens**, **Security**, **History** and **System**, with a **New** button and a personal
+  user menu in the top bar. The Actions menu is gone: each job sits under its object's **Tasks**
+  header (SSH › Tasks for host and key jobs, Tokens › Tasks for Add a token), and New repeats Add a
+  host, Add a token and Mint missing keys. Auth tokens has its own Tokens menu with the token
+  checklists; Activity and Backups & export are one History menu (Changes, File events, Snapshots,
+  Export); System holds Doctor, Validate, Repair, Settings and Reset, which is listed once, in red.
+  The user menu keeps Running as, the tour, About and Sign out, and no longer repeats Settings,
+  Events and Doctor. Read-only still hides every task (and now New); the dev sandbox still leaves
+  out Rotate and Revoke.
+- **Every menu entry has its own icon and a one-line description of what its page shows.** No two
+  entries share an icon (Naming is a tag, Repair a tool, VMs a server rack, Reset a restore arrow,
+  Sign out a logout arrow), sixteen icons were added to the sprite through `icons.txt` and
+  `make tabler-vendor`, and the descriptions were rewritten to one shape of about 60 characters.
+  The command palette shows each page with its menu's icon and under its menu's name.
+  The tour follows the new menus: search, SSH, Tokens, Security, History, New, the bell and the user
+  menu. Guards fail on a shared icon or page, an icon missing from the sprite, a task or New on a
+  read-only server, and Rotate or Revoke in the dev sandbox.
+- **Menu entries keep 4.5:1 contrast on their tint.** Tabler's grey description, red destructive
+  entry and blue current entry fell to between 2.7:1 and 4.48:1 on the hover and current-page tints,
+  and in the dark theme; they now use the body colour there, or a darker or lighter mix. The e2e
+  accessibility suite runs axe on every menu open, in both themes.
 
-- **Release binaries no longer report `-dirty`.** Every v0.1.0 binary printed `0.1.0-dirty` and a
-  full 40-character commit: GoReleaser's `go mod tidy` hook changed `go.sum` in the release checkout.
-  The hook is gone, `make ci` runs `make tidy-check`, and the build stamps `v{{ .Version }}` and the
-  short commit, as `make build` does.
-- **Archives carry `third-party-notices-go.md`**, the licences of the 24 Go modules linked into the
-  binary and of the Go standard library, generated by `make notices` and checked by `make ci`.
-- **`src/go.mod` retracts v0.1.6**, which the Go module proxy cached from the history before the
-  2026-11-14 reset. v0.1.0 is re-tagged on this code, so it is not retracted.
-- **The withdrawn channels' credentials are gone**: the Homebrew tap and Scoop bucket write deploy
-  keys, the two secrets that held them, `SKIP_SCOOP`, and `deploy-key-probe.yml` (review R-SEC-09).
-- **`release.yml` pins simtabi/.github's shared workflow at v0.1.1.** v0.1.1 publishes a CHANGELOG
-  section longer than GitHub's 125,000-character release body up to the last whole line that fits and
-  links the rest. v0.1.0's notes were 157,941 bytes, so its release was cut and its run stopped before
-  attesting provenance; re-running v0.1.0 under this pin attaches the attestation.
+- **`authama version` names the commit and build day.** It printed only the version, so a build from a
+  branch said `authama dev`; it now adds them when Go recorded them, as in
+  `authama v0.1.6 (6c56209, 2026-11-13)`. The line still starts `authama <version>`.
+- **Go 1.27, golangci-lint v2.15.0 and the current go-notifykit.** The module now declares `go 1.27.0`
+  with `toolchain go1.27.4`, as sange and imprimatur do, and CI lints with golangci-lint v2.15.0; the dev
+  container defaults to Go 1.27. go-notifykit moves to the build sange uses, which drops the
+  `terminal-notifier` backend (macOS uses its helper app, else `osascript`).
+- **Desktop notifications replace rather than stack.** Each carries a group named after the event, so
+  the same event posted again replaces its banner. With no backend, the message now says to install
+  `notify-send` on Linux and to run `authama notify doctor` elsewhere, not `terminal-notifier`.
+- **CI skips draft pull requests and cancels superseded CodeQL runs.** Every CI and CodeQL job now
+  waits until a draft is marked ready (which starts a run), as sange and imprimatur already did, and
+  CodeQL cancels a pull request's earlier run when a new push supersedes it.
+- **`init --force` keeps a copy and asks first.** It reset `manifest.json`, `inventory.json` and `.env`
+  to their defaults with no copy unless `--backup` was given (and `--backup` without `--force` was
+  silently ignored), and never asked. It now copies them into the state home's `init-backup-<stamp>/`
+  first, and asks at a terminal, saying what it resets and where the copies go; `-y` skips the
+  question, and a run with no terminal proceeds as before, now with the copy. `--no-backup` keeps
+  none. `--backup` still works and is deprecated, since a backup is the default.
+- **authama moved to sangehq.** The repository is now `sangehq/authama` (GitHub redirects
+  `simtabi/authama`), and the Go module path is `github.com/sangehq/authama/src`. Release
+  assets, install scripts, the settings schema URL, the web UI's About links and the man
+  page point at the new home. The `retract` in `src/go.mod` is gone: it named versions of
+  the old path, and under the new one it would have retracted this module's own future
+  v0.1.1 to v0.1.3. Unchanged on purpose: the event type `com.simtabi.authama.*` and the
+  event `source` (both identify events to webhook consumers), and the notifier's macOS
+  identity `com.simtabi.authama` (changing it resets the notification permission).
+
+- **A release runs under the `release` environment again.** `release.yml` passes
+  `environment: release` to the shared workflow, pinned to simtabi/.github's `v1.0.0` (`767e0c0`,
+  which takes an environment), with the version as the comment so Dependabot can move it. Each release is recorded as a deployment, and the
+  environment requires the owner's approval (added 2026-11-13), so a pushed tag publishes nothing
+  until it is approved.
 
 ### Security
+
+- **The installers check who built the binary, not only that it downloaded intact.** With `gh` installed and
+  signed in, `install.sh` and `install.ps1` run `gh attestation verify` against the shared release workflow and
+  refuse a binary that does not verify; without `gh` they install and say only the checksum was checked.
+  `AUTHAMA_INSTALL_REQUIRE_ATTESTATION=1` makes the provenance check required (audit A-SEC-14).
+- **One API token holds at most four event streams open at once.** A fifth is answered `429 too_many_streams`;
+  each stream polls the feed for as long as it lives, so one leaked token could otherwise open them without
+  bound (audit P-05).
+- A job's question and its Cancel now need the same PIN step-up as every other change, and only the
+  sign-in that started a job can answer or cancel it; any other sign-in sees the job read-only and is
+  refused with 403. Signing out and in again is a new sign-in. Checklist ticks and export selections
+  stay without a PIN, by decision (review R-GAP-06).
+- `ssh import` refuses to adopt a key when a directory between `~/.ssh` and the profile directory
+  is a symbolic link, instead of creating and chmodding 0700 through it (A-SEC-15).
 
 - **`serve` keeps the sign-in link off every command line.** It used to run `open`/`xdg-open` with the
   single-use link as an argument, where another local user could read it with `ps` and sign in first.
@@ -182,133 +456,26 @@ nothing can import them; binaries ship on the GitHub release only.
   proof. `--stop-all` signals a pid another server reports only when it is an `authama` process.
   `/healthz` no longer gives its pid, build and start time to a request a proxy passed on.
 
-### Fixed
+### Deprecated
 
-- **`history` records a command's events in the default layout.** With config in `~/.config/authama` and
-  state in `~/.local/state/authama`, the sink compared the config home with a home derived from the audit
-  log's path, so no locked operation got its events: `history show` listed none, `--key`/`--host` missed
-  operations named only by their events, and `history` warned of a gap every time. It now compares the
-  audit logs, and an event raised before the lock opens the operation against the command's real homes,
-  so its manifest hashes are read (audit B-01).
-- **`token audit` reads `.gitignore` as git does.** A rule that merely contained a secret file's name
-  counted as covering it, so `!.npmrc` (which forces the file into git), `.npmrc.example` and
-  `auth.json.dist` passed. Coverage now follows the last matching rule, with `!` un-ignoring, a trailing
-  `/` matching only directories, and globs such as `.npm*` counting (B-02).
-- **`ssh load` fails when `ssh-add` added nothing.** With no agent running, or no `ssh-add`, it printed
-  `loaded 0 key(s)` and exited 0. It now exits non-zero naming the keys `ssh-add` did not add (a partial
-  load warns and exits 0), and names each key whose private file is not on disk instead of skipping it
-  silently (B-03).
-- **A rotation says when it could not keep the retirement record.** A `retired.json` that could not be
-  read or written was ignored, hiding where the old key can still log in; the rotation summary, on the
-  terminal and in the web job, now ends with a warning naming the file (B-05).
-- **Web rotate jobs fail when the retry list cannot be saved**, as the CLI's do. The bulk rotate and
-  rotate-check jobs dropped the error, leaving "retry the failed ones" on a stale list (B-06).
-- **`services/owner` tests compile on FreeBSD, OpenBSD and NetBSD.** A test named a constant declared
-  only for darwin, linux and windows (B-07).
-- **`docs/tools/expiry.md` lists the notification backends go-notifykit accepts**: `helper`, `osascript`,
-  `notify-send`, `powershell` and `none`. It listed `terminal-notifier`, which makes every banner fail (B-08).
-- **`token audit` help and `migration.md` say it checks every tool**, not "all five"; it checks 14 (B-09).
-- **A wrong `--confirm` word is explained.** `reset --confirm nope` and `history reset --confirm nope`
-  exited 1 with no message; they now say which word is wanted and that nothing changed (B-10).
+- `importer.ImportResult.LeftInConfig` (internal): always empty now; see `Moved` and `Kept`.
 
-- **A refused command no longer evicts a restore point.** Snapshots were pruned to
-  `backup.snapshot_retain` when taken, before the command checked its input, so at the limit each
-  refused command pushed the oldest real snapshot out even though its own was then discarded. The
-  prune now waits until the command's snapshot is kept; while a command runs there can be one more
-  than the limit (A-BUG-04).
-- **A snapshot restore keeps a symlinked `~/.ssh/config` a link** and writes the restored text into
-  the file it points at, as a render does; it used to replace the link with a plain file, leaving the
-  dotfiles copy stale. Only `config` is written through, and only when its link leads to a file that
-  exists; any other link in `~/.ssh` is still replaced (A-BUG-05).
-- **`ssh rotate --force` keeps a predecessor that still logs in.** A rotation stops rather than evict
-  the key in `old/` while a host it was never removed from still accepts it, but `--force` then
-  replaced the key locally, which evicted it all the same. The local replacement now refuses the same
-  way, naming the hosts, unless `--evict-old` is given; the web UI never evicts it (A-BUG-01).
-- **One failed restart no longer ends the web UI's auto-restart.** The failure is printed, the same
-  build is not tried again, and the next build is restarted from (review R-BUG-16).
-- **A failed `migrate --force` puts the home back.** The current home was moved aside and, when the
-  copy failed, left at its `.replaced-` name (review R-BUG-14).
+### Release
 
-- **Rotation, rollback and restore summaries say what happened.** A rotation that did not happen said
-  "rotation ABORTED" (above "replaced" for a forced one), and a failed rollback said "rotation ABORTED"
-  too. Summaries now read "rotated", "rotation not done", "rolled back" or "rollback not done". A
-  restore names each key by its path, so a key and its `old/` predecessor are told apart.
-- **`settings show --json` prints JSON with no `authama.json`.** It printed a sentence; it now prints
-  `{}`, the settings that file sets.
-- **The manifest schema accepts `reserved_keys`.** `manifest.schema.json` forbids keys it does not
-  list, and it did not list `reserved_keys` (written by `ssh key reserve` since 0.1.4), so an editor or
-  CI step validating against it refused a manifest authama itself wrote. The schema guard now checks
-  the top level and the reserved-key entries too, and a new one checks `inventory.schema.json`.
-- **`doctor` reports what an interrupted run left behind.** A reconcile killed mid-run could leave a
-  `.mint-*` directory holding a private key, and doctor said nothing until the next reconcile swept
-  it. It is now a warning naming each path and `authama ssh clean` (`--strict` fails), and
-  `crash_residue` in `--json`.
-- **`settings validate` checks what `.env` sets, and migration renames old names.** It said "ok" over
-  a `.env` whose settings were never read: old `SSHMGR_`/`SSH_MANAGER_` names, a misspelt `AUTHAMA_`
-  name, and values like `AUTHAMA_SNAPSHOT_RETAIN=abc` or a boolean `maybe` (read as false). It now
-  reports each, naming the `AUTHAMA_` name to use for an old one, and migrating an old home renames
-  them in the copied `.env` so its settings keep applying.
-- **A stale config that could not be removed is reported.** Rendering the config listed an old
-  per-profile config under "removed stale" even when removing it failed; it now stops with the error.
-- **A `Match host` block that covers a managed host is reported.** The shadow check skipped every
-  `Match` block, so a `Match host *.corp` above the managed block quietly gave `api.corp` another
-  user. `Match` blocks made only of `host` and `originalhost` criteria are now evaluated (against
-  the alias, as ssh does there), and `host add`, like any command that changes the manifest, prints a
-  shadow it finds as a warning instead of leaving it to `doctor`.
-- **`ssh import` says what it leaves behind.** After import and reconcile, `doctor` failed at once on
-  the hand-written blocks import had copied (they stay in your config, above the managed block), and
-  `Match` and wildcard `Host` blocks were dropped without a word. The summary now names the blocks
-  left in your config and why doctor will report them, and lists each block it did not import.
-- **A key your own Host block uses is no longer called loose.** The key audit only looked at the
-  manifest, so a key named by a hand-written block in `~/.ssh/config`, or a file it Includes, was
-  reported as "a key in ~/.ssh that no Host block uses", and `doctor --strict` failed on a home
-  that was fine. It now reads those IdentityFile lines too.
-- **A corrupt `revoked.json` or `retired.json` is reported, not read as empty.** The key checklist
-  read an unreadable record as "nothing recorded", so a revoked key was listed as in use with nothing
-  left to do; the rotation's check for a predecessor that still logs in did the same and would evict
-  it. Both now stop with the error.
-- **`doctor` fails on a manifest it cannot load.** It loaded `manifest.json` with the error dropped,
-  skipped the drift checks and said "clean" (`ok: true`) over a file every other command refuses. A
-  manifest that exists and does not load is now a failing finding, in the report and as
-  `manifest_error` in `--json`, naming the way back (fix it, or restore a snapshot).
-- **A refused command no longer uses up a snapshot.** Every command that changes the home snapshots
-  `~/.ssh` first, before it checks its input, so each typo or name already taken kept a snapshot, and
-  with ten kept, a few typos pushed every real restore point out. A command that fails or is declined
-  having changed nothing (the manifest, the inventory and `~/.ssh` as they were) now gives its
-  snapshot back; one that changed something keeps it.
-- **Rotating again keeps a predecessor that still logs in.** Only one previous key is kept in `old/`,
-  so a second rotation evicted the first one's key even while a host it was never removed from still
-  accepted it. The rotation now stops and names those hosts; `rotate --evict-old` replaces it
-  anyway.
-- **A `~/.ssh/config` linked from a dotfiles repository stays a link.** Rendering the config renamed
-  a new file over the link, so the link became a regular file and the linked copy went stale. The
-  render now writes the link's target, atomically, and refuses a link whose target is missing rather
-  than replace it.
-- **Undoing a refused batch rewrites the manifest atomically.** When a batch that created a profile
-  failed, the manifest was put back with an in-place write, which an interruption could leave
-  half-written. It is now written by rename, like every other manifest write, and a guard test fails
-  on any new in-place truncating write outside a short, reasoned list.
-- **A snapshot that fails part-way leaves nothing behind.** It was written in place, so a failure
-  left a broken archive that was listed as a restore point and counted against retention. It is now
-  written to a temporary name, synced, and renamed into place.
-- **Webhook changes made during a delivery stick, and an event is sent once.** A delivery read
-  `webhooks.json`, sent for up to minutes, then wrote back what it had read, so a webhook removed in
-  the meantime came back with its secret and a disable was undone; the server's loop and
-  `authama webhook deliver` running together sent the same event twice. Deliveries now take turns,
-  and each writes back only its own progress, into the file as it is then.
-- **The web UI restarts after its binary moved.** A server started from a checkout that was then
-  moved (macOS keeps reporting the old path) ran a missing file on restart, after already telling the
-  page it was restarting, so the page waited for good; the watcher never restarted from a removed
-  binary either. A restart now runs the `authama` on `PATH` when its own path is gone, the watcher
-  follows that one, and with none on `PATH` the restart is refused with the reason, which the page
-  shows.
-- **`make build` never leaves the binary missing.** It emptied `build/` first, so with
-  `~/.local/bin/authama` linked to the build, `authama` was off `PATH` for the whole compile. It now
-  compiles to `authama.tmp` beside the binary and renames it into place (the Touch ID helper too), and
-  no longer runs `clean`; `make clean` still empties `build/` when asked.
-- **A host without a `user` can be deployed to.** authama reached it as `@host`, which ssh refuses
-  with its usage text, so every deploy, check and removal on such a host failed. It now connects to
-  the hostname alone, and ssh takes the user from its config or the local account.
+- **Release binaries no longer report `-dirty`.** Every v0.1.0 binary printed `0.1.0-dirty` and a
+  full 40-character commit: GoReleaser's `go mod tidy` hook changed `go.sum` in the release checkout.
+  The hook is gone, `make ci` runs `make tidy-check`, and the build stamps `v{{ .Version }}` and the
+  short commit, as `make build` does.
+- **Archives carry `third-party-notices-go.md`**, the licences of the 24 Go modules linked into the
+  binary and of the Go standard library, generated by `make notices` and checked by `make ci`.
+- **`src/go.mod` retracts v0.1.6**, which the Go module proxy cached from the history before the
+  2026-11-14 reset. v0.1.0 is re-tagged on this code, so it is not retracted.
+- **The withdrawn channels' credentials are gone**: the Homebrew tap and Scoop bucket write deploy
+  keys, the two secrets that held them, `SKIP_SCOOP`, and `deploy-key-probe.yml` (review R-SEC-09).
+- **`release.yml` pins simtabi/.github's shared workflow at v0.1.1.** v0.1.1 publishes a CHANGELOG
+  section longer than GitHub's 125,000-character release body up to the last whole line that fits and
+  links the rest. v0.1.0's notes were 157,941 bytes, so its release was cut and its run stopped before
+  attesting provenance; re-running v0.1.0 under this pin attaches the attestation.
 
 ### Documentation
 
@@ -321,131 +488,6 @@ nothing can import them; binaries ship on the GitHub release only.
   names the signer, `--signer-workflow simtabi/.github/.github/workflows/go-release.yml`: the shared
   release workflow signs, and without the flag the check fails against v0.1.6. A test fails any doc
   that shows the command without it. The pages no longer say that no release has been published.
-
-### Added
-
-- **authama records when each thing happens to a key.** Minting, adopting, importing, deploying,
-  rotating, rolling back and revoking a key now note the time, to the second, in `key-events.json`
-  beside the inventory, written by the same save as the inventory record through a journal
-  (`key-events.json.pending`, which names the inventory it goes with), so a save cut off between the
-  two files still leaves them agreeing; a minted key also notes
-  where it came from (`generated`, `adopted` or `imported`) and a rotated one the key it replaced.
-  The inventory's own format is unchanged, so an older authama still reads it, and a key recorded
-  before this release falls back to the days the inventory already holds (R-FEAT-01).
-- **Two settings say what counts as a new key.** `keys.new_window_days` (`AUTHAMA_KEYS_NEW_WINDOW_DAYS`,
-  default 7, `0` turns the label off) is how long a key stays new, and `keys.new_events`
-  (`AUTHAMA_KEYS_NEW_EVENTS`, default `created,added,rotated,deployed`, `restored` also allowed) which
-  events make it new. `settings set` and `settings validate` refuse an unknown event or a negative
-  window, and the schema checks both.
-- **`keys.new_until` and `keys.age_pills`.** `keys.new_until` (`AUTHAMA_KEYS_NEW_UNTIL`) is `window`,
-  the default (a key is new until the window ends or `ssh key ack`), or `acknowledged` (new until
-  `ssh key ack`, however long). `keys.age_pills` (`AUTHAMA_KEYS_AGE_PILLS`, default `0.5,1.0`) sets
-  when a key turns `ageing` and `old`, as fractions of its `rotate_after_days`; a key past the bad
-  fraction whose expiry has not caught up is now `old` rather than `ageing`. `settings set` and
-  `settings validate` refuse anything else.
-- **`ssh key list` shows how new and how old each key is.** Two columns, `AGE` (since it was
-  created, added or rotated in) and `STATUS` (`new`, `current`, `ageing`, `old`, `due soon`, `overdue`,
-  `revoked`, `retired`), as words. `--new` keeps the keys labelled new, `--since <duration|date>`
-  (`36h`, `7d`, `2026-11-01`) the keys something happened to since then, and `--json` prints each key
-  with its recency: every event with its time, age and constraint, `is_new`, `new_because` and the
-  pill.
-- **The read API and MCP give each key's recency.** `/api/v1/keys`, `/api/v1/keys/{profile}/{key}` and
-  the MCP tools `list_keys` and `get_key` carry the `recency` object `ssh key list --json` prints:
-  each event with its time, age and constraint, `is_new`, `new_because` and the pill, under the same
-  settings.
-- **`ssh key ack` clears the new label** on the keys it names (or `--category`, `--all`) until their
-  next event, and records when it did in `key-events.json` and the history.
-- **The web UI shows key recency as pills.** The Keys list gains a Status column (the pill and the
-  key's age), and a key's page its status and a Lifecycle card listing every event with its age, a
-  machine-readable `<time>` and its constraint. A host's page shows its key's pill, and the overview's
-  Key health card counts the keys labelled new and lists each with its pill; every page draws the one
-  pill partial. Each pill carries its word, not colour alone, in the
-  existing badge colours. *Mark as seen* on a new key is `key ack`, previewed and confirmed like any
-  change.
-
-- **`make link`.** Links `~/.local/bin/authama` (and `authama-touchid` on macOS) to the checkout's
-  `build/<your-os>/` binary, so `PATH`, and a running `authama serve`, follow every build. It says
-  whether the directory is on `PATH`, as `make install` does; `make uninstall` removes the link.
-  Windows uses `make install`.
-
-### Changed
-
-- **Webhook and feed events name `products/sangehq/authama` in `source`**, not
-  `products/simtabi/authama`: the install identity moved with the repository before anything
-  outside depended on it. The `com.simtabi.authama.*` event types are unchanged.
-- **`token audit` reads a `.gitignore` only with `--project`**, as its help said. Run from any other
-  directory it judged that directory's `.gitignore` and exited 1 in a repository that keeps no
-  credentials; the web page did the same with the server's directory (audit B-04).
-
-- **The web UI's menus are colour-coded.** Each entry's icon sits on a Tabler tile coloured by what it
-  is: a menu's own pages share a colour (SSH cyan, Tokens pink, Security purple, History yellow), and
-  a task's colour says what it does (create or add green, change blue, revoke orange, delete or reset
-  red); Doctor, Validate and Repair are teal, Settings and the user menu grey. Each menu's toggle shows
-  its icon in its colour. The colours are darkened in the light theme and lightened in the dark one,
-  so icons and tile edges reach 5.4:1 or more in both. VMs has its own icon (`box`), no longer one
-  that reads as Hosts. The current page's entry has a bar at its start edge, and keyboard focus a
-  visible ring. Guards fail on an entry without a tile, a kind in two colours, a task in the wrong
-  colour, a red entry that is not a delete, a description over 62 characters, and an Overview link
-  that does not reach the dashboard (with or without `--base-path`); the accessibility suite also
-  measures the tiles' contrast on every menu open, in both themes.
-- **The main menu's list is closed.** Its `<ul>` had no `</ul>`.
-
-- **The web UI's menus are regrouped, one kind of thing to a menu.** The main menu is Overview,
-  **SSH**, **Tokens**, **Security**, **History** and **System**, with a **New** button and a personal
-  user menu in the top bar. The Actions menu is gone: each job sits under its object's **Tasks**
-  header (SSH › Tasks for host and key jobs, Tokens › Tasks for Add a token), and New repeats Add a
-  host, Add a token and Mint missing keys. Auth tokens has its own Tokens menu with the token
-  checklists; Activity and Backups & export are one History menu (Changes, File events, Snapshots,
-  Export); System holds Doctor, Validate, Repair, Settings and Reset, which is listed once, in red.
-  The user menu keeps Running as, the tour, About and Sign out, and no longer repeats Settings,
-  Events and Doctor. Read-only still hides every task (and now New); the dev sandbox still leaves
-  out Rotate and Revoke.
-- **Every menu entry has its own icon and a one-line description of what its page shows.** No two
-  entries share an icon (Naming is a tag, Repair a tool, VMs a server rack, Reset a restore arrow,
-  Sign out a logout arrow), sixteen icons were added to the sprite through `icons.txt` and
-  `make tabler-vendor`, and the descriptions were rewritten to one shape of about 60 characters.
-  The command palette shows each page with its menu's icon and under its menu's name.
-  The tour follows the new menus: search, SSH, Tokens, Security, History, New, the bell and the user
-  menu. Guards fail on a shared icon or page, an icon missing from the sprite, a task or New on a
-  read-only server, and Rotate or Revoke in the dev sandbox.
-- **Menu entries keep 4.5:1 contrast on their tint.** Tabler's grey description, red destructive
-  entry and blue current entry fell to between 2.7:1 and 4.48:1 on the hover and current-page tints,
-  and in the dark theme; they now use the body colour there, or a darker or lighter mix. The e2e
-  accessibility suite runs axe on every menu open, in both themes.
-
-- **`authama version` names the commit and build day.** It printed only the version, so a build from a
-  branch said `authama dev`; it now adds them when Go recorded them, as in
-  `authama v0.1.6 (6c56209, 2026-11-13)`. The line still starts `authama <version>`.
-- **Go 1.27, golangci-lint v2.15.0 and the current go-notifykit.** The module now declares `go 1.27.0`
-  with `toolchain go1.27.4`, as sange and imprimatur do, and CI lints with golangci-lint v2.15.0; the dev
-  container defaults to Go 1.27. go-notifykit moves to the build sange uses, which drops the
-  `terminal-notifier` backend (macOS uses its helper app, else `osascript`).
-- **Desktop notifications replace rather than stack.** Each carries a group named after the event, so
-  the same event posted again replaces its banner. With no backend, the message now says to install
-  `notify-send` on Linux and to run `authama notify doctor` elsewhere, not `terminal-notifier`.
-- **CI skips draft pull requests and cancels superseded CodeQL runs.** Every CI and CodeQL job now
-  waits until a draft is marked ready (which starts a run), as sange and imprimatur already did, and
-  CodeQL cancels a pull request's earlier run when a new push supersedes it.
-- **`init --force` keeps a copy and asks first.** It reset `manifest.json`, `inventory.json` and `.env`
-  to their defaults with no copy unless `--backup` was given (and `--backup` without `--force` was
-  silently ignored), and never asked. It now copies them into the state home's `init-backup-<stamp>/`
-  first, and asks at a terminal, saying what it resets and where the copies go; `-y` skips the
-  question, and a run with no terminal proceeds as before, now with the copy. `--no-backup` keeps
-  none. `--backup` still works and is deprecated, since a backup is the default.
-- **authama moved to sangehq.** The repository is now `sangehq/authama` (GitHub redirects
-  `simtabi/authama`), and the Go module path is `github.com/sangehq/authama/src`. Release
-  assets, install scripts, the settings schema URL, the web UI's About links and the man
-  page point at the new home. The `retract` in `src/go.mod` is gone: it named versions of
-  the old path, and under the new one it would have retracted this module's own future
-  v0.1.1 to v0.1.3. Unchanged on purpose: the event type `com.simtabi.authama.*` and the
-  event `source` (both identify events to webhook consumers), and the notifier's macOS
-  identity `com.simtabi.authama` (changing it resets the notification permission).
-
-- **A release runs under the `release` environment again.** `release.yml` passes
-  `environment: release` to the shared workflow, pinned to simtabi/.github's `v1.0.0` (`767e0c0`,
-  which takes an environment), with the version as the comment so Dependabot can move it. Each release is recorded as a deployment, and the
-  environment requires the owner's approval (added 2026-11-13), so a pushed tag publishes nothing
-  until it is approved.
 
 ## Withdrawn 0.1.6 - 2026-11-13
 

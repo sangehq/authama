@@ -19,6 +19,7 @@ import (
 	"github.com/sangehq/authama/src/internal/core/inventory"
 	"github.com/sangehq/authama/src/internal/core/key"
 	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/renderer"
 	"github.com/sangehq/authama/src/internal/services/keystore"
 	"github.com/sangehq/authama/src/internal/util/fs"
 	"github.com/sangehq/authama/src/internal/util/paths"
@@ -53,12 +54,27 @@ type ImportResult struct {
 	// relative Includes and ~/.ssh/ identity paths resolved against.
 	Sources []string
 	Root    string
-	// LeftInConfig are the aliases imported from hand-written Host blocks,
-	// which stay in the source config: authama does not edit it.
+	// LeftInConfig are the aliases imported from hand-written Host blocks
+	// that stayed in the source config.
+	//
+	// Deprecated: import now moves each block it imports out of the config
+	// ssh reads (Moved), and leaves out a host whose block it cannot move
+	// (Kept), so no imported alias is left defined twice and this is always
+	// empty. Kept for callers of the struct until at least v1.0.0.
 	LeftInConfig []string
 	// NotImported are the Match blocks and wildcard-only Host blocks, as
 	// written: authama manages plain Host blocks, so these stay and apply.
 	NotImported []string
+	// Moved are the aliases whose hand-written Host blocks import took out of
+	// the config ssh reads, now that the manifest holds them; MovedFrom the
+	// files it edited. The originals are kept in Backup.
+	Moved     []string
+	MovedFrom []string
+	// Kept are the hosts left in the user's config and not imported, each
+	// with why: a block import cannot move without changing what ssh does.
+	Kept []string
+	// Backup is where the files import edited were copied first.
+	Backup string
 }
 
 // Format renders the human-readable import summary (mirrors ImportResult.format).
@@ -86,10 +102,23 @@ func (r ImportResult) Format() string {
 	for _, s := range r.Skipped {
 		lines = append(lines, "  skipped "+s)
 	}
+	if len(r.Moved) > 0 {
+		verb := "moved"
+		if r.DryRun {
+			verb = "would move"
+		}
+		line := "  " + verb + " into the manifest, out of " + strings.Join(r.MovedFrom, ", ") + ": " + strings.Join(r.Moved, ", ")
+		if r.Backup != "" {
+			line += " (the original is in " + r.Backup + ")"
+		}
+		lines = append(lines, line,
+			"    authama renders these hosts now; ssh reads one definition of each")
+	}
+	for _, k := range r.Kept {
+		lines = append(lines, "  kept in your config, not imported: "+k)
+	}
 	if len(r.LeftInConfig) > 0 {
-		lines = append(lines, "  the hand-written Host blocks for "+strings.Join(r.LeftInConfig, ", ")+" stay in your config: "+
-			"ssh reads them before the managed block, so `authama doctor` reports them shadowed until you remove them "+
-			"(authama does not edit what it did not write)")
+		lines = append(lines, "  the hand-written Host blocks for "+strings.Join(r.LeftInConfig, ", ")+" stay in your config")
 	}
 	for _, n := range r.NotImported {
 		lines = append(lines, "  not imported: "+n+" (authama manages plain Host blocks; it stays in your config and still applies)")
@@ -114,6 +143,27 @@ type block struct {
 	patterns []string // as written, "!" negations included
 	all      bool     // the lines before the first Host line: they apply to every host
 	opts     []kv
+
+	// Where the block is, so import can take it out of the file once the
+	// manifest holds it. file is the path the block was reached by (a link
+	// not resolved, so a ~/.ssh/config that links into a dotfiles checkout
+	// still reads as ~/.ssh/config). start is the Host line, end one past the
+	// last option line, both 0-based. rootLine is where in the first file read
+	// the block is: its own Host line there, or the Include line that pulled
+	// its file in.
+	file       string
+	start, end int
+	rootLine   int
+	// managed is a block authama rendered (inside the managed markers, or in a
+	// file carrying the managed header): a render replaces it, so it is never
+	// edited and never counts as the user's own definition.
+	managed bool
+	// include is set when an Include sits inside the Host block. ssh scopes the
+	// included file to the block, which no manifest host can say.
+	include bool
+	// first is set on the blocks read from the first source file and what it
+	// Includes: rootLine is a line of that file.
+	first bool
 }
 
 // matches reports whether this block applies to alias, as ssh's
@@ -159,7 +209,7 @@ func (b *block) names(alias string) bool {
 // into every host. Match blocks are never applied: their criteria cannot be
 // evaluated at import time.
 func parseSSHConfig(text, baseDir string, seen map[string]bool) []*ParsedHost {
-	blocks, aliases := collectBlocks(text, baseDir, seen, true)
+	blocks, aliases := collectBlocks(text, "", baseDir, seen, true, -1)
 	hosts := make([]*ParsedHost, 0, len(aliases))
 	for _, alias := range aliases {
 		hosts = append(hosts, resolveHost(alias, blocks))
@@ -169,7 +219,10 @@ func parseSSHConfig(text, baseDir string, seen map[string]bool) []*ParsedHost {
 
 // collectBlocks splits config text into blocks, inlining Include files in place,
 // and lists each literal (non-pattern) alias once, in first-seen order.
-func collectBlocks(text, baseDir string, seen map[string]bool, top bool) ([]*block, []string) {
+//
+// file is the path text was read from and rootLine the line of the first file
+// read that leads here (-1 when text is that file).
+func collectBlocks(text, file, baseDir string, seen map[string]bool, top bool, rootLine int) ([]*block, []string) {
 	var blocks []*block
 	var aliases []string
 	known := map[string]bool{}
@@ -178,18 +231,30 @@ func collectBlocks(text, baseDir string, seen map[string]bool, top bool) ([]*blo
 	// includer's context, which (as before) is treated as no context at all.
 	var current *block
 	if top {
-		current = &block{all: true}
+		current = &block{all: true, file: file, start: -1, end: -1, rootLine: rootLine}
 		blocks = append(blocks, current)
 	}
-	for _, raw := range strings.Split(text, "\n") {
+	managedFile := renderer.IsManagedFile(text)
+	inManaged := false
+	for i, raw := range strings.Split(text, "\n") {
 		line := strings.TrimSpace(raw)
+		if renderer.IsManagedHeaderLine(line) {
+			inManaged = true
+		} else if renderer.IsManagedEndLine(line) {
+			inManaged = false
+		}
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
+		}
+		at := rootLine
+		if at < 0 {
+			at = i
 		}
 		keyword, value := splitKV(line)
 		switch {
 		case keyword == "host":
-			current = &block{patterns: argvSplit(value)}
+			current = &block{patterns: argvSplit(value), file: file, start: i, end: i + 1,
+				rootLine: at, managed: managedFile || inManaged}
 			blocks = append(blocks, current)
 			for _, p := range current.patterns {
 				if strings.ContainsAny(p, "*?!") || known[p] {
@@ -201,7 +266,10 @@ func collectBlocks(text, baseDir string, seen map[string]bool, top bool) ([]*blo
 		case keyword == "match":
 			current = nil
 		case keyword == "include" && baseDir != "":
-			incBlocks, incAliases := parseIncludes(value, baseDir, seen)
+			if current != nil && !current.all {
+				current.include = true
+			}
+			incBlocks, incAliases := parseIncludes(value, baseDir, seen, at)
 			blocks = append(blocks, incBlocks...)
 			for _, a := range incAliases {
 				if !known[a] {
@@ -213,6 +281,9 @@ func collectBlocks(text, baseDir string, seen map[string]bool, top bool) ([]*blo
 		default:
 			if current != nil {
 				current.opts = append(current.opts, kv{keyword, value})
+				if !current.all {
+					current.end = i + 1
+				}
 			}
 		}
 	}
@@ -399,7 +470,7 @@ func profileFromIdentityIn(identityFile string, roots ...string) (profile, categ
 
 // parseIncludes returns the blocks and aliases of every file an Include names,
 // in order, so they resolve together with the including file's blocks.
-func parseIncludes(pattern, baseDir string, seen map[string]bool) ([]*block, []string) {
+func parseIncludes(pattern, baseDir string, seen map[string]bool, rootLine int) ([]*block, []string) {
 	var blocks []*block
 	var aliases []string
 	for _, token := range strings.Fields(pattern) {
@@ -415,6 +486,7 @@ func parseIncludes(pattern, baseDir string, seen map[string]bool) ([]*block, []s
 			if err != nil {
 				continue
 			}
+			reached := abs
 			if resolved, e := filepath.EvalSymlinks(abs); e == nil {
 				abs = resolved
 			}
@@ -426,7 +498,7 @@ func parseIncludes(pattern, baseDir string, seen map[string]bool) ([]*block, []s
 			if err != nil {
 				continue
 			}
-			bs, as := collectBlocks(string(b), baseDir, seen, false)
+			bs, as := collectBlocks(string(b), reached, baseDir, seen, false, rootLine)
 			blocks = append(blocks, bs...)
 			aliases = append(aliases, as...)
 		}
@@ -536,14 +608,22 @@ func Locate(path string) (Source, error) {
 // in order, then every host resolved against all of them, as ssh resolves a
 // config whose Includes pulled the rest in.
 func parseSources(src Source) []*ParsedHost {
+	hosts, _ := parseSourceBlocks(src)
+	return hosts
+}
+
+// parseSourceBlocks is parseSources returning the blocks too, in the order
+// ssh reads them, so import can tell which hand-written block defines what.
+func parseSourceBlocks(src Source) ([]*ParsedHost, []*block) {
 	seen := map[string]bool{}
 	var blocks []*block
 	var aliases []string
-	for _, f := range src.Files {
+	for n, f := range src.Files {
 		abs, err := filepath.Abs(f)
 		if err != nil {
 			continue
 		}
+		reached := abs
 		if resolved, e := filepath.EvalSymlinks(abs); e == nil {
 			abs = resolved
 		}
@@ -555,7 +635,12 @@ func parseSources(src Source) []*ParsedHost {
 		if err != nil {
 			continue
 		}
-		bs, as := collectBlocks(string(text), src.Root, seen, true)
+		bs, as := collectBlocks(string(text), reached, src.Root, seen, true, -1)
+		if n == 0 {
+			for _, b := range bs {
+				b.first = true
+			}
+		}
 		blocks = append(blocks, bs...)
 		aliases = append(aliases, as...)
 	}
@@ -568,7 +653,7 @@ func parseSources(src Source) []*ParsedHost {
 		done[alias] = true
 		hosts = append(hosts, resolveHost(alias, blocks))
 	}
-	return hosts
+	return hosts, blocks
 }
 
 // New builds an importer.
@@ -601,7 +686,7 @@ func (im *Importer) Run(configPath string, dryRun bool) (ImportResult, error) {
 			im.root = r
 		}
 	}
-	parsed := parseSources(src)
+	parsed, blocks := parseSourceBlocks(src)
 	// Parsing reads profiles off paths under the default root. A home whose
 	// keys live under another (defaults.key_root) has its paths read again
 	// under that root, and the new manifest keeps it.
@@ -617,19 +702,103 @@ func (im *Importer) Run(configPath string, dryRun bool) (ImportResult, error) {
 		}
 	}
 
+	// A host whose hand-written block import cannot take out of the config
+	// it read stays the user's, and is not imported: both would define it,
+	// and ssh would read whichever comes first (review R-BUG-09). Leaving one
+	// out can strand a block that names it beside another alias, so this
+	// runs until nothing more is left out.
+	plan := im.newAdoption(src, blocks)
+	var b built
+	for {
+		if b, err = im.build(parsed, root, plan.excluded); err != nil {
+			return ImportResult{}, err
+		}
+		if !plan.exclude(blocks, b, im) {
+			break
+		}
+	}
+	plan.place(blocks, b)
+	if plan.insertAt >= 0 {
+		carryGlobalOptions(b.m, blocks)
+	}
+	m := b.m
+
+	inv := inventory.New()
+	adopted := 0
+	skipped := b.skipped
+	for _, r := range b.resolved {
+		ident := m.IdentityFile(r.h.Profile, r.res.keyName)
+		if !dryRun && r.res.adoptFrom != "" {
+			ok, why := im.adoptKey(m, r.res.adoptFrom, r.h.Profile, r.res.keyName)
+			if ok {
+				adopted++
+			} else if why != "" {
+				skipped = append(skipped, r.h.Alias+": key not adopted: "+why)
+			}
+		}
+		if r.res.probe != "" {
+			if fp := im.safeFingerprint(r.res.probe); fp != "" {
+				inv.Record(fp, inventory.KeyRecord{
+					Profile: r.h.Profile, Path: ident, Type: "ed25519", RotateAfterDays: 365,
+				})
+				inv.NoteAdded(fp, inventory.OriginImported, inventory.Stamp())
+			}
+		}
+	}
+
+	// Counted from what actually reached the manifest, not from what was parsed.
+	// Duplicate Host blocks are dropped above (first wins) - appending to an ssh
+	// config rather than editing it in place is normal, so a repeated alias is
+	// normal - and counting parsed hosts reported an import larger than the one
+	// written, with nothing in the summary to say which number was real.
+	result := ImportResult{DryRun: dryRun, KeysFound: len(inv.Keys), Adopted: adopted, Profiles: map[string]int{}, Skipped: skipped,
+		Sources: src.Files, Root: src.Root}
+	for name, hosts := range b.byProfile {
+		result.Profiles[name] = len(hosts)
+	}
+	result.Moved = plan.moved
+	result.MovedFrom = plan.files()
+	result.Kept = plan.keptLines()
+	result.NotImported = notImported(src.Files)
+	if !dryRun {
+		if err := m.Save(im.p.Manifest()); err != nil {
+			return ImportResult{}, err
+		}
+		if err := inv.Save(im.p.Inventory()); err != nil {
+			return ImportResult{}, err
+		}
+		backup, err := plan.apply(im, m)
+		if err != nil {
+			return result, err
+		}
+		result.Backup = backup
+	}
+	return result, nil
+}
+
+// built is the manifest an import would write, and how it got there.
+type built struct {
+	m         *manifest.Manifest
+	byProfile map[string][]manifest.Host
+	resolved  []resolvedHost
+	skipped   []string
+}
+
+type resolvedHost struct {
+	h   *ParsedHost
+	res resolution
+}
+
+// build turns the parsed hosts, less those excluded, into a manifest. It
+// refuses one Load would reject.
+func (im *Importer) build(parsed []*ParsedHost, root string, excluded map[string]string) (built, error) {
 	m := manifest.Starter(im.emitUseKeychain) // defaults with the right global options
 	if root != manifest.DefaultKeyRoot {
 		m.Defaults.KeyRoot = root
 	}
+	out := built{m: m, byProfile: map[string][]manifest.Host{}}
 	order := []string{}
-	byProfile := map[string][]manifest.Host{}
 	category := map[string]string{} // profile -> the first category its keys were found under
-	type rh struct {
-		h   *ParsedHost
-		res resolution
-	}
-	var resolved []rh
-	var skipped []string
 	seen := map[string]bool{}
 	for _, h := range parsed {
 		// Keyed on the alias alone, not profile+alias: a repeated alias whose
@@ -641,6 +810,9 @@ func (im *Importer) Run(configPath string, dryRun bool) (ImportResult, error) {
 			continue
 		}
 		seen[h.Alias] = true
+		if _, gone := excluded[h.Alias]; gone {
+			continue
+		}
 		res := im.resolveKey(h)
 		kn := res.keyName
 		hostName := h.Hostname
@@ -661,70 +833,29 @@ func (im *Importer) Run(configPath string, dryRun bool) (ImportResult, error) {
 		// One host the manifest would refuse is left out and reported; the
 		// rest of the config is still imported.
 		if err := manifest.ValidateHost(h.Profile, host); err != nil {
-			skipped = append(skipped, h.Alias+": "+err.Error())
+			out.skipped = append(out.skipped, h.Alias+": "+err.Error())
 			continue
 		}
-		resolved = append(resolved, rh{h, res})
-		if _, ok := byProfile[h.Profile]; !ok {
+		out.resolved = append(out.resolved, resolvedHost{h, res})
+		if _, ok := out.byProfile[h.Profile]; !ok {
 			order = append(order, h.Profile)
 		}
 		if category[h.Profile] == "" {
 			category[h.Profile] = h.Category
 		}
-		byProfile[h.Profile] = append(byProfile[h.Profile], host)
+		out.byProfile[h.Profile] = append(out.byProfile[h.Profile], host)
 	}
 	for _, name := range order {
-		m.SetProfile(name, manifest.Profile{Category: category[name], KeyScope: "per_service", Hosts: byProfile[name]})
+		m.SetProfile(name, manifest.Profile{Category: category[name], KeyScope: "per_service", Hosts: out.byProfile[name]})
 	}
 	// Save does not validate, and every later command Loads (which does). An
 	// import that wrote a manifest Load then rejects would report success and
 	// leave authama unusable, so refuse it here - before any key is adopted, and
 	// in a dry run too, which should predict the real run.
 	if err := m.Validate(); err != nil {
-		return ImportResult{}, &importError{"import would produce an invalid manifest: " + err.Error()}
+		return built{}, &importError{"import would produce an invalid manifest: " + err.Error()}
 	}
-
-	inv := inventory.New()
-	adopted := 0
-	for _, r := range resolved {
-		ident := m.IdentityFile(r.h.Profile, r.res.keyName)
-		if !dryRun && r.res.adoptFrom != "" && im.adoptKey(m, r.res.adoptFrom, r.h.Profile, r.res.keyName) {
-			adopted++
-		}
-		if r.res.probe != "" {
-			if fp := im.safeFingerprint(r.res.probe); fp != "" {
-				inv.Record(fp, inventory.KeyRecord{
-					Profile: r.h.Profile, Path: ident, Type: "ed25519", RotateAfterDays: 365,
-				})
-				inv.NoteAdded(fp, inventory.OriginImported, inventory.Stamp())
-			}
-		}
-	}
-
-	// Counted from what actually reached the manifest, not from what was parsed.
-	// Duplicate Host blocks are dropped above (first wins) - appending to an ssh
-	// config rather than editing it in place is normal, so a repeated alias is
-	// normal - and counting parsed hosts reported an import larger than the one
-	// written, with nothing in the summary to say which number was real.
-	result := ImportResult{DryRun: dryRun, KeysFound: len(inv.Keys), Adopted: adopted, Profiles: map[string]int{}, Skipped: skipped,
-		Sources: src.Files, Root: src.Root}
-	for name, hosts := range byProfile {
-		result.Profiles[name] = len(hosts)
-		for _, h := range hosts {
-			result.LeftInConfig = append(result.LeftInConfig, h.Alias)
-		}
-	}
-	sort.Strings(result.LeftInConfig)
-	result.NotImported = notImported(src.Files)
-	if !dryRun {
-		if err := m.Save(im.p.Manifest()); err != nil {
-			return ImportResult{}, err
-		}
-		if err := inv.Save(im.p.Inventory()); err != nil {
-			return ImportResult{}, err
-		}
-	}
-	return result, nil
+	return out, nil
 }
 
 func (im *Importer) resolveKey(h *ParsedHost) resolution {
@@ -774,24 +905,36 @@ func underProfile(real, profile, root string) bool {
 
 // adoptKey copies an existing keypair into the profile's directory
 // (profiles/[<category>/]<profile>/<keyName>). Non-destructive: skips if the
-// destination already exists.
-func (im *Importer) adoptKey(m *manifest.Manifest, srcPriv, profile, keyName string) bool {
+// destination already exists. When it refuses for a reason the user should
+// hear, why says it.
+func (im *Importer) adoptKey(m *manifest.Manifest, srcPriv, profile, keyName string) (ok bool, why string) {
 	dstPriv := m.KeyPath(im.p.SSHDir, manifest.KeyRef{Profile: profile, KeyName: keyName})
 	// occupied, not exists: a dangling symlink at the destination reads as
 	// absent through Stat, and the copy would then follow it out of the tree.
 	if occupied(dstPriv) || !exists(srcPriv) {
-		return false
+		return false, ""
+	}
+	// MkdirAll and the chmod below follow a link anywhere on the way, so a
+	// profile directory that is a symlink had its target made 0700, wherever
+	// it pointed (review A-SEC-15). The key itself is written O_EXCL, never
+	// through a link; its directory is held to the same rule.
+	if link := linkUnder(im.p.SSHDir, filepath.Dir(dstPriv)); link != "" {
+		return false, link + " is a symbolic link; authama will not write a key through it"
 	}
 	if err := os.MkdirAll(filepath.Dir(dstPriv), perms.DirMode); err != nil {
-		return false
+		return false, ""
+	}
+	// A link swapped in between the check and here is caught again before the chmod.
+	if link := linkUnder(im.p.SSHDir, filepath.Dir(dstPriv)); link != "" {
+		return false, link + " is a symbolic link; authama will not write a key through it"
 	}
 	_ = perms.SetPerms(filepath.Dir(dstPriv), perms.DirMode)
 	if im.standIn {
 		if writeNew(dstPriv, nil) != nil {
-			return false
+			return false, ""
 		}
 	} else if !copyFile(srcPriv, dstPriv) {
-		return false
+		return false, ""
 	}
 	_ = perms.SetPerms(dstPriv, perms.PrivateKeyMode)
 	// The public half replaces whatever is beside the new private key, a stale
@@ -802,7 +945,31 @@ func (im *Importer) adoptKey(m *manifest.Manifest, srcPriv, profile, keyName str
 			_ = perms.SetPerms(dstPriv+".pub", perms.PublicKeyMode)
 		}
 	}
-	return true
+	return true, ""
+}
+
+// linkUnder returns the first directory from base (exclusive) down to dir
+// (inclusive) that is a symbolic link, or "" when none is. base itself may be
+// a link - a ~/.ssh kept in a dotfiles checkout is ordinary - but nothing
+// authama creates under it may be. A component that does not exist yet is
+// not a link.
+func linkUnder(base, dir string) string {
+	rel, err := filepath.Rel(base, dir)
+	if err != nil || rel == "." || strings.HasPrefix(rel, "..") {
+		return ""
+	}
+	cur := base
+	for _, part := range strings.Split(rel, string(filepath.Separator)) {
+		cur = filepath.Join(cur, part)
+		fi, err := os.Lstat(cur)
+		if err != nil {
+			return ""
+		}
+		if fi.Mode()&os.ModeSymlink != 0 {
+			return cur
+		}
+	}
+	return ""
 }
 
 func (im *Importer) safeFingerprint(probe string) string {
@@ -892,7 +1059,7 @@ func IdentityFiles(configPath string) []string {
 	if err != nil {
 		return nil
 	}
-	blocks, _ := collectBlocks(string(b), filepath.Dir(configPath), map[string]bool{}, true)
+	blocks, _ := collectBlocks(string(b), configPath, filepath.Dir(configPath), map[string]bool{}, true, -1)
 	var out []string
 	for _, bl := range blocks {
 		for _, o := range bl.opts {
