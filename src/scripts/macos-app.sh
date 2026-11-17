@@ -57,9 +57,10 @@ exec /usr/bin/open -a Terminal "$res/authama-serve.command"
 LAUNCH
 chmod 0755 "${app}/Contents/MacOS/authama-app"
 
-# The bundle id is reverse-DNS from authama's product domain, sange.sh, as the
-# notifier's app id is (sh.sange.authama, its helper sh.sange.authama.notifier).
-# It was com.simtabi.authama until 2026-11-16; the app keeps no state under it.
+# The bundle id is reverse-DNS under com.simtabi, since Simtabi LLC owns sange,
+# as the notifier's app id is (com.simtabi.sange.authama, its helper
+# com.simtabi.sange.authama.notifier). It was com.simtabi.authama until
+# 2026-11-16, then sh.sange.authama for a day; the app keeps no state under it.
 cat > "${app}/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -67,7 +68,7 @@ cat > "${app}/Contents/Info.plist" <<PLIST
 <dict>
   <key>CFBundleName</key><string>Authama</string>
   <key>CFBundleDisplayName</key><string>Authama</string>
-  <key>CFBundleIdentifier</key><string>sh.sange.authama</string>
+  <key>CFBundleIdentifier</key><string>com.simtabi.sange.authama</string>
   <key>CFBundleExecutable</key><string>authama-app</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>${short}</string>

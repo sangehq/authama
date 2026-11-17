@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/sangehq/authama/src/internal/core/recency"
+	"github.com/sangehq/authama/src/internal/services/feed"
 	"github.com/sangehq/authama/src/internal/util/envnames"
 )
 
@@ -122,6 +123,8 @@ var Specs = []Spec{
 		Doc: "Let `ssh vm sync` replace a VM host's known_hosts pin when the guest's host key changed (a rebuilt VM), as `--repin` does. Off: sync reports it."},
 	{Section: "api", Name: "enabled", Env: envnames.API, Kind: KindBool, Default: "false",
 		Doc: "Serve the read API at /api/v1/ on `serve`, for programs holding an API token (`authama api token create`). It reads only: profiles, keys, hosts, which tokens are set (never a secret), the history, the event feed and doctor. Off: /api/v1/ is not served."},
+	{Section: "events", Name: "source", Env: envnames.EventsSource, Kind: KindEnum, Enum: feed.Sources, Default: feed.SourceSangeSh,
+		Doc: "The base of each event's source, the URL naming this install by a random id in the event feed, webhooks, the read API and MCP: sange.sh gives https://sange.sh/authama/install/<id>, simtabi.com gives https://simtabi.com/sange/authama/install/<id>. The id is the same under both. A receiver keyed on source sees a change."},
 	{Section: "webhooks", Name: "enabled", Env: envnames.Webhooks, Kind: KindBool, Default: "false",
 		Doc: "Have `serve` send each new event (a change finished, a watched file changed) to the endpoints added with `authama webhook add`, signed as Standard Webhooks do. Off: nothing is sent; `authama webhook deliver` still sends by hand."},
 	{Section: "webhooks", Name: "allow_private", Env: envnames.WebhooksAllowPrivate, Kind: KindBool, Default: "false",

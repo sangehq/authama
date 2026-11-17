@@ -16,11 +16,11 @@ An endpoint is sent what happens from when it is added, never the history before
 
 | Command | What it does |
 |---|---|
-| `authama webhook add <name> <url> [--event <prefix>]...` | adds an endpoint and prints its `whsec_` secret once; `--event` sends only types starting with a prefix, whole or without `sh.sange.authama.` (`operation.finished`, `file.`); the old `com.simtabi.authama.` prefix is still read (see [the event identity](api.md#event-identity)) |
+| `authama webhook add <name> <url> [--event <prefix>]...` | adds an endpoint and prints its `whsec_` secret once; `--event` sends only types starting with a prefix, whole or without `com.simtabi.sange.authama.` (`operation.finished`, `file.`); the earlier `com.simtabi.authama.` and `sh.sange.authama.` prefixes are still read (see [the event identity](api.md#event-identity)) |
 | `authama webhook list [--json]` | endpoints and how their delivery stands; never a secret |
 | `authama webhook remove <name>` | forgets an endpoint and its secret |
 | `authama webhook disable <name>`, `enable <name>` | pauses an endpoint, or resumes it from where it stopped |
-| `authama webhook test <name>` | sends one `sh.sange.authama.webhook.tested` event now; moves nothing |
+| `authama webhook test <name>` | sends one `com.simtabi.sange.authama.webhook.tested` event now; moves nothing |
 | `authama webhook deliver` | sends every endpoint what is due, without `serve` |
 
 Endpoints and their secrets are kept in `webhooks.json` in the state home (mode 0600).
@@ -39,7 +39,7 @@ webhook-timestamp: 1763000000
 webhook-signature: v1,<base64 HMAC-SHA256>
 
 {"specversion":"1.0","id":"op_0f9c2e1a7b3d4c5e","source":"https://sange.sh/authama/install/7f3c2a9e5b1d4c60",
- "type":"sh.sange.authama.operation.finished","subject":"operation/0f9c2e1a7b3d4c5e","time":"2026-11-12T10:00:05Z",
+ "type":"com.simtabi.sange.authama.operation.finished","subject":"operation/0f9c2e1a7b3d4c5e","time":"2026-11-12T10:00:05Z",
  "datacontenttype":"application/json","data":{...},"authamasub":"ops"}
 ```
 

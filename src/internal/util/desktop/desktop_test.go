@@ -3,6 +3,7 @@ package desktop
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -162,12 +163,24 @@ func TestANotificationIsGroupedByItsTitle(t *testing.T) {
 	}
 }
 
-// The notifier's app id is reverse-DNS from authama's product domain, sange.sh,
-// as go-notifykit's standard asks (owner, 2026-11-16). macOS remembers the
-// notification permission by AppID+".notifier", so this changes only with a
-// release note.
-func TestTheAppIDIsUnderSangeSh(t *testing.T) {
-	if AppID != "sh.sange.authama" {
+// The notifier's app id is reverse-DNS under com.simtabi, since Simtabi LLC
+// owns sange (owner, 2026-11-17). macOS remembers the notification permission
+// by AppID+".notifier", so this changes only with a release note.
+func TestTheAppIDIsUnderComSimtabi(t *testing.T) {
+	if AppID != "com.simtabi.sange.authama" {
 		t.Errorf("AppID is %q", AppID)
+	}
+}
+
+// Authama.app's bundle id (src/scripts/macos-app.sh) is the notifier's app id,
+// so the two cannot drift apart when the identity moves.
+func TestTheMacAppBundleIDIsTheAppID(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("..", "..", "..", "scripts", "macos-app.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ids := regexp.MustCompile(`<key>CFBundleIdentifier</key><string>([^<]+)</string>`).FindAllStringSubmatch(string(b), -1)
+	if len(ids) != 1 || ids[0][1] != AppID {
+		t.Fatalf("macos-app.sh bundle ids %v, want exactly one, %q", ids, AppID)
 	}
 }

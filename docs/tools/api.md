@@ -81,7 +81,7 @@ sange uses, so one receiver reads both:
   "specversion": "1.0",
   "id": "op_0f9c2e1a7b3d4c5e",
   "source": "https://sange.sh/authama/install/7f3c2a9e5b1d4c60",
-  "type": "sh.sange.authama.operation.finished",
+  "type": "com.simtabi.sange.authama.operation.finished",
   "subject": "operation/0f9c2e1a7b3d4c5e",
   "time": "2026-11-12T10:00:05Z",
   "datacontenttype": "application/json",
@@ -91,19 +91,21 @@ sange uses, so one receiver reads both:
 
 | Type | When | Subject | Data |
 |---|---|---|---|
-| `sh.sange.authama.operation.finished` | a change finished, from the command line or the web | `operation/<op_id>` | `op_id`, `command`, `args`, `made_from`, `result`, `error`, `subjects`, `snapshot` |
-| `sh.sange.authama.file.added`, `.file.changed`, `.file.removed`, `.file.mode-changed` | a watched file changed | `file/<path>` | `kind`, `area`, `path`, `changed_at`, `size`, `mode` |
-| `sh.sange.authama.file.watch.started` | watching began | | `detail` |
-| `sh.sange.authama.webhook.tested` | `authama webhook test` | `webhook/<name>` | `message` |
+| `com.simtabi.sange.authama.operation.finished` | a change finished, from the command line or the web | `operation/<op_id>` | `op_id`, `command`, `args`, `made_from`, `result`, `error`, `subjects`, `snapshot` |
+| `com.simtabi.sange.authama.file.added`, `.file.changed`, `.file.removed`, `.file.mode-changed` | a watched file changed | `file/<path>` | `kind`, `area`, `path`, `changed_at`, `size`, `mode` |
+| `com.simtabi.sange.authama.file.watch.started` | watching began | | `detail` |
+| `com.simtabi.sange.authama.webhook.tested` | `authama webhook test` | `webhook/<name>` | `message` |
 
 - **`source`** names this install by a random id, made once and kept in the state home. It never
-  names the host or the user.
+  names the host or the user. Its base is the `events.source` setting: `https://sange.sh/authama/install/<id>`
+  by default, or `https://simtabi.com/sange/authama/install/<id>` (see [the event identity](#event-identity)).
 - **A path in your home** is written from `~` (`~/.ssh/config`), so no event names your account.
 - **`time`** is when it happened: when a change finished, or when authama noticed a file change (the
   file's own time is `changed_at`).
-- A `type` filter takes a type whole or without `sh.sange.authama.`: `file.` matches every file
-  event. A filter written with the old `com.simtabi.authama.` prefix is read as the same filter on
-  `sh.sange.authama.` (deprecated; see [the event identity](#event-identity)). `/events` returns `next`: pass it as
+- A `type` filter takes a type whole or without `com.simtabi.sange.authama.`: `file.` matches every
+  file event. A filter written with either earlier prefix, `com.simtabi.authama.` or
+  `sh.sange.authama.`, is read as the same filter on `com.simtabi.sange.authama.` (deprecated; see
+  [the event identity](#event-identity)). `/events` returns `next`: pass it as
 `after` to read on, and each event is read once. A file event is ordered by when authama noticed it, so
 a change made while nothing was watching still comes after your cursor. The stream's SSE `id` is the
 same cursor, so a client that reconnects with `Last-Event-ID` resumes where it stopped.
@@ -111,24 +113,42 @@ One token holds at most four streams open at once; a fifth is answered `429 too_
 stream's place is given back when it closes.
 
 
-### <a name="event-identity"></a>The event identity moved to sange.sh
+### <a name="event-identity"></a>The event identity is under com.simtabi
 
-On 2026-11-16 the event identity moved under authama's product domain, `sange.sh`, the way sange's
-own events are (`https://sange.sh/install/<id>`, `sh.sange.*`):
+Simtabi LLC owns sange, so authama's reverse-DNS names sit under `com.simtabi`, as sange's do
+(owner, 2026-11-17). The identity has had three generations; the second, under `sange.sh`, was
+released on 2026-11-16 and replaced the next day:
 
-| | Before | Now |
-|---|---|---|
-| `source` | `https://opensource.simtabi.com/products/sangehq/authama/install/<id>` | `https://sange.sh/authama/install/<id>` |
-| `type` | `com.simtabi.authama.*` | `sh.sange.authama.*` |
-| desktop notifier app id | `com.simtabi.authama` | `sh.sange.authama` |
+| | Until 2026-11-16 | 2026-11-16 | Now (2026-11-17) |
+|---|---|---|---|
+| `type` | `com.simtabi.authama.*` | `sh.sange.authama.*` | `com.simtabi.sange.authama.*` |
+| `source` | `https://opensource.simtabi.com/products/sangehq/authama/install/<id>` | `https://sange.sh/authama/install/<id>` | `https://sange.sh/authama/install/<id>` (default) or `https://simtabi.com/sange/authama/install/<id>` |
+| desktop notifier app id | `com.simtabi.authama` | `sh.sange.authama` | `com.simtabi.sange.authama` |
+| macOS `Authama.app` bundle id | `com.simtabi.authama` | `sh.sange.authama` | `com.simtabi.sange.authama` |
 
-The install id after `install/` is unchanged. **A receiver that matches on `source` or `type` must
-accept the new values.** authama's own filters (`webhook add --event`, a saved webhook's `events`,
-`/api/v1/events?type=`, MCP's `list_events`) still read a filter written with
-`com.simtabi.authama.` as the same filter on `sh.sange.authama.`, so a webhook saved before the move
-keeps receiving what it asked for. That reading is deprecated and goes no earlier than v1.0.0; write
-filters without the prefix (`file.`) and they never need changing. On macOS, the first notification
-after the move may ask for permission again ([expiry](expiry.md#how-a-notification-is-shown)).
+**The source has two forms, and a setting picks one.** `events.source` in `authama.json`
+(`AUTHAMA_EVENTS_SOURCE`) takes `sange.sh`, the default, or `simtabi.com`:
+
+| `events.source` | `source` |
+|---|---|
+| `sange.sh` (default) | `https://sange.sh/authama/install/7f3c2a9e5b1d4c60` |
+| `simtabi.com` | `https://simtabi.com/sange/authama/install/7f3c2a9e5b1d4c60` |
+
+```sh
+authama settings set events.source simtabi.com   # or: AUTHAMA_EVENTS_SOURCE=simtabi.com in .env
+```
+
+Any other value is refused by `authama settings set` and reported by `authama settings validate`
+([configuration](../configuration.md#settings-env-and-authamajson)). The install id after `install/`
+is the same under both forms and in every generation, so a receiver can key on it alone.
+
+**A receiver that matches on `source` or `type` must accept the new values.** authama's own filters
+(`webhook add --event`, a saved webhook's `events`, `/api/v1/events?type=`, MCP's `list_events`)
+still read a filter written with `com.simtabi.authama.` or `sh.sange.authama.` as the same filter on
+`com.simtabi.sange.authama.`, so a webhook saved under either earlier prefix keeps receiving what it
+asked for. That reading is deprecated and goes no earlier than v1.0.0; write filters without the
+prefix (`file.`) and they never need changing. On macOS, the first notification after updating may
+ask for permission again ([expiry](expiry.md#how-a-notification-is-shown)).
 
 ## Security
 

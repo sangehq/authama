@@ -683,6 +683,7 @@ every setting stays at its default until you add it.
 | `web.port` | `AUTHAMA_WEB_PORT` | `7822` (the next free port is used when it is taken; only `--port` makes that an error) |
 | `web.menu_export` | `AUTHAMA_WEB_MENU_EXPORT` | `true` (show Export in the menu; off hides the item, and the page and each list's download stay) |
 | `api.enabled` | `AUTHAMA_API` | `false` (serve the read API at `/api/v1/` for API tokens; see [read API](tools/api.md)) |
+| `events.source` | `AUTHAMA_EVENTS_SOURCE` | `sange.sh` (the base of each event's `source`: `sange.sh` gives `https://sange.sh/authama/install/<id>`, `simtabi.com` gives `https://simtabi.com/sange/authama/install/<id>`; any other value is refused; see [the event identity](tools/api.md#event-identity)) |
 | `webhooks.enabled` | `AUTHAMA_WEBHOOKS` | `false` (`serve` sends each new event to your endpoints; see [webhooks](tools/webhooks.md)) |
 | `webhooks.allow_private` | `AUTHAMA_WEBHOOKS_ALLOW_PRIVATE` | `false` (allow endpoints on this machine or a private network, and plain http to loopback) |
 | `webhooks.include_details` | `AUTHAMA_WEBHOOKS_INCLUDE_DETAILS` | `false` (put an operation's error text and subjects in webhook payloads; see [webhooks](tools/webhooks.md#what-is-sent)) |

@@ -322,6 +322,7 @@ func TestTheEnvironmentVariableNamesAreTheDocumentedOnes(t *testing.T) {
 		"AUTHAMA_WEBHOOKS":                 "webhooks.enabled: serve delivers the event feed to endpoints",
 		"AUTHAMA_WEBHOOKS_ALLOW_PRIVATE":   "webhooks.allow_private: endpoints on loopback or private addresses",
 		"AUTHAMA_WEBHOOKS_INCLUDE_DETAILS": "webhooks.include_details: an operation's error text and subjects in webhook payloads",
+		"AUTHAMA_EVENTS_SOURCE":            "events.source: the base of the event source URL, sange.sh or simtabi.com",
 		"AUTHAMA_MCP":                      "mcp.enabled: authama mcp serves MCP over stdio",
 		"AUTHAMA_HELLO_CHECK":              "internal: asks the Windows Hello script for availability only",
 		"AUTHAMA_WEB_AUTO_RESTART":         "web.auto_restart: restart serve by itself when its binary is rebuilt",
