@@ -1,0 +1,19 @@
+# The release-train freeze (DEC-044): from Friday 18:00 to Tuesday 12:30 America/New_York only pull
+# requests labelled release-fix, or the train's own release/train-* pull request, may merge. This
+# repository is on the train (simtabi/.github release-train/train.json); see that repository's
+# release-train/README.md.
+name: Release window
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions: {}
+
+concurrency:
+  group: release-window-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  window:
+    uses: simtabi/.github/.github/workflows/release-window.yml@1f1f5d08895c9474ed266edf98f32204bb8b243d # v0.1.2
