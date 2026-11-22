@@ -31,14 +31,14 @@
                       <li class="structure-leaf"><a class="d-inline-block py-1 text-decoration-underline" href="{{u "/profiles"}}#profile-{{.Name}}">Open profile {{.Name}}</a></li>
                       {{range .Keys}}<li class="structure-leaf structure-item"{{if and (not $.ReadOnly) .Moves}} draggable="true" data-drag="move-k-{{$prof.Name}}-{{.Name}}"{{end}}>
                         <span class="structure-label">{{icon "key"}}<span class="ms-1">{{.Name}}</span></span> <code class="small">{{.Path}}</code>{{if .Adopted}} <span class="badge badge-info">kept where it is</span>{{end}}{{if not .Present}} <span class="badge badge-warn">not on disk yet</span>{{end}}
-                        {{if and (not $.ReadOnly) .Moves}}<label class="visually-hidden" for="move-k-{{$prof.Name}}-{{.Name}}">Move key {{.Name}} to another profile</label><select class="form-select form-select-sm d-inline-block w-auto ms-2 py-0" id="move-k-{{$prof.Name}}-{{.Name}}" name="move" form="structure-plan" data-structure-what="key {{$prof.Name}}/{{.Name}}">
+                        {{if and (not $.ReadOnly) .Moves}}<label class="visually-hidden" for="move-k-{{$prof.Name}}-{{.Name}}">Move key {{.Name}} to another profile</label><select class="form-select form-select-sm d-inline-block w-auto ms-2" id="move-k-{{$prof.Name}}-{{.Name}}" name="move" form="structure-plan" data-structure-what="key {{$prof.Name}}/{{.Name}}">
                           <option value="">Stay in {{$prof.Name}}</option>
                           {{range .Moves}}<option value="{{.Line}}" data-target="{{.Target}}">{{.Label}}</option>{{end}}
                         </select>{{end}}
                       </li>{{end}}
                       {{range .Hosts}}<li class="structure-leaf structure-item"{{if and (not $.ReadOnly) .Moves}} draggable="true" data-drag="move-h-{{.Alias}}"{{end}}>
                         <span class="structure-label">{{icon "server"}}<a class="ms-1 text-decoration-underline" href="{{u "/hosts"}}/{{.Alias}}">{{.Alias}}</a></span> <span class="text-secondary small">{{.Hostname}} · key {{.Key}}</span>
-                        {{if and (not $.ReadOnly) .Moves}}<label class="visually-hidden" for="move-h-{{.Alias}}">Move host {{.Alias}} to another profile</label><select class="form-select form-select-sm d-inline-block w-auto ms-2 py-0" id="move-h-{{.Alias}}" name="move" form="structure-plan" data-structure-what="host {{.Alias}}">
+                        {{if and (not $.ReadOnly) .Moves}}<label class="visually-hidden" for="move-h-{{.Alias}}">Move host {{.Alias}} to another profile</label><select class="form-select form-select-sm d-inline-block w-auto ms-2" id="move-h-{{.Alias}}" name="move" form="structure-plan" data-structure-what="host {{.Alias}}">
                           <option value="">Stay in {{$prof.Name}}</option>
                           {{range .Moves}}<option value="{{.Line}}" data-target="{{.Target}}">{{.Label}}</option>{{end}}
                         </select>{{end}}
