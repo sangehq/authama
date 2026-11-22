@@ -140,13 +140,19 @@ func newStructureApproveCmd() *cobra.Command {
 		Long: "Approves suggestions by id (or an id prefix of 4+ characters), or a plan of move lines\n" +
 			"with --plan (- reads stdin):\n\n" +
 			"  key <~/.ssh/path|config/name> profile <profile> [name <key>]\n" +
+			"  key <profile>/<key> profile <profile> [name <key>]   (a declared key, with its hosts)\n" +
+			"  host <profile>/<alias> profile <profile>\n" +
 			"  misplaced <profile>/<key>\n" +
 			"  profile <profile> category <category|->\n\n" +
+			"A host moved to another profile takes its own key when no other host uses it;\n" +
+			"otherwise it takes the key its new profile gives it. A declared key moves only\n" +
+			"with every host of its profile that uses it, and keeps its record and deployments.\n\n" +
 			"A suggestion with no guessed profile needs --profile. The preview lists each file\n" +
 			"moved and the manifest and config diffs; nothing is written before you confirm.",
 		Example: "  " + brand.Command + " ssh structure approve 1a2b3c4d\n" +
 			"  " + brand.Command + " ssh structure approve 9f8e --profile work --name laptop\n" +
-			"  " + brand.Command + " ssh structure approve --plan moves.txt --dry-run",
+			"  " + brand.Command + " ssh structure approve --plan moves.txt --dry-run\n" +
+			"  echo \"host work/gh profile home\" | " + brand.Command + " ssh structure approve --plan -",
 		RunE: func(c *cobra.Command, args []string) error {
 			p, err := resolvePaths(c)
 			if err != nil {

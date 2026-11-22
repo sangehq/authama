@@ -53,15 +53,21 @@ type StructureProfile struct {
 	Moves               []StructureOption // to another category
 }
 
-// StructureKey is one key a profile declares.
+// StructureKey is one key a profile declares, with the profiles it can move
+// to (none when it is kept where it is, or in 1Password).
 type StructureKey struct {
 	Name, Path string
 	Present    bool
 	Adopted    bool // kept where it is (`key adopt`): never moved
+	Moves      []StructureOption
 }
 
-// StructureHost is one host and the key it uses.
-type StructureHost struct{ Alias, Hostname, Key string }
+// StructureHost is one host and the key it uses, with the profiles it can
+// move to.
+type StructureHost struct {
+	Alias, Hostname, Key string
+	Moves                []StructureOption
+}
 
 // StructureOption is one choice in a move select: its plan line and the
 // category or profile it moves to (what a drop target names).
@@ -128,15 +134,24 @@ func structureGroups(p paths.Paths, m *manifest.Manifest) []StructureGroup {
 			if m.Profiles[ref.Profile].InOnePassword() {
 				_, err = os.Lstat(path + ".pub")
 			}
-			keysOf[ref.Profile] = append(keysOf[ref.Profile], StructureKey{Name: ref.KeyName,
-				Path: "~/.ssh/" + filepath.ToSlash(rel), Present: err == nil,
-				Adopted: manifest.AdoptedPath(m, ref) != ""})
+			k := StructureKey{Name: ref.KeyName, Path: "~/.ssh/" + filepath.ToSlash(rel), Present: err == nil,
+				Adopted: manifest.AdoptedPath(m, ref) != ""}
+			if !k.Adopted {
+				k.Moves = crossMoves(m, ref.Profile, func(to string) structure.Move {
+					return structure.Move{Kind: structure.MoveDeclared, From: ref.Profile, Key: ref.KeyName, Name: ref.KeyName, Profile: to}
+				})
+			}
+			keysOf[ref.Profile] = append(keysOf[ref.Profile], k)
 		}
 	}
 	hostsOf := map[string][]StructureHost{}
 	if res, err := m.IterResolved(); err == nil {
 		for _, rk := range res {
-			hostsOf[rk.Profile] = append(hostsOf[rk.Profile], StructureHost{Alias: rk.Host.Alias, Hostname: rk.Host.Hostname, Key: rk.KeyName})
+			alias, from := rk.Host.Alias, rk.Profile
+			hostsOf[rk.Profile] = append(hostsOf[rk.Profile], StructureHost{Alias: alias, Hostname: rk.Host.Hostname, Key: rk.KeyName,
+				Moves: crossMoves(m, from, func(to string) structure.Move {
+					return structure.Move{Kind: structure.MoveHost, From: from, Name: alias, Profile: to}
+				})})
 		}
 	}
 	cats := append([]string{""}, m.Categories()...)
@@ -172,6 +187,22 @@ func structureGroups(p paths.Paths, m *manifest.Manifest) []StructureGroup {
 		groups = append(groups, g)
 	}
 	return groups
+}
+
+// crossMoves is what a key's or host's select offers: a move into each other
+// profile that keeps its keys on disk. A profile in 1Password offers none.
+func crossMoves(m *manifest.Manifest, from string, move func(to string) structure.Move) []StructureOption {
+	if m.Profiles[from].InOnePassword() {
+		return nil
+	}
+	var out []StructureOption
+	for _, to := range m.ProfileNames() {
+		if to == from || m.Profiles[to].InOnePassword() {
+			continue
+		}
+		out = append(out, StructureOption{Line: move(to).Line(), Target: "profile:" + to, Label: "into " + to})
+	}
+	return out
 }
 
 // suggestionMoves is what a suggestion's select offers: its own plan when

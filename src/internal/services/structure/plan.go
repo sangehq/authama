@@ -26,6 +26,12 @@ const (
 	MoveKey       = "key"       // key <src> profile <p> [name <n>]
 	MoveMisplaced = "misplaced" // misplaced <profile>/<key>
 	MoveCategory  = "profile"   // profile <name> category <cat|->
+	// MoveHost moves a host to another profile: host <from>/<alias> profile <to>.
+	MoveHost = "host"
+	// MoveDeclared moves a key a profile declares or its hosts use to another
+	// profile: key <from>/<key> profile <to> [name <n>] (a key line whose
+	// source is profile/key rather than a path).
+	MoveDeclared = "declared"
 )
 
 // Move is one approved line of a plan.
@@ -35,6 +41,9 @@ type Move struct {
 	Profile  string
 	Name     string // MoveKey: the key name (defaults to the file's); MoveMisplaced: the key
 	Category string // MoveCategory: "" for none
+	// From is the profile a MoveHost or MoveDeclared takes from; Key the key
+	// a MoveDeclared takes (Name is what it is called in Profile).
+	From, Key string
 }
 
 // Line is the move as a plan line.
@@ -48,6 +57,14 @@ func (mv Move) Line() string {
 			c = "-"
 		}
 		return "profile " + mv.Profile + " category " + c
+	case MoveHost:
+		return "host " + mv.From + "/" + mv.Name + " profile " + mv.Profile
+	case MoveDeclared:
+		line := "key " + mv.From + "/" + mv.Key + " profile " + mv.Profile
+		if mv.Name != "" && mv.Name != mv.Key {
+			line += " name " + mv.Name
+		}
+		return line
 	}
 	return KeyLine(mv.Src, mv.Profile, mv.Name)
 }
@@ -85,6 +102,25 @@ func ParsePlan(text string) ([]Move, error) {
 
 func parseLine(f []string) (Move, error) {
 	switch {
+	case len(f) >= 4 && f[0] == MoveKey && f[2] == "profile" && isRef(f[1]):
+		from, key, _ := strings.Cut(f[1], "/")
+		mv := Move{Kind: MoveDeclared, From: from, Key: key, Profile: f[3], Name: key}
+		switch {
+		case len(f) == 6 && f[4] == "name" && planName(f[5]):
+			mv.Name = f[5]
+		case len(f) != 4:
+			return Move{}, errors.New("want: key <profile>/<key> profile <profile> [name <key>]")
+		}
+		if !planName(mv.Profile) {
+			return Move{}, fmt.Errorf("%q is not a profile name", mv.Profile)
+		}
+		return mv, nil
+	case len(f) == 4 && f[0] == MoveHost && f[2] == "profile":
+		if !isRef(f[1]) || !planName(f[3]) {
+			return Move{}, errors.New("want: host <profile>/<alias> profile <profile>")
+		}
+		from, alias, _ := strings.Cut(f[1], "/")
+		return Move{Kind: MoveHost, From: from, Name: alias, Profile: f[3]}, nil
 	case len(f) >= 4 && f[0] == MoveKey && f[2] == "profile":
 		mv := Move{Kind: MoveKey, Src: f[1], Profile: f[3]}
 		switch {
@@ -113,7 +149,30 @@ func parseLine(f []string) (Move, error) {
 		}
 		return Move{Kind: MoveCategory, Profile: f[1], Category: c}, nil
 	}
-	return Move{}, errors.New("not a move: want `key …`, `misplaced …` or `profile … category …`")
+	return Move{}, errors.New("not a move: want `key …`, `misplaced …`, `host …` or `profile … category …`")
+}
+
+// isRef reports whether s is profile/name: one slash, two plain names, not a
+// path (a path starts ~/.ssh/ or config/).
+func isRef(s string) bool {
+	a, b, ok := strings.Cut(s, "/")
+	return ok && planName(a) && planName(b) && a != "~" && a != "config"
+}
+
+// planName is a profile, key or host name as a plan line may give one:
+// letters, digits, '.', '_' and '-', not starting with '.' or '-'.
+func planName(s string) bool {
+	if s == "" || strings.HasPrefix(s, ".") || strings.HasPrefix(s, "-") {
+		return false
+	}
+	for _, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '.', r == '_', r == '-':
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // checkSrc refuses a source that is not plainly a file in ~/.ssh or directly
@@ -135,18 +194,31 @@ func checkSrc(src string) error {
 	return nil
 }
 
-// srcAbs is where a move's source is under p.
+// srcAbs is where a move's source is under p: always inside ~/.ssh or the
+// config home ("" for anything that would resolve outside them, which
+// checkSrc already refuses).
 func srcAbs(p paths.Paths, src string) string {
 	if rest, ok := strings.CutPrefix(src, "config/"); ok {
-		return filepath.Join(p.ConfigDir, rest)
+		return inside(p.ConfigDir, filepath.Join(p.ConfigDir, rest))
 	}
-	return filepath.Join(p.SSHDir, filepath.FromSlash(strings.TrimPrefix(src, "~/.ssh/")))
+	return inside(p.SSHDir, filepath.Join(p.SSHDir, filepath.FromSlash(strings.TrimPrefix(src, "~/.ssh/"))))
 }
 
 // Dest is where a key move puts the private key under p, per the manifest
-// as it stands (a category move earlier in the same plan is not reflected).
+// as it stands (a category move earlier in the same plan is not reflected);
+// "" when that would be outside ~/.ssh.
 func Dest(p paths.Paths, m *manifest.Manifest, mv Move) string {
-	return filepath.Join(m.ProfileDir(p.SSHDir, mv.Profile), mv.Name)
+	return inside(p.SSHDir, filepath.Join(m.ProfileDir(p.SSHDir, mv.Profile), mv.Name))
+}
+
+// inside is path when it is strictly under root, else "": a plan line names
+// paths, and nothing it names may reach past the directory it is about.
+func inside(root, path string) string {
+	root, path = filepath.Clean(root), filepath.Clean(path)
+	if strings.HasPrefix(path, root+string(filepath.Separator)) {
+		return path
+	}
+	return ""
 }
 
 // Result is what Apply did.
@@ -186,6 +258,9 @@ func Apply(p paths.Paths, moves []Move, out io.Writer) (Result, error) {
 		}
 		audit(p, mv, "~/.ssh/"+cr.From, "~/.ssh/"+cr.To)
 	}
+	if err := applyCross(p, moves, out, &res); err != nil {
+		return res, err
+	}
 	m, err := manifest.Load(p.Manifest())
 	if err != nil {
 		return res, err
@@ -214,6 +289,9 @@ func Apply(p paths.Paths, moves []Move, out io.Writer) (Result, error) {
 				return res, err
 			}
 			src, dest := srcAbs(p, mv.Src), Dest(p, m, mv)
+			if src == "" || dest == "" {
+				return res, fmt.Errorf("%s: a path outside ~/.ssh or the config home", mv.Line())
+			}
 			if mv.FromConfigHome() {
 				steps = append(steps, step{mv, "", dest})
 				continue
@@ -318,6 +396,9 @@ func MoveConfigHome(p paths.Paths, moves []Move, out io.Writer) error {
 			return err
 		}
 		src, dest := srcAbs(p, mv.Src), Dest(p, m, mv)
+		if src == "" || dest == "" {
+			return fmt.Errorf("%s: a path outside ~/.ssh or the config home", mv.Line())
+		}
 		if err := checkPair(src); err != nil {
 			return fmt.Errorf("%s: %w", mv.Line(), err)
 		}

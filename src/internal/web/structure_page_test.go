@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/editor"
 	"github.com/sangehq/authama/src/internal/services/events"
 	"github.com/sangehq/authama/src/internal/services/history"
 	"github.com/sangehq/authama/src/internal/services/mutation"
@@ -146,5 +148,46 @@ func TestTheEventScanRefreshesTheSuggestions(t *testing.T) {
 	st, err := structure.LoadState(p)
 	if err != nil || len(st.Suggestions) != 1 || st.Suggestions[0].Path != "~/.ssh/id_new" {
 		t.Fatalf("state after the scan: %+v %v", st, err)
+	}
+}
+
+// A host in the tree has a move into each other profile; the move goes
+// through the preview and moves the host in the manifest on apply.
+func TestTheStructurePageMovesAHostToAnotherProfile(t *testing.T) {
+	s, p, _ := newTestServer(t)
+	t.Cleanup(mutation.Release)
+	if err := editor.New(p).AddProfile("home", "per_service", nil); err != nil {
+		t.Fatal(err)
+	}
+	c := signIn(t, s)
+	body := html.UnescapeString(c.get("/structure").Body.String())
+	opt := regexp.MustCompile(`<option value="(host ([a-z0-9_.-]+)/([a-zA-Z0-9_.-]+) profile ([a-z0-9_.-]+))" data-target="profile:`).FindStringSubmatch(body)
+	if opt == nil {
+		t.Fatalf("no host move in the tree:\n%.3000s", body)
+	}
+	if !strings.Contains(body, `data-drag="move-h-`+opt[3]+`"`) {
+		t.Error("the host cannot be dragged")
+	}
+	f := url.Values{"action": {"structure-plan"}, "move": {opt[1]}, "moves": {""}}
+	prev := c.change("/changes/preview", f)
+	pb := prev.Body.String()
+	hash := hashField.FindStringSubmatch(pb)
+	if prev.Code != http.StatusOK || hash == nil || !strings.Contains(pb, "config/manifest.json") {
+		t.Fatalf("preview: %d\n%.1500s", prev.Code, pb)
+	}
+	f.Set("hash", hash[1])
+	if rec := c.change("/changes/apply", f); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Made the change") {
+		t.Fatalf("apply: %d\n%.800s", rec.Code, rec.Body.String())
+	}
+	m, err := manifest.Load(p.Manifest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, h := range m.Profiles[opt[4]].Hosts {
+		found = found || h.Alias == opt[3]
+	}
+	if !found {
+		t.Errorf("host %s is not in profile %s after the move", opt[3], opt[4])
 	}
 }

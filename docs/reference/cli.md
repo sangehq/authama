@@ -3447,8 +3447,14 @@ Approves suggestions by id (or an id prefix of 4+ characters), or a plan of move
 with --plan (- reads stdin):
 
   key <~/.ssh/path|config/name> profile <profile> [name <key>]
+  key <profile>/<key> profile <profile> [name <key>]   (a declared key, with its hosts)
+  host <profile>/<alias> profile <profile>
   misplaced <profile>/<key>
   profile <profile> category <category|->
+
+A host moved to another profile takes its own key when no other host uses it;
+otherwise it takes the key its new profile gives it. A declared key moves only
+with every host of its profile that uses it, and keeps its record and deployments.
 
 A suggestion with no guessed profile needs --profile. The preview lists each file
 moved and the manifest and config diffs; nothing is written before you confirm.
@@ -3463,6 +3469,7 @@ Examples:
   authama ssh structure approve 1a2b3c4d
   authama ssh structure approve 9f8e --profile work --name laptop
   authama ssh structure approve --plan moves.txt --dry-run
+  echo "host work/gh profile home" | authama ssh structure approve --plan -
 ```
 
 Flags:

@@ -23,9 +23,11 @@ func StructurePlan(moves []structure.Move) Change {
 	seen := map[string]bool{}
 	for _, mv := range moves {
 		args = append(args, mv.Line())
-		if !seen[mv.Profile] {
-			seen[mv.Profile] = true
-			subjects = append(subjects, history.Subject{Kind: history.KindProfile, Name: mv.Profile})
+		for _, prof := range mv.Profiles() {
+			if !seen[prof] {
+				seen[prof] = true
+				subjects = append(subjects, history.Subject{Kind: history.KindProfile, Name: prof})
+			}
 		}
 	}
 	return Change{
