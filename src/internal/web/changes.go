@@ -18,6 +18,7 @@ import (
 	"github.com/sangehq/authama/src/internal/services/change"
 	"github.com/sangehq/authama/src/internal/services/editor"
 	"github.com/sangehq/authama/src/internal/services/keysvc"
+	"github.com/sangehq/authama/src/internal/services/repair"
 	"github.com/sangehq/authama/src/internal/services/savedsel"
 	"github.com/sangehq/authama/src/internal/services/settings"
 	"github.com/sangehq/authama/src/internal/services/tokensvc"
@@ -37,28 +38,31 @@ import (
 // actionFields are the form fields each action reads, in the order the
 // confirmation carries them.
 var actionFields = map[string][]string{
-	"profile-add":       {"name", "key_scope", "key_name", "key_comment", "category"},
-	"profile-comment":   {"name", "key_comment"},
-	"profile-edit":      {"name", "key_scope", "key_name"},
-	"profile-delete":    {"name", "purge"},
-	"profile-category":  {"name", "category"},
-	"host-add":          {"profile", "alias", "hostname", "user", "port", "tags", "key_name", "provider", "token_env", "proxy"},
-	"host-edit":         {"profile", "alias", "hostname", "user", "port", "tags", "key_name", "provider", "token_env", "proxy"},
-	"host-delete":       {"profile", "alias"},
-	"key-delete":        {"profile", "key"},
-	"key-reserve":       {"key", "for", "note"},
-	"key-unreserve":     {"key"},
-	"key-ack":           {"key"},
-	"vm-add":            {"profile", "alias", "hypervisor", "vm", "user"},
+	"profile-add":      {"name", "key_scope", "key_name", "key_comment", "category", "code"},
+	"profile-comment":  {"name", "key_comment"},
+	"profile-edit":     {"name", "key_scope", "key_name"},
+	"profile-delete":   {"name", "purge"},
+	"profile-category": {"name", "category"},
+	// host-add with no alias names the host by the naming rules from env and
+	// role (`host add <profile> --env --role`).
+	"host-add":      {"profile", "alias", "env", "role", "hostname", "user", "port", "tags", "key_name", "provider", "token_env", "proxy"},
+	"host-edit":     {"profile", "alias", "hostname", "user", "port", "tags", "key_name", "provider", "token_env", "proxy"},
+	"host-delete":   {"profile", "alias"},
+	"key-delete":    {"profile", "key"},
+	"key-reserve":   {"key", "for", "note"},
+	"key-unreserve": {"key"},
+	// key-ack acknowledges one key, every key (all) or a category's.
+	"key-ack":           {"key", "all", "category"},
+	"vm-add":            {"profile", "alias", "hypervisor", "vm", "user", "key_name"},
 	"config-render":     {},
 	"config-adopt":      {},
 	"reconcile":         {},
 	"keygen":            {"target"},
-	"key-add":           {"profile", "key", "key_type", "host"},
+	"key-add":           {"profile", "key", "key_type", "host", "rotate_after_days"},
 	"providers-export":  {},
 	"snapshots-prune":   {"keep"},
 	"doctor-fix":        {},
-	"host-apply":        {"profile", "specs", "create", "category"},
+	"host-apply":        {"profile", "specs", "create", "category", "tags", "reconcile"},
 	"clean":             {"adopt"},
 	"bundle":            {"keep"},
 	"vm-docker-context": {"alias"},
@@ -70,8 +74,8 @@ var actionFields = map[string][]string{
 	// --target (only_<tool>, one box each).
 	"token-apply": {"config", "project", "source", "only_composer", "only_npm", "only_docker", "only_git", "only_netrc", "only_pypi",
 		"only_cargo", "only_gem", "only_gradle", "only_maven", "only_yarn", "only_helm", "only_helm-oci", "only_gh"},
-	"vm-sync":       {"repin"},
-	"vm-adopt-key":  {"key", "profile", "alias", "hypervisor", "vm", "user"},
+	"vm-sync":       {"repin", "no_probe"},
+	"vm-adopt-key":  {"key", "profile", "alias", "hypervisor", "vm", "user", "move", "docker_context"},
 	"vm-schedule":   {"install"},
 	"settings-init": {},
 	// settings-reset writes authama.json again at its defaults, keeping the
@@ -118,8 +122,9 @@ var actionFields = map[string][]string{
 	"owner-reseal":        {},
 	"owner-forget":        {"confirm"},
 	"owner-fingerprint":   {"on"},
-	"repair":              {},
-	"factory-reset":       {"confirm"},
+	// repair takes --area as one box per area; none is every area.
+	"repair":        {"area_tool", "area_ssh", "area_tokens"},
+	"factory-reset": {"confirm"},
 }
 
 // secretFields are the typed secrets each action takes. Each goes into the
@@ -374,7 +379,11 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		}
 		category, err := optionalName(f, "category")
 		errs = append(errs, err)
-		ch = change.ProfileAddIn(n("name"), scope, keyName, pl("key_comment"), category)
+		code := ""
+		if strings.TrimSpace(f.Get("code")) != "" {
+			code = n("code")
+		}
+		ch = change.ProfileAddWith(n("name"), scope, keyName, pl("key_comment"), category, code)
 	case "profile-comment":
 		ch = change.ProfileKeyComment(n("name"), pl("key_comment"))
 	case "profile-edit":
@@ -399,7 +408,42 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		errs = append(errs, err)
 		ch = change.ProfileCategory(n("name"), category)
 	case "host-add":
-		ch = change.HostAdd(n("profile"), n("alias"), host(false))
+		in := host(false)
+		alias := strings.TrimSpace(f.Get("alias"))
+		env, role := strings.TrimSpace(f.Get("env")), strings.TrimSpace(f.Get("role"))
+		switch {
+		case alias == "" && (env != "" || role != ""):
+			if (env != "" && !nameRe.MatchString(env)) || (role != "" && !nameRe.MatchString(role)) {
+				errs = append(errs, badForm("env and role are names: letters, digits, '.', '_' and '-'"))
+				break
+			}
+			m, err := manifest.Load(h.p.Manifest())
+			if err != nil {
+				errs = append(errs, err)
+				break
+			}
+			generated, extra, err := editor.GenerateAlias(m, n("profile"), env, role)
+			if err != nil {
+				errs = append(errs, badForm("%s", err.Error()))
+				break
+			}
+			alias = generated
+			tags := []string{}
+			if in.Tags != nil {
+				tags = *in.Tags
+			}
+			for _, t := range extra {
+				if !slices.Contains(tags, t) {
+					tags = append(tags, t)
+				}
+			}
+			in.Tags = &tags
+		case alias != "" && (env != "" || role != ""):
+			errs = append(errs, badForm("env and role name the host; leave the alias empty to use them, or add them as tags"))
+		default:
+			alias = n("alias")
+		}
+		ch = change.HostAdd(n("profile"), alias, in)
 	case "host-edit":
 		ch = change.HostEdit(n("profile"), n("alias"), host(true))
 	case "host-delete":
@@ -415,7 +459,11 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		if vm == "" || user == "" {
 			errs = append(errs, badForm("a VM host needs the VM's name and a guest user"))
 		}
-		ch = change.VMAdd(n("profile"), n("alias"), hv, vm, user)
+		keyName := ""
+		if strings.TrimSpace(f.Get("key_name")) != "" {
+			keyName = n("key_name")
+		}
+		ch = change.VMAddWith(n("profile"), n("alias"), hv, vm, user, keyName)
 	case "config-render":
 		ch = change.ConfigRender()
 	case "config-adopt":
@@ -435,7 +483,15 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		if strings.TrimSpace(f.Get("host")) != "" {
 			host = n("host")
 		}
-		ch = change.KeyAdd(n("profile"), n("key"), kt, host)
+		var days *int
+		if v := strings.TrimSpace(f.Get("rotate_after_days")); v != "" {
+			d, err := strconv.Atoi(v)
+			if err != nil || d < 0 || d > 3650 {
+				errs = append(errs, badForm("rotate after is a number of days from 0 to 3650"))
+			}
+			days = &d
+		}
+		ch = change.KeyAddWith(n("profile"), n("key"), kt, host, days)
 	case "key-reserve":
 		forWhat, note := pl("for"), pl("note")
 		if len(forWhat) > 200 || len(note) > 200 {
@@ -445,9 +501,17 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 	case "key-unreserve":
 		ch = change.KeyUnreserve(n("key"))
 	case "key-ack":
-		ref, err := keyRef(f)
-		errs = append(errs, err)
-		ch = change.KeyAck(keysvc.Selection{Selectors: []string{ref.String()}})
+		// A category narrows the form's "every key" to its keys.
+		switch {
+		case strings.TrimSpace(f.Get("category")) != "":
+			ch = change.KeyAck(keysvc.Selection{Category: n("category")})
+		case checked(f, "all"):
+			ch = change.KeyAck(keysvc.Selection{All: true})
+		default:
+			ref, err := keyRef(f)
+			errs = append(errs, err)
+			ch = change.KeyAck(keysvc.Selection{Selectors: []string{ref.String()}})
+		}
 	case "providers-export":
 		ch = change.ProvidersExport()
 	case "settings-init":
@@ -489,7 +553,7 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 	case "doctor-fix":
 		ch = change.DoctorFix()
 	case "vm-sync":
-		ch = change.VMSync(checked(f, "repin"))
+		ch = change.VMSyncWith(checked(f, "repin"), checked(f, "no_probe"))
 	case "vm-adopt-key":
 		hv := pl("hypervisor")
 		if !knownHypervisor(hv) {
@@ -499,7 +563,7 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		if vm == "" || user == "" {
 			errs = append(errs, badForm("adopting a key onto a VM needs the VM's name and a guest user"))
 		}
-		ch = change.VMAdoptKey(n("key"), n("profile"), n("alias"), hv, vm, user)
+		ch = change.VMAdoptKeyWith(n("key"), n("profile"), n("alias"), hv, vm, user, checked(f, "move"), checked(f, "docker_context"))
 	case "vm-schedule":
 		ch = change.VMSchedule(checked(f, "install"))
 	case "host-apply":
@@ -507,7 +571,13 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		errs = append(errs, err)
 		category, err := optionalName(f, "category")
 		errs = append(errs, err)
-		ch = change.HostApply(n("profile"), specs, checked(f, "create"), category)
+		var extra []string
+		if t, err := tagsOf(f); err != nil {
+			errs = append(errs, err)
+		} else if t != nil {
+			extra = *t
+		}
+		ch = change.HostApplyWith(n("profile"), specs, checked(f, "create"), category, extra, checked(f, "reconcile"))
 	case "clean":
 		ch = change.Clean(checked(f, "adopt"))
 	case "bundle":
@@ -530,7 +600,13 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 	case "notify-test":
 		ch = change.NotifyTest()
 	case "repair":
-		ch = change.Repair(repairHome)
+		var areas []repair.Area
+		for _, a := range repair.Areas {
+			if checked(f, "area_"+string(a)) {
+				areas = append(areas, a)
+			}
+		}
+		ch = change.RepairAreas(repairHome, areas)
 	case "factory-reset":
 		ch = change.FactoryReset(strings.TrimSpace(f.Get("confirm")) == "reset")
 	case "owner-init":

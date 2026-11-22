@@ -258,7 +258,8 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := signIn(t, s)
-	action := regexp.MustCompile(`name="action" value="([a-z-]+)"`)
+	// A job is offered by a form, or by a link to its review.
+	action := regexp.MustCompile(`(?:name="action" value="|/jobs/review\?action=)([a-z-]+)`)
 	seen := map[string]bool{}
 	// A bundle, for the snapshots page to offer a restore of.
 	if err := os.MkdirAll(p.DistDir(), 0o700); err != nil {

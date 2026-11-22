@@ -1,5 +1,5 @@
 {{define "content"}}
-{{template "page_header" (header "SSH" "Keys" "Every key with its fingerprint and expiry, and the loose keys kept on purpose." (only (not .ReadOnly) (panel "Add a key" "add-key" "plus" | withTip "key-add")) (only (and (not .ReadOnly) (not .DevRoot) (gt (len .Data.Rows) 0)) (action "Rotate keys" "/jobs/review?action=rotate-keys" "recycle" | withTip "keys-rotate")) (only (not .ReadOnly) (panel "Mint missing keys" "mint-keys" "key" | withTip "key-mint")) (only (and (not .ReadOnly) (gt (len .Data.Rows) 0)) (panel "Rebuild public keys" "regen-pub" "refresh" | withTip "key-regen-pub-many")) (only (not .ReadOnly) (panel "Move the key root" "key-root" "folder" | withTip "key-root")) (only (and (not .ReadOnly) (not .DevRoot) (gt (len .Data.Rows) 0)) (action "Revoke keys" "/jobs/review?action=revoke-keys" "ban" | withTip "keys-revoke")) (only (and (not .ReadOnly) (gt (len .Data.Rows) 0)) (action "Delete keys" "/jobs/review?action=delete-keys" "trash" | withTip "keys-delete")))}}
+{{template "page_header" (header "SSH" "Keys" "Every key with its fingerprint and expiry, and the loose keys kept on purpose." (only (not .ReadOnly) (panel "Add a key" "add-key" "plus" | withTip "key-add")) (only (and (not .ReadOnly) (not .DevRoot) (gt (len .Data.Rows) 0)) (action "Rotate keys" "/jobs/review?action=rotate-keys" "recycle" | withTip "keys-rotate")) (only (not .ReadOnly) (panel "Mint missing keys" "mint-keys" "key" | withTip "key-mint")) (only (and (not .ReadOnly) (gt (len .Data.Rows) 0)) (panel "Acknowledge new keys" "ack-keys" "circle-check" | withTip "keys-ack")) (only (and (not .ReadOnly) (gt (len .Data.Rows) 0)) (panel "Rebuild public keys" "regen-pub" "refresh" | withTip "key-regen-pub-many")) (only (not .ReadOnly) (panel "Move the key root" "key-root" "folder" | withTip "key-root")) (only (and (not .ReadOnly) (not .DevRoot) (gt (len .Data.Rows) 0)) (action "Revoke keys" "/jobs/review?action=revoke-keys" "ban" | withTip "keys-revoke")) (only (and (not .ReadOnly) (gt (len .Data.Rows) 0)) (action "Delete keys" "/jobs/review?action=delete-keys" "trash" | withTip "keys-delete")))}}
 {{with .Data.RecordsNotice}}<div class="alert alert-warning" role="status" id="records-notice">{{icon "alert-triangle"}}<span class="ms-1">Whether a key was revoked or retired cannot be read, so its recency shows as <strong>unknown</strong> rather than new or current: {{.}}. <code>authama doctor</code> names the file to repair.</span></div>{{end}}
 <div class="card">
   <div class="card-header"><h2 class="card-title">Keys</h2>{{if .Data.Rows}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data.Rows}} in the manifest</span>{{template "csv" "/exports/keys.csv"}}</div>{{end}}</div>
@@ -88,6 +88,7 @@
           <div class="mb-3"><label class="form-label required" for="k-name">Key name</label><input class="form-control" id="k-name" name="key" required autocomplete="off" spellcheck="false"></div>
           <div class="mb-3"><label class="form-label" for="k-type">Type</label><select class="form-select" id="k-type" name="key_type"><option value="">the manifest's default</option><option>ed25519</option><option>ecdsa</option><option>rsa</option></select></div>
           <div class="mb-3"><label class="form-label" for="k-host">Wire it to host <span class="text-secondary">(optional alias in that profile)</span></label><input class="form-control" id="k-host" name="host" autocomplete="off" spellcheck="false"></div>
+          <div class="mb-3"><label class="form-label" for="k-days">Rotate after <span class="text-secondary">(days; empty for the manifest's policy, 0 never)</span></label><input class="form-control" id="k-days" name="rotate_after_days" type="number" min="0" max="3650" inputmode="numeric"{{desc "key-rotate-after"}}></div>
           <datalist id="k-profiles">{{range .Data.Rows}}<option value="{{.Ref.Profile}}">{{end}}</datalist>
           {{template "panel_actions" ""}}
         </form>
@@ -113,6 +114,13 @@
      (/jobs/review?action=rotate-keys), not in a slide-in here: an older
      link to /keys#rotate-keys is sent there. */}}
 <span hidden data-moved-panels="rotate-keys revoke-keys delete-keys"></span>
+{{template "panel_open" (header "ack-keys" "Acknowledge new keys" "A new key is flagged until it is acknowledged. This clears the flag for every key, or for a category's keys, as ssh key ack --all or --category does.")}}
+        {{template "change_open" .}}<input type="hidden" name="action" value="key-ack">
+          <div class="mb-2"><label class="form-label" for="ack-category">Category <span class="text-secondary">(empty for every key)</span></label><input class="form-control" id="ack-category" name="category" autocomplete="off" spellcheck="false" list="ack-categories"{{desc "keys-ack-category"}}><datalist id="ack-categories">{{range .Data.Categories}}<option value="{{.}}">{{end}}</datalist></div>
+          <input type="hidden" name="all" value="1" data-ack-all>
+          {{template "panel_actions" ""}}
+        </form>
+{{template "panel_close"}}
 {{template "panel_open" (header "mint-keys" "Mint missing keys" "Keys that exist are left alone.")}}
         {{template "change_open" .}}<input type="hidden" name="action" value="keygen">
           <div class="mb-2"><label class="form-label" for="g-target">For a profile or host alias</label><input class="form-control" id="g-target" name="target" required autocomplete="off" spellcheck="false" list="k-profiles"></div>

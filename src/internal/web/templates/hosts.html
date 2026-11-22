@@ -44,7 +44,11 @@
 {{template "panel_open" (header "add-host" "Add a host" "A host in a profile's config. Its key is minted by authama ssh reconcile in a terminal.")}}
         {{template "change_open" .}}<input type="hidden" name="action" value="host-add">
           <div class="mb-3"><label class="form-label required" for="h-profile">Profile</label><select class="form-select" id="h-profile" name="profile">{{range .Data}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div>
-          <div class="mb-3"><label class="form-label required" for="h-alias">Alias</label><input class="form-control" id="h-alias" name="alias" required autocomplete="off" spellcheck="false"><small class="form-hint">The name you type after <code>ssh</code>.</small></div>
+          <div class="mb-3"><label class="form-label" for="h-alias">Alias</label><input class="form-control" id="h-alias" name="alias" autocomplete="off" spellcheck="false"><small class="form-hint">The name you type after <code>ssh</code>. Leave it empty to generate one from the environment and role below.</small></div>
+          <div class="row g-3 mb-3">
+            <div class="col-6"><label class="form-label" for="h-env">Environment</label><input class="form-control" id="h-env" name="env" autocomplete="off" spellcheck="false" placeholder="prod"{{desc "host-env"}}></div>
+            <div class="col-6"><label class="form-label" for="h-role">Role</label><input class="form-control" id="h-role" name="role" autocomplete="off" spellcheck="false" placeholder="web"{{desc "host-role"}}></div>
+          </div>
           <div class="mb-3"><label class="form-label required" for="h-hostname">Hostname</label><input class="form-control" id="h-hostname" name="hostname" required autocomplete="off" spellcheck="false" placeholder="203.0.113.10 or web1.example.com"></div>
           <div class="row g-3 mb-3">
             <div class="col-8"><label class="form-label required" for="h-user">User</label><input class="form-control" id="h-user" name="user" required autocomplete="off" spellcheck="false"></div>
@@ -67,6 +71,7 @@
           <div class="mb-3"><label class="form-label" for="v-hv">Hypervisor</label><select class="form-select" id="v-hv" name="hypervisor">{{range hypervisors}}<option value="{{.}}">{{.}}</option>{{end}}</select></div>
           <div class="mb-3"><label class="form-label required" for="v-vm">VM name</label><input class="form-control" id="v-vm" name="vm" required autocomplete="off" spellcheck="false"></div>
           <div class="mb-3"><label class="form-label required" for="v-user">Guest user</label><input class="form-control" id="v-user" name="user" required autocomplete="off" spellcheck="false"></div>
+          <div class="mb-3"><label class="form-label" for="v-keyname">Key name <span class="text-secondary">(optional)</span></label><input class="form-control" id="v-keyname" name="key_name" autocomplete="off" spellcheck="false"{{desc "vm-key-name"}}><small class="form-hint">Leave empty for the profile's key. The same as <code>--key-name</code>.</small></div>
           <p class="text-secondary small mt-2 mb-2">Its address comes from the hypervisor each time ssh connects.</p>
           {{template "panel_actions" ""}}
         </form>
@@ -86,7 +91,9 @@
       <div class="mb-3"><label class="form-label required" for="a-profile">Profile</label><input class="form-control" id="a-profile" name="profile" list="a-profiles" required autocomplete="off" spellcheck="false"><datalist id="a-profiles">{{range .Data}}<option value="{{.Name}}">{{end}}</datalist></div>
       <div class="mb-3"><label class="form-label" for="a-category">Category <span class="text-secondary">(for a new profile)</span></label><input class="form-control" id="a-category" name="category" autocomplete="off" spellcheck="false"></div>
       <div class="mb-3"><label class="form-label required" for="a-specs">Hosts <span class="text-secondary">(one per line: <code>&lt;alias&gt; &lt;host&gt;[:port] &lt;user&gt; [role]</code>; # starts a comment)</span></label><textarea class="form-control font-monospace" id="a-specs" name="specs" rows="5" required spellcheck="false"></textarea></div>
+      <div class="mb-3"><label class="form-label" for="a-tags">Tags <span class="text-secondary">(comma-separated, added to every host listed)</span></label><input class="form-control" id="a-tags" name="tags" autocomplete="off" spellcheck="false"{{desc "host-apply-tags"}}></div>
       <div class="mb-3"><label class="form-check"><input class="form-check-input" type="checkbox" name="create" value="1"><span class="form-check-label">Create the profile if it does not exist</span></label></div>
+      <div class="mb-3"><label class="form-check"><input class="form-check-input" type="checkbox" name="reconcile" value="1"{{desc "host-apply-reconcile"}}><span class="form-check-label">Reconcile after: mint the new hosts' keys and render ~/.ssh/config</span></label></div>
       <p class="text-secondary small mt-2 mb-2">A host already in the profile has its hostname, user and port set; the role is added to its tags, and no tag is removed. New hosts' keys are minted by Reconcile.</p>
           {{template "panel_actions" ""}}
     </form>

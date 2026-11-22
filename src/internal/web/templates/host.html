@@ -86,6 +86,7 @@
           <p class="text-secondary small">Its manifest entry, its block in <code>~/.ssh/config</code> and its pinned host keys go. Its key files stay on disk.</p>
           <form method="post" action="{{basePath}}/changes/preview" data-inline id="f-host-delete"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="host-delete"><input type="hidden" name="profile" value="{{.Profile}}"><input type="hidden" name="alias" value="{{.Alias}}">
             <button type="submit" class="btn btn-outline-danger"{{desc "delete"}}>{{icon "trash"}}<span class="ms-1">Preview deleting {{.Alias}}</span></button>
+            <a class="btn btn-link text-danger" href="{{basePath}}/jobs/review?action=delete-host&amp;profile={{.Profile}}&amp;alias={{.Alias}}"{{desc "delete-options"}}>Revoke its keys or purge their files too…</a>
           </form>
         </div>
 {{template "panel_close"}}

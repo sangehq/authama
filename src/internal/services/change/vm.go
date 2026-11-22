@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/services/dockerctx"
 	"github.com/sangehq/authama/src/internal/services/history"
 	"github.com/sangehq/authama/src/internal/services/settings"
 	"github.com/sangehq/authama/src/internal/services/vmsync"
@@ -29,10 +30,17 @@ var NewSyncer = func(p paths.Paths, cfg settings.VMConfig, opt vmsync.Options) *
 // OnApply: a hashed known_hosts line gets a fresh salt every time it is
 // written, so a pin made in the copy could never hash the same twice.
 // OnApply backs the manifest and inventory up first.
-func VMSync(repin bool) Change {
+func VMSync(repin bool) Change { return VMSyncWith(repin, false) }
+
+// VMSyncWith is VMSync with --no-probe: the hypervisors are asked, and no
+// running guest is connected to, so nothing is pinned or installed in one.
+func VMSyncWith(repin, noProbe bool) Change {
 	args := []string{"--yes"}
 	if repin {
 		args = append(args, "--repin")
+	}
+	if noProbe {
+		args = append(args, "--no-probe")
 	}
 	var cfg settings.VMConfig
 	syncer := func(p paths.Paths, probe bool) *vmsync.Syncer {
@@ -48,7 +56,7 @@ func VMSync(repin bool) Change {
 		Command: "vm sync", Args: args,
 		Effects: func(p paths.Paths) ([]string, error) {
 			cfg, _ = settings.LoadVMConfig(p.SettingsFile())
-			s := syncer(p, true)
+			s := syncer(p, !noProbe)
 			plan, err := s.Plan()
 			if err != nil {
 				return nil, err
@@ -71,7 +79,7 @@ func VMSync(repin bool) Change {
 			return out, nil
 		},
 		OnApply: func(p paths.Paths, out io.Writer) error {
-			s := syncer(p, true)
+			s := syncer(p, !noProbe)
 			plan, err := s.Plan()
 			if err != nil {
 				return err
@@ -106,23 +114,55 @@ func VMSync(repin bool) Change {
 // copy holds the private key only as a placeholder, which the preview copies
 // in its place; the original is never removed from the web.
 func VMAdoptKey(key, profile, alias, hv, vmName, user string) Change {
+	return VMAdoptKeyWith(key, profile, alias, hv, vmName, user, false, false)
+}
+
+// VMAdoptKeyWith is VMAdoptKey with --move (the originals in ~/.ssh are
+// removed once the copy is verified identical; the preview's diff shows them
+// go) and --docker-context (a Docker context ssh://<alias> is made too).
+func VMAdoptKeyWith(key, profile, alias, hv, vmName, user string, move, docker bool) Change {
+	args := []string{key, profile, alias, "--hypervisor=" + hv, "--vm=" + vmName, "--user=" + user}
+	if move {
+		args = append(args, "--move")
+	}
+	if docker {
+		args = append(args, "--docker-context")
+	}
 	return Change{
 		Command: "vm adopt-key",
-		Args:    []string{key, profile, alias, "--hypervisor=" + hv, "--vm=" + vmName, "--user=" + user, "--yes"},
+		Args:    append(args, "--yes"),
 		Subjects: []history.Subject{{Kind: history.KindProfile, Name: profile}, {Kind: history.KindHost, Name: alias},
 			{Kind: history.KindKey, Name: profile + "/" + key}},
 		Effects: func(p paths.Paths) ([]string, error) {
 			if err := CheckAdopt(p, key, profile, alias, hv, user); err != nil {
 				return nil, err
 			}
-			return []string{
-				"backs up manifest.json and inventory.json to " + filepath.Join(p.State(), "backups", "vmsync"),
-				"copies ~/.ssh/" + key + " and " + key + ".pub into profile " + profile + "; the originals stay",
-			}, nil
+			lines := []string{"backs up manifest.json and inventory.json to " + filepath.Join(p.State(), "backups", "vmsync")}
+			if move {
+				lines = append(lines, "moves ~/.ssh/"+key+" and "+key+".pub into profile "+profile+": the originals go once the copy is verified identical")
+			} else {
+				lines = append(lines, "copies ~/.ssh/"+key+" and "+key+".pub into profile "+profile+"; the originals stay")
+			}
+			if docker {
+				if err := dockerctx.Available(); err != nil {
+					return nil, err
+				}
+				lines = append(lines, fmt.Sprintf("%ss the Docker context %s -> ssh://%s", dockerctx.Verb(alias), alias, alias))
+			}
+			return lines, nil
 		},
-		OnApply: func(p paths.Paths, _ io.Writer) error {
-			_, err := NewSyncer(p, settings.VMConfig{}, vmsync.Options{}).BackupManifest()
-			return err
+		OnApply: func(p paths.Paths, out io.Writer) error {
+			if _, err := NewSyncer(p, settings.VMConfig{}, vmsync.Options{}).BackupManifest(); err != nil {
+				return err
+			}
+			if docker {
+				line, err := dockerctx.Apply(alias)
+				if err != nil {
+					return err
+				}
+				_, _ = fmt.Fprintln(out, line)
+			}
+			return nil
 		},
 		Run: func(p paths.Paths, out io.Writer) error {
 			if err := CheckAdopt(p, key, profile, alias, hv, user); err != nil {
@@ -131,7 +171,7 @@ func VMAdoptKey(key, profile, alias, hv, vmName, user string) Change {
 			if err := vmsync.AddVMHost(p, profile, alias, hv, vmName, user, key); err != nil {
 				return err
 			}
-			res, err := vmsync.AdoptKey(p, filepath.Join(p.SSHDir, key), profile, key, false)
+			res, err := vmsync.AdoptKey(p, filepath.Join(p.SSHDir, key), profile, key, move)
 			if err != nil {
 				return err
 			}

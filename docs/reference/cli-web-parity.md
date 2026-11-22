@@ -21,14 +21,14 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | --- | --- |
 | Commands (runnable, not hidden, not help-only parents) | 156 |
 | Help-only parent commands left out | 25 |
-| Web | 118 |
+| Web | 134 |
 | Partial | 3 |
 | CLI-only by design | 19 |
-| Gap | 16 |
+| Gap | 0 |
 | Flags on those commands | 406 |
-| Flags covered | 286 |
-| Flags CLI-only by design | 66 |
-| Flags with no web control | 54 |
+| Flags covered | 338 |
+| Flags CLI-only by design | 68 |
+| Flags with no web control | 0 |
 
 
 ## Matrix
@@ -36,9 +36,9 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | Command | Status | Web | Flags | Notes |
 | --- | --- | --- | --- | --- |
 | `(root)` | CLI-only by design | - | `--dev-root` (CLI), `--no-dotenv` (CLI) | Global flags; `serve --dev-root` runs the web UI in a sandbox. |
-| `api token create` | gap | /settings (API on/off only) | `--expires` (gap) | Token shown once; needs a show-once web flow. |
-| `api token list` | gap | /settings (API on/off only) | `--json` (gap) |  |
-| `api token revoke` | gap | /settings (API on/off only) | - |  |
+| `api token create` | web | /api-tokens: Create (PIN; the token is shown once) | `--expires` | Shown once, never again; copy button. |
+| `api token list` | web | /api-tokens | `--json` | Names, scope and dates; never the token. |
+| `api token revoke` | web | /api-tokens: Revoke (PIN) | - |  |
 | `checklist` | web | /checklists | `--json`, `--open` (CLI) |  |
 | `checklist revoking` | web | /checklist: Revoking | `--stop` |  |
 | `checklist show` | web | /checklist?key= | `--json` |  |
@@ -49,11 +49,11 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `events` | web | /events (filters, CSV) | `--area`, `--csv`, `--json`, `--kind`, `--limit`, `--no-scan` (CLI), `--since`, `--verify` |  |
 | `export` | web | /export builder, Copy command, download | `--aggregate`, `--area`, `--columns`, `--command`, `--compact`, `--dedupe`, `--env`, `--exclude`, `--fields`, `--format`, `--group-by`, `--include`, `--include-git`, `--key`, `--kind`, `--limit`, `--narrow`, `--no-header`, `--out`, `--pivot`, `--profile`, `--role`, `--selection`, `--shape`, `--since`, `--sort`, `--source`, `--status`, `--tag`, `--template`, `--termius-groups`, `--tool`, `--totals`, `--transform`, `--until` |  |
 | `export pack` | web | /transfer: Export pack | `--dry-run`, `--include`, `--include-git`, `--out`, `--termius-groups` |  |
-| `export schedule add` | gap | none | `--format` (gap), `--to` (gap) | Daily export of a saved selection. |
+| `export schedule add` | web | /export: Scheduled exports (PIN) | `--format`, `--to` | Daily export of a saved selection. |
 | `export schedule install` | CLI-only by design | - | - | Registers a launchd/systemd/schtasks job. |
-| `export schedule list` | gap | none | - |  |
-| `export schedule remove` | gap | none | `--format` (gap) |  |
-| `export schedule run` | gap | none | `--quiet` (CLI) |  |
+| `export schedule list` | web | /export: Scheduled exports | - |  |
+| `export schedule remove` | web | /export: Scheduled exports (PIN) | `--format` |  |
+| `export schedule run` | web | /export: Run now (PIN) | `--quiet` (CLI) |  |
 | `export schedule uninstall` | CLI-only by design | - | - | Background service. |
 | `export selections delete` | web | /export: saved selections | `--from`, `--yes` |  |
 | `export selections list` | web | /export: saved selections | `--json` |  |
@@ -75,7 +75,7 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `owner reseal` | web | /security: Reseal | `--yes` |  |
 | `owner status` | web | /security | - |  |
 | `owner verify` | web | /security, header badge | - |  |
-| `repair` | web | /repair | `--area` (gap), `--check`, `--yes` |  |
+| `repair` | web | /repair (area checkboxes) | `--area`, `--check`, `--yes` |  |
 | `reset` | web | /reset: factory reset | `--confirm` |  |
 | `serve` | CLI-only by design | - | `--addr` (CLI), `--allow-host` (CLI), `--allow-remote` (CLI), `--new` (CLI), `--no-open` (CLI), `--port` (CLI), `--read-only` (CLI), `--restart` (CLI), `--status` (CLI), `--stop` (CLI), `--stop-all` (CLI), `--token-file` (CLI) | Starts the web UI itself. |
 | `settings backup-key` | web | /settings: Backup key | - |  |
@@ -105,15 +105,15 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `ssh git sign status` | web | /git-sign | `--json` |  |
 | `ssh git sign use` | web | /git-sign: Use for checkouts | `--dry-run`, `--yes` |  |
 | `ssh git sign verify` | web | /git-sign?check= | `--json`, `--number`, `--strict` (CLI) |  |
-| `ssh git status` | gap | none | `--json` (gap) | Remote mode/owner per checkout. |
-| `ssh git use` | gap | none | `--dry-run` (gap), `--json` (gap), `--mode` (gap), `--profile` (gap), `--yes` (gap) | Switches origin URLs after ls-remote. |
-| `ssh host add` | web | /hosts: Add a host | `--env` (gap), `--hostname`, `--key-name`, `--port`, `--provider`, `--proxy`, `--role` (gap), `--tag`, `--token-env`, `--user` | --key-name/--provider/--token-env/--proxy added in this branch. |
-| `ssh host apply` | web | /hosts: Add or update in bulk | `--category`, `--create-profile`, `--dry-run`, `--file` (CLI), `--host`, `--no-pin` (gap), `--reconcile` (gap), `--tag` (gap), `--yes` |  |
-| `ssh host delete` | web | host page: Delete | `--no-key-backup` (CLI), `--purge` (gap), `--revoke` (gap), `--yes` |  |
+| `ssh git status` | web | /git-sign: Remote mode (?remotes=) | `--json` | Mode and owner per checkout. |
+| `ssh git use` | web | /git-sign: Remote mode, Switch (preview) | `--dry-run`, `--json`, `--mode`, `--profile`, `--yes` | Checks with ls-remote on apply. |
+| `ssh host add` | web | /hosts: Add a host | `--env`, `--hostname`, `--key-name`, `--port`, `--provider`, `--proxy`, `--role`, `--tag`, `--token-env`, `--user` | Alias empty: generated from env and role. |
+| `ssh host apply` | web | /hosts: Add or update in bulk | `--category`, `--create-profile`, `--dry-run`, `--file` (CLI), `--host`, `--no-pin`, `--reconcile`, `--tag`, `--yes` | The web reconcile is always --no-pin; pin from /hosts. |
+| `ssh host delete` | web | host page: Delete; --revoke/--purge as a job | `--no-key-backup` (CLI), `--purge`, `--revoke`, `--yes` |  |
 | `ssh host edit` | web | host page: Edit | `--hostname`, `--key-name`, `--port`, `--provider`, `--proxy`, `--tag`, `--token-env`, `--untag`, `--user` | --key-name/--provider/--token-env/--proxy added in this branch. |
 | `ssh import` | web | /import | `--dry-run`, `--force`, `--yes` |  |
-| `ssh key ack` | web | key page: Acknowledge | `--all` (gap), `--category` (gap) |  |
-| `ssh key add` | web | /keys: Add a key | `--host`, `--passphrase` (CLI), `--rotate-after-days` (gap), `--type` | A passphrase stays in the terminal. |
+| `ssh key ack` | web | key page: Acknowledge; /keys: Acknowledge new keys | `--all`, `--category` |  |
+| `ssh key add` | web | /keys: Add a key | `--host`, `--passphrase` (CLI), `--rotate-after-days`, `--type` | A passphrase stays in the terminal. |
 | `ssh key adopt` | web | /structure: keep in place | `--host`, `--yes` |  |
 | `ssh key delete` | web | /keys: delete, bulk Delete (job) | `--all`, `--category`, `--no-key-backup` (CLI), `--purge`, `--revoke`, `--yes` |  |
 | `ssh key lifetime` | web | key page: Set lifetime | `--clear`, `--default`, `--yes` |  |
@@ -125,7 +125,7 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `ssh key unreserve` | web | /keys | `--yes` |  |
 | `ssh keygen` | web | /keys: Mint | `--force` (CLI), `--no-key-backup` (CLI), `--no-pin`, `--passphrase` (CLI), `--yes` | Runs with --no-pin; overwrite and passphrase stay in the terminal. |
 | `ssh knownhosts init` | web | /hosts: Pin host keys (job) | `--all`, `--force`, `--yes` |  |
-| `ssh knownhosts pin` | web | host page: Pin its keys (job) | `--all` (gap), `--port` (gap), `--yes` |  |
+| `ssh knownhosts pin` | web | host page: Pin its keys (job); /hosts: Pin host keys for --all | `--all`, `--port` (CLI), `--yes` | A form never sends a free hostname to ssh-keyscan: --port (unmanaged hosts) is CLI-only. |
 | `ssh list` | web | /hosts (filters, CSV) | `--csv`, `--profile`, `--provider`, `--tag`, `--type` |  |
 | `ssh load` | CLI-only by design | - | - | Adds keys to the running ssh-agent. |
 | `ssh naming check` | web | /naming | `--strict` (CLI) |  |
@@ -138,15 +138,15 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `ssh notify ping` | CLI-only by design | - | - | Helper verb. |
 | `ssh notify send` | CLI-only by design | - | - | Helper verb. |
 | `ssh notify test` | web | /settings: Test notification | - |  |
-| `ssh profile add` | web | /profiles: Add | `--category`, `--code` (gap), `--key-comment`, `--key-name`, `--key-scope`, `--shared` (gap) | Code is set after with Set code. |
-| `ssh profile delete` | web | /profiles: Delete | `--no-key-backup` (CLI), `--purge`, `--revoke` (gap), `--yes` |  |
-| `ssh profile edit` | web | /profiles: Edit, Category, Code, Comment | `--category`, `--code`, `--key-comment`, `--key-name`, `--key-scope`, `--shared` (gap) |  |
+| `ssh profile add` | web | /profiles: Add | `--category`, `--code`, `--key-comment`, `--key-name`, `--key-scope`, `--shared` | --shared is the Key scope select. |
+| `ssh profile delete` | web | /profiles: Delete; --revoke/--purge as a job | `--no-key-backup` (CLI), `--purge`, `--revoke`, `--yes` |  |
+| `ssh profile edit` | web | /profiles: Edit, Category, Code, Comment | `--category`, `--code`, `--key-comment`, `--key-name`, `--key-scope`, `--shared` | --shared is Change key scope. |
 | `ssh providers` | partial | /settings: Export providers; host form provider list | `--export`, `--force` | No page lists credential state. |
 | `ssh reconcile` | web | overview/keys: Reconcile | `--dry-run`, `--no-pin`, `--passphrase` (CLI), `--yes` | Runs with --no-pin; host keys are pinned from /hosts. |
 | `ssh recover` | web | key page: Break-glass | - | New in this branch. The no-argument fixkeys tool stays CLI. |
 | `ssh restore` | web | /transfer, /snapshots: Restore bundle (job) | `--allow-risky-options`, `--identity` (CLI), `--yes` |  |
 | `ssh rollback` | web | key page: Roll back (job) | `--yes` |  |
-| `ssh rotate` | web | key page / bulk Rotate (job) | `--all`, `--allow-unverified`, `--category`, `--check`, `--dry-run`, `--evict-old`, `--failed` (gap), `--force`, `--keep-old` (gap), `--no-key-backup`, `--passphrase` (CLI), `--yes` |  |
+| `ssh rotate` | web | key page / bulk Rotate (job) | `--all`, `--allow-unverified`, `--category`, `--check`, `--dry-run`, `--evict-old`, `--failed`, `--force`, `--keep-old`, `--no-key-backup`, `--passphrase` (CLI), `--yes` | --failed: the review link; --keep-old: Take the previous key off servers unticked. |
 | `ssh show` | web | profile/host/key pages | - |  |
 | `ssh snapshots list` | web | /snapshots | `--csv` |  |
 | `ssh snapshots prune` | web | /snapshots: Prune | `--keep` |  |
@@ -160,60 +160,48 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `ssh termius keys` | web | /termius: keys | `--clear` (CLI), `--clear-after` (CLI), `--include-git`, `--print` (CLI), `--skip` |  |
 | `ssh validate` | web | /validate | - |  |
 | `ssh view` | web | host page | - |  |
-| `ssh vm add` | web | /hosts: Add a VM host | `--hypervisor`, `--key-name` (gap), `--user`, `--vm`, `--yes` |  |
-| `ssh vm adopt-key` | web | /vms: Adopt key | `--docker-context` (gap), `--dry-run`, `--hypervisor`, `--key-name`, `--move` (gap), `--user`, `--vm`, `--yes` |  |
+| `ssh vm add` | web | /hosts: Add a VM host | `--hypervisor`, `--key-name`, `--user`, `--vm`, `--yes` |  |
+| `ssh vm adopt-key` | web | /vms: Adopt key | `--docker-context`, `--dry-run`, `--hypervisor`, `--key-name`, `--move`, `--user`, `--vm`, `--yes` |  |
 | `ssh vm docker-context` | web | host page: Docker context | - |  |
 | `ssh vm list` | web | /vms | - |  |
-| `ssh vm sync` | web | /vms: Sync, schedule | `--dry-run`, `--install-schedule`, `--no-probe` (gap), `--quiet` (CLI), `--remove-schedule`, `--repin`, `--yes` |  |
-| `token apply` | web | /tokens: Apply | `--config` (gap), `--creds-store-mode` (gap), `--dry-run`, `--exports` (CLI), `--no-env-hint` (CLI), `--project` (gap), `--source` (gap), `--target` (gap) |  |
-| `token audit` | web | /tokens, overview | `--config` (gap), `--project` (gap), `--target` (gap) |  |
+| `ssh vm sync` | web | /vms: Sync, schedule | `--dry-run`, `--install-schedule`, `--no-probe`, `--quiet` (CLI), `--remove-schedule`, `--repin`, `--yes` |  |
+| `token apply` | web | /tokens: Apply (scope bar for --project/--config) | `--config`, `--creds-store-mode`, `--dry-run`, `--exports` (CLI), `--no-env-hint` (CLI), `--project`, `--source`, `--target` | --creds-store-mode: the config's _settings.docker_creds_store, which the web apply reads. |
+| `token audit` | web | /tokens, overview (scope bar) | `--config`, `--project`, `--target` | --target: the page lists every tool. |
 | `token copy` | CLI-only by design | - | `--project` (CLI) | Clipboard, never printed. |
-| `token delete` | web | /tokens: Delete | `--project` (gap), `--yes` |  |
-| `token examples` | web | /tokens: examples | `--json`, `--project` (gap), `--target` |  |
+| `token delete` | web | /tokens: Delete (scope bar) | `--project`, `--yes` |  |
+| `token examples` | web | /tokens: examples | `--json`, `--project` (CLI), `--target` | Placeholders are not credentials: writing them into a project stays in the terminal. |
 | `token import` | web | /tokens: Import | `--dry-run` |  |
 | `token init` | web | /tokens: Init | `--target` |  |
-| `token list` | web | /tokens | `--csv`, `--json`, `--project` (gap), `--reveal` (CLI), `--target`, `--yes` | Secrets never render. |
+| `token list` | web | /tokens (scope bar) | `--csv`, `--json`, `--project`, `--reveal` (CLI), `--target`, `--yes` | Secrets never render. |
 | `token providers` | partial | /tokens: Set form service list | - | No list of git hosts/registries. |
-| `token set` | web | /tokens: Add (secret stashed, never echoed) | `--creds-store-mode`, `--project` (gap), `--scope`, `--server`, `--service`, `--target`, `--username` |  |
+| `token set` | web | /tokens: Add (secret stashed, never echoed; scope bar) | `--creds-store-mode`, `--project`, `--scope`, `--server`, `--service`, `--target`, `--username` |  |
 | `token shell-aliases` | CLI-only by design | - | `--file` (CLI), `--install` (CLI), `--login` (CLI), `--no-backup` (CLI), `--print` (CLI), `--quiet` (CLI), `--uninstall` (CLI) | Edits shell rc files. |
 | `token show` | CLI-only by design | - | `--json` (CLI), `--project` (CLI), `--reveal` (CLI), `--yes` (CLI) | Reveals a secret. |
-| `token status` | web | /tokens | `--config` (gap), `--json`, `--project` (gap) |  |
+| `token status` | web | /tokens (scope bar) | `--config`, `--json`, `--project` |  |
 | `version` | web | /about | - |  |
-| `vm add` | web | (same as ssh vm add) /hosts: Add a VM host | `--hypervisor`, `--key-name` (gap), `--user`, `--vm`, `--yes` |  |
-| `vm adopt-key` | web | (same as ssh vm adopt-key) /vms: Adopt key | `--docker-context` (gap), `--dry-run`, `--hypervisor`, `--key-name`, `--move` (gap), `--user`, `--vm`, `--yes` |  |
+| `vm add` | web | (same as ssh vm add) /hosts: Add a VM host | `--hypervisor`, `--key-name`, `--user`, `--vm`, `--yes` |  |
+| `vm adopt-key` | web | (same as ssh vm adopt-key) /vms: Adopt key | `--docker-context`, `--dry-run`, `--hypervisor`, `--key-name`, `--move`, `--user`, `--vm`, `--yes` |  |
 | `vm docker-context` | web | (same as ssh vm docker-context) host page: Docker context | - |  |
 | `vm list` | web | (same as ssh vm list) /vms | - |  |
-| `vm sync` | web | (same as ssh vm sync) /vms: Sync, schedule | `--dry-run`, `--install-schedule`, `--no-probe` (gap), `--quiet` (CLI), `--remove-schedule`, `--repin`, `--yes` |  |
-| `webhook add` | gap | /settings (on/off only) | `--event` (gap) | Signing secret shown once. |
-| `webhook deliver` | gap | none | - |  |
-| `webhook disable` | gap | none | - |  |
-| `webhook enable` | gap | none | - |  |
-| `webhook list` | gap | none | `--json` (gap) |  |
-| `webhook remove` | gap | none | - |  |
-| `webhook test` | gap | none | - |  |
+| `vm sync` | web | (same as ssh vm sync) /vms: Sync, schedule | `--dry-run`, `--install-schedule`, `--no-probe`, `--quiet` (CLI), `--remove-schedule`, `--repin`, `--yes` |  |
+| `webhook add` | web | /webhooks: Add (PIN; secret shown once) | `--event` |  |
+| `webhook deliver` | web | /webhooks: Deliver now | - |  |
+| `webhook disable` | web | /webhooks: Disable | - |  |
+| `webhook enable` | web | /webhooks: Enable | - |  |
+| `webhook list` | web | /webhooks | `--json` |  |
+| `webhook remove` | web | /webhooks: Remove (PIN) | - |  |
+| `webhook test` | web | /webhooks: Test | - |  |
 
 ## Open gaps
 
-These need a decision before they get a web page:
+None. Every command and flag is on the web, or CLI-only by design for the reason in its Notes. The web forms map some flags to a control of another name:
 
-- **Webhooks** (`webhook add/list/remove/enable/disable/test/deliver`): /settings only turns them on or off. A web flow needs a show-once page for the signing secret.
-- **API tokens** (`api token create/list/revoke`): the same show-once question as webhooks.
-- **Scheduled exports** (`export schedule add/list/remove/run`): the selection is on /export; the schedule is not.
-- **Remote modes** (`ssh git status`, `ssh git use`): /git-sign covers signing, not switching a checkout's origin between SSH and HTTPS.
-- **Per-project tokens** (`--project`, `--config`, `--target` on `token ...`): /tokens works on the user-level files only.
-- **Smaller flags:**
-  - `host add --env/--role`: naming-rule aliases.
-  - `host apply --tag/--no-pin/--reconcile`.
-  - `host delete`, `profile delete --revoke/--purge`.
-  - `profile add --code/--shared`.
-  - `key add --rotate-after-days`: set it after with Set lifetime.
-  - `key ack --all/--category`.
-  - `knownhosts pin --all/--port`.
-  - `rotate --failed/--keep-old`.
-  - `vm add --key-name`.
-  - `vm adopt-key --docker-context/--move`.
-  - `vm sync --no-probe`.
-  - `repair --area`.
+- `profile add/edit --shared`: the Key scope select.
+- `rotate --keep-old`: Take the previous key off servers, unticked.
+- `rotate --failed`: Choose the keys the last rotation left, on the rotate review.
+- `host apply --no-pin`: the web reconcile always runs with `--no-pin`; host keys are pinned from /hosts.
+- `knownhosts pin --all`: Pin host keys on /hosts (`knownhosts init`), which pins every host.
+- `host delete`, `profile delete --revoke/--purge`: a job, linked from the plain delete.
 
 ## Web options the CLI lacks
 

@@ -3,8 +3,6 @@ package web
 import (
 	"errors"
 	"fmt"
-	"github.com/sangehq/authama/src/internal/platform"
-	"github.com/sangehq/authama/src/internal/services/reconciler"
 	"io"
 	"net/http"
 	"net/url"
@@ -15,6 +13,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/reconciler"
 
 	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/core/inventory"
@@ -53,7 +54,7 @@ var jobFields = map[string][]string{
 	"revoke": {"key", "reason"},
 	// rotate-keys rotates the chosen keys (sel: keys, profiles, categories),
 	// a profile's keys, or every key, one after another.
-	"rotate-keys": {"sel", "profile", "all", "allow_unverified", "no_backup", "check", "force", "evict_old", "direct"},
+	"rotate-keys": {"sel", "profile", "all", "failed", "allow_unverified", "no_backup", "check", "force", "evict_old", "direct"},
 	// revoke-keys revokes each chosen key, as `authama ssh key revoke` does.
 	"revoke-keys": {"sel", "all", "reason"},
 	// delete-keys deletes each chosen key, as `authama ssh key delete` does.
@@ -66,6 +67,10 @@ var jobFields = map[string][]string{
 	// knownhosts-pin scans one manifest host and pins its keys once the
 	// person has seen their fingerprints, as `ssh knownhosts pin` does.
 	"knownhosts-pin": {"host"},
+	// delete-host and delete-profile are `ssh host delete` and `ssh profile
+	// delete` with --revoke or --purge; the plain delete is a change.
+	"delete-host":    {"profile", "alias", "revoke", "purge"},
+	"delete-profile": {"name", "revoke", "purge"},
 }
 
 // readsOnlyHostKeys is the jobs that only ask a host for its public keys and
@@ -112,7 +117,7 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 	// Everything but a bundle restore reaches real servers, which a sandbox
 	// cannot contain: refused here, as the CLI refuses it.
 	// Deleting keys without revoking them reaches no server.
-	localOnly := action == "delete-keys" && !checked(f, "revoke")
+	localOnly := (action == "delete-keys" || action == "delete-host" || action == "delete-profile") && !checked(f, "revoke")
 	if action != "bundle-restore" && !readsOnlyHostKeys[action] && !localOnly {
 		verb := action
 		switch verb {
@@ -120,7 +125,7 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 			verb = "rotate"
 		case "revoke-keys":
 			verb = "revoke"
-		case "delete-keys":
+		case "delete-keys", "delete-host", "delete-profile":
 			verb = "delete"
 		}
 		if err := h.p.RefuseOutsideSandbox(verb); err != nil {
@@ -144,6 +149,8 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 		return knownhostsInitSpec(f, h, retain)
 	case "knownhosts-pin":
 		return knownhostsPinSpec(f, h, retain)
+	case "delete-host", "delete-profile":
+		return deleteWithOptionsSpec(f, h)
 	}
 	ref, err := keyRef(f)
 	if err != nil {
@@ -696,7 +703,7 @@ func jobOptions(f url.Values, fields []formField) ([]jobOption, []formField) {
 	case "revoke-keys":
 		opts = []jobOption{{Name: "reason", Label: "Reason (optional)", Text: true, Placeholder: "laptop lost, contractor left…",
 			Detail: "Kept with the revocation record and shown in the history."}}
-	case "delete-keys":
+	case "delete-keys", "delete-host", "delete-profile":
 		opts = []jobOption{
 			{Name: "revoke", Label: "Revoke each from its targets first",
 				Detail: "Removes the key from every server it was deployed to before forgetting it."},
@@ -758,6 +765,10 @@ func jobBack(f url.Values) (href, label string) {
 		return "/snapshots", "Snapshots"
 	case "knownhosts-init", "knownhosts-pin":
 		return "/hosts", "Hosts"
+	case "delete-host":
+		return "/hosts/" + f.Get("profile") + "/" + f.Get("alias"), f.Get("alias")
+	case "delete-profile":
+		return "/profiles", "Profiles"
 	}
 	return "/keys", "Keys"
 }
@@ -853,6 +864,21 @@ func (h jobPages) handleJobReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	f := r.Form
+	// rotate --failed: the keys the last rotation or dry run left, from the
+	// command line or the page, chosen for this one.
+	if f.Get("action") == "rotate-keys" && checked(f, "failed") {
+		left, err := rotator.LoadFailed(h.s.opts.Engine.Home())
+		if err != nil {
+			h.fail(w, r, err)
+			return
+		}
+		if len(left) == 0 {
+			h.s.renderError(w, r, http.StatusBadRequest, "Nothing to run again", "No key was left by the last rotation or dry run.")
+			return
+		}
+		f["sel"] = left
+		f.Del("failed")
+	}
 	// Asked for by its address with no job named - a reload of an older
 	// review, Back - it says so, as any form's answer does.
 	if r.Method == http.MethodGet && f.Get("action") == "" {

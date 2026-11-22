@@ -33,7 +33,8 @@
               <a class="dropdown-item" href="#profile-category" data-panel-open="profile-category" data-panel-fill-name="{{.Name}}"{{desc "profile-category"}}>{{icon "folder"}}<span class="ms-2">Move to a category</span></a>
               {{if not $.DevRoot}}<a class="dropdown-item" href="{{basePath}}/jobs/review?action=rotate-keys&amp;sel={{.Name}}"{{desc "profile-rotate"}}>{{icon "recycle"}}<span class="ms-2">Rotate its keys</span></a>{{end}}
               <div class="dropdown-divider"></div>
-              <button type="submit" class="dropdown-item text-danger" form="f-profile-{{.Name}}" data-confirm="m-profile-{{.Name}}"{{desc "delete"}}>{{icon "trash"}}<span class="ms-2">Delete</span></button>{{end}}
+              <button type="submit" class="dropdown-item text-danger" form="f-profile-{{.Name}}" data-confirm="m-profile-{{.Name}}"{{desc "delete"}}>{{icon "trash"}}<span class="ms-2">Delete</span></button>
+              <a class="dropdown-item text-danger" href="{{basePath}}/jobs/review?action=delete-profile&amp;name={{.Name}}"{{desc "delete-options"}}>{{icon "alert-triangle"}}<span class="ms-2">Delete, revoking or purging…</span></a>{{end}}
             {{template "menu_close"}}
           </td>
         </tr>
@@ -54,6 +55,7 @@
           <div class="mb-3" data-show-when="#p-scope" data-show-when-in="shared"><label class="form-label" for="p-keyname">Shared key name</label><input class="form-control" id="p-keyname" name="key_name" autocomplete="off" spellcheck="false"><small class="form-hint">The one key every host in the profile uses.</small></div>
           <div class="mb-3"><label class="form-label" for="p-category">Category</label><input class="form-control" id="p-category" name="category" autocomplete="off" spellcheck="false"><small class="form-hint">Optional: files the profile under <code>~/.ssh/profiles/&lt;category&gt;/</code>.</small></div>
           <div class="mb-3"><label class="form-label" for="p-comment">Key comment</label><input class="form-control" id="p-comment" name="key_comment" autocomplete="off" spellcheck="false" placeholder="{profile}/{alias} {date}"><small class="form-hint">Optional. Placeholders: <code>{profile}</code> <code>{alias}</code> <code>{key}</code> <code>{date}</code> <code>{device}</code>.</small></div>
+          <div class="mb-3"><label class="form-label" for="p-code">Code <span class="text-secondary">(optional)</span></label><input class="form-control" id="p-code" name="code" autocomplete="off" spellcheck="false" maxlength="16"{{desc "profile-add-code"}}><small class="form-hint">A short code generated aliases start with, as <code>--code</code>.</small></div>
           {{template "panel_footer" (footer "authama ssh profile add" "Preview" "btn-primary" "")}}
         </form>
 {{template "panel_close"}}

@@ -34,6 +34,12 @@ func ProfileAdd(name, keyScope, keyName, keyComment string) Change {
 // ProfileAddIn is ProfileAdd with --category: the profile is filed under
 // profiles/<category>/ from the start. An empty category is ProfileAdd.
 func ProfileAddIn(name, keyScope, keyName, keyComment, category string) Change {
+	return ProfileAddWith(name, keyScope, keyName, keyComment, category, "")
+}
+
+// ProfileAddWith is ProfileAddIn with --code: the organisation's code name
+// its servers' aliases start with. An empty code sets none.
+func ProfileAddWith(name, keyScope, keyName, keyComment, category, code string) Change {
 	if keyScope == "" {
 		keyScope = "per_service"
 	}
@@ -48,6 +54,9 @@ func ProfileAddIn(name, keyScope, keyName, keyComment, category string) Change {
 	}
 	if category != "" {
 		args = append(args, "--category="+category)
+	}
+	if code != "" {
+		args = append(args, "--code="+code)
 	}
 	return Change{
 		Command: "profile add", Args: args,
@@ -64,6 +73,11 @@ func ProfileAddIn(name, keyScope, keyName, keyComment, category string) Change {
 			}
 			if keyComment != "" {
 				if err := ed.SetKeyComment(name, keyComment); err != nil {
+					return err
+				}
+			}
+			if code != "" {
+				if _, err := editor.SetProfileCode(ed, name, code); err != nil {
 					return err
 				}
 			}
@@ -273,16 +287,28 @@ func KeyDelete(ref manifest.KeyRef) Change {
 
 // VMAdd is `authama ssh vm add <profile> <alias> --hypervisor --vm -u <user> --yes`.
 func VMAdd(profile, alias, hypervisor, vmName, user string) Change {
+	return VMAddWith(profile, alias, hypervisor, vmName, user, "")
+}
+
+// VMAddWith is VMAdd with --key-name: the host uses that key instead of the
+// derived one. An empty keyName derives it.
+func VMAddWith(profile, alias, hypervisor, vmName, user, keyName string) Change {
+	args := []string{profile, alias, "--hypervisor=" + hypervisor, "--vm=" + vmName, "--user=" + user}
+	var kn *string
+	if keyName != "" {
+		kn = &keyName
+		args = append(args, "--key-name="+keyName)
+	}
 	return Change{
 		Command:  "vm add",
-		Args:     []string{profile, alias, "--hypervisor=" + hypervisor, "--vm=" + vmName, "--user=" + user, "--yes"},
+		Args:     append(args, "--yes"),
 		Subjects: []history.Subject{{Kind: history.KindProfile, Name: profile}, {Kind: history.KindHost, Name: alias}},
 		Run: func(p paths.Paths, out io.Writer) error {
 			if hypervisor == manifest.HypervisorOrbStack || hypervisor == manifest.HypervisorPodman {
 				return fmt.Errorf("%s", manifest.OwnSSHRefusal(hypervisor))
 			}
 			name := alias
-			f := editor.HostFields{Hostname: &name, User: &user,
+			f := editor.HostFields{Hostname: &name, User: &user, KeyName: kn,
 				VM: &manifest.VMSpec{Hypervisor: hypervisor, Name: vmName}}
 			if err := editor.New(p).AddHost(profile, alias, f); err != nil {
 				return err

@@ -15,10 +15,18 @@ import (
 // fixes reach the OS key store, file modes and a database, which a preview
 // copy does not hold, so they run in OnApply; Effects lists them, and the
 // confirmation is bound to that list.
-func Repair(home func(paths.Paths) repair.Home) Change {
+func Repair(home func(paths.Paths) repair.Home) Change { return RepairAreas(home, nil) }
+
+// RepairAreas is `authama repair --area <area>... --yes`: only the fixes in
+// those areas; none is every area.
+func RepairAreas(home func(paths.Paths) repair.Home, areas []repair.Area) Change {
+	args := []string{}
+	for _, a := range areas {
+		args = append(args, "--area="+string(a))
+	}
 	fixable := func(p paths.Paths) []repair.Finding {
 		var out []repair.Finding
-		for _, f := range home(p).Check() {
+		for _, f := range home(p).Check(areas...) {
 			if f.Fixable {
 				out = append(out, f)
 			}
@@ -26,7 +34,7 @@ func Repair(home func(paths.Paths) repair.Home) Change {
 		return out
 	}
 	return Change{
-		Command: "repair", Args: []string{"--yes"},
+		Command: "repair", Args: append(args, "--yes"),
 		Effects: func(p paths.Paths) ([]string, error) {
 			fs := fixable(p)
 			if len(fs) == 0 {

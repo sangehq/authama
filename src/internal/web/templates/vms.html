@@ -60,6 +60,7 @@
     {{if not $.ReadOnly}}
     {{template "change_open" $}}<input type="hidden" name="action" value="vm-sync">
       <label class="form-check"><input class="form-check-input" type="checkbox" name="repin" value="1"><span class="form-check-label">replace the pin of a guest whose host key changed (<code>--repin</code>)</span></label>
+      <label class="form-check"><input class="form-check-input" type="checkbox" name="no_probe" value="1"{{desc "vm-no-probe"}}><span class="form-check-label">do not connect to the guests: only hypervisor state (<code>--no-probe</code>)</span></label>
       <button type="submit" class="btn btn-primary"{{desc "vm-sync"}}>Preview sync</button>
     </form>
     {{end}}
@@ -128,6 +129,8 @@
           <div class="mb-3"><label class="form-label" for="ak-hv">Hypervisor</label><select class="form-select" id="ak-hv" name="hypervisor">{{range hypervisors}}{{if and (ne . "orbstack") (ne . "podman")}}<option value="{{.}}">{{.}}</option>{{end}}{{end}}</select></div>
           <div class="mb-3"><label class="form-label required" for="ak-vm">VM name</label><input class="form-control" id="ak-vm" name="vm" required autocomplete="off" spellcheck="false" list="ak-vms"><datalist id="ak-vms">{{range .Drivers}}{{range .VMs}}<option value="{{.Name}}">{{end}}{{end}}</datalist></div>
           <div class="mb-3"><label class="form-label required" for="ak-user">Guest user</label><input class="form-control" id="ak-user" name="user" required autocomplete="off" spellcheck="false"></div>
+          <div class="mb-2"><label class="form-check"><input class="form-check-input" type="checkbox" name="move" value="1"{{desc "vm-adopt-move"}}><span class="form-check-label">Move the keypair instead of copying it (<code>--move</code>)</span></label></div>
+          <div class="mb-3"><label class="form-check"><input class="form-check-input" type="checkbox" name="docker_context" value="1"{{desc "vm-adopt-docker"}}><span class="form-check-label">Also create a Docker context for the host (<code>--docker-context</code>)</span></label></div>
           {{template "panel_actions" ""}}
         </form>
 {{template "panel_close"}}
