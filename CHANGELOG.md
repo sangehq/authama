@@ -126,6 +126,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `ssh structure approve` refuses a destination whose profile or category directory is a symlink, as the
   importer does, so nothing is created or chmodded outside `~/.ssh`.
 
+### Security
+
+- **Paths, commands and responses from a web form or an uploaded document are guarded where they are used**
+  (CodeQL's 98 alerts on the combined PR). Every profile, key, category and key-root path the manifest builds goes
+  through one set of guards in `util/fs` (`Segment`, `LocalRel`, `Within`, `AbsDir`), so a name that skipped
+  validation still cannot leave `~/.ssh`. Providers run only `ssh`, `ssh-copy-id`, `gh` or `glab`, never a program
+  named by data, and every ssh destination follows `--` and must be a plain `user@host`. Git signing runs git in the
+  checkout instead of passing it as `-C`, puts values after `--` where none can read as an option, and gives the
+  allowed signers file through `GIT_CONFIG_*`. A Termius group scheme not on the list is refused rather than written
+  into the export zip.
+
 ## [0.1.0] - 2026-11-17
 
 The first release under `sangehq/authama`, tagged 2026-11-14 and re-tagged on 2026-11-16 and 2026-11-17 with everything
