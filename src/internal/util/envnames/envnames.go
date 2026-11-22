@@ -31,7 +31,7 @@ const (
 	// DeployRoute is how deploy, verify and remove reach a server: alias
 	// (through the managed config, so ProxyJump, ProxyCommand, cloudflared
 	// and VM routes apply) or direct (the manifest's hostname, user and port).
-	DeployRoute = "AUTHAMA_DEPLOY_ROUTE"
+	DeployRoute      = "AUTHAMA_DEPLOY_ROUTE"
 	History          = "AUTHAMA_HISTORY"
 	HistoryPermanent = "AUTHAMA_HISTORY_PERMANENT"
 	GitMode          = "AUTHAMA_GIT_MODE"
