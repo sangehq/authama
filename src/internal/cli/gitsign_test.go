@@ -25,11 +25,14 @@ func TestGitSignSetAppliesAndClearsTheProfilesIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if g := m.Profiles["work"].Git; g == nil || g.Email != "ada@acme.example" || !g.Sign || g.Dirs[0] != "/srv/acme" {
+	// On Windows /srv/acme is on the current drive: D:/srv/acme.
+	abs, _ := filepath.Abs("/srv/acme")
+	dir := filepath.ToSlash(abs)
+	if g := m.Profiles["work"].Git; g == nil || g.Email != "ada@acme.example" || !g.Sign || g.Dirs[0] != dir {
 		t.Fatalf("manifest: %+v", g)
 	}
 	cfg, _ := os.ReadFile(global)
-	if !strings.Contains(string(cfg), `gitdir:/srv/acme/`) {
+	if !strings.Contains(string(cfg), "gitdir:"+dir+"/") {
 		t.Errorf("global config:\n%s", cfg)
 	}
 	frag, _ := os.ReadFile(gitsign.FragmentPath(p, "work"))
