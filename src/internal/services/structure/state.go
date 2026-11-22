@@ -7,6 +7,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/sangehq/authama/src/internal/util/fs"
 	"github.com/sangehq/authama/src/internal/util/paths"
 	"github.com/sangehq/authama/src/internal/util/perms"
 )
@@ -50,11 +51,7 @@ func SaveState(p paths.Paths, s State) error {
 	if err != nil {
 		return err
 	}
-	tmp := StateFile(p) + ".tmp"
-	if err := os.WriteFile(tmp, append(b, '\n'), perms.ConfigMode); err != nil {
-		return err
-	}
-	return os.Rename(tmp, StateFile(p))
+	return fs.WriteTextAtomic(StateFile(p), string(b)+"\n", perms.ConfigMode)
 }
 
 // Check is one watcher pass: the suggestions now, marked dismissed where the

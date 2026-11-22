@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/sangehq/authama/src/internal/util/fs"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
@@ -25,7 +26,9 @@ func handWritten(p paths.Paths) []string {
 	out = append(out, conf...)
 	var files []string
 	for _, f := range out {
-		if fi, err := os.Lstat(f); err == nil && fi.Mode().IsRegular() {
+		// A link to a regular file counts (a dotfiles setup); the rewrite
+		// goes through it and leaves it a link.
+		if fi, err := os.Stat(f); err == nil && fi.Mode().IsRegular() {
 			files = append(files, f)
 		}
 	}
@@ -144,7 +147,13 @@ func rewrite(p paths.Paths, to func(abs string) (string, bool)) ([]string, error
 		if !touched {
 			continue
 		}
-		if err := os.WriteFile(f, []byte(strings.Join(lines, "\n")), fi.Mode().Perm()); err != nil {
+		// Through a symlinked config (a dotfiles setup) to the file it names,
+		// so the link stays a link; replaced whole, never truncated in place.
+		target, err := filepath.EvalSymlinks(f)
+		if err != nil {
+			return changed, err
+		}
+		if err := fs.WriteTextAtomic(target, strings.Join(lines, "\n"), fi.Mode().Perm()); err != nil {
 			return changed, err
 		}
 		changed = append(changed, "~/.ssh/"+relSSH(p, f))

@@ -15,6 +15,7 @@ import (
 	"github.com/sangehq/authama/src/internal/platform"
 	"github.com/sangehq/authama/src/internal/services/editor"
 	"github.com/sangehq/authama/src/internal/services/reconciler"
+	"github.com/sangehq/authama/src/internal/util/fs"
 	"github.com/sangehq/authama/src/internal/util/log"
 	"github.com/sangehq/authama/src/internal/util/paths"
 	"github.com/sangehq/authama/src/internal/util/perms"
@@ -431,7 +432,7 @@ func backupPair(p paths.Paths, src, dir string) error {
 		if err := os.MkdirAll(filepath.Dir(dst), perms.DirMode); err != nil {
 			return err
 		}
-		if err := os.WriteFile(dst, b, perms.PrivateKeyMode); err != nil {
+		if err := fs.WriteTextAtomic(dst, string(b), perms.PrivateKeyMode); err != nil {
 			return err
 		}
 	}

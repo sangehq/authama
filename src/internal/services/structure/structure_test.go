@@ -323,3 +323,28 @@ func TestApplyRefusesASymlinkedProfileDir(t *testing.T) {
 		t.Errorf("wrote through the link: %v", ents)
 	}
 }
+
+// A symlinked ~/.ssh/config (a dotfiles setup) is repointed through the link,
+// which stays a link.
+func TestApplyKeepsASymlinkedConfigALink(t *testing.T) {
+	p := home(t, "")
+	pair(t, filepath.Join(p.SSHDir, "id_work"), pubWork)
+	real := filepath.Join(t.TempDir(), "dotfiles-ssh-config")
+	write(t, real, "Host x\n  IdentityFile ~/.ssh/id_work\n", 0o600)
+	if err := os.Symlink(real, filepath.Join(p.SSHDir, "config")); err != nil {
+		t.Skip("no symlinks here:", err)
+	}
+	moves, err := ParsePlan("key ~/.ssh/id_work profile work name laptop\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Apply(p, moves, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Lstat(filepath.Join(p.SSHDir, "config")); err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("the config is no longer a link: %v %v", fi, err)
+	}
+	if b, _ := os.ReadFile(real); !strings.Contains(string(b), "~/.ssh/profiles/work/laptop") {
+		t.Errorf("the linked file was not repointed:\n%s", b)
+	}
+}

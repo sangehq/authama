@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/sangehq/authama/src/internal/services/events"
@@ -44,15 +45,18 @@ func (s *Server) scanEvents() {
 	if err != nil {
 		return
 	}
-	s.checkStructure(p, evs)
+	checkStructure(&s.structureSeen, p, evs, s.now())
 }
 
 // checkStructure refreshes the structure suggestions (the structure page's
 // list) after a scan that saw a file change in ~/.ssh or the config home,
 // and once at start. It only suggests: nothing moves until the owner
 // approves it.
-func (s *Server) checkStructure(p paths.Paths, evs []events.Event) {
-	changed := !s.structureSeen.Load()
+//
+// A function, not a Server method: Server's method count is kept down on
+// purpose (TestNoTypeHasBecomeTheFacadeAgain).
+func checkStructure(seen *atomic.Bool, p paths.Paths, evs []events.Event, now time.Time) {
+	changed := !seen.Load()
 	for _, e := range evs {
 		if e.Area == events.AreaSSH || e.Area == events.AreaConfig {
 			changed = true
@@ -62,8 +66,8 @@ func (s *Server) checkStructure(p paths.Paths, evs []events.Event) {
 	if !changed {
 		return
 	}
-	if _, _, err := structure.Check(p, s.now()); err == nil {
-		s.structureSeen.Store(true)
+	if _, _, err := structure.Check(p, now); err == nil {
+		seen.Store(true)
 	}
 }
 
