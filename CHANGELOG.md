@@ -24,6 +24,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   host it shows the key label and key path, and the `ssh termius keys <host> --clear-after 60s` command that copies
   the key. The page never copies a private key itself, since nothing secret is copied from a page.
 
+- **Commit as each profile, signed with its SSH key** (`authama ssh git sign`). A profile's new `git` block in the
+  manifest (`email`, `name`, `signing_key`, `sign`, `dirs`) is rendered by `sign apply` into
+  `<config home>/git/<profile>.gitconfig`, one `allowed_signers` file, and one managed block of `includeIf
+  "gitdir:…"` lines in the global git config, so every checkout under a profile's directories commits as its address
+  and signs commits and tags with its key (`gpg.format ssh`; 1Password profiles sign through `op-ssh-sign`). Only
+  the managed block is changed, the file is copied to the state home first, and a symlinked `~/.gitconfig` keeps
+  its link. `sign set` edits the block and applies it, `sign status` shows what each checkout resolves, `sign use`
+  makes one checkout a profile's wherever it is, and `sign verify` checks recent commits against `allowed_signers`.
+  Recipe: [Sign commits with each profile's SSH key](docs/recipes/sign-commits-with-ssh.md).
+- **`authama ssh git clone OWNER/REPO [DIR]`** clones through the URL `git resolve` gives, and makes the checkout
+  commit as the profile when it has a git identity.
+
 ### Changed
 
 - The hosts page leads to the Termius import instead of offering three Termius downloads; the plain Termius CSV

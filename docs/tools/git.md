@@ -1,7 +1,12 @@
-# `git` — switch checkouts between profile SSH, plain SSH and HTTPS
+# `git` — remotes over each profile's SSH key, and commits signed with it
 
-Two verbs: `git status` shows how each checkout's GitHub `origin` authenticates, and `git use` points it at
-one of three modes after proving the new URL works.
+`authama ssh git` does two jobs for git:
+
+- **Remotes.** `git status` shows how each checkout's GitHub `origin` authenticates, `git use` points it at
+  one of three modes after proving the new URL works, `git resolve` says how a repository would be reached,
+  and `git clone` clones through the right profile's alias.
+- **Identity and signing.** `git sign` makes the checkouts under a profile's directories commit as that
+  profile (its email and name) and sign commits and tags with its SSH key, and checks those signatures.
 
 | Mode | Origin URL | Authenticates as |
 |---|---|---|
@@ -146,6 +151,69 @@ Both `use --json` and `resolve --json` keep the promise `status --json` makes: f
 added, and the same test guards them.
 
 Glob `packages/*`, not `*/`, where parked copies share names with live ones.
+
+## `authama ssh git clone OWNER/REPO [DIR]`
+
+Clones over the URL `resolve` gives (the owner's profile, the default mode; `--profile` and `--mode` override
+them), so the checkout starts on the right key. When the profile has a git identity that is applied, the new
+checkout also includes its fragment, as `git sign use` does, so the first commit is already made and signed as
+that profile. `--dry-run` prints the URL and directory and clones nothing.
+
+```sh
+authama ssh git clone acme/app ~/code/acme/app
+authama ssh git clone me/dotfiles --profile personal --dry-run
+```
+
+## `authama ssh git sign` — commit as a profile, signed with its SSH key
+
+Each profile can carry a git identity in the manifest:
+
+```jsonc
+"profiles": {
+  "work": {
+    "git": {
+      "email": "ada@acme.example",   // user.email, and the signer's principal in allowed_signers
+      "name": "Ada Lovelace",         // user.name; optional
+      "signing_key": "",              // a key of this profile; empty = its github.com host's key
+      "sign": true,                   // sign commits and tags; false writes the identity only
+      "dirs": ["~/code/acme"]         // checkouts under these commit as this profile
+    },
+    ...
+  }
+}
+```
+
+| Verb | Does |
+|---|---|
+| `sign set <profile> --email E [--name N] [--key K] [--dir D]... [--no-sign] [--clear]` | Writes the profile's `git` block (each `--dir` replaces the list), then applies. `--no-apply` changes the manifest only. |
+| `sign apply [--dry-run] [-y]` | Renders every profile's block, showing each change as a diff first. |
+| `sign status [PATH...] [--json]` | Each profile's identity and key, whether `apply` is due, and for each checkout the email, signing key and format git resolves there and the file the email comes from. |
+| `sign use <profile> [PATH...] [--dry-run] [-y]` | Makes checkouts commit as the profile wherever they are, through their own `include.path`; another profile's fragment is taken out, includes that are not authama's stay. |
+| `sign verify [PATH] [-n N] [--strict] [--json]` | Checks the last N commits (default 10) with git's own signature check against authama's `allowed_signers`. Exits non-zero on a bad signature, and with `--strict` on any commit that is not a good signature from an allowed signer. |
+
+What `apply` writes, every time from the manifest:
+
+| File | Holds |
+|---|---|
+| `<config home>/git/<profile>.gitconfig` (0600) | `user.email`, `user.name`, `user.signingkey` (the key's `.pub`), and when it signs `gpg.format = ssh`, `gpg.ssh.allowedSignersFile`, `commit.gpgsign` and `tag.gpgsign` |
+| `<config home>/git/allowed_signers` (0600) | `<email> namespaces="git" <public key>` for every signing profile |
+| the global git config | one managed block: an `[includeIf "gitdir:<dir>/"]` per directory, pointing at the profile's fragment |
+
+The global git config is `$GIT_CONFIG_GLOBAL`, else `~/.gitconfig` (or `$XDG_CONFIG_HOME/git/config` when only
+that exists); in a sandbox (`--dev-root`) it is the sandbox home's `.gitconfig`. Only the block between the
+`# >>> authama: git identities` markers is ever changed; a copy of the file is kept under the state home's
+`backups/gitconfig/` before each change, and a symlinked `~/.gitconfig` (a dotfiles checkout) is written through,
+so the link stays. A fragment whose profile no longer has a git block is removed, and so is its include.
+
+**Keys.** Signing names the public half; git runs `ssh-keygen -Y sign`, which uses the private key next to it
+(or the agent). No private key is read or copied. A profile with `key_store: 1password` signs through
+1Password's `op-ssh-sign` with `signingkey = key::<public key>`. A key not made yet leaves signing off and says
+so (`authama ssh reconcile` mints it); the identity is still written. Upload the same public key to GitHub as a
+**signing key** (Settings → SSH and GPG keys → New SSH key → Key type: Signing Key) for GitHub to show the
+commits as Verified.
+
+`gitdir:` is matched against the checkout's real path: give a directory behind a symlink by its resolved path.
+Two profiles cannot claim one directory; the manifest refuses it.
 
 ---
 

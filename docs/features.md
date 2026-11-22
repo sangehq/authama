@@ -156,6 +156,13 @@ bounded SSH-level reachability probe first, so a down or VPN-gated host (includi
 | `knownhosts pin [HOST] [-p PORT] [--all] [-y]` | Pin into the one `known_hosts` via `ssh-keyscan`, showing each fingerprint and asking first. A host that returns no SSH key fails the command (named, with the reason) instead of reporting `pinned 0`. | U·F |
 | `git status [PATH...]` | Each checkout's GitHub remote mode (profile, ssh, https), owner/repo and profile. | U·F |
 | `git use [MODE] [PATH...] [--mode] [--profile] [--dry-run] [--yes]` | Point checkouts' origin at profile SSH, plain SSH or HTTPS; the new URL must pass `git ls-remote` before origin is rewritten. | U·F |
+| `git resolve OWNER/REPO [--mode] [--profile] [--json]` | How a repository would be reached: profile, mode, URL, SSH alias and key fingerprint; changes nothing. | U·F |
+| `git clone OWNER/REPO [DIR] [--mode] [--profile] [--dry-run]` | Clone through the URL `resolve` gives, and make the checkout commit as the profile when it has a git identity. | U·F |
+| `git sign set PROFILE --email E [--name] [--key] [--dir D]... [--no-sign] [--clear]` | Set a profile's git identity and SSH signing in the manifest, then apply it. | U·F |
+| `git sign apply [--dry-run] [-y]` | Write each profile's git config fragment, `allowed_signers`, and one managed `includeIf` block in the global git config (copied first; a symlink is kept), each change shown as a diff. | U·F |
+| `git sign status [PATH...] [--json]` | Each profile's identity and signing key, whether apply is due, and what git resolves in each checkout. | U·F |
+| `git sign use PROFILE [PATH...]` | Make a checkout commit and sign as a profile wherever it is (`include.path`). | U |
+| `git sign verify [PATH] [-n N] [--strict] [--json]` | Check recent commits' signatures against `allowed_signers`; non-zero on a bad one. | U |
 | `vm list` | Every installed hypervisor's VMs, and which manifest host uses each; missing hypervisors say so. | U·F |
 | `vm add PROFILE ALIAS --hypervisor H --vm NAME -u USER [--key-name] [-y]` | Add a local VM as a host; its address is resolved at connect time through `ProxyCommand "<authama>" vm proxy ALIAS`. | U·F |
 | `vm docker-context ALIAS` | Create or update a Docker context `ssh://ALIAS` for a VM host. | U·F |

@@ -46,12 +46,14 @@ func isGitMode(s string) bool {
 func newGitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "git",
-		Short: "Show or switch checkouts' GitHub remotes between profile SSH, plain SSH and HTTPS",
+		Short: "Switch checkouts' GitHub remotes between profile SSH, plain SSH and HTTPS; commit and sign as a profile",
 		Long: "Each checkout's origin reaches GitHub one of three ways:\n\n" +
 			"  profile  git@github-<profile>:owner/repo.git  the profile's own key (default)\n" +
 			"  ssh      git@github.com:owner/repo.git         the key bound to Host github.com\n" +
 			"  https    https://github.com/owner/repo.git     your git credential helper\n\n" +
-			"The owner picks the profile through defaults.git.orgs, then defaults.git.profile.",
+			"The owner picks the profile through defaults.git.orgs, then defaults.git.profile.\n\n" +
+			"`clone` clones through the right alias; `sign` makes checkouts commit as a profile\n" +
+			"and sign with its SSH key (profiles.<name>.git in the manifest).",
 	}
 
 	var asJSON bool
@@ -179,7 +181,7 @@ func newGitCmd() *cobra.Command {
 	use.Flags().BoolVarP(&yes, "yes", "y", false, "rewrite without confirming (implied when there is no terminal)")
 	use.Flags().BoolVar(&useJSON, "json", false, "machine-readable output (scripting); fields are only ever added")
 	cmd.AddCommand(use)
-	cmd.AddCommand(newGitResolveCmd())
+	cmd.AddCommand(newGitResolveCmd(), newGitCloneCmd(), newGitSignCmd())
 	return cmd
 }
 

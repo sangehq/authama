@@ -42,6 +42,10 @@ authama ssh deploy work_github-ed25519
 authama ssh config show github-work        # ssh -G for that alias
 ```
 
+To commit as each account's address and sign with its key too, see
+[Sign commits with each profile's SSH key](sign-commits-with-ssh.md): `authama ssh git sign set` writes the
+`includeIf` blocks above for you, from the manifest.
+
 Full manifest reference: [Configuration](../configuration.md).
 
 ---

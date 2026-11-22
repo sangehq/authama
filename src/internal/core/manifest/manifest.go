@@ -325,9 +325,12 @@ type Profile struct {
 	KeyName  *string `json:"key_name,omitempty"`
 	// KeyComment is the ssh-keygen -C template for keys minted in this
 	// profile; empty inherits defaults.key_comment (see KeyCommentTemplate).
-	KeyComment string    `json:"key_comment,omitempty"`
-	Keys       []KeySpec `json:"keys,omitempty"`
-	Hosts      []Host    `json:"hosts"`
+	KeyComment string `json:"key_comment,omitempty"`
+	// Git is the identity the profile commits as, and how it signs; nil
+	// leaves git alone (see ProfileGit).
+	Git   *ProfileGit `json:"git,omitempty"`
+	Keys  []KeySpec   `json:"keys,omitempty"`
+	Hosts []Host      `json:"hosts"`
 }
 
 func (p *Profile) UnmarshalJSON(b []byte) error {
@@ -347,22 +350,23 @@ func (p *Profile) UnmarshalJSON(b []byte) error {
 // written before these fields existed - byte-identical across a load/save cycle.
 func (p Profile) MarshalJSON() ([]byte, error) {
 	type wire struct {
-		Category   string    `json:"category,omitempty"`
-		Code       string    `json:"code,omitempty"`
-		Naming     *Naming   `json:"naming,omitempty"`
-		KeyStore   string    `json:"key_store,omitempty"`
-		OPVault    string    `json:"op_vault,omitempty"`
-		KeyScope   string    `json:"key_scope"`
-		KeyName    *string   `json:"key_name"`
-		KeyComment string    `json:"key_comment,omitempty"`
-		Keys       []KeySpec `json:"keys,omitempty"`
-		Hosts      []Host    `json:"hosts"`
+		Category   string      `json:"category,omitempty"`
+		Code       string      `json:"code,omitempty"`
+		Naming     *Naming     `json:"naming,omitempty"`
+		KeyStore   string      `json:"key_store,omitempty"`
+		OPVault    string      `json:"op_vault,omitempty"`
+		KeyScope   string      `json:"key_scope"`
+		KeyName    *string     `json:"key_name"`
+		KeyComment string      `json:"key_comment,omitempty"`
+		Git        *ProfileGit `json:"git,omitempty"`
+		Keys       []KeySpec   `json:"keys,omitempty"`
+		Hosts      []Host      `json:"hosts"`
 	}
 	hosts := p.Hosts
 	if hosts == nil {
 		hosts = []Host{}
 	}
-	return json.Marshal(wire{Category: p.Category, Code: p.Code, Naming: p.Naming, KeyStore: p.KeyStore, OPVault: p.OPVault, KeyScope: p.KeyScope, KeyName: p.KeyName, KeyComment: p.KeyComment, Keys: p.Keys, Hosts: hosts})
+	return json.Marshal(wire{Category: p.Category, Code: p.Code, Naming: p.Naming, KeyStore: p.KeyStore, OPVault: p.OPVault, KeyScope: p.KeyScope, KeyName: p.KeyName, KeyComment: p.KeyComment, Git: p.Git, Keys: p.Keys, Hosts: hosts})
 }
 
 // ExpiryCheck is the notifier policy.
@@ -1041,6 +1045,9 @@ func (m *Manifest) validate() error {
 		return err
 	}
 	if err := checkGit(m); err != nil {
+		return err
+	}
+	if err := checkProfileGit(m); err != nil {
 		return err
 	}
 	if err := checkReserved(m); err != nil {

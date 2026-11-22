@@ -87,8 +87,15 @@ Every command also takes the global flag:
   - [`authama ssh deploy`](#authama-ssh-deploy) - Install a public key on its target
   - [`authama ssh diff`](#authama-ssh-diff) - Preview what reconcile would change (manifest vs. ~/.ssh)
   - [`authama ssh expiry`](#authama-ssh-expiry) - Per-key rotation-age table
-  - [`authama ssh git`](#authama-ssh-git) - Show or switch checkouts' GitHub remotes between profile SSH, plain SSH and HTTPS
+  - [`authama ssh git`](#authama-ssh-git) - Switch checkouts' GitHub remotes between profile SSH, plain SSH and HTTPS; commit and sign as a profile
+    - [`authama ssh git clone`](#authama-ssh-git-clone) - Clone a GitHub repository through the right profile's SSH alias, committing as that profile
     - [`authama ssh git resolve`](#authama-ssh-git-resolve) - Show the profile, mode, URL, SSH alias and key a GitHub repository would use; changes nothing
+    - [`authama ssh git sign`](#authama-ssh-git-sign) - Commit as each profile, and sign commits and tags with its SSH key
+      - [`authama ssh git sign apply`](#authama-ssh-git-sign-apply) - Write each profile's git config fragment, allowed_signers, and the includeIf block
+      - [`authama ssh git sign set`](#authama-ssh-git-sign-set) - Set a profile's git email, name, signing key and directories, then apply
+      - [`authama ssh git sign status`](#authama-ssh-git-sign-status) - Show each profile's git identity, whether it is applied, and how checkouts commit
+      - [`authama ssh git sign use`](#authama-ssh-git-sign-use) - Make checkouts commit and sign as a profile, wherever they are
+      - [`authama ssh git sign verify`](#authama-ssh-git-sign-verify) - Check the signatures of a checkout's recent commits against allowed_signers
     - [`authama ssh git status`](#authama-ssh-git-status) - Show each checkout's remote mode, owner and profile
     - [`authama ssh git use`](#authama-ssh-git-use) - Point checkouts' origin at a mode, after proving the new URL with ls-remote
   - [`authama ssh host`](#authama-ssh-host) - Manage a host within a profile (add/edit/delete/apply)
@@ -1479,7 +1486,7 @@ Subcommands:
 - [`deploy`](#authama-ssh-deploy) - Install a public key on its target
 - [`diff`](#authama-ssh-diff) - Preview what reconcile would change (manifest vs. ~/.ssh)
 - [`expiry`](#authama-ssh-expiry) - Per-key rotation-age table
-- [`git`](#authama-ssh-git) - Show or switch checkouts' GitHub remotes between profile SSH, plain SSH and HTTPS
+- [`git`](#authama-ssh-git) - Switch checkouts' GitHub remotes between profile SSH, plain SSH and HTTPS; commit and sign as a profile
 - [`host`](#authama-ssh-host) - Manage a host within a profile (add/edit/delete/apply)
 - [`import`](#authama-ssh-import) - Onboard an existing ssh setup - a config file or any folder of them - into the manifest
 - [`key`](#authama-ssh-key) - Manage a profile's keys (add/list/delete)
@@ -1759,15 +1766,45 @@ Each checkout's origin reaches GitHub one of three ways:
 
 The owner picks the profile through defaults.git.orgs, then defaults.git.profile.
 
+`clone` clones through the right alias; `sign` makes checkouts commit as a profile
+and sign with its SSH key (profiles.<name>.git in the manifest).
+
 ```
 authama ssh git
 ```
 
 Subcommands:
 
+- [`clone`](#authama-ssh-git-clone) - Clone a GitHub repository through the right profile's SSH alias, committing as that profile
 - [`resolve`](#authama-ssh-git-resolve) - Show the profile, mode, URL, SSH alias and key a GitHub repository would use; changes nothing
+- [`sign`](#authama-ssh-git-sign) - Commit as each profile, and sign commits and tags with its SSH key
 - [`status`](#authama-ssh-git-status) - Show each checkout's remote mode, owner and profile
 - [`use`](#authama-ssh-git-use) - Point checkouts' origin at a mode, after proving the new URL with ls-remote
+
+## authama ssh git clone
+
+Resolves the URL as `resolve` does (the owner's profile, the default mode), clones
+it, and when the profile has a git identity adds its fragment to the new checkout
+(as `sign use` does), so the first commit is already made and signed as that profile.
+
+```
+authama ssh git clone <owner>/<repo> [dir] [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh git clone acme/app ~/code/acme/app
+  authama ssh git clone me/dotfiles --profile personal --mode profile
+```
+
+Flags:
+
+```
+      --dry-run[=true|false]   show the URL and directory, clone nothing
+      --mode string            profile, ssh or https (overrides $AUTHAMA_GIT_MODE and the manifest)
+      --profile string         use this profile instead of the owner's mapping
+```
 
 ## authama ssh git resolve
 
@@ -1796,6 +1833,162 @@ Flags:
       --json[=true|false]   machine-readable output (scripting); fields are only ever added
       --mode string         profile, ssh or https (overrides $AUTHAMA_GIT_MODE and the manifest)
       --profile string      use this profile instead of the owner's mapping
+```
+
+## authama ssh git sign
+
+Each profile can carry a git identity (profiles.<name>.git in the manifest): the email
+and name its commits are made as, the key that signs them (its github.com host's key
+unless signing_key names another), and the directories whose checkouts are its own.
+
+`apply` renders that into <config home>/git/<profile>.gitconfig, one allowed_signers
+file, and one managed block of includeIf lines in the global git config, so every
+checkout under a profile's directories commits and signs as that profile. `use` does
+the same for one checkout wherever it is. `verify` checks recent commits' signatures.
+No private key is read: git signs through ssh-keygen (or 1Password's op-ssh-sign).
+
+```
+authama ssh git sign
+```
+
+Subcommands:
+
+- [`apply`](#authama-ssh-git-sign-apply) - Write each profile's git config fragment, allowed_signers, and the includeIf block
+- [`set`](#authama-ssh-git-sign-set) - Set a profile's git email, name, signing key and directories, then apply
+- [`status`](#authama-ssh-git-sign-status) - Show each profile's git identity, whether it is applied, and how checkouts commit
+- [`use`](#authama-ssh-git-sign-use) - Make checkouts commit and sign as a profile, wherever they are
+- [`verify`](#authama-ssh-git-sign-verify) - Check the signatures of a checkout's recent commits against allowed_signers
+
+## authama ssh git sign apply
+
+Renders every profile's git block: <config home>/git/<profile>.gitconfig and
+<config home>/git/allowed_signers (owner-only), and one managed block of includeIf
+lines in the global git config ($GIT_CONFIG_GLOBAL, else ~/.gitconfig). Only that
+block is ever changed, a copy of the file is kept under the state home's
+backups/gitconfig/ first, and a symlinked ~/.gitconfig keeps its link. Every
+change is shown as a diff before it is made.
+
+```
+authama ssh git sign apply [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh git sign apply --dry-run
+  authama ssh git sign apply -y
+```
+
+Flags:
+
+```
+      --dry-run[=true|false]   show the diff, write nothing
+  -y, --yes[=true|false]       write without confirming (implied when there is no terminal)
+```
+
+## authama ssh git sign set
+
+Sets profiles.<profile>.git in the manifest and applies it (see `sign apply`).
+--dir is repeatable and replaces the list; give it once per directory whose
+checkouts commit as this profile. Signing is on unless --no-sign. --clear removes
+the profile's git block, and apply takes its includes out of the global config.
+
+```
+authama ssh git sign set <profile> [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh git sign set work --email me@acme.example --name "Ada Lovelace" --dir ~/code/acme
+  authama ssh git sign set personal --email me@example.com --dir ~/code/personal --key github
+  authama ssh git sign set old-client --clear
+```
+
+Flags:
+
+```
+      --clear[=true|false]      remove the profile's git identity
+      --dir stringArray         a directory whose checkouts commit as this profile (repeatable; replaces the list)
+      --email string            user.email, and the signer's principal in allowed_signers
+      --key string              the profile's key that signs (default: its github.com host's key)
+      --name string             user.name (empty leaves the global one)
+      --no-apply[=true|false]   change the manifest only
+      --no-sign[=true|false]    set the identity only, without signing
+  -y, --yes[=true|false]        apply without confirming (implied when there is no terminal)
+```
+
+## authama ssh git sign status
+
+Lists the profiles with a git identity, says whether `apply` would change
+anything, and for each path (default: the current directory, when it is a checkout)
+the email, signing key and format git resolves there and the file the email comes from.
+
+```
+authama ssh git sign status [path...] [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh git sign status
+  authama ssh git sign status ~/code/acme/app --json
+```
+
+Flags:
+
+```
+      --json[=true|false]   machine-readable output (scripting); fields are only ever added
+```
+
+## authama ssh git sign use
+
+Adds the profile's fragment to each checkout's own config (include.path), in
+place of another profile's, so the checkout commits as that profile whatever
+directory it is in. Includes that are not authama's stay. Run `sign apply` first
+so the fragment exists.
+
+```
+authama ssh git sign use <profile> [path...] [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh git sign use work .
+  authama ssh git sign use personal ~/src/dotfiles --dry-run
+```
+
+Flags:
+
+```
+      --dry-run[=true|false]   show what would change, touch nothing
+  -y, --yes[=true|false]       change without confirming (implied when there is no terminal)
+```
+
+## authama ssh git sign verify
+
+Checks the last -n commits (default 10) with git's own signature check, against
+authama's allowed_signers. Exits non-zero when a signature is bad, and with --strict
+when any commit is not a good signature from an allowed signer.
+
+```
+authama ssh git sign verify [path] [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh git sign verify
+  authama ssh git sign verify ~/code/acme/app -n 50 --strict
+```
+
+Flags:
+
+```
+      --json[=true|false]     machine-readable output (scripting); fields are only ever added
+  -n, --number int            how many recent commits to check (default 10)
+      --strict[=true|false]   fail unless every checked commit is a good signature from an allowed signer
 ```
 
 ## authama ssh git status

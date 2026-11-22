@@ -146,6 +146,7 @@ else is in the [documentation index](#documentation).
 - [Group profiles into categories](docs/recipes/group-profiles-into-categories.md) — `internal`, `clients`, `others`: one directory and one `config` file each.
 - [Keep your keys in a directory of your choosing](docs/recipes/choose-where-keys-live.md) — move `~/.ssh/profiles/` to `~/.ssh/keys/` or any name, keys and config together.
 - [Switch checkouts to profile SSH](docs/recipes/switch-git-remote-modes.md) — each owner's own key, every URL proven before it is written.
+- [Sign commits with each profile's SSH key](docs/recipes/sign-commits-with-ssh.md) — commit as the right address and sign with the right key, per directory.
 - [Use a local VM as a devbox](docs/recipes/devbox-vm.md) — reach a VM by name whatever its IP, and point Docker at it.
 - [Import your hosts into Termius](docs/recipes/import-hosts-into-termius.md) — every host with its user, then `termius keys` to paste each key into Termius's Keychain (the CSV carries no keys).
 - [Reach a server through Cloudflare Access](docs/recipes/cloudflare-access.md) — `ssh <alias>` through `cloudflared`, with no SSH port open to the internet.
