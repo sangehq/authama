@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/sangehq/authama/src/internal/util/fs"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
@@ -117,7 +118,7 @@ func Trust(signers, principal, pubLine string) (bool, error) {
 	if err := os.MkdirAll(filepath.Dir(signers), 0o700); err != nil {
 		return false, err
 	}
-	return true, os.WriteFile(signers, out, 0o600)
+	return true, fs.WriteTextAtomic(signers, string(out), 0o600)
 }
 
 // Options say how strict a check is.
