@@ -193,6 +193,14 @@ func (pl Plan) UpToDate() bool { return len(pl.Pending()) == 0 && len(pl.Removes
 // Render works out what an apply writes, reading but changing nothing.
 func Render(p paths.Paths, m *manifest.Manifest, getenv func(string) string) (Plan, error) {
 	signers, problems := Signers(m, p.SSHDir)
+	for _, s := range signers {
+		if s.Git.Sign {
+			if err := CheckGit(); err != nil {
+				problems = append(problems, err.Error())
+			}
+			break
+		}
+	}
 	pl := Plan{Signers: signers, Problems: problems, Global: GlobalConfigPath(p, getenv)}
 	allowed := AllowedSignersPath(p)
 	keep := map[string]bool{}

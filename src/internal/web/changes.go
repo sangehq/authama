@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/providers"
 	"github.com/sangehq/authama/src/internal/core/tokens"
 	"github.com/sangehq/authama/src/internal/services/change"
 	"github.com/sangehq/authama/src/internal/services/editor"
@@ -40,8 +42,8 @@ var actionFields = map[string][]string{
 	"profile-edit":      {"name", "key_scope", "key_name"},
 	"profile-delete":    {"name", "purge"},
 	"profile-category":  {"name", "category"},
-	"host-add":          {"profile", "alias", "hostname", "user", "port", "tags"},
-	"host-edit":         {"profile", "alias", "hostname", "user", "port", "tags"},
+	"host-add":          {"profile", "alias", "hostname", "user", "port", "tags", "key_name", "provider", "token_env", "proxy"},
+	"host-edit":         {"profile", "alias", "hostname", "user", "port", "tags", "key_name", "provider", "token_env", "proxy"},
 	"host-delete":       {"profile", "alias"},
 	"key-delete":        {"profile", "key"},
 	"key-reserve":       {"key", "for", "note"},
@@ -49,6 +51,7 @@ var actionFields = map[string][]string{
 	"key-ack":           {"key"},
 	"vm-add":            {"profile", "alias", "hypervisor", "vm", "user"},
 	"config-render":     {},
+	"config-adopt":      {},
 	"reconcile":         {},
 	"keygen":            {"target"},
 	"key-add":           {"profile", "key", "key_type", "host"},
@@ -199,6 +202,40 @@ func optionalName(f url.Values, field string) (string, error) {
 	return name(f, field)
 }
 
+// envVarRe is an environment variable name, as --token-env takes.
+var envVarRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,127}$`)
+
+// hostExtras reads the host form's optional --key-name, --provider,
+// --token-env and --proxy. Each left empty is nil: unset on a new host,
+// unchanged on an edit. A provider must be one the catalog or providers.json
+// names, and a proxy one authama renders, or "none" to clear it.
+func hostExtras(f url.Values, h home) (keyName, provider, tokenEnv, proxy *string, err error) {
+	if v, e := optionalName(f, "key_name"); e != nil {
+		return nil, nil, nil, nil, e
+	} else if v != "" {
+		keyName = &v
+	}
+	if v := strings.TrimSpace(f.Get("provider")); v != "" {
+		if _, ok := providers.AllSpecs(h.p.Providers())[v]; !ok {
+			return nil, nil, nil, nil, badForm("provider %q is not one `authama ssh providers` lists", v)
+		}
+		provider = &v
+	}
+	if v := strings.TrimSpace(f.Get("token_env")); v != "" {
+		if !envVarRe.MatchString(v) {
+			return nil, nil, nil, nil, badForm("token env %q is not an environment variable name", v)
+		}
+		tokenEnv = &v
+	}
+	if v := strings.TrimSpace(f.Get("proxy")); v != "" {
+		if v != "none" && !slices.Contains(manifest.ProxyKinds, v) {
+			return nil, nil, nil, nil, badForm("proxy must be none or one of %s", strings.Join(manifest.ProxyKinds, ", "))
+		}
+		proxy = &v
+	}
+	return keyName, provider, tokenEnv, proxy, nil
+}
+
 // hostSpecs parses the host apply box, one spec per line, and holds every
 // alias to the same rule as a name and every hostname and user to plain.
 func hostSpecs(f url.Values) ([]editor.HostSpec, error) {
@@ -315,6 +352,8 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		// whole new list: an emptied box clears them.
 		in.Tags, err = tagsOf(f)
 		errs = append(errs, err)
+		in.KeyName, in.Provider, in.TokenEnv, in.Proxy, err = hostExtras(f, h)
+		errs = append(errs, err)
 		return in
 	}
 	var ch change.Change
@@ -374,6 +413,8 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch = change.VMAdd(n("profile"), n("alias"), hv, vm, user)
 	case "config-render":
 		ch = change.ConfigRender()
+	case "config-adopt":
+		ch = change.ConfigAdopt()
 	case "reconcile":
 		ch = change.Reconcile()
 	case "keygen":

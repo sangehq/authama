@@ -22,18 +22,23 @@ func program(name string) (string, error) {
 	return "", fmt.Errorf("providers: %q is not a program authama runs", name)
 }
 
-// plainDest is an ssh destination that can only be one: an optional user and
-// a host name or address, neither starting with '-', with no space, quote,
-// shell or control character. ssh_config aliases are not destinations here:
-// a target is always its hostname.
-var plainDest = regexp.MustCompile(`^([A-Za-z0-9_.][A-Za-z0-9_.+-]*@)?[A-Za-z0-9_.:%\[\]][A-Za-z0-9_.:%\[\]-]*$`)
+// plainDest is an ssh destination that can only be one, by the rules the
+// manifest validator and OpenSSH already apply: an optional user (which may
+// hold '@', '\' or '$', as in first.last@corp.example or DOMAIN\user) and a
+// host name, IPv4 or IPv6 address (bare or bracketed). Neither starts with
+// '-' or holds whitespace, a control character, a quote or a character ssh
+// refuses (` ; & | < > ( ) { }, and $ or \ in a host). ssh splits at the last
+// '@', and so does this.
+var plainDest = regexp.MustCompile("^(?:[^-\\s\\x00-\\x1f\\x7f`;&|<>(){}\"'][^\\s\\x00-\\x1f\\x7f`;&|<>(){}\"']*@)?" +
+	"[^-@\\s\\x00-\\x1f\\x7f`;&|<>(){}\"'$\\\\][^@\\s\\x00-\\x1f\\x7f`;&|<>(){}\"'$\\\\]*$")
 
 // destArgs is "--" and dest, the end of every ssh command line: after "--"
 // ssh reads no option, so a host can never be taken for one, and dest must be
 // a plain destination as well.
 func destArgs(dest string) ([]string, error) {
 	if !plainDest.MatchString(dest) {
-		return nil, fmt.Errorf("%q is not a plain ssh destination (user@host)", dest)
+		return nil, fmt.Errorf("%q cannot be an ssh destination: the user and hostname must not start with '-' "+
+			"or hold whitespace, quotes or any of `;&|<>(){} (and no $ or \\ in the hostname); fix the host with `authama ssh host edit`", dest)
 	}
 	return []string{"--", dest}, nil
 }

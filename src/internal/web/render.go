@@ -18,6 +18,7 @@ import (
 	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/core/expiry"
 	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/providers"
 	"github.com/sangehq/authama/src/internal/services/checklist"
 	"github.com/sangehq/authama/src/internal/services/events"
 	"github.com/sangehq/authama/src/internal/services/history"
@@ -192,8 +193,20 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		"join":        strings.Join,
 		"list":        func(xs ...string) []string { return xs },
 		"hypervisors": manifest.KnownHypervisors,
-		"short":       func(s string) string { return shorten(s, 8) },
-		"size":        humanSize,
+		// providerNames and proxyKinds fill the host forms' --provider and
+		// --proxy choices; a providers.json entry is accepted when typed.
+		"providerNames": func() []string {
+			specs := providers.AllSpecs("")
+			out := make([]string, 0, len(specs))
+			for n := range specs {
+				out = append(out, n)
+			}
+			sort.Strings(out)
+			return out
+		},
+		"proxyKinds": func() []string { return manifest.ProxyKinds },
+		"short":      func(s string) string { return shorten(s, 8) },
+		"size":       humanSize,
 		"resultClass": func(r string) string {
 			switch r {
 			case history.ResultOK:

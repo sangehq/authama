@@ -51,6 +51,12 @@
             <div class="col-4"><label class="form-label" for="h-port">Port</label><input class="form-control" id="h-port" name="port" type="number" min="1" max="65535" inputmode="numeric" value="22"></div>
           </div>
           <div class="mb-3"><label class="form-label" for="h-tags">Tags</label><input class="form-control" id="h-tags" name="tags" autocomplete="off" spellcheck="false" placeholder="prod, web"><small class="form-hint">Comma-separated.</small></div>
+          <details class="mb-3"><summary class="text-secondary">More options: key, provider, proxy</summary>
+            <div class="mt-2 mb-3"><label class="form-label" for="h-keyname">Key name</label><input class="form-control" id="h-keyname" name="key_name" autocomplete="off" spellcheck="false"><small class="form-hint">Leave empty for the profile's key. The same as <code>--key-name</code>.</small></div>
+            <div class="mb-3"><label class="form-label" for="h-provider">Provider</label><input class="form-control" id="h-provider" name="provider" list="h-providers" autocomplete="off" spellcheck="false"><datalist id="h-providers">{{range providerNames}}<option value="{{.}}">{{end}}</datalist><small class="form-hint">Leave empty for plain ssh (authorized_keys). The same as <code>--provider</code>.</small></div>
+            <div class="mb-3"><label class="form-label" for="h-tokenenv">Token variable</label><input class="form-control" id="h-tokenenv" name="token_env" autocomplete="off" spellcheck="false" placeholder="GH_TOKEN_WORK"><small class="form-hint">The name of the environment variable that holds the provider's API token, never the token. The same as <code>--token-env</code>.</small></div>
+            <div><label class="form-label" for="h-proxy">Proxy</label><select class="form-select" id="h-proxy" name="proxy"><option value="">None</option>{{range proxyKinds}}<option value="{{.}}">{{.}}</option>{{end}}</select><small class="form-hint">The same as <code>--proxy</code>.</small></div>
+          </details>
           {{template "panel_footer" (footer "authama ssh host add" "Preview" "btn-primary" "")}}
         </form>
 {{template "panel_close"}}

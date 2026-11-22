@@ -196,6 +196,9 @@ func Verify(dir, allowedSigners string, n int) ([]Commit, error) {
 	if !IsCheckout(dir) {
 		return nil, fmt.Errorf("%s is not a git checkout", dir)
 	}
+	if err := CheckGit(); err != nil {
+		return nil, err
+	}
 	if n <= 0 {
 		n = 10
 	}

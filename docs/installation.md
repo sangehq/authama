@@ -16,7 +16,8 @@ interpreter to keep current.
   so deployment falls back to plain `ssh` there.
 - Optional, each degrading to a manual path when absent: `age` and `age-keygen`
   (encrypted bundles), `sops`, `gitleaks`, `gh` and `glab` (VCS key deployment), `age-plugin-yubikey`,
-  `docker` (only for `token apply` against a registry kept in a credential store).
+  `docker` (only for `token apply` against a registry kept in a credential store),
+  git 2.34 or newer (only for `ssh git sign`, which needs SSH signing).
 
 The auth-token side needs nothing: it writes the tools' files itself.
 

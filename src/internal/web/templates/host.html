@@ -67,6 +67,12 @@
             <div class="col-4"><label class="form-label" for="e-port">Port</label><input class="form-control" id="e-port" name="port" value="{{.Port}}" inputmode="numeric" pattern="[0-9]+"></div>
           </div>
           <div class="mb-3"><label class="form-label" for="e-tags">Tags</label><input class="form-control" id="e-tags" name="tags" value="{{join .Tags ", "}}" autocomplete="off" spellcheck="false"><small class="form-hint">Comma-separated; empty clears them.</small></div>
+          <details class="mb-3"><summary class="text-secondary">More options: key, provider, proxy</summary>
+            <div class="mt-2 mb-3"><label class="form-label" for="e-keyname">Key name</label><input class="form-control" id="e-keyname" name="key_name" autocomplete="off" spellcheck="false"><small class="form-hint">Leave empty to keep it. The same as <code>--key-name</code>.</small></div>
+            <div class="mb-3"><label class="form-label" for="e-provider">Provider</label><input class="form-control" id="e-provider" name="provider" list="e-providers" autocomplete="off" spellcheck="false"><datalist id="e-providers">{{range providerNames}}<option value="{{.}}">{{end}}</datalist><small class="form-hint">Leave empty to keep it. The same as <code>--provider</code>.</small></div>
+            <div class="mb-3"><label class="form-label" for="e-tokenenv">Token variable</label><input class="form-control" id="e-tokenenv" name="token_env" autocomplete="off" spellcheck="false" placeholder="GH_TOKEN_WORK"><small class="form-hint">The name of the environment variable that holds the provider's API token, never the token. The same as <code>--token-env</code>.</small></div>
+            <div><label class="form-label" for="e-proxy">Proxy</label><select class="form-select" id="e-proxy" name="proxy"><option value="">Unchanged</option><option value="none">None (clear it)</option>{{range proxyKinds}}<option value="{{.}}">{{.}}</option>{{end}}</select><small class="form-hint">The same as <code>--proxy</code>.</small></div>
+          </details>
           {{template "panel_actions" ""}}
         </form>
         {{if $.Data.VM}}<div class="mt-4 pt-3 border-top">

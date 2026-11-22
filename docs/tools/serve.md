@@ -182,6 +182,9 @@ documentation, the source and the licences.
 - **Connection status is checked on request.** *Check connections* on the Overview and Hosts pages
   (and *Check connection* on a host's page) runs `ssh net` and shows the result in the side panel.
   No page probes the network as it loads. See [network](network.md#in-the-web-ui).
+- **Break-glass snippet.** A key with a public half has **Break-glass** on its page: the
+  `authama ssh recover <key>` snippet to paste into a locked-out server's console. It holds only the
+  public key.
 - **Copying** puts public values on the clipboard: a public key, a fingerprint, a path, a hostname,
   `ssh <alias>`. A toast says it worked. Nothing secret can be copied from a page: a private key
   is copied only from the terminal (`authama ssh termius keys`), and a token's secret only with
@@ -351,18 +354,19 @@ These changes can be made from the pages:
 | Change the naming rules, for every profile or one | Naming | `authama ssh naming set [--profile] …` (only the fields changed) |
 | Change how new keys are named | Naming | `authama ssh naming key-template <template> --yes` |
 | Set or clear a profile's code | Naming (a profile's menu) | `authama ssh profile edit <name> --code` |
-| Add a host, or a VM host | Hosts | `authama ssh host add`, `authama ssh vm add` |
+| Add a host, or a VM host; a host's key name, provider, token variable and proxy are under *More options* | Hosts | `authama ssh host add [--key-name] [--provider] [--token-env] [--proxy]`, `authama ssh vm add` |
 | Add or update hosts from specs | Hosts | `authama ssh host apply --host … --yes` |
 | Create a VM host's Docker context | the host's page | `authama ssh vm docker-context` |
 | Sync the VM hosts with their VMs (optionally replacing changed pins) | VMs | `authama ssh vm sync --yes` (`--repin`) |
 | Adopt a loose key as a VM host's key | VMs | `authama ssh vm adopt-key <key> <profile> <alias> --hypervisor … --vm … --user … --yes` |
 | Install or remove the daily VM sync | VMs | `authama ssh vm sync --install-schedule` / `--remove-schedule` |
-| Edit a host's hostname, user, port or tags | the host's page | `authama ssh host edit` |
+| Edit a host's hostname, user, port or tags, and under *More options* its key name, provider, token variable or proxy (*None* clears it) | the host's page | `authama ssh host edit [--key-name] [--provider] [--token-env] [--proxy]` |
 | Delete a host and its pins | the host's page | `authama ssh host delete --yes` |
 | Delete a declared key that no host uses | Keys | `authama ssh key delete --yes` |
 | Reserve a loose key (keep it on purpose) | Keys | `authama ssh key reserve <key> --for … --note … --yes` |
 | Drop a key's reservation | Keys | `authama ssh key unreserve <key> --yes` |
 | Re-render `~/.ssh/config` | Overview, SSH config | `authama ssh config render --yes` |
+| Take out hand-written `Host` blocks the managed block already reproduces (the config is copied first; a block that differs stays and is listed) | SSH config | `authama ssh config adopt --yes` |
 | Reconcile: mint missing keys, record keys on disk, render | Overview | `authama ssh reconcile --yes --no-pin` |
 | Mint a profile's or host's missing keys | Keys | `authama ssh keygen <target> --no-pin --yes` |
 | Rebuild one key's `.pub`, a profile's, or every key's | Keys (row menu, or *Rebuild public keys*), a key's page | `authama ssh key regen-pub <profile/key \| profile \| --all> --yes` |
@@ -602,6 +606,9 @@ Some changes are terminal-only:
 - **Open a snapshot that holds private keys.** A snapshot written before private keys were left out
   is listed but never opened. `authama ssh snapshots prune --keep 0` removes it.
 - **Show private keys.** Pages read public keys, `known_hosts` and config only.
+- **Print a token or reveal a secret.** `token show`, `token list --reveal` and `token copy` stay in
+  the terminal. So do a key passphrase, `keygen --force` and the other commands
+  [CLI and web parity](../reference/cli-web-parity.md) lists as CLI-only by design.
 - **Create the history from a page view.** A page reads `log/history.db` if it exists. Only a change
   creates the database or imports into it, and only while it holds the lock.
 

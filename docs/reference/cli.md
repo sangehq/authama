@@ -6,7 +6,8 @@
 
 Every `authama` command, with its flags and examples, exactly as `--help` prints
 them. The feature pages under [docs/tools](../tools/) explain what each one is for; this page is the
-complete list. [Choosing between similar commands](#choosing-between-similar-commands)
+complete list. Which of them the web UI offers, flag by flag, is in
+[CLI and web parity](cli-web-parity.md). [Choosing between similar commands](#choosing-between-similar-commands)
 is at the end.
 
 Every command also takes the global flag:

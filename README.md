@@ -17,7 +17,7 @@ Two features in a single static binary with no runtime dependencies:
   variables, never secrets.
 
 macOS, Linux and Windows are all first-class; OpenSSH is the only requirement
-for the SSH side. `sshmgr`, the former name, is no longer built or installed.
+for the SSH side (git 2.34 or newer for commit signing). `sshmgr`, the former name, is no longer built or installed.
 Coming from sshmgr or auth-token-manager? See the [migration guide](docs/migration.md).
 
 ## Install
@@ -111,6 +111,7 @@ else is in the [documentation index](#documentation).
 ### Reference
 
 - [Command reference](docs/reference/cli.md) — every command and subcommand with its flags, aliases and examples, generated from the binary (a test keeps it current), plus a "which command do I want" table.
+- [CLI and web parity](docs/reference/cli-web-parity.md): every command and flag next to the web page or control that does the same, what stays in the terminal by design, and the open gaps.
 - [Feature catalog](docs/features.md) — every command, what it does, and how it is tested.
 - [`token`](docs/tools/tokens.md) — auth tokens: apply, set, list, show, status, copy, delete, audit, import; per tool: [Composer](docs/tools/tokens/composer.md), [npm](docs/tools/tokens/npm.md), [Docker](docs/tools/tokens/docker.md), [git](docs/tools/tokens/git.md), [netrc](docs/tools/tokens/netrc.md), [PyPI](docs/tools/tokens/pypi.md), [Cargo](docs/tools/tokens/cargo.md), [RubyGems](docs/tools/tokens/gem.md), [Gradle](docs/tools/tokens/gradle.md), [Maven](docs/tools/tokens/maven.md), [Yarn Berry](docs/tools/tokens/yarn.md), [Helm](docs/tools/tokens/helm.md), [GitHub CLI](docs/tools/tokens/gh.md).
 - [`doctor`](docs/tools/doctor.md) — what it checks (SSH and token files), `--fix`, `--json`, `--strict`.

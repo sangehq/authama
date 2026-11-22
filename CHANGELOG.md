@@ -91,13 +91,54 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`authama ssh git clone OWNER/REPO [DIR]`** clones through the URL `git resolve` gives, and makes the checkout
   commit as the profile when it has a git identity.
 
+- **The web UI catches up with more of the CLI.** [CLI and web parity](docs/reference/cli-web-parity.md)
+  maps every command and flag to its page or control, says what stays in the terminal by design, and lists
+  the open gaps. New in this round:
+  - **`ssh config adopt`** on the SSH config page, previewed as a diff.
+  - **The `ssh recover` break-glass snippet** on each key's page (public key only).
+  - **`--key-name`, `--provider`, `--token-env` and `--proxy`** under *More options* on the Add a host and
+    Edit host panels. *None* clears a proxy, and an unknown provider, variable name or proxy is refused
+    before the preview.
+
 ### Changed
 
 - The hosts page leads to the Termius import instead of offering three Termius downloads; the plain Termius CSV
   download stays. The palette names that download "Download the Termius CSV, grouped by profile".
 
+### Behaviour changes (upgrade notes)
+
+Things that work differently after this release, and what to do if one affects you:
+
+- **ssh destinations are checked before `deploy`, `verify` and `remove`.**
+  - What is allowed:
+    - The user may hold dots, dashes, `@`, `\` and `$` (`first.last`, `DOMAIN\user`, `svc$`).
+    - The hostname may be a name with `_`, an IPv4 address, or a bare or bracketed IPv6 address.
+  - What is refused, with a message naming the host and `authama ssh host edit` as the fix:
+    - either part starting with `-`;
+    - whitespace, quotes or any of `` `;&|<>(){} ``;
+    - `$` or `\` in the hostname.
+  - The destination is passed after `--` to `ssh` and `ssh-copy-id` (OpenSSH has accepted that for years).
+  - Deploy still connects by the manifest's hostname, user and port, not by the alias, as before. See
+    [deploy](docs/tools/deploy.md#what-a-destination-may-hold).
+- **`ssh git sign` needs git 2.34 or newer** (SSH signing arrived in 2.34).
+  - With an older git, `ssh git sign status`, `ssh git sign verify` and `/git-sign` name the version and
+    write nothing. Before, git failed later with its own error.
+  - Git runs in the checkout as its working directory instead of `git -C`, and values go after `--`. A value
+    that starts with `-` (an email, name or key path) is refused.
+  - `verify` hands git the allowed signers file through `GIT_CONFIG_*` (git 2.31+) instead of `-c`.
+- **The Export pack's Termius group scheme must be one of the listed ones.** Any other value in
+  `termius_groups` is answered with 400 and the list of choices, instead of being written into the zip.
+- **A `serve` started by an older build cannot be reused.** The new link check (audit P-02) asks for
+  `authama serve --restart` once after upgrading. The next run reuses the server as before.
+- **Manifest names that would leave `~/.ssh` become `_invalid-name_`.** A profile, category or key name
+  with a path separator, `..` or NUL is not allowed by validation anyway. Where one reached a path builder
+  regardless, the segment is now `_invalid-name_`, inside the key root, instead of a path outside it.
+  `doctor` and `validate` still report the name.
+
 ### Fixed
 
+- `ssh notify send`, `ping` and `doctor` print their help for `--help` instead of passing it to the
+  notification helper (which, for `doctor`, printed the live status).
 - A local key replacement now writes a retirement record for the key it moves to `old/`, naming where it is
   still deployed. A key in `old/` with no record at all is "cannot tell" unless the inventory shows it was never
   deployed, so it is no longer treated as free to evict (audit A-BUG-07, follow-up).
@@ -132,7 +173,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (CodeQL's 98 alerts on the combined PR). Every profile, key, category and key-root path the manifest builds goes
   through one set of guards in `util/fs` (`Segment`, `LocalRel`, `Within`, `AbsDir`), so a name that skipped
   validation still cannot leave `~/.ssh`. Providers run only `ssh`, `ssh-copy-id`, `gh` or `glab`, never a program
-  named by data, and every ssh destination follows `--` and must be a plain `user@host`. Git signing runs git in the
+  named by data, and every ssh destination follows `--` and is checked first (see Behaviour changes). Git signing runs git in the
   checkout instead of passing it as `-C`, puts values after `--` where none can read as an option, and gives the
   allowed signers file through `GIT_CONFIG_*`. A Termius group scheme not on the list is refused rather than written
   into the export zip.

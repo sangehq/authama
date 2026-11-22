@@ -3,6 +3,8 @@
 Work commits made as your work address and signed with your work key; personal ones as yourself, with
 your personal key. One manifest block per profile does both, for every checkout under its directories.
 
+You need git 2.34 or newer (`git version`); authama says so, and writes nothing, when git is older.
+
 ```sh
 # the keys the profiles already use for GitHub sign too
 authama ssh git sign set work     --email ada@acme.example --name "Ada Lovelace" --dir ~/code/acme

@@ -166,6 +166,12 @@ authama ssh git clone me/dotfiles --profile personal --dry-run
 
 ## `authama ssh git sign` — commit as a profile, signed with its SSH key
 
+SSH signing needs **git 2.34 or newer**. `ssh git sign status`, `ssh git sign verify` and the
+`/git-sign` page name the version found, and how to upgrade, when it is older; nothing is written
+for an older git. Git runs inside each checkout (its working directory), never with `-C`. The
+allowed signers file reaches `git log` through `GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0`,
+so nothing is added to the checkout's config to verify it.
+
 Each profile can carry a git identity in the manifest:
 
 ```jsonc

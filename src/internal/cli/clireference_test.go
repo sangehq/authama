@@ -43,7 +43,8 @@ func renderCLIReference(root *cobra.Command) string {
 	w("     UPDATE_CLI_REFERENCE=1 go test ./internal/cli/ -run TestCLIReferenceIsCurrent -->\n\n")
 	w("Every `%s` command, with its flags and examples, exactly as `--help` prints\n", brand.Command)
 	w("them. The feature pages under [docs/tools](../tools/) explain what each one is for; this page is the\n")
-	w("complete list. [Choosing between similar commands](#choosing-between-similar-commands)\n")
+	w("complete list. Which of them the web UI offers, flag by flag, is in\n")
+	w("[CLI and web parity](cli-web-parity.md). [Choosing between similar commands](#choosing-between-similar-commands)\n")
 	w("is at the end.\n\n")
 	w("Every command also takes the global flag:\n\n```\n%s```\n\n", root.PersistentFlags().FlagUsages())
 

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"slices"
 
 	notifykit "github.com/simtabi/go-notifykit/src"
 	"github.com/spf13/cobra"
@@ -31,6 +32,11 @@ func newNotifyCmd() *cobra.Command {
 			Short:              v.short,
 			DisableFlagParsing: true,
 			RunE: func(c *cobra.Command, args []string) error {
+				// Flag parsing is off so notifykit reads its own flags; --help
+				// still means help here, never a notification or a probe.
+				if slices.ContainsFunc(args, func(a string) bool { return a == "-h" || a == "--help" || a == "-help" }) {
+					return c.Help()
+				}
 				n, err := desktop.NewNotifier()
 				if err != nil {
 					return err

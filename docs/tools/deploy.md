@@ -49,6 +49,26 @@ server's `authorized_keys` / the account's key list.
 | `deployed` | at least one deployment is verified |
 | `no-key` | (hosts only) the host's key is not in the inventory |
 
+## What a destination may hold
+
+`deploy`, `verify` and `remove` run `ssh` and `ssh-copy-id` with the destination after `--`, so a
+host can never be read as an option. The destination is the host's `user@hostname`:
+
+- The user may hold dots, dashes, `@`, `\` and `$` (`first.last`, `DOMAIN\user`, `svc$`), but not
+  a leading `-`.
+- The hostname may be a name, an IPv4 address, a bare or bracketed IPv6 address, or hold `_`. It may
+  not start with `-` or hold `$` or `\`.
+- Neither part may hold whitespace, quotes or any of `` `;&|<>(){} ``.
+
+A host that breaks the rule is refused with a message naming it. Fix it with
+`authama ssh host edit <profile> <alias> --hostname … --user …`.
+
+Deploy gives `ssh` the host's `Hostname`, `User` and `Port` from the manifest, not its alias. So
+the alias's block in `~/.ssh/config`, with its `ProxyJump`, `ProxyCommand` or `--proxy`, does not
+apply to the copy. Only blocks that match the hostname itself, or `Host *`, do. A host reached only
+through a jump host or a tunnel takes its key by hand: `authama ssh recover <key>` prints a snippet
+to paste on it.
+
 ## Examples
 
 ```sh

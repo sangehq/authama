@@ -262,3 +262,19 @@ func TestGitRefusesAValueThatCouldBeAnOption(t *testing.T) {
 		t.Error("git ran in a directory that does not exist")
 	}
 }
+
+func TestCheckGitVersionNamesTheMinimum(t *testing.T) {
+	for out, ok := range map[string]bool{
+		"git version 2.34.0": true, "git version 2.56.1": true, "git version 3.0.0": true,
+		"git version 2.39.5 (Apple Git-154)": true, "git version 2.33.8": false, "git version 2.30.2": false,
+		"something else": true,
+	} {
+		err := checkGitVersion(out)
+		if (err == nil) != ok {
+			t.Errorf("checkGitVersion(%q) = %v", out, err)
+		}
+		if err != nil && !strings.Contains(err.Error(), MinGit) {
+			t.Errorf("the error does not name git %s: %v", MinGit, err)
+		}
+	}
+}

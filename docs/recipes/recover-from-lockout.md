@@ -10,6 +10,9 @@ there:
 authama ssh recover work/work_hpc-ed25519
 ```
 
+In the web UI (`authama serve`), the key's page has the same snippet under
+**Break-glass**, with a copy button.
+
 Paste the output into the console. It is POSIX `sh`, needs no working SSH and no
 interpreter on the server, backs up `authorized_keys` before it edits, appends
 the key only if it is not already present, and leaves the file at 0600.

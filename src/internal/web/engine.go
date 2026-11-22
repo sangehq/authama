@@ -30,6 +30,7 @@ import (
 	"github.com/sangehq/authama/src/internal/services/notifier"
 	"github.com/sangehq/authama/src/internal/services/overview"
 	"github.com/sangehq/authama/src/internal/services/query"
+	recoversvc "github.com/sangehq/authama/src/internal/services/recover"
 	"github.com/sangehq/authama/src/internal/services/settings"
 	"github.com/sangehq/authama/src/internal/services/snapshots"
 	"github.com/sangehq/authama/src/internal/services/tokensvc"
@@ -127,6 +128,10 @@ type KeyView struct {
 	Detail keysvc.Detail
 	// PublicKey is the key's public key line, "" when there is none to show.
 	PublicKey string
+	// Recover is `authama ssh recover <ref>`: a console snippet that re-adds
+	// the public key on a locked-out server, "" when there is no public key.
+	// It holds only the public key.
+	Recover string
 	// Revoked is the date the key was revoked, "" when it was not; DefaultDays
 	// the lifetime a key without its own inherits.
 	Revoked     string
@@ -530,6 +535,9 @@ func (e AppEngine) Key(ref string) (KeyView, error) {
 			return KeyView{}, err
 		}
 		v := KeyView{Detail: d, PublicKey: publicKeyLine(d.PublicPath), DefaultDays: m.Defaults.RotateAfterDays}
+		if v.PublicKey != "" {
+			v.Recover, _ = recoversvc.Script(e.P, m, r.String())
+		}
 		v.Recency = keysvc.Recency(m, inv, e.P.Inventory(), []keysvc.Row{d.Row}, recency.FromEnv(nil), time.Now())[r.String()]
 		v.RecordsNotice = keysvc.RecordsUnreadable(e.P.Inventory())
 		if revs, err := inventory.LoadRevocations(inventory.RevokedPath(e.P.Inventory())); err == nil && d.Fingerprint != "" {

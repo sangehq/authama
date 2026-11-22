@@ -87,6 +87,8 @@ var tips = map[string]string{
 	"export-command":    "Copies the authama export command that writes this file from a terminal: the same list, filters, columns, sort and format.",
 	"reconcile":         "Mints the keys the manifest names and renders ~/.ssh/config, previewed first.",
 	"render":            "Writes ~/.ssh/config again from the manifest, keeping everything outside authama's block.",
+	"key-recover":       "A console snippet that puts this key back in a locked-out server's authorized_keys. It holds only the public key.",
+	"config-adopt":      "Takes out of ~/.ssh/config the hand-written Host blocks authama's block already reproduces line for line, after a copy. Blocks that differ are kept and listed. Previewed first.",
 	"token-add":         "Adds or replaces a token in a tool's credential file. The secret never comes back to this page.",
 	"token-apply":       "Writes every token tokens.json names, from the environment this server was started in.",
 	"token-config":      "Edits tokens.json, which names environment variables, never secrets. Checked as you type.",
