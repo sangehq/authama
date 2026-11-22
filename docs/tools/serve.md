@@ -116,7 +116,7 @@ top bar, the main menu holds every page, one kind of thing to a menu:
 | **Tokens** | Tokens, Token checklists (the Checklists page filtered to tokens). *Tasks:* Add a token |
 | **Security** | Audit, Checklists, Owner & PIN |
 | **History** | *Record:* Changes (the history page), File events. *Backups:* Snapshots, Export |
-| **System** | *Health:* Doctor, Validate, Repair. *Configure:* Settings. Then Reset…, set apart in red |
+| **System** | *Health:* Doctor, Validate, Repair. *Configure:* Settings, API tokens, Webhooks. Then Reset…, set apart in red |
 | **New** | Add a host, Add a token, Mint missing keys |
 
 Each entry has its own icon and a line under its name saying what the page shows or does; no two
@@ -132,7 +132,7 @@ in the same colour (System's is Health's).
 | Security | purple | Audit, Checklists, Owner & PIN |
 | History | yellow | Changes, File events, Snapshots, Export |
 | Health | teal | Doctor, Validate, Repair |
-| Settings | secondary (grey) | Settings |
+| Settings | secondary (grey) | Settings, API tokens, Webhooks |
 | Personal (user menu) | secondary (grey) | Running as, Take the tour, About, Sign out |
 | Create or add | green | Add a host, Add a token, Mint missing keys (in Tasks and New) |
 | Change | blue | Pin host keys, Rotate keys |
@@ -337,6 +337,8 @@ documentation, the source and the licences.
 | Owner & PIN | whether the home is [bound to its owner](owner.md), where the sealing key is kept, whether a PIN and fingerprint unlock are on, and whether the sealed files match, naming each one changed outside authama. Changing any of it is done at a terminal, which proves the OS account; the page shows the commands |
 | Repair | what is wrong with the home, `~/.ssh` and the token files, the fixes made as one previewed change, and a factory reset; see [repair](repair.md) |
 | Settings | the colour theme (light, dark, or following the system); where the config home, state home, `.env` and `authama.json` are, and what `authama settings validate` reports; every setting in a card for its section, with its description, value and where it came from. **Edit** opens a form whose input fits the setting and saves it into `authama.json`, previewed (the server uses it at once unless the environment or `.env` sets it); **Go back to the default** removes it; *Create a backup key* shows while no backup recipient is set. The same as `authama settings path`, `show --effective`, `validate`, `set`, `unset` and `backup-key` |
+| API tokens | the read API's tokens: name, scope, dates, last use. **Make token** (name, days until it expires) and **Revoke**, each behind the PIN; a new token is shown once, in the answer to its form, with a copy button, and never again. The same as `authama api token create`, `list` and `revoke` |
+| Webhooks | the endpoints, their events and how delivery stands, never a secret. **Add endpoint**, **Test**, **Turn off**/**Turn on**, **Remove** and **Deliver now**, each behind the PIN; a new endpoint's signing secret is shown once. The same as `authama webhook add`, `list`, `test`, `disable`, `enable`, `remove` and `deliver` |
 | Third-party licences | the licences of the web UI's bundled front-end assets (Tabler, Tabler Icons, Bootstrap, Popper), at `/about/licenses` |
 
 ## Changes
@@ -378,6 +380,8 @@ These changes can be made from the pages:
 | Fix file modes | Doctor | `authama doctor --fix` |
 | Write an editable `providers.json` | Doctor | `authama ssh providers --export` |
 | Create a starter `authama.json` | Settings, when there is none | `authama settings init` |
+| Make or revoke an API token | API tokens | `authama api token create <name>`, `revoke <name>` |
+| Add, test, pause or remove a webhook; deliver now | Webhooks | `authama webhook add`, `test`, `disable`, `enable`, `remove`, `deliver` |
 | Remove stale pins and records, optionally adopting pins first | Doctor | `authama ssh clean --yes [--adopt]` |
 | Write an encrypted bundle | Snapshots | `authama ssh bundle [--keep]` |
 | Send the desktop alert, if one is due | Audit | `authama ssh audit --notify` |

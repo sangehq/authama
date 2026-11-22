@@ -30,6 +30,13 @@ A token is `ama_` and 32 random bytes. authama keeps only its SHA-256, in `api-t
 state home (mode 0600), so the file holds nothing a caller could use. Every token has the `read` scope,
 the only one there is. Making and revoking a token are recorded in the [history](history.md).
 
+**System → API tokens** (`/api-tokens`, `g j` in the palette) lists the tokens, makes one (a name and the days
+until it expires, 90 to start with, 0 for never) and revokes one, each behind the owner PIN when one is set and
+the last was given more than five minutes ago. The new token is in the answer to the form that made it, once,
+under a warning, with a **Copy** button and `Cache-Control: no-store`. It is never kept in the session or a URL,
+and the page cannot show it again, since authama keeps only its hash. A read-only server lists the tokens and
+shows the command instead of the form.
+
 ## Routes
 
 Every route is `GET` (or `HEAD`) and answers JSON.

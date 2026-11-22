@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **API tokens and Webhooks pages in the web UI** (System → API tokens, `/api-tokens`, `g j`; System → Webhooks,
+  `/webhooks`, `g q`). They make, list and revoke API tokens, and add, list, test, turn off and on, remove and
+  deliver webhooks, as `authama api token` and `authama webhook` do. Each change asks for the owner PIN within the
+  step-up window and is written to the audit log. A new token or signing secret is shown once, in the answer to
+  the form that made it, under a warning and with a **Copy** button and `Cache-Control: no-store`. It is never put
+  in the session or a URL, and it is never shown again. A read-only server lists both and shows the commands.
 - **Nested Termius groups.** `export hosts --format termius --termius-groups <scheme>` writes the `Groups` column
   as a path Termius files as subgroups, the way its own import template's `Project/Dev` does: `profile` (the
   default, unchanged), `category/profile`, `profile/env`, `category/profile/env`, or `none` for no group. The

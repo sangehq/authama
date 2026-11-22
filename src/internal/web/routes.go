@@ -84,6 +84,9 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /api/export/selections", exportSelectionsAPI{s}.handleList)
 	mux.HandleFunc("GET /exports/compare", exportSelectionsAPI{s}.handleCompare)
 	mux.HandleFunc("GET /about/licenses", h.handleLicences)
+	ip := integrationsPage{s}
+	mux.HandleFunc("GET /api-tokens", ip.handleAPITokens)
+	mux.HandleFunc("GET /webhooks", ip.handleWebhooks)
 	if !s.opts.ReadOnly {
 		mux.HandleFunc("POST /api/export/selections", exportSelectionsAPI{s}.handleSave)
 		mux.HandleFunc("POST /api/export/selections/delete", exportSelectionsAPI{s}.handleDelete)
@@ -95,6 +98,12 @@ func (s *Server) routes() http.Handler {
 		// carries every private key: it is a confirmed, PIN-gated step that a
 		// read-only server does not offer. An import goes on to the preview.
 		mux.HandleFunc("POST /transfer/encrypted", transferPage{s}.handleEncrypted)
+		// API tokens and webhook endpoints live in the state directory; a
+		// new one's secret is shown once, in the answer to its PIN-gated form.
+		mux.HandleFunc("POST /api-tokens/create", ip.handleAPITokenCreate)
+		mux.HandleFunc("POST /api-tokens/revoke", ip.handleAPITokenRevoke)
+		mux.HandleFunc("POST /webhooks/add", ip.handleWebhookAdd)
+		mux.HandleFunc("POST /webhooks/{act}", ip.handleWebhookAct)
 		mux.HandleFunc("POST /transfer/import", transferPage{s}.handleImport)
 		mux.HandleFunc("POST /changes/preview", h.handlePreview)
 		mux.HandleFunc("POST /changes/apply", h.handleApply)

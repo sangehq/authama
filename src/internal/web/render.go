@@ -639,7 +639,7 @@ var navKinds = map[string]string{
 	"history": "history", "events": "history", "snapshots": "history", "export": "history", "setup": "history",
 	"transfer": "history", "transfer-export": "history", "transfer-encrypted": "history", "transfer-import": "history",
 	"doctor": "health", "validate": "health", "repair": "health",
-	"settings": "settings",
+	"settings": "settings", "apitokens": "settings", "webhooks": "settings",
 	"overview": "overview",
 	// Tasks, by what they do.
 	"act-addhost": "create", "act-token": "create", "act-mint": "create",
@@ -932,6 +932,8 @@ func paletteItems(readOnly bool) []paletteItem {
 		{"repair", "Repair", "/repair", "tool", "System", "repair fix corrupt permissions", "g r", ""},
 		{"reset", "Reset", "/reset", "restore", "System", "reset factory start again initialise init defaults settings unbind rotate every key", "g z", ""},
 		{"settings", "Settings", "/settings", "adjustments", "System", "settings theme appearance env", "g ,", ""},
+		{"apitokens", "API tokens", "/api-tokens", "license", "System", "api token create revoke read programs", "g j", ""},
+		{"webhooks", "Webhooks", "/webhooks", "bolt", "System", "webhook endpoint events deliver test secret", "g q", ""},
 		{"about", "About", "/about", "info-circle", "System", "about version licences", "g i", ""},
 	}
 	if !readOnly {

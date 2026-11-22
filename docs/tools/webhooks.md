@@ -25,6 +25,16 @@ An endpoint is sent what happens from when it is added, never the history before
 
 Endpoints and their secrets are kept in `webhooks.json` in the state home (mode 0600).
 
+### In the web UI
+
+**System → Webhooks** (`/webhooks`, `g q` in the palette) does the same: it lists the endpoints and how their
+delivery stands, and adds, tests, turns off and on, removes and delivers. Each of those asks for the owner PIN
+when one is set and the last was given more than five minutes ago. A new endpoint's signing secret is in the
+answer to the **Add endpoint** form only, under a warning, with a **Copy** button and `Cache-Control: no-store`.
+It is never kept in the session or a URL, and the page never shows it again: reload, and it is gone. A read-only
+server lists the endpoints and shows the commands instead of the forms. Every change is written to the audit log
+with `source: web`.
+
 ## What is sent
 
 Each event is a `POST` of the [CloudEvents](api.md#the-event-feed) event itself, in structured mode,
