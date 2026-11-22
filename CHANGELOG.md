@@ -196,6 +196,12 @@ Things that work differently after this release, and what to do if one affects y
 
 ### Fixed
 
+- **A hypervisor that does not answer no longer holds the VMs page.** Listing a hypervisor's VMs now stops
+  after 5 seconds (it was 20) and says so: /vms shows a **Timed out** notice naming it and a `timed out` badge
+  on its row, `vm list` prints `timed out`, and the hypervisors are asked at once, so one hanging CLI costs the
+  page 5 seconds in all. A CLI that leaves a helper holding its output is no longer waited on after the kill.
+  Finding one VM's address for ssh still waits 20 seconds, so a slow answer is not taken for a stopped VM.
+
 - **Web pages at phone width and contrast.** At 375px the Profiles, Naming, Hosts, Keys, Snapshots, API tokens
   and About pages scrolled sideways (a visually hidden label escaped its table); they no longer do. The Export
   page's muted text and active tab, and red text on the VMs page in the dark theme, now meet 4.5:1.

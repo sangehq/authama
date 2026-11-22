@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/util/envnames"
@@ -234,13 +235,13 @@ func expand(argv []string, vm string) []string {
 	return out
 }
 
-func (c command) runArgv(argv []string, vm string, extra ...string) ([]byte, error) {
+func (c command) runArgv(timeout time.Duration, argv []string, vm string, extra ...string) ([]byte, error) {
 	full := append(expand(argv, vm), extra...)
 	cli := lookup(full[0])
 	if cli == "" {
 		return nil, fmt.Errorf("%s: %s not found on PATH", c.name, full[0])
 	}
-	return run(cli, slow, full[1:]...)
+	return run(cli, timeout, full[1:]...)
 }
 
 func runningState(state string) bool {
@@ -301,7 +302,7 @@ func ParseCommandList(out []byte) ([]VM, error) {
 }
 
 func (c command) List() ([]VM, error) {
-	out, err := c.runArgv(c.spec.List, "")
+	out, err := c.runArgv(ListTimeout, c.spec.List, "")
 	if err != nil {
 		return nil, err
 	}
@@ -331,7 +332,7 @@ func ParseAddress(out []byte) (Endpoint, error) {
 }
 
 func (c command) Address(vm string) (Endpoint, error) {
-	out, err := c.runArgv(c.spec.Address, vm)
+	out, err := c.runArgv(slow, c.spec.Address, vm)
 	if err != nil {
 		return Endpoint{}, err
 	}
@@ -342,7 +343,7 @@ func (c command) Start(vm string) error {
 	if len(c.spec.Start) == 0 {
 		return ErrNotSupported
 	}
-	_, err := c.runArgv(c.spec.Start, vm)
+	_, err := c.runArgv(slow, c.spec.Start, vm)
 	return err
 }
 
@@ -350,7 +351,7 @@ func (c command) Exec(vm string, argv ...string) ([]byte, error) {
 	if len(c.spec.Exec) == 0 {
 		return nil, ErrNotSupported
 	}
-	return c.runArgv(c.spec.Exec, vm, argv...)
+	return c.runArgv(slow, c.spec.Exec, vm, argv...)
 }
 
 // CanExec reports whether d can run a command in a guest without SSH (and so

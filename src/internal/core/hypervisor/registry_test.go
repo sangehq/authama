@@ -1,11 +1,13 @@
 package hypervisor
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestParseCommandListReadsJSONAndTabs(t *testing.T) {
@@ -118,5 +120,36 @@ func TestEnabledNames(t *testing.T) {
 	}
 	if got := strings.Join(EnabledNames(get("Parallels, vmpal\tlima")), ","); got != "parallels,vmpal,lima" {
 		t.Errorf("got %s", got)
+	}
+}
+
+// A CLI that does not answer is cut off at ListTimeout and reported as timed
+// out, even when it leaves a child holding its output open.
+func TestAHangingListTimesOut(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell stub")
+	}
+	bin := t.TempDir()
+	script := "#!/bin/sh\nsleep 30 &\nsleep 30\n"
+	if err := os.WriteFile(filepath.Join(bin, "slowtool"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+"/bin:/usr/bin")
+	Register(map[string]CommandSpec{"slow": {List: []string{"slowtool", "list"}, Address: []string{"slowtool", "ip", "{vm}"}}})
+	t.Cleanup(func() { Register(nil) })
+	old := ListTimeout
+	ListTimeout = 200 * time.Millisecond
+	t.Cleanup(func() { ListTimeout = old })
+	d, err := For("slow")
+	if err != nil {
+		t.Fatal(err)
+	}
+	start := time.Now()
+	_, err = d.List()
+	if !errors.Is(err, ErrTimedOut) || !strings.Contains(err.Error(), "timed out after 200ms") {
+		t.Fatalf("list: %v", err)
+	}
+	if took := time.Since(start); took > 3*time.Second {
+		t.Errorf("a hanging list held the caller %s", took)
 	}
 }

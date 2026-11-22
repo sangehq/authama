@@ -1,9 +1,14 @@
 package web
 
 import (
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/sangehq/authama/src/internal/core/hypervisor"
 	"github.com/sangehq/authama/src/internal/services/dockerctx"
 	"github.com/sangehq/authama/src/internal/services/vmsync"
 )
@@ -62,5 +67,41 @@ func TestVMsPageWithoutDocker(t *testing.T) {
 	body := signIn(t, s).get("/vms").Body.String()
 	if !strings.Contains(body, "The docker CLI is not installed") || strings.Contains(body, "Check the engines") {
 		t.Error("without docker the page does not say so, or still offers the check")
+	}
+}
+
+// A hypervisor whose CLI hangs costs the page ListTimeout: the page says it
+// timed out, names it, and still lists the rest.
+func TestVMsPageSaysAHypervisorTimedOut(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell stub")
+	}
+	swapWebDocker(t, false, nil, nil)
+	bin := t.TempDir()
+	if err := os.WriteFile(filepath.Join(bin, "slowtool"), []byte("#!/bin/sh\nsleep 30\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+"/bin:/usr/bin")
+	t.Setenv("AUTHAMA_VM_HYPERVISORS", "slowbox")
+	old := hypervisor.ListTimeout
+	hypervisor.ListTimeout = 300 * time.Millisecond
+	t.Cleanup(func() { hypervisor.ListTimeout = old })
+	s, p, _ := newTestServer(t)
+	// The page registers the home's command drivers from its authama.json.
+	conf := `{"hypervisors": {"slowbox": {"list": ["slowtool", "list"], "address": ["slowtool", "ip", "{vm}"]}}}`
+	if err := os.WriteFile(p.SettingsFile(), []byte(conf), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { hypervisor.Register(nil) })
+	c := signIn(t, s)
+	start := time.Now()
+	body := c.get("/vms").Body.String()
+	if took := time.Since(start); took > 5*time.Second {
+		t.Logf("%s", body[strings.Index(body, "Hypervisor drivers"):][:3000]); t.Errorf("/vms took %s with a hanging hypervisor", took)
+	}
+	for _, want := range []string{`id="vms-timed-out"`, "<strong>Timed out:</strong> slowbox did not answer within 300ms", ">timed out</span>"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("/vms lacks %q", want)
+		}
 	}
 }

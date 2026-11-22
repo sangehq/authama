@@ -1,7 +1,9 @@
 package web
 
 import (
+	"errors"
 	"sort"
+	"sync"
 
 	"github.com/sangehq/authama/src/internal/core/hypervisor"
 	"github.com/sangehq/authama/src/internal/core/manifest"
@@ -16,13 +18,17 @@ import (
 // a sync would do (worked out without connecting to a guest), the drivers,
 // the declared devboxes, and the loose keys that could be adopted.
 type VMsView struct {
-	Hosts    []vmsync.Host
-	Pending  []string
-	Notes    []string
-	Drivers  []DriverView
-	Unknown  []string // enabled names that match no driver
-	Devboxes []DevboxView
-	Loose    []keyaudit.LooseKey
+	Hosts   []vmsync.Host
+	Pending []string
+	Notes   []string
+	Drivers []DriverView
+	// TimedOut names the hypervisors whose CLI did not answer within
+	// ListTimeout; their VMs are not shown.
+	TimedOut    []string
+	ListTimeout string
+	Unknown     []string // enabled names that match no driver
+	Devboxes    []DevboxView
+	Loose       []keyaudit.LooseKey
 	// Reserved are the loose keys kept on purpose; they can still be adopted.
 	Reserved []keyaudit.Reserved
 	Profiles []string
@@ -42,6 +48,7 @@ type DriverView struct {
 	Enabled         bool
 	VMs             []hypervisor.VM
 	Err             string
+	TimedOut        bool // its CLI did not answer within hypervisor.ListTimeout
 }
 
 // dockerList and dockerCheck are the docker CLI; tests swap them.
@@ -81,17 +88,35 @@ func (e AppEngine) VMs(checkDocker bool) (VMsView, error) {
 			v.Contexts = vmsync.ContextStatuses(plan, cs, check)
 		}
 	}
-	for _, d := range hypervisor.All() {
+	// Each hypervisor is asked at once, so one that hangs costs the page
+	// hypervisor.ListTimeout, not that times the number installed.
+	drivers := hypervisor.All()
+	v.Drivers = make([]DriverView, len(drivers))
+	var wg sync.WaitGroup
+	for i, d := range drivers {
 		dv := DriverView{Name: d.Name(), Kind: hypervisor.Describe(d), CLI: d.CLI(), Enabled: hypervisor.IsEnabled(d.Name())}
-		if dv.Enabled && dv.CLI != "" {
-			vms, err := d.List()
-			if err != nil {
-				dv.Err = err.Error()
-			}
-			dv.VMs = vms
+		v.Drivers[i] = dv
+		if !dv.Enabled || dv.CLI == "" {
+			continue
 		}
-		v.Drivers = append(v.Drivers, dv)
+		wg.Add(1)
+		go func(i int, d hypervisor.Driver) {
+			defer wg.Done()
+			vms, err := d.List()
+			v.Drivers[i].VMs = vms
+			if err != nil {
+				v.Drivers[i].Err = err.Error()
+				v.Drivers[i].TimedOut = errors.Is(err, hypervisor.ErrTimedOut)
+			}
+		}(i, d)
 	}
+	wg.Wait()
+	for _, dv := range v.Drivers {
+		if dv.TimedOut {
+			v.TimedOut = append(v.TimedOut, dv.Name)
+		}
+	}
+	v.ListTimeout = hypervisor.ListTimeout.String()
 	v.Unknown = hypervisor.UnknownEnabled()
 	for _, a := range cfg.DevboxAliases() {
 		v.Devboxes = append(v.Devboxes, DevboxView{Alias: a, Devbox: cfg.Devboxes[a]})

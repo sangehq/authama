@@ -105,7 +105,14 @@ func run(cli string, timeout time.Duration, args ...string) ([]byte, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, cli, args...).Output()
+	cmd := exec.CommandContext(ctx, cli, args...)
+	// A CLI that leaves a child holding its output open (a helper daemon)
+	// would keep Output waiting after the kill; stop waiting a second later.
+	cmd.WaitDelay = time.Second
+	out, err := cmd.Output()
+	if err != nil && errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return out, fmt.Errorf("%s %s: %w after %s", cli, strings.Join(args, " "), ErrTimedOut, timeout)
+	}
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) && len(ee.Stderr) > 0 {
@@ -115,6 +122,17 @@ func run(cli string, timeout time.Duration, args ...string) ([]byte, error) {
 	}
 	return out, nil
 }
+
+// ErrTimedOut means the hypervisor's CLI did not answer in time: it is
+// starting, hung, or waiting on something (a sign-in, a daemon).
+var ErrTimedOut = errors.New("timed out")
+
+// ListTimeout bounds listing a hypervisor's VMs, which a page or `vm list`
+// waits on; a CLI that hangs is reported as timed out rather than holding
+// the page. Finding one VM's address (quick) waits longer, since ssh's
+// ProxyCommand would otherwise take a slow answer for a stopped VM and
+// start it.
+var ListTimeout = 5 * time.Second
 
 const quick, slow = 20 * time.Second, 6 * time.Minute
 
@@ -131,8 +149,8 @@ type prlVM struct {
 	IPConfigured string `json:"ip_configured"`
 }
 
-func (d parallels) list() ([]prlVM, error) {
-	out, err := run(d.CLI(), quick, "list", "--all", "--full", "--json")
+func (d parallels) list(timeout time.Duration) ([]prlVM, error) {
+	out, err := run(d.CLI(), timeout, "list", "--all", "--full", "--json")
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +159,7 @@ func (d parallels) list() ([]prlVM, error) {
 }
 
 func (d parallels) List() ([]VM, error) {
-	raw, err := d.list()
+	raw, err := d.list(ListTimeout)
 	var vms []VM
 	for _, v := range raw {
 		vms = append(vms, VM{Name: v.Name, State: v.Status, Running: v.Status == "running"})
@@ -150,7 +168,7 @@ func (d parallels) List() ([]VM, error) {
 }
 
 func (d parallels) Address(vm string) (Endpoint, error) {
-	raw, err := d.list()
+	raw, err := d.list(quick)
 	if err != nil {
 		return Endpoint{}, err
 	}
@@ -188,8 +206,8 @@ type vmpalVM struct {
 	Guest        string `json:"guest"`
 }
 
-func (d vmpal) list() ([]vmpalVM, error) {
-	out, err := run(d.CLI(), quick, "list", "--json")
+func (d vmpal) list(timeout time.Duration) ([]vmpalVM, error) {
+	out, err := run(d.CLI(), timeout, "list", "--json")
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +218,7 @@ func (d vmpal) list() ([]vmpalVM, error) {
 }
 
 func (d vmpal) List() ([]VM, error) {
-	raw, err := d.list()
+	raw, err := d.list(ListTimeout)
 	var vms []VM
 	for _, v := range raw {
 		vms = append(vms, VM{Name: v.Name, State: v.State, Running: v.State == "running", ID: v.ID, Guest: strings.ToLower(v.Guest)})
@@ -209,7 +227,7 @@ func (d vmpal) List() ([]VM, error) {
 }
 
 func (d vmpal) Address(vm string) (Endpoint, error) {
-	raw, err := d.list()
+	raw, err := d.list(quick)
 	if err != nil {
 		return Endpoint{}, err
 	}
@@ -247,7 +265,7 @@ func (vmware) CLI() string {
 // List reports running VMs only: vmrun knows nothing about a stopped .vmx it was not handed.
 // A VM is named by the path of its .vmx file.
 func (d vmware) List() ([]VM, error) {
-	out, err := run(d.CLI(), quick, "list")
+	out, err := run(d.CLI(), ListTimeout, "list")
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +310,7 @@ func (utm) CLI() string {
 
 // List parses `utmctl list`: a header, then "UUID  Status  Name" with the name possibly spaced.
 func (d utm) List() ([]VM, error) {
-	out, err := run(d.CLI(), quick, "list")
+	out, err := run(d.CLI(), ListTimeout, "list")
 	if err != nil {
 		return nil, err
 	}
@@ -340,8 +358,8 @@ type limaVM struct {
 }
 
 // list parses `limactl list --json`, one JSON object per line.
-func (d lima) list() ([]limaVM, error) {
-	out, err := run(d.CLI(), quick, "list", "--json")
+func (d lima) list(timeout time.Duration) ([]limaVM, error) {
+	out, err := run(d.CLI(), timeout, "list", "--json")
 	if err != nil {
 		return nil, err
 	}
@@ -360,7 +378,7 @@ func (d lima) list() ([]limaVM, error) {
 }
 
 func (d lima) List() ([]VM, error) {
-	raw, err := d.list()
+	raw, err := d.list(ListTimeout)
 	var vms []VM
 	for _, v := range raw {
 		vms = append(vms, VM{Name: v.Name, State: v.Status, Running: v.Status == "Running"})
@@ -370,7 +388,7 @@ func (d lima) List() ([]VM, error) {
 
 // Address is Lima's forwarded port on loopback, not the guest IP.
 func (d lima) Address(vm string) (Endpoint, error) {
-	raw, err := d.list()
+	raw, err := d.list(quick)
 	if err != nil {
 		return Endpoint{}, err
 	}
@@ -398,7 +416,7 @@ func (orbstack) Name() string { return manifest.HypervisorOrbStack }
 func (orbstack) CLI() string  { return lookup("orb") }
 
 func (d orbstack) List() ([]VM, error) {
-	out, err := run(d.CLI(), quick, "list", "-f", "json")
+	out, err := run(d.CLI(), ListTimeout, "list", "-f", "json")
 	if err != nil {
 		return nil, err
 	}
@@ -432,8 +450,8 @@ type podmanMachine struct {
 	Port    int    `json:"Port"`
 }
 
-func (d podman) list() ([]podmanMachine, error) {
-	out, err := run(d.CLI(), quick, "machine", "list", "--format", "json")
+func (d podman) list(timeout time.Duration) ([]podmanMachine, error) {
+	out, err := run(d.CLI(), timeout, "machine", "list", "--format", "json")
 	if err != nil {
 		return nil, err
 	}
@@ -442,7 +460,7 @@ func (d podman) list() ([]podmanMachine, error) {
 }
 
 func (d podman) List() ([]VM, error) {
-	raw, err := d.list()
+	raw, err := d.list(ListTimeout)
 	var vms []VM
 	for _, m := range raw {
 		state := "stopped"
@@ -456,7 +474,7 @@ func (d podman) List() ([]VM, error) {
 
 // Address is the machine's forwarded SSH port, for reference; podman itself connects with its own key.
 func (d podman) Address(vm string) (Endpoint, error) {
-	raw, err := d.list()
+	raw, err := d.list(quick)
 	if err != nil {
 		return Endpoint{}, err
 	}

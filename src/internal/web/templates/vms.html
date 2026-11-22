@@ -67,6 +67,7 @@
     <p class="text-secondary small mt-2 mb-0">A sync backs the manifest up first and takes a snapshot of <code>~/.ssh</code>; a Docker context it removes is exported first.</p>
   </div>
 </div>
+{{if .TimedOut}}<div class="alert alert-warning" role="status" id="vms-timed-out">{{icon "clock"}} <strong>Timed out:</strong> {{join .TimedOut ", "}} did not answer within {{.ListTimeout}}, so {{if eq (len .TimedOut) 1}}its{{else}}their{{end}} VMs are not listed. The hypervisor may be starting, hung or waiting for a sign-in; reload once it answers, or turn it off with <code>vm.hypervisors</code>.</div>{{end}}
 <div class="row row-cards">
   <div class="col-lg-6">
     <div class="card">
@@ -81,7 +82,7 @@
               <th scope="row"><code>{{.Name}}</code></th>
               <td class="text-secondary">{{.Kind}}</td>
               <td>{{if not .Enabled}}<span class="badge badge-muted">disabled</span>{{else if not .CLI}}<span class="badge badge-muted">not installed</span>{{else}}<span class="badge badge-ok">enabled</span>{{end}}</td>
-              <td>{{if .Err}}<span class="text-danger">{{.Err}}</span>{{else}}{{range .VMs}}<div>{{.Name}} <span class="text-secondary">({{.State}})</span></div>{{else}}<span class="text-secondary">–</span>{{end}}{{end}}</td>
+              <td>{{if .TimedOut}}<span class="badge badge-warn">timed out</span> <span class="text-secondary small">{{.Err}}</span>{{else if .Err}}<span class="text-danger">{{.Err}}</span>{{else}}{{range .VMs}}<div>{{.Name}} <span class="text-secondary">({{.State}})</span></div>{{else}}<span class="text-secondary">–</span>{{end}}{{end}}</td>
             </tr>
             {{end}}
           </tbody>
