@@ -46,9 +46,9 @@ var commandLong = map[string]string{
 		"- or bring an existing one up to date without touching what is in it. Safe to run again. --force\n" +
 		"resets manifest.json, inventory.json and .env to their defaults, copying the current ones into the\n" +
 		"state home first unless --no-backup; it asks before it does.",
-	"migrate": "Copy a home made before 0.1.1 (ssh-manager or sshmgr) into the authama home. The old home is kept\n" +
-		"and marked as migrated, never deleted. When an authama home exists too, --force backs it up and\n" +
-		"replaces it.",
+	"migrate": "Copy a home made before 0.1.1, under the tool's earlier names, into the authama home. The old\n" +
+		"home is kept and marked as migrated, never deleted. When an authama home exists too, --force backs\n" +
+		"it up and replaces it.",
 	"owner init": "Bind this home to you and this machine: authama makes a random sealing key, keeps it where the OS\n" +
 		"keeps your secrets (the login Keychain, the Secret Service, a DPAPI file, or else an owner-only file\n" +
 		"in the state home), and seals the state files so a change made outside authama is noticed. You can\n" +

@@ -1053,9 +1053,9 @@ Examples:
 
 ## authama migrate
 
-Copy a home made before 0.1.1 (ssh-manager or sshmgr) into the authama home. The old home is kept
-and marked as migrated, never deleted. When an authama home exists too, --force backs it up and
-replaces it.
+Copy a home made before 0.1.1, under the tool's earlier names, into the authama home. The old
+home is kept and marked as migrated, never deleted. When an authama home exists too, --force backs
+it up and replaces it.
 
 ```
 authama migrate [flags]
