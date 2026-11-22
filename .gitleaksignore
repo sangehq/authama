@@ -39,6 +39,8 @@ eb1bf5e242d3752cbdd82a68950fc200bfa58227:src/internal/cli/termius_keys_test.go:p
 5bae99e093bd867dc908edf467e51c2f7119e82d:src/internal/services/webhooks/webhooks_test.go:generic-api-key:34
 5bae99e093bd867dc908edf467e51c2f7119e82d:src/internal/services/webhooks/webhooks_test.go:generic-api-key:37
 
-# Xshell golden file: UserKey=legacy-ed25519 is the NAME of a key in Xshell's User Key Manager
+# Xshell golden file: the UserKey line holds the NAME of a key in Xshell's User Key Manager
 # (the fixture key file's basename), not key material; the .xsh format names keys this way.
 f6f589a3d9e377f9dff2ef35d396c306d435f07c:src/internal/core/renderer/testdata/golden/xshell/box.xsh:generic-api-key:11
+# The first wording of the comment above quoted that line, so the scan flagged the comment in e928b86 too.
+e928b860a5b5edb773cf814e1ce0a3b43a0070c6:.gitleaksignore:generic-api-key:42
