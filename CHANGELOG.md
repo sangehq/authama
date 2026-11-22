@@ -67,6 +67,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`/setup`, `g m`) downloads the document and imports a pasted one through the preview; the full export stays at
   the terminal. `ssh restore` given a full export points to `setup import`. Recipe:
   [Move to a new machine](docs/recipes/move-to-a-new-machine.md).
+- **Export / Import, beside New in the web UI's header** (`/transfer`, `g f`). **Export** lists every file the home
+  exports as - the Termius CSV with its group scheme, the flat ssh config, the setup document, `structure.json` (the
+  categories, profiles, where each key lives and which hosts use it, and the moves suggested now), `git-signing.json`
+  with `allowed_signers`, the tokens list (names and where each value is read from, never a value) and the hosts,
+  keys, profiles, deployments, history, events and snapshots lists. You tick what to include, **Preview** shows each
+  file's size and first lines, and **Download zip** gets one zip. None of these files holds a private key or a token value.
+  **Encrypted export** downloads the full export (`setup export --encrypt`) under a passphrase typed twice, behind
+  the owner PIN. The page never shows it. **Import** takes an uploaded setup document, export zip or encrypted export, tells
+  them apart by what they hold, and lists what it would bring by name only: key files and token values with
+  add / keep / replace. It then goes through the usual preview and confirm. The upload and its passphrase are kept in
+  the session's secret stash (15 minutes, used once), never in the page. An ssh config is pointed to SSH import, a
+  backup bundle to `ssh restore`, and a Termius CSV is refused with the reason. A read-only server offers the export
+  only. At a terminal, `authama export pack [--include …|all] [--termius-groups …] [--dry-run]` writes the same zip,
+  and `setup import` takes it for its `setup.json`.
+- **Hosts and declared keys move between profiles** in `ssh structure approve --plan` (`host <profile>/<alias>
+  profile <to>`, `key <profile>/<key> profile <to> [name <key>]`) and in the `/structure` tree, from each key's and
+  host's menu or by dragging it onto another profile. A host takes its own key along when no other host uses it;
+  otherwise it takes the key its new profile gives it. A declared key moves only with every host of its profile that
+  uses it, and keeps its inventory record and deployments. Adopted keys, shared keys, a shared-scope target and
+  1Password profiles are refused, and every move is checked before anything moves.
 - **`authama ssh git clone OWNER/REPO [DIR]`** clones through the URL `git resolve` gives, and makes the checkout
   commit as the profile when it has a git identity.
 
@@ -77,6 +97,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A local key replacement now writes a retirement record for the key it moves to `old/`, naming where it is
+  still deployed. A key in `old/` with no record at all is "cannot tell" unless the inventory shows it was never
+  deployed, so it is no longer treated as free to evict (audit A-BUG-07, follow-up).
+- The keys and key pages say so in a notice when `revoked.json` or `retired.json` cannot be read, so the
+  "unknown" pills have a reason on the page (audit A-BUG-06, follow-up).
+- `serve` reusing a running server links with an HMAC challenge and proof, and the control key no longer crosses the
+  wire. The proof is time-limited, can be used once, and is refused from a non-loopback or forwarded request. A server
+  from an older build asks to be restarted with `serve --restart` (audit P-02).
+- `install.sh` runs only once it has been read whole: its body is a function called on the last line. CI checks
+  that the script cut short at any line inside it runs nothing (audit P-03).
+- `make ci-linux` runs in the digest-pinned Go image the Dockerfile names, instead of a tag (audit S-07).
+- The tests pass on Windows: Unix mode checks are skipped there, and git directories are kept in forward slashes.
+  `git` is run only in an existing absolute directory, with `core.fsmonitor` and the pager turned off, and every
+  structure move's source and destination is checked to be inside its root.
 - The Termius export's notes name the jump host of a host that reaches its server through a `ProxyJump` raw option,
   to set as its Host Chain in Termius: the CSV has no column for one, so the host was imported as a direct host
   with nothing saying why it could not connect.

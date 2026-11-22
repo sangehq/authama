@@ -123,8 +123,19 @@ the config with `authama ssh snapshots restore`. `ssh restore` given a full expo
 ## In the web UI
 
 **History → Move setup** (`/setup`, `g m`) downloads the setup document, lists what it holds, and imports a
-pasted one through the usual preview and confirm, with the same three conflict choices; it is recorded with the
-web as its source. A document with risky options is refused there. The full export is made and imported at a
-terminal only - the page shows the commands - so a private key or a token value never reaches the browser.
+pasted one through the usual preview and confirm, with the same three conflict choices. The import is recorded with
+the web as its source. A document with risky options is refused there.
+
+**Export / Import** (the header button beside **New**, `/transfer`, `g f`) does the rest:
+
+- **Encrypted export** downloads the full export under a passphrase typed twice, behind the owner PIN. It goes
+  straight to the download, and nothing of it is shown.
+- **Import** takes an uploaded setup document, an [export zip](export.md#export-pack) (for its `setup.json`), or a
+  full export with its passphrase. It lists every key file and token value it would bring by name and state only,
+  then goes through the same preview and confirm. The upload and its passphrase wait in the session's secret stash
+  for 15 minutes and are used once. They are never written into a page.
+
+`setup import` at a terminal takes an export zip too. A full export with risky options is refused in the browser; import it at a
+terminal with `--allow-risky-options` if you set them yourself.
 
 Recipe: [Move to a new machine](../recipes/move-to-a-new-machine.md).

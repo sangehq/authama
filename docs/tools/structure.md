@@ -71,6 +71,8 @@ key ~/.ssh/id_ed25519_work profile work            # move a key into a profile, 
 key ~/.ssh/id_rsa profile personal name legacy     # ... or a new one
 key config/stray_key profile work                  # a key from the config home
 misplaced work/deploy                              # a declared key back where the manifest puts it
+host work/gh profile personal                      # a host into another profile, with its own key if no other host uses it
+key work/deploy profile ops                        # a declared key into another profile, with the hosts that use it
 profile work category clients                      # a profile into a category: its directory moves too
 profile work category -                            # ... and out of one
 ```
@@ -84,7 +86,7 @@ files that name it.
 
 - **Choose a move** from an item's menu: a profile's moves it into another category or out of one; a stray key's
   moves it into a profile (the guessed one is marked *suggested*); a misplaced key's moves it back.
-- **Or drag it**: a profile onto a category, a stray key onto a profile. A drop only chooses the same menu entry, so
+- **Or drag it**: a profile onto a category, a stray key, a declared key or a host onto a profile. A drop only chooses the same menu entry, so
   the keyboard and the mouse reach the same moves, and the page works without the script. Items that can move are
   marked as draggable; a place an item cannot go does not accept it.
 - **Moves** lists what is chosen so far, and takes extra [plan lines](#plans) - a new category, a key under a new
@@ -93,9 +95,17 @@ files that name it.
   History like any other.
 - **Dismiss** hides a suggestion; **Show the dismissed suggestions** lists them with **Show again**.
 
-Hosts and declared keys do not move between profiles: a host's alias, key and deployments belong to its profile,
-so moving one means a new host (and key) in the other profile. Keys adopted where they are never move. A
-read-only server shows the tree and the suggestions, without the menus.
+### Moving hosts and keys between profiles
+
+A host moved to another profile takes its own key along when no other host uses it. Otherwise it takes the key its
+new profile gives it, which `ssh reconcile` mints and you deploy; the preview says which. A declared key moves only
+with every host of its profile that uses it, so a plan moving the key alone is refused while a host still uses it.
+A moved key keeps its inventory record and deployments, because it is the same key. Its key specs follow it, and
+`~/.ssh/config` lines naming it are repointed.
+
+Refused, before anything moves: a key kept where it is (`ssh key adopt`), a shared key, a target profile with shared
+key scope or one that already has that key name, and a 1Password profile on either side. A read-only server shows
+the tree and the suggestions, without the menus.
 
 ## The watcher
 

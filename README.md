@@ -86,6 +86,7 @@ authama                           # on a terminal: the web UI on this machine, a
 authama serve                     # a web UI on this machine, with previewed changes
 authama setup export --encrypt --out setup.age   # keys, hosts and token values for a new machine
 authama ssh structure list        # keys outside the expected layout, and where each would go
+authama export pack --include all # every export in one zip: Termius, ssh config, setup, structure, git signing, lists
 authama ssh git sign set work --email me@work.example --dir ~/src/work   # commit and sign as a profile
 authama ssh help deploy           # help at any level: authama help, authama auth help set
 authama history                   # every change made, SSH or token
@@ -138,7 +139,7 @@ else is in the [documentation index](#documentation).
 - [MCP server](docs/tools/mcp.md) — `authama mcp`, read-only tools for an AI client over stdio; off by default.
 - [`companion`](docs/tools/companion.md) — the handshake a companion tool such as sange reads: version, contract, capabilities, homes.
 - [`man`](docs/tools/man.md) — a manual page for every command, and the layout every `--help` shares.
-- [`serve`](docs/tools/serve.md) — the web UI: overview, hosts, keys, the folder structure, git identities, setup transfer, snapshots, auth tokens and history in a browser, with previewed changes.
+- [`serve`](docs/tools/serve.md) — the web UI: overview, hosts, keys, the folder structure, git identities, setup transfer, an Export / Import hub for every export and import, snapshots, auth tokens and history in a browser, with previewed changes.
 - [`recover`](docs/tools/recover.md) — break-glass when you are locked out.
 - [`tui`](docs/tools/tui.md) — the terminal menu, removed: where each of its entries went.
 

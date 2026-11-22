@@ -43,6 +43,10 @@ A key you mean to leave where it is: `authama ssh structure dismiss <id>`.
 `authama serve`, then **SSH → Structure**: drag each stray key onto its profile (or pick the profile from its menu),
 drag profiles between categories, then **Preview the moves**. The preview is the same one the terminal shows.
 
+A host or a declared key that belongs to another profile moves the same way: drag it onto that profile, or use
+`host work/gh profile personal` / `key work/deploy profile ops` in a plan. A key moves with every host that uses it,
+and keeps its record and deployments ([structure](../tools/structure.md#moving-hosts-and-keys-between-profiles)).
+
 ## 3. Keep watching
 
 `authama serve` refreshes the list whenever a file under `~/.ssh` or the config home changes. To be told without

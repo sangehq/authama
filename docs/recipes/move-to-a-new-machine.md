@@ -34,6 +34,9 @@ authama setup import setup.json --dry-run    # on the other machine
 authama ssh reconcile                        # make the keys it declares, fresh
 ```
 
-The web UI's **History → Move setup** page downloads and imports the document too.
+The web UI's **History → Move setup** page downloads and imports the document too. **Export / Import**, the
+header button beside **New**, does the encrypted export in the browser as well. It downloads the age file behind
+your PIN, and on the new machine imports it from an upload with its passphrase, listing the keys and token values it
+would lay down by name only before you confirm.
 
 See [setup](../tools/setup.md) for what each form holds and how the encrypted file is made.

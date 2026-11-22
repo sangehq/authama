@@ -5,7 +5,9 @@ or key. Import the CSV authama writes instead.
 
 In the web UI (`authama serve`), **SSH → Termius import** does every step below on one page: pick the group scheme
 and the hosts, check the CSV as Termius will read it, download it, and see each host's key label and the command
-that copies its key ([Termius import](../tools/serve.md#termius-import)). At a terminal:
+that copies its key ([Termius import](../tools/serve.md#termius-import)). To take the CSV together with the
+flat ssh config and the rest, tick them on **Export / Import** (the header button) or run
+`authama export pack --include termius,ssh-config --termius-groups category/profile`. At a terminal:
 
 ```bash
 authama export hosts --format termius --out ~/Downloads/termius-hosts.csv

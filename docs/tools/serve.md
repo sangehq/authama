@@ -103,8 +103,9 @@ accepted. A running server is reused only when its base path is the one asked fo
 
 The layout is Tabler's, in two bars. The top bar holds the name (with a *read-only* badge when the
 server only reads), a search box that opens the command palette, a theme toggle (light or dark), a
-bell listing the newest [file events](events.md), a **New** button for the common creates, and the
-user menu, named for the system user the server runs as. The user menu is personal: it opens with
+bell listing the newest [file events](events.md), a **New** button for the common creates, an **Export / Import**
+button (every export in one zip, the encrypted full export, and importing a setup file; a read-only server offers
+the export only), and the user menu, named for the system user the server runs as. The user menu is personal: it opens with
 *Running as <user> on <host>*, then **Take the tour**, **About authama** and **Sign out**. Under the
 top bar, the main menu holds every page, one kind of thing to a menu:
 
@@ -324,7 +325,8 @@ documentation, the source and the licences.
 | Termius import (`/termius`) | the Termius CSV of the hosts chosen, previewed as Termius reads it, with what was left out and the key to attach to each host: [below](#termius-import) |
 | Git identities (`/git-sign`) | each profile's git identity - email, name, signing key, directories - and whether it is applied; set, change or remove one, apply, and point other checkouts at a profile, each through the preview (the manifest diff and every line of the git files). **Check a checkout** reads how it commits and its commits' signatures; **Clone through a profile** gives the URL and the `ssh git clone` command. `allowed_signers` is shown (public keys only). See [git](git.md#in-the-web-ui) |
 | Structure (`/structure`) | the SSH folder as a tree - categories, profiles, their keys and hosts - and the keys found outside it, each with a move menu; drag a profile onto a category or a stray key onto a profile to choose the same move. **Preview the moves** shows each key file that moves and the manifest and config diffs; **Dismiss** hides a suggestion. See [ssh structure](structure.md#in-the-web-ui) |
-| Move setup (`/setup`) | what the setup document holds (profiles, providers, settings, token config, the token variables by name), **Download the setup document** (`/setup/export.json`; no key and no token value), an import form that takes a pasted document through the preview with a keep / replace / stop choice for what differs, and the commands for the encrypted full export, which stays at the terminal: see [setup](setup.md#in-the-web-ui) |
+| Move setup (`/setup`) | what the setup document holds (profiles, providers, settings, token config, the token variables by name), **Download the setup document** (`/setup/export.json`; no key and no token value), and an import form that takes a pasted document through the preview with a keep / replace / stop choice for what differs: see [setup](setup.md#in-the-web-ui) |
+| Export / Import (`/transfer`, the header button) | **Export**: tick any of the exports (Termius CSV and its groups, flat ssh config, setup document, structure, git identities and `allowed_signers`, tokens and the lists), **Preview** each file's size and first lines, **Download zip** (`/transfer/pack.zip`; no key and no token value; `export pack` at a terminal). **Encrypted export**: the full export under a passphrase and the owner PIN, sent straight to the download. **Import**: upload a setup document, export zip or encrypted export; it is told apart, listed by name only, and imported through the preview. See [export](export.md#export-pack) and [setup](setup.md#in-the-web-ui) |
 | Doctor, Audit | the reports `authama doctor` and `authama ssh audit` print |
 | Validate | every validate check on one page, run when you open it: the manifest loads and passes its rules, `authama settings validate`, `authama ssh validate` (each keypair parses, matches and has safe permissions) and `authama ssh config check`. A manifest that does not load fails the two checks that need it rather than reporting them clean. Reads only |
 | Events | every change seen to a tracked file, with the authama operation that made it, as [`authama events`](events.md) lists them; filtered by area |
@@ -619,6 +621,17 @@ Some changes are terminal-only:
   selection (`/checklist/*`, `/api/export/selections*`) change only authama's own notes and saved
   views, never a key, a host or a server, so they take no PIN step-up: the owner's decision on
   R-GAP-06 (2026-11-16). They still need the session and its CSRF token.
+- **Export / Import never shows a secret.** The export zip holds no private key and no token value.
+  The encrypted full export is a POST that needs the form token, the owner PIN (within the step-up
+  window) and a passphrase typed twice. It is written to a private temporary folder in the state home,
+  sent as the download and removed, and nothing of it is rendered. An uploaded encrypted export is
+  opened only to list its key files and token variables by name. The file and its passphrase then
+  wait in the session's secret stash (15 minutes, used once), and the page carries only random
+  references to them. A read-only server offers neither the encrypted export nor an import.
+- **Linking to a running server proves the control key without sending it.** `serve`, finding a
+  server already running, asks for a challenge and answers it with an HMAC proof. The server proves
+  itself back the same way, each proof is single-use and time-limited, and only a loopback request that
+  was not forwarded is answered (audit P-02). A server from an older build asks for `serve --restart`.
 - **Bounded requests.** A request body over 1 MiB is refused with 413 before it is parsed; headers
   are held to 64 KiB, a body must arrive within 30 seconds, and `Permissions-Policy` turns off every
   device API (camera, microphone, location, USB and the rest).

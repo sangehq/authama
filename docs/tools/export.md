@@ -153,6 +153,31 @@ The Export page offers the same formats on its Hosts tab, with an *Include git h
 the chosen format leaves out. *Copy as command* copies the `authama export` command that writes the file the page
 previews, with its list, filters, columns, sort, format and options.
 
+## Export pack
+
+`authama export pack` zips any of the exports in one file: the same zip as the web UI's **Export / Import** page
+(the header button beside **New**, `/transfer`). No file in it holds a private key or a token value.
+
+| Part (`--include`) | File(s) | What |
+|---|---|---|
+| `termius` | `termius-hosts.csv` | the Termius CSV, grouped by `--termius-groups` (`--include-git` adds git hosts) |
+| `ssh-config` | `ssh_config` | every host inline, as `ssh config export --flat` writes it |
+| `setup` | `setup.json` | the [setup document](setup.md#the-setup-document) |
+| `structure` | `structure.json` | categories, profiles, each key's path and the hosts using it, and the suggested moves |
+| `git-signing` | `git-signing.json`, `allowed_signers` | each profile's git identity, signing key (public half) and directories |
+| `tokens` | `tokens.csv` | each token's name, tool and where its value is read from, never the value |
+| `hosts`, `keys`, `profiles`, `deployments`, `history`, `events`, `snapshots` | `<part>.csv` | the lists, as `export <list>` writes them |
+
+With no `--include` the pack holds `termius,ssh-config,setup,structure,git-signing,tokens`. `--include all` takes
+every part. A `README.txt` names what is inside. The zip goes to
+`<config home>/exports/authama-export-<time>.zip`, or `--out`, and never inside `~/.ssh`. `--dry-run` lists the files
+and their sizes and writes nothing, as the page's **Preview** does. `setup import` takes the zip for its `setup.json`.
+
+```sh
+authama export pack --include termius,ssh-config --termius-groups category/profile --out hosts.zip
+authama export pack --include all --dry-run
+```
+
 ## Why a flat copy
 
 With [categories](../recipes/group-profiles-into-categories.md), `~/.ssh/config` holds `Match all` and one `Include`
