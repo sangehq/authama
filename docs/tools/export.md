@@ -132,6 +132,11 @@ schedule and reports any that fails (a deleted selection, say) while the rest st
 folder inside `~/.ssh` is refused, and the SSH client formats are not scheduled. `remove` leaves the files
 already written.
 
+The Export page's **Schedules** card (`/export#export-schedules`) lists the schedules and adds, removes and
+runs them, each behind the owner PIN when one is set and the last was given more than five minutes ago. Give a
+folder's full path (or `~/…`): the server has no current directory of yours. `install` and `uninstall` stay at a
+terminal, since they change the system's scheduler rather than authama's home; the card shows the command.
+
 ### Hosts for ssh and SSH clients
 
 | `--format` | Writes |

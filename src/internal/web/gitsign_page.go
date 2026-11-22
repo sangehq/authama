@@ -47,6 +47,13 @@ type GitSignView struct {
 	CheckN     int
 	CheckError string
 
+	// Checkouts' remote modes read from the page (?remotes=), as `ssh git
+	// status` shows them.
+	Remotes      string
+	RemoteRows   []gitremote.Checkout
+	RemoteError  string
+	RemoteUseCmd string
+
 	// A clone worked out from the page (?repo=).
 	Repo, RepoMode, RepoProfile string
 	Clone                       *gitremote.Resolution
@@ -178,6 +185,16 @@ func (gp gitSignPage) view(q url.Values) (GitSignView, error) {
 		}
 	}
 
+	if text := strings.TrimSpace(q.Get("remotes")); text != "" {
+		v.Remotes = text
+		if dirs, err := checkoutPaths(text); err != nil {
+			v.RemoteError = err.Error()
+		} else {
+			v.RemoteRows = gitremote.Status(change.RemoteGit, m, dirs)
+			v.RemoteUseCmd = brand.Command + " ssh git use <profile|ssh|https> " + strings.Join(dirs, " ")
+		}
+	}
+
 	if repo := strings.TrimSpace(q.Get("repo")); repo != "" {
 		v.Repo, v.RepoMode, v.RepoProfile = repo, q.Get("mode"), q.Get("profile")
 		owner, name, ok := strings.Cut(strings.TrimSuffix(repo, ".git"), "/")
@@ -275,23 +292,51 @@ func gitSignUseChange(f url.Values, errs []error) (change.Change, []error) {
 	if err != nil {
 		return change.Change{}, append(errs, err)
 	}
+	dirs, err := checkoutPaths(f.Get("checkouts"))
+	if err != nil {
+		return change.Change{}, append(errs, err)
+	}
+	return change.GitSignUse(profile, dirs), errs
+}
+
+// gitRemoteUseChange is the git-remote-use action: `ssh git use`, each
+// checkout's origin pointed at a mode (empty: the default), through an
+// optional profile.
+func gitRemoteUseChange(f url.Values, errs []error) (change.Change, []error) {
+	mode := strings.TrimSpace(f.Get("mode"))
+	if mode != "" && !knownGitMode(mode) {
+		errs = append(errs, badForm("mode %q is not one of %s", mode, strings.Join(manifest.GitModes, ", ")))
+	}
+	profile := strings.TrimSpace(f.Get("profile"))
+	if profile != "" && !nameRe.MatchString(profile) {
+		errs = append(errs, badForm("profile %q is not a profile name", profile))
+	}
+	dirs, err := checkoutPaths(f.Get("checkouts"))
+	if err != nil {
+		return change.Change{}, append(errs, err)
+	}
+	return change.GitRemoteUse(mode, profile, dirs), errs
+}
+
+// checkoutPaths reads checkouts, one full path (or ~/…) per line.
+func checkoutPaths(text string) ([]string, error) {
 	var dirs []string
-	for _, d := range strings.Split(f.Get("checkouts"), "\n") {
+	for _, d := range strings.Split(text, "\n") {
 		if d = strings.TrimSpace(d); d == "" {
 			continue
 		}
 		if strings.ContainsFunc(d, func(r rune) bool { return r < 0x20 || r == 0x7f }) {
-			return change.Change{}, append(errs, badForm("a checkout path holds a control character"))
+			return nil, badForm("a checkout path holds a control character")
 		}
 		if !strings.HasPrefix(d, "/") && !strings.HasPrefix(d, "~/") && (len(d) < 3 || d[1] != ':') {
-			return change.Change{}, append(errs, badForm("%q: give a checkout's full path (or ~/…); the server has no current directory of yours", d))
+			return nil, badForm("%q: give a checkout's full path (or ~/…); the server has no current directory of yours", d)
 		}
 		dirs = append(dirs, expandHome(d))
 	}
 	if len(dirs) == 0 {
-		errs = append(errs, badForm("name at least one checkout"))
+		return nil, badForm("name at least one checkout")
 	}
-	return change.GitSignUse(profile, dirs), errs
+	return dirs, nil
 }
 
 // expandHome turns a leading ~/ into the home directory, for paths the server

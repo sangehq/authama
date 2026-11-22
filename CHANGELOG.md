@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Export schedules, remote modes and project tokens in the web UI.** The Export page's **Schedules** card adds,
+  lists, removes and runs export schedules (`export schedule add|list|remove|run`), behind the PIN. **Git
+  identities → Remote mode** shows each checkout's origin mode and switches it through the preview, proving the
+  new URL with `git ls-remote` first (`ssh git status`, `ssh git use --mode --profile`). The **Auth tokens** page's
+  scope bar reads and writes a project's own files and another token config (`--project`, `--config`), and
+  **Apply** takes `--source` and `--target`. Writing schedules moved into `services/exportsched`, shared by the
+  command line and the page.
 - **API tokens and Webhooks pages in the web UI** (System → API tokens, `/api-tokens`, `g j`; System → Webhooks,
   `/webhooks`, `g q`). They make, list and revoke API tokens, and add, list, test, turn off and on, remove and
   deliver webhooks, as `authama api token` and `authama webhook` do. Each change asks for the owner PIN within the

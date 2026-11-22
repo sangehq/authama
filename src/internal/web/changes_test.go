@@ -339,6 +339,8 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 	}
 	collect("/repair")
 	collect("/reset")
+	// Switching remotes is offered once checkouts are read.
+	collect("/git-sign?remotes=" + url.QueryEscape(t.TempDir()))
 	// The bulk key jobs are offered on their own review page, where their
 	// keys are chosen.
 	for _, a := range []string{"rotate-keys", "revoke-keys", "delete-keys"} {

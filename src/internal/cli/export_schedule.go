@@ -1,11 +1,8 @@
 package cli
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"text/tabwriter"
 
@@ -13,11 +10,9 @@ import (
 
 	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/core/manifest"
-	"github.com/sangehq/authama/src/internal/services/dataset"
+	"github.com/sangehq/authama/src/internal/services/exportsched"
 	"github.com/sangehq/authama/src/internal/services/savedsel"
-	"github.com/sangehq/authama/src/internal/services/selection"
 	"github.com/sangehq/authama/src/internal/util/encode"
-	"github.com/sangehq/authama/src/internal/util/fs"
 	"github.com/sangehq/authama/src/internal/util/paths"
 	"github.com/sangehq/authama/src/internal/util/scheduler"
 )
@@ -43,17 +38,7 @@ func newExportScheduleCmd() *cobra.Command {
 // scheduleFolder makes folder absolute and refuses one inside ~/.ssh, or,
 // in dev mode, outside the sandbox.
 func scheduleFolder(p paths.Paths, folder string) (string, error) {
-	abs, err := filepath.Abs(folder)
-	if err != nil {
-		return "", err
-	}
-	if insideDir(abs, p.SSHDir) {
-		return "", fmt.Errorf("refusing %s: it is inside %s, which an export must leave as it is", abs, p.SSHDir)
-	}
-	if !p.Contains(abs) {
-		return "", fmt.Errorf("refusing %s in dev mode: it is outside the sandbox under %s", abs, p.DevRoot)
-	}
-	return abs, nil
+	return exportsched.Folder(p, folder)
 }
 
 func newScheduleAddCmd() *cobra.Command {
@@ -201,41 +186,7 @@ func newScheduleRunCmd() *cobra.Command {
 
 // runSchedule writes one schedule's file, answering where and how many rows.
 func runSchedule(p paths.Paths, m *manifest.Manifest, s savedsel.Schedule) (string, int, error) {
-	if err := savedsel.CheckSchedule(s); err != nil {
-		return "", 0, err
-	}
-	if _, err := scheduleFolder(p, s.Folder); err != nil {
-		return "", 0, err
-	}
-	saved, err := savedsel.Get(p, m, s.Selection)
-	if err != nil {
-		return "", 0, err
-	}
-	ds, err := dataset.Build(p, dataset.Options{Parts: selection.Parts(saved.Selection.Grain)})
-	if err != nil {
-		return "", 0, err
-	}
-	res, err := selection.Run(ds, saved.Selection)
-	if err != nil {
-		return "", 0, err
-	}
-	f, err := encode.Get(s.Format)
-	if err != nil {
-		return "", 0, err
-	}
-	var buf bytes.Buffer
-	if err := f.Write(&buf, encode.Table{Columns: res.Columns, Rows: res.Rows},
-		encode.Options{Title: brand.Command + " " + s.Selection}); err != nil {
-		return "", 0, err
-	}
-	if err := os.MkdirAll(s.Folder, 0o700); err != nil {
-		return "", 0, err
-	}
-	file, err := s.File()
-	if err != nil {
-		return "", 0, err
-	}
-	return file, len(res.Rows), fs.WriteTextAtomic(file, buf.String(), 0o600)
+	return exportsched.Run(p, m, s)
 }
 
 // newScheduleInstallCmd is `schedule install` (install) or `schedule

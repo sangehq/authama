@@ -234,6 +234,11 @@ Two profiles cannot claim one directory; the manifest refuses it.
 - **Use it in checkouts elsewhere** is `sign use`: give each checkout's full path (or `~/…`).
 - **Check a checkout** reads how a checkout commits and checks its recent commits' signatures (`sign status`
   and `sign verify`); it changes nothing.
+- **Remote mode** is `ssh git status` and `ssh git use`: give checkouts' full paths, one a line, to see each
+  origin's mode, owner, repository and profile. **Preview the switch** points them at `profile`, `ssh` or `https`
+  (or the default), through the owner's profile or one you choose. The preview lists what each origin would go
+  from and to and changes nothing. Confirming, with the PIN, proves each new URL with `git ls-remote` before it
+  rewrites origin, as the command line does. A checkout that fails is left as it was, and the rest still change.
 - **Clone through a profile** works out the URL, profile and mode `ssh git clone` would use and gives the
   command; the clone itself runs at a terminal.
 - `allowed_signers` is shown as it is: public keys only.

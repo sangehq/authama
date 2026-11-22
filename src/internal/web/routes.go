@@ -2,15 +2,16 @@ package web
 
 import (
 	"errors"
-	"github.com/sangehq/authama/src/internal/services/settings"
-	"github.com/sangehq/authama/src/internal/util/envnames"
-	"github.com/sangehq/authama/src/internal/util/paths"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sangehq/authama/src/internal/services/settings"
+	"github.com/sangehq/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/paths"
 
 	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/core/inventory"
@@ -104,6 +105,8 @@ func (s *Server) routes() http.Handler {
 		mux.HandleFunc("POST /api-tokens/revoke", ip.handleAPITokenRevoke)
 		mux.HandleFunc("POST /webhooks/add", ip.handleWebhookAdd)
 		mux.HandleFunc("POST /webhooks/{act}", ip.handleWebhookAct)
+		// A schedule writes files outside the home: PIN-gated, no preview.
+		mux.HandleFunc("POST /export/schedules/{act}", exportAPI{s}.handleSchedule)
 		mux.HandleFunc("POST /transfer/import", transferPage{s}.handleImport)
 		mux.HandleFunc("POST /changes/preview", h.handlePreview)
 		mux.HandleFunc("POST /changes/apply", h.handleApply)
@@ -386,7 +389,19 @@ func (h pages) handleVMs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h pages) handleTokens(w http.ResponseWriter, r *http.Request) {
-	v, err := h.s.opts.Engine.Tokens()
+	q := r.URL.Query()
+	project, perr := scopePath(q, "project")
+	config, cerr := scopePath(q, "config")
+	var v TokensView
+	var err error
+	if (project != "" || config != "") && perr == nil && cerr == nil {
+		v, err = tokensView(h.s.opts.Engine.Home(), project, config)
+	} else {
+		v, err = h.s.opts.Engine.Tokens()
+		if e := errors.Join(perr, cerr); e != nil {
+			v.ScopeError = e.Error()
+		}
+	}
 	if err != nil {
 		h.fail(w, r, err)
 		return

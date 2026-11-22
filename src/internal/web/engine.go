@@ -817,6 +817,12 @@ type TokensView struct {
 	// holds variable names only; ConfigRefused says why it is not shown
 	// otherwise. A file that holds a value never reaches a page.
 	ConfigText, ConfigRefused string
+	// Project and ConfigArg are the page's scope (?project=, ?config=): the
+	// command line's --project and --config. ScopeError says why one was
+	// not used.
+	Project, ConfigArg, ScopeError string
+	// AllTargets are every tool, for apply's --target boxes.
+	AllTargets []string
 }
 
 // TokenService is a Composer service and the kind of secret it takes.
@@ -828,23 +834,30 @@ type TokenService struct {
 // Tokens is `authama token list` and `authama token audit` as data.
 // The secrets never leave the service: Inventory is asked not to reveal them,
 // and the view drops them again in case it ever does.
-func (e AppEngine) Tokens() (TokensView, error) {
-	env := tokensvc.NewEnv(e.P, nil, nil, "")
-	v := TokensView{Items: env.Inventory("", false)}
+func (e AppEngine) Tokens() (TokensView, error) { return tokensView(e.P, "", "") }
+
+// tokensView is Tokens for a project's files (`token list|audit|status
+// --project`) and through a given token config (`--config`); both are
+// absolute paths, or "".
+func tokensView(p paths.Paths, project, config string) (TokensView, error) {
+	env := tokensvc.NewEnv(p, nil, nil, "")
+	v := TokensView{Items: env.Inventory(project, false), Project: project, ConfigArg: config, AllTargets: tokens.Targets()}
 	for i := range v.Items {
 		v.Items[i].Secret = ""
 	}
-	v.Findings, v.Failed = env.Checkup(tokens.NewSet(), "")
-	if src, err := env.FindConfig(""); err == nil {
+	v.Findings, v.Failed = env.Checkup(tokens.NewSet(), project)
+	if src, err := env.FindConfig(config); err == nil {
 		v.Config, v.Legacy = src.Path, src.Legacy
+	} else if config != "" {
+		v.ScopeError = err.Error()
 	}
-	if st, err := tokensvc.StatusOf(env, "", ""); err == nil {
+	if st, err := tokensvc.StatusOf(env, config, project); err == nil {
 		v.Status = st
 	}
-	_, err := os.Stat(e.P.Tokens())
+	_, err := os.Stat(p.Tokens())
 	v.HasConfig = err == nil
 	if v.HasConfig {
-		v.ConfigText, v.ConfigRefused = editableTokenConfig(e.P.Tokens())
+		v.ConfigText, v.ConfigRefused = editableTokenConfig(p.Tokens())
 	}
 	for _, t := range tokens.Targets() {
 		if t != tokens.Composer {

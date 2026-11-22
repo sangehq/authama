@@ -36,7 +36,8 @@ const MaxSelection = 16 << 10
 
 // exportPage is what the Export page starts from: the grains it offers.
 type exportPage struct {
-	Grains []exportGrain
+	Grains    []exportGrain
+	Schedules exportSchedules
 }
 
 type exportGrain struct {
@@ -70,7 +71,7 @@ var exportGrains = func() []exportGrain {
 // file, previewed as they are chosen. The page's script drives it through
 // /exports/run; without the script it lists each preset's download.
 func (x exportAPI) handlePage(w http.ResponseWriter, r *http.Request) {
-	x.s.render(w, http.StatusOK, "export", x.s.newView(r, "export", "Export", exportPage{Grains: exportGrains}))
+	x.renderPage(w, r, http.StatusOK, x.schedules())
 }
 
 func (x exportAPI) handleDataset(w http.ResponseWriter, r *http.Request) {

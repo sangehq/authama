@@ -113,6 +113,38 @@
       </div>
     </div>
 
+    <div class="card mb-3" id="gitsign-remotes">
+      <div class="card-header"><h2 class="card-title">Remote mode</h2></div>
+      <div class="card-body">
+        <p class="small text-secondary">How each checkout's origin reaches GitHub: <code>profile</code> (the profile's own alias and key), <code>ssh</code> (the key bound to github.com) or <code>https</code> (your credential helper). Switching proves the new URL with <code>git ls-remote</code> before it rewrites origin.</p>
+        <form method="get" action="{{u "/git-sign"}}#gitsign-remotes">
+          <label class="form-label" for="gs-remotes">Checkouts, one full path a line</label>
+          <textarea class="form-control font-monospace small" id="gs-remotes" name="remotes" rows="2" spellcheck="false" autocomplete="off" required placeholder="~/code/work/app">{{.Remotes}}</textarea>
+          <button type="submit" class="btn btn-outline-primary mt-2"{{desc "gitremote-status"}}>Show the remotes</button>
+        </form>
+        {{if .RemoteError}}<div class="alert alert-danger py-2 mt-2" role="alert">{{.RemoteError}}</div>{{end}}
+        {{if .RemoteRows}}
+        <ul class="list-unstyled small mt-2 mb-2">
+          {{range .RemoteRows}}<li class="mb-1"><code class="text-break">{{.Path}}</code>
+            {{if eq .State "managed"}}<span class="badge badge-info">{{.Mode}}</span> {{.Owner}}/{{.Repo}}{{if .Profile}} · profile {{.Profile}}{{if eq .ProfileFrom "owner"}} (by owner){{end}}{{end}}
+            {{else if eq .State "no-origin"}}<span class="badge badge-muted">no origin</span>
+            {{else}}<span class="badge badge-muted">not a managed GitHub remote</span> <span class="text-secondary text-break">{{.URL}}</span>{{end}}</li>{{end}}
+        </ul>
+        {{if $.ReadOnly}}<p class="text-secondary mb-1">This server is read-only. Switch at a terminal:</p>{{template "command_line" .RemoteUseCmd}}
+        {{else}}
+        {{template "change_open" $}}<input type="hidden" name="action" value="git-remote-use"><input type="hidden" name="checkouts" value="{{.Remotes}}">
+          <div class="row g-2">
+            <div class="col-6"><label class="form-label" for="gs-use-mode">Switch to</label>
+              <select class="form-select" id="gs-use-mode" name="mode"><option value="">default ({{.DefaultMode}})</option>{{range .Modes}}<option value="{{.}}">{{.}}</option>{{end}}</select></div>
+            <div class="col-6"><label class="form-label" for="gs-use-profile">Profile</label>
+              <select class="form-select" id="gs-use-profile" name="profile"><option value="">the owner's</option>{{range .Profiles}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div>
+          </div>
+          <button type="submit" class="btn btn-primary mt-2"{{desc "gitremote-use"}}>Preview the switch</button>
+        </form>
+        {{end}}{{end}}
+      </div>
+    </div>
+
     <div class="card mb-3" id="gitsign-clone">
       <div class="card-header"><h2 class="card-title">Clone through a profile</h2></div>
       <div class="card-body">

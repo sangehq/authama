@@ -65,12 +65,15 @@ var actionFields = map[string][]string{
 	"snapshots-restore": {"id"},
 	"notify-test":       {},
 	"audit-notify":      {},
-	"token-delete":      {"target", "host"},
-	"token-apply":       {},
-	"vm-sync":           {"repin"},
-	"vm-adopt-key":      {"key", "profile", "alias", "hypervisor", "vm", "user"},
-	"vm-schedule":       {"install"},
-	"settings-init":     {},
+	"token-delete":      {"target", "host", "project"},
+	// token-apply takes the command line's --config, --project, --source and
+	// --target (only_<tool>, one box each).
+	"token-apply": {"config", "project", "source", "only_composer", "only_npm", "only_docker", "only_git", "only_netrc", "only_pypi",
+		"only_cargo", "only_gem", "only_gradle", "only_maven", "only_yarn", "only_helm", "only_helm-oci", "only_gh"},
+	"vm-sync":       {"repin"},
+	"vm-adopt-key":  {"key", "profile", "alias", "hypervisor", "vm", "user"},
+	"vm-schedule":   {"install"},
+	"settings-init": {},
 	// settings-reset writes authama.json again at its defaults, keeping the
 	// old file beside it.
 	"settings-reset": {},
@@ -84,7 +87,7 @@ var actionFields = map[string][]string{
 	"home-init":               {"confirm"},
 	"export-selection-save":   {"name", "selection"},
 	"export-selection-delete": {"name"},
-	"token-set":               {"target", "service", "server", "username", "scope", "docker_mode", "secret_ref"},
+	"token-set":               {"target", "service", "server", "username", "scope", "docker_mode", "project", "secret_ref"},
 	"token-init":              {"t_composer", "t_npm", "t_docker", "t_git", "t_netrc", "t_pypi", "t_cargo", "t_gem", "t_gradle", "t_maven", "t_yarn", "t_helm", "t_helm-oci", "t_gh"},
 	"token-import":            {},
 	"token-config-edit":       {"body"},
@@ -97,9 +100,11 @@ var actionFields = map[string][]string{
 	// git-sign-set is one profile's git identity (clear removes it);
 	// git-sign-use points checkouts at a profile; git-sign-apply writes the
 	// git files from the manifest as it is.
-	"git-sign-set":        {"profile", "email", "user_name", "key", "dirs", "sign", "clear"},
-	"git-sign-use":        {"profile", "checkouts"},
-	"git-sign-apply":      {},
+	"git-sign-set":   {"profile", "email", "user_name", "key", "dirs", "sign", "clear"},
+	"git-sign-use":   {"profile", "checkouts"},
+	"git-sign-apply": {},
+	// git-remote-use is `ssh git use`: checkouts' origin pointed at a mode.
+	"git-remote-use":      {"mode", "profile", "checkouts"},
 	"key-lifetime":        {"key", "lifetime"},
 	"key-regen-pub":       {"key", "profile", "all"},
 	"ssh-import":          {"source", "replace"},
@@ -551,9 +556,25 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		if host == "" {
 			errs = append(errs, badForm("host is required"))
 		}
-		ch = change.TokenDelete(target, host)
+		project, err := scopePath(f, "project")
+		errs = append(errs, err)
+		ch = change.TokenDeleteIn(target, host, project)
 	case "token-apply":
-		ch = change.TokenApply()
+		var sc change.TokenScope
+		var err error
+		for _, fld := range []struct {
+			name string
+			dst  *string
+		}{{"config", &sc.Config}, {"project", &sc.Project}, {"source", &sc.Source}} {
+			*fld.dst, err = scopePath(f, fld.name)
+			errs = append(errs, err)
+		}
+		for _, t := range tokens.Targets() {
+			if checked(f, "only_"+t) {
+				sc.Targets = append(sc.Targets, t)
+			}
+		}
+		ch = change.TokenApplyIn(sc)
 	case "token-set":
 		spec := tokensvc.SetSpec{Target: strings.TrimSpace(f.Get("target")), Service: strings.TrimSpace(f.Get("service")),
 			Server: pl("server"), Username: pl("username"), Scope: pl("scope")}
@@ -574,8 +595,10 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		if ref == "" {
 			errs = append(errs, badForm("the token form sent no secret"))
 		}
+		project, err := scopePath(f, "project")
+		errs = append(errs, err)
 		resolve := h.secret
-		ch = change.TokenSet(spec, mode, func() (string, error) {
+		ch = change.TokenSetIn(spec, mode, project, func() (string, error) {
 			if resolve != nil {
 				if v, ok := resolve(ref); ok {
 					return v, nil
@@ -659,6 +682,8 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch, errs = gitSignUseChange(f, errs)
 	case "git-sign-apply":
 		ch = change.GitSignApply()
+	case "git-remote-use":
+		ch, errs = gitRemoteUseChange(f, errs)
 	case "token-config-edit":
 		body := f.Get("body")
 		switch {
@@ -836,4 +861,20 @@ func knownHypervisor(hv string) bool {
 		}
 	}
 	return false
+}
+
+// scopePath reads an optional path field of a token change: --project,
+// --config or --source. It must be absolute (or ~/...), since the server has
+// no current directory of yours, and hold no control character.
+func scopePath(f url.Values, field string) (string, error) {
+	v := strings.TrimSpace(f.Get(field))
+	switch {
+	case v == "":
+		return "", nil
+	case strings.ContainsFunc(v, func(r rune) bool { return r < 0x20 || r == 0x7f }):
+		return "", badForm("%s holds a control character", field)
+	case !strings.HasPrefix(v, "/") && !strings.HasPrefix(v, "~/") && (len(v) < 3 || v[1] != ':'):
+		return "", badForm("%s %q: give a full path (or ~/…); the server has no current directory of yours", field, v)
+	}
+	return expandHome(v), nil
 }

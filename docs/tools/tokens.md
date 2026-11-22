@@ -293,7 +293,10 @@ duplicated. The rc file is copied to `<file>.authama.bak` first unless `--no-bac
 ## Also in
 
 - [`doctor`](doctor.md) checks the token files' modes (a warning; `--strict` fails on it), and `doctor --fix` repairs them.
-- [`serve`](serve.md) has a **Tokens** page: the list, the status and audit, and previewed `delete` and `apply`.
+- [`serve`](serve.md) has a **Tokens** page: the list, the status and audit, and previewed `set`, `delete` and
+  `apply`. Its scope bar takes a project's full path (`--project`) and a token config's (`--config`): the page
+  then lists, audits and writes the project's own `auth.json` and `.npmrc`. **Apply** also takes an env file
+  (`--source`) and the tools to write (`--target`).
 
 <!-- nav-footer -->
 

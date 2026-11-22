@@ -3,7 +3,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
@@ -13,6 +12,7 @@ import (
 	"github.com/sangehq/authama/src/internal/core/renderer"
 	"github.com/sangehq/authama/src/internal/platform"
 	"github.com/sangehq/authama/src/internal/services/configsvc"
+	"github.com/sangehq/authama/src/internal/services/exportsched"
 	"github.com/sangehq/authama/src/internal/util/fs"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
@@ -51,24 +51,8 @@ func exportTarget(p paths.Paths, out, defaultName string) (string, error) {
 	return target, nil
 }
 
-// insideDir reports whether path is dir or lies under it, judged by inode:
-// each existing ancestor of path is compared with dir by os.SameFile.
-func insideDir(path, dir string) bool {
-	want, err := os.Stat(dir)
-	if err != nil {
-		return false // no SSH directory yet: nothing there to overwrite
-	}
-	for cur := filepath.Clean(path); ; {
-		if fi, err := os.Stat(cur); err == nil && os.SameFile(fi, want) {
-			return true
-		}
-		parent := filepath.Dir(cur)
-		if parent == cur {
-			return false
-		}
-		cur = parent
-	}
-}
+// insideDir reports whether path is dir or lies under it, judged by inode.
+func insideDir(path, dir string) bool { return exportsched.InsideDir(path, dir) }
 
 // writeExport writes an export (0600: it names every host and key path) or
 // prints it for --out -. It reports where it wrote.
