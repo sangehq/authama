@@ -1,0 +1,5 @@
+devbox: reached through a ProxyCommand, which Transmit 5 (a FileZilla Site Manager XML, the import Transmit reads) does not run; use windows-terminal or iterm2, which go through ssh
+In Transmit 5, File > Import… and choose authama-transmit.xml as a FileZilla file; the servers appear under their groups. Transmit keeps keys in its own store and does not take the key path from the file: add each key under Settings > Keys (or use the SSH agent), then pick it on each server. Keys:
+  /home/u/.ssh/profiles/internal/personal/imani_github-ed25519  as imani_github-ed25519
+  /home/u/.ssh/profiles/legacy/legacy-ed25519  as legacy-ed25519
+  /home/u/.ssh/profiles/orgs/simtabi/simtabi_oribi-web-ed25519  as simtabi_oribi-web-ed25519

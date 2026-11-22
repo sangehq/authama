@@ -1,0 +1,5 @@
+devbox: reached through a ProxyCommand, which Blink Shell (an ssh config of the hosts, for its config editor) does not run; use windows-terminal or iterm2, which go through ssh
+Blink Shell keeps its own keys and hosts. Import each key under Settings > Keys with the name below, then paste authama-blink.ssh_config into Settings > Hosts > SSH Config (or `config` in a Blink session); Blink reads Host, HostName, Port, User, IdentityFile and ProxyJump from it. Keys to import:
+  /home/u/.ssh/profiles/internal/personal/imani_github-ed25519  as imani_github-ed25519
+  /home/u/.ssh/profiles/legacy/legacy-ed25519  as legacy-ed25519
+  /home/u/.ssh/profiles/orgs/simtabi/simtabi_oribi-web-ed25519  as simtabi_oribi-web-ed25519

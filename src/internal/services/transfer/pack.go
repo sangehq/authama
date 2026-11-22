@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -39,7 +40,7 @@ type Part struct {
 // The parts, in the order a pack and the page list them.
 var Parts = []Part{
 	{"termius", "Hosts for Termius", "termius-hosts.csv", "The Termius CSV import, grouped as chosen. It carries no key: attach each with `ssh termius keys`."},
-	{"ssh-clients", "Hosts for other SSH clients", "clients/", "The hosts for each client `export hosts --format` writes: a generic CSV, Windows Terminal, iTerm2, PuTTY, Remmina, SecureCRT and MobaXterm, with clients/NOTES.txt on finishing each import. No key is in any of them."},
+	{"ssh-clients", "Hosts for other SSH clients", "clients/", "The hosts for each client `export hosts --format` writes - a generic CSV, Windows Terminal, iTerm2, PuTTY, Remmina, SecureCRT, MobaXterm, Royal TS, Remote Desktop Manager, Tabby, mRemoteNG, Xshell, Blink, Prompt 3, WinSCP, FileZilla, Cyberduck, Transmit and an Ansible inventory, or only the clients chosen - with clients/NOTES.txt on finishing each import. No key is in any of them."},
 	{"ssh-config", "SSH config, one file", "ssh_config", "Every host inline with absolute key paths, for a tool that cannot follow Include."},
 	{"setup", "Setup document", "setup.json", "Profiles, hosts, key names, token names and settings: what `setup import` makes another machine from. No secret."},
 	{"structure", "SSH folder structure", "structure.json", "Categories, profiles, where each key lives and which hosts use it, and the moves suggested now."},
@@ -72,6 +73,7 @@ type Options struct {
 	Include       []string // part IDs; empty is Default
 	TermiusGroups string   // the Termius Groups scheme (encode.TermiusGroupSchemes)
 	IncludeGit    bool     // host files also list git hosts
+	Clients       []string // the ssh-clients part's formats (ClientFormats); empty is every one
 	Version       string
 	Now           time.Time
 }
@@ -114,6 +116,9 @@ func Check(o Options) ([]string, error) {
 	}
 	if err := encode.CheckTermiusGroups(o.TermiusGroups); err != nil {
 		return nil, fmt.Errorf("termius groups: %w", err)
+	}
+	if _, err := ChosenClients(o.Clients); err != nil {
+		return nil, err
 	}
 	var out []string
 	for _, p := range Parts {
@@ -221,7 +226,40 @@ func hostFile(p paths.Paths, format string, o Options) ([]byte, error) {
 
 // ClientFormats are the SSH client formats the ssh-clients part writes, as
 // `export hosts --format` names them; Termius has its own part.
-var ClientFormats = []string{encode.ClientCSV, "windows-terminal", "iterm2", "putty", "remmina", "securecrt", "mobaxterm"}
+var ClientFormats = []string{encode.ClientCSV, "windows-terminal", "iterm2", "putty", "remmina", "securecrt", "mobaxterm",
+	"royalts", "rdm", "tabby", "mremoteng", "xshell", "blink", "prompt3", "winscp", "filezilla", "cyberduck", "transmit", "ansible"}
+
+// ChosenClients is the client formats a pack's ssh-clients part writes, in
+// ClientFormats order: every one when none is named. Each name may hold
+// several, comma-separated, as --clients takes them.
+func ChosenClients(names []string) ([]string, error) {
+	want := map[string]bool{}
+	for _, n := range names {
+		for _, one := range strings.Split(n, ",") {
+			one = strings.TrimSpace(one)
+			if one == "" {
+				continue
+			}
+			if one == "all" {
+				return ClientFormats, nil
+			}
+			if !slices.Contains(ClientFormats, one) {
+				return nil, fmt.Errorf("no client format %q: choose from %s, or all", one, strings.Join(ClientFormats, ", "))
+			}
+			want[one] = true
+		}
+	}
+	if len(want) == 0 {
+		return ClientFormats, nil
+	}
+	var out []string
+	for _, f := range ClientFormats {
+		if want[f] {
+			out = append(out, f)
+		}
+	}
+	return out, nil
+}
 
 // clientFiles is every client format's files under clients/<format>/, and
 // clients/NOTES.txt with what each needs to finish its import and the hosts
@@ -240,7 +278,11 @@ func clientFiles(p paths.Paths, o Options) ([]File, error) {
 	var files []File
 	var notes strings.Builder
 	notes.WriteString("Hosts for other SSH clients. No file here holds a private key: each names the key's path on this machine.\n")
-	for _, name := range ClientFormats {
+	chosen, err := ChosenClients(o.Clients)
+	if err != nil {
+		return nil, err
+	}
+	for _, name := range chosen {
 		f, err := encode.Get(name)
 		if err != nil {
 			return nil, err

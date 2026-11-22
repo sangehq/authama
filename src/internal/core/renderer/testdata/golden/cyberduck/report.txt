@@ -1,0 +1,2 @@
+devbox: reached through a ProxyCommand, which Cyberduck and Mountain Duck (one .duck bookmark per host) does not run; use windows-terminal or iterm2, which go through ssh
+Unzip and drag the .duck files onto Cyberduck's Bookmarks (or copy them to ~/Library/Group Containers/G69SCX94XU.duck/Library/Application Support/duck/Bookmarks); Mountain Duck reads the same files. Key paths are this machine's.

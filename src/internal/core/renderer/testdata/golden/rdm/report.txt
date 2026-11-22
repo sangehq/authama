@@ -1,0 +1,2 @@
+devbox: reached through a ProxyCommand, which Devolutions Remote Desktop Manager (a CSV for its CSV import wizard) does not run; use windows-terminal or iterm2, which go through ssh
+In Remote Desktop Manager, File > Import > Import from CSV (the CSV wizard), choose authama-rdm.csv and map each column to the field of the same name. PrivateKeyPath is this machine's; set the entry's private key source to a file.

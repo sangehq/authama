@@ -1,2 +1,2 @@
-devbox: reached through a ProxyCommand, which any client that imports a CSV (Royal TS, Xshell, SecureCRT's import script, a spreadsheet) does not run; use windows-terminal or iterm2, which go through ssh
-Royal TS maps the host to its URI column, not hostname; Royal TS's and Xshell's CSV imports do not take key_path, so attach each key in the client.
+devbox: reached through a ProxyCommand, which any client that imports a CSV (SecureCRT's import script, a spreadsheet) does not run; use windows-terminal or iterm2, which go through ssh
+A generic CSV: map its columns in the client's import. Royal TS, Remote Desktop Manager and Xshell have formats of their own (royalts, rdm, xshell) that carry the key.

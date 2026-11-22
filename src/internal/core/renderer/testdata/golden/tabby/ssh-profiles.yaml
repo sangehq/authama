@@ -1,0 +1,30 @@
+- name: github-imani
+  type: ssh
+  group: personal
+  options:
+    host: github.com
+    port: 22
+    user: git
+    auth: publicKey
+    privateKeys:
+      - /home/u/.ssh/profiles/internal/personal/imani_github-ed25519
+- name: box
+  type: ssh
+  group: legacy
+  options:
+    host: box.example
+    port: 2222
+    user: me
+    auth: publicKey
+    privateKeys:
+      - /home/u/.ssh/profiles/legacy/legacy-ed25519
+- name: oribi-web
+  type: ssh
+  group: simtabi
+  options:
+    host: 203.0.113.23
+    port: 22
+    user: ploi
+    auth: publicKey
+    privateKeys:
+      - /home/u/.ssh/profiles/orgs/simtabi/simtabi_oribi-web-ed25519

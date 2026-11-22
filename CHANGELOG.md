@@ -8,6 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Hosts for twelve more clients.** `export hosts --format` writes `royalts` (Royal TS/TSX, Royal JSON for a
+  dynamic folder), `rdm` (Remote Desktop Manager CSV), `tabby` (`ssh-profiles.yaml`), `mremoteng` (`confCons.xml`),
+  `xshell` (a zip of `.xsh` sessions), `blink` and `prompt3` (an ssh config snippet with the steps each app needs),
+  `winscp` (`WinSCP.ini` sessions), `filezilla` (Site Manager XML), `cyberduck` (a zip of `.duck` bookmarks),
+  `transmit` (the FileZilla XML Transmit 5 imports, with its limits) and `ansible` (a YAML inventory grouped by
+  category, profile and `env_<env>`). No file holds a password or a private key, only key paths or key names; a
+  ProxyJump is written where the client takes one and reported where it cannot. `export pack --clients` and
+  checkboxes on the Export / Import hub choose which clients the **Hosts for other SSH clients** part writes. Each
+  format has golden-file tests. See [Other SSH clients](docs/tools/export.md#other-ssh-clients).
 - **`make qa`: a walk through every command.** `cmd/authama/qa_test.go` (part of `make e2e` too) checks every
   command's help and that it refuses an unknown flag, walks the commands and their main flags in a throwaway home
   whose hosts are 127.0.0.1 on a closed port, and runs every read-only command line in README.md and docs/ so a
@@ -186,6 +195,10 @@ Things that work differently after this release, and what to do if one affects y
   `doctor` and `validate` still report the name.
 
 ### Fixed
+
+- **Web pages at phone width and contrast.** At 375px the Profiles, Naming, Hosts, Keys, Snapshots, API tokens
+  and About pages scrolled sideways (a visually hidden label escaped its table); they no longer do. The Export
+  page's muted text and active tab, and red text on the VMs page in the dark theme, now meet 4.5:1.
 
 - **`history --command` takes the command as typed.** `--command "ssh host add"` (or `"authama ssh host add"`)
   found nothing, because ssh commands are recorded without their group; it now matches `host add`. A filtered

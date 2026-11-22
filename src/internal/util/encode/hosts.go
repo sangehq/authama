@@ -45,15 +45,25 @@ func init() {
 		"csv": "Client CSV (Royal TS, Xshell)", "windows-terminal": "Windows Terminal profiles", "iterm2": "iTerm2 profiles",
 		"putty": "PuTTY sessions (.reg)", "remmina": "Remmina profiles (.zip)", "securecrt": "SecureCRT sessions",
 		"mobaxterm": "MobaXterm sessions",
+		"royalts":   "Royal TS / TSX (Royal JSON)", "rdm": "Remote Desktop Manager CSV", "tabby": "Tabby profiles (YAML)",
+		"mremoteng": "mRemoteNG confCons.xml", "xshell": "Xshell sessions (.zip of .xsh)", "blink": "Blink Shell ssh config",
+		"prompt3": "Prompt 3 ssh config", "winscp": "WinSCP.ini sessions", "filezilla": "FileZilla Site Manager XML",
+		"cyberduck": "Cyberduck bookmarks (.zip of .duck)", "transmit": "Transmit 5 (FileZilla XML)", "ansible": "Ansible inventory (YAML)",
 	}
 	exts := map[string]string{
 		"csv": "csv", "windows-terminal": "json", "iterm2": "json", "putty": "reg", "remmina": "zip",
 		"securecrt": "xml", "mobaxterm": "mxtsessions",
+		"royalts": "json", "rdm": "csv", "tabby": "yaml", "mremoteng": "xml", "xshell": "zip", "blink": "ssh_config",
+		"prompt3": "ssh_config", "winscp": "ini", "filezilla": "xml", "cyberduck": "zip", "transmit": "xml", "ansible": "yml",
 	}
 	media := map[string]string{
 		"csv": "text/csv; charset=utf-8", "windows-terminal": "application/json; charset=utf-8",
 		"iterm2": "application/json; charset=utf-8", "putty": "application/octet-stream", "remmina": "application/zip",
 		"securecrt": "application/xml; charset=utf-8", "mobaxterm": "text/plain; charset=utf-8",
+		"royalts": "application/json; charset=utf-8", "rdm": "text/csv; charset=utf-8", "tabby": "application/yaml; charset=utf-8",
+		"mremoteng": "application/xml; charset=utf-8", "xshell": "application/zip", "blink": "text/plain; charset=utf-8",
+		"prompt3": "text/plain; charset=utf-8", "winscp": "text/plain; charset=utf-8", "filezilla": "application/xml; charset=utf-8",
+		"cyberduck": "application/zip", "transmit": "application/xml; charset=utf-8", "ansible": "application/yaml; charset=utf-8",
 	}
 	for name, c := range Clients {
 		pipelineName := name

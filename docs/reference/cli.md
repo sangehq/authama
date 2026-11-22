@@ -515,7 +515,7 @@ braces), --dedupe (keep the first row of each), then --group-by with --aggregate
 count by default) with --totals. A column can name
 the fields they write. The SSH client formats below take none.
 
-Hosts also go out as an SSH client imports them: --format hosts-csv, iterm2, mobaxterm, putty, remmina, securecrt, ssh_config, termius, windows-terminal.
+Hosts also go out as an SSH client imports them: --format ansible, blink, cyberduck, filezilla, hosts-csv, iterm2, mobaxterm, mremoteng, prompt3, putty, rdm, remmina, royalts, securecrt, ssh_config, tabby, termius, transmit, windows-terminal, winscp, xshell.
 ssh_config is the managed config of the hosts kept, byte for byte what `ssh config export --flat`
 writes when every host is kept; termius is the Termius CSV, grouped by profile or, with
 --termius-groups, in nested groups (category/profile, profile/env, category/profile/env, or
@@ -523,7 +523,7 @@ none); hosts-csv is a generic CSV; the rest
 are the clients' own files. Those formats write hosts in manifest order unless --sort is
 given, ignore --columns, leave out git hosts unless --include-git and, except ssh_config,
 windows-terminal and iterm2, hosts behind a ProxyCommand. remmina writes a zip of one file per
-host. What was left out, and what is left to do in the client, goes to stderr.
+host, as do xshell and cyberduck. What was left out, and what is left to do in the client, goes to stderr.
 
 The file goes to stdout, or to --out.
 
@@ -566,7 +566,7 @@ Flags:
       --env strings                only these environments
       --exclude string             leave out rows containing this text, ignoring case
       --fields[=true|false]        list every field the list's rows have, after any transforms, and write nothing
-      --format string              csv, tsv, json, jsonl, yaml, php, js, markdown or html; for hosts also hosts-csv, iterm2, mobaxterm, putty, remmina, securecrt, ssh_config, termius, windows-terminal (default "csv")
+      --format string              csv, tsv, json, jsonl, yaml, php, js, markdown or html; for hosts also ansible, blink, cyberduck, filezilla, hosts-csv, iterm2, mobaxterm, mremoteng, prompt3, putty, rdm, remmina, royalts, securecrt, ssh_config, tabby, termius, transmit, windows-terminal, winscp, xshell (default "csv")
       --group-by strings           a row per distinct value of these fields
       --include string             only rows containing this text, ignoring case
       --include-git[=true|false]   host formats: also export git hosts (user git, or a github or gitlab provider)
@@ -631,11 +631,13 @@ Examples:
   authama export pack
   authama export pack --include termius,ssh-config --termius-groups category/profile --out hosts.zip
   authama export pack --include all --dry-run
+  authama export pack --include ssh-clients --clients tabby,filezilla,ansible
 ```
 
 Flags:
 
 ```
+      --clients strings            ssh-clients: only these client formats (hosts-csv, windows-terminal, iterm2, putty, remmina, securecrt, mobaxterm, royalts, rdm, tabby, mremoteng, xshell, blink, prompt3, winscp, filezilla, cyberduck, transmit, ansible); every one by default
       --dry-run[=true|false]       list the files and sizes; write nothing
       --include strings            the parts: termius, ssh-clients, ssh-config, setup, structure, git-signing, tokens, hosts, keys, profiles, deployments, history, events, snapshots, or all
       --include-git[=true|false]   termius: also list git hosts

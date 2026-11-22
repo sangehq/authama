@@ -17,7 +17,7 @@ import (
 // newExportPackCmd is `export pack`: the web UI's Export / Import page at a
 // terminal. It zips the parts chosen; no part holds a secret.
 func newExportPackCmd() *cobra.Command {
-	var include []string
+	var include, clients []string
 	var termiusGroups, out string
 	var includeGit, dryRun bool
 	var long strings.Builder
@@ -37,7 +37,8 @@ func newExportPackCmd() *cobra.Command {
 		Long:  long.String(),
 		Example: "  " + brand.Command + " export pack\n" +
 			"  " + brand.Command + " export pack --include termius,ssh-config --termius-groups category/profile --out hosts.zip\n" +
-			"  " + brand.Command + " export pack --include all --dry-run",
+			"  " + brand.Command + " export pack --include all --dry-run\n" +
+			"  " + brand.Command + " export pack --include ssh-clients --clients tabby,filezilla,ansible",
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			p, err := resolvePaths(c)
@@ -46,7 +47,7 @@ func newExportPackCmd() *cobra.Command {
 			}
 			now := time.Now()
 			files, err := transfer.Build(p, transfer.Options{Include: include, TermiusGroups: termiusGroups,
-				IncludeGit: includeGit, Version: version.Version, Now: now})
+				IncludeGit: includeGit, Clients: clients, Version: version.Version, Now: now})
 			if err != nil {
 				return err
 			}
@@ -81,6 +82,7 @@ func newExportPackCmd() *cobra.Command {
 	f.StringSliceVar(&include, "include", nil, "the parts: "+strings.Join(transfer.IDs(), ", ")+", or all")
 	f.StringVar(&termiusGroups, "termius-groups", encode.TermiusGroupsProfile, "termius: the Groups column: "+strings.Join(encode.TermiusGroupSchemes, ", "))
 	f.BoolVar(&includeGit, "include-git", false, "termius: also list git hosts")
+	f.StringSliceVar(&clients, "clients", nil, "ssh-clients: only these client formats ("+strings.Join(transfer.ClientFormats, ", ")+"); every one by default")
 	f.StringVarP(&out, "out", "o", "", "where to write the zip (mode 0600)")
 	f.BoolVar(&dryRun, "dry-run", false, "list the files and sizes; write nothing")
 	return cmd

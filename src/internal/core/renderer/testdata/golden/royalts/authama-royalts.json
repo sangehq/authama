@@ -1,0 +1,50 @@
+{
+  "Objects": [
+    {
+      "Type": "Folder",
+      "Name": "legacy",
+      "Objects": [
+        {
+          "Type": "TerminalConnection",
+          "TerminalConnectionType": "SSH",
+          "Name": "box",
+          "ComputerName": "box.example",
+          "Port": 2222,
+          "Username": "me",
+          "KeyFilePath": "/home/u/.ssh/profiles/legacy/legacy-ed25519",
+          "Description": "prod, eu,west"
+        }
+      ]
+    },
+    {
+      "Type": "Folder",
+      "Name": "personal",
+      "Objects": [
+        {
+          "Type": "TerminalConnection",
+          "TerminalConnectionType": "SSH",
+          "Name": "github-imani",
+          "ComputerName": "github.com",
+          "Port": 22,
+          "Username": "git",
+          "KeyFilePath": "/home/u/.ssh/profiles/internal/personal/imani_github-ed25519"
+        }
+      ]
+    },
+    {
+      "Type": "Folder",
+      "Name": "simtabi",
+      "Objects": [
+        {
+          "Type": "TerminalConnection",
+          "TerminalConnectionType": "SSH",
+          "Name": "oribi-web",
+          "ComputerName": "203.0.113.23",
+          "Port": 22,
+          "Username": "ploi",
+          "KeyFilePath": "/home/u/.ssh/profiles/orgs/simtabi/simtabi_oribi-web-ed25519"
+        }
+      ]
+    }
+  ]
+}

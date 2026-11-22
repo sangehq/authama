@@ -74,7 +74,7 @@ func newExportCmd() *cobra.Command {
 			"are the clients' own files. Those formats write hosts in manifest order unless --sort is\n" +
 			"given, ignore --columns, leave out git hosts unless --include-git and, except ssh_config,\n" +
 			"windows-terminal and iterm2, hosts behind a ProxyCommand. remmina writes a zip of one file per\n" +
-			"host. What was left out, and what is left to do in the client, goes to stderr.\n\n" +
+			"host, as do xshell and cyberduck. What was left out, and what is left to do in the client, goes to stderr.\n\n" +
 			"The file goes to stdout, or to --out.",
 		Example: "  " + brand.Command + " export hosts --profile simtabi --env prd --format json\n" +
 			"  " + brand.Command + " export keys --columns ref=key,fingerprint,expires_on --sort expires_on --format markdown\n" +

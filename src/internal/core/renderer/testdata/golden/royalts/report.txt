@@ -1,0 +1,2 @@
+devbox: reached through a ProxyCommand, which Royal TS and Royal TSX (Royal JSON for a dynamic folder) does not run; use windows-terminal or iterm2, which go through ssh
+In Royal TS or Royal TSX, add a Dynamic Folder, set its script type to JSON, paste authama-royalts.json as the script and Reload it. Key paths are this machine's; edit them if Royal TS runs elsewhere.

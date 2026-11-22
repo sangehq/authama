@@ -1,0 +1,2 @@
+devbox: reached through a ProxyCommand, which Ansible (a YAML inventory) does not run; use windows-terminal or iterm2, which go through ssh
+Use it as an inventory: ansible-inventory -i inventory.yml --graph, or ansible all -i inventory.yml -m ping. Groups are categories, then profiles (a profile with no category is under ungrouped_profiles), and env_<env> for each environment. Key paths are this machine's.

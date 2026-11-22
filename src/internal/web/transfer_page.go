@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -44,6 +45,12 @@ type TransferPart struct {
 	Checked bool
 }
 
+// TransferClient is one client format the ssh-clients part can write.
+type TransferClient struct {
+	Name, Label string
+	Checked     bool
+}
+
 // TransferFile is one file of the export preview.
 type TransferFile struct {
 	Name  string
@@ -69,6 +76,7 @@ type TransferView struct {
 	Groups        []string
 	Group         string
 	IncludeGit    bool
+	Clients       []TransferClient
 	Preview       []TransferFile
 	Previewed     bool
 	Download      string
@@ -98,6 +106,13 @@ func (tp transferPage) view(q url.Values) (TransferView, transfer.Options) {
 			problem = "No Termius group scheme " + strconv.Quote(raw) + ": choose one of " + strings.Join(encode.TermiusGroupSchemes, ", ") + "."
 		}
 	}
+	clients, err := transfer.ChosenClients(q["client"])
+	if err != nil && problem == "" {
+		problem = err.Error() + "."
+	}
+	if len(clients) < len(transfer.ClientFormats) {
+		o.Clients = clients
+	}
 	chosen := map[string]bool{}
 	want := o.Include
 	if len(want) == 0 {
@@ -111,6 +126,16 @@ func (tp transferPage) view(q url.Values) (TransferView, transfer.Options) {
 		PackCmd:    brand.Command + " export pack --include " + strings.Join(want, ",") + " --termius-groups " + o.TermiusGroups,
 		EncryptCmd: brand.Command + " setup export --encrypt --out setup.age",
 		ImportCmd:  brand.Command + " setup import FILE --dry-run", Problem: problem}
+	if len(o.Clients) > 0 {
+		v.PackCmd += " --clients " + strings.Join(o.Clients, ",")
+	}
+	for _, name := range transfer.ClientFormats {
+		label := name
+		if f, err := encode.Get(name); err == nil {
+			label = f.Label
+		}
+		v.Clients = append(v.Clients, TransferClient{Name: name, Label: label, Checked: len(o.Clients) == 0 || slices.Contains(o.Clients, name)})
+	}
 	for _, p := range transfer.Parts {
 		v.Parts = append(v.Parts, TransferPart{Part: p, Checked: chosen[p.ID]})
 	}
@@ -121,6 +146,9 @@ func (tp transferPage) view(q url.Values) (TransferView, transfer.Options) {
 	dq.Set("termius_groups", o.TermiusGroups)
 	if o.IncludeGit {
 		dq.Set("include_git", "1")
+	}
+	for _, c := range o.Clients {
+		dq.Add("client", c)
 	}
 	v.Download = "/transfer/pack.zip?" + dq.Encode()
 	return v, o

@@ -62,6 +62,15 @@
               {{end}}
             </div>
           </fieldset>
+          <fieldset class="mt-3" aria-describedby="clients-hint">
+            <legend class="form-label">Hosts for other SSH clients: which clients</legend>
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-1">
+              {{range .Clients}}
+              <div class="col"><label class="form-check mb-0"><input class="form-check-input" type="checkbox" name="client" value="{{.Name}}"{{if .Checked}} checked{{end}}><span class="form-check-label">{{.Label}} <code class="small">{{.Name}}</code></span></label></div>
+              {{end}}
+            </div>
+            <small class="form-hint" id="clients-hint">Used when that part is ticked. Ticking none writes every client.</small>
+          </fieldset>
           <div class="row g-2 mt-2">
             <div class="col-sm-6">
               <label class="form-label" for="termius-groups">Termius groups</label>

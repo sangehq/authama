@@ -43,7 +43,7 @@ func TestEveryFormatIsRegisteredAndWrites(t *testing.T) {
 	if got := TableNames(); strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("table formats = %v, want %v", got, want)
 	}
-	hosts := []string{"hosts-csv", "iterm2", "mobaxterm", "putty", "remmina", "securecrt", "ssh_config", "termius", "windows-terminal"}
+	hosts := []string{"ansible", "blink", "cyberduck", "filezilla", "hosts-csv", "iterm2", "mobaxterm", "mremoteng", "prompt3", "putty", "rdm", "remmina", "royalts", "securecrt", "ssh_config", "tabby", "termius", "transmit", "windows-terminal", "winscp", "xshell"}
 	if got := HostNames(); strings.Join(got, ",") != strings.Join(hosts, ",") {
 		t.Fatalf("host formats = %v, want %v", got, hosts)
 	}

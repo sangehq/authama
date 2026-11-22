@@ -25,8 +25,8 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | Partial | 3 |
 | CLI-only by design | 19 |
 | Gap | 0 |
-| Flags on those commands | 412 |
-| Flags covered | 339 |
+| Flags on those commands | 413 |
+| Flags covered | 340 |
 | Flags CLI-only by design | 73 |
 | Flags with no web control | 0 |
 
@@ -48,7 +48,7 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `doctor` | web | /doctor, Fix | `--dry-run`, `--fix`, `--json`, `--strict` (CLI), `--yes` |  |
 | `events` | web | /events (filters, CSV) | `--area`, `--csv`, `--json`, `--kind`, `--limit`, `--no-scan` (CLI), `--since`, `--verify` |  |
 | `export` | web | /export builder, Copy command, download | `--aggregate`, `--area`, `--columns`, `--command`, `--compact`, `--dedupe`, `--env`, `--exclude`, `--fields`, `--format`, `--group-by`, `--include`, `--include-git`, `--key`, `--kind`, `--limit`, `--narrow`, `--no-header`, `--out`, `--pivot`, `--profile`, `--role`, `--selection`, `--shape`, `--since`, `--sort`, `--source`, `--status`, `--tag`, `--template`, `--termius-groups`, `--tool`, `--totals`, `--transform`, `--until` |  |
-| `export pack` | web | /transfer: Export pack | `--dry-run`, `--include`, `--include-git`, `--out`, `--termius-groups` |  |
+| `export pack` | web | /transfer: Export pack | `--clients`, `--dry-run`, `--include`, `--include-git`, `--out`, `--termius-groups` |  |
 | `export schedule add` | web | /export: Scheduled exports (PIN) | `--format`, `--to` | Daily export of a saved selection. |
 | `export schedule install` | CLI-only by design | - | - | Registers a launchd/systemd/schtasks job. |
 | `export schedule list` | web | /export: Scheduled exports | - |  |

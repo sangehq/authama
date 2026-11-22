@@ -62,8 +62,8 @@ type Client struct {
 
 // Clients are the SSH client formats, by their own name ("csv" is hosts-csv
 // in the pipeline).
-var Clients = map[string]Client{
-	"csv":              {Name: "csv", Client: "any client that imports a CSV (Royal TS, Xshell, SecureCRT's import script, a spreadsheet)", Render: renderGenericCSV},
+var Clients = withClients(map[string]Client{
+	"csv":              {Name: "csv", Client: "any client that imports a CSV (SecureCRT's import script, a spreadsheet)", Render: renderGenericCSV},
 	"windows-terminal": {Name: "windows-terminal", Client: "Windows Terminal (a JSON fragment)", ViaSSH: true, Render: renderWindowsTerminal},
 	"iterm2":           {Name: "iterm2", Client: "iTerm2 (Dynamic Profiles)", ViaSSH: true, Render: renderITerm2},
 	"putty":            {Name: "putty", Client: "PuTTY and KiTTY (a .reg file)", Render: renderPuTTY},
@@ -72,6 +72,13 @@ var Clients = map[string]Client{
 		Client: "SecureCRT (an XML settings file for File > Import Settings; Termius imports it too)", Render: renderSecureCRT},
 	"mobaxterm": {Name: "mobaxterm",
 		Client: "MobaXterm (a .mxtsessions file for Sessions > Import; Termius imports it too)", Render: renderMobaXterm},
+}, moreClients)
+
+func withClients(base, more map[string]Client) map[string]Client {
+	for n, c := range more {
+		base[n] = c
+	}
+	return base
 }
 
 // ClientNames are the client format names, sorted.
@@ -238,7 +245,7 @@ func renderGenericCSV(hosts []Host) (*ClientExport, error) {
 	}
 	return &ClientExport{
 		Files: []ClientFile{{Name: "hosts.csv", Data: buf.Bytes()}},
-		Notes: []string{"Royal TS maps the host to its URI column, not hostname; Royal TS's and Xshell's CSV imports do not take key_path, so attach each key in the client."},
+		Notes: []string{"A generic CSV: map its columns in the client's import. Royal TS, Remote Desktop Manager and Xshell have formats of their own (royalts, rdm, xshell) that carry the key."},
 	}, nil
 }
 

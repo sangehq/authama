@@ -1,0 +1,29 @@
+all:
+  children:
+    internal:
+      children:
+        personal:
+          hosts:
+            github-imani:
+              ansible_host: github.com
+              ansible_port: 22
+              ansible_user: git
+              ansible_ssh_private_key_file: /home/u/.ssh/profiles/internal/personal/imani_github-ed25519
+    orgs:
+      children:
+        simtabi:
+          hosts:
+            oribi-web:
+              ansible_host: 203.0.113.23
+              ansible_port: 22
+              ansible_user: ploi
+              ansible_ssh_private_key_file: /home/u/.ssh/profiles/orgs/simtabi/simtabi_oribi-web-ed25519
+    ungrouped_profiles:
+      children:
+        legacy:
+          hosts:
+            box:
+              ansible_host: box.example
+              ansible_port: 2222
+              ansible_user: me
+              ansible_ssh_private_key_file: /home/u/.ssh/profiles/legacy/legacy-ed25519

@@ -89,12 +89,33 @@ func TestExportPackHoldsEveryClientFormat(t *testing.T) {
 			t.Errorf("%s holds a private key", f.Name)
 		}
 	}
-	for _, name := range []string{"hosts-csv", "windows-terminal", "iterm2", "putty", "remmina", "securecrt", "mobaxterm"} {
+	for _, name := range []string{"hosts-csv", "windows-terminal", "iterm2", "putty", "remmina", "securecrt", "mobaxterm",
+		"royalts", "rdm", "tabby", "mremoteng", "xshell", "blink", "prompt3", "winscp", "filezilla", "cyberduck", "transmit", "ansible"} {
 		if !seen[name] {
 			t.Errorf("no clients/%s/ in the pack", name)
 		}
 	}
 	if _, err := zr.Open("clients/NOTES.txt"); err != nil {
 		t.Error("no clients/NOTES.txt")
+	}
+}
+
+// --clients narrows the ssh-clients part to the formats named, and refuses
+// one it does not know.
+func TestExportPackClientsChoosesTheFormats(t *testing.T) {
+	editHome(t)
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "web", "-H", "web.example.test", "-u", "deploy")
+	out := run(t, "export", "pack", "--include", "ssh-clients", "--clients", "tabby,ansible", "--clients", "filezilla", "--dry-run")
+	for _, want := range []string{"clients/tabby/ssh-profiles.yaml", "clients/ansible/inventory.yml", "clients/filezilla/authama-filezilla.xml"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("dry run lacks %s:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "clients/putty/") {
+		t.Errorf("a client not chosen is in the pack:\n%s", out)
+	}
+	if _, err := runErr(t, "export", "pack", "--include", "ssh-clients", "--clients", "nope"); err == nil || !strings.Contains(err.Error(), "no client format") {
+		t.Errorf("an unknown client: %v", err)
 	}
 }

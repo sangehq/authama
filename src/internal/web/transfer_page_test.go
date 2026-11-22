@@ -206,3 +206,27 @@ func TestTheTransferPackRefusesAnUnknownGroupScheme(t *testing.T) {
 		t.Fatalf("a known scheme: %d %s", rec.Code, rec.Header().Get("Content-Type"))
 	}
 }
+
+// The ssh-clients part writes only the clients ticked; the command and the
+// download carry them, and an unknown one is refused without echoing it.
+func TestTheTransferPageChoosesClients(t *testing.T) {
+	s, _, _ := newTestServer(t)
+	c := signIn(t, s)
+	body := c.get("/transfer?preview=1&part=ssh-clients&client=tabby&client=ansible").Body.String()
+	for _, want := range []string{"clients/tabby/ssh-profiles.yaml", "clients/ansible/inventory.yml", "--clients tabby,ansible",
+		html.EscapeString("client=tabby&client=ansible"), `name="client" value="filezilla">`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("/transfer lacks %q", want)
+		}
+	}
+	if strings.Contains(body, "clients/putty/") {
+		t.Error("a client not ticked is in the preview")
+	}
+	if all := c.get("/transfer").Body.String(); !strings.Contains(all, `name="client" value="filezilla" checked>`) {
+		t.Error("every client should start ticked")
+	}
+	rec := c.get("/transfer/pack.zip?part=ssh-clients&client=%3Cb%3Ex")
+	if rec.Code != http.StatusBadRequest || strings.Contains(rec.Body.String(), "<b>x") {
+		t.Fatalf("an unknown client: %d\n%.400s", rec.Code, rec.Body.String())
+	}
+}
