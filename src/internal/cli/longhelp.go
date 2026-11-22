@@ -7,6 +7,31 @@ import "github.com/spf13/cobra"
 // commandExamples are. A command's own Long wins.
 // TestEveryCommandHasADescription keeps every visible command covered.
 var commandLong = map[string]string{
+	"logs": "Show authama.log: one record per command, web action, job, file change and sign-in, newest\n" +
+		"last, with times in the display zone. Keys, tokens, passphrases, PINs and sign-in links are blanked\n" +
+		"before anything is written. --level, --since and --grep filter; --follow keeps printing new records\n" +
+		"until Ctrl-C; --json prints each record as written. The log is in the state home's log directory\n" +
+		"(`authama logs path`), rotated at log.max_size_mb and kept log.retention_days days.",
+	"logs export": "Write the log records the filters match as JSON lines, to a new file (--out, never overwritten)\n" +
+		"or to stdout: for a bug report or another tool. They are already redacted.",
+	"logs path": "Print the path of authama.log. Rotated files sit beside it as authama-<time>.log.",
+	"logs level": "Set log.level in authama.json: the least severe record written (debug, info, warn or error).\n" +
+		"debug adds every page the web UI serves. The next command, or the web UI after a restart, uses it.",
+	"logs retention": "Set log.retention_days in authama.json: how many days a rotated log file is kept before it is\n" +
+		"deleted. The live authama.log is never deleted.",
+	"serve browsers": "List the browsers the web UI remembers. A browser is remembered when it signs in with a link\n" +
+		"(what `authama` opens), for web.remember_days (30 by default): later visits sign in by themselves,\n" +
+		"with an HttpOnly, SameSite=Strict cookie whose secret changes on every sign-in. Only a hash of it\n" +
+		"is kept. The Settings page lists them too.",
+	"serve browsers forget": "Forget remembered browsers, by the ids `serve browsers` lists, or every one with --all. A\n" +
+		"forgotten browser's session ends on its next page, and it needs a sign-in link again (run `authama`).",
+	"settings timezone": "The time zone every time is shown in, in the terminal and the web UI: display.timezone, an IANA\n" +
+		"name such as Europe/Berlin or UTC. Unset, it is this system's zone. Stored times stay UTC. --tz\n" +
+		"<zone>, or $AUTHAMA_TIMEZONE, overrides it for one command.",
+	"settings timezone show": "Show the zone times are shown in, and the time there now.",
+	"settings timezone set": "Set display.timezone in authama.json, after checking it is an IANA zone. `local` takes the\n" +
+		"setting out, so this system's zone is used. A running web UI uses the new zone from its next page.",
+	"settings timezone list": "List the IANA zones with the time in each now, or those whose name holds the search text.",
 	"api token": "API tokens let a program read authama's API (served by `authama serve` at /api/v1/ when api.enabled\n" +
 		"is on). `create` prints a token once - authama keeps only its hash - `list` shows names, ages and\n" +
 		"expiry but never a token, and `revoke` stops one at once.",

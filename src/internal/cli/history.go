@@ -22,6 +22,7 @@ import (
 	"github.com/sangehq/authama/src/internal/util/csvout"
 	"github.com/sangehq/authama/src/internal/util/lock"
 	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/tz"
 )
 
 func newHistoryCmd() *cobra.Command {
@@ -185,7 +186,7 @@ func writeHistory(out io.Writer, ops []history.Op) {
 	tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
 	_, _ = fmt.Fprintln(tw, "STARTED\tRESULT\tSOURCE\tCOMMAND\tABOUT\tOP")
 	for _, o := range ops {
-		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", o.StartedAt, dash(o.Result), o.Source,
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", showTS(o.StartedAt), dash(o.Result), o.Source,
 			o.Command, dash(subjectList(o.Subjects)), o.OpID[:8])
 	}
 	_ = tw.Flush()
@@ -200,8 +201,8 @@ func writeOp(out io.Writer, s *history.Store, o history.Op) error {
 	row("op", o.OpID)
 	row("command", strings.TrimSpace(o.Command+" "+strings.Join(o.Args, " ")))
 	row("source", o.Source)
-	row("started", o.StartedAt)
-	row("finished", o.FinishedAt)
+	row("started", showTS(o.StartedAt))
+	row("finished", showTS(o.FinishedAt))
 	row("result", o.Result)
 	row("error", o.Error)
 	row("about", subjectList(o.Subjects))
@@ -211,7 +212,7 @@ func writeOp(out io.Writer, s *history.Store, o history.Op) error {
 	if len(o.Events) > 0 {
 		_, _ = fmt.Fprintln(out, "\nevents")
 		for _, e := range o.Events {
-			_, _ = fmt.Fprintf(out, "  %s  %s  %s\n", e.TS, e.Event, e.Fields)
+			_, _ = fmt.Fprintf(out, "  %s  %s  %s\n", showTS(e.TS), e.Event, e.Fields)
 		}
 	}
 	_, _ = fmt.Fprintln(out)
@@ -356,4 +357,15 @@ func newHistoryResetCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&confirmWord, "confirm", "", `type "history" to start the history again without being asked`)
 	return cmd
+}
+
+// showTS is a recorded time (stored in UTC) in the display zone; anything it
+// cannot read is shown as it is.
+func showTS(s string) string {
+	for _, layout := range []string{history.TimeFormat, time.RFC3339Nano, "2006-01-02T15:04:05Z"} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return tz.Second(t)
+		}
+	}
+	return s
 }

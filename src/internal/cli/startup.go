@@ -120,6 +120,10 @@ func startup(c *cobra.Command, _ []string) error {
 	if st.SettingsErr != nil && !toleratesBadSettings(c) {
 		return st.SettingsErr
 	}
+	if err := applyDisplayZone(c); err != nil {
+		return err
+	}
+	configureLog(p)
 	return nil
 }
 

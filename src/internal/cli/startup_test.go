@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"github.com/sangehq/authama/src/internal/util/applog"
+	"github.com/sangehq/authama/src/internal/util/tz"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -36,7 +38,11 @@ func withStartup(t *testing.T) (home string) {
 	}
 	releaseHeldLock(t)
 	runStartup = true
-	t.Cleanup(func() { runStartup = false })
+	t.Cleanup(func() {
+		runStartup = false
+		applog.Configure(applog.Config{})
+		_ = tz.Set("")
+	})
 	return home
 }
 

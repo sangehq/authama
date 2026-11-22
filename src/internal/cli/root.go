@@ -76,6 +76,8 @@ func newRootCmd() *cobra.Command {
 	root.SetFlagErrorFunc(unknownCommandBeforeFlags)
 	root.PersistentFlags().String(devRootFlag, "",
 		"run against a sandbox directory instead of ~/.ssh (also $"+paths.DevRootEnv+")")
+	root.PersistentFlags().String(tzFlag, "",
+		"show times in this IANA time zone for this run, e.g. UTC or Europe/Berlin (else display.timezone, else this system's)")
 	root.PersistentFlags().Bool(noDotenvFlag, false,
 		"do not read <config home>/.env this run (also $"+envnames.NoDotenv+"=1)")
 	// Start-up - first-run migration, .env and authama.json - runs ahead of
@@ -91,6 +93,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newMigrateCmd())
 	root.AddCommand(newHistoryCmd())
 	root.AddCommand(newEventsCmd())
+	root.AddCommand(newLogsCmd())
 	root.AddCommand(newManCmd())
 	root.AddCommand(newServeCmd())
 	root.AddCommand(newSettingsCmd())

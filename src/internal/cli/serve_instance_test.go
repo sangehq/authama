@@ -35,12 +35,24 @@ func TestServeReusesTheRunningServerForTheHome(t *testing.T) {
 	if out, _ := runServe(t, stop, "--status"); !strings.Contains(out, "pid 4242: http://127.0.0.1:7822/\n") || strings.Contains(out, "token=") {
 		t.Fatalf("--status shows the address without a token:\n%s", out)
 	}
-	// A server that gives no link (one from an older build) is named, with the
-	// way out, and nothing is started beside it.
+	// A server that gives no link (one from an older build) is replaced: it
+	// is stopped and this build starts on its port. One that cannot be
+	// stopped is named, with the way out, and nothing starts beside it.
 	serveNewLink = func(r *serveRecord) (string, error) { return "", errors.New("its record has no control key") }
 	tried, stop = fakeServe(t)
-	if _, err := runServe(t, stop); err == nil || !strings.Contains(err.Error(), "serve --restart") || len(*tried) != 0 {
-		t.Fatalf("a server that gives no link: %v, bound %v", err, *tried)
+	if _, err := runServe(t, stop); err == nil || !strings.Contains(err.Error(), "serve --stop") || len(*tried) != 0 {
+		t.Fatalf("a server that gives no link and cannot be stopped: %v, bound %v", err, *tried)
+	}
+	tried, stop = fakeServe(t)
+	stopped := 0
+	serveStop = func(r *serveRecord) error { stopped++; return nil }
+	out, err = runServe(t, stop)
+	if err != nil || stopped != 1 || len(*tried) == 0 || (*tried)[0] != "127.0.0.1:7822" ||
+		!strings.Contains(out, "replacing the web UI at 127.0.0.1:7822 (pid 4242): it gave no sign-in link") {
+		t.Fatalf("a server that gives no link: %v, stopped %d, bound %v\n%s", err, stopped, *tried, out)
+	}
+	if err := writeServeRecord(p, rec); err != nil {
+		t.Fatal(err)
 	}
 	serveNewLink = func(r *serveRecord) (string, error) { return fresh, nil }
 

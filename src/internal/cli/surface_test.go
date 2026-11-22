@@ -99,6 +99,17 @@ var v1RemovedVerbs = map[string]string{
 // deviation that authorises it. An entry here is a decision someone made; an
 // addition without one is a test failure.
 var goOnly = map[string]string{
+	"logs":                      "owner, 2026-11-22: authama.log, every command, web action, job, file change and sign-in, redacted",
+	"logs export":               "owner, 2026-11-22: the log's records as JSON lines, for a report",
+	"logs path":                 "owner, 2026-11-22: where authama.log is",
+	"logs level":                "owner, 2026-11-22: log.level from the terminal",
+	"logs retention":            "owner, 2026-11-22: log.retention_days from the terminal",
+	"serve browsers":            "owner, 2026-11-22: the browsers the web UI remembers after a link sign-in",
+	"serve browsers forget":     "owner, 2026-11-22: sign a remembered browser out for good",
+	"settings timezone":         "owner, 2026-11-22: the zone every time is shown in",
+	"settings timezone show":    "owner, 2026-11-22: the zone in use and the time there",
+	"settings timezone set":     "owner, 2026-11-22: set display.timezone, checked against the IANA zones",
+	"settings timezone list":    "owner, 2026-11-22: search the IANA zones",
 	"settings set":              "owner, 2026-11-11: edit a setting from the web UI's Settings page or the terminal, previewed",
 	"settings unset":            "owner, 2026-11-11: send a setting back to its default",
 	"settings backup-key":       "owner, 2026-11-11: make and set up an age key so a job's backup check can be fixed in one step",

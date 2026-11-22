@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/sangehq/authama/src/internal/util/applog"
 	"html"
 	"io"
 	"net"
@@ -25,6 +26,8 @@ import (
 	"github.com/sangehq/authama/src/internal/services/owner"
 	"github.com/sangehq/authama/src/internal/util/desktop"
 	"github.com/sangehq/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/tz"
 	"github.com/sangehq/authama/src/internal/version"
 	"github.com/sangehq/authama/src/internal/web"
 )
@@ -87,15 +90,18 @@ func newServeCmd() *cobra.Command {
 			"--read-only serves no change at all.\n\n" +
 			"Listens on 127.0.0.1, port " + strconv.Itoa(web.DefaultPort) + " by default. If that port is taken it takes the\n" +
 			"next free one and prints the address it bound; --port pins a port and fails if it\n" +
-			"is taken. The printed address carries a one-time token that signs the browser in;\n" +
-			"without it every page answers 401.\n\n" +
-			"One server per home: when one is already running for this home, serve opens\n" +
-			"it again instead of starting another, so launching twice - or double-clicking\n" +
-			"the app - never piles servers up. --new starts another anyway; --status says\n" +
+			"is taken. Every launch opens the default browser with a one-time link that signs\n" +
+			"it in, and the browser is remembered for web.remember_days (`serve browsers`);\n" +
+			"--no-open, an SSH session or no desktop prints the address instead.\n\n" +
+			"One server per home: when one is already running for this home, serve checks\n" +
+			"it and opens it instead of starting another, so launching twice - or\n" +
+			"double-clicking the app - never piles servers up. A server that hung, or runs\n" +
+			"an older or rebuilt binary, another base path or another web.port, is replaced.\n" +
+			"--new starts another anyway; --status says\n" +
 			"whether one is running and where; --stop stops it. --stop-all stops every\n" +
 			"authama web UI on this machine's usual ports that proves it holds this home's\n" +
 			"control key, and names the others with the command that stops each;\n" +
-			"--restart does that and starts a fresh one, which is how to load a new build.\n" +
+			"--restart does that and starts a fresh one.\n" +
 			"A page from an older build says so, and can restart its server itself. When every port from the\n" +
 			"default up is taken, any free port is used.\n\n" +
 			"web.addr, web.port and web.base_path in authama.json (or AUTHAMA_WEB_ADDR,\n" +
@@ -147,7 +153,19 @@ func newServeCmd() *cobra.Command {
 			out := c.OutOrStdout()
 			running := readServeRecord(p)
 			if running != nil && !serveAlive(running) {
-				running = nil // a record left by a server that is gone
+				// A record left by a server that is gone, or one that holds
+				// its port and no longer answers: either way it is cleared,
+				// so this launch starts one that works.
+				if serveHung(running) {
+					if err := serveReap(running); err != nil {
+						_, _ = fmt.Fprintf(c.ErrOrStderr(), "the web UI at %s (pid %d) holds its port but does not answer, and was not stopped: %v\n",
+							running.Addr, running.PID, err)
+					} else {
+						_, _ = fmt.Fprintf(out, "stopped the web UI at %s (pid %d): it held its port but no longer answered\n", running.Addr, running.PID)
+					}
+				}
+				removeServeRecord(p, running.Instance)
+				running = nil
 			}
 			// A server replacing one that restarted: wait for the old one to
 			// let go of its port, then take the same port. The sign-in token is
@@ -182,38 +200,40 @@ func newServeCmd() *cobra.Command {
 					return nil
 				}
 				_, _ = fmt.Fprintf(out, "running since %s, pid %d: %s\n",
-					running.Started.Local().Format("2006-01-02 15:04"), running.PID, running.address())
+					tz.Minute(running.Started), running.PID, running.address())
 				return nil
 			}
 			// Reuse the running server, unless asked for a new one or for
 			// something it is not: another port, read-only when it is not, or
-			// a remote bind.
-			if running != nil && !fresh && !pinned && !allowRemote && web.IsLoopback(host) && running.ReadOnly == readOnly &&
-				running.BasePath == basePath {
-				// The address it printed when it started has a link that works
-				// once, so it is asked for a new one.
-				link, err := serveNewLink(running)
-				if err != nil {
-					return fmt.Errorf("%s web UI is already running for this home (pid %d) at %s, but gave no sign-in link: %v; "+
-						"restart it with `%s serve --restart`", brand.Name, running.PID, running.address(), err, brand.Command)
+			// a remote bind. First it is checked: one from an older build, or
+			// serving under another base path or off web.port, is replaced by
+			// this build rather than opened as it is.
+			if running != nil && !fresh && !pinned && !allowRemote && web.IsLoopback(host) && running.ReadOnly == readOnly {
+				configuredPort := 0
+				if !c.Flags().Changed("port") && envnames.Get(nil, envnames.WebPort) != "" {
+					configuredPort = port
 				}
-				_, _ = fmt.Fprintf(out, "%s web UI is already running for this home (pid %d): %s\n", brand.Name, running.PID, link)
-				_, _ = fmt.Fprintf(out, "the link signs in once, within %d minutes; stop the server with `%s serve --stop`, or start another with `%s serve --new`\n",
-					int(web.LinkLifetime/time.Minute), brand.Command, brand.Command)
-				if tokenFile != "" {
-					if err := writeTokenFile(tokenFile, link); err != nil {
-						return err
+				exe, _ := os.Executable()
+				fix := replaceReason(running, version.Version, exe, configuredPort, basePath, serveProcessExe(running.PID))
+				if fix.Why == "" {
+					// The address it printed when it started has a link that
+					// works once, so it is asked for a new one.
+					link, err := serveNewLink(running)
+					if err == nil {
+						return openRunning(c, p, running, link, tokenFile, noOpen)
 					}
+					_, portStr, _ := net.SplitHostPort(running.Addr)
+					n, _ := strconv.Atoi(portStr)
+					fix = launchFix{Why: fmt.Sprintf("it gave no sign-in link (%v)", err), Port: n}
 				}
-				if !noOpen && platform.StdinIsTerminal() {
-					// This process ends now, so the page is not removed
-					// here: the next launch sweeps it once its link has
-					// expired.
-					if _, err := serveBrowser(p.StateDir(), link); err != nil {
-						_, _ = fmt.Fprintf(c.ErrOrStderr(), "could not open a browser (%s); open the address above yourself\n", err)
-					}
+				_, _ = fmt.Fprintf(out, "replacing the web UI at %s (pid %d): %s\n", running.Addr, running.PID, fix.Why)
+				if err := serveStop(running); err != nil {
+					return fmt.Errorf("%s web UI is running for this home (pid %d) at %s and could not be replaced: %w; stop it with `%s serve --stop` and run %s again",
+						brand.Name, running.PID, running.address(), err, brand.Command, brand.Command)
 				}
-				return nil
+				removeServeRecord(p, running.Instance)
+				pinnedPort = fix.Port
+				running = nil
 			}
 
 			// A home whose seal was removed is not served: the web UI would
@@ -273,6 +293,7 @@ func newServeCmd() *cobra.Command {
 				AutoRestart:  settingOn(envnames.WebAutoRestart, true),
 				API:          settingOn(envnames.API, false),
 				Sessions:     handoffSessions(handoff),
+				RememberFor:  rememberFor(),
 			})
 			if err != nil {
 				_ = ln.Close()
@@ -300,6 +321,8 @@ func newServeCmd() *cobra.Command {
 				mode = "read-only"
 			}
 			_, _ = fmt.Fprintf(out, "home %s (%s)\n", p.ConfigDir, mode)
+			applog.Info("web UI started", "area", "web", "addr", net.JoinHostPort(displayHost(host), strconv.Itoa(bound)),
+				"version", version.Version, "read_only", readOnly, "remember_days", int(rememberFor()/(24*time.Hour)))
 			if settingOn(envnames.API, false) {
 				_, _ = fmt.Fprintf(out, "read API on: %s%s (API tokens only: authama api token create)\n",
 					strings.TrimSuffix(strings.SplitN(url, "?", 2)[0], "/"), "/api/v1")
@@ -318,7 +341,7 @@ func newServeCmd() *cobra.Command {
 					return err
 				}
 			}
-			if !noOpen && platform.StdinIsTerminal() {
+			if wantBrowser(c, noOpen) {
 				removePage, err := serveBrowser(p.StateDir(), url)
 				if err != nil {
 					_, _ = fmt.Fprintf(c.ErrOrStderr(), "could not open a browser (%s); open the address above yourself\n", err)
@@ -352,7 +375,68 @@ func newServeCmd() *cobra.Command {
 	f.BoolVar(&stopEvery, "stop-all", false, "stop every authama web UI on this machine's usual ports that proves this home's control key; others are listed with how to stop them")
 	f.BoolVar(&restart, "restart", false, "stop every authama web UI found, then start a fresh one: how to load a new build")
 	cmd.MarkFlagsMutuallyExclusive("new", "status", "stop", "stop-all", "restart")
+	cmd.AddCommand(newServeBrowsersCmd())
 	return cmd
+}
+
+// openRunning hands the running server's fresh link to the browser, and to
+// --token-file, and says so. This process ends now, so the launch page is not
+// removed here: the next launch sweeps it once its link has expired.
+func openRunning(c *cobra.Command, p paths.Paths, running *serveRecord, link, tokenFile string, noOpen bool) error {
+	out := c.OutOrStdout()
+	if cmp, ok := compareVersions(running.Version, version.Version); ok && cmp > 0 {
+		_, _ = fmt.Fprintf(out, "a newer build (%s) is running than this one (%s); opening it as it is\n", running.Version, version.Version)
+	}
+	_, _ = fmt.Fprintf(out, "%s web UI is already running for this home (pid %d): %s\n", brand.Name, running.PID, link)
+	_, _ = fmt.Fprintf(out, "the link signs in once, within %d minutes; stop the server with `%s serve --stop`, or start another with `%s serve --new`\n",
+		int(web.LinkLifetime/time.Minute), brand.Command, brand.Command)
+	if tokenFile != "" {
+		if err := writeTokenFile(tokenFile, link); err != nil {
+			return err
+		}
+	}
+	if wantBrowser(c, noOpen) {
+		if _, err := serveBrowser(p.StateDir(), link); err != nil {
+			_, _ = fmt.Fprintf(c.ErrOrStderr(), "could not open a browser (%s); open the address above yourself\n", err)
+		} else {
+			_, _ = fmt.Fprintln(out, "opened it in your browser")
+		}
+	}
+	return nil
+}
+
+// wantBrowser reports whether this launch opens a browser: not with
+// --no-open, not without a terminal (a script or a service), and not where
+// there is no desktop to open one on, which it says.
+func wantBrowser(c *cobra.Command, noOpen bool) bool {
+	if noOpen || !serveInteractive() {
+		return false
+	}
+	if ok, why := canOpenBrowser(runtime.GOOS, os.Getenv); !ok {
+		_, _ = fmt.Fprintf(c.ErrOrStderr(), "not opening a browser: %s; open the address above on this machine, or tunnel to it\n", why)
+		return false
+	}
+	return true
+}
+
+// serveInteractive is whether stdin is a terminal, swappable in tests.
+var serveInteractive = platform.StdinIsTerminal
+
+// serveProcessExe is the executable a pid runs, for telling a server whose
+// binary was rebuilt in place; "" when it cannot be read. Swappable in tests.
+var serveProcessExe = func(pid int) string {
+	switch runtime.GOOS {
+	case "linux":
+		exe, _ := os.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
+		return exe
+	case "darwin":
+		name, err := processName(pid)
+		if err != nil || !filepath.IsAbs(name) {
+			return ""
+		}
+		return name
+	}
+	return ""
 }
 
 // splitAddr accepts "host" or "host:port".
@@ -402,9 +486,34 @@ func writeTokenFile(path, url string) error {
 	return os.Chmod(path, 0o600)
 }
 
-// browserStart starts the opener and does not wait for it; a seam so a test
-// can see the argv without starting a browser.
-var browserStart = func(argv []string) error { return exec.Command(argv[0], argv[1:]...).Start() }
+// browserStart starts the opener detached from this terminal, and waits up to
+// openerWait for it to hand the page to the browser: a launch that exits at
+// once (a server already running) must not end before the opener has. A seam
+// so a test can see the argv without starting a browser.
+var browserStart = func(argv []string) error {
+	cmd := openerCmd(argv)
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	done := make(chan error, 1)
+	go func() { done <- cmd.Wait() }()
+	select {
+	case err := <-done:
+		return err
+	case <-time.After(openerWait):
+		return nil // a browser that keeps its opener (xdg-open) is still opening
+	}
+}
+
+// openerWait bounds how long a launch waits for the opener to finish.
+const openerWait = 5 * time.Second
+
+// openerCmd is the opener's command, detached from the terminal.
+func openerCmd(argv []string) *exec.Cmd {
+	cmd := exec.Command(argv[0], argv[1:]...)
+	detachOpener(cmd)
+	return cmd
+}
 
 // launchPagePattern names the owner-only page openBrowser hands the browser.
 const launchPagePattern = "serve-open-*.html"

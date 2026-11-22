@@ -14,6 +14,7 @@ import (
 	"github.com/sangehq/authama/src/internal/services/tokensvc"
 	"github.com/sangehq/authama/src/internal/util/csvout"
 	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/tz"
 )
 
 // eventRoots is what a home's events track: ~/.ssh, the config home, and each
@@ -103,7 +104,7 @@ func newEventsCmd() *cobra.Command {
 			tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
 			_, _ = fmt.Fprintln(tw, "TIME\tKIND\tAREA\tFILE\tDETAIL")
 			for _, e := range evs {
-				_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", e.Time.Local().Format("2006-01-02 15:04:05"), e.Kind, orDashStr(e.Area), orDashStr(e.Path), e.Detail)
+				_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", tz.Second(e.Time), e.Kind, orDashStr(e.Area), orDashStr(e.Path), e.Detail)
 			}
 			return tw.Flush()
 		},

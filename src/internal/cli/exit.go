@@ -59,7 +59,7 @@ func silent(err error) bool {
 // an outcome to an exit code.
 func Execute() {
 	root := newRootCmd()
-	err := root.Execute()
+	err := executeLogged(root, os.Args[1:])
 	if err == nil {
 		return
 	}
