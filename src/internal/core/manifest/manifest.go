@@ -18,7 +18,6 @@ import (
 	"strings"
 	"unicode"
 
-
 	"github.com/sangehq/authama/src/internal/core/key"
 	"github.com/sangehq/authama/src/internal/util/fs"
 )
