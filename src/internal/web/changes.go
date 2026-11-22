@@ -86,21 +86,25 @@ var actionFields = map[string][]string{
 	"token-import":            {},
 	"token-config-edit":       {"body"},
 	"setup-import":            {"body", "on_conflict"},
-	"key-lifetime":            {"key", "lifetime"},
-	"key-regen-pub":           {"key", "profile", "all"},
-	"ssh-import":              {"source", "replace"},
-	"key-root":                {"root", "confirm"},
-	"naming-set":              {"profile", "alias", "envs", "roles", "enforce", "start", "code_fallback"},
-	"naming-key-template":     {"profile", "key_name"},
-	"profile-code":            {"name", "code"},
-	"owner-init":              {},
-	"owner-pin-set":           {"pin_current_ref", "pin_new_ref", "pin_confirm_ref"},
-	"owner-pin-remove":        {"pin_current_ref"},
-	"owner-reseal":            {},
-	"owner-forget":            {"confirm"},
-	"owner-fingerprint":       {"on"},
-	"repair":                  {},
-	"factory-reset":           {"confirm"},
+	// structure-plan carries every move select (one plan line each) and
+	// the free-form plan lines; structure-dismiss hides one suggestion.
+	"structure-plan":      {"move", "moves"},
+	"structure-dismiss":   {"id", "undo"},
+	"key-lifetime":        {"key", "lifetime"},
+	"key-regen-pub":       {"key", "profile", "all"},
+	"ssh-import":          {"source", "replace"},
+	"key-root":            {"root", "confirm"},
+	"naming-set":          {"profile", "alias", "envs", "roles", "enforce", "start", "code_fallback"},
+	"naming-key-template": {"profile", "key_name"},
+	"profile-code":        {"name", "code"},
+	"owner-init":          {},
+	"owner-pin-set":       {"pin_current_ref", "pin_new_ref", "pin_confirm_ref"},
+	"owner-pin-remove":    {"pin_current_ref"},
+	"owner-reseal":        {},
+	"owner-forget":        {"confirm"},
+	"owner-fingerprint":   {"on"},
+	"repair":              {},
+	"factory-reset":       {"confirm"},
 }
 
 // secretFields are the typed secrets each action takes. Each goes into the
@@ -592,6 +596,10 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		errs = append(errs, err)
 	case "setup-import":
 		ch, errs = setupImportChange(f, errs)
+	case "structure-plan":
+		ch, errs = structurePlanChange(f, errs)
+	case "structure-dismiss":
+		ch, errs = structureDismissChange(f, errs)
 	case "token-config-edit":
 		body := f.Get("body")
 		switch {
@@ -616,8 +624,10 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 func carried(f url.Values) []formField {
 	out := []formField{{"action", f.Get("action")}}
 	for _, k := range actionFields[f.Get("action")] {
-		if f.Has(k) {
-			out = append(out, formField{k, f.Get(k)})
+		// Every value: a field a form repeats (the structure page's move
+		// selects) reaches the confirmation whole.
+		for _, v := range f[k] {
+			out = append(out, formField{k, v})
 		}
 	}
 	return append(out, thenFields(f, thenPrefix)...)

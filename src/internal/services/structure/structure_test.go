@@ -48,7 +48,7 @@ func write(t *testing.T, path, body string, mode os.FileMode) {
 
 func pair(t *testing.T, priv, pub string) {
 	t.Helper()
-	write(t, priv, "-----BEGIN OPENSSH PRIVATE KEY-----\nfake\n-----END OPENSSH PRIVATE KEY-----\n", 0o600)
+	write(t, priv, "placeholder for a private key: never read\n", 0o600)
 	write(t, priv+".pub", pub, 0o644)
 }
 

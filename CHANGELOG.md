@@ -33,6 +33,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   its link. `sign set` edits the block and applies it, `sign status` shows what each checkout resolves, `sign use`
   makes one checkout a profile's wherever it is, and `sign verify` checks recent commits against `allowed_signers`.
   Recipe: [Sign commits with each profile's SSH key](docs/recipes/sign-commits-with-ssh.md).
+- **A visual structure builder in the web UI** (`/structure`: SSH → Structure, `g b`). The SSH folder as a tree -
+  key root, categories, profiles with their keys and hosts - beside the keys found outside it. Each movable item has
+  a menu of moves, and dragging a profile onto a category or a stray key onto a profile picks the same entry, so
+  the keyboard and the mouse reach the same moves. The chosen moves, plus any plan lines typed in, go through the
+  usual preview (the key files that move, by path only, and the manifest and config diffs) before anything is
+  written; suggestions can be dismissed and shown again. Plain Tabler markup and one small script component.
 - **A structure watcher for `~/.ssh`** (`authama ssh structure`). It finds keys outside the expected layout - a
   pair loose in `~/.ssh`, a key no profile declares in a profile's directory, a key in a directory no profile owns,
   a declared key in the wrong directory, a key in the config home - and suggests a move for each, guessing the

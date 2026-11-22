@@ -45,6 +45,7 @@ func TestEveryPageRenders(t *testing.T) {
 		"/about":                                "This build",
 		"/termius":                              "Termius import",
 		"/setup":                                "Move setup",
+		"/structure":                            "Structure",
 	}
 	if len(pages) < 19 {
 		t.Fatal("the page list shrank")

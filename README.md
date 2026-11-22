@@ -127,7 +127,7 @@ else is in the [documentation index](#documentation).
 - [`validate`](docs/tools/validate.md) — keypair integrity checks.
 - [`bundle`](docs/tools/bundle.md) — encrypted backup and restore.
 - [`setup`](docs/tools/setup.md) — move a setup between machines: a secrets-free document, or everything (keys and token values) passphrase-encrypted; import with a preview and a conflict policy.
-- [`ssh structure`](docs/tools/structure.md) — find keys outside the expected layout and move each into its profile once you approve it; checked by `serve` and, optionally, a background job.
+- [`ssh structure`](docs/tools/structure.md) — find keys outside the expected layout and move each into its profile once you approve it; checked by `serve` and, optionally, a background job; the web UI draws the folder as a tree with drag and drop.
 - [`history`](docs/tools/history.md) — every change authama has made, filtered by host, profile or key.
 - [`events`](docs/tools/events.md) — every change seen to a file under `~/.ssh`, the config home or a token file, by anyone.
 - [Read API](docs/tools/api.md) — JSON for programs at `/api/v1/` on `serve`, with API tokens; reads only, off by default.

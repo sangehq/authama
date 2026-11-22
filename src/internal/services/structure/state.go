@@ -87,6 +87,23 @@ func Check(p paths.Paths, now time.Time) (all, fresh []Suggestion, err error) {
 	return all, fresh, SaveState(p, st)
 }
 
+// Current is the suggestions now, marked dismissed where the owner dismissed
+// them, and when the last check ran. Unlike Check it writes nothing, so a
+// page can show it on a read-only server.
+func Current(p paths.Paths) ([]Suggestion, time.Time, error) {
+	all, err := Suggest(p)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	st, _ := LoadState(p)
+	for i := range all {
+		if _, ok := st.Dismissed[all[i].ID]; ok {
+			all[i].Dismissed = true
+		}
+	}
+	return all, st.Checked, nil
+}
+
 // MarkNotified records that a notification named these suggestions, so the
 // next check does not repeat them.
 func MarkNotified(p paths.Paths, ss []Suggestion, now time.Time) error {

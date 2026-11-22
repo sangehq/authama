@@ -176,7 +176,7 @@ func TestReadOnlyServesNoChangeAndShowsNoForm(t *testing.T) {
 			t.Errorf("read-only %s: %d, want 405", path, rec.Code)
 		}
 	}
-	for _, page := range []string{"/", "/profiles", "/naming", "/import", "/hosts", "/hosts/gh", "/keys", "/snapshots", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export", "/setup"} {
+	for _, page := range []string{"/", "/profiles", "/naming", "/import", "/hosts", "/hosts/gh", "/keys", "/snapshots", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export", "/setup", "/structure"} {
 		if strings.Contains(c.get(page).Body.String(), "/changes/preview") {
 			t.Errorf("read-only %s shows a change form", page)
 		}
@@ -289,8 +289,10 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 	if openable == "" {
 		t.Fatal("the changes above took no snapshot to offer a restore of")
 	}
+	// A loose key gives the structure page a suggestion to move and dismiss.
+	looseKey(t, p.SSHDir, "id_stray")
 	for _, page := range []string{"/", "/profiles", "/naming", "/import", "/hosts", "/hosts/gh", "/hosts/devbox", "/keys", "/snapshots",
-		"/snapshots/" + openable, "/keys/" + fixtureKey(t, c), "/keys/work/spare", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export", "/setup"} {
+		"/snapshots/" + openable, "/keys/" + fixtureKey(t, c), "/keys/work/spare", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export", "/setup", "/structure"} {
 		for _, m := range action.FindAllStringSubmatch(c.get(page).Body.String(), -1) {
 			seen[m[1]] = true
 			_, change := actionFields[m[1]]

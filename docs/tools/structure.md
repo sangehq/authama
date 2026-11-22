@@ -75,6 +75,28 @@ profile work category clients                      # a profile into a category: 
 profile work category -                            # ... and out of one
 ```
 
+## In the web UI
+
+**SSH → Structure** (`/structure`, `g b` in the palette) draws the folder as a tree: the key root, each category, each
+profile with its directory, the keys it declares (with a badge for one kept where it is, or not on disk yet) and its
+hosts with the key each uses, then **Outside the layout** - every suggestion, with its kind, why, and the config
+files that name it.
+
+- **Choose a move** from an item's menu: a profile's moves it into another category or out of one; a stray key's
+  moves it into a profile (the guessed one is marked *suggested*); a misplaced key's moves it back.
+- **Or drag it**: a profile onto a category, a stray key onto a profile. A drop only chooses the same menu entry, so
+  the keyboard and the mouse reach the same moves, and the page works without the script. Items that can move are
+  marked as draggable; a place an item cannot go does not accept it.
+- **Moves** lists what is chosen so far, and takes extra [plan lines](#plans) - a new category, a key under a new
+  name. **Preview the moves** opens the usual preview: each key file that moves (its path, never its content), and
+  the manifest, inventory and `~/.ssh/config` diffs. Nothing is written until you confirm, and the change is in
+  History like any other.
+- **Dismiss** hides a suggestion; **Show the dismissed suggestions** lists them with **Show again**.
+
+Hosts and declared keys do not move between profiles: a host's alias, key and deployments belong to its profile,
+so moving one means a new host (and key) in the other profile. Keys adopted where they are never move. A
+read-only server shows the tree and the suggestions, without the menus.
+
 ## The watcher
 
 - **Inside `authama serve`.** The server already scans `~/.ssh`, the config home and token files every 30 seconds

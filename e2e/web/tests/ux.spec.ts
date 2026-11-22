@@ -176,6 +176,27 @@ test('Move setup downloads a document with no secret, and previews a pasted impo
   await expect(page.getByText(/nothing to change|already the same/).first()).toBeVisible();
 });
 
+test('the structure tree moves a stray key by drag and drop or its menu, and previews before writing', async ({ page }) => {
+  await page.goto('/structure');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Structure');
+  const stray = page.locator('li[draggable="true"]', { hasText: '~/.ssh/id_e2e_stray' });
+  await expect(stray).toBeVisible();
+  const menu = page.getByLabel('Move ~/.ssh/id_e2e_stray');
+  await expect(menu).toHaveValue('');
+  // Dragging onto a profile picks that profile in the item's menu.
+  await stray.dragTo(page.locator('li[data-drop="profile:work"]').first());
+  await expect(menu).toHaveValue('key ~/.ssh/id_e2e_stray profile work');
+  const pending = page.locator('[data-structure-pending]');
+  await expect(pending).toContainText('~/.ssh/id_e2e_stray: into work');
+  // The menu is the keyboard way to the same choice.
+  await menu.selectOption({ label: 'Leave it' });
+  await expect(pending).toContainText('Nothing yet');
+  await menu.focus();
+  await menu.selectOption({ value: 'key ~/.ssh/id_e2e_stray profile work' });
+  await page.getByRole('button', { name: 'Preview the moves' }).click();
+  await expect(page.getByText('creates ~/.ssh/profiles/work/id_e2e_stray').first()).toBeVisible();
+});
+
 test('tokens.json is checked as it is typed, and cannot be sent while it is not JSON', async ({ page }) => {
   await page.goto('/tokens');
   await page.getByRole('button', { name: 'Edit tokens.json' }).click();

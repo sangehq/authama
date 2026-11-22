@@ -3,6 +3,7 @@ package change
 import (
 	"io"
 	"os"
+	"time"
 
 	"github.com/sangehq/authama/src/internal/services/history"
 	"github.com/sangehq/authama/src/internal/services/structure"
@@ -45,6 +46,25 @@ func StructurePlan(moves []structure.Move) Change {
 				return ApplyManifestEdit(out, p)
 			}
 			return nil
+		},
+	}
+}
+
+// StructureDismiss is `authama ssh structure dismiss <id> [--undo]`: hides a
+// suggestion from the structure list (or shows it again). It moves nothing
+// and is kept in the state home only.
+func StructureDismiss(id string, undo bool) Change {
+	args, verb := []string{id}, "hides"
+	if undo {
+		args, verb = append(args, "--undo"), "shows again"
+	}
+	return Change{
+		Command: "ssh structure dismiss", Args: args, NoSnapshot: true,
+		Effects: func(paths.Paths) ([]string, error) {
+			return []string{verb + " suggestion " + id + " in the structure list; no file moves"}, nil
+		},
+		Run: func(p paths.Paths, out io.Writer) error {
+			return structure.Dismiss(p, []string{id}, undo, time.Now())
 		},
 	}
 }

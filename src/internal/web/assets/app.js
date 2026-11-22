@@ -17,6 +17,7 @@ import { JsonField } from "./js/components/json-field.js";
 import { ExportPage } from "./js/components/export-page.js";
 import { KeyPicker, MovedPanels } from "./js/components/key-picker.js";
 import { SlowProgress } from "./js/components/slow-progress.js";
+import { StructureTree } from "./js/components/structure-tree.js";
 import { SettingsFilter } from "./js/components/settings-page.js";
 import { LiveBuild, RestartServer, Restarted } from "./js/components/restart.js";
 
@@ -39,6 +40,7 @@ App.create()
   .use(KeyPicker)
   .use(MovedPanels)
   .use(SlowProgress)
+  .use(StructureTree)
   .use(SettingsFilter)
   .use(CopyText)
   .use(PanelOpen)

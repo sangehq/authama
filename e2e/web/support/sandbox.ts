@@ -115,6 +115,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     run(env, bin, ['ssh', 'bundle', '--recipient', recipient]);
     const bundle = readdirSync(join(state, 'dist')).find((f) => f.endsWith('.age'));
     if (!bundle) throw new Error(`ssh bundle wrote no .age file into ${join(state, 'dist')}`);
+    // A key loose in ~/.ssh, for the structure page to suggest moving.
+    run(env, 'ssh-keygen', ['-q', '-t', 'ed25519', '-N', '', '-C', 'stray@e2e', '-f', join(home, '.ssh', 'id_e2e_stray')]);
 
     const tokenFile = join(home, 'serve-url');
     let output = '';
