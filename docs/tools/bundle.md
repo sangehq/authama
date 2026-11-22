@@ -86,6 +86,13 @@ question before it writes lists the options, and the summary says which it laid 
 no such switch; it shows the refusal and the command. A manifest you edit by hand is not checked:
 these options are yours to set.
 
+### Signed bundles
+
+`authama ssh bundle --sign-key <private key>` writes `<bundle>.sig` with `ssh-keygen -Y sign` and trusts the key in
+this home's `bundle_signers`. `ssh restore` checks a `.sig` it finds before it decrypts: a bundle changed after it
+was signed is refused, and `--require-signature` also refuses an unsigned bundle, or one signed by a key
+`bundle_signers` (or `--signers FILE`) does not trust. See [signed bundles](../reference/bundle-signatures.md).
+
 ```sh
 authama settings backup-key                # once: makes an age key and sets the recipient (or set
                                            # AUTHAMA_AGE_RECIPIENT="age1..." to a key you have)

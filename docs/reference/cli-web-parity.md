@@ -25,9 +25,9 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | Partial | 3 |
 | CLI-only by design | 19 |
 | Gap | 0 |
-| Flags on those commands | 406 |
-| Flags covered | 338 |
-| Flags CLI-only by design | 68 |
+| Flags on those commands | 412 |
+| Flags covered | 339 |
+| Flags CLI-only by design | 73 |
 | Flags with no web control | 0 |
 
 
@@ -85,10 +85,10 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `settings show` | web | /settings | `--effective`, `--json` |  |
 | `settings unset` | web | /settings | - |  |
 | `settings validate` | web | /settings (checked as you type) | - |  |
-| `setup export` | web | /setup: export (PIN-gated encrypt) | `--encrypt`, `--out`, `--passphrase-file` (CLI) |  |
-| `setup import` | web | /setup: import (preview first) | `--allow-risky-options`, `--dry-run`, `--on-conflict`, `--passphrase-file` (CLI), `--yes` |  |
+| `setup export` | web | /setup: export (PIN-gated encrypt) | `--encrypt`, `--out`, `--passphrase-file` (CLI), `--sign-key` (CLI) | --sign-key stays in the terminal: ssh-keygen may ask for the key's passphrase. |
+| `setup import` | web | /setup: import (preview first) | `--allow-risky-options`, `--dry-run`, `--on-conflict`, `--passphrase-file` (CLI), `--require-signature` (CLI), `--signers` (CLI), `--yes` | An upload arrives without its .sig, so signatures are checked in the terminal. |
 | `ssh audit` | web | /audit (CSV, Notify) | `--csv`, `--notify` |  |
-| `ssh bundle` | web | /snapshots: Bundle | `--keep`, `--output` (CLI), `--recipient` | Written to the state home dist/. |
+| `ssh bundle` | web | /snapshots: Bundle | `--keep`, `--output` (CLI), `--recipient`, `--sign-key` (CLI) | Written to the state home dist/. --sign-key stays in the terminal: ssh-keygen may ask for the key's passphrase. |
 | `ssh clean` | web | /doctor: Clean | `--adopt`, `--dry-run`, `--yes` |  |
 | `ssh config adopt` | web | /ssh-config: Adopt duplicate Host blocks | `--dry-run`, `--yes` | New in this branch. |
 | `ssh config check` | web | /ssh-config | - |  |
@@ -144,7 +144,7 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `ssh providers` | partial | /settings: Export providers; host form provider list | `--export`, `--force` | No page lists credential state. |
 | `ssh reconcile` | web | overview/keys: Reconcile | `--dry-run`, `--no-pin`, `--passphrase` (CLI), `--yes` | Runs with --no-pin; host keys are pinned from /hosts. |
 | `ssh recover` | web | key page: Break-glass | - | New in this branch. The no-argument fixkeys tool stays CLI. |
-| `ssh restore` | web | /transfer, /snapshots: Restore bundle (job) | `--allow-risky-options`, `--identity` (CLI), `--yes` |  |
+| `ssh restore` | web | /transfer, /snapshots: Restore bundle (job; checks bundle_signers, Require a trusted signature) | `--allow-risky-options`, `--identity` (CLI), `--require-signature`, `--signers` (CLI), `--yes` | --signers: the web trusts bundle_signers only. |
 | `ssh rollback` | web | key page: Roll back (job) | `--yes` |  |
 | `ssh rotate` | web | key page / bulk Rotate (job) | `--all`, `--allow-unverified`, `--category`, `--check`, `--dry-run`, `--evict-old`, `--failed`, `--force`, `--keep-old`, `--no-key-backup`, `--passphrase` (CLI), `--yes` | --failed: the review link; --keep-old: Take the previous key off servers unticked. |
 | `ssh show` | web | profile/host/key pages | - |  |

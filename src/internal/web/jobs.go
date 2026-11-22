@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/bundlesig"
 	"github.com/sangehq/authama/src/internal/services/reconciler"
 
 	"github.com/sangehq/authama/src/internal/brand"
@@ -60,7 +61,7 @@ var jobFields = map[string][]string{
 	// delete-keys deletes each chosen key, as `authama ssh key delete` does.
 	"delete-keys": {"sel", "all", "revoke", "purge"},
 	// bundle-restore lays a bundle from the state home's dist/ back.
-	"bundle-restore": {"bundle"},
+	"bundle-restore": {"bundle", "require_signature"},
 	// knownhosts-init scans a profile's hosts, or every host, and pins what
 	// answers (trust on first use), as `ssh knownhosts init` does.
 	"knownhosts-init": {"profile", "all", "force"},
@@ -592,20 +593,31 @@ func bundleRestoreSpec(f url.Values, h home, retain int) (jobSpec, error) {
 	if _, err := os.Stat(path); err != nil {
 		return jobSpec{}, badForm("no bundle %s in %s", b, h.p.DistDir())
 	}
+	require := checked(f, "require_signature")
+	args := []string{b, "--yes"}
+	if require {
+		args = append(args, "--require-signature")
+	}
 	return jobSpec{
-		scope: mutation.Scope{Command: "restore", Args: []string{b, "--yes"}, Source: history.SourceWeb},
+		scope: mutation.Scope{Command: "restore", Args: args, Source: history.SourceWeb},
 		what: []string{
+			"checks the signature next to it (" + b + ".sig), if any, against bundle_signers: a bundle changed after it was signed is refused",
 			"decrypts " + b + " with the identity in AUTHAMA_AGE_IDENTITY_FILE, which cannot have a passphrase here",
 			"refuses it, writing nothing, if its manifest sets SSH options that could redirect or weaken connections; " +
 				"a bundle you made yourself is restored with `authama ssh restore " + b + " --allow-risky-options`",
 			"lays its keys and config-home files back over what is there, snapshotting ~/.ssh first",
 			"then sets every mode right and renders ~/.ssh/config",
 		},
-		run: func(j *jobs.Job) error { return bundleRestoreJob(j, h.p, retain, path) },
+		run: func(j *jobs.Job) error { return bundleRestoreJob(j, h.p, retain, path, require) },
 	}, nil
 }
 
-func bundleRestoreJob(j *jobs.Job, p paths.Paths, retain int, path string) error {
+func bundleRestoreJob(j *jobs.Job, p paths.Paths, retain int, path string, requireSig bool) error {
+	sig, err := bundlesig.Check(path, bundlesig.Options{Signers: bundlesig.SignersPath(p), Require: requireSig})
+	if err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintln(j, sig.String())
 	ident := envnames.Get(nil, envnames.AgeIdentityFile)
 	if ident == "" {
 		return errors.New("AUTHAMA_AGE_IDENTITY_FILE is not set where authama serve runs; restore from a terminal " +
@@ -703,6 +715,9 @@ func jobOptions(f url.Values, fields []formField) ([]jobOption, []formField) {
 	case "revoke-keys":
 		opts = []jobOption{{Name: "reason", Label: "Reason (optional)", Text: true, Placeholder: "laptop lost, contractor left…",
 			Detail: "Kept with the revocation record and shown in the history."}}
+	case "bundle-restore":
+		opts = []jobOption{{Name: "require_signature", Label: "Require a trusted signature",
+			Detail: "Refuse the bundle unless its .sig is a good signature by a key in bundle_signers, as restore --require-signature does."}}
 	case "delete-keys", "delete-host", "delete-profile":
 		opts = []jobOption{
 			{Name: "revoke", Label: "Revoke each from its targets first",

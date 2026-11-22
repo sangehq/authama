@@ -113,6 +113,9 @@ Import tells the two forms apart by their first bytes. It shows, before writing 
 A manifest that sets SSH options that could redirect or weaken connections (a `ControlPath` or `IdentityAgent`
 outside `~/.ssh`, `ForwardAgent` or `StrictHostKeyChecking no` for every host) is refused, as `ssh restore`
 refuses one, unless you pass `--allow-risky-options` for a file you made yourself: neither form proves who made it.
+A signature does: `setup export --out FILE --sign-key KEY` writes `FILE.sig`, and `setup import` checks it,
+refusing a file changed after it was signed (`--require-signature` and `--signers` as for `ssh restore`; see
+[signed bundles](../reference/bundle-signatures.md)).
 
 Keys land 0600 in folders 0700, `.env` stays 0600, and the config files are written owner-only. Token values are
 merged into `.env` double-quoted, every other line of it kept as it was. The import is recorded in the history

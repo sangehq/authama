@@ -47,7 +47,7 @@ func newSetupCmd() *cobra.Command {
 }
 
 func newSetupExportCmd() *cobra.Command {
-	var out, passFile string
+	var out, passFile, signKey string
 	var encrypt bool
 	cmd := &cobra.Command{
 		Use:   "export",
@@ -70,6 +70,9 @@ func newSetupExportCmd() *cobra.Command {
 					return err
 				}
 				if out == "" {
+					if signKey != "" {
+						return errors.New("--sign-key signs a file: name it with --out")
+					}
 					_, err = c.OutOrStdout().Write(body)
 					return err
 				}
@@ -78,6 +81,11 @@ func newSetupExportCmd() *cobra.Command {
 				}
 				_, _ = fmt.Fprintf(c.OutOrStdout(), "wrote %s: %d profile(s), %d key(s) named (none carried), %d token variable(s) named (no values)\n",
 					out, len(d.Profiles), len(d.Keys), len(d.EnvNames))
+				if signKey != "" {
+					if err := signWritten(c, p, out, signKey); err != nil {
+						return fmt.Errorf("the export is written, but not signed: %w", err)
+					}
+				}
 				return nil
 			}
 			if out == "" {
@@ -112,12 +120,18 @@ func newSetupExportCmd() *cobra.Command {
 				_, _ = fmt.Fprintf(w, "  no value here for %s, so the export carries none for it\n", strings.Join(res.Missing, ", "))
 			}
 			_, _ = fmt.Fprintf(w, "Keep the passphrase apart from the file. Import it with: %s setup import %s\n", brand.Command, res.Path)
+			if signKey != "" {
+				if err := signWritten(c, p, res.Path, signKey); err != nil {
+					return fmt.Errorf("the export is written, but not signed: %w", err)
+				}
+			}
 			return nil
 		},
 	}
 	cmd.Flags().StringVarP(&out, "out", "o", "", "write to this file (mode 0600) instead of stdout; required with --encrypt, and never replaced")
 	cmd.Flags().BoolVar(&encrypt, "encrypt", false, "a full export: private keys, inventory and token values too, encrypted with a passphrase")
 	cmd.Flags().StringVar(&passFile, "passphrase-file", "", "read the passphrase from this owner-only file instead of asking")
+	signFlag(cmd, &signKey)
 	return cmd
 }
 
@@ -169,8 +183,8 @@ func setupPassphrase(c *cobra.Command, file string, choose bool) ([]byte, error)
 }
 
 func newSetupImportCmd() *cobra.Command {
-	var onConflict, passFile string
-	var dryRun, yes, allowRisky bool
+	var onConflict, passFile, signers string
+	var dryRun, yes, allowRisky, requireSig bool
 	cmd := &cobra.Command{
 		Use:   "import FILE",
 		Short: "Merge a setup document, an export pack or an encrypted full export into this home, after showing what it would do",
@@ -190,6 +204,9 @@ func newSetupImportCmd() *cobra.Command {
 			}
 			head, err := fileHead(args[0])
 			if err != nil {
+				return err
+			}
+			if err := checkSignature(c, p, args[0], signers, requireSig); err != nil {
 				return err
 			}
 			if agepass.IsAge(head) {
@@ -243,6 +260,7 @@ func newSetupImportCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "import without confirming (implied when there is no terminal)")
 	cmd.Flags().StringVar(&passFile, "passphrase-file", "", "an encrypted export: read its passphrase from this owner-only file instead of asking")
 	cmd.Flags().BoolVar(&allowRisky, "allow-risky-options", false, "import a manifest that sets SSH options that could redirect or weaken connections (you made it yourself)")
+	verifyFlags(cmd, &requireSig, &signers)
 	return cmd
 }
 

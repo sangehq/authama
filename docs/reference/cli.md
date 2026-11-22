@@ -1579,6 +1579,7 @@ Flags:
       --encrypt[=true|false]     a full export: private keys, inventory and token values too, encrypted with a passphrase
   -o, --out string               write to this file (mode 0600) instead of stdout; required with --encrypt, and never replaced
       --passphrase-file string   read the passphrase from this owner-only file instead of asking
+      --sign-key string          sign the file with this SSH private key, writing <file>.sig (ssh-keygen -Y sign)
 ```
 
 ## authama setup import
@@ -1605,6 +1606,8 @@ Flags:
       --dry-run[=true|false]               show what the import would add, keep and replace; write nothing
       --on-conflict string                 what differs from this home: keep (leave it), replace (take the import's, keeping a copy), fail (write nothing) (default "keep")
       --passphrase-file string             an encrypted export: read its passphrase from this owner-only file instead of asking
+      --require-signature[=true|false]     refuse the file unless <file>.sig is a good signature by a trusted signer
+      --signers string                     trusted signers, allowed_signers lines (else bundle_signers in the config home)
   -y, --yes[=true|false]                   import without confirming (implied when there is no terminal)
 ```
 
@@ -1698,6 +1701,7 @@ Flags:
       --keep int           after bundling, keep only the newest N bundles (0 keeps all)
   -o, --output string      destination dir (else dist/ in the state home)
   -r, --recipient string   age recipient (else $AUTHAMA_AGE_RECIPIENT)
+      --sign-key string    sign the file with this SSH private key, writing <file>.sig (ssh-keygen -Y sign)
 ```
 
 ## authama ssh clean
@@ -3275,6 +3279,10 @@ or IdentityAgent outside ~/.ssh and $XDG_RUNTIME_DIR, ForwardAgent or
 StrictHostKeyChecking no for every host) is refused, naming each one: a bundle does
 not prove who made it. Pass --allow-risky-options to restore one you made yourself.
 
+A bundle written with --sign-key has a signature, <bundle>.sig, next to it. It is
+checked first: a bundle changed after it was signed is refused. --require-signature
+also refuses one that is unsigned, or signed by a key bundle_signers does not trust.
+
 ```
 authama ssh restore <bundle.age> [flags]
 ```
@@ -3290,6 +3298,8 @@ Flags:
 ```
       --allow-risky-options[=true|false]   restore a bundle whose manifest sets SSH options that could redirect or weaken connections (you made it yourself)
   -i, --identity string                    age identity file (else $AUTHAMA_AGE_IDENTITY_FILE)
+      --require-signature[=true|false]     refuse the file unless <file>.sig is a good signature by a trusted signer
+      --signers string                     trusted signers, allowed_signers lines (else bundle_signers in the config home)
   -y, --yes[=true|false]                   skip the confirmation prompt
 ```
 
