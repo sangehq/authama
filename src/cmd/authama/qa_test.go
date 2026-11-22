@@ -66,6 +66,10 @@ func newQABox(t *testing.T) *qaBox {
 		"AUTHAMA_OWNER_STORE=file",
 		"AUTHAMA_AUTO_PIN=0",
 		"AUTHAMA_NOTIFICATIONS=off",
+		// Only a hypervisor no machine here has: the real ones' CLIs would
+		// list the developer's own VMs, and some hang without their app's
+		// state under the real HOME (orbctl waited out its 20s timeout).
+		"AUTHAMA_VM_HYPERVISORS=lima",
 		"AUTHAMA_NO_DOTENV=1",
 		"GIT_CONFIG_NOSYSTEM=1",
 		"NO_COLOR=1",
