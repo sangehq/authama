@@ -699,6 +699,11 @@ every setting stays at its default until you add it.
 | `mcp.enabled` | `AUTHAMA_MCP` | `false` (let `authama mcp` serve MCP over stdio; see [MCP server](tools/mcp.md)) |
 | `web.base_path` | `AUTHAMA_WEB_BASE_PATH` | `/` (serve the UI under a path such as `/authama`; see [tools/serve.md](tools/serve.md#address)) |
 | `web.auto_restart` | `AUTHAMA_WEB_AUTO_RESTART` | `true` (restart `serve` by itself when its binary is rebuilt, and reload open pages into the new build; see [installation.md](installation.md#updating)) |
+| `web.remember_days` | `AUTHAMA_WEB_REMEMBER_DAYS` | `30` (how long a browser stays signed in after a sign-in link; `0` turns remembering off. See [serve.md](tools/serve.md#remembered-browsers)) |
+| `display.timezone` | `AUTHAMA_TIMEZONE` | unset: this system's zone (the IANA zone every time is shown in, CLI and web; stored times stay UTC. `--tz` overrides it for one command) |
+| `log.level` | `AUTHAMA_LOG_LEVEL` | `info` (`debug`, `info`, `warn` or `error`: the least severe entry written to `authama.log`) |
+| `log.retention_days` | `AUTHAMA_LOG_RETENTION_DAYS` | `14` (days a rotated log file is kept) |
+| `log.max_size_mb` | `AUTHAMA_LOG_MAX_SIZE_MB` | `5` (`authama.log` rotates when it reaches this size) |
 
 Two sections are not settings but declarations: `hypervisors` adds a command driver for a VM tool
 authama has no driver for, and `devboxes` names the VM hosts `ssh vm sync` keeps (a devbox without `vm` only keeps its key reserved). Both are described,

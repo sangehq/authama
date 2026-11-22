@@ -327,6 +327,11 @@ func TestTheEnvironmentVariableNamesAreTheDocumentedOnes(t *testing.T) {
 		"AUTHAMA_DEPLOY_ROUTE":             "ssh.deploy_route: alias (through the managed config) or direct (the manifest's hostname)",
 		"AUTHAMA_HELLO_CHECK":              "internal: asks the Windows Hello script for availability only",
 		"AUTHAMA_WEB_AUTO_RESTART":         "web.auto_restart: restart serve by itself when its binary is rebuilt",
+		"AUTHAMA_WEB_REMEMBER_DAYS":        "web.remember_days: days a browser stays signed in, 0 off",
+		"AUTHAMA_TIMEZONE":                 "display.timezone: the IANA zone times are shown in",
+		"AUTHAMA_LOG_LEVEL":                "log.level: debug, info, warn or error for authama.log",
+		"AUTHAMA_LOG_RETENTION_DAYS":       "log.retention_days: days rotated logs are kept",
+		"AUTHAMA_LOG_MAX_SIZE_MB":          "log.max_size_mb: authama.log rotates at this size",
 		"AUTHAMA_SERVE_HANDOFF":            "internal: a restarting serve's token, port and instance, for the server replacing it",
 	}
 	table := map[string]bool{}

@@ -24,6 +24,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sangehq/authama/src/internal/core/recency"
 	"github.com/sangehq/authama/src/internal/services/feed"
@@ -143,6 +144,16 @@ var Specs = []Spec{
 		Doc: "A path the web UI is served under, such as /authama, so it can sit behind a reverse proxy beside other sites. Every link, form and redirect carries it."},
 	{Section: "web", Name: "menu_export", Env: envnames.WebMenuExport, Kind: KindBool, Default: "true",
 		Doc: "Show Export in the web UI's menu: every list in any format, filtered and with the columns you choose. Off hides the menu item; the page and each list's download stay."},
+	{Section: "web", Name: "remember_days", Env: envnames.WebRememberDays, Kind: KindInt, Min: 0, Default: "30",
+		Doc: "How many days a browser that signed in with a link from `authama` is remembered after it was last used, so opening the web UI's address signs it in again with no new link. 0 remembers none. Remembered browsers are listed, and forgotten, on the Settings page and by `authama serve browsers`; changes still ask for the owner PIN."},
+	{Section: "display", Name: "timezone", Env: envnames.Timezone, Kind: KindString, Default: "", Check: CheckTimezone,
+		Doc: "The IANA time zone times are shown in, by the CLI and the web UI (America/New_York, Europe/Berlin, UTC). Empty: this system's own zone. Times are stored in UTC either way. `authama settings timezone list` names every zone; --tz overrides it for one command."},
+	{Section: "log", Name: "level", Env: envnames.LogLevel, Kind: KindEnum, Enum: []string{"debug", "info", "warn", "error"}, Default: "info",
+		Doc: "The least level authama.log records: debug adds every web request and more detail; info records commands, changes, jobs, watcher events and sign-ins; warn and error record only what went wrong. Secrets are never logged at any level."},
+	{Section: "log", Name: "retention_days", Env: envnames.LogRetentionDays, Kind: KindInt, Min: 1, Default: "14",
+		Doc: "How many days rotated logs are kept before they are removed. `authama logs` and the Logs page read them."},
+	{Section: "log", Name: "max_size_mb", Env: envnames.LogMaxSizeMB, Kind: KindInt, Min: 1, Default: "5",
+		Doc: "The size in MB at which authama.log is rotated: it is renamed with the time and a new one begun."},
 	{Section: "web", Name: "auto_restart", Env: envnames.WebAutoRestart, Kind: KindBool, Default: "true",
 		Doc: "Restart `serve` by itself when its binary is rebuilt or reinstalled (make install), on the same address with the same sign-in, and reload every open page into the new build; a page with unsaved input offers Reload instead. Off: a page says it is from an older build and offers Restart now."},
 }
@@ -428,4 +439,19 @@ func namesIn(section string) []string {
 func checkPills(v string) error {
 	_, _, err := recency.ParsePills(v)
 	return err
+}
+
+// CheckTimezone accepts an IANA zone name, or empty for this system's zone.
+func CheckTimezone(v string) error {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return nil
+	}
+	if v == "Local" || strings.HasPrefix(v, "/") || strings.Contains(v, "..") {
+		return fmt.Errorf("%q is not an IANA time zone name (America/New_York, UTC); leave it empty for this system's zone", v)
+	}
+	if _, err := time.LoadLocation(v); err != nil {
+		return fmt.Errorf("%q is not an IANA time zone name (America/New_York, UTC); `authama settings timezone list` names them", v)
+	}
+	return nil
 }
