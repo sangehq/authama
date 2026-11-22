@@ -135,7 +135,9 @@ type KeyView struct {
 	// Recency is when each thing happened to the key, how long ago, whether
 	// it is new and its pill (core/recency).
 	Recency recency.Status
-	Ops     []history.Op
+	// RecordsNotice is KeysView.RecordsNotice, for this key's page.
+	RecordsNotice string
+	Ops           []history.Op
 	// Checklist is where the key is used and what is left to rotate or
 	// revoke it; nil when it could not be worked out.
 	Checklist *checklist.Checklist
@@ -358,6 +360,9 @@ type KeysView struct {
 	Categories []string
 	// Recency is each key's recency, by its ref, for its pill.
 	Recency map[string]recency.Status
+	// RecordsNotice says why the revocation or retirement records cannot be
+	// read, which makes every pill "unknown"; "" when they can (A-BUG-06).
+	RecordsNotice string
 }
 
 // pickerData is the key picker for one bulk action.
@@ -456,7 +461,8 @@ func (e AppEngine) Keys() (KeysView, error) {
 		return KeysView{}, err
 	}
 	v := KeysView{Rows: rows, Public: map[string]string{}, KeyRoot: manifest.KeyRoot(m),
-		Recency: keysvc.Recency(m, inv, e.P.Inventory(), rows, recency.FromEnv(nil), time.Now())}
+		Recency:       keysvc.Recency(m, inv, e.P.Inventory(), rows, recency.FromEnv(nil), time.Now()),
+		RecordsNotice: keysvc.RecordsUnreadable(e.P.Inventory())}
 	for _, r := range rows {
 		if !slices.Contains(v.Profiles, r.Ref.Profile) {
 			v.Profiles = append(v.Profiles, r.Ref.Profile)
@@ -525,6 +531,7 @@ func (e AppEngine) Key(ref string) (KeyView, error) {
 		}
 		v := KeyView{Detail: d, PublicKey: publicKeyLine(d.PublicPath), DefaultDays: m.Defaults.RotateAfterDays}
 		v.Recency = keysvc.Recency(m, inv, e.P.Inventory(), []keysvc.Row{d.Row}, recency.FromEnv(nil), time.Now())[r.String()]
+		v.RecordsNotice = keysvc.RecordsUnreadable(e.P.Inventory())
 		if revs, err := inventory.LoadRevocations(inventory.RevokedPath(e.P.Inventory())); err == nil && d.Fingerprint != "" {
 			v.Revoked = revs[d.Fingerprint].RevokedOn
 		}

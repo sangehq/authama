@@ -45,7 +45,14 @@ func fakeServer(t *testing.T, key string) *bool {
 			if r.Header.Get(web.ControlHeader) != "" {
 				*got = true
 			}
-			return jsonReply(http.StatusOK, map[string]string{"sign_in": "?token=fresh"})
+			reply := map[string]string{"sign_in": "?token=fresh"}
+			if c := r.Header.Get(web.LinkChallengeHeader); c != "" && key != "" {
+				if r.Header.Get(web.LinkProofHeader) != web.LinkCallerProof(key, "inst", c) {
+					return jsonReply(http.StatusForbidden, nil)
+				}
+				reply["proof"] = web.LinkProof(key, c, reply["sign_in"])
+			}
+			return jsonReply(http.StatusOK, reply)
 		}
 		return jsonReply(http.StatusNotFound, nil)
 	})
@@ -53,9 +60,11 @@ func fakeServer(t *testing.T, key string) *bool {
 	return got
 }
 
-// The control key goes only to a server that proves it holds the same key:
-// something else that took a dead server's port, answering with the public
-// instance id, used to receive it (review R-SEC-08).
+// The control key never goes to the server at all: a new link is asked for
+// in one request that proves the key, and taken only with the server's proof
+// under it. Something else that took a dead server's port, answering with
+// the public instance id, used to receive the key (review R-SEC-08), and
+// still could between the /healthz proof and the link request (audit P-02).
 func TestTheControlKeyGoesOnlyToAServerThatProvesIt(t *testing.T) {
 	key, other := testcred.Secret("control"), testcred.Secret("other")
 	rec := &serveRecord{Addr: "127.0.0.1:7822", Instance: "inst", Control: key}
@@ -77,7 +86,7 @@ func TestTheControlKeyGoesOnlyToAServerThatProvesIt(t *testing.T) {
 	if !rec.checkAlive() {
 		t.Fatal("the recorded server was not recognised")
 	}
-	if link, err := rec.newLink(); err != nil || !*sent || !strings.HasSuffix(link, "?token=fresh") {
+	if link, err := rec.newLink(); err != nil || *sent || !strings.HasSuffix(link, "?token=fresh") {
 		t.Errorf("newLink to the recorded server: %q %v sent=%v", link, err, *sent)
 	}
 

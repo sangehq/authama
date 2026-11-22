@@ -347,6 +347,22 @@ jobs:
             src/scripts/extract-changelog.sh \
             src/internal/services/recover/fixkeys.sh \
             .github/scripts/requeue-stranded.sh
+      - name: a cut install.sh runs nothing
+        # `curl … | bash` runs what has arrived; the body is one function
+        # called on the last line, so every cut inside it must fail to parse
+        # (audit P-03).
+        run: |
+          f=src/scripts/install.sh
+          start=$(grep -n '^main() {$' "$f" | cut -d: -f1)
+          end=$(grep -n "^}$" "$f" | tail -n 1 | cut -d: -f1)
+          for cut in $(seq "$start" $((end - 1))); do
+            head -n "$cut" "$f" > "$RUNNER_TEMP/cut.sh"
+            if bash -n "$RUNNER_TEMP/cut.sh" 2>/dev/null; then
+              echo "::error::install.sh cut after line $cut still parses, so a cut download would run part of it"
+              exit 1
+            fi
+          done
+          echo "every cut from line $start to $((end - 1)) fails to parse"
       - name: PowerShell parses
         shell: pwsh
         run: |

@@ -46,3 +46,17 @@ func Recency(m *manifest.Manifest, inv *inventory.Inventory, inventoryPath strin
 	}
 	return out
 }
+
+// RecordsUnreadable says why revoked.json or retired.json beside the
+// inventory at inventoryPath cannot be read, "" when both can. A page that
+// shows recency pills shows it as a notice, so an "unknown" pill comes with
+// its reason (audit A-BUG-06).
+func RecordsUnreadable(inventoryPath string) string {
+	if _, err := inventory.LoadRevocations(inventory.RevokedPath(inventoryPath)); err != nil {
+		return err.Error()
+	}
+	if _, err := inventory.LoadRetirements(inventory.RetiredPath(inventoryPath)); err != nil {
+		return err.Error()
+	}
+	return ""
+}

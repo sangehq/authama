@@ -154,13 +154,16 @@ gates: ci lint-all e2e e2e-web ## every local gate before a push: ci, lint-all, 
 # says so. When CI cannot say so (a runner outage, a fork without Actions, a
 # flight), this is the same gate on the same Go version the module asks for.
 #
-# It reads the version from go.mod rather than pinning one, so it cannot drift
-# from what setup-go installs in the workflow.
-GOVERSION = $(shell awk '/^go /{print $$2}' $(MODULE)/go.mod)
+# It runs on the dev container's base image, golang pinned by tag and digest in
+# the Dockerfile (which Dependabot keeps current), not on a tag that can change
+# under it (audit S-07). GOTOOLCHAIN=auto fetches the exact go.mod version when
+# the image's is older, so it cannot drift from what setup-go installs either.
+GOIMAGE = $(shell sed -n 's/^FROM \(golang:[^ ]*@sha256:[0-9a-f]*\) AS base$$/\1/p' Dockerfile)
 
 ci-linux: ## run the CI gate inside a linux container (needs docker)
 	@command -v docker >/dev/null 2>&1 || { echo "docker is not installed"; exit 1; }
-	docker run --rm -v "$(CURDIR)":/w -w /w golang:$(GOVERSION) \
+	@test -n "$(GOIMAGE)" || { echo "no pinned golang base (FROM golang:<tag>@sha256:<digest> AS base) in the Dockerfile"; exit 1; }
+	docker run --rm -e GOTOOLCHAIN=auto -v "$(CURDIR)":/w -w /w $(GOIMAGE) \
 		sh -c 'apt-get -qq update >/dev/null && apt-get -qq install -y openssh-client >/dev/null && \
 		       go -C $(MODULE) build ./... && go -C $(MODULE) vet ./... && go -C $(MODULE) test ./...'
 

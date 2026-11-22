@@ -12,6 +12,7 @@
     </div>{{end}}
   </div>
 </div>
+{{with .RecordsNotice}}<div class="alert alert-warning" role="status" id="records-notice">{{icon "alert-triangle"}}<span class="ms-1">Whether this key was revoked or retired cannot be read, so its recency shows as <strong>unknown</strong> rather than new or current: {{.}}. <code>authama doctor</code> names the file to repair.</span></div>{{end}}
 <div class="row row-cards">
   <div class="col-lg-6">
     <div class="card">

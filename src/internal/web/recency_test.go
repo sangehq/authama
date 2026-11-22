@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -152,5 +153,26 @@ func TestEveryRecencyPillIsThePartial(t *testing.T) {
 	}
 	if users < 4 {
 		t.Errorf("%d templates use the pill partial, want the keys list, key, host and overview pages", users)
+	}
+}
+
+// When revoked.json cannot be read, every pill reads "unknown", and the keys
+// list and the key's page say why in a notice (audit A-BUG-06).
+func TestUnreadableRecordsShowAPageNotice(t *testing.T) {
+	s, p, _ := newTestServer(t)
+	c := signIn(t, s)
+	ref := fixtureKey(t, c)
+	recordKey(t, p, ref)
+	if strings.Contains(c.get("/keys").Body.String(), `id="records-notice"`) {
+		t.Fatal("a notice with every record readable")
+	}
+	if err := os.WriteFile(inventory.RevokedPath(p.Inventory()), []byte("{not json"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"/keys", "/keys/" + ref} {
+		page := c.get(path).Body.String()
+		if !strings.Contains(page, `id="records-notice"`) || !strings.Contains(page, `data-recency="unknown">unknown</span>`) {
+			t.Errorf("%s: no notice or no unknown pill with revoked.json unreadable:\n%.1500s", path, page)
+		}
 	}
 }
