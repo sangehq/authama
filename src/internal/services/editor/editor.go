@@ -20,6 +20,8 @@ import (
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/core/naming"
 	"github.com/sangehq/authama/src/internal/core/providers"
+	"github.com/sangehq/authama/src/internal/core/renderer"
+	"github.com/sangehq/authama/src/internal/platform"
 	"github.com/sangehq/authama/src/internal/util/log"
 	"github.com/sangehq/authama/src/internal/util/paths"
 	"github.com/sangehq/authama/src/internal/util/perms"
@@ -682,6 +684,9 @@ func (e *Editor) removeFromTarget(host manifest.Host, path string) bool {
 		Alias: host.Alias, Hostname: host.Hostname, User: host.User, Port: host.Port,
 		PubkeyPath: path, PubkeyText: strings.TrimSpace(string(text)), TokenEnv: deref(host.TokenEnv),
 		KnownHosts: filepath.Join(e.p.SSHDir, "known_hosts"), Unattended: e.unattended,
+	}
+	if m, err := e.load(); err == nil {
+		t.ConfigFile = renderer.RouteConfig(m, e.p.SSHDir, e.p.StateDir(), platform.EmitUseKeychain(), false)
 	}
 	return providers.Resolve(deref(host.Provider), e.p.Providers()).Remove(t)
 }

@@ -118,8 +118,15 @@ Things that work differently after this release, and what to do if one affects y
     - whitespace, quotes or any of `` `;&|<>(){} ``;
     - `$` or `\` in the hostname.
   - The destination is passed after `--` to `ssh` and `ssh-copy-id` (OpenSSH has accepted that for years).
-  - Deploy still connects by the manifest's hostname, user and port, not by the alias, as before. See
-    [deploy](docs/tools/deploy.md#what-a-destination-may-hold).
+  - See [deploy](docs/tools/deploy.md#what-a-destination-may-hold).
+- **Deploy, verify, rotate, rollback and revoke reach a host through its alias.**
+  - authama runs `ssh -F <state home>/route.conf -- <alias>`, a flat copy of the managed config, so a
+    host's `ProxyJump`, `ProxyCommand`, Cloudflare Access proxy or VM route now applies.
+  - Before, these commands connected to the manifest's hostname, user and port, and a host behind a jump
+    or a tunnel could not be reached.
+  - `--direct` (on `deploy`, `rotate`, `rollback`, `key revoke`), *Connect directly* on a web job's
+    review, or `ssh.deploy_route` `direct` brings back the old route.
+  - See [deploy](docs/tools/deploy.md#how-deploy-reaches-a-server).
 - **`ssh git sign` needs git 2.34 or newer** (SSH signing arrived in 2.34).
   - With an older git, `ssh git sign status`, `ssh git sign verify` and `/git-sign` name the version and
     write nothing. Before, git failed later with its own error.

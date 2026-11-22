@@ -133,6 +133,9 @@ var goOnly = map[string]string{
 	"show":                      "D1 - reconciles manifest, key files, rendered config and trust store in one view",
 	"clean":                     "D1 - prunes stale pins and records left by deletions",
 
+	"deploy --direct":            "owner, 2026-11-22: deploy reaches a host through its alias and the managed config; --direct connects to the manifest's hostname as before",
+	"rotate --direct":            "owner, 2026-11-22: as deploy --direct, for the rotation's deploy, verify and removal",
+	"rollback --direct":          "owner, 2026-11-22: as deploy --direct, for the rollback's deploy and verify",
 	"rotate --force":             "owner, 2026-11-12: a forced rotation replaces on this computer each key that cannot be rotated in place, to deploy afterwards",
 	"api":                        "owner, 2026-11-12: \"add support for rest api + events + webhooks + mcp securely ... most features are off by default\": the read API's tokens",
 	"api token":                  "owner, 2026-11-12: \"add support for rest api + events + webhooks + mcp securely ... most features are off by default\": make, list and revoke API tokens",

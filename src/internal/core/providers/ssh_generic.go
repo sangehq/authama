@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"time"
 
@@ -87,17 +86,17 @@ func autoPinOff() bool {
 }
 
 func (g GenericSSH) sshBase(t Target) []string {
-	base := append([]string{"ssh"}, hostKeyOpts()...)
+	base := append([]string{"ssh"}, t.routeOpts()...)
+	base = append(base, hostKeyOpts()...)
 	base = append(base, "-o", "ConnectTimeout=10")
 	base = append(base, g.knownHostsOpts(t)...)
-	if t.Port != 22 {
-		base = append(base, "-p", strconv.Itoa(t.Port))
-	}
-	return base
+	return append(base, t.portOpts()...)
 }
 
 func (g GenericSSH) Deploy(t Target) DeployOutcome {
-	if _, err := exec.LookPath("ssh-copy-id"); err != nil {
+	// A routed target goes through plain ssh -F: ssh-copy-id before OpenSSH
+	// 9.x has no -F, and the ssh path does what it does.
+	if _, err := exec.LookPath("ssh-copy-id"); err != nil || t.routed() {
 		return g.deployOverSSH(t)
 	}
 	args := append([]string{"-o", "ConnectTimeout=10"}, g.knownHostsOpts(t)...)
@@ -105,9 +104,7 @@ func (g GenericSSH) Deploy(t Target) DeployOutcome {
 		args = append(args, "-o", "BatchMode=yes")
 	}
 	args = append(args, "-i", t.PubkeyPath)
-	if t.Port != 22 {
-		args = append(args, "-p", strconv.Itoa(t.Port))
-	}
+	args = append(args, t.portOpts()...)
 	dest, err := destArgs(t.SSHDest())
 	if err != nil {
 		return DeployOutcome{Method: "ssh-copy-id", Detail: err.Error(), Error: true}
@@ -151,7 +148,7 @@ func (g GenericSSH) deployOverSSH(t Target) DeployOutcome {
 	if t.Unattended != nil {
 		args = append(args, "-o", "BatchMode=yes")
 	}
-	dest, err := destArgs(t.SSHDest())
+	dest, err := destArgs(t.dest())
 	if err != nil {
 		return DeployOutcome{Method: "ssh", Detail: err.Error(), Error: true}
 	}
@@ -189,14 +186,13 @@ func (g GenericSSH) Verify(t Target) bool {
 	if t.IdentityPath == "" {
 		return false
 	}
-	args := append([]string{"ssh"}, t.identityOpts()...)
+	args := append([]string{"ssh"}, t.routeOpts()...)
+	args = append(args, t.identityOpts()...)
 	args = append(args, "-o", "BatchMode=yes")
 	args = append(args, hostKeyOpts()...)
 	args = append(args, g.knownHostsOpts(t)...)
-	if t.Port != 22 {
-		args = append(args, "-p", strconv.Itoa(t.Port))
-	}
-	dest, err := destArgs(t.SSHDest())
+	args = append(args, t.portOpts()...)
+	dest, err := destArgs(t.dest())
 	if err != nil {
 		return false
 	}
@@ -215,7 +211,7 @@ func (g GenericSSH) Remove(t Target) bool {
 		return false
 	}
 	script := strings.ReplaceAll(removeScript, "{body}", strings.ReplaceAll(body, "'", "'\\''"))
-	dest, err := destArgs(t.SSHDest())
+	dest, err := destArgs(t.dest())
 	if err != nil {
 		return false
 	}
@@ -224,7 +220,7 @@ func (g GenericSSH) Remove(t Target) bool {
 }
 
 func (g GenericSSH) readAuthorizedKeys(t Target) string {
-	dest, err := destArgs(t.SSHDest())
+	dest, err := destArgs(t.dest())
 	if err != nil {
 		return ""
 	}

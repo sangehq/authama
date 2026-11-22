@@ -28,6 +28,10 @@ const (
 	SnapshotRetain   = "AUTHAMA_SNAPSHOT_RETAIN"
 	OldKeyMaxAgeDays = "AUTHAMA_OLD_KEY_MAX_AGE_DAYS"
 	AutoPin          = "AUTHAMA_AUTO_PIN"
+	// DeployRoute is how deploy, verify and remove reach a server: alias
+	// (through the managed config, so ProxyJump, ProxyCommand, cloudflared
+	// and VM routes apply) or direct (the manifest's hostname, user and port).
+	DeployRoute = "AUTHAMA_DEPLOY_ROUTE"
 	History          = "AUTHAMA_HISTORY"
 	HistoryPermanent = "AUTHAMA_HISTORY_PERMANENT"
 	GitMode          = "AUTHAMA_GIT_MODE"
@@ -84,7 +88,7 @@ const (
 // Names returns every name authama reads, sorted.
 func Names() []string {
 	out := []string{
-		API, AgeIdentityFile, AgeRecipient, AskpassMode, AskpassSecret, AutoPin, ConfigDir,
+		API, AgeIdentityFile, AgeRecipient, AskpassMode, AskpassSecret, AutoPin, ConfigDir, DeployRoute,
 		DevRoot, DockerCredsStore, EventsSource, ExportSaveTo, GitMode, HelloCheck, History, HistoryPermanent, KeysAgePills, KeysNewEvents, KeysNewUntil, KeysNewWindowDays, MCP, NoDotenv, Notifications,
 		OldKeyMaxAgeDays, OwnerStore, ServeHandoff, SnapshotRetain, StateDir, TokensCatalog, TokensConfig,
 		VMHypervisors, VMMultiplex, VMPruneGone, VMRepin, WebAddr, WebAutoRestart, WebBasePath, WebMenuExport, WebPort, Webhooks, WebhooksAllowPrivate,

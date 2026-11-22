@@ -324,6 +324,7 @@ func TestTheEnvironmentVariableNamesAreTheDocumentedOnes(t *testing.T) {
 		"AUTHAMA_WEBHOOKS_INCLUDE_DETAILS": "webhooks.include_details: an operation's error text and subjects in webhook payloads",
 		"AUTHAMA_EVENTS_SOURCE":            "events.source: the base of the event source URL, sange.sh or simtabi.com",
 		"AUTHAMA_MCP":                      "mcp.enabled: authama mcp serves MCP over stdio",
+		"AUTHAMA_DEPLOY_ROUTE":             "ssh.deploy_route: alias (through the managed config) or direct (the manifest's hostname)",
 		"AUTHAMA_HELLO_CHECK":              "internal: asks the Windows Hello script for availability only",
 		"AUTHAMA_WEB_AUTO_RESTART":         "web.auto_restart: restart serve by itself when its binary is rebuilt",
 		"AUTHAMA_SERVE_HANDOFF":            "internal: a restarting serve's token, port and instance, for the server replacing it",

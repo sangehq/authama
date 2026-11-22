@@ -84,7 +84,7 @@ func TestEvictPredecessorTakesThePreviousKeyOffItsHosts(t *testing.T) {
 		t.Fatalf("eviction = %+v, want box removed and gone, panel still", ev)
 	}
 	log, _ := os.ReadFile(calls)
-	if body := strings.Fields(string(pub))[1]; !strings.Contains(string(log), "box.example") || !strings.Contains(string(log), body) {
+	if body := strings.Fields(string(pub))[1]; !strings.Contains(string(log), "-- box ") || !strings.Contains(string(log), body) {
 		t.Errorf("ssh was not asked to remove the previous key from box:\n%s", log)
 	}
 	all, err := inventory.LoadRetirements(inventory.RetiredPath(p.Inventory()))
@@ -112,7 +112,7 @@ func TestReplaceLocallyEvictsThePreviousKeyWhenTold(t *testing.T) {
 			t.Errorf("the output lacks %q:\n%s", want, out.String())
 		}
 	}
-	if log, _ := os.ReadFile(calls); !strings.Contains(string(log), "box.example") {
+	if log, _ := os.ReadFile(calls); !strings.Contains(string(log), "-- box ") {
 		t.Error("ssh was never asked to remove the previous key")
 	}
 }

@@ -46,14 +46,14 @@ import (
 
 // jobFields are the form fields each job reads.
 var jobFields = map[string][]string{
-	"deploy":   {"key", "target"},
-	"rotate":   {"key", "allow_unverified", "no_backup", "check", "force", "evict_old"},
-	"rollback": {"key"},
+	"deploy":   {"key", "target", "direct"},
+	"rotate":   {"key", "allow_unverified", "no_backup", "check", "force", "evict_old", "direct"},
+	"rollback": {"key", "direct"},
 	// revoke removes a key from every target and records it as revoked.
 	"revoke": {"key", "reason"},
 	// rotate-keys rotates the chosen keys (sel: keys, profiles, categories),
 	// a profile's keys, or every key, one after another.
-	"rotate-keys": {"sel", "profile", "all", "allow_unverified", "no_backup", "check", "force", "evict_old"},
+	"rotate-keys": {"sel", "profile", "all", "allow_unverified", "no_backup", "check", "force", "evict_old", "direct"},
 	// revoke-keys revokes each chosen key, as `authama ssh key revoke` does.
 	"revoke-keys": {"sel", "all", "reason"},
 	// delete-keys deletes each chosen key, as `authama ssh key delete` does.
@@ -162,6 +162,10 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 		if target != "" {
 			args, where = append(args, target), target
 		}
+		direct := checked(f, "direct")
+		if direct {
+			args = append(args, "--direct")
+		}
 		return jobSpec{
 			scope: mutation.Scope{Command: "deploy", Args: append(args, "--yes"), Source: history.SourceWeb, Subjects: subjects},
 			what: []string{
@@ -169,7 +173,7 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 				"snapshots ~/.ssh first",
 				"cannot answer a password prompt: a target that needs a password fails, and is deployed from a terminal",
 			},
-			run: func(j *jobs.Job) error { return deployJob(j, h.p, retain, key, target) },
+			run: func(j *jobs.Job) error { return deployJob(j, h.p, retain, key, target, direct) },
 		}, nil
 	case "rotate":
 		o := rotateOptsOf(f)
@@ -207,14 +211,19 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 			run: func(j *jobs.Job) error { return revokeJob(j, h.p, ref, reason) },
 		}, nil
 	default: // rollback
+		direct := checked(f, "direct")
+		rbArgs := []string{key, "--yes"}
+		if direct {
+			rbArgs = append(rbArgs, "--direct")
+		}
 		return jobSpec{
-			scope: mutation.Scope{Command: "rollback", Args: []string{key, "--yes"}, Source: history.SourceWeb, Subjects: subjects},
+			scope: mutation.Scope{Command: "rollback", Args: rbArgs, Source: history.SourceWeb, Subjects: subjects},
 			what: []string{
 				"puts " + key + "'s old/ predecessor back, and keeps the rotated-in key in old/ so this can be undone",
 				"checks every target is reachable first, and changes nothing if one is not",
 				"deploys the restored key to each target, and snapshots ~/.ssh first",
 			},
-			run: func(j *jobs.Job) error { return rollbackJob(j, h.p, retain, key) },
+			run: func(j *jobs.Job) error { return rollbackJob(j, h.p, retain, key, direct) },
 		}, nil
 	}
 }
@@ -232,7 +241,7 @@ func loadState(p paths.Paths) (*manifest.Manifest, *inventory.Inventory, error) 
 }
 
 // deployJob is `authama ssh deploy` after its confirmation.
-func deployJob(j *jobs.Job, p paths.Paths, retain int, key, target string) error {
+func deployJob(j *jobs.Job, p paths.Paths, retain int, key, target string, direct bool) error {
 	m, inv, err := loadState(p)
 	if err != nil {
 		return err
@@ -245,7 +254,7 @@ func deployJob(j *jobs.Job, p paths.Paths, retain int, key, target string) error
 	sum := newSummaryOf(j, "deploy", "authama ssh deploy "+profile+"/"+keyName,
 		"Hosts marked not deployed do not have the key: it cannot log in there yet.")
 	sum.pending(profile+"/"+keyName, "deploying")
-	report, err := deployer.New(p, m, inv).Unattended(j).Deploy(key, target)
+	report, err := deployer.New(p, m, inv).Direct(direct).Unattended(j).Deploy(key, target)
 	if err != nil {
 		sum.show([]rotator.SummaryKey{{Ref: profile + "/" + keyName, Result: "not deployed", Severity: 2,
 			Kind: rotator.Classify(err.Error()), Note: err.Error()}})
@@ -280,7 +289,7 @@ func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, o rotateOpts)
 	if err := j.Step(); err != nil {
 		return err
 	}
-	r := rotator.New(p, m, inv).Unattended(j)
+	r := rotator.New(p, m, inv).Direct(o.direct).Unattended(j)
 	r.EvictOld = o.evict
 	if !force {
 		r = r.WithManualStep(manualPaste(j))
@@ -332,7 +341,7 @@ func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, o rotateOpts)
 }
 
 // rollbackJob is `authama ssh rollback` after its confirmation.
-func rollbackJob(j *jobs.Job, p paths.Paths, retain int, key string) error {
+func rollbackJob(j *jobs.Job, p paths.Paths, retain int, key string, direct bool) error {
 	m, inv, err := loadState(p)
 	if err != nil {
 		return err
@@ -345,7 +354,7 @@ func rollbackJob(j *jobs.Job, p paths.Paths, retain int, key string) error {
 	sum := newSummaryOf(j, "rollback", "authama ssh rollback "+profile+"/"+keyName,
 		"Hosts marked not rolled back still trust the newer key.")
 	sum.pending(profile+"/"+keyName, "rolling back")
-	report, err := rotator.New(p, m, inv).Unattended(j).Rollback(key)
+	report, err := rotator.New(p, m, inv).Direct(direct).Unattended(j).Rollback(key)
 	if err != nil {
 		sum.show([]rotator.SummaryKey{{Ref: profile + "/" + keyName, Result: "not rolled back", Severity: 2,
 			Kind: rotator.Classify(err.Error()), Note: err.Error()}})
@@ -399,12 +408,12 @@ func rotateKeysSpec(f url.Values, h home, retain int) (jobSpec, error) {
 // rotateOpts are a rotation's options as the review chose them: go on
 // unverified, skip the backup, force, and the previous-key policy (evict the
 // key in old/, or keep it).
-type rotateOpts struct{ allow, skip, force, evict bool }
+type rotateOpts struct{ allow, skip, force, evict, direct bool }
 
 // rotateOptsOf reads a rotation's options from its form.
 func rotateOptsOf(f url.Values) rotateOpts {
 	return rotateOpts{allow: checked(f, "allow_unverified"), skip: checked(f, "no_backup"),
-		force: checked(f, "force"), evict: evictOld(f)}
+		force: checked(f, "force"), evict: evictOld(f), direct: checked(f, "direct")}
 }
 
 // evictOld is the previous-key policy a form chose: evict_old=1 evicts,
@@ -443,6 +452,9 @@ func rotateFlags(args []string, o rotateOpts) []string {
 		out = append(out, "--evict-old")
 	case o.force:
 		out = append(out, "--keep-old")
+	}
+	if o.direct {
+		out = append(out, "--direct")
 	}
 	return out
 }
@@ -487,7 +499,7 @@ func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection,
 	}
 	mutation.SnapshotBeforeMutation(p, retain)
 	j.Plan(names)
-	r := rotator.New(p, m, inv).Unattended(j)
+	r := rotator.New(p, m, inv).Direct(o.direct).Unattended(j)
 	r.EvictOld = o.evict
 	if !force {
 		// Forced, nothing stops to ask for a paste: a target that takes the
@@ -673,7 +685,10 @@ func jobOptions(f url.Values, fields []formField) ([]jobOption, []formField) {
 			{Name: "force", Label: "Force: replace what cannot rotate in place", Danger: true,
 				Detail: "A factory reset of the keys chosen: a key never deployed, whose host cannot be reached, whose target takes the key by hand, or that no host uses, is replaced on this computer anyway and must be deployed next. Until then a host that trusted the old key cannot be logged in to with it; the old key stays under old/ for a rollback."},
 			evictOption(checked(f, "force")),
+			directOption,
 		}
+	case "deploy", "rollback":
+		opts = []jobOption{directOption}
 	case "revoke-keys":
 		opts = []jobOption{{Name: "reason", Label: "Reason (optional)", Text: true, Placeholder: "laptop lost, contractor left…",
 			Detail: "Kept with the revocation record and shown in the history."}}
@@ -705,6 +720,12 @@ func jobOptions(f url.Values, fields []formField) ([]jobOption, []formField) {
 	}
 	return opts, kept
 }
+
+// directOption is deploy, rotate and rollback's --direct: connect to each
+// host's hostname, user and port instead of its alias through the managed
+// config (ssh.deploy_route direct for one job).
+var directOption = jobOption{Name: "direct", Label: "Connect directly, not through the host's ssh config",
+	Detail: "Off (the default), each host is reached as `ssh <alias>` reaches it, through its ProxyJump, ProxyCommand, Cloudflare Access or VM route. On, authama connects to the hostname, user and port the manifest names, as before; a host behind a jump or a tunnel is then out of reach."}
 
 // evictOption is the previous-key switch on a rotation's review: off, the key
 // in old/ is kept, and a key whose previous key still logs in somewhere does
@@ -1169,7 +1190,7 @@ func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string, o rotateOpts) (e
 	if err != nil {
 		return err
 	}
-	r := rotator.New(p, m, inv)
+	r := rotator.New(p, m, inv).Direct(o.direct)
 	r.EvictOld = o.evict
 	j.Plan(names)
 	var failed []string

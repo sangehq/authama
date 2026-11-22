@@ -673,6 +673,7 @@ every setting stays at its default until you add it.
 | `backup.snapshot_retain` | `AUTHAMA_SNAPSHOT_RETAIN` | `10` (at least 1); a command that fails or is declined having changed nothing keeps no snapshot, and the oldest snapshots are pruned only once a command's own is kept, so refusals never push a restore point out (while a command runs there can be one more than the limit) |
 | `backup.old_key_max_age_days` | `AUTHAMA_OLD_KEY_MAX_AGE_DAYS` | `90` (`0` turns the check off) |
 | `ssh.auto_pin` | `AUTHAMA_AUTO_PIN` | `true` |
+| `ssh.deploy_route` | `AUTHAMA_DEPLOY_ROUTE` | `alias` (deploy, verify, rotate and remove reach a host through its alias and the managed config, so its ProxyJump, ProxyCommand, cloudflared or VM route applies; `direct` connects to the manifest's hostname, user and port; see [deploy](tools/deploy.md#how-deploy-reaches-a-server)) |
 | `history.enabled` | `AUTHAMA_HISTORY` | `true` |
 | `history.permanent` | `AUTHAMA_HISTORY_PERMANENT` | `false` (`true` makes `history reset` and the web UI's *Start the history again* refuse) |
 | `git.mode` | `AUTHAMA_GIT_MODE` | the manifest's `defaults.git.mode`, else `profile` |

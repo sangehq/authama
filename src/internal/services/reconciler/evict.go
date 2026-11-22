@@ -9,6 +9,8 @@ import (
 	"github.com/sangehq/authama/src/internal/core/inventory"
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/core/providers"
+	"github.com/sangehq/authama/src/internal/core/renderer"
+	"github.com/sangehq/authama/src/internal/platform"
 	"github.com/sangehq/authama/src/internal/services/keystore"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
@@ -65,7 +67,8 @@ func EvictPredecessor(p paths.Paths, m *manifest.Manifest, ks *keystore.KeyStore
 		prov := providers.Resolve(deref(h.Provider), p.Providers())
 		tgt := providers.Target{Alias: h.Alias, Hostname: h.Hostname, User: h.User, Port: h.Port,
 			PubkeyPath: slot + ".pub", PubkeyText: string(pub), TokenEnv: deref(h.TokenEnv),
-			KnownHosts: filepath.Join(p.SSHDir, "known_hosts")}
+			KnownHosts: filepath.Join(p.SSHDir, "known_hosts"),
+			ConfigFile: renderer.RouteConfig(m, p.SSHDir, p.StateDir(), platform.EmitUseKeychain(), false)}
 		if prov.Remove(tgt) {
 			ev.Removed = append(ev.Removed, alias)
 			continue

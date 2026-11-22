@@ -1865,7 +1865,8 @@ Examples:
 Flags:
 
 ```
-  -y, --yes[=true|false]   deploy without confirming (implied when there is no terminal)
+      --direct[=true|false]   connect to the manifest's hostname, user and port, not the host's alias through the managed config (its ProxyJump, ProxyCommand, cloudflared or VM route); the same as ssh.deploy_route direct
+  -y, --yes[=true|false]      deploy without confirming (implied when there is no terminal)
 ```
 
 ## authama ssh diff
@@ -2685,10 +2686,11 @@ Examples:
 Flags:
 
 ```
-      --all[=true|false]   revoke every minted key
-      --category string    revoke every minted key in profiles of this category
-      --reason string      why, recorded with the revocation (e.g. "laptop lost")
-  -y, --yes[=true|false]   skip the confirmation prompt
+      --all[=true|false]      revoke every minted key
+      --category string       revoke every minted key in profiles of this category
+      --direct[=true|false]   connect to the manifest's hostname, user and port, not the host's alias through the managed config (its ProxyJump, ProxyCommand, cloudflared or VM route); the same as ssh.deploy_route direct
+      --reason string         why, recorded with the revocation (e.g. "laptop lost")
+  -y, --yes[=true|false]      skip the confirmation prompt
 ```
 
 ## authama ssh key root
@@ -3308,7 +3310,8 @@ Examples:
 Flags:
 
 ```
-  -y, --yes[=true|false]   skip the confirmation prompt
+      --direct[=true|false]   connect to the manifest's hostname, user and port, not the host's alias through the managed config (its ProxyJump, ProxyCommand, cloudflared or VM route); the same as ssh.deploy_route direct
+  -y, --yes[=true|false]      skip the confirmation prompt
 ```
 
 ## authama ssh rotate
@@ -3361,6 +3364,7 @@ Flags:
       --allow-unverified[=true|false]   commit even if a target can't auto-verify
       --category string                 rotate every key in profiles of this category
       --check[=true|false]              test each key's rotation and change nothing: every server answers and the current key logs in, or the target takes it by hand
+      --direct[=true|false]             connect to the manifest's hostname, user and port, not the host's alias through the managed config (its ProxyJump, ProxyCommand, cloudflared or VM route); the same as ssh.deploy_route direct
       --dry-run[=true|false]            list the keys that would rotate, and change nothing
       --evict-old[=true|false]          evict the previous key in old/: take it off every host it was never removed from, then drop it (the default under --force)
       --failed[=true|false]             run again the keys the last rotation or dry run left (not rotated, or would fail)

@@ -316,6 +316,14 @@
           "default": true,
           "description": "Pin a new host's key on first use (trust on first use) when a profile is minted. Sets $AUTHAMA_AUTO_PIN. Default: true.",
           "type": "boolean"
+        },
+        "deploy_route": {
+          "description": "How deploy, verify, rotate and remove reach a server: alias runs ssh with the host's alias against a flat copy of the managed config (-F), so its ProxyJump, ProxyCommand, cloudflared or VM route applies; direct connects to the manifest's hostname, user and port, as before. `--direct` on deploy and rotate picks direct for one run. Sets $AUTHAMA_DEPLOY_ROUTE. Default: alias.",
+          "enum": [
+            "alias",
+            "direct"
+          ],
+          "type": "string"
         }
       },
       "type": "object"
