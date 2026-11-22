@@ -132,3 +132,26 @@ func TestReplaceLocallyKeepsAPredecessorThatStillLogsIn(t *testing.T) {
 		t.Fatalf("told to evict, the replacement still failed:\n%s", out.String())
 	}
 }
+
+// A key in old/ whose fingerprint cannot be read might still log in
+// anywhere: "cannot tell" is refused like "still logs in", not evicted
+// (audit A-BUG-07).
+func TestAnUnreadablePredecessorIsCannotTell(t *testing.T) {
+	if _, err := exec.LookPath("ssh-keygen"); err != nil {
+		t.Skip("ssh-keygen not on PATH")
+	}
+	m := loadManifest(t)
+	p := paths.Paths{SSHDir: t.TempDir(), ConfigDir: t.TempDir()}
+	ref := manifest.KeyRef{Profile: "work", KeyName: "work_gh-ed25519"}
+	slot := filepath.Join(manifest.ArchiveDir(m, p.SSHDir, ref), ref.KeyName)
+	if err := os.MkdirAll(filepath.Dir(slot), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(slot+".pub", []byte("not a public key\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	live, err := PredecessorStillLogsIn(p, m, New(p, m, inventory.New(), false).ks, ref)
+	if err == nil || len(live) != 0 {
+		t.Fatalf("live %v err %v: an unreadable predecessor read as free to evict", live, err)
+	}
+}

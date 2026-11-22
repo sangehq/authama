@@ -52,3 +52,32 @@ func TestTheAPIThrottleLiftsAfterTheWindow(t *testing.T) {
 		t.Errorf("still throttled after the window: %s", wait)
 	}
 }
+
+// Rotating addresses does not escape the throttle: an IPv6 /64 is one
+// caller, and every address together has a ceiling (audit A-SEC-10).
+func TestTheThrottleCountsAnIPv6BlockAndHasACeiling(t *testing.T) {
+	r1, _ := http.NewRequest("GET", "/", nil)
+	r1.RemoteAddr = "[2001:db8:1:2::a]:4000"
+	r2, _ := http.NewRequest("GET", "/", nil)
+	r2.RemoteAddr = "[2001:db8:1:2:ffff::b]:4001"
+	if remoteHost(r1) != remoteHost(r2) || remoteHost(r1) != "2001:db8:1:2::/64" {
+		t.Fatalf("%s vs %s", remoteHost(r1), remoteHost(r2))
+	}
+	r3, _ := http.NewRequest("GET", "/", nil)
+	r3.RemoteAddr = "[::1]:4000"
+	if remoteHost(r3) != "::1" {
+		t.Errorf("loopback = %s", remoteHost(r3))
+	}
+
+	var l failLimiter
+	now := time.Now()
+	for i := 0; i < apiFailAll; i++ {
+		l.fail("198.51.100."+string(rune('a'+i%26))+string(rune('a'+i/26)), now)
+	}
+	if l.blocked("203.0.113.9", now) == 0 {
+		t.Fatal("the ceiling did not hold a fresh address back")
+	}
+	if l.blocked("203.0.113.9", now.Add(apiFailWindow+time.Second)) != 0 {
+		t.Fatal("the ceiling outlived its window")
+	}
+}

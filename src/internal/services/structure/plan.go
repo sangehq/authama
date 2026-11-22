@@ -231,6 +231,9 @@ func Apply(p paths.Paths, moves []Move, out io.Writer) (Result, error) {
 		}
 	}
 	for _, s := range steps {
+		if err := checkDestDir(p, s.dest); err != nil {
+			return res, fmt.Errorf("%s: %w", s.mv.Line(), err)
+		}
 		if taken[s.dest] {
 			return res, fmt.Errorf("two moves put a key at ~/.ssh/%s", relSSH(p, s.dest))
 		}
@@ -321,6 +324,9 @@ func MoveConfigHome(p paths.Paths, moves []Move, out io.Writer) error {
 			if _, err := os.Lstat(f); err == nil {
 				return fmt.Errorf("%s: ~/.ssh/%s is already there", mv.Line(), relSSH(p, f))
 			}
+		}
+		if err := checkDestDir(p, dest); err != nil {
+			return fmt.Errorf("%s: %w", mv.Line(), err)
 		}
 		if err := backupPair(p, src, backup); err != nil {
 			return err
@@ -435,6 +441,23 @@ func backupPair(p paths.Paths, src, dir string) error {
 // movePair moves a private key and its .pub (and -cert.pub) to dest, in
 // profile directories made owner-only; the moved files get the modes ssh
 // wants. A rename across file systems falls back to copy and remove.
+// checkDestDir refuses a destination whose directory, or any directory
+// between it and ~/.ssh, is a symlink: creating and chmodding it would land
+// on the link's target, outside ~/.ssh (as the importer refuses).
+func checkDestDir(p paths.Paths, dest string) error {
+	root := filepath.Clean(p.SSHDir)
+	for d := filepath.Dir(dest); len(d) > len(root) && strings.HasPrefix(d, root+string(filepath.Separator)); d = filepath.Dir(d) {
+		fi, err := os.Lstat(d)
+		if err != nil {
+			continue
+		}
+		if fi.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("~/.ssh/%s is a symlink; a key is never moved through one", relSSH(p, d))
+		}
+	}
+	return nil
+}
+
 func movePair(src, dest string) error {
 	if err := os.MkdirAll(filepath.Dir(dest), perms.DirMode); err != nil {
 		return err

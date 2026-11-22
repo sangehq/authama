@@ -125,3 +125,26 @@ func TestTwoDeliveriesAtOnceSendAnEventOnce(t *testing.T) {
 		t.Errorf("one event was sent %d times", n)
 	}
 }
+
+// A webhook removed while the first of a batch was in flight is not sent
+// the rest of the batch (audit A-SEC-11).
+func TestAWebhookRemovedMidBatchGetsNoMore(t *testing.T) {
+	p, t0 := oneEndpointWithAnEvent(t)
+	finishOp(t, p, "op_two", t0.Add(2*time.Second))
+	finishOp(t, p, "op_three", t0.Add(3*time.Second))
+	h := newHoldFirst()
+	done := make(chan struct{})
+	go func() {
+		_, _ = Deliver(context.Background(), p, &http.Client{Transport: h}, t0.Add(10*time.Second), DetailRedacted)
+		close(done)
+	}()
+	<-h.entered
+	if err := Remove(p, "one"); err != nil {
+		t.Fatal(err)
+	}
+	close(h.release)
+	<-done
+	if n := h.sent(); n != 1 {
+		t.Errorf("sent %d events after the webhook was removed, want only the one in flight", n)
+	}
+}

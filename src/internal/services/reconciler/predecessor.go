@@ -1,6 +1,7 @@
 package reconciler
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -13,7 +14,10 @@ import (
 // PredecessorStillLogsIn names the hosts the key now in old/ was never removed
 // from, as its retirement recorded them. The archive keeps one predecessor,
 // so rotating again would evict it while those hosts still accept it (review
-// R-BUG-12). A key in old/ with no retirement on record names none.
+// R-BUG-12). A key in old/ with no retirement on record names none: a local
+// replacement archives a key it never deployed, and records nothing. A key
+// whose fingerprint cannot be read is "cannot tell", an error, which callers
+// treat as still logging in unless --evict-old (review A-BUG-07).
 func PredecessorStillLogsIn(p paths.Paths, m *manifest.Manifest, ks *keystore.KeyStore, keyRef manifest.KeyRef) ([]string, error) {
 	slot := filepath.Join(manifest.ArchiveDir(m, p.SSHDir, keyRef), keyRef.KeyName)
 	if _, err := os.Stat(slot + ".pub"); err != nil {
@@ -21,7 +25,7 @@ func PredecessorStillLogsIn(p paths.Paths, m *manifest.Manifest, ks *keystore.Ke
 	}
 	fp, err := ks.Fingerprint(slot + ".pub")
 	if err != nil {
-		return nil, nil // no fingerprint, no retirement to look up
+		return nil, fmt.Errorf("cannot read the fingerprint of %s.pub: %w", filepath.Base(slot), err)
 	}
 	all, err := inventory.LoadRetirements(inventory.RetiredPath(p.Inventory()))
 	if err != nil {

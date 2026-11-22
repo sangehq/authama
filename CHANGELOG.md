@@ -74,6 +74,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The Termius export's notes name the jump host of a host that reaches its server through a `ProxyJump` raw option,
   to set as its Host Chain in Termius: the CSV has no column for one, so the host was imported as a direct host
   with nothing saying why it could not connect.
+- A key in `old/` whose fingerprint cannot be read is no longer evicted by a rotation or local replacement as if
+  it were free to go: "cannot tell" is refused like "still logs in" unless `--evict-old` (audit A-BUG-07).
+- A webhook removed, disabled or given a new secret or URL while a delivery was under way is no longer sent the
+  rest of that batch: each send first checks the endpoint as it is now (audit A-SEC-11).
+- The read API's bad-token throttle counts an IPv6 caller by its /64, and a ceiling on failures from every
+  address together holds when addresses rotate (audit A-SEC-10).
+- A key's recency pill reads "unknown" when `revoked.json` or `retired.json` cannot be read, instead of a
+  confident "new" or "current" (audit A-BUG-06).
+- `ssh structure approve` refuses a destination whose profile or category directory is a symlink, as the
+  importer does, so nothing is created or chmodded outside `~/.ssh`.
 
 ## [0.1.0] - 2026-11-17
 

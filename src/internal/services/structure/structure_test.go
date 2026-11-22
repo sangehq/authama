@@ -296,3 +296,30 @@ func TestRefsResolveInASandbox(t *testing.T) {
 		t.Fatalf("%v %v", changed, err)
 	}
 }
+
+// A profile directory that is a symlink is refused: making and chmodding it
+// would land outside ~/.ssh (as the importer refuses).
+func TestApplyRefusesASymlinkedProfileDir(t *testing.T) {
+	p := home(t, "")
+	pair(t, filepath.Join(p.SSHDir, "id_work"), pubWork)
+	elsewhere := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(p.SSHDir, "profiles"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(elsewhere, filepath.Join(p.SSHDir, "profiles", "work")); err != nil {
+		t.Skip("no symlinks here:", err)
+	}
+	moves, err := ParsePlan("key ~/.ssh/id_work profile work name laptop\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Apply(p, moves, &bytes.Buffer{}); err == nil || !strings.Contains(err.Error(), "symlink") {
+		t.Fatalf("applied through a symlinked profile dir: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(p.SSHDir, "id_work")); err != nil {
+		t.Error("the key moved although the plan was refused")
+	}
+	if ents, _ := os.ReadDir(elsewhere); len(ents) != 0 {
+		t.Errorf("wrote through the link: %v", ents)
+	}
+}

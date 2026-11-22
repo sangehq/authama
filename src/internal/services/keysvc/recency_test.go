@@ -1,6 +1,7 @@
 package keysvc
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -38,5 +39,24 @@ func TestRecencyIsWorkedOutPerKey(t *testing.T) {
 	}
 	if gh := Recency(s.m, s.inv, invPath, rows, recency.DefaultPolicy(), now)["work/work_gh-ed25519"]; gh.Pill.Label != "revoked" {
 		t.Errorf("a revoked key's pill: %+v", gh.Pill)
+	}
+}
+
+// An unreadable revoked.json or retired.json leaves a minted key's pill
+// "unknown", not a confident new or current (audit A-BUG-06).
+func TestAnUnreadableRecordMakesThePillUnknown(t *testing.T) {
+	s := fixture(t)
+	now := time.Date(2026, 11, 14, 12, 0, 0, 0, time.UTC)
+	s.inv.Note("SHA256:gh", inventory.EventDeployed, now.Add(-2*time.Hour))
+	rows, err := s.Rows("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	invPath := filepath.Join(t.TempDir(), "inventory.json")
+	if err := os.WriteFile(inventory.RevokedPath(invPath), []byte("{not json"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if gh := Recency(s.m, s.inv, invPath, rows, recency.DefaultPolicy(), now)["work/work_gh-ed25519"]; gh.Pill.Label != "unknown" {
+		t.Errorf("pill with an unreadable revoked.json: %+v", gh.Pill)
 	}
 }
