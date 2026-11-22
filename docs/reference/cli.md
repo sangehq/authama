@@ -33,6 +33,7 @@ Every command also takes the global flag:
 - [`authama doctor`](#authama-doctor) - Diagnose deps, perms, agent, known_hosts, drift, dangling keys, and token-file perms
 - [`authama events`](#authama-events) - Every change seen to a file under ~/.ssh, the config home or a token file, newest first
 - [`authama export`](#authama-export) - Write any list as CSV, JSON, YAML, a PHP or JS array, Markdown or HTML, or hosts for an SSH client, filtered
+  - [`authama export pack`](#authama-export-pack) - Zip any of the exports - Termius hosts, ssh config, setup, structure, git signing, lists - in one file
   - [`authama export schedule`](#authama-export-schedule) - Write saved selections to a folder every day
     - [`authama export schedule add`](#authama-export-schedule-add) - Schedule a saved selection to be written to a folder every day
     - [`authama export schedule install`](#authama-export-schedule-install) - Register a daily job that writes the scheduled exports
@@ -76,7 +77,7 @@ Every command also takes the global flag:
   - [`authama settings validate`](#authama-settings-validate) - Check authama.json (or FILE) against the schema, and .env's syntax and permissions
 - [`authama setup`](#authama-setup) - Export this setup to another machine, or import one (secrets-free, or encrypted with keys and tokens)
   - [`authama setup export`](#authama-setup-export) - Write this setup as a secrets-free document, or (--encrypt) everything, keys and tokens included
-  - [`authama setup import`](#authama-setup-import) - Merge a setup document or an encrypted full export into this home, after showing what it would do
+  - [`authama setup import`](#authama-setup-import) - Merge a setup document, an export pack or an encrypted full export into this home, after showing what it would do
 - [`authama ssh`](#authama-ssh) - SSH keys, profiles, hosts, config and trust
   - [`authama ssh audit`](#authama-ssh-audit) - Deployment, expiry, and hygiene report
   - [`authama ssh bundle`](#authama-ssh-bundle) - Write an encrypted backup of keys + state (read back with restore)
@@ -531,6 +532,7 @@ authama export [deployments|events|history|hosts|keys|profiles|snapshots|tokens|
 
 Subcommands:
 
+- [`pack`](#authama-export-pack) - Zip any of the exports - Termius hosts, ssh config, setup, structure, git signing, lists - in one file
 - [`schedule`](#authama-export-schedule) - Write saved selections to a folder every day
 - [`selections`](#authama-export-selections) - List, show, save and delete export selections saved by name
 
@@ -589,6 +591,54 @@ Flags:
       --totals[=true|false]        with --group-by: a last row over every group; with --pivot, also a total column
       --transform stringArray      a transform step as JSON, e.g. {"kind":"map","field":"status","values":{"needs-redeploy":"pending"}}
       --until string               only rows at or before this time
+```
+
+## authama export pack
+
+Zip the files the home exports as, chosen by part: the same pack the web UI's
+Export / Import page downloads. No part holds a private key or a token value; the encrypted
+full export is `authama setup export --encrypt`.
+
+Parts (--include, comma-separated, or all):
+  termius      Hosts for Termius (termius-hosts.csv)
+  ssh-config   SSH config, one file (ssh_config)
+  setup        Setup document (setup.json)
+  structure    SSH folder structure (structure.json)
+  git-signing  Git identities and signing (git-signing.json, allowed_signers)
+  tokens       Tokens (tokens.csv)
+  hosts        Hosts list (hosts.csv)
+  keys         Keys list (keys.csv)
+  profiles     Profiles list (profiles.csv)
+  deployments  Deployments (deployments.csv)
+  history      History (history.csv)
+  events       File events (events.csv)
+  snapshots    Snapshots (snapshots.csv)
+
+With no --include the pack holds termius, ssh-config, setup, structure, git-signing, tokens.
+The zip goes to <config home>/exports/authama-export-<time>.zip, or --out (never inside
+~/.ssh). --dry-run lists the files and their sizes and writes nothing. `setup import` takes the
+zip as it takes setup.json.
+
+```
+authama export pack [flags]
+```
+
+Examples:
+
+```sh
+  authama export pack
+  authama export pack --include termius,ssh-config --termius-groups category/profile --out hosts.zip
+  authama export pack --include all --dry-run
+```
+
+Flags:
+
+```
+      --dry-run[=true|false]       list the files and sizes; write nothing
+      --include strings            the parts: termius, ssh-config, setup, structure, git-signing, tokens, hosts, keys, profiles, deployments, history, events, snapshots, or all
+      --include-git[=true|false]   termius: also list git hosts
+  -o, --out string                 where to write the zip (mode 0600)
+      --termius-groups string      termius: the Groups column: profile, category/profile, profile/env, category/profile/env, none (default "profile")
 ```
 
 ## authama export schedule
@@ -1491,7 +1541,8 @@ never a value. It is JSON, safe to read and to keep in a repository.
 inventory and the token values, in an age file encrypted with a passphrase (`age -d`
 opens it too). It needs the owner PIN when one is set.
 
-`setup import` reads either, shows what it would add, keep and replace, and merges it
+`setup import` reads either (or an `export pack` zip, for its setup.json), shows what it
+would add, keep and replace, and merges it
 into this home. --on-conflict settles what differs: keep (the default) leaves what is
 here, replace takes the import's - keeping a copy of every key file and .env it
 replaces in the state home's replaced/ folder - and fail writes nothing.
@@ -1503,7 +1554,7 @@ authama setup
 Subcommands:
 
 - [`export`](#authama-setup-export) - Write this setup as a secrets-free document, or (--encrypt) everything, keys and tokens included
-- [`import`](#authama-setup-import) - Merge a setup document or an encrypted full export into this home, after showing what it would do
+- [`import`](#authama-setup-import) - Merge a setup document, an export pack or an encrypted full export into this home, after showing what it would do
 
 ## authama setup export
 
@@ -1530,7 +1581,7 @@ Flags:
 
 ## authama setup import
 
-Merge a setup document or an encrypted full export into this home, after showing what it would do.
+Merge a setup document, an export pack or an encrypted full export into this home, after showing what it would do.
 
 ```
 authama setup import FILE [flags]
@@ -1540,6 +1591,7 @@ Examples:
 
 ```sh
   authama setup import setup.json --dry-run
+  authama setup import authama-export.zip --dry-run
   authama setup import setup.age --on-conflict replace
   authama setup import setup.age --on-conflict fail --passphrase-file ~/.setup-pass
 ```

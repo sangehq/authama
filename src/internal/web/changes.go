@@ -86,6 +86,7 @@ var actionFields = map[string][]string{
 	"token-import":            {},
 	"token-config-edit":       {"body"},
 	"setup-import":            {"body", "on_conflict"},
+	"transfer-import-full":    {"file_ref", "pass_ref", "on_conflict"},
 	// structure-plan carries every move select (one plan line each) and
 	// the free-form plan lines; structure-dismiss hides one suggestion.
 	"structure-plan":    {"move", "moves"},
@@ -600,6 +601,11 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		var err error
 		ch, err = namingChange(action, f, h)
 		errs = append(errs, err)
+	case "transfer-import-full":
+		var err error
+		if ch, err = transferImportFullChange(f, h); err != nil {
+			errs = append(errs, err)
+		}
 	case "setup-import":
 		ch, errs = setupImportChange(f, errs)
 	case "structure-plan":
@@ -758,6 +764,12 @@ func (h pages) handleApply(w http.ResponseWriter, r *http.Request) {
 	default:
 		for field := range allSecretFields() {
 			if ref := r.PostForm.Get(field + "_ref"); ref != "" {
+				h.s.secrets.drop(ref)
+			}
+		}
+		// An uploaded full export and its passphrase are used once too.
+		for _, field := range []string{"file_ref", "pass_ref"} {
+			if ref := r.PostForm.Get(field); ref != "" {
 				h.s.secrets.drop(ref)
 			}
 		}

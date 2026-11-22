@@ -20,7 +20,7 @@
       <div class="card-header"><h2 class="card-title">Everything, encrypted</h2></div>
       <div class="card-body">
         <p>The full export adds every private key, the inventory and the values of the tokens above, in an <a href="https://age-encryption.org" rel="noopener">age</a> file encrypted with a passphrase you choose - <code>age -d</code> opens it too. It asks for your owner PIN when one is set.</p>
-        <p class="text-secondary small">It is made and imported at a terminal only: this page never handles a private key or a token value, so neither reaches the browser.</p>
+        <p class="text-secondary small">Make or import it on <a href="{{u "/transfer"}}#encrypted"{{desc "setup-to-transfer"}}>Export / Import</a>, where it goes straight to your download, encrypted, behind your PIN, and is listed by name only when imported; or at a terminal. No private key or token value is ever shown in a page.</p>
         {{template "command_line" .EncryptCmd}}
         {{template "command_line" .ImportFullCmd}}
       </div>

@@ -23,6 +23,7 @@ export const pages: { path: string; heading: string }[] = [
   { path: '/history', heading: 'History' },
   { path: '/events', heading: 'Events' },
   { path: '/setup', heading: 'Move setup' },
+  { path: '/transfer', heading: 'Export / Import' },
   { path: '/doctor', heading: 'Doctor' },
   { path: '/validate', heading: 'Validate' },
   { path: '/audit', heading: 'Audit' },

@@ -64,6 +64,16 @@
             {{template "navmenuitem" (navItem . "act-mint" "/keys#mint-keys" "circle-plus" "Mint missing keys")}}
           </div>
         </div>{{end}}
+        {{/* Export / Import: every file this home goes out as, and bringing
+             a setup in. Export works on a read-only server; Import does not. */}}
+        <div class="nav-item dropdown me-3">
+          <button type="button" class="btn btn-outline-primary dropdown-toggle" id="navbar-transfer" data-bs-toggle="dropdown" aria-expanded="false"{{desc "nav-transfer"}}>{{icon "transfer"}}<span class="d-none d-sm-inline">Export / Import</span><span class="visually-hidden d-sm-none">Export / Import</span></button>
+          <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow" aria-labelledby="navbar-transfer">
+            {{template "navmenuitem" (navItem . "transfer-export" "/transfer#export" "file-zip" "Export")}}
+            {{if not .ReadOnly}}{{template "navmenuitem" (navItem . "transfer-encrypted" "/transfer#encrypted" "lock" "Encrypted export")}}
+            {{template "navmenuitem" (navItem . "transfer-import" "/transfer#import" "file-import" "Import")}}{{end}}
+          </div>
+        </div>
         {{/* The user menu is personal: who this server runs as, the tour,
              About, and Sign out. Every page is in the main menu below. */}}
         <div class="nav-item dropdown">
@@ -148,7 +158,7 @@
                   {{template "navmenuitem" (navItem . "security" "/security" "user-shield" "Owner & PIN")}}
                 </div>
               </li>
-              <li class="nav-item dropdown{{if eq .Nav "history" "events" "snapshots" "export" "setup"}} active{{end}}">
+              <li class="nav-item dropdown{{if eq .Nav "history" "events" "snapshots" "export" "setup" "transfer"}} active{{end}}">
                 <a class="nav-link dropdown-toggle" href="#navbar-history" id="navbar-history" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false" data-tour="5" data-tour-title="History" data-tour-text="What happened: every change authama made, and every file event under ~/.ssh, the config home and the token files. Snapshots of ~/.ssh and Export are here too."{{desc "nav-history"}}><span class="nav-link-icon nav-glyph text-{{navColour "history"}} d-md-none d-lg-inline-block">{{icon "clock"}}</span><span class="nav-link-title">History</span></a>
                 <div class="dropdown-menu" aria-labelledby="navbar-history">
                   <span class="dropdown-header">Record</span>

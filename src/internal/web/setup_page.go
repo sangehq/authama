@@ -17,8 +17,8 @@ import (
 // secrets-free setup document. The document downloads from GET
 // /setup/export.json; an import is pasted and goes through the change preview
 // (action setup-import) like every other change. The encrypted full export -
-// private keys and token values - is made and imported at a terminal only, as
-// the page says: a private key or a token value never reaches the browser.
+// private keys and token values - is made and imported on Export / Import
+// (transfer_page.go) as an age file that is never shown, or at a terminal.
 type setupPage struct{ s *Server }
 
 // SetupView is the /setup page.

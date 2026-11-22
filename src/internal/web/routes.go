@@ -68,6 +68,8 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /termius", termiusPage{s}.handleTermius)
 	mux.HandleFunc("GET /setup", setupPage{s}.handleSetup)
 	mux.HandleFunc("GET /setup/export.json", setupPage{s}.handleExport)
+	mux.HandleFunc("GET /transfer", transferPage{s}.handle)
+	mux.HandleFunc("GET /transfer/pack.zip", transferPage{s}.handlePack)
 	mux.HandleFunc("GET /structure", structurePage{s}.handleStructure)
 	mux.HandleFunc("GET /git-sign", gitSignPage{s}.handle)
 	mux.HandleFunc("GET /events", sp.handleEvents)
@@ -89,6 +91,11 @@ func (s *Server) routes() http.Handler {
 		// directory and touches nothing under ~/.ssh: no preview.
 		mux.HandleFunc("POST /checklist/tick", checklistPages{s}.handleTick)
 		mux.HandleFunc("POST /checklist/revoking", checklistPages{s}.handleRevoking)
+		// The encrypted full export changes nothing in the home, but it
+		// carries every private key: it is a confirmed, PIN-gated step that a
+		// read-only server does not offer. An import goes on to the preview.
+		mux.HandleFunc("POST /transfer/encrypted", transferPage{s}.handleEncrypted)
+		mux.HandleFunc("POST /transfer/import", transferPage{s}.handleImport)
 		mux.HandleFunc("POST /changes/preview", h.handlePreview)
 		mux.HandleFunc("POST /changes/apply", h.handleApply)
 		mux.HandleFunc("POST /jobs/review", jh.handleJobReview)

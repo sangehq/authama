@@ -222,7 +222,7 @@ func newExportCmd() *cobra.Command {
 	f.StringVar(&pivot, "pivot", "", "rows:column - a row per value of the rows fields (comma-separated), a column per value of column")
 	f.BoolVar(&includeGit, "include-git", false, "host formats: also export git hosts (user git, or a github or gitlab provider)")
 	f.StringVar(&termiusGroups, "termius-groups", encode.TermiusGroupsProfile, "termius: the Groups column, nested by '/': "+strings.Join(encode.TermiusGroupSchemes, ", "))
-	cmd.AddCommand(newExportSelectionsCmd(), newExportScheduleCmd())
+	cmd.AddCommand(newExportSelectionsCmd(), newExportScheduleCmd(), newExportPackCmd())
 	return cmd
 }
 

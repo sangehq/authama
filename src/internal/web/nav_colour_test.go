@@ -61,7 +61,9 @@ func TestNavColoursFollowTheMapping(t *testing.T) {
 		if strings.Contains(e.attrs, "text-danger") && kind != "delete" {
 			t.Errorf("%s › %s is red (text-danger) but its kind is %s, not delete", e.Menu, e.Label, kind)
 		}
-		if !navTaskKinds[kind] && e.Menu != "user" && e.Menu != "system" {
+		// Export / Import, beside New, repeats History's export pages in
+		// History's colour, as New repeats the creates: it owns no colour.
+		if !navTaskKinds[kind] && e.Menu != "user" && e.Menu != "system" && e.Menu != "transfer" {
 			if pageColours[e.Menu] == nil {
 				pageColours[e.Menu] = map[string]bool{}
 			}

@@ -81,3 +81,6 @@ restore
 user-circle
 logout
 box
+transfer
+file-zip
+file-import

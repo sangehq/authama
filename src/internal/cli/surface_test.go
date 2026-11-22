@@ -260,6 +260,7 @@ var goOnly = map[string]string{
 	"setup":                 "owner, 2026-11-22: import and export ssh, tokens etc - a secrets-free document and an encrypted full export",
 	"setup export":          "owner, 2026-11-22: write the setup document, or with --encrypt the passphrase-encrypted full export",
 	"setup import":          "owner, 2026-11-22: merge either into this home with a preview and --on-conflict keep|replace|fail",
+	"export pack":           "owner, 2026-11-22: the web UI's Export / Import picker at a terminal - any exports, chosen by part, in one zip",
 	"structure":             "owner, 2026-11-22: a watcher that detects ~/.ssh changes and moves keys into the expected structure, once approved",
 	"structure list":        "owner, 2026-11-22: the suggested moves, never carried out unasked",
 	"structure check":       "owner, 2026-11-22: scan for changes and refresh suggestions; what the background job runs",

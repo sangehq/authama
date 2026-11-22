@@ -1,0 +1,163 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "History" $.Title "Every file this home goes out as, in one place, and bringing a setup in. Nothing exported here holds a private key or a token value, except the encrypted export, which goes straight to your download under your passphrase. An import shows what it would change before anything is written.")}}
+{{with .Import}}
+<div class="card mb-3" id="import-review" aria-labelledby="import-review-title">
+  <div class="card-header"><h2 class="card-title" id="import-review-title">{{icon "file-import"}}<span class="ms-1">Review <code>{{.File}}</code></span></h2></div>
+  <div class="card-body">
+    {{if .Explain}}
+    <div class="alert alert-info mb-0" role="status">{{.Explain}}</div>
+    {{else}}
+    <p class="mb-2">
+      {{if eq .Kind "full"}}<span class="badge badge-warn">Encrypted full export</span> It opened with the passphrase given. Private keys and token values are never shown: they are listed by name, and laid down only when you confirm.
+      {{else if eq .Kind "pack"}}<span class="badge badge-info">Export pack</span> Its <code>setup.json</code> is imported; the other files in it are copies for other tools.
+      {{else}}<span class="badge badge-info">Setup document</span> No secret in it.{{end}}
+    </p>
+    {{with .Doc}}
+    <dl class="row mb-2">
+      <dt class="col-sm-4">Made</dt><dd class="col-sm-8">{{.ExportedAt}}{{if .Authama}} by {{.Authama}}{{end}}</dd>
+      <dt class="col-sm-4">Profiles</dt><dd class="col-sm-8">{{if .Profiles}}{{range $i, $n := .Profiles}}{{if $i}}, {{end}}<code>{{$n}}</code>{{end}}{{else}}<span class="text-secondary">none</span>{{end}}</dd>
+      <dt class="col-sm-4">Keys declared</dt><dd class="col-sm-8">{{len .Keys}}</dd>
+      <dt class="col-sm-4">Token variables</dt><dd class="col-sm-8">{{if .EnvNames}}{{range $i, $n := .EnvNames}}{{if $i}}, {{end}}<code>{{$n}}</code>{{end}}{{else}}<span class="text-secondary">none</span>{{end}}</dd>
+    </dl>
+    {{end}}
+    {{if or .KeyFiles .Tokens}}
+    <div class="table-responsive">
+      <table class="table table-sm table-vcenter mb-2">
+        <caption class="text-secondary small">What it lays down under <em>{{.Policy}}</em>, by name only</caption>
+        <thead><tr><th scope="col">Item</th><th scope="col">Name</th><th scope="col">Here</th></tr></thead>
+        <tbody>
+          {{range .KeyFiles}}<tr><td>key file</td><td><code>{{.Name}}</code></td><td><span class="badge {{if eq .State "add"}}badge-ok{{else if eq .State "replace"}}badge-warn{{else}}badge-muted{{end}}">{{.State}}</span></td></tr>{{end}}
+          {{range .Tokens}}<tr><td>token value</td><td><code>{{.Name}}</code></td><td><span class="badge {{if eq .State "add"}}badge-ok{{else if eq .State "replace"}}badge-warn{{else}}badge-muted{{end}}">{{.State}}</span></td></tr>{{end}}
+        </tbody>
+      </table>
+    </div>
+    {{end}}
+    {{template "change_open" $}}
+      {{if eq .Kind "full"}}<input type="hidden" name="action" value="transfer-import-full"><input type="hidden" name="file_ref" value="{{.FileRef}}"><input type="hidden" name="pass_ref" value="{{.PassRef}}">
+      {{else}}<input type="hidden" name="action" value="setup-import"><input type="hidden" name="body" value="{{.Body}}">{{end}}
+      <input type="hidden" name="on_conflict" value="{{.Policy}}">
+      <button type="submit" class="btn btn-primary"{{desc "preview"}}>Preview the import</button>
+      <a class="btn btn-link" href="{{u "/transfer"}}#import"{{desc "transfer-another"}}>Choose another file</a>
+    </form>
+    {{end}}
+  </div>
+</div>
+{{end}}
+<div class="row row-cards">
+  <div class="col-lg-7">
+    <div class="card" id="export" aria-labelledby="export-title">
+      <div class="card-header"><h2 class="card-title" id="export-title">{{icon "file-zip"}}<span class="ms-1">Export</span></h2></div>
+      <form method="get" action="{{u "/transfer"}}">
+        <input type="hidden" name="preview" value="1">
+        <div class="card-body">
+          {{if .Problem}}<div class="alert alert-danger" role="alert">{{.Problem}}</div>{{end}}
+          <fieldset>
+            <legend class="form-label">What to include</legend>
+            <div class="list-group list-group-flush border rounded">
+              {{range .Parts}}
+              <label class="list-group-item d-flex gap-3 align-items-start">
+                <input class="form-check-input flex-shrink-0 mt-1" type="checkbox" name="part" value="{{.ID}}"{{if .Checked}} checked{{end}} aria-describedby="part-{{.ID}}-about">
+                <span><span class="fw-medium">{{.Title}}</span> <code class="small">{{.Files}}</code><span class="d-block text-secondary small" id="part-{{.ID}}-about">{{.About}}</span></span>
+              </label>
+              {{end}}
+            </div>
+          </fieldset>
+          <div class="row g-2 mt-2">
+            <div class="col-sm-6">
+              <label class="form-label" for="termius-groups">Termius groups</label>
+              <select class="form-select" id="termius-groups" name="termius_groups" aria-describedby="termius-groups-hint">
+                {{$g := .Group}}{{range .Groups}}<option value="{{.}}"{{if eq . $g}} selected{{end}}>{{.}}</option>{{end}}
+              </select>
+              <small class="form-hint" id="termius-groups-hint">How the Termius CSV nests hosts into groups.</small>
+            </div>
+            <div class="col-sm-6 d-flex align-items-center">
+              <label class="form-check mb-0"><input class="form-check-input" type="checkbox" name="include_git" value="1"{{if .IncludeGit}} checked{{end}}><span class="form-check-label">Also list git hosts in the Termius CSV</span></label>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer d-flex flex-wrap gap-2 justify-content-end">
+          <button type="submit" class="btn btn-outline-primary"{{desc "transfer-preview"}}>{{icon "search"}}<span class="ms-1">Preview</span></button>
+          <button type="submit" class="btn btn-primary" formaction="{{u "/transfer/pack.zip"}}"{{desc "transfer-download"}}>{{icon "download"}}<span class="ms-1">Download zip</span></button>
+        </div>
+      </form>
+      {{if .Previewed}}
+      <div class="card-body border-top" id="export-preview">
+        <h3 class="card-subtitle mb-2">The zip would hold {{len .Preview}} file(s)</h3>
+        {{range .Preview}}
+        <details class="mb-2">
+          <summary><code>{{.Name}}</code> <span class="text-secondary small">{{.Size}} bytes{{if .Lines}}, {{.Lines}} line(s){{end}}</span></summary>
+          {{if .Head}}<pre class="code-block small mt-2 mb-0" tabindex="0">{{.Head}}{{if .More}}
+…{{end}}</pre>{{end}}
+        </details>
+        {{end}}
+        <a class="btn btn-primary mt-2" href="{{u $.Data.Download}}" download{{desc "transfer-download"}}>{{icon "download"}}<span class="ms-1">Download these as a zip</span></a>
+      </div>
+      {{end}}
+      <div class="card-body border-top">
+        <p class="text-secondary small mb-1">The same at a terminal:</p>
+        {{template "command_line" .PackCmd}}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card mb-3" id="encrypted" aria-labelledby="encrypted-title">
+      <div class="card-header"><h2 class="card-title" id="encrypted-title">{{icon "lock"}}<span class="ms-1">Everything, encrypted</span></h2></div>
+      <div class="card-body">
+        <p>Every private key, the inventory and the token values, in an <a href="https://age-encryption.org" rel="noopener">age</a> file under a passphrase you choose. It goes straight to your download: nothing of it is shown here.</p>
+        {{if $.ReadOnly}}
+        <p class="text-secondary mb-1">This server is read-only. Make it at a terminal:</p>
+        {{template "command_line" .EncryptCmd}}
+        {{else}}
+        <form method="post" action="{{u "/transfer/encrypted"}}" autocomplete="off">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <div class="mb-2">
+            <label class="form-label" for="export-passphrase">Passphrase</label>
+            <input class="form-control" type="password" id="export-passphrase" name="passphrase" required minlength="{{.MinPass}}" maxlength="1024" autocomplete="new-password" aria-describedby="export-passphrase-hint">
+            <small class="form-hint" id="export-passphrase-hint">At least {{.MinPass}} characters. Keep it apart from the file.</small>
+          </div>
+          <div class="mb-2">
+            <label class="form-label" for="export-passphrase-again">The passphrase again</label>
+            <input class="form-control" type="password" id="export-passphrase-again" name="passphrase_confirm" required minlength="{{.MinPass}}" maxlength="1024" autocomplete="new-password">
+          </div>
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            {{template "pin_field" $}}
+            <button type="submit" class="btn btn-primary"{{desc "transfer-encrypt"}}>{{icon "download"}}<span class="ms-1">Download encrypted export</span></button>
+          </div>
+        </form>
+        {{end}}
+      </div>
+    </div>
+    <div class="card" id="import" aria-labelledby="import-title">
+      <div class="card-header"><h2 class="card-title" id="import-title">{{icon "file-import"}}<span class="ms-1">Import</span></h2></div>
+      <div class="card-body">
+        {{if .ImportProblem}}<div class="alert alert-danger" role="alert">{{.ImportProblem}}</div>{{end}}
+        {{if $.ReadOnly}}
+        <p class="text-secondary mb-1">This server is read-only. Import at a terminal:</p>
+        {{template "command_line" .ImportCmd}}
+        {{else}}
+        <form method="post" action="{{u "/transfer/import"}}" enctype="multipart/form-data" autocomplete="off">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <div class="mb-2">
+            <label class="form-label" for="import-file">File</label>
+            <input class="form-control" type="file" id="import-file" name="file" required accept=".json,.zip,.age,application/json,application/zip" aria-describedby="import-file-hint">
+            <small class="form-hint" id="import-file-hint">A setup document, an export zip, or an encrypted full export, up to {{.MaxUpload}}. It is told apart by what it holds.</small>
+          </div>
+          <div class="mb-2">
+            <label class="form-label" for="import-passphrase">Passphrase <span class="text-secondary fw-normal">(an encrypted export only)</span></label>
+            <input class="form-control" type="password" id="import-passphrase" name="passphrase" maxlength="1024" autocomplete="off">
+          </div>
+          <fieldset class="mb-2">
+            <legend class="form-label">When something here differs</legend>
+            <label class="form-check"><input class="form-check-input" type="radio" name="on_conflict" value="keep" checked><span class="form-check-label">Keep this home's</span></label>
+            <label class="form-check"><input class="form-check-input" type="radio" name="on_conflict" value="replace"><span class="form-check-label">Take the file's <span class="text-secondary small">(a snapshot is taken first; replaced key files are kept)</span></span></label>
+            <label class="form-check"><input class="form-check-input" type="radio" name="on_conflict" value="fail"><span class="form-check-label">Stop if anything differs</span></label>
+          </fieldset>
+          <button type="submit" class="btn btn-primary"{{desc "transfer-upload"}}>{{icon "file-import"}}<span class="ms-1">Read the file</span></button>
+        </form>
+        <p class="text-secondary small mt-3 mb-0">An ssh config goes to <a href="{{u "/import"}}">SSH import</a>, and a backup bundle to <code>{{brandCommand}} ssh restore</code>. Your PIN is asked when you confirm.</p>
+        {{end}}
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}{{end}}

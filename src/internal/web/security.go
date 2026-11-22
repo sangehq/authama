@@ -330,7 +330,13 @@ func (s *Server) sameOrigin(next http.Handler) http.Handler {
 		}
 		// Parse here, so a body over MaxBodyBytes is reported as what it is
 		// rather than as a missing CSRF token.
-		if err := r.ParseForm(); err != nil {
+		err := r.ParseForm()
+		// The one upload (Export / Import) is multipart; its fields, the
+		// token among them, are read the same way, within MaxBodyBytes.
+		if err == nil && strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+			err = r.ParseMultipartForm(MaxBodyBytes)
+		}
+		if err != nil {
 			var tooBig *http.MaxBytesError
 			if errors.As(err, &tooBig) {
 				s.renderError(w, r, http.StatusRequestEntityTooLarge, "Too large",

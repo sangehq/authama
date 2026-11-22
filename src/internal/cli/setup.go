@@ -17,6 +17,7 @@ import (
 	"github.com/sangehq/authama/src/internal/services/history"
 	"github.com/sangehq/authama/src/internal/services/keystore"
 	"github.com/sangehq/authama/src/internal/services/setupxfer"
+	"github.com/sangehq/authama/src/internal/services/transfer"
 	"github.com/sangehq/authama/src/internal/util/agepass"
 	"github.com/sangehq/authama/src/internal/util/fs"
 	"github.com/sangehq/authama/src/internal/util/log"
@@ -35,7 +36,8 @@ func newSetupCmd() *cobra.Command {
 			"`setup export --encrypt` writes a full export: the same, plus every private key, the\n" +
 			"inventory and the token values, in an age file encrypted with a passphrase (`age -d`\n" +
 			"opens it too). It needs the owner PIN when one is set.\n\n" +
-			"`setup import` reads either, shows what it would add, keep and replace, and merges it\n" +
+			"`setup import` reads either (or an `export pack` zip, for its setup.json), shows what it\n" +
+			"would add, keep and replace, and merges it\n" +
 			"into this home. --on-conflict settles what differs: keep (the default) leaves what is\n" +
 			"here, replace takes the import's - keeping a copy of every key file and .env it\n" +
 			"replaces in the state home's replaced/ folder - and fail writes nothing.",
@@ -171,8 +173,9 @@ func newSetupImportCmd() *cobra.Command {
 	var dryRun, yes, allowRisky bool
 	cmd := &cobra.Command{
 		Use:   "import FILE",
-		Short: "Merge a setup document or an encrypted full export into this home, after showing what it would do",
+		Short: "Merge a setup document, an export pack or an encrypted full export into this home, after showing what it would do",
 		Example: "  " + brand.Command + " setup import setup.json --dry-run\n" +
+			"  " + brand.Command + " setup import " + brand.Command + "-export.zip --dry-run\n" +
 			"  " + brand.Command + " setup import setup.age --on-conflict replace\n" +
 			"  " + brand.Command + " setup import setup.age --on-conflict fail --passphrase-file ~/.setup-pass",
 		Args: cobra.ExactArgs(1),
@@ -195,6 +198,14 @@ func newSetupImportCmd() *cobra.Command {
 			body, err := os.ReadFile(args[0])
 			if err != nil {
 				return err
+			}
+			switch k := transfer.Detect(body); k {
+			case transfer.KindPack:
+				if body, err = transfer.SetupFromPack(body); err != nil {
+					return err
+				}
+			case transfer.KindPackOnly, transfer.KindSSHConfig, transfer.KindTermius:
+				return errors.New(transfer.Explain(k, brand.Command))
 			}
 			d, err := setupxfer.Parse(body)
 			if err != nil {

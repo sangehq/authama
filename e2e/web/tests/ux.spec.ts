@@ -176,6 +176,33 @@ test('Move setup downloads a document with no secret, and previews a pasted impo
   await expect(page.getByText(/nothing to change|already the same/).first()).toBeVisible();
 });
 
+test('Export / Import in the header previews a pack, downloads it, and imports it back through the preview', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#navbar-transfer').click();
+  await page.getByRole('link', { name: /^Export\b/ }).first().click();
+  await expect(page).toHaveURL(/\/transfer#export$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Export / Import');
+  const exportCard = page.locator('#export');
+  await exportCard.getByRole('checkbox', { name: /Hosts for Termius/ }).check();
+  await exportCard.getByRole('checkbox', { name: /Setup document/ }).check();
+  await exportCard.getByLabel('Termius groups').selectOption('category/profile');
+  await exportCard.getByRole('button', { name: 'Preview' }).click();
+  const preview = page.locator('#export-preview');
+  await expect(preview).toContainText('termius-hosts.csv');
+  await expect(preview).toContainText('setup.json');
+  await expect(preview).not.toContainText('PRIVATE KEY');
+  const href = (await preview.getByRole('link', { name: 'Download these as a zip' }).getAttribute('href')) ?? '';
+  expect(href).toContain('termius_groups=category%2Fprofile');
+  const zip = await page.request.get(href);
+  expect(zip.headers()['content-type']).toBe('application/zip');
+  const body = await zip.body();
+  await page.locator('#import-file').setInputFiles({ name: 'authama-export.zip', mimeType: 'application/zip', buffer: body });
+  await page.getByRole('button', { name: 'Read the file' }).click();
+  await expect(page.locator('#import-review')).toContainText('Export pack');
+  await page.locator('#import-review').getByRole('button', { name: 'Preview the import' }).click();
+  await expect(page.getByText(/nothing to change|already the same/).first()).toBeVisible();
+});
+
 test('the structure tree moves a stray key by drag and drop or its menu, and previews before writing', async ({ page }) => {
   // Tall enough that the stray key and the profile are both on screen: a
   // drag that has to scroll the page never starts in headless Chromium.

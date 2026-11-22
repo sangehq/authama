@@ -378,6 +378,9 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 	if len(actionFields) < 22 {
 		t.Fatalf("%d actions; the list is not being read", len(actionFields))
 	}
+	// Offered only once an encrypted export is uploaded:
+	// TestTheTransferPageImportsAnEncryptedExport follows it there.
+	seen["transfer-import-full"] = true
 	for want := range actionFields {
 		if !seen[want] {
 			t.Errorf("no page offers %s", want)
