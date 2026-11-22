@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -33,7 +34,7 @@ func TestABrowserSignsInWithItsCookieAndGetsANewOne(t *testing.T) {
 	if strings.Contains(string(b), sec) || strings.Contains(string(b), next) {
 		t.Fatal("browsers.json holds a cookie secret; only hashes belong there")
 	}
-	if fi, _ := os.Stat(path); fi.Mode().Perm() != 0o600 {
+	if fi, _ := os.Stat(path); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
 		t.Fatalf("browsers.json is %v, want 0600", fi.Mode().Perm())
 	}
 }

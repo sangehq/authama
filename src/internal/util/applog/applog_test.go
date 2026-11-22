@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -49,7 +50,7 @@ func TestSecretsNeverReachTheLog(t *testing.T) {
 	if !strings.Contains(string(b), "work") || !strings.Contains(string(b), Redacted) {
 		t.Fatalf("redaction removed too much or nothing:\n%s", b)
 	}
-	if fi, _ := os.Stat(filepath.Join(dir, FileName)); fi.Mode().Perm() != 0o600 {
+	if fi, _ := os.Stat(filepath.Join(dir, FileName)); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
 		t.Fatalf("authama.log is %v", fi.Mode().Perm())
 	}
 }
