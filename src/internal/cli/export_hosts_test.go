@@ -195,3 +195,38 @@ func TestExportHostsFiltersTheHostsAndReportsWhatItLeftOut(t *testing.T) {
 		}
 	}
 }
+
+// --termius-groups nests the Groups column: a categorized profile's hosts file
+// under category/profile, an uncategorized one's under the profile alone. The
+// file is the renderer's for the same scheme; the flag is refused for another
+// format, and a scheme that is not one is refused naming the choices.
+func TestExportHostsTermiusGroups(t *testing.T) {
+	clientsHome(t)
+	run(t, "ssh", "profile", "edit", "work", "--category", "clients")
+	p, m, _, err := loadExport(newRootCmd())
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp, err := renderer.RenderTermiusCSV(m, exportPaths(p), renderer.TermiusOptions{Groups: encode.TermiusGroupsCategoryProfile})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := filepath.Join(t.TempDir(), "termius.csv")
+	run(t, "export", "hosts", "--format", "termius", "--termius-groups", "category/profile", "--out", out)
+	got, _ := os.ReadFile(out) //nolint:gosec // test temp path
+	if string(got) != exp.CSV || !strings.Contains(exp.CSV, "\nclients/work,web1,") {
+		t.Errorf("--termius-groups category/profile:\n--- export hosts\n%s\n--- renderer\n%s", got, exp.CSV)
+	}
+	plain := run(t, "export", "hosts", "--format", "termius")
+	if !strings.Contains(plain, "\nwork,web1,") {
+		t.Errorf("the default groups by profile alone:\n%s", plain)
+	}
+	if _, err := runErr(t, "export", "hosts", "--format", "json", "--termius-groups", "profile/env"); err == nil ||
+		!strings.Contains(err.Error(), "--format termius") {
+		t.Errorf("--termius-groups with json: %v", err)
+	}
+	if _, err := runErr(t, "export", "hosts", "--format", "termius", "--termius-groups", "env"); err == nil ||
+		!strings.Contains(err.Error(), "category/profile/env") {
+		t.Errorf("an unknown scheme: %v", err)
+	}
+}

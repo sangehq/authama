@@ -435,7 +435,8 @@ file. Confirming snapshots `~/.ssh` first, then restores. A snapshot that still 
 is refused here, as its page refuses to open it.
 
 **Exports download.** The hosts page offers the flat `ssh_config` (`authama ssh config export --flat`)
-and the Termius CSV (`authama export hosts --format termius`, with or without git hosts) as downloads. Nothing is
+and the Termius CSV (`authama export hosts --format termius`, with or without git hosts, or in profile/env groups;
+`?termius_groups=` takes any `--termius-groups` value) as downloads. Nothing is
 written to the home, so `--read-only` keeps them.
 
 **A preview or a review answers its form, and has no address of its own.** Reloading one, going Back

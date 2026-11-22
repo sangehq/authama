@@ -61,7 +61,9 @@ type Engine interface {
 	Doctor() (doctor.Report, error)
 	VMs(checkDocker bool) (VMsView, error)
 	Audit(now time.Time) (AuditView, error)
-	Export(name string, includeGit bool) (string, error)
+	// Export renders a download; groups is the Termius CSV's group scheme
+	// (encode.TermiusGroupSchemes, "" for the profile), ignored otherwise.
+	Export(name string, includeGit bool, groups string) (string, error)
 	Tokens() (TokensView, error)
 
 	// Preview runs a change on a private copy of the home; Apply makes it
@@ -759,7 +761,7 @@ const (
 )
 
 // Export renders one of the exports for download.
-func (e AppEngine) Export(name string, includeGit bool) (string, error) {
+func (e AppEngine) Export(name string, includeGit bool, groups string) (string, error) {
 	m, err := e.manifest()
 	if err != nil {
 		return "", err
@@ -769,7 +771,7 @@ func (e AppEngine) Export(name string, includeGit bool) (string, error) {
 	case ExportFlat:
 		return renderer.RenderFlatConfig(m, ep, platform.EmitUseKeychain())
 	case ExportTermius:
-		exp, err := renderer.RenderTermiusCSV(m, ep, renderer.TermiusOptions{IncludeGit: includeGit})
+		exp, err := renderer.RenderTermiusCSV(m, ep, renderer.TermiusOptions{IncludeGit: includeGit, Groups: groups})
 		if err != nil {
 			return "", err
 		}

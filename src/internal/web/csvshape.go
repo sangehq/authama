@@ -38,6 +38,9 @@ type csvShape struct {
 	// keyHosts is how many hosts use each key, for counting hosts when
 	// narrowing; nil for a list that has no such count.
 	keyHosts map[string]int
+	// regroup, when set, rewrites the rows the filters kept before any column
+	// is dropped: the Termius CSV's nested groups (termiusRegroup).
+	regroup func(csvout.Table) csvout.Table
 }
 
 func shapeOf(q url.Values) csvShape {
@@ -141,7 +144,40 @@ func (s csvShape) stages(t csvout.Table) (inProfiles, inKeys, kept csvout.Table)
 // apply shapes t.
 func (s csvShape) apply(t csvout.Table) csvout.Table {
 	_, _, kept := s.stages(t)
+	if s.regroup != nil {
+		kept = s.regroup(kept)
+	}
 	return kept.Drop(s.Drop...)
+}
+
+// termiusRegroup gives each Termius row the Groups cell its Label has in
+// nested, the same hosts rendered in nested groups. A label is a host's
+// alias, unique in the manifest, so it names one row in each file.
+func termiusRegroup(nested csvout.Table) func(csvout.Table) csvout.Table {
+	return func(t csvout.Table) csvout.Table {
+		ng, nl := nested.Column("Groups"), nested.Column("Label")
+		g, l := t.Column("Groups"), t.Column("Label")
+		if ng < 0 || nl < 0 || g < 0 || l < 0 {
+			return t
+		}
+		group := map[string]string{}
+		for _, r := range nested.Rows {
+			if ng < len(r) && nl < len(r) {
+				group[r[nl]] = r[ng]
+			}
+		}
+		out := csvout.Table{Header: t.Header}
+		for _, r := range t.Rows {
+			if l < len(r) && g < len(r) {
+				if v, ok := group[r[l]]; ok {
+					r = append([]string(nil), r...)
+					r[g] = v
+				}
+			}
+			out.Rows = append(out.Rows, r)
+		}
+		return out
+	}
 }
 
 // csvProfile is one profile a list's rows belong to, and how many it has.
@@ -255,6 +291,12 @@ type csvPreview struct {
 func (h pages) writeCSV(w http.ResponseWriter, r *http.Request, filename string, t csvout.Table, keyHosts map[string]int) {
 	shape := shapeOf(r.URL.Query())
 	shape.keyHosts = keyHosts
+	writeShapedCSV(w, filename, t, shape)
+}
+
+// writeShapedCSV writes t as shape asks: the file, or its preview.
+func writeShapedCSV(w http.ResponseWriter, filename string, t csvout.Table, shape csvShape) {
+	keyHosts := shape.keyHosts
 	shaped := shape.apply(t)
 	w.Header().Set("Cache-Control", "no-store")
 	if shape.Preview {

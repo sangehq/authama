@@ -498,7 +498,9 @@ the fields they write. The SSH client formats below take none.
 
 Hosts also go out as an SSH client imports them: --format hosts-csv, iterm2, mobaxterm, putty, remmina, securecrt, ssh_config, termius, windows-terminal.
 ssh_config is the managed config of the hosts kept, byte for byte what `ssh config export --flat`
-writes when every host is kept; termius is the Termius CSV; hosts-csv is a generic CSV; the rest
+writes when every host is kept; termius is the Termius CSV, grouped by profile or, with
+--termius-groups, in nested groups (category/profile, profile/env, category/profile/env, or
+none); hosts-csv is a generic CSV; the rest
 are the clients' own files. Those formats write hosts in manifest order unless --sort is
 given, ignore --columns, leave out git hosts unless --include-git and, except ssh_config,
 windows-terminal and iterm2, hosts behind a ProxyCommand. remmina writes a zip of one file per
@@ -529,6 +531,7 @@ Examples:
   authama export prd-hosts --format json
   authama export hosts --profile simtabi --format ssh_config --out simtabi.ssh_config
   authama export hosts --env prd --format putty --out prd.reg
+  authama export hosts --format termius --termius-groups profile/env --out termius-hosts.csv
 ```
 
 Flags:
@@ -564,6 +567,7 @@ Flags:
       --status strings             only these statuses (a host's status, a key's state)
       --tag strings                only rows with one of these tags
       --template stringArray       a column from a template: as={profile}/{alias}
+      --termius-groups string      termius: the Groups column, nested by '/': profile, category/profile, profile/env, category/profile/env, none (default "profile")
       --tool strings               tokens: only these tools
       --totals[=true|false]        with --group-by: a last row over every group; with --pivot, also a total column
       --transform stringArray      a transform step as JSON, e.g. {"kind":"map","field":"status","values":{"needs-redeploy":"pending"}}

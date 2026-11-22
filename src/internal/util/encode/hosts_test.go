@@ -114,7 +114,7 @@ func TestTermiusFormatIsTheTermiusCSV(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want, _ := TermiusCSV([]Host{src.hosts["web"], src.hosts["gh"]})
+	want, _ := TermiusCSV([]Host{src.hosts["web"], src.hosts["gh"]}, "")
 	if string(exp.Files[0].Data) != want || exp.Files[0].Name != "termius-hosts.csv" {
 		t.Errorf("termius = %q, want %q", exp.Files[0].Data, want)
 	}
@@ -168,5 +168,30 @@ func TestRemminaBundlesIntoAZip(t *testing.T) {
 	}
 	if _, err := Bundle(f, &ClientExport{Files: []ClientFile{{Name: "../x", Data: []byte("x")}}}); err == nil {
 		t.Error("a file name with a path went into the zip")
+	}
+}
+
+// --termius-groups reaches the CSV, a scheme that is not one is refused before
+// any host is read, and a host behind a ProxyJump stays in the file with a
+// note saying where Termius takes the jump host instead.
+func TestTermiusFormatGroupsAndProxyJump(t *testing.T) {
+	f, _ := Get("termius")
+	src := newFake()
+	web := src.hosts["web"]
+	web.Env, web.Category, web.ProxyJump = "prd", "clients", "bastion"
+	src.hosts["web"] = web
+	exp, err := f.Hosts(src, []string{"web"}, Options{TermiusGroups: TermiusGroupsCategoryProfileEnv})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Split(string(exp.Files[0].Data), "\n")[1]; got != "clients/acme/prd,web,prd,203.0.113.5,ssh,22,deploy," {
+		t.Errorf("row = %q", got)
+	}
+	if !strings.Contains(strings.Join(exp.Notes, "\n"), "web  reaches its host through ProxyJump bastion") {
+		t.Errorf("no ProxyJump note: %v", exp.Notes)
+	}
+	src.asked = nil
+	if _, err := f.Hosts(src, []string{"web"}, Options{TermiusGroups: "env/profile"}); err == nil || src.asked != nil {
+		t.Errorf("a scheme that is not one: err %v, asked %v", err, src.asked)
 	}
 }

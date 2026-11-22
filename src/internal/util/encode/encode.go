@@ -32,6 +32,9 @@ type Options struct {
 	// IncludeGit keeps git hosts (user git, or a github or gitlab provider)
 	// in a host format, which otherwise leaves them out: they are not shells.
 	IncludeGit bool
+	// TermiusGroups is what the termius format writes in its Groups column:
+	// one of TermiusGroupSchemes, "" for the default (the profile).
+	TermiusGroups string
 }
 
 // Format is one file format.

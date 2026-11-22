@@ -20,6 +20,7 @@ import (
 	"github.com/sangehq/authama/src/internal/services/history"
 	"github.com/sangehq/authama/src/internal/services/snapshots"
 	"github.com/sangehq/authama/src/internal/util/csvout"
+	"github.com/sangehq/authama/src/internal/util/encode"
 )
 
 // tokenFilterParam is the history filter for one token, as target/host.
@@ -415,20 +416,48 @@ func (h pages) handleExport(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, ErrNotFound)
 		return
 	}
-	body, err := h.s.opts.Engine.Export(name, r.URL.Query().Get("include_git") == "1")
+	q := r.URL.Query()
+	includeGit, groups := q.Get("include_git") == "1", q.Get("termius_groups")
+	if name == ExportTermius {
+		if err := encode.CheckTermiusGroups(groups); err != nil {
+			h.s.renderError(w, r, http.StatusBadRequest, "Bad request", err.Error())
+			return
+		}
+	} else {
+		groups = ""
+	}
+	body, err := h.s.opts.Engine.Export(name, includeGit, groups)
 	if err != nil {
 		h.fail(w, r, err)
 		return
 	}
 	// The Termius file is a CSV too: shaped like the lists' when asked to be,
-	// and written exactly as rendered when not.
-	if name == ExportTermius && shapeOf(r.URL.Query()).any() {
-		t, err := csvout.Parse(body)
+	// and written exactly as rendered when not. Its rows are chosen by profile
+	// in the profile-grouped file, since a nested group (clients/simtabi/prd)
+	// is not a profile name, and get their nested group back by label.
+	if name == ExportTermius && shapeOf(q).any() {
+		byProfile := body
+		if groups != "" && groups != encode.TermiusGroupsProfile {
+			if byProfile, err = h.s.opts.Engine.Export(name, includeGit, ""); err != nil {
+				h.fail(w, r, err)
+				return
+			}
+		}
+		t, err := csvout.Parse(byProfile)
 		if err != nil {
 			h.fail(w, r, err)
 			return
 		}
-		h.writeCSV(w, r, name, t, nil)
+		shape := shapeOf(q)
+		if byProfile != body {
+			nested, err := csvout.Parse(body)
+			if err != nil {
+				h.fail(w, r, err)
+				return
+			}
+			shape.regroup = termiusRegroup(nested)
+		}
+		writeShapedCSV(w, name, t, shape)
 		return
 	}
 	ctype := "text/plain; charset=utf-8"

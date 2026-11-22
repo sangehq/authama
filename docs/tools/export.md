@@ -32,7 +32,7 @@ authama export hosts --env prd --format putty -o prd.reg
 | filters | `--profile`, `--key` (a key's name or `profile/name`), `--env`, `--role`, `--tag`, `--status`, `--tool`, `--kind`, `--area`, `--source`, `--command`, `--since`/`--until` (a prefix such as `2026-11`), `--include`/`--exclude` text |
 | columns | `--columns field,field=heading,…` by field, in order; related fields by path (`key.fingerprint`, `profile.code`) |
 | order | `--sort field,-field` (`-` descends), `--limit n` |
-| format | `--format csv` (default), `tsv`, `json`, `jsonl`, `yaml`, `php`, `js`, `markdown`, `html`; `--no-header`, `--compact`, `--shape table`. For hosts also `ssh_config`, `termius` and the clients below; `--include-git` |
+| format | `--format csv` (default), `tsv`, `json`, `jsonl`, `yaml`, `php`, `js`, `markdown`, `html`; `--no-header`, `--compact`, `--shape table`. For hosts also `ssh_config`, `termius` and the clients below; `--include-git`; for `termius`, `--termius-groups` |
 | output | stdout, or `--out <file>` (mode 0600) |
 
 `authama export hosts` and `authama export keys` with no options print exactly what `ssh list --csv` and
@@ -190,6 +190,7 @@ authama export hosts --format termius --out termius-hosts.csv  # the CSV, mode 0
 authama export hosts --format termius --include-git            # also git hosts, to stdout
 authama export hosts --format termius --exclude uni            # leave out hosts containing "uni"
 authama export hosts --format termius --profile clients        # any export filter applies
+authama export hosts --format termius --termius-groups profile/env   # nested groups: simtabi/prd, simtabi/stg
 ```
 
 The Export page in the web UI offers the same file. `ssh termius export`, which wrote it before, was removed on
@@ -197,16 +198,40 @@ The Export page in the web UI offers the same file. `ssh termius export`, which 
 
 | Column | Value |
 |---|---|
-| `Groups` | the profile |
+| `Groups` | the profile, or the path `--termius-groups` names (below) |
 | `Label` | the host alias |
 | `Tags` | the host's tags (a comma inside one tag becomes a space) |
-| `Hostname/IP` · `Port` · `Username` | from the host; `Protocol` is `ssh` |
+| `Hostname/IP` · `Port` · `Username` | from the host (port 22 when the host sets none); `Protocol` is `ssh` |
 | `Password` | always empty |
+
+### Nested groups
+
+Termius reads a `/` in `Groups` as nesting: its own template files a host under `Project/Dev`, the subgroup `Dev` of
+`Project`. `--termius-groups` chooses the path (the web UI takes the same value as `?termius_groups=`, and the hosts
+page has a **Download the Termius CSV, in profile/env groups** link):
+
+| `--termius-groups` | `Groups` | Example |
+|---|---|---|
+| `profile` (default) | the profile | `simtabi` |
+| `category/profile` | the profile under its [category](../recipes/group-profiles-into-categories.md) | `orgs/simtabi` |
+| `profile/env` | the profile, then the environment | `simtabi/prd` |
+| `category/profile/env` | both | `orgs/simtabi/prd` |
+| `none` | empty: every host at the top level | |
+
+The environment is the `{env}` the profile's [naming rules](../configuration.md#naming-servers) read from the alias (`simbi-prd-web-00` gives
+`prd`), the same value `--env` filters on. A part a host does not have is left out rather than written as an empty
+level: an uncategorized profile's hosts file under `simtabi/prd`, and a host whose alias the naming rules do not parse
+files under its profile. A `/` inside one part becomes `-`, so a name can never add a level. The default output is
+unchanged. `--termius-groups` is refused with any other `--format`.
 
 Left out, and reported on stderr:
 
 - **VM hosts** — reached only through authama's ProxyCommand, which Termius ignores;
 - **git hosts** — user `git`, or a `github`/`gitlab` provider: not shells (`--include-git` adds them);
+
+A host that reaches its server through a `ProxyJump` raw option stays in the file, since Termius can reach it through
+a jump host, but the CSV has no column for one: the notes on stderr name the jump host to set as the host's **Host
+Chain** in Termius.
 
 A value starting with `=`, `+`, `-` or `@` is prefixed with `'`, so the file cannot run a formula if opened in a
 spreadsheet.

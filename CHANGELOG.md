@@ -6,6 +6,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Nested Termius groups.** `export hosts --format termius --termius-groups <scheme>` writes the `Groups` column
+  as a path Termius files as subgroups, the way its own import template's `Project/Dev` does: `profile` (the
+  default, unchanged), `category/profile`, `profile/env`, `category/profile/env`, or `none` for no group. The
+  environment is the `{env}` the profile's naming rules read from the alias; a part a host lacks is left out, and a
+  `/` inside a name becomes `-`, so it cannot add a level. The web UI takes `?termius_groups=` on the Termius download
+  and on `/exports/run`, and the hosts page has a **Download the Termius CSV, in profile/env groups** link; `?profile=`
+  still chooses rows by profile there.
+
+### Fixed
+
+- The Termius export's notes name the jump host of a host that reaches its server through a `ProxyJump` raw option,
+  to set as its Host Chain in Termius: the CSV has no column for one, so the host was imported as a direct host
+  with nothing saying why it could not connect.
+
 ## [0.1.0] - 2026-11-17
 
 The first release under `sangehq/authama`, tagged 2026-11-14 and re-tagged on 2026-11-16 and 2026-11-17 with everything

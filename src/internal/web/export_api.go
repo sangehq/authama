@@ -284,7 +284,8 @@ func (x exportAPI) run(w http.ResponseWriter, r *http.Request, sel selection.Sel
 }
 
 // hostExport writes the hosts sel keeps in the host format f, from this
-// home's manifest. ?include_git=1 keeps git hosts, as --include-git does.
+// home's manifest. ?include_git=1 keeps git hosts, as --include-git does, and
+// ?termius_groups= is --termius-groups.
 func (x exportAPI) hostExport(ds *dataset.Dataset, sel selection.Selection, f encode.Format, q url.Values) (*encode.ClientExport, error) {
 	home := x.s.opts.Engine.Home()
 	m, err := manifest.Load(home.Manifest())
@@ -292,7 +293,7 @@ func (x exportAPI) hostExport(ds *dataset.Dataset, sel selection.Selection, f en
 		return nil, err
 	}
 	src := renderer.Source{M: m, P: renderer.ExportPathsFor(home.SSHDir), EmitUseKeychain: platform.EmitUseKeychain()}
-	exp, _, err := selection.HostExport(ds, sel, f, src, encode.Options{IncludeGit: q.Get("include_git") == "1"})
+	exp, _, err := selection.HostExport(ds, sel, f, src, encode.Options{IncludeGit: q.Get("include_git") == "1", TermiusGroups: q.Get("termius_groups")})
 	return exp, err
 }
 

@@ -104,5 +104,5 @@ func clientHost(m *manifest.Manifest, p ExportPaths, rk manifest.ResolvedKey) en
 	if agent == "" {
 		ch.KeyFile = p.expand(file)
 	}
-	return ch
+	return withPlacement(m, rk, ch)
 }

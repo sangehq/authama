@@ -69,6 +69,11 @@ func TestTermiusAndFlatConfigMatchTheirGoldenFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	golden(t, "termius/termius-hosts.csv", []byte(exp.CSV))
+	nested, err := RenderTermiusCSV(m, testExportPaths, TermiusOptions{IncludeGit: true, Groups: "category/profile/env"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	golden(t, "termius/termius-hosts-category-profile-env.csv", []byte(nested.CSV))
 	flat, err := RenderFlatConfig(m, testExportPaths, false)
 	if err != nil {
 		t.Fatal(err)

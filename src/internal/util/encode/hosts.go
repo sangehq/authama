@@ -101,11 +101,14 @@ func writeSSHConfig(src HostSource, aliases []string, _ Options) (*ClientExport,
 // writeTermius is the Termius CSV import of the chosen hosts. The CSV carries
 // no keys, so the notes name the key to attach to each host.
 func writeTermius(src HostSource, aliases []string, o Options) (*ClientExport, error) {
+	if err := CheckTermiusGroups(o.TermiusGroups); err != nil {
+		return nil, err
+	}
 	hosts, skipped, err := src.ClientHosts(aliases, "Termius", false, o.IncludeGit)
 	if err != nil {
 		return nil, err
 	}
-	csv, err := TermiusCSV(hosts)
+	csv, err := TermiusCSV(hosts, o.TermiusGroups)
 	if err != nil {
 		return nil, err
 	}
@@ -116,6 +119,12 @@ func writeTermius(src HostSource, aliases []string, o Options) (*ClientExport, e
 			where = "in 1Password: add it from 1Password, not from disk"
 		}
 		notes = append(notes, "  "+h.Alias+"  "+where)
+	}
+	for _, h := range hosts {
+		if h.ProxyJump != "" {
+			notes = append(notes, "  "+h.Alias+"  reaches its host through ProxyJump "+h.ProxyJump+
+				", which the CSV cannot carry: in Termius, set the host's Host Chain to "+h.ProxyJump)
+		}
 	}
 	return &ClientExport{Files: []ClientFile{{Name: "termius-hosts.csv", Data: []byte(csv)}}, Skipped: skipped, Notes: notes}, nil
 }
