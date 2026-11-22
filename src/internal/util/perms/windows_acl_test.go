@@ -3,6 +3,7 @@ package perms
 import (
 	"errors"
 	"os/user"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -100,9 +101,12 @@ func TestPathsWithSpacesArePassedAsOneArgument(t *testing.T) {
 	}
 }
 
-// Windows permissions are ACLs; a mode check would flag every file. Enforcement
-// is the icacls call on write, so the check only asks whether the file is there.
-func TestWindowsPermsOKOnlyChecksExistence(t *testing.T) {
+// Off Windows there is no ACL to read, so the Windows check only asks whether
+// the file is there; on Windows acl_windows_test.go reads the real ACL.
+func TestWindowsPermsOKOffWindowsChecksExistence(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the real ACL is read on Windows; see acl_windows_test.go")
+	}
 	dir := t.TempDir()
 	if !windowsPermsOK(dir) {
 		t.Error("an existing directory should pass")

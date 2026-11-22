@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A real permission check on Windows (P-04).** `doctor`, `validate`, `repair`, `reconcile` and the token audit used
+  to pass any existing file on Windows. They now read its owner and DACL through the Windows security API: a private
+  file passes only when you, SYSTEM or Administrators own it and no ACE that applies to it grants anyone else access.
+  Everyone, Users, Authenticated Users or another account fails the check, and `repair` applies the owner-only
+  `icacls` ACL again. The rules are tested on every OS and the ACL read on the windows-latest CI leg.
+
 - **The remaining CLI flags on the web.** Every command flag in
   [CLI and web parity](docs/reference/cli-web-parity.md) is now on a page or CLI-only by design, with 0 gaps
   (156 commands; 406 flags: 338 covered, 68 CLI-only). New controls: `profile add --code`; `host add --env --role`

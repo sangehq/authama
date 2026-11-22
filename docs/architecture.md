@@ -462,7 +462,10 @@ PowerShell toast). Desktop notifications on every platform go through
 `internal/util/desktop`, which delegates to go-notifykit. The Windows leg matters: it is the only place the tagged code
 runs at all, and the first time it did it found four defects nothing else could
 see - a test home that was never isolated there, an advisory lock that leaked its
-descriptor, and two mode assertions with no ACL guard.
+descriptor, and two mode assertions with no ACL guard. The owner-only check reads the
+real DACL there (`util/perms/acl_windows.go`); its rules (`acl_rules.go`) are
+plain functions over SIDs, tested on every OS, and the read itself is tested on
+the Windows leg (`acl_windows_test.go`).
 
 ## Why is the web UI's JavaScript ES modules with no build step?
 
