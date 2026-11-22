@@ -7,6 +7,8 @@ import (
 
 	"github.com/sangehq/authama/src/internal/services/events"
 	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/services/structure"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // defaultEventInterval is how often a running server scans for file changes.
@@ -38,7 +40,31 @@ func (s *Server) scanEvents() {
 		return
 	}
 	p := s.opts.Engine.Home()
-	_, _ = events.Scan(p, s.opts.EventRoots(p), s.now().UTC())
+	evs, err := events.Scan(p, s.opts.EventRoots(p), s.now().UTC())
+	if err != nil {
+		return
+	}
+	s.checkStructure(p, evs)
+}
+
+// checkStructure refreshes the structure suggestions (the structure page's
+// list) after a scan that saw a file change in ~/.ssh or the config home,
+// and once at start. It only suggests: nothing moves until the owner
+// approves it.
+func (s *Server) checkStructure(p paths.Paths, evs []events.Event) {
+	changed := !s.structureSeen.Load()
+	for _, e := range evs {
+		if e.Area == events.AreaSSH || e.Area == events.AreaConfig {
+			changed = true
+			break
+		}
+	}
+	if !changed {
+		return
+	}
+	if _, _, err := structure.Check(p, s.now()); err == nil {
+		s.structureSeen.Store(true)
+	}
 }
 
 // EventRow is one file event, with the authama operation that made it when

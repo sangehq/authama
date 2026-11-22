@@ -16,6 +16,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/sangehq/authama/src/internal/services/events"
@@ -117,6 +118,10 @@ type Server struct {
 	jobs     *jobs.Registry
 	handler  http.Handler
 	binary   binaryWatch
+	// structureSeen is set once the structure suggestions were checked;
+	// after that a scan that saw no change in ~/.ssh or the config home
+	// leaves them as they are.
+	structureSeen atomic.Bool
 }
 
 // New builds a Server. It parses every template once, so a template error is

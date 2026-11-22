@@ -33,6 +33,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   its link. `sign set` edits the block and applies it, `sign status` shows what each checkout resolves, `sign use`
   makes one checkout a profile's wherever it is, and `sign verify` checks recent commits against `allowed_signers`.
   Recipe: [Sign commits with each profile's SSH key](docs/recipes/sign-commits-with-ssh.md).
+- **A structure watcher for `~/.ssh`** (`authama ssh structure`). It finds keys outside the expected layout - a
+  pair loose in `~/.ssh`, a key no profile declares in a profile's directory, a key in a directory no profile owns,
+  a declared key in the wrong directory, a key in the config home - and suggests a move for each, guessing the
+  profile from the key's name or comment. Nothing moves until it is approved: `structure approve <id>` (or a plan
+  of move lines) previews the change on a throwaway copy, then backs up each moved key to `.state/moved/<time>/`,
+  moves the pair with the right modes, declares and records it, repoints `IdentityFile` lines in hand-written ssh
+  config, re-renders, and records each move in the history. `serve` refreshes the suggestions whenever its 30-second
+  file scan sees a change; `structure install` adds a background check every 15 minutes (launchd, a systemd user
+  timer or cron, a Scheduled Task) that notifies about new suggestions. The scheduler gained interval jobs for it.
+  Recipe: [Tidy loose keys into their profiles](docs/recipes/tidy-keys-into-profiles.md).
 - **Move a setup between machines** (`authama setup export` / `setup import`). The setup document is JSON with no
   secret in it: the manifest, providers, settings (without this machine's `paths`) and token config, with the token
   variables, profiles and keys named. `setup export --encrypt` writes a full export - the same plus every private

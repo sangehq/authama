@@ -91,3 +91,28 @@ func TestTheExportsJobIsItsOwn(t *testing.T) {
 		t.Fatalf("schtasks: %v", a)
 	}
 }
+
+func TestTheStructureJobRunsEveryFewMinutes(t *testing.T) {
+	if p := buildPlist(StructureLabel, "/x/authama ssh structure check"); !strings.Contains(p, "<key>StartInterval</key><integer>900</integer>") ||
+		strings.Contains(p, "StartCalendarInterval") {
+		t.Fatalf("plist: %s", p)
+	}
+	if p := buildPlist(Label, "/x/authama audit --notify"); !strings.Contains(p, "StartCalendarInterval") {
+		t.Fatalf("daily plist lost its calendar: %s", p)
+	}
+	if s := timerUnitFor(StructureLabel); !strings.Contains(s, "OnUnitActiveSec=15min") || strings.Contains(s, "OnCalendar") {
+		t.Fatalf("timer: %s", s)
+	}
+	if a := schtasksArgs("x", StructureLabel); strings.Join(a[6:10], " ") != "/SC MINUTE /MO 15" {
+		t.Fatalf("schtasks: %v", a)
+	}
+	if l := cronLine(StructureLabel, "x", "# m"); l != "*/15 * * * * x # m" {
+		t.Fatalf("cron: %q", l)
+	}
+	if l := cronLine(VMSyncLabel, "x", "# m"); l != "30 9 * * * x # m" {
+		t.Fatalf("daily cron: %q", l)
+	}
+	if !strings.Contains(StructureCommand(), "ssh structure check --notify") {
+		t.Fatal(StructureCommand())
+	}
+}

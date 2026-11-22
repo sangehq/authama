@@ -145,6 +145,7 @@ func sshCommands() []*cobra.Command {
 		newDeployCmd(), newRotateCmd(), newRollbackCmd(), newListCmd(),
 		newViewCmd(), newShowCmd(), newCleanCmd(), newExpiryCmd(), newAuditCmd(),
 		newNotifyCmd(), newGitCmd(), newVMCmd(), newTermiusCmd(), newNamingCmd(),
+		newStructureCmd(),
 	}
 }
 

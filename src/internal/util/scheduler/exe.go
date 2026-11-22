@@ -45,3 +45,6 @@ func VMSyncCommand() string { return Exe() + " ssh vm sync --quiet --yes" }
 
 // ExportsCommand is the command the scheduled exports job runs.
 func ExportsCommand() string { return Exe() + " export schedule run --quiet" }
+
+// StructureCommand is the command the scheduled structure check runs.
+func StructureCommand() string { return Exe() + " ssh structure check --notify --quiet" }

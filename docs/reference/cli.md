@@ -152,6 +152,13 @@ Every command also takes the global flag:
     - [`authama ssh snapshots list`](#authama-ssh-snapshots-list) - List local ~/.ssh snapshots (oldest -> newest)
     - [`authama ssh snapshots prune`](#authama-ssh-snapshots-prune) - Prune old snapshots, keeping the most recent N
     - [`authama ssh snapshots restore`](#authama-ssh-snapshots-restore) - Restore ~/.ssh config from a snapshot (private keys are left as they are)
+  - [`authama ssh structure`](#authama-ssh-structure) - Find keys outside the expected layout and move them, once you approve each move
+    - [`authama ssh structure approve`](#authama-ssh-structure-approve) - Preview, then carry out, the moves you approve
+    - [`authama ssh structure check`](#authama-ssh-structure-check) - Record file changes and refresh the suggestions; what the background job runs
+    - [`authama ssh structure dismiss`](#authama-ssh-structure-dismiss) - Hide suggestions you mean to leave as they are (--undo shows them again)
+    - [`authama ssh structure install`](#authama-ssh-structure-install) - Check in the background every 15 minutes and notify about new suggestions
+    - [`authama ssh structure list`](#authama-ssh-structure-list) - List the suggested moves (dismissed ones with --all)
+    - [`authama ssh structure uninstall`](#authama-ssh-structure-uninstall) - Remove the background structure check
   - [`authama ssh termius`](#authama-ssh-termius) - Termius: the key to attach to each host
     - [`authama ssh termius keys`](#authama-ssh-termius-keys) - List the Termius key label for each host, or copy one host's private key to the clipboard
   - [`authama ssh validate`](#authama-ssh-validate) - Check keypairs parse, match, and have safe perms
@@ -1584,6 +1591,7 @@ Subcommands:
 - [`rotate`](#authama-ssh-rotate) - Zero-downtime staged key rotation
 - [`show`](#authama-ssh-show) - Everything about a profile, host or key: files, config blocks, pins (the inventory view)
 - [`snapshots`](#authama-ssh-snapshots) - List/restore/prune local ~/.ssh backups
+- [`structure`](#authama-ssh-structure) - Find keys outside the expected layout and move them, once you approve each move
 - [`termius`](#authama-ssh-termius) - Termius: the key to attach to each host
 - [`validate`](#authama-ssh-validate) - Check keypairs parse, match, and have safe perms
 - [`view`](#authama-ssh-view) - One host as ssh will use it: resolved config, key and deployment status (the connect view)
@@ -3405,6 +3413,170 @@ Flags:
 
 ```
   -y, --yes[=true|false]   skip the confirmation prompt
+```
+
+## authama ssh structure
+
+Watches ~/.ssh and the config home for keys that are not where authama expects them -
+a pair loose in ~/.ssh, a key in the wrong profile directory, a key dropped in the
+config home - and suggests a move for each. Nothing moves until you approve it, here
+or on the web structure page. An approved move is previewed first, backs up each
+file it moves (owner-only, in the state home's .state/moved/), declares the key in
+its profile, records it, repoints IdentityFile lines in your hand-written ssh config,
+re-renders the managed config, and is recorded in history.
+
+`authama serve` checks after every file change it sees; `install` adds
+a background job that checks every 15 minutes and notifies about new suggestions.
+
+```
+authama ssh structure
+```
+
+Subcommands:
+
+- [`approve`](#authama-ssh-structure-approve) - Preview, then carry out, the moves you approve
+- [`check`](#authama-ssh-structure-check) - Record file changes and refresh the suggestions; what the background job runs
+- [`dismiss`](#authama-ssh-structure-dismiss) - Hide suggestions you mean to leave as they are (--undo shows them again)
+- [`install`](#authama-ssh-structure-install) - Check in the background every 15 minutes and notify about new suggestions
+- [`list`](#authama-ssh-structure-list) - List the suggested moves (dismissed ones with --all)
+- [`uninstall`](#authama-ssh-structure-uninstall) - Remove the background structure check
+
+## authama ssh structure approve
+
+Approves suggestions by id (or an id prefix of 4+ characters), or a plan of move lines
+with --plan (- reads stdin):
+
+  key <~/.ssh/path|config/name> profile <profile> [name <key>]
+  misplaced <profile>/<key>
+  profile <profile> category <category|->
+
+A suggestion with no guessed profile needs --profile. The preview lists each file
+moved and the manifest and config diffs; nothing is written before you confirm.
+
+```
+authama ssh structure approve [<id>...] [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh structure approve 1a2b3c4d
+  authama ssh structure approve 9f8e --profile work --name laptop
+  authama ssh structure approve --plan moves.txt --dry-run
+```
+
+Flags:
+
+```
+      --dry-run[=true|false]   show the preview; move nothing
+      --name string            the key's name in that profile (one id only; default: its file name)
+      --plan string            approve these move lines instead of ids (- reads stdin)
+      --profile string         the profile to move the key into (for a suggestion with none guessed, or to override the guess)
+  -y, --yes[=true|false]       move without confirming (implied when there is no terminal)
+```
+
+## authama ssh structure check
+
+Scans for file changes (the same scan as `authama events`), refreshes the
+suggestions and, with --notify, posts one desktop notification naming the new ones.
+It never moves anything.
+
+```
+authama ssh structure check [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh structure check --notify
+```
+
+Flags:
+
+```
+      --notify[=true|false]   post a desktop notification about new suggestions
+  -q, --quiet[=true|false]    print nothing
+```
+
+## authama ssh structure dismiss
+
+Hide suggestions you mean to leave as they are (--undo shows them again).
+
+```
+authama ssh structure dismiss <id>... [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh structure dismiss 1a2b3c4d
+  authama ssh structure dismiss 1a2b3c4d --undo
+```
+
+Flags:
+
+```
+      --undo[=true|false]   show the suggestions again
+```
+
+## authama ssh structure install
+
+Registers a job with launchd (macOS), a systemd user timer (or cron) on Linux, or a
+Scheduled Task on Windows, that runs `ssh structure check --notify --quiet`. It only
+suggests; moves still need your approval.
+
+```
+authama ssh structure install [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh structure install
+```
+
+Flags:
+
+```
+  -y, --yes[=true|false]   install without confirming (implied when there is no terminal)
+```
+
+## authama ssh structure list
+
+List the suggested moves (dismissed ones with --all).
+
+```
+authama ssh structure list [flags]
+```
+
+Aliases: `ls`
+
+Examples:
+
+```sh
+  authama ssh structure list
+  authama ssh structure list --all --json
+```
+
+Flags:
+
+```
+      --all[=true|false]    include dismissed suggestions
+      --json[=true|false]   print the suggestions as JSON
+```
+
+## authama ssh structure uninstall
+
+Remove the background structure check.
+
+```
+authama ssh structure uninstall
+```
+
+Examples:
+
+```sh
+  authama ssh structure uninstall
 ```
 
 ## authama ssh termius
