@@ -68,7 +68,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the terminal. `ssh restore` given a full export points to `setup import`. Recipe:
   [Move to a new machine](docs/recipes/move-to-a-new-machine.md).
 - **Export / Import, beside New in the web UI's header** (`/transfer`, `g f`). **Export** lists every file the home
-  exports as - the Termius CSV with its group scheme, the flat ssh config, the setup document, `structure.json` (the
+  exports as - the Termius CSV with its group scheme, every other SSH client's files (`clients/`: hosts-csv, Windows
+  Terminal, iTerm2, PuTTY, Remmina, SecureCRT and MobaXterm, with `NOTES.txt`), the flat ssh config, the setup document, `structure.json` (the
   categories, profiles, where each key lives and which hosts use it, and the moves suggested now), `git-signing.json`
   with `allowed_signers`, the tokens list (names and where each value is read from, never a value) and the hosts,
   keys, profiles, deployments, history, events and snapshots lists. You tick what to include, **Preview** shows each

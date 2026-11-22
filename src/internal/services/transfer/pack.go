@@ -39,6 +39,7 @@ type Part struct {
 // The parts, in the order a pack and the page list them.
 var Parts = []Part{
 	{"termius", "Hosts for Termius", "termius-hosts.csv", "The Termius CSV import, grouped as chosen. It carries no key: attach each with `ssh termius keys`."},
+	{"ssh-clients", "Hosts for other SSH clients", "clients/", "The hosts for each client `export hosts --format` writes: a generic CSV, Windows Terminal, iTerm2, PuTTY, Remmina, SecureCRT and MobaXterm, with clients/NOTES.txt on finishing each import. No key is in any of them."},
 	{"ssh-config", "SSH config, one file", "ssh_config", "Every host inline with absolute key paths, for a tool that cannot follow Include."},
 	{"setup", "Setup document", "setup.json", "Profiles, hosts, key names, token names and settings: what `setup import` makes another machine from. No secret."},
 	{"structure", "SSH folder structure", "structure.json", "Categories, profiles, where each key lives and which hosts use it, and the moves suggested now."},
@@ -151,6 +152,8 @@ func build(p paths.Paths, id string, o Options) ([]File, error) {
 	case "termius":
 		body, err := hostFile(p, "termius", o)
 		return []File{{"termius-hosts.csv", body}}, err
+	case "ssh-clients":
+		return clientFiles(p, o)
 	case "ssh-config":
 		m, err := manifest.Load(p.Manifest())
 		if err != nil {
@@ -214,6 +217,53 @@ func hostFile(p paths.Paths, format string, o Options) ([]byte, error) {
 		return nil, err
 	}
 	return encode.Bundle(f, exp)
+}
+
+// ClientFormats are the SSH client formats the ssh-clients part writes, as
+// `export hosts --format` names them; Termius has its own part.
+var ClientFormats = []string{encode.ClientCSV, "windows-terminal", "iterm2", "putty", "remmina", "securecrt", "mobaxterm"}
+
+// clientFiles is every client format's files under clients/<format>/, and
+// clients/NOTES.txt with what each needs to finish its import and the hosts
+// each left out.
+func clientFiles(p paths.Paths, o Options) ([]File, error) {
+	m, err := manifest.Load(p.Manifest())
+	if err != nil {
+		return nil, err
+	}
+	sel := selection.Presets["hosts"]
+	ds, err := dataset.Build(p, dataset.Options{Parts: selection.Parts(sel.Grain)})
+	if err != nil {
+		return nil, err
+	}
+	src := renderer.Source{M: m, P: renderer.ExportPathsFor(p.SSHDir), EmitUseKeychain: platform.EmitUseKeychain()}
+	var files []File
+	var notes strings.Builder
+	notes.WriteString("Hosts for other SSH clients. No file here holds a private key: each names the key's path on this machine.\n")
+	for _, name := range ClientFormats {
+		f, err := encode.Get(name)
+		if err != nil {
+			return nil, err
+		}
+		exp, _, err := selection.HostExport(ds, sel, f, src, encode.Options{IncludeGit: o.IncludeGit, TermiusGroups: o.TermiusGroups})
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", name, err)
+		}
+		fmt.Fprintf(&notes, "\n%s/\n", name)
+		for _, cf := range exp.Files {
+			if cf.Name != filepath.Base(cf.Name) || strings.ContainsAny(cf.Name, `\:`) || cf.Name == ".." {
+				return nil, fmt.Errorf("%s: unsafe file name %q", name, cf.Name)
+			}
+			files = append(files, File{"clients/" + name + "/" + cf.Name, cf.Data})
+		}
+		for _, n := range exp.Notes {
+			fmt.Fprintf(&notes, "  %s\n", n)
+		}
+		for _, sk := range exp.Skipped {
+			fmt.Fprintf(&notes, "  left out: %s\n", sk)
+		}
+	}
+	return append(files, File{"clients/NOTES.txt", []byte(notes.String())}), nil
 }
 
 // StructureDoc is structure.json; fields are only ever added.

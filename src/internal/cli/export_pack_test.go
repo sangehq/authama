@@ -2,6 +2,7 @@ package cli
 
 import (
 	"archive/zip"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,5 +56,45 @@ func TestExportPackAndImportIt(t *testing.T) {
 	_ = os.WriteFile(cfg, []byte("Host x\n  HostName x.example\n"), 0o600)
 	if _, err := runErr(t, "setup", "import", cfg); err == nil || !strings.Contains(err.Error(), "ssh import") {
 		t.Errorf("an ssh config: %v", err)
+	}
+}
+
+// The ssh-clients part writes each other client's hosts under clients/, with
+// notes on finishing each import, and no private key.
+func TestExportPackHoldsEveryClientFormat(t *testing.T) {
+	editHome(t)
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "web", "-H", "web.example.test", "-u", "deploy")
+	run(t, "ssh", "reconcile", "-y")
+	pack := filepath.Join(t.TempDir(), "clients.zip")
+	run(t, "export", "pack", "--include", "ssh-clients", "--out", pack)
+	zr, err := zip.OpenReader(pack)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = zr.Close() }()
+	seen := map[string]bool{}
+	for _, f := range zr.File {
+		parts := strings.Split(f.Name, "/")
+		if len(parts) == 3 && parts[0] == "clients" {
+			seen[parts[1]] = true
+		}
+		rc, err := f.Open()
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(rc)
+		_ = rc.Close()
+		if strings.Contains(string(body), "PRIVATE KEY") {
+			t.Errorf("%s holds a private key", f.Name)
+		}
+	}
+	for _, name := range []string{"hosts-csv", "windows-terminal", "iterm2", "putty", "remmina", "securecrt", "mobaxterm"} {
+		if !seen[name] {
+			t.Errorf("no clients/%s/ in the pack", name)
+		}
+	}
+	if _, err := zr.Open("clients/NOTES.txt"); err != nil {
+		t.Error("no clients/NOTES.txt")
 	}
 }

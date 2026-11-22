@@ -601,6 +601,7 @@ full export is `authama setup export --encrypt`.
 
 Parts (--include, comma-separated, or all):
   termius      Hosts for Termius (termius-hosts.csv)
+  ssh-clients  Hosts for other SSH clients (clients/)
   ssh-config   SSH config, one file (ssh_config)
   setup        Setup document (setup.json)
   structure    SSH folder structure (structure.json)
@@ -635,7 +636,7 @@ Flags:
 
 ```
       --dry-run[=true|false]       list the files and sizes; write nothing
-      --include strings            the parts: termius, ssh-config, setup, structure, git-signing, tokens, hosts, keys, profiles, deployments, history, events, snapshots, or all
+      --include strings            the parts: termius, ssh-clients, ssh-config, setup, structure, git-signing, tokens, hosts, keys, profiles, deployments, history, events, snapshots, or all
       --include-git[=true|false]   termius: also list git hosts
   -o, --out string                 where to write the zip (mode 0600)
       --termius-groups string      termius: the Groups column: profile, category/profile, profile/env, category/profile/env, none (default "profile")

@@ -161,6 +161,7 @@ previews, with its list, filters, columns, sort, format and options.
 | Part (`--include`) | File(s) | What |
 |---|---|---|
 | `termius` | `termius-hosts.csv` | the Termius CSV, grouped by `--termius-groups` (`--include-git` adds git hosts) |
+| `ssh-clients` | `clients/<format>/…`, `clients/NOTES.txt` | the hosts for every other client `export hosts --format` writes (hosts-csv, windows-terminal, iterm2, putty, remmina, securecrt, mobaxterm), with what each needs to finish its import; no key |
 | `ssh-config` | `ssh_config` | every host inline, as `ssh config export --flat` writes it |
 | `setup` | `setup.json` | the [setup document](setup.md#the-setup-document) |
 | `structure` | `structure.json` | categories, profiles, each key's path and the hosts using it, and the suggested moves |
