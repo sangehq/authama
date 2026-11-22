@@ -211,7 +211,9 @@ Subcommands:
 
 ## authama api token
 
-Make, list and revoke API tokens.
+API tokens let a program read authama's API (served by `authama serve` at /api/v1/ when api.enabled
+is on). `create` prints a token once - authama keeps only its hash - `list` shows names, ages and
+expiry but never a token, and `revoke` stops one at once.
 
 ```
 authama api token
@@ -225,7 +227,9 @@ Subcommands:
 
 ## authama api token create
 
-Make an API token, shown once.
+Make a read-only API token called <name> and print it once; authama keeps only its hash, so copy it
+now. It expires after --expires days (90 by default; 0 never expires). Programs send it as
+`Authorization: Bearer ama_...`.
 
 ```
 authama api token create <name> [flags]
@@ -246,7 +250,8 @@ Flags:
 
 ## authama api token list
 
-List API tokens (never the tokens themselves).
+List the API tokens: name, scopes, when each was made, when it expires and when it was last used.
+The tokens themselves are never shown; they cannot be, since only their hashes are kept.
 
 ```
 authama api token list [flags]
@@ -269,7 +274,8 @@ Flags:
 
 ## authama api token revoke
 
-Revoke an API token: it stops working at once.
+Revoke the API token called <name>. Calls that use it are refused from that moment; the programs
+holding it need a new one from `api token create`.
 
 ```
 authama api token revoke <name>
@@ -347,7 +353,9 @@ Flags:
 
 ## authama checklist show
 
-One item's checklist: every step, what is done, and the command for the rest.
+Show one key's or token's checklist: every place it is used, each step of rotating or revoking it,
+which steps are done, and the command for each step left. Name a key as profile/key and a token as
+token:<tool>/<host>.
 
 ```
 authama checklist show <item> [flags]
@@ -399,7 +407,9 @@ Examples:
 
 ## authama companion
 
-Answer a companion tool such as sange: what this build can do and where it keeps things.
+Answers for a companion tool such as sange, which drives authama and needs to know what this build
+supports. `companion info` prints the name, version, contract versions, capabilities and homes, and
+changes nothing.
 
 ```
 authama companion
@@ -434,7 +444,12 @@ Flags:
 
 ## authama doctor
 
-Diagnose deps, perms, agent, known_hosts, drift, dangling keys, and token-file perms.
+Check this machine and home: the tools authama needs, file permissions, the ssh agent, known_hosts,
+drift between the manifest and ~/.ssh, dangling or loose keys, VM hosts and token files others can
+read. It changes nothing unless --fix, which repairs permissions, removes stale authama pins and
+runs a VM sync, backing up before it removes anything (--dry-run shows it first). It exits non-zero
+when something blocks; --strict also fails on every dangling-key state and on readable token files,
+for CI.
 
 ```
 authama doctor [flags]
@@ -692,7 +707,9 @@ Flags:
 
 ## authama export schedule install
 
-Register a daily job that writes the scheduled exports.
+Register one daily job with this system's scheduler (launchd, systemd or cron, schtasks) that runs
+`export schedule run`, which writes every export schedule. Run it once; adding or removing schedules
+later needs no reinstall. It is refused in dev mode, since the job is machine-wide.
 
 ```
 authama export schedule install
@@ -706,7 +723,7 @@ Examples:
 
 ## authama export schedule list
 
-List the export schedules.
+List the export schedules: each saved selection, and the folder and format it is written to.
 
 ```
 authama export schedule list
@@ -765,7 +782,8 @@ Flags:
 
 ## authama export schedule uninstall
 
-Remove the daily job that writes the scheduled exports.
+Remove the daily job `export schedule install` registered. The schedules themselves are kept;
+`export schedule run` still writes them by hand.
 
 ```
 authama export schedule uninstall
@@ -823,7 +841,8 @@ Flags:
 
 ## authama export selections list
 
-List the saved selections, both stores.
+List the saved export selections from both stores: the shared one in the manifest and your own under
+the state home. Each shows its name, store and what it selects; --json prints them as JSON.
 
 ```
 authama export selections list [flags]
@@ -872,7 +891,8 @@ Flags:
 
 ## authama export selections show
 
-Print a saved selection as JSON.
+Print a saved selection as JSON, the same shape `export --selection` and the Export page read. Which
+store it came from goes to stderr, so stdout can be saved as a file.
 
 ```
 authama export selections show <name>
@@ -956,7 +976,9 @@ Flags:
 
 ## authama history show
 
-Show one operation: its events and what it changed in the manifest.
+Show one operation from the history: what ran, when, from where (CLI, web or a job), its result, its
+events, and what it changed in the manifest. Name it by the OP id `authama history` lists, or a
+unique prefix of it.
 
 ```
 authama history show <op_id>
@@ -970,7 +992,10 @@ Examples:
 
 ## authama init
 
-Create/converge the per-user home.
+Create the authama home - the config home with its manifest, inventory and .env, and the state home
+- or bring an existing one up to date without touching what is in it. Safe to run again. --force
+resets manifest.json, inventory.json and .env to their defaults, copying the current ones into the
+state home first unless --no-backup; it asks before it does.
 
 ```
 authama init [flags]
@@ -980,13 +1005,13 @@ Examples:
 
 ```sh
   authama init
-  authama init --force --backup   # reset manifest, inventory and .env, keeping copies
+  authama init --force   # reset manifest, inventory and .env, keeping copies
 ```
 
 Flags:
 
 ```
-  -f, --force[=true|false]       overwrite manifest/inventory/.env with fresh defaults, keeping a copy of each in the state home's .state/ first
+  -f, --force[=true|false]       overwrite manifest/inventory/.env with fresh defaults, keeping a copy of each in the state home (init-backup-<time>) first
       --no-backup[=true|false]   with --force, keep no copy of the files it overwrites
   -y, --yes[=true|false]         skip the confirmation prompt
 ```
@@ -1028,7 +1053,9 @@ Examples:
 
 ## authama migrate
 
-Copy a pre-0.1.1 home (ssh-manager, sshmgr) into the authama home; the old one is kept and marked.
+Copy a home made before 0.1.1 (ssh-manager or sshmgr) into the authama home. The old home is kept
+and marked as migrated, never deleted. When an authama home exists too, --force backs it up and
+replaces it.
 
 ```
 authama migrate [flags]
@@ -1124,7 +1151,10 @@ Flags:
 
 ## authama owner init
 
-Bind this home to you and this machine, and seal its state files.
+Bind this home to you and this machine: authama makes a random sealing key, keeps it where the OS
+keeps your secrets (the login Keychain, the Secret Service, a DPAPI file, or else an owner-only file
+in the state home), and seals the state files so a change made outside authama is noticed. You can
+then set a PIN with `owner pin set`.
 
 ```
 authama owner init [flags]
@@ -1145,7 +1175,11 @@ Flags:
 
 ## authama owner pin
 
-Set, change, reset or remove the PIN.
+With a PIN set, the web UI asks for it after the sign-in link and again on confirmations, and the
+command line asks before revealing or copying a token value and before destructive commands (delete,
+revoke, rotate, rollback, restore, prune, clean, recover, deploy, keygen --force). `set` sets or
+changes it, `remove` turns it off (asking for it first), and `reset` replaces a forgotten one by
+proving your OS account instead.
 
 ```
 authama owner pin
@@ -1159,7 +1193,8 @@ Subcommands:
 
 ## authama owner pin remove
 
-Turn the PIN off (asks for it first).
+Turn the owner PIN off. It asks for the current PIN first; what it guarded is then guarded by the
+bound home and the web sign-in alone.
 
 ```
 authama owner pin remove
@@ -1227,7 +1262,8 @@ Flags:
 
 ## authama owner status
 
-Show whether the home is bound, where its key is kept, and whether a PIN is set.
+Show whether this home is bound to you and this machine, since when, where its sealing key is kept,
+whether a PIN and fingerprint unlock are on, and whether the seal still matches the state files.
 
 ```
 authama owner status
@@ -1425,7 +1461,8 @@ Examples:
 
 ## authama settings init
 
-Create a starter authama.json (schema reference and version; every setting at its default).
+Write a starter authama.json in the config home: the schema reference and version, with every
+setting at its default, ready to edit. It will not replace an existing file without --force.
 
 ```
 authama settings init [flags]
@@ -1446,7 +1483,8 @@ Flags:
 
 ## authama settings path
 
-Print where the config home, state home, .env and authama.json are.
+Print where authama keeps things: the config home, the state home, the .env file and authama.json.
+--json prints them for a script.
 
 ```
 authama settings path [flags]
@@ -1484,7 +1522,8 @@ Examples:
 
 ## authama settings show
 
-Print authama.json, or with --effective every setting's value and where it came from.
+Print authama.json as it is on disk. --effective prints every setting instead, with the value in
+effect and where it came from: the environment, .env, authama.json or the default.
 
 ```
 authama settings show [flags]
@@ -1506,7 +1545,8 @@ Flags:
 
 ## authama settings unset
 
-Take one setting out of authama.json, so it goes back to its default.
+Take one setting out of authama.json, so the environment, .env or the default decides it again. Name
+it as section.name, as `settings show --effective` lists it.
 
 ```
 authama settings unset <key>
@@ -1520,7 +1560,8 @@ Examples:
 
 ## authama settings validate
 
-Check authama.json (or FILE) against the schema, and .env's syntax and permissions.
+Check authama.json (or FILE) against the schema - unknown keys, wrong types, invalid values - and
+.env's syntax and permissions. It exits non-zero when anything is wrong and changes nothing.
 
 ```
 authama settings validate [FILE]
@@ -1562,7 +1603,12 @@ Subcommands:
 
 ## authama setup export
 
-Write this setup as a secrets-free document, or (--encrypt) everything, keys and tokens included.
+Write this setup as a document another machine can import. By default it is secrets-free JSON: the
+manifest, providers, settings without this machine's paths, and the token config naming the
+variables tokens come from, never a value. --encrypt writes a full export instead: every private
+key, the inventory and the token values too, in an age file encrypted with a passphrase (needs
+--out, and the owner PIN when one is set). --sign-key also writes <file>.sig, which `setup import`
+checks.
 
 ```
 authama setup export [flags]
@@ -1586,7 +1632,11 @@ Flags:
 
 ## authama setup import
 
-Merge a setup document, an export pack or an encrypted full export into this home, after showing what it would do.
+Merge a setup into this home: a setup document, an `export pack` zip (its setup.json) or an
+encrypted full export. It shows what it would add, keep and replace first. --on-conflict settles
+what differs: keep (the default) leaves what is here, replace takes the import's and keeps a copy of
+every key file and .env it replaces, fail writes nothing. A <file>.sig beside it is checked before
+anything is read; --require-signature also refuses a file with no trusted signature.
 
 ```
 authama setup import FILE [flags]
@@ -1658,7 +1708,9 @@ Subcommands:
 
 ## authama ssh audit
 
-Deployment, expiry, and hygiene report.
+Report on every key: where it is deployed, how close it is to its rotation date, and the recent
+activity behind it. --csv prints the deployments, one row per key and target. --notify also fires
+the desktop alert, at most as often as its cadence allows; `ssh notify install` runs that daily.
 
 ```
 authama ssh audit [flags]
@@ -1735,7 +1787,10 @@ Flags:
 
 ## authama ssh config
 
-Render, check, or show the SSH config.
+authama writes ~/.ssh/config and the per-profile config files from the manifest. `render` writes
+them, `check` reports drift without writing, `show` prints them (or what ssh resolves for one
+alias), `adopt` moves hand-written Host blocks that duplicate managed hosts out of the way, and
+`export` writes the config as one file for another tool.
 
 ```
 authama ssh config
@@ -1778,7 +1833,9 @@ Flags:
 
 ## authama ssh config check
 
-Verify the config matches the manifest (read-only; exit non-zero on drift).
+Compare the config files on disk with what the manifest renders. It writes nothing, prints what
+differs and exits 1 on drift, so a script or CI can gate on it; `ssh config render` brings them back
+in line.
 
 ```
 authama ssh config check
@@ -1818,7 +1875,9 @@ Flags:
 
 ## authama ssh config render
 
-Render the config files from the manifest.
+Write ~/.ssh/config and each profile's config file from the manifest, after showing what would
+change. A snapshot of ~/.ssh is taken first; hand-written lines outside authama's blocks are kept.
+--dry-run shows the change and writes nothing.
 
 ```
 authama ssh config render [flags]
@@ -1840,7 +1899,8 @@ Flags:
 
 ## authama ssh config show
 
-Print the rendered config, or ssh -G for one alias.
+Print the config authama renders for every profile. With an alias, print what `ssh -G` resolves for
+it instead: the hostname, user, port, identity file and options ssh will actually use.
 
 ```
 authama ssh config show [alias]
@@ -1855,7 +1915,10 @@ Examples:
 
 ## authama ssh deploy
 
-Install a public key on its target.
+Install a key's public half on its targets: the hosts that use it, or the one target named. It
+connects through the host's alias, so its ProxyJump or ProxyCommand applies (--direct uses the
+manifest's hostname, user and port instead), or through the provider's API for a git host. The
+inventory records each deployment.
 
 ```
 authama ssh deploy <[profile/]key> [target] [flags]
@@ -1877,7 +1940,8 @@ Flags:
 
 ## authama ssh diff
 
-Preview what reconcile would change (manifest vs. ~/.ssh).
+Preview what `ssh reconcile` would change: how the config files differ from what the manifest
+renders, and which keys the manifest wants that are not on disk yet. It writes nothing.
 
 ```
 authama ssh diff
@@ -1891,7 +1955,8 @@ Examples:
 
 ## authama ssh expiry
 
-Per-key rotation-age table.
+A table of every key, by profile/key, with its state (ok, due soon, overdue), the date it expires
+and the days left, from each key's lifetime and when it was last minted or rotated.
 
 ```
 authama ssh expiry
@@ -2198,7 +2263,9 @@ Flags:
 
 ## authama ssh host
 
-Manage a host within a profile (add/edit/delete/apply).
+A host is one server in a profile: its alias, hostname, user, port and key. `add` adds one (or names
+it by the naming rules), `apply` adds or updates many from compact specs, `edit` changes one, and
+`delete` removes it with its config block and pins.
 
 ```
 authama ssh host
@@ -2331,7 +2398,9 @@ Flags:
 
 ## authama ssh host edit
 
-Edit a host.
+Change a host in a profile: its hostname, user, port, key, provider, proxy or tags. Only the flags
+given change, and the config is rendered again. A key the host now names that is not on disk yet is
+minted by `ssh reconcile`.
 
 ```
 authama ssh host edit <profile> <alias> [flags]
@@ -2406,7 +2475,10 @@ Flags:
 
 ## authama ssh key
 
-Manage a profile's keys (add/list/delete).
+A profile's keys: `add` declares and mints one, `list` shows every key with its state, `adopt`
+manages a key where it already is, `delete` removes one no host uses, `revoke` takes one off every
+target for good, `lifetime` sets when rotation is due, `reserve` keeps a loose key on purpose, and
+`root` moves the directory that holds the profiles.
 
 ```
 authama ssh key
@@ -2576,7 +2648,9 @@ Flags:
 
 ## authama ssh key list
 
-Every key with its fingerprint, expiry, hosts and state.
+Every key with its fingerprint, the hosts that use it, its expiry and state (new, due, deployed,
+retired). Name a profile, alias or key to narrow it; --new and --since show only the recent ones,
+and --json and --csv print them for a script.
 
 ```
 authama ssh key list [profile|alias|key] [flags]
@@ -2735,7 +2809,8 @@ Flags:
 
 ## authama ssh key unreserve
 
-Drop a key's reservation (doctor lists it as loose again).
+Drop a loose key's reservation, so `doctor` lists it as loose again. The key file is left where it
+is.
 
 ```
 authama ssh key unreserve <name> [flags]
@@ -2755,7 +2830,9 @@ Flags:
 
 ## authama ssh keygen
 
-Generate a profile's or host's keys.
+Mint the keys a profile or host needs that are missing, into their place under ~/.ssh, and pin the
+reachable hosts' host keys into known_hosts (--no-pin skips that). --force replaces existing keys,
+moving each to old/ after an encrypted backup; --passphrase protects new keys.
 
 ```
 authama ssh keygen <profile|alias> [flags]
@@ -2780,7 +2857,9 @@ Flags:
 
 ## authama ssh knownhosts
 
-Pin host keys into the single ~/.ssh/known_hosts trust store.
+authama keeps one trust store, ~/.ssh/known_hosts. `init` pins every reachable host on first use and
+reports the fingerprints; `pin` scans a host (or --all) with ssh-keyscan and asks before trusting
+what it found.
 
 ```
 authama ssh knownhosts
@@ -2819,7 +2898,9 @@ Flags:
 
 ## authama ssh knownhosts pin
 
-Seed known_hosts via ssh-keyscan, with confirmation.
+Scan a host's keys with ssh-keyscan, show their fingerprints, and add them to ~/.ssh/known_hosts
+once you confirm. Name a manifest host or any host (with --port for a non-standard one), or --all
+for every host in the manifest.
 
 ```
 authama ssh knownhosts pin [host] [flags]
@@ -2843,7 +2924,9 @@ Flags:
 
 ## authama ssh list
 
-Filterable tree across profiles.
+A tree of profiles and their hosts, each with its hostname, provider, key and deployment state.
+Filter by --profile, --tag, --provider or provider --type (vcs for git hosts); --csv prints one row
+per host.
 
 ```
 authama ssh list [flags]
@@ -2871,7 +2954,9 @@ Flags:
 
 ## authama ssh load
 
-Add a profile's keys to the agent.
+Add a profile's private keys to the running ssh agent (ssh-add, with the keychain on macOS). Keys
+not on disk are skipped and named; it fails when ssh-add adds nothing, which usually means no agent
+is running (SSH_AUTH_SOCK).
 
 ```
 authama ssh load <profile>
@@ -2993,7 +3078,8 @@ Flags:
 
 ## authama ssh naming show
 
-Show the naming rules in effect, and each profile's code and own rules.
+Show the naming rules in effect for aliases and key names, the template each follows, and each
+profile's code and any rules of its own.
 
 ```
 authama ssh naming show
@@ -3007,7 +3093,9 @@ Examples:
 
 ## authama ssh net
 
-Per-host connection status + VPN indicator.
+Check each host's connection: whether its port answers, and whether it needs a VPN that is down.
+Name a profile or alias to check fewer. It exits non-zero when a host behind a VPN cannot be
+reached.
 
 ```
 authama ssh net [selector]
@@ -3022,7 +3110,9 @@ Examples:
 
 ## authama ssh notify
 
-Manage the scheduled expiry notifier and desktop notifications.
+Desktop notifications for keys that are due. `install` registers a daily job that runs `ssh audit
+--notify`; `test` fires one now; `doctor` says whether notifications can show here and why not;
+`send` and `ping` show any message, from this process or through the running web UI.
 
 ```
 authama ssh notify
@@ -3038,7 +3128,8 @@ Subcommands:
 
 ## authama ssh notify doctor
 
-Say whether desktop notifications work here, and why not.
+Say whether desktop notifications can show on this machine: which backend would carry them, whether
+it is installed and allowed, and what to change when it is not. It sends nothing.
 
 ```
 authama ssh notify doctor
@@ -3052,7 +3143,9 @@ Examples:
 
 ## authama ssh notify install
 
-Install the scheduled expiry notifier.
+Register a daily job with this system's scheduler (launchd, systemd or schtasks) that runs `ssh
+audit --notify`, so a key coming due shows a desktop notification. It asks first, and is refused in
+dev mode since the job is machine-wide.
 
 ```
 authama ssh notify install [flags]
@@ -3114,7 +3207,8 @@ Examples:
 
 ## authama ssh notify test
 
-Fire a test notification.
+Fire one test desktop notification now, to check that notifications show. When no backend is found
+it says what to install or allow.
 
 ```
 authama ssh notify test
@@ -3128,7 +3222,9 @@ Examples:
 
 ## authama ssh profile
 
-Manage a profile (add/edit/delete).
+A profile groups hosts that share an identity - a client, an employer, your own servers - with its
+keys under ~/.ssh/profiles/. `add` makes one, `edit` changes its category, code, key scope or key
+comment, and `delete` removes it with its config blocks and host pins.
 
 ```
 authama ssh profile
@@ -3142,7 +3238,10 @@ Subcommands:
 
 ## authama ssh profile add
 
-Add a profile.
+Add a profile. By default each host gets its own key (per_service); --shared (or --key-scope shared
+with --key-name) uses one key for every host. --category files it under profiles/<category>/, --code
+sets the organisation code its server aliases start with, and --key-comment sets the comment of keys
+minted from now on.
 
 ```
 authama ssh profile add <name> [flags]
@@ -3199,7 +3298,9 @@ Flags:
 
 ## authama ssh profile edit
 
-Edit a profile.
+Change a profile: move it to another category (its key directory and inventory follow), set its
+code, switch between one key per host and one shared key, or change the key comment template. Only
+the flags given change.
 
 ```
 authama ssh profile edit <name> [flags]
@@ -3225,7 +3326,9 @@ Flags:
 
 ## authama ssh providers
 
-List the active provider catalog + credential state.
+List the providers hosts can deploy keys through (GitHub, GitLab, web panels and the like): each
+one's category, kind, the environment variable its API token comes from, and whether that token is
+set. --export writes the shipped catalog to providers.json in the config home to customise.
 
 ```
 authama ssh providers [flags]
@@ -3247,7 +3350,9 @@ Flags:
 
 ## authama ssh reconcile
 
-Build ~/.ssh from the manifest.
+Make ~/.ssh match the manifest: mint the keys it wants that are missing, render the config files,
+and pin reachable hosts' host keys. It shows the plan and asks first, and takes a snapshot of ~/.ssh
+before it writes; --dry-run shows the plan and writes nothing.
 
 ```
 authama ssh reconcile [flags]
@@ -3271,7 +3376,9 @@ Flags:
 
 ## authama ssh recover
 
-Print a break-glass snippet for regaining access when a key is lost.
+Print a break-glass snippet for getting back into a server when a key is lost: the public key to put
+back in authorized_keys and the commands to do it from a console. With no key, print the standalone
+fixkeys tool for every key.
 
 ```
 authama ssh recover [[profile/]key]
@@ -3320,7 +3427,9 @@ Flags:
 
 ## authama ssh rollback
 
-Undo a rotation: put a key's previous version back.
+Undo a rotation: move a key's previous version back from old/, deploy it to the key's targets again
+and revoke the key the rotation put in. It asks first, snapshots ~/.ssh, and exits non-zero if it
+could not finish.
 
 ```
 authama ssh rollback <[profile/]key> [flags]
@@ -3402,7 +3511,9 @@ Flags:
 
 ## authama ssh show
 
-Everything about a profile, host or key: files, config blocks, pins (the inventory view).
+Everything authama knows about a profile, host or key: the files on disk, the config blocks rendered
+for it, the known_hosts pins and where each key is deployed. This is the inventory view; `ssh view`
+shows one host as ssh will use it.
 
 ```
 authama ssh show <profile|alias|profile/key>
@@ -3418,7 +3529,9 @@ Examples:
 
 ## authama ssh snapshots
 
-List/restore/prune local ~/.ssh backups.
+authama copies the files it manages in ~/.ssh before each change. `list` shows the snapshots,
+`restore` puts a snapshot's config back (private keys are left as they are), and `prune` deletes old
+ones.
 
 ```
 authama ssh snapshots
@@ -3432,7 +3545,8 @@ Subcommands:
 
 ## authama ssh snapshots list
 
-List local ~/.ssh snapshots (oldest -> newest).
+List the snapshots of ~/.ssh, oldest first, each a tar.gz in the state home with its size. --csv
+prints one row each.
 
 ```
 authama ssh snapshots list [flags]
@@ -3454,7 +3568,7 @@ Flags:
 
 ## authama ssh snapshots prune
 
-Prune old snapshots, keeping the most recent N.
+Delete old snapshots, keeping the --keep most recent (10 by default).
 
 ```
 authama ssh snapshots prune [flags]
@@ -3590,7 +3704,8 @@ Flags:
 
 ## authama ssh structure dismiss
 
-Hide suggestions you mean to leave as they are (--undo shows them again).
+Hide structure suggestions you mean to leave as they are, by the ids `ssh structure list` shows;
+they stop appearing in the list and the web UI. --undo shows them again.
 
 ```
 authama ssh structure dismiss <id>... [flags]
@@ -3633,7 +3748,9 @@ Flags:
 
 ## authama ssh structure list
 
-List the suggested moves (dismissed ones with --all).
+List the moves authama suggests for keys outside the expected layout (~/.ssh/profiles/<profile>/),
+each with its id, kind, path and what approving it would do. --all includes dismissed ones; --json
+prints them for a script.
 
 ```
 authama ssh structure list [flags]
@@ -3657,7 +3774,9 @@ Flags:
 
 ## authama ssh structure uninstall
 
-Remove the background structure check.
+Remove the background job `ssh structure install` registered, which checks the layout and raises
+suggestions. Suggestions already found are kept. It is refused in dev mode, since the job is
+machine-wide.
 
 ```
 authama ssh structure uninstall
@@ -3731,7 +3850,9 @@ Examples:
 
 ## authama ssh view
 
-One host as ssh will use it: resolved config, key and deployment status (the connect view).
+One host as ssh will connect to it: the resolved config (what `ssh -G` reports), the key it offers
+and whether that key is on disk, and whether it is deployed to the host. Name a host's alias, or a
+profile to see each of its hosts.
 
 ```
 authama ssh view <profile|alias>
@@ -3772,7 +3893,10 @@ Subcommands:
 
 ## authama ssh vm add
 
-Add a VM as a host: its address comes from the hypervisor at connect time.
+Add a local VM as a host in a profile. Its address is not stored: at connect time ssh asks the
+hypervisor for it (and starts the VM if it is stopped), so a new IP on each boot does not matter.
+Name the hypervisor and the VM as it lists it; the key is <profile>_<alias>-<algo> unless --key-
+name.
 
 ```
 authama ssh vm add <profile> <alias> [flags]
@@ -3831,7 +3955,8 @@ Flags:
 
 ## authama ssh vm docker-context
 
-Create or update a Docker context ssh://<alias> for a VM host.
+Create or update a Docker context called <alias> that reaches the VM host's Docker engine over
+ssh://<alias>, through the managed config. Needs the docker CLI.
 
 ```
 authama ssh vm docker-context <alias>
@@ -3845,7 +3970,8 @@ Examples:
 
 ## authama ssh vm list
 
-List every hypervisor's VMs, and which manifest host uses each.
+List every enabled hypervisor's VMs with their state, and which manifest host uses each. A
+hypervisor whose CLI does not answer within 5 seconds is reported as timed out.
 
 ```
 authama ssh vm list
@@ -4090,7 +4216,9 @@ Flags:
 
 ## authama token init
 
-Write a starter token config (never over an existing file).
+Write a starter token config, tokens.json in the config home (or FILE), from the shipped templates:
+an entry per tool to fill in with the environment variable each token comes from, then `token
+apply`. --target starts from those tools' templates only. It never writes over an existing file.
 
 ```
 authama token init [FILE] [flags]
@@ -4111,7 +4239,9 @@ Flags:
 
 ## authama token list
 
-List the tokens installed in the credential files (secrets masked).
+List the tokens installed in the tools' credential files - Composer's auth.json, .npmrc, Docker's
+config, git credentials, .netrc and the rest - with their hosts and masked values. --target narrows
+the tools, --project reads a project's own files, and --reveal shows the values after asking.
 
 ```
 authama token list [flags]
@@ -4274,7 +4404,7 @@ Flags:
 
 ## authama version
 
-Print the authama version.
+Print the authama version, the commit it was built from and its build date.
 
 ```
 authama version
@@ -4309,7 +4439,10 @@ Subcommands:
 
 ## authama webhook add
 
-Add an endpoint; its signing secret is shown once.
+Add a webhook endpoint called <name> (https only) that receives authama's events as signed POSTs:
+each a CloudEvent, signed as Standard Webhooks describes (webhook-id, webhook-timestamp, webhook-
+signature). The signing secret is printed once; verify each request with it. --event sends only the
+event types named, by prefix.
 
 ```
 authama webhook add <name> <url> [flags]
@@ -4330,7 +4463,9 @@ Flags:
 
 ## authama webhook deliver
 
-Send every endpoint the events due to it now.
+Send every enabled endpoint the events due to it now, including failed ones whose backoff has
+passed, and report each delivery. Use it to deliver without `serve` running, from a job or by hand.
+It exits non-zero when a delivery failed.
 
 ```
 authama webhook deliver
@@ -4344,7 +4479,8 @@ Examples:
 
 ## authama webhook disable
 
-Stop sending to an endpoint; it keeps its place.
+Stop sending to an endpoint. It keeps its secret and its place in the event stream, so `webhook
+enable` resumes where it stopped.
 
 ```
 authama webhook disable <name>
@@ -4358,7 +4494,7 @@ Examples:
 
 ## authama webhook enable
 
-Send to an endpoint again, from where it stopped.
+Send to a disabled endpoint again, starting from the first event it has not received.
 
 ```
 authama webhook enable <name>
@@ -4372,7 +4508,8 @@ Examples:
 
 ## authama webhook list
 
-List endpoints and how their delivery stands (never their secrets).
+List the webhook endpoints: name, URL, the events each takes, whether it is on, and when it was last
+sent to and with what result. Secrets are never shown; --json prints the list for a script.
 
 ```
 authama webhook list [flags]
@@ -4395,7 +4532,7 @@ Flags:
 
 ## authama webhook remove
 
-Remove an endpoint and its secret.
+Remove a webhook endpoint and its signing secret. Nothing more is sent to it.
 
 ```
 authama webhook remove <name>
@@ -4409,7 +4546,8 @@ Examples:
 
 ## authama webhook test
 
-Send one webhook.test event now.
+Send one webhook.test event to an endpoint now and print the HTTP status it answered with, to check
+the URL and the signature check on the receiving side.
 
 ```
 authama webhook test <name>

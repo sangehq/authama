@@ -196,6 +196,11 @@ Things that work differently after this release, and what to do if one affects y
 
 ### Fixed
 
+- **Every command's help explains it.** 78 commands showed only their one-line summary under DESCRIPTION;
+  each now says what it does, what it reads or writes, and what its main flags change (docs/reference/cli.md
+  follows), and a test keeps every visible command described. `init --help` no longer suggests the deprecated
+  `--backup`, and its `--force` names where the copies go.
+
 - **A hypervisor that does not answer no longer holds the VMs page.** Listing a hypervisor's VMs now stops
   after 5 seconds (it was 20) and says so: /vms shows a **Timed out** notice naming it and a `timed out` badge
   on its row, `vm list` prints `timed out`, and the hypervisors are asked at once, so one hanging CLI costs the

@@ -31,7 +31,7 @@ var commandExamples = map[string][]string{
 	"settings set":        {"settings set backup.age_recipient age1...   # your age recipient", "settings set web.port 8000"},
 	"settings unset":      {"settings unset web.port"},
 	"settings backup-key": {"settings backup-key"},
-	"init":                {"init", "init --force --backup   # reset manifest, inventory and .env, keeping copies"},
+	"init":                {"init", "init --force   # reset manifest, inventory and .env, keeping copies"},
 	"migrate":             {"migrate", "migrate --force --yes"},
 	"settings path":       {"settings path", "settings path --json"},
 	"settings show":       {"settings show", "settings show --effective   # every setting, its value and where it came from"},

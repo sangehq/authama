@@ -129,6 +129,7 @@ func newRootCmd() *cobra.Command {
 		root.AddCommand(c)
 	}
 	applyExamples(root, "")
+	applyLong(root, "")
 	addGroupHelp(root)
 	applyManStyle(root)
 	recordCommands(root)
