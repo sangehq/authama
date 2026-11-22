@@ -49,7 +49,10 @@ src/                # THE GO MODULE. go.mod is here, so every `go` command runs
                     #   cleaner (stale pins and records), dockerctx (VM Docker
                     #   contexts), gitremote (a checkout's origin transport),
                     #   opstore (keys kept in 1Password), overview (the web
-                    #   overview's state rows and fixes), pubkeys (regenerate .pub)
+                    #   overview's state rows and fixes), pubkeys (regenerate .pub),
+                    #   gitsign (per-profile git identity and SSH signing),
+                    #   setupxfer (setup export/import), structure (keys outside
+                    #   the expected layout: suggestions, approved moves)
     platform/       # build-tagged OS predicates and terminal handling
                     #   (*_darwin.go, *_linux.go, *_windows.go, *_other.go)
     web/            # serve: routes, templates, the preview/confirm engine

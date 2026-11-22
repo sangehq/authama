@@ -119,6 +119,13 @@ guarantees each alias offers only its own key and trusts only its own host keys.
       "key_scope": "per_service",         // or "shared"
       "key_name": null,                    // set only when key_scope == "shared"
       "key_comment": "alice-{device}-{date}", // optional: overrides defaults.key_comment
+      "git": {                             // optional: written by `ssh git sign set`
+        "email": "alice@work.example",     // user.email, and the allowed_signers principal
+        "name": "Alice",                   // user.name (optional)
+        "signing_key": "work_gh-ed25519",  // optional: default is the profile's github.com key
+        "sign": true,                      // sign commits and tags with that key
+        "dirs": ["~/code/work/"]           // checkouts under these commit as this profile
+      },
       "hosts": [
         {
           "alias": "hpc",                  // the ssh Host alias you type
@@ -578,7 +585,8 @@ or `shared`.
 The config home holds what you write or back up: `.env`, `authama.json`, the
 manifest, inventory, providers, token config and the age identity. The state
 home holds what authama writes for itself: `log/audit.log`, `log/history.db`,
-`snapshots/` and `dist/`. `authama settings path` prints all four locations and
+`snapshots/` and `dist/`, and under `.state/` the `ssh structure` suggestions
+(`structure.json`) and the owner-only backups of every key it moved (`moved/<time>/`). `authama settings path` prints all four locations and
 whether each file loaded.
 
 ### Precedence

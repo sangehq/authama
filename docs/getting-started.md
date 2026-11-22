@@ -79,7 +79,17 @@ authama ssh show gh                 # manifest, key files, rendered config and p
 authama ssh expiry                  # per-key rotation age
 authama ssh rotate work_gh-ed25519  # zero-downtime staged rotation
 authama ssh notify install          # scheduled reminders before keys come due
+authama ssh structure list          # keys left loose in ~/.ssh, and the profile each would move to
+authama ssh structure approve 3f2a  # move one after a preview; backed up, config repointed
+authama ssh git sign set work --email me@work.example --dir ~/src/work   # commit and sign as the profile
+authama setup export --encrypt --out setup.age   # everything, for the next machine
 ```
+
+Nothing is moved on its own: `ssh structure` only suggests, and `serve` (or the optional
+`ssh structure install` job) checks again when `~/.ssh` changes. See
+[Tidy loose keys into their profiles](recipes/tidy-keys-into-profiles.md),
+[Sign commits with each profile's SSH key](recipes/sign-commits-with-ssh.md) and
+[Move to a new machine](recipes/move-to-a-new-machine.md).
 
 **Every verb that changes `~/.ssh` asks first.** `reconcile` shows its dry run as
 the question, so you approve what will happen rather than a verb name. `--yes`/`-y`
