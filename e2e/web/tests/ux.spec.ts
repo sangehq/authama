@@ -177,6 +177,9 @@ test('Move setup downloads a document with no secret, and previews a pasted impo
 });
 
 test('the structure tree moves a stray key by drag and drop or its menu, and previews before writing', async ({ page }) => {
+  // Tall enough that the stray key and the profile are both on screen: a
+  // drag that has to scroll the page never starts in headless Chromium.
+  await page.setViewportSize({ width: 1280, height: 1600 });
   await page.goto('/structure');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Structure');
   const stray = page.locator('li[draggable="true"]', { hasText: '~/.ssh/id_e2e_stray' });
@@ -184,7 +187,7 @@ test('the structure tree moves a stray key by drag and drop or its menu, and pre
   const menu = page.getByLabel('Move ~/.ssh/id_e2e_stray');
   await expect(menu).toHaveValue('');
   // Dragging onto a profile picks that profile in the item's menu.
-  await stray.dragTo(page.locator('li[data-drop="profile:work"]').first());
+  await stray.dragTo(page.locator('li[data-drop="profile:work"] > details > summary').first(), { sourcePosition: { x: 4, y: 4 } });
   await expect(menu).toHaveValue('key ~/.ssh/id_e2e_stray profile work');
   const pending = page.locator('[data-structure-pending]');
   await expect(pending).toContainText('~/.ssh/id_e2e_stray: into work');

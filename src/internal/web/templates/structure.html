@@ -12,12 +12,12 @@
           {{range .Groups}}
           <li class="structure-node structure-group" data-drop="category:{{.Name}}">
             <details open>
-              <summary><span class="structure-label">{{icon "folder"}}<span class="ms-1 fw-medium">{{if .Name}}{{.Name}}{{else}}No category{{end}}</span></span><span class="text-secondary small ms-2">{{.Dir}}/</span><span class="badge bg-secondary-lt ms-2">{{len .Profiles}} profile(s)</span></summary>
+              <summary><span class="structure-label">{{icon "folder"}}<span class="ms-1 fw-medium">{{if .Name}}{{.Name}}{{else}}No category{{end}}</span></span><span class="text-secondary small ms-2">{{.Dir}}/</span><span class="badge badge-muted ms-2">{{len .Profiles}} profile(s)</span></summary>
               <ul>
                 {{range .Profiles}}{{$prof := .}}
                 <li class="structure-node structure-profile" data-drop="profile:{{.Name}}"{{if and (not $.ReadOnly) .Moves}} draggable="true" data-drag="move-profile-{{.Name}}"{{end}}>
                   <details open>
-                    <summary><span class="structure-label">{{icon "users"}}<a class="ms-1 fw-medium" href="{{u "/profiles"}}#profile-{{.Name}}">{{.Name}}</a></span><span class="text-secondary small ms-2">{{.Dir}}/</span>{{if .OnePassword}}<span class="badge bg-azure-lt ms-2">1Password</span>{{end}}</summary>
+                    <summary><span class="structure-label">{{icon "users"}}<span class="ms-1 fw-medium">{{.Name}}</span></span><span class="text-secondary small ms-2">{{.Dir}}/</span>{{if .OnePassword}}<span class="badge badge-info ms-2">1Password</span>{{end}}</summary>
                     {{if and (not $.ReadOnly) .Moves}}
                     <div class="structure-move">
                       <label class="form-label small mb-0" for="move-profile-{{.Name}}">Move profile {{.Name}}</label>
@@ -28,8 +28,9 @@
                     </div>
                     {{end}}
                     <ul>
-                      {{range .Keys}}<li class="structure-leaf">{{icon "key"}}<span class="ms-1">{{.Name}}</span> <code class="small">{{.Path}}</code>{{if .Adopted}} <span class="badge bg-azure-lt">kept where it is</span>{{end}}{{if not .Present}} <span class="badge bg-yellow-lt">not on disk yet</span>{{end}}</li>{{end}}
-                      {{range .Hosts}}<li class="structure-leaf">{{icon "server"}}<a class="ms-1" href="{{u "/hosts"}}/{{.Alias}}">{{.Alias}}</a> <span class="text-secondary small">{{.Hostname}} · key {{.Key}}</span></li>{{end}}
+                      <li class="structure-leaf"><a class="d-inline-block py-1 text-decoration-underline" href="{{u "/profiles"}}#profile-{{.Name}}">Open profile {{.Name}}</a></li>
+                      {{range .Keys}}<li class="structure-leaf">{{icon "key"}}<span class="ms-1">{{.Name}}</span> <code class="small">{{.Path}}</code>{{if .Adopted}} <span class="badge badge-info">kept where it is</span>{{end}}{{if not .Present}} <span class="badge badge-warn">not on disk yet</span>{{end}}</li>{{end}}
+                      {{range .Hosts}}<li class="structure-leaf">{{icon "server"}}<a class="ms-1 text-decoration-underline" href="{{u "/hosts"}}/{{.Alias}}">{{.Alias}}</a> <span class="text-secondary small">{{.Hostname}} · key {{.Key}}</span></li>{{end}}
                       {{if not (or .Keys .Hosts)}}<li class="structure-leaf text-secondary small">No keys or hosts yet</li>{{end}}
                     </ul>
                   </details>
@@ -41,12 +42,12 @@
           {{end}}
           <li class="structure-node structure-outside">
             <details open>
-              <summary><span class="structure-label">{{icon "alert-triangle"}}<span class="ms-1 fw-medium">Outside the layout</span></span><span class="badge {{if .Suggestions}}bg-orange-lt{{else}}bg-green-lt{{end}} ms-2">{{len .Suggestions}}</span></summary>
+              <summary><span class="structure-label">{{icon "alert-triangle"}}<span class="ms-1 fw-medium">Outside the layout</span></span><span class="badge {{if .Suggestions}}badge-warn{{else}}badge-ok{{end}} ms-2">{{len .Suggestions}}</span></summary>
               <ul>
                 {{range .Suggestions}}
                 <li class="structure-node structure-key" id="suggestion-{{.ID}}"{{if and (not $.ReadOnly) .Moves}} draggable="true" data-drag="move-s-{{.ID}}"{{end}}>
                   <div class="d-flex flex-wrap align-items-center gap-2">
-                    {{icon "key"}}<code>{{.Path}}</code><span class="badge bg-secondary-lt">{{.Kind}}</span>{{if .Profile}}<span class="badge bg-blue-lt">suggested: {{.Profile}}</span>{{end}}<span class="text-secondary small">id {{.ID}}</span>
+                    {{icon "key"}}<code>{{.Path}}</code><span class="badge badge-muted">{{.Kind}}</span>{{if .Profile}}<span class="badge badge-info">suggested: {{.Profile}}</span>{{end}}<span class="text-secondary small">id {{.ID}}</span>
                   </div>
                   <p class="text-secondary small mb-1">{{.Detail}}</p>
                   {{range .InUse}}<p class="small mb-1">Named in <code>{{.}}</code>; that line is repointed when it moves.</p>{{end}}
@@ -106,7 +107,7 @@
     </div>
     {{if .Dismissed}}
     <div class="card" id="structure-dismissed">
-      <div class="card-header"><h2 class="card-title">Dismissed <span class="badge bg-secondary-lt ms-1">{{len .Dismissed}}</span></h2></div>
+      <div class="card-header"><h2 class="card-title">Dismissed <span class="badge badge-muted ms-1">{{len .Dismissed}}</span></h2></div>
       {{if .ShowAll}}
       <ul class="list-group list-group-flush">
         {{range .Dismissed}}<li class="list-group-item d-flex align-items-center gap-2"><code class="flex-grow-1">{{.Path}}</code>{{if not $.ReadOnly}}<button type="submit" class="btn btn-sm btn-ghost-secondary" form="restore-{{.ID}}"{{desc "structure-restore"}}>{{icon "restore"}}<span class="ms-1">Show again</span></button>{{end}}</li>{{end}}
