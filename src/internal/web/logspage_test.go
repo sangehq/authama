@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sangehq/authama/src/internal/util/applog"
 	"github.com/sangehq/authama/src/internal/util/tz"
@@ -114,4 +115,28 @@ func TestTheTimeZoneSettingIsASearchableField(t *testing.T) {
 func itoa(n int64) string {
 	b, _ := json.Marshal(n)
 	return string(b)
+}
+
+// A zone set or taken out while the server runs applies from the next page.
+func TestTheServerFollowsTheTimeZoneSetting(t *testing.T) {
+	t.Setenv("AUTHAMA_TIMEZONE", "")
+	t.Cleanup(func() { _ = tz.Set("") })
+	s, p, _ := newTestServer(t)
+	c := signIn(t, s)
+	if err := os.WriteFile(p.SettingsFile(), []byte(`{"display": {"timezone": "Asia/Tokyo"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	c.get("/logs")
+	if tz.Name() != "Asia/Tokyo" {
+		t.Fatalf("zone after the setting = %q", tz.Name())
+	}
+	if err := os.WriteFile(p.SettingsFile(), []byte(`{}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	future := time.Now().Add(time.Minute)
+	_ = os.Chtimes(p.SettingsFile(), future, future)
+	c.get("/logs")
+	if tz.Name() != "" {
+		t.Fatalf("zone after taking the setting out = %q, want this system's", tz.Name())
+	}
 }

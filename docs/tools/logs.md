@@ -87,4 +87,5 @@ authama --tz UTC history                 # one command in another zone
 
 `$AUTHAMA_TIMEZONE` sets it from the environment. The
 Settings page's **Display › Timezone** field searches the zones and shows the time in the one you
-type; a running server uses a new zone from its next page.
+type. A running server uses a new zone, or goes back to this system's when the setting is taken
+out, from its next page; one started with `--tz` or `$AUTHAMA_TIMEZONE` keeps that zone.

@@ -8,6 +8,7 @@ import (
 
 	"github.com/sangehq/authama/src/internal/services/settings"
 	"github.com/sangehq/authama/src/internal/util/applog"
+	"github.com/sangehq/authama/src/internal/util/envnames"
 	"github.com/sangehq/authama/src/internal/util/tz"
 )
 
@@ -68,23 +69,29 @@ const zoneKey = "display.timezone"
 
 // followZone shows times in display.timezone as it is now: a change made on
 // the Settings page (or by the CLI while the server runs) applies from the
-// next page, without a restart. The settings file is read only when its
-// modification time moves.
+// next page, without a restart, and taking the setting out goes back to this
+// system's zone. The settings file is read only when its modification time
+// moves. A zone from the environment wins over the file, as it does at
+// start-up, and so does --tz: then nothing is followed.
 func followZone(file string, next http.Handler) http.Handler {
 	var mu sync.Mutex
 	var seen time.Time
-	start := tz.Name()
+	env := os.Getenv(envnames.Timezone)
+	fv, inFile := settings.FileValue(file, zoneKey)
+	fromEnv := env != "" && (!inFile || fv != env)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if fi, err := os.Stat(file); err == nil && !tz.Pinned() {
+		if fromEnv || tz.Pinned() {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if fi, err := os.Stat(file); err == nil {
 			mu.Lock()
 			if !fi.ModTime().Equal(seen) {
-				first := seen.IsZero()
 				seen = fi.ModTime()
-				v, ok := settings.FileValue(file, zoneKey)
-				switch {
-				case ok && tz.Set(v) == nil:
-				case !ok && !first:
-					_ = tz.Set(start)
+				if v, ok := settings.FileValue(file, zoneKey); ok {
+					_ = tz.Set(v) // a bad value keeps the zone in use; the setting's check refuses one anyway
+				} else {
+					_ = tz.Set("")
 				}
 			}
 			mu.Unlock()
