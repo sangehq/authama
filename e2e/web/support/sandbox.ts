@@ -48,7 +48,7 @@ export function sandboxEnv(home: string): NodeJS.ProcessEnv {
     AUTHAMA_AUTO_PIN: '0', // no network reach from a test
     // Only a hypervisor the test machines do not have: the real ones' CLIs
     // would list the developer's own VMs, and orbctl, without OrbStack's
-    // state under the real HOME, holds /vms for its whole 20s timeout.
+    // state under the real HOME, holds /vms for its whole 5s list timeout.
     AUTHAMA_VM_HYPERVISORS: 'lima',
     AUTHAMA_AGE_IDENTITY_FILE: join(home, '.config', 'authama', 'age-identity.txt'),
   };

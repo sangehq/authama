@@ -49,7 +49,7 @@
           <input type="hidden" name="csrf" value="{{$.CSRF}}">
           <div class="mb-2">
             <label class="form-label" for="api-token-name">Name</label>
-            <input class="form-control" id="api-token-name" name="name" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._-]*" aria-describedby="api-token-name-hint">
+            <input class="form-control" id="api-token-name" name="name" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._\-]*" aria-describedby="api-token-name-hint">
             <small class="form-hint" id="api-token-name-hint">Letters, digits, dots, dashes and underscores; what the program is.</small>
           </div>
           <div class="mb-3">

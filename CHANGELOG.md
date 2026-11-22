@@ -196,6 +196,10 @@ Things that work differently after this release, and what to do if one affects y
 
 ### Fixed
 
+- **Name checks on /api-tokens and /webhooks work in the browser.** Their name fields' `pattern` was invalid
+  under the v flag browsers compile it with, so the browser ignored it and only the server checked; a test now
+  compiles every template pattern that way. A long saved selection name on /export is cut with an ellipsis
+  (full name on hover) instead of losing letters at both ends.
 - **Every command's help explains it.** 78 commands showed only their one-line summary under DESCRIPTION;
   each now says what it does, what it reads or writes, and what its main flags change (docs/reference/cli.md
   follows), and a test keeps every visible command described. `init --help` no longer suggests the deprecated
