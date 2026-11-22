@@ -44,7 +44,7 @@ VERSION := $(shell git describe --tags --match 'v[0-9]*' --always --dirty 2>/dev
 LDFLAGS := -s -w -X github.com/sangehq/authama/src/internal/version.Version=$(VERSION)
 GO      := go -C $(MODULE)
 
-.PHONY: help build build-all test vet fmt fmt-check lint lint-tool lint-all ci check gates ci-linux e2e e2e-web feature-check docker-shell docker-run docker-down \
+.PHONY: help build build-all test vet fmt fmt-check lint lint-tool lint-all ci check gates ci-linux e2e qa e2e-web feature-check docker-shell docker-run docker-down \
         cross dist release-snapshot clean install link uninstall doctor reconcile render rotate bundle settings generate tabler-check tabler-update tabler-vendor man
 
 help:  ## list targets
@@ -195,6 +195,13 @@ docker-down: ## stop and remove the dev container
 # The CI job keeps its own 15-minute limit.
 e2e: ## end-to-end smoke in a throwaway sandbox
 	$(GO) test -tags e2e -count=1 -timeout 600s ./cmd/authama/
+
+# The QA walk alone (cmd/authama/qa_test.go, part of e2e too): every command's
+# help and an unknown flag, then a walk through each command and its main flags
+# against a throwaway HOME whose hosts are 127.0.0.1 on a closed port. Nothing
+# leaves the machine; installs, the clipboard, the agent and serve run as --help.
+qa: ## the QA command walk: every command, its help and main flags, in a throwaway HOME
+	$(GO) test -tags e2e -count=1 -timeout 600s -run TestQA ./cmd/authama/
 
 # The web UI in a real browser: Playwright drives every page and the write flows
 # of `authama serve`, and axe checks each page in both themes. It builds the

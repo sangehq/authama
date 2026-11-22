@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`make qa`: a walk through every command.** `cmd/authama/qa_test.go` (part of `make e2e` too) checks every
+  command's help and that it refuses an unknown flag, walks the commands and their main flags in a throwaway home
+  whose hosts are 127.0.0.1 on a closed port, and runs every read-only command line in README.md and docs/ so a
+  documented command this build refuses fails the run. The browser suite gains every page at 375px wide (no
+  sideways scroll), Tab order and focus rings, and the Connections, Import, VMs, Export, Checklists, API tokens
+  and Webhooks pages in its page and axe sweeps; its server now takes a free port, never the default 7822.
 - **Signed bundles (P-06).** `ssh bundle --sign-key KEY` and `setup export --out FILE --sign-key KEY` write a detached
   SSH signature, `<file>.sig`, with `ssh-keygen -Y sign` in the `authama-bundle` namespace, and trust the key in the
   config home's new `bundle_signers` file (allowed_signers format). `ssh restore` and `setup import` check a `.sig`
@@ -181,6 +187,18 @@ Things that work differently after this release, and what to do if one affects y
 
 ### Fixed
 
+- **`history --command` takes the command as typed.** `--command "ssh host add"` (or `"authama ssh host add"`)
+  found nothing, because ssh commands are recorded without their group; it now matches `host add`. A filtered
+  list that matches nothing says so, instead of "no operations recorded yet".
+- **`ssh rotate --check` is recorded as a dry run.** It was recorded as a rotation that ended `ok`, though it
+  changes nothing; `repair --check` is the same. A `rotate` that names no key is refused before it takes the lock,
+  so a usage error is no longer recorded as a failed rotation.
+- **`ssh key reserve ~/.ssh/<name>` honours `--dev-root`.** `~/.ssh/` was read as the real home's, so the path
+  form was refused in a sandbox; it now names the ssh directory the run uses. A missing key says
+  "no key file ~/.ssh/<name> to reserve" instead of an lstat error.
+- **`ssh notify doctor` refuses flags.** It ignored any flag it was given, and its help listed `send`'s flags,
+  which it never read. `notify send` and `ping` now list every flag go-notifykit takes (`-icon` and `-open` were
+  missing) and say what each does.
 - **Form paths reach no command or file unchecked.** The project and config scope on Auth tokens, the checkouts
   on Git identities → Remote mode and an export schedule's folder must be plain absolute paths before the server
   opens them, and `ssh git status` and `ssh git use` run git in the checkout (its working directory) instead of
