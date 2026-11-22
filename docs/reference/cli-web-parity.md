@@ -19,15 +19,15 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 
 | | Count |
 | --- | --- |
-| Commands (runnable, not hidden, not help-only parents) | 156 |
-| Help-only parent commands left out | 25 |
-| Web | 134 |
+| Commands (runnable, not hidden, not help-only parents) | 166 |
+| Help-only parent commands left out | 26 |
+| Web | 144 |
 | Partial | 3 |
 | CLI-only by design | 19 |
 | Gap | 0 |
-| Flags on those commands | 413 |
-| Flags covered | 340 |
-| Flags CLI-only by design | 73 |
+| Flags on those commands | 431 |
+| Flags covered | 357 |
+| Flags CLI-only by design | 74 |
 | Flags with no web control | 0 |
 
 
@@ -35,7 +35,7 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 
 | Command | Status | Web | Flags | Notes |
 | --- | --- | --- | --- | --- |
-| `(root)` | CLI-only by design | - | `--dev-root` (CLI), `--no-dotenv` (CLI) | Global flags; `serve --dev-root` runs the web UI in a sandbox. |
+| `(root)` | CLI-only by design | - | `--dev-root` (CLI), `--no-dotenv` (CLI), `--tz` (CLI) | Global flags; `serve --dev-root` runs the web UI in a sandbox. `--tz` is one run; the web uses display.timezone. |
 | `api token create` | web | /api-tokens: Create (PIN; the token is shown once) | `--expires` | Shown once, never again; copy button. |
 | `api token list` | web | /api-tokens | `--json` | Names, scope and dates; never the token. |
 | `api token revoke` | web | /api-tokens: Revoke (PIN) | - |  |
@@ -63,6 +63,11 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `history reset` | web | /reset | `--confirm` |  |
 | `history show` | web | /history/{op} | - |  |
 | `init` | web | /reset: re-initialise home | `--force`, `--no-backup` (CLI), `--yes` | The web always keeps a backup. |
+| `logs` | web | /logs (level, since, search, Follow, Download) | `--follow`, `--grep`, `--json`, `--level`, `--limit`, `--since` | The page shows the newest 500; Download has them all. |
+| `logs export` | web | /logs: Download | `--grep`, `--level`, `--limit`, `--out`, `--since` |  |
+| `logs level` | web | /settings: log.level | - |  |
+| `logs path` | web | /logs (footer) | - |  |
+| `logs retention` | web | /settings: log.retention_days | - |  |
 | `man` | CLI-only by design | - | - | Man pages. |
 | `mcp` | CLI-only by design | - | - | MCP server over stdio. |
 | `migrate` | CLI-only by design | - | `--force` (CLI), `--yes` (CLI) | One-off v1 migration. |
@@ -78,11 +83,16 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `repair` | web | /repair (area checkboxes) | `--area`, `--check`, `--yes` |  |
 | `reset` | web | /reset: factory reset | `--confirm` |  |
 | `serve` | CLI-only by design | - | `--addr` (CLI), `--allow-host` (CLI), `--allow-remote` (CLI), `--new` (CLI), `--no-open` (CLI), `--port` (CLI), `--read-only` (CLI), `--restart` (CLI), `--status` (CLI), `--stop` (CLI), `--stop-all` (CLI), `--token-file` (CLI) | Starts the web UI itself. |
+| `serve browsers` | web | /settings: Remembered browsers | `--json` |  |
+| `serve browsers forget` | web | /settings: Forget, Forget all | `--all` |  |
 | `settings backup-key` | web | /settings: Backup key | - |  |
 | `settings init` | web | /settings: Reset to defaults | `--force` |  |
 | `settings path` | web | /settings, /about | `--json` |  |
 | `settings set` | web | /settings | - |  |
 | `settings show` | web | /settings | `--effective`, `--json` |  |
+| `settings timezone list` | web | /settings: display.timezone (searchable list) | - |  |
+| `settings timezone set` | web | /settings: display.timezone | - |  |
+| `settings timezone show` | web | /settings: display.timezone (time there now) | - |  |
 | `settings unset` | web | /settings | - |  |
 | `settings validate` | web | /settings (checked as you type) | - |  |
 | `setup export` | web | /setup: export (PIN-gated encrypt) | `--encrypt`, `--out`, `--passphrase-file` (CLI), `--sign-key` (CLI) | --sign-key stays in the terminal: ssh-keygen may ask for the key's passphrase. |
@@ -95,7 +105,7 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `ssh config export` | web | /ssh-config: download ssh_config | `--flat`, `--out` |  |
 | `ssh config render` | web | /ssh-config, overview: Re-render | `--dry-run`, `--yes` |  |
 | `ssh config show` | web | /ssh-config | - |  |
-| `ssh deploy` | web | key page: Deploy (job) | `--yes` |  |
+| `ssh deploy` | web | key page: Deploy (job) | `--direct`, `--yes` |  |
 | `ssh diff` | web | Reconcile preview | - |  |
 | `ssh expiry` | web | /keys, /audit | - |  |
 | `ssh git clone` | partial | /git-sign: clone helper | `--dry-run` (CLI), `--mode` (CLI), `--profile` (CLI) | The page builds the command; cloning runs in a terminal. |
@@ -120,7 +130,7 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `ssh key list` | web | /keys | `--csv`, `--json`, `--new`, `--since` |  |
 | `ssh key regen-pub` | web | /keys, key page | `--all`, `--category`, `--dry-run`, `--yes` |  |
 | `ssh key reserve` | web | /keys: Reserve | `--dry-run`, `--for`, `--note`, `--yes` |  |
-| `ssh key revoke` | web | key page, bulk Revoke (job) | `--all`, `--category`, `--reason`, `--yes` |  |
+| `ssh key revoke` | web | key page, bulk Revoke (job) | `--all`, `--category`, `--direct`, `--reason`, `--yes` |  |
 | `ssh key root` | web | /keys, /structure | `--yes` |  |
 | `ssh key unreserve` | web | /keys | `--yes` |  |
 | `ssh keygen` | web | /keys: Mint | `--force` (CLI), `--no-key-backup` (CLI), `--no-pin`, `--passphrase` (CLI), `--yes` | Runs with --no-pin; overwrite and passphrase stay in the terminal. |
@@ -145,8 +155,8 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `ssh reconcile` | web | overview/keys: Reconcile | `--dry-run`, `--no-pin`, `--passphrase` (CLI), `--yes` | Runs with --no-pin; host keys are pinned from /hosts. |
 | `ssh recover` | web | key page: Break-glass | - | New in this branch. The no-argument fixkeys tool stays CLI. |
 | `ssh restore` | web | /transfer, /snapshots: Restore bundle (job; checks bundle_signers, Require a trusted signature) | `--allow-risky-options`, `--identity` (CLI), `--require-signature`, `--signers` (CLI), `--yes` | --signers: the web trusts bundle_signers only. |
-| `ssh rollback` | web | key page: Roll back (job) | `--yes` |  |
-| `ssh rotate` | web | key page / bulk Rotate (job) | `--all`, `--allow-unverified`, `--category`, `--check`, `--dry-run`, `--evict-old`, `--failed`, `--force`, `--keep-old`, `--no-key-backup`, `--passphrase` (CLI), `--yes` | --failed: the review link; --keep-old: Take the previous key off servers unticked. |
+| `ssh rollback` | web | key page: Roll back (job) | `--direct`, `--yes` |  |
+| `ssh rotate` | web | key page / bulk Rotate (job) | `--all`, `--allow-unverified`, `--category`, `--check`, `--direct`, `--dry-run`, `--evict-old`, `--failed`, `--force`, `--keep-old`, `--no-key-backup`, `--passphrase` (CLI), `--yes` | --failed: the review link; --keep-old: Take the previous key off servers unticked. |
 | `ssh show` | web | profile/host/key pages | - |  |
 | `ssh snapshots list` | web | /snapshots | `--csv` |  |
 | `ssh snapshots prune` | web | /snapshots: Prune | `--keep` |  |

@@ -15,6 +15,7 @@ Every command also takes the global flag:
 ```
       --dev-root string          run against a sandbox directory instead of ~/.ssh (also $AUTHAMA_DEV_ROOT)
       --no-dotenv[=true|false]   do not read <config home>/.env this run (also $AUTHAMA_NO_DOTENV=1)
+      --tz string                show times in this IANA time zone for this run, e.g. UTC or Europe/Berlin (else display.timezone, else this system's)
 ```
 
 ## Contents
@@ -51,6 +52,11 @@ Every command also takes the global flag:
   - [`authama history reset`](#authama-history-reset) - Start the history again: move the history and audit log aside (kept)
   - [`authama history show`](#authama-history-show) - Show one operation: its events and what it changed in the manifest
 - [`authama init`](#authama-init) - Create/converge the per-user home
+- [`authama logs`](#authama-logs) - Show authama's log: commands, web actions, jobs, file changes and sign-ins
+  - [`authama logs export`](#authama-logs-export) - Write the log records (JSON lines) to a file, or stdout
+  - [`authama logs level`](#authama-logs-level) - Set the least severe level written to the log
+  - [`authama logs path`](#authama-logs-path) - Print where authama.log is
+  - [`authama logs retention`](#authama-logs-retention) - Set how many days rotated log files are kept
 - [`authama man`](#authama-man) - Write a manual page (troff, section 1) for every command into DIR
 - [`authama mcp`](#authama-mcp) - Serve the Model Context Protocol over stdio, for an AI client
 - [`authama migrate`](#authama-migrate) - Copy a pre-0.1.1 home (ssh-manager, sshmgr) into the authama home; the old one is kept and marked
@@ -68,12 +74,18 @@ Every command also takes the global flag:
 - [`authama repair`](#authama-repair) - Find and fix what is wrong with the authama home, ~/.ssh and the token files
 - [`authama reset`](#authama-reset) - Factory reset: move the authama home aside (kept) and start again; ~/.ssh is not touched
 - [`authama serve`](#authama-serve) - Open the web UI on this machine
+  - [`authama serve browsers`](#authama-serve-browsers) - List the browsers the web UI remembers, or forget them
+    - [`authama serve browsers forget`](#authama-serve-browsers-forget) - Forget remembered browsers: they sign in with a link again
 - [`authama settings`](#authama-settings) - Your settings files (.env and authama.json): where they are, what is in effect, validate, create
   - [`authama settings backup-key`](#authama-settings-backup-key) - Make an age key for encrypted backups and set backup.age_recipient to it
   - [`authama settings init`](#authama-settings-init) - Create a starter authama.json (schema reference and version; every setting at its default)
   - [`authama settings path`](#authama-settings-path) - Print where the config home, state home, .env and authama.json are
   - [`authama settings set`](#authama-settings-set) - Write one setting into authama.json, keeping the rest
   - [`authama settings show`](#authama-settings-show) - Print authama.json, or with --effective every setting's value and where it came from
+  - [`authama settings timezone`](#authama-settings-timezone) - Show, set or list the time zone times are shown in
+    - [`authama settings timezone list`](#authama-settings-timezone-list) - List the IANA zones, or those matching a search
+    - [`authama settings timezone set`](#authama-settings-timezone-set) - Show times in an IANA zone (Europe/Berlin, UTC), or local for this system's
+    - [`authama settings timezone show`](#authama-settings-timezone-show) - Show the zone times are shown in, and the time there now
   - [`authama settings unset`](#authama-settings-unset) - Take one setting out of authama.json, so it goes back to its default
   - [`authama settings validate`](#authama-settings-validate) - Check authama.json (or FILE) against the schema, and .env's syntax and permissions
 - [`authama setup`](#authama-setup) - Export this setup to another machine, or import one (secrets-free, or encrypted with keys and tokens)
@@ -1016,6 +1028,116 @@ Flags:
   -y, --yes[=true|false]         skip the confirmation prompt
 ```
 
+## authama logs
+
+Show authama.log: one record per command, web action, job, file change and sign-in, newest
+last, with times in the display zone. Keys, tokens, passphrases, PINs and sign-in links are blanked
+before anything is written. --level, --since and --grep filter; --follow keeps printing new records
+until Ctrl-C; --json prints each record as written. The log is in the state home's log directory
+(`authama logs path`), rotated at log.max_size_mb and kept log.retention_days days.
+
+```
+authama logs [flags]
+```
+
+Subcommands:
+
+- [`export`](#authama-logs-export) - Write the log records (JSON lines) to a file, or stdout
+- [`level`](#authama-logs-level) - Set the least severe level written to the log
+- [`path`](#authama-logs-path) - Print where authama.log is
+- [`retention`](#authama-logs-retention) - Set how many days rotated log files are kept
+
+Examples:
+
+```sh
+  authama logs
+  authama logs --follow
+  authama logs --level warn --since 24h
+  authama logs --grep signin --json
+```
+
+Flags:
+
+```
+  -f, --follow[=true|false]   keep printing new records until Ctrl-C
+      --grep string           records containing this text (any case)
+      --json[=true|false]     print each record as its JSON line
+      --level string          the least severe level to show: debug, info, warn or error
+      --limit int             the newest N records (0 for all) (default 200)
+      --since string          records from then on: 36h, 7d, 2026-11-20, or RFC 3339
+```
+
+## authama logs export
+
+Write the log records the filters match as JSON lines, to a new file (--out, never overwritten)
+or to stdout: for a bug report or another tool. They are already redacted.
+
+```
+authama logs export [flags]
+```
+
+Examples:
+
+```sh
+  authama logs export --out authama-log.jsonl
+  authama logs export --since 7d --level warn
+```
+
+Flags:
+
+```
+      --grep string    records containing this text (any case)
+      --level string   the least severe level to show: debug, info, warn or error
+      --limit int      the newest N records (0 for all)
+  -o, --out string     the file to write (new; never overwritten), or - for stdout
+      --since string   records from then on: 36h, 7d, 2026-11-20, or RFC 3339
+```
+
+## authama logs level
+
+Set log.level in authama.json: the least severe record written (debug, info, warn or error).
+debug adds every page the web UI serves. The next command, or the web UI after a restart, uses it.
+
+```
+authama logs level <debug|info|warn|error>
+```
+
+Examples:
+
+```sh
+  authama logs level debug
+  authama logs level info
+```
+
+## authama logs path
+
+Print the path of authama.log. Rotated files sit beside it as authama-<time>.log.
+
+```
+authama logs path
+```
+
+Examples:
+
+```sh
+  authama logs path
+```
+
+## authama logs retention
+
+Set log.retention_days in authama.json: how many days a rotated log file is kept before it is
+deleted. The live authama.log is never deleted.
+
+```
+authama logs retention <days>
+```
+
+Examples:
+
+```sh
+  authama logs retention 30
+```
+
 ## authama man
 
 Writes one manual page per command, authama.1, authama-ssh.1, authama-ssh-deploy.1
@@ -1366,16 +1488,19 @@ a change is checked and made, so a running server does not hold up a command.
 
 Listens on 127.0.0.1, port 7822 by default. If that port is taken it takes the
 next free one and prints the address it bound; --port pins a port and fails if it
-is taken. The printed address carries a one-time token that signs the browser in;
-without it every page answers 401.
+is taken. Every launch opens the default browser with a one-time link that signs
+it in, and the browser is remembered for web.remember_days (`serve browsers`);
+--no-open, an SSH session or no desktop prints the address instead.
 
-One server per home: when one is already running for this home, serve opens
-it again instead of starting another, so launching twice - or double-clicking
-the app - never piles servers up. --new starts another anyway; --status says
+One server per home: when one is already running for this home, serve checks
+it and opens it instead of starting another, so launching twice - or
+double-clicking the app - never piles servers up. A server that hung, or runs
+an older or rebuilt binary, another base path or another web.port, is replaced.
+--new starts another anyway; --status says
 whether one is running and where; --stop stops it. --stop-all stops every
 authama web UI on this machine's usual ports that proves it holds this home's
 control key, and names the others with the command that stops each;
---restart does that and starts a fresh one, which is how to load a new build.
+--restart does that and starts a fresh one.
 A page from an older build says so, and can restart its server itself. When every port from the
 default up is taken, any free port is used.
 
@@ -1390,6 +1515,10 @@ tunnel: ssh -L 7822:127.0.0.1:7822 <host>.
 ```
 authama serve [flags]
 ```
+
+Subcommands:
+
+- [`browsers`](#authama-serve-browsers) - List the browsers the web UI remembers, or forget them
 
 Examples:
 
@@ -1416,6 +1545,56 @@ Flags:
       --token-file string           also write the sign-in address to this file, mode 0600, for scripts
 ```
 
+## authama serve browsers
+
+List the browsers the web UI remembers. A browser is remembered when it signs in with a link
+(what `authama` opens), for web.remember_days (30 by default): later visits sign in by themselves,
+with an HttpOnly, SameSite=Strict cookie whose secret changes on every sign-in. Only a hash of it
+is kept. The Settings page lists them too.
+
+```
+authama serve browsers [flags]
+```
+
+Subcommands:
+
+- [`forget`](#authama-serve-browsers-forget) - Forget remembered browsers: they sign in with a link again
+
+Examples:
+
+```sh
+  authama serve browsers
+  authama serve browsers --json
+```
+
+Flags:
+
+```
+      --json[=true|false]   print the list as JSON
+```
+
+## authama serve browsers forget
+
+Forget remembered browsers, by the ids `serve browsers` lists, or every one with --all. A
+forgotten browser's session ends on its next page, and it needs a sign-in link again (run `authama`).
+
+```
+authama serve browsers forget [id...] [flags]
+```
+
+Examples:
+
+```sh
+  authama serve browsers forget 3f9c2a1b7e4d5c6a   # an id from serve browsers
+  authama serve browsers forget --all
+```
+
+Flags:
+
+```
+      --all[=true|false]   forget every remembered browser
+```
+
 ## authama settings
 
 authama reads two files from its config home at start-up:
@@ -1438,6 +1617,7 @@ Subcommands:
 - [`path`](#authama-settings-path) - Print where the config home, state home, .env and authama.json are
 - [`set`](#authama-settings-set) - Write one setting into authama.json, keeping the rest
 - [`show`](#authama-settings-show) - Print authama.json, or with --effective every setting's value and where it came from
+- [`timezone`](#authama-settings-timezone) - Show, set or list the time zone times are shown in
 - [`unset`](#authama-settings-unset) - Take one setting out of authama.json, so it goes back to its default
 - [`validate`](#authama-settings-validate) - Check authama.json (or FILE) against the schema, and .env's syntax and permissions
 
@@ -1541,6 +1721,76 @@ Flags:
 ```
       --effective[=true|false]   every setting with its value in effect and its source
       --json[=true|false]        machine-readable output (with --effective)
+```
+
+## authama settings timezone
+
+The time zone every time is shown in, in the terminal and the web UI: display.timezone, an IANA
+name such as Europe/Berlin or UTC. Unset, it is this system's zone. Stored times stay UTC. --tz
+<zone>, or $AUTHAMA_TIMEZONE, overrides it for one command.
+
+```
+authama settings timezone
+```
+
+Subcommands:
+
+- [`list`](#authama-settings-timezone-list) - List the IANA zones, or those matching a search
+- [`set`](#authama-settings-timezone-set) - Show times in an IANA zone (Europe/Berlin, UTC), or local for this system's
+- [`show`](#authama-settings-timezone-show) - Show the zone times are shown in, and the time there now
+
+Examples:
+
+```sh
+  authama settings timezone
+```
+
+## authama settings timezone list
+
+List the IANA zones with the time in each now, or those whose name holds the search text.
+
+```
+authama settings timezone list [search]
+```
+
+Aliases: `ls`
+
+Examples:
+
+```sh
+  authama settings timezone list
+  authama settings timezone list europe
+```
+
+## authama settings timezone set
+
+Set display.timezone in authama.json, after checking it is an IANA zone. `local` takes the
+setting out, so this system's zone is used. A running web UI uses the new zone from its next page.
+
+```
+authama settings timezone set <zone>
+```
+
+Examples:
+
+```sh
+  authama settings timezone set America/New_York
+  authama settings timezone set local   # this system's zone
+```
+
+## authama settings timezone show
+
+Show the zone times are shown in, and the time there now.
+
+```
+authama settings timezone show
+```
+
+Examples:
+
+```sh
+  authama settings timezone show
+  authama --tz UTC settings timezone show   # one command in another zone
 ```
 
 ## authama settings unset

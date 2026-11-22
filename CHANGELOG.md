@@ -8,6 +8,29 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Every launch opens the browser, signed in.** Double-clicking authama, `authama` and `authama serve`
+  now check the server before anything else: a stale record or a hung server (one that holds its port
+  but no longer answers) is cleared, a server from an older or rebuilt binary, or on another base path
+  or `web.port`, is replaced, and the default browser opens with a fresh one-time link, whether the
+  server was started or found running. No address to copy. `--no-open`, SSH sessions and machines with
+  no desktop skip the browser and say why. See [every launch checks the
+  server](docs/tools/serve.md#every-launch-checks-the-server).
+- **Remembered browsers.** After a link sign-in the browser is remembered for `web.remember_days` (30;
+  `0` turns it off) with a rotating, hashed, `HttpOnly`, `SameSite=Strict` cookie, so a restart or a
+  closed browser no longer means a 401. `authama serve browsers` and **Settings › Remembered browsers**
+  list them and forget them; signing out forgets the browser too. A replayed old cookie forgets the
+  browser. Nothing signs a browser in for being local. See [remembered
+  browsers](docs/tools/serve.md#remembered-browsers).
+- **A display time zone.** `display.timezone` (an IANA name; unset is this system's zone) sets the zone
+  of every time shown, in the terminal and the web UI; stored times stay UTC. `authama settings
+  timezone show|set|list`, a global `--tz` for one command, `$AUTHAMA_TIMEZONE`, and
+  a searchable field with the time there now on the Settings page. See [times](docs/tools/logs.md#times).
+- **`authama.log`.** A structured, levelled log of every command, web change, job, watched-file change
+  and sign-in, in the state home's `log/`, rotated at `log.max_size_mb` and kept `log.retention_days`.
+  Keys, tokens, passphrases, PINs and sign-in links are redacted before anything is written. `authama
+  logs` reads it (`--follow`, `--level`, `--since`, `--grep`, `--json`, `export`, `path`, `level`,
+  `retention`), and **System › Logs** filters, searches, follows and downloads it. See
+  [logs](docs/tools/logs.md).
 - **Hosts for twelve more clients.** `export hosts --format` writes `royalts` (Royal TS/TSX, Royal JSON for a
   dynamic folder), `rdm` (Remote Desktop Manager CSV), `tabby` (`ssh-profiles.yaml`), `mremoteng` (`confCons.xml`),
   `xshell` (a zip of `.xsh` sessions), `blink` and `prompt3` (an ssh config snippet with the steps each app needs),
@@ -196,6 +219,13 @@ Things that work differently after this release, and what to do if one affects y
 
 ### Fixed
 
+- **A Finder double-click opened no browser.** The browser opener was killed with the Terminal window's
+  shell before the browser started, so a launch that found a server running printed its address and
+  nothing opened. The opener now runs in its own session and the launch waits for it.
+- **Keys and Events settings were missing from the Settings page.** `keys.*` and `events.source` had no
+  card, so they could be set only from the terminal; a test now holds every section to a card.
+- **A restarted server's adopted sessions had no owner id**, so a job they started could not be
+  answered from them.
 - **Times on the pages read in this machine's zone.** The Structure page's last check, the overview, History
   and the other pages showed UTC; they now show local time with the zone named (2026-11-22 15:10 EST).
 - **`ssh list` lines its columns up** across every profile, and no line ends in padding.

@@ -27,13 +27,82 @@ press Ctrl-C to stop
 
 The token in the address signs one browser in, once, within 10 minutes. The browser swaps it for a
 session cookie and drops it from the address bar; after that the address signs nobody in, so a copy
-left in a terminal, a file or a browser's history is of no use. Without a session, every page
-answers 401. For another sign-in, run `authama serve` again: it asks the running server for a new
-link (see [one server per home](#one-server-per-home)).
+left in a terminal, a file or a browser's history is of no use. The browser is then remembered (see
+[remembered browsers](#remembered-browsers)), so later visits sign in by themselves. A browser that
+is not remembered gets a 401 page that says how to get in: open authama (double-click it, or run
+`authama`), which opens the browser with a fresh link.
+
+You never need to copy the address. Every launch opens your default browser with a new link (`open`
+on macOS, `xdg-open` on Linux, `start` on Windows), whether it starts the server or finds one already
+running (see [every launch checks the server](#every-launch-checks-the-server)).
 
 A session ends after 8 hours without a request, or 24 hours after you signed in, whichever comes
 first, when the server stops, and when you choose **Sign out** in the user menu, which ends it on the
-server as well as in the browser. The page then answers 401, and `authama serve` gives a new link.
+server as well as in the browser and forgets the browser. A remembered browser starts a new session
+by itself on its next page.
+
+### Every launch checks the server
+
+Double-clicking authama, running `authama`, and `authama serve` all do the same checks before they
+open the browser:
+
+1. **Is a server running for this home, and is it this server?** The launch reads `serve.json` and
+   proves the server holds its control key (below). A record left by a crashed server is removed.
+   A process that holds the port but no longer answers `/healthz` is stopped, but only when it is
+   an `authama` process serving a web UI; anything else is left alone and named.
+2. **Is it up to date?** When the binary on disk was rebuilt since the server started (the same
+   file, another version), or the server runs an older release than this one, it is replaced: the
+   launch stops it, waits for the port, and starts this build. A server that is *newer* than the
+   binary you ran is kept, and the launch says so.
+3. **Is it where the settings say?** A server under another base path, or on another port than
+   `web.port` names (when that port is free), is replaced too.
+4. **Open the browser** with a fresh one-time link. The opener runs in its own session, so closing
+   the Terminal window a Finder double-click opened does not kill it before the browser starts.
+
+`--no-open` skips the browser. So does a launch with no desktop: over SSH (`SSH_CONNECTION`,
+`SSH_CLIENT` or `SSH_TTY` set), with no `DISPLAY` or `WAYLAND_DISPLAY` on Linux and the BSDs, or with
+no terminal; the address is printed instead, and the launch says why.
+
+### Remembered browsers
+
+A browser that signed in with a link gets a second cookie, `authama_browser`, and is remembered for
+`web.remember_days` days (30 by default; `0` turns it off). When it has no session (the server
+restarted, the session timed out, the browser was closed), its next page signs it in with that
+cookie. The PIN still guards every change: a home with an owner PIN asks for it again before any
+page opens.
+
+```sh
+authama serve browsers                 # the remembered browsers: id, browser, signed in, last used, expiry
+authama serve browsers forget <id>     # sign one out; it needs a link again
+authama serve browsers forget --all
+```
+
+**Settings › Remembered browsers** lists and forgets them too. A forgotten browser's session ends on
+its next page.
+
+Why it is safe:
+
+- The cookie is `HttpOnly`, `SameSite=Strict`, scoped to the server's base path and `Secure` behind
+  TLS. A page on another site cannot read it, and a browser does not send it with another site's
+  request.
+- It signs in only on a `GET` or `HEAD`, which change nothing. Every change still needs the session's
+  form token and the same origin. A forged form that carried the cookie would gain nothing.
+- Its secret changes on every sign-in. authama keeps only its SHA-256 hash, in the owner-only
+  `browsers.json` in the state home, so a copy of that file signs nobody in. A cookie used after it
+  was replaced (a stolen copy, used after you) forgets the browser at once and is logged as
+  `browser.reused`. Two tabs racing within a minute are allowed.
+- It belongs to this home, not to one server: a restart, a new build or a reboot keeps it. That is
+  why it is bound to the home's own store rather than to the server's control key, which changes on
+  every start and would sign every browser out with it.
+- The Host check comes first. A rebinding name never reaches it, and the cookie is scoped to the
+  host it was set on (`127.0.0.1` or `localhost`).
+
+**What it does not do.** A request from this machine with no cookie is never signed in for being
+local. Another user on the same machine, or a web page that rebinds a name to `127.0.0.1`, can
+reach the port as easily as you can, so a local address proves nothing. That is why the 401 page has
+no "sign me in" button: anything that page could do, an attacker's page could do too. Signing in
+needs something only you have: a link from a launch you ran (proved by the control key in your
+owner-only state home), or the cookie that link left in your browser.
 
 If port 7822 is taken, `serve` uses the next free port and says which. If all twenty from 7822 up are
 taken, it uses any free port the system offers. `--port` pins a port and fails when that port is
@@ -642,7 +711,8 @@ Some changes are terminal-only:
 - **Linking to a running server proves the control key without sending it.** `serve`, finding a
   server already running, asks for a challenge and answers it with an HMAC proof. The server proves
   itself back the same way, each proof is single-use and time-limited, and only a loopback request that
-  was not forwarded is answered (audit P-02). A server from an older build asks for `serve --restart`.
+  was not forwarded is answered (audit P-02). A server from an older build is replaced by the launch
+  (see [every launch checks the server](#every-launch-checks-the-server)).
 - **Bounded requests.** A request body over 1 MiB is refused with 413 before it is parsed; headers
   are held to 64 KiB, a body must arrive within 30 seconds, and `Permissions-Policy` turns off every
   device API (camera, microphone, location, USB and the rest).
@@ -669,6 +739,11 @@ Some changes are terminal-only:
   removes; the environment carries only its name.
 - **Session cookie.** `HttpOnly` and `SameSite=Strict`. Every change is also held to the page's own
   origin and a per-session form token.
+- **Remembered browsers.** See [remembered browsers](#remembered-browsers): a rotating, hashed,
+  `HttpOnly`, `SameSite=Strict` cookie that signs in on `GET` only, and is forgotten on sign-out, on
+  reuse, from Settings or with `serve browsers forget`. Nothing signs a browser in for being local.
+- **Logged.** Sign-ins (by link or remembered browser), refusals, reuse and sign-outs go to
+  [authama.log](logs.md), with the browser's id but never a cookie, token or link.
 - **Forms take names, never paths.** Profile, host and key names must be letters, digits, `.`, `_`
   and `-`. A hostname or user with a control character in it is refused, so a form cannot smuggle a
   line into `~/.ssh/config`.

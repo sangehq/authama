@@ -136,6 +136,7 @@ else is in the [documentation index](#documentation).
 - [`ssh structure`](docs/tools/structure.md) — find keys outside the expected layout and move each into its profile once you approve it; checked by `serve` and, optionally, a background job; the web UI draws the folder as a tree with drag and drop.
 - [`history`](docs/tools/history.md) — every change authama has made, filtered by host, profile or key.
 - [`events`](docs/tools/events.md) — every change seen to a file under `~/.ssh`, the config home or a token file, by anyone.
+- [`logs`](docs/tools/logs.md) — authama's own log: commands, web actions, jobs, file changes and sign-ins, redacted; followed, filtered and exported; and the time zone every time is shown in.
 - [Read API](docs/tools/api.md) — JSON for programs at `/api/v1/` on `serve`, with API tokens; reads only, off by default.
 - [Webhooks](docs/tools/webhooks.md) — each change and file event sent to your endpoints, signed as Standard Webhooks; off by default.
 - [MCP server](docs/tools/mcp.md) — `authama mcp`, read-only tools for an AI client over stdio; off by default.
