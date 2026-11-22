@@ -79,6 +79,8 @@ type SessionState struct {
 	// Seen is when it last made a request; a server before this field hands
 	// over none, and the session counts as seen when it is adopted.
 	Seen time.Time `json:"seen,omitempty"`
+	// Browser is the remembered browser that began it, if one did.
+	Browser string `json:"browser,omitempty"`
 }
 
 // Sessions is every signed-in session, for the server replacing this one.
@@ -87,7 +89,7 @@ func (s *Server) Sessions() []SessionState {
 	defer s.sessions.mu.Unlock()
 	out := make([]SessionState, 0, len(s.sessions.byID))
 	for id, sess := range s.sessions.byID {
-		out = append(out, SessionState{ID: id, CSRF: sess.csrf, Created: sess.created, Seen: sess.seen})
+		out = append(out, SessionState{ID: id, CSRF: sess.csrf, Created: sess.created, Seen: sess.seen, Browser: sess.browser})
 	}
 	return out
 }
@@ -106,7 +108,8 @@ func (s *sessions) adopt(states []SessionState, now time.Time) {
 				seen = now
 			}
 			if !expired(st.Created, seen, now) {
-				s.byID[st.ID] = &session{csrf: st.CSRF, created: st.Created, seen: seen}
+				// A fresh owner: the jobs the old server ran are not here.
+				s.byID[st.ID] = &session{csrf: st.CSRF, owner: NewToken(), created: st.Created, seen: seen, browser: st.Browser}
 			}
 		}
 	}

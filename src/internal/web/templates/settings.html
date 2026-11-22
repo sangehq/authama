@@ -13,6 +13,25 @@
     </div>
   </div>
 </div>
+<div class="card mb-3" id="browsers">
+  <div class="card-header"><h2 class="card-title">Remembered browsers{{if .Browsers}} <span class="badge badge-muted ms-1">{{len .Browsers}}</span>{{end}}</h2>
+    {{if gt (len .Browsers) 1}}<div class="card-actions"><form method="post" action="{{u "/browsers/forget"}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="all" value="1"><button type="submit" class="btn btn-sm btn-outline-danger"{{desc "browsers-forget-all"}}>{{icon "x"}}<span class="ms-1">Forget all</span></button></form></div>{{end}}
+  </div>
+  <div class="card-body">
+    {{if .RememberDays}}<p class="text-secondary mb-0">A browser that signs in with a link from <code>authama</code> is remembered for {{.RememberDays}} days after it was last used, so opening this address signs it in again. Changes still ask for the owner PIN. Forgetting a browser signs it out. <code>web.remember_days</code> sets how long; 0 remembers none.</p>
+    {{else}}<p class="text-secondary mb-0">Browsers are not remembered (<code>web.remember_days</code> is 0): each needs a sign-in link from <code>authama</code>.</p>{{end}}
+  </div>
+  {{if .Browsers}}
+  <div class="table-responsive"><table class="table table-vcenter card-table">
+    <thead><tr><th>Browser</th><th>Signed in</th><th>Last used</th><th>Remembered until</th><th></th></tr></thead>
+    <tbody>{{range .Browsers}}<tr data-browser="{{.ID}}">
+      <td>{{.Label}}{{if .This}} <span class="badge badge-info ms-1">this browser</span>{{end}}</td>
+      <td class="text-secondary">{{when .Created}}</td><td class="text-secondary">{{when .LastUsed}}</td><td class="text-secondary">{{when .Expires}}</td>
+      <td class="text-end"><form method="post" action="{{u "/browsers/forget"}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="id" value="{{.ID}}"><button type="submit" class="btn btn-sm btn-outline-secondary" aria-label="Forget {{.Label}}{{if .This}} (this browser){{end}}"{{desc "browsers-forget"}}>{{icon "x"}}<span class="ms-1">Forget</span></button></form></td>
+    </tr>{{end}}</tbody>
+  </table></div>
+  {{end}}
+</div>
 <div class="row row-cards mb-3">
   <div class="col-lg-7">
     <div class="card h-100">
@@ -76,11 +95,14 @@
             <div class="d-flex flex-wrap gap-2 align-items-start">
               {{if eq (print .Spec.Kind) "boolean"}}<select class="form-select setting-input" id="v-{{.Variable}}" name="value"><option value="true"{{if eq .Value "1" "true"}} selected{{end}}>On</option><option value="false"{{if eq .Value "0" "false"}} selected{{end}}>Off</option></select>
               {{else if eq (print .Spec.Kind) "enum"}}<select class="form-select setting-input" id="v-{{.Variable}}" name="value">{{range .Spec.Enum}}<option value="{{.}}"{{if eq . $f.Value}} selected{{end}}>{{.}}</option>{{end}}</select>
+              {{else if eq .Key "display.timezone"}}<input class="form-control setting-input setting-input-wide" type="text" id="v-{{.Variable}}" name="value" list="tz-zones" value="{{.Value}}" placeholder="this system's zone" autocomplete="off" spellcheck="false" data-tz-preview="tz-now">
+              <datalist id="tz-zones">{{range zones}}<option value="{{.}}"></option>{{end}}</datalist>
               {{else if eq (print .Spec.Kind) "integer"}}<input class="form-control setting-input" type="number" id="v-{{.Variable}}" name="value" min="{{.Spec.Min}}" step="1" value="{{.Value}}" required>
               {{else}}<input class="form-control setting-input setting-input-wide" type="text" id="v-{{.Variable}}" name="value" value="{{if ne .Source "default"}}{{.Value}}{{end}}" placeholder="{{.Spec.Default}}" required autocomplete="off" spellcheck="false">{{end}}
               <button type="submit" class="btn btn-primary"{{desc "preview"}}>Preview</button>
             </div>
-            <div class="form-hint">{{if .Spec.Default}}Default: {{.Spec.Default}}. {{end}}The same as <code>authama settings set {{.Key}} &lt;value&gt;</code>.</div>
+            {{if eq .Key "display.timezone"}}<div class="form-hint">Type to search the IANA zones. Now there: <strong id="tz-now" aria-live="polite">{{zoneName}}</strong>. Leave it empty for this system's zone. The same as <code>authama settings timezone set &lt;zone&gt;</code>.</div>
+            {{else}}            <div class="form-hint">{{if .Spec.Default}}Default: {{.Spec.Default}}. {{end}}The same as <code>authama settings set {{.Key}} &lt;value&gt;</code>.</div>{{end}}
           </form>
           {{if .InFile}}{{template "change_open" $}}<input type="hidden" name="action" value="settings-unset"><input type="hidden" name="key" value="{{.Key}}"><button type="submit" class="btn btn-sm btn-link link-secondary px-0 mt-1"{{desc "setting-unset"}}>{{icon "arrow-back-up"}}<span class="ms-1">Go back to the default</span></button></form>{{end}}
         </div>

@@ -102,6 +102,10 @@ type Options struct {
 	AutoRestart bool
 	// Sessions are signed-in sessions a restarting server handed over.
 	Sessions []SessionState
+	// RememberFor is how long a browser signed in with a link is remembered
+	// (web.remember_days), so the address alone signs it in again; 0
+	// remembers none. See BrowserCookie.
+	RememberFor time.Duration
 }
 
 // Server is the web UI.
@@ -157,7 +161,7 @@ func New(opts Options) (*Server, error) {
 			s.links.add(l.Token, l.Expires)
 		}
 	}
-	s.handler = securityHeaders(withBasePath(base, s.hostCheck(s.splitAPI(s.auth(s.sameOrigin(ownerGate{s}.requireUnlock(s.routes())))))))
+	s.handler = logRequests(followZone(s.opts.Engine.Home().SettingsFile(), securityHeaders(withBasePath(base, s.hostCheck(s.splitAPI(s.auth(s.sameOrigin(ownerGate{s}.requireUnlock(s.routes())))))))))
 	return s, nil
 }
 

@@ -80,7 +80,7 @@ func TestTheMainMenuGroupsPagesByWhatTheyAreAbout(t *testing.T) {
 		"tokens":   {"/tokens", "/checklists?show=tokens", "/tokens#add-token"},
 		"security": {"/audit", "/checklists", "/security"},
 		"history":  {"/history", "/events", "/snapshots", "/export", "/setup"},
-		"system":   {"/doctor", "/validate", "/repair", "/settings", "/api-tokens", "/webhooks", "/reset"},
+		"system":   {"/doctor", "/validate", "/repair", "/logs", "/settings", "/api-tokens", "/webhooks", "/reset"},
 		"new":      {"/hosts#add-host", "/tokens#add-token", "/keys#mint-keys"},
 		"user":     {"/about"},
 	} {

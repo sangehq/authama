@@ -38,6 +38,7 @@ export const pages: { path: string; heading: string }[] = [
   { path: '/api-tokens', heading: 'API tokens' },
   { path: '/webhooks', heading: 'Webhooks' },
   { path: '/repair', heading: 'Repair' },
+  { path: '/logs', heading: 'Logs' },
   { path: '/reset', heading: 'Reset' },
   { path: '/settings', heading: 'Settings' },
   { path: '/about', heading: 'About' },

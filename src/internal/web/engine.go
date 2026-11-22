@@ -85,6 +85,10 @@ type SettingsView struct {
 	HasSettings              bool
 	Effective                []SettingRow
 	Problems                 []string
+	// Browsers are the remembered browsers, and RememberDays how long one is
+	// remembered (0: none is); the server fills them in.
+	Browsers     []BrowserRow
+	RememberDays int
 }
 
 // SettingRow is one setting, as `authama settings show --effective` prints it.

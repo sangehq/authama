@@ -20,6 +20,7 @@ import { SlowProgress } from "./js/components/slow-progress.js";
 import { StructureTree } from "./js/components/structure-tree.js";
 import { SettingsFilter } from "./js/components/settings-page.js";
 import { LiveBuild, RestartServer, Restarted } from "./js/components/restart.js";
+import { LogFollow, ZonePreview } from "./js/components/logs-page.js";
 
 App.create()
   .use(SidePanel)
@@ -42,6 +43,8 @@ App.create()
   .use(SlowProgress)
   .use(StructureTree)
   .use(SettingsFilter)
+  .use(LogFollow)
+  .use(ZonePreview)
   .use(CopyText)
   .use(PanelOpen)
   .use(PanelFromHash)

@@ -170,13 +170,14 @@
                   {{template "navmenuitem" (navItem . "setup" "/setup" "stack-2" "Move setup")}}
                 </div>
               </li>
-              <li class="nav-item dropdown{{if eq .Nav "doctor" "validate" "repair" "settings" "apitokens" "webhooks" "reset"}} active{{end}}">
+              <li class="nav-item dropdown{{if eq .Nav "doctor" "validate" "repair" "logs" "settings" "apitokens" "webhooks" "reset"}} active{{end}}">
                 <a class="nav-link dropdown-toggle" href="#navbar-system" id="navbar-system" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false"{{desc "nav-system"}}><span class="nav-link-icon nav-glyph text-{{navColour "health"}} d-md-none d-lg-inline-block">{{icon "settings"}}</span><span class="nav-link-title">System</span></a>
                 <div class="dropdown-menu" aria-labelledby="navbar-system">
                   <span class="dropdown-header">Health</span>
                   {{template "navmenuitem" (navItem . "doctor" "/doctor" "stethoscope" "Doctor")}}
                   {{template "navmenuitem" (navItem . "validate" "/validate" "circle-check" "Validate")}}
                   {{template "navmenuitem" (navItem . "repair" "/repair" "tool" "Repair")}}
+                  {{template "navmenuitem" (navItem . "logs" "/logs" "table" "Logs")}}
                   <span class="dropdown-header">Configure</span>
                   {{template "navmenuitem" (navItem . "settings" "/settings" "adjustments" "Settings")}}
                   {{template "navmenuitem" (navItem . "apitokens" "/api-tokens" "license" "API tokens")}}

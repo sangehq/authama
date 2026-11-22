@@ -12,6 +12,7 @@ import (
 	"github.com/sangehq/authama/src/internal/util/fs"
 	"github.com/sangehq/authama/src/internal/util/lock"
 	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/tz"
 )
 
 // FreeAttempts is how many wrong PINs in a row are allowed before each further
@@ -26,7 +27,7 @@ const (
 type LockedError struct{ Until time.Time }
 
 func (e LockedError) Error() string {
-	return fmt.Sprintf("too many wrong PINs; try again after %s", e.Until.Local().Format("15:04:05"))
+	return fmt.Sprintf("too many wrong PINs; try again after %s", tz.Format(e.Until, "15:04:05 MST"))
 }
 
 // verifyHook runs just before the hash is checked. Tests only.

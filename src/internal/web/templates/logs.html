@@ -1,0 +1,41 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "System" "Logs" "What authama did: commands, web actions, jobs, file changes and sign-ins. Keys, tokens, passphrases and PINs are blanked before anything is written.")}}
+<form method="get" action="{{basePath}}/logs" class="card card-body mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-6 col-md-3 col-xl-2"><label class="form-label" for="l-level">Level, at least</label>
+      <select class="form-select" id="l-level" name="level" data-autosubmit>
+        <option value="">any</option>
+        {{range .Levels}}<option value="{{.}}"{{if eq . $.Data.Level}} selected{{end}}>{{.}}</option>{{end}}
+      </select>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2"><label class="form-label" for="l-since">Since</label><input class="form-control" id="l-since" name="since" value="{{.Since}}" placeholder="24h, 7d, 2026-11-20" autocomplete="off" spellcheck="false"></div>
+    <div class="col-12 col-md-6 col-xl-4"><label class="form-label" for="l-grep">Search</label><input class="form-control" type="search" id="l-grep" name="grep" value="{{.Grep}}" placeholder="serve, signin, rotate…" autocomplete="off" spellcheck="false"></div>
+    <div class="col-12 col-xl-auto ms-xl-auto d-flex gap-2">
+      <a class="btn btn-outline-secondary flex-fill" href="{{basePath}}/logs"{{desc "filter-clear"}}>Clear</a>
+      <button type="submit" class="btn btn-primary flex-fill"{{desc "filter-apply"}}>Filter</button>
+    </div>
+  </div>
+</form>
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Records <span class="text-secondary small fw-normal">newest first, times in {{.Zone}}</span></h2>
+    <div class="card-actions d-flex align-items-center gap-2">
+      <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" data-log-follow data-log-follow-offset="{{.Offset}}" data-log-follow-target="log-rows"{{desc "logs-follow"}}><span class="form-check-label">Follow</span></label>
+      <a class="btn btn-sm btn-outline-secondary" href="{{basePath}}/logs/download?level={{.Level}}&amp;since={{.Since}}&amp;grep={{.Grep}}" download{{desc "logs-download"}}>{{icon "download"}}<span class="ms-1">Download</span></a>
+    </div>
+  </div>
+  <div class="table-responsive" tabindex="0">
+    <table class="table table-vcenter card-table table-sm">
+      <caption class="visually-hidden">Log records, newest first</caption>
+      <thead><tr><th scope="col">When</th><th scope="col">Level</th><th scope="col">What</th><th scope="col">Details</th></tr></thead>
+      <tbody id="log-rows">
+        {{range .Rows}}<tr><td class="text-nowrap text-secondary">{{.Time}}</td><td><span class="badge {{logBadge .Level}}">{{.Level}}</span></td><td>{{.Msg}}</td><td class="text-break small"><code>{{.Attrs}}</code></td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{if not .Rows}}{{template "empty" (empty "table" "No log records match" "Every command and web action adds one; change the filters or wait for some.")}}{{end}}
+  <div class="card-footer text-secondary">{{if .Truncated}}The newest {{.Limit}} shown; narrow the filters, or download them all. {{end}}The same as <code>authama logs</code> (<code>--follow</code>, <code>--level</code>, <code>--since</code>, <code>--grep</code>, <code>--json</code>, <code>logs export</code>). File: <code>{{tilde .Path}}</code>.
+    Level <code>{{.SettingLevel}}</code>, rotated at {{.MaxSizeMB}} MB, kept {{.Retention}} days: change them under <a href="{{basePath}}/settings#setting-log.level">Settings</a> or with <code>authama logs level</code> and <code>authama logs retention</code>.</div>
+</div>
+{{end}}{{end}}

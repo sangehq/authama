@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"github.com/sangehq/authama/src/internal/util/applog"
 	"net/http"
 	"sync/atomic"
 	"time"
@@ -43,7 +44,11 @@ func (s *Server) scanEvents() {
 	p := s.opts.Engine.Home()
 	evs, err := events.Scan(p, s.opts.EventRoots(p), s.now().UTC())
 	if err != nil {
+		applog.Warn("file scan failed", "area", "watch", "error", err)
 		return
+	}
+	for _, e := range evs {
+		applog.Info("file changed", "area", "watch", "kind", e.Kind, "file", e.Path, "where", e.Area)
 	}
 	checkStructure(&s.structureSeen, p, evs, s.now())
 }

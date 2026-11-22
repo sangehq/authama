@@ -74,11 +74,16 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /structure", structurePage{s}.handleStructure)
 	mux.HandleFunc("GET /git-sign", gitSignPage{s}.handle)
 	mux.HandleFunc("GET /events", sp.handleEvents)
+	lp := logsPage{s}
+	mux.HandleFunc("GET /logs", lp.handle)
+	mux.HandleFunc("GET /logs/tail", lp.handleTail)
+	mux.HandleFunc("GET /logs/download", lp.handleDownload)
 	mux.HandleFunc("GET /about", sp.handleAbout)
 	mux.HandleFunc("GET /export", exportAPI{s}.handlePage)
 	// Restarting changes nothing in the home, so read-only servers have it too.
 	mux.HandleFunc("POST /server/restart", restartAPI{s}.handleRestart)
 	mux.HandleFunc("POST /signout", signOut{s}.handle)
+	mux.HandleFunc("POST /browsers/forget", forgetBrowsers{s}.handle)
 	mux.HandleFunc("GET /exports/run", exportAPI{s}.handleRun)
 	mux.HandleFunc("GET /exports/{name}", h.handleExport)
 	mux.HandleFunc("GET /api/dataset", exportAPI{s}.handleDataset)
@@ -425,6 +430,7 @@ func (h systemPages) handleSettings(w http.ResponseWriter, r *http.Request) {
 		v = SettingsView{ConfigHome: p.ConfigDir, StateHome: p.State(), Dotenv: p.EnvFile(),
 			Settings: p.SettingsFile(), HasSettings: err == nil, Effective: effectiveSettings(p)}
 	}
+	v.Browsers, v.RememberDays = remembered(h).browserRows(r), int(h.s.opts.RememberFor/(24*time.Hour))
 	h.s.render(w, http.StatusOK, "settings", h.s.newView(r, "settings", "Settings", v))
 }
 

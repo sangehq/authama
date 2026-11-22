@@ -25,6 +25,7 @@ import (
 	"github.com/sangehq/authama/src/internal/services/jobs"
 	"github.com/sangehq/authama/src/internal/services/owner"
 	"github.com/sangehq/authama/src/internal/util/highlight"
+	"github.com/sangehq/authama/src/internal/util/tz"
 )
 
 // assetSet is the embedded assets with a content hash each, for
@@ -140,7 +141,10 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		"brandCommand": func() string { return brand.Command },
 		"brandDocsURL": func() string { return brand.DocsURL },
 		"cmdline":      brand.Line,
-		"when":         func(t time.Time) string { return whenIn(t, time.Local) },
+		"when":         func(t time.Time) string { return whenIn(t, tz.Location()) },
+		"day":          func(t time.Time) string { return tz.Format(t, "2006-01-02") },
+		"zones":        func() []string { return tz.Zones },
+		"zoneName":     tz.Describe,
 		// consoleLines reads a job's output into status, subject and text.
 		"consoleLines": consoleLines,
 		"itemTally":    itemTally,
@@ -174,7 +178,7 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		},
 		"stamp": func(s string) string {
 			if t, err := time.Parse(history.TimeFormat, s); err == nil {
-				return stampIn(t, time.Local)
+				return stampIn(t, tz.Location())
 			}
 			return s
 		},
@@ -329,6 +333,17 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 				return "status-azure"
 			}
 			return "status-secondary"
+		},
+		"logBadge": func(level string) string {
+			switch level {
+			case "error":
+				return "badge-bad"
+			case "warn":
+				return "badge-warn"
+			case "debug":
+				return "badge-muted"
+			}
+			return "badge-info"
 		},
 		"eventBadge": func(kind string) string {
 			switch kind {
@@ -638,7 +653,7 @@ var navKinds = map[string]string{
 	"audit": "security", "checklists": "security", "security": "security",
 	"history": "history", "events": "history", "snapshots": "history", "export": "history", "setup": "history",
 	"transfer": "history", "transfer-export": "history", "transfer-encrypted": "history", "transfer-import": "history",
-	"doctor": "health", "validate": "health", "repair": "health",
+	"doctor": "health", "validate": "health", "repair": "health", "logs": "health",
 	"settings": "settings", "apitokens": "settings", "webhooks": "settings",
 	"overview": "overview",
 	// Tasks, by what they do.
@@ -814,10 +829,12 @@ func (s *Server) renderError(w http.ResponseWriter, r *http.Request, status int,
 }
 
 func (s *Server) renderUnauthorized(w http.ResponseWriter, r *http.Request) {
-	s.renderError(w, r, http.StatusUnauthorized, "Sign-in link required",
-		"This browser is not signed in to this server. Run `authama serve` for a sign-in link: it opens one, "+
-			"or prints it. A link works once, within 10 minutes, so an address you have already used, or an old "+
-			"one, is refused. A session ends after 8 hours without use, or 24 hours after you signed in.")
+	s.renderError(w, r, http.StatusUnauthorized, "Open authama to sign in",
+		"This browser is not signed in to this server. Open authama on this computer - double-click it, or run "+
+			"`authama` in a terminal - and it signs this browser in: it opens the web UI here with a one-time "+
+			"sign-in link. After that, this browser is remembered (Settings, Remembered browsers), so this address "+
+			"alone opens it. A link works once, within 10 minutes; one you have already used, or an old one, is refused. "+
+			"Nothing else signs a browser in: this page cannot, so another program or user on this machine cannot either.")
 }
 
 // serveAsset answers /assets/{hash}/{path...}. A stale hash is a 404, not the
@@ -932,6 +949,7 @@ func paletteItems(readOnly bool) []paletteItem {
 		{"repair", "Repair", "/repair", "tool", "System", "repair fix corrupt permissions", "g r", ""},
 		{"reset", "Reset", "/reset", "restore", "System", "reset factory start again initialise init defaults settings unbind rotate every key", "g z", ""},
 		{"settings", "Settings", "/settings", "adjustments", "System", "settings theme appearance env", "g ,", ""},
+		{"logs", "Logs", "/logs", "table", "System", "logs log level retention follow tail search download sign-in debug", "g .", ""},
 		{"apitokens", "API tokens", "/api-tokens", "license", "System", "api token create revoke read programs", "g j", ""},
 		{"webhooks", "Webhooks", "/webhooks", "bolt", "System", "webhook endpoint events deliver test secret", "g q", ""},
 		{"about", "About", "/about", "info-circle", "System", "about version licences", "g i", ""},
@@ -975,8 +993,8 @@ type panelFooter struct {
 	Command, Label, Style, Icon string
 }
 
-// whenIn is a moment as this machine's clock reads it, with the zone named
-// (2026-11-22 15:10 EST): the server runs on the machine whose owner reads it.
+// whenIn is a moment in the display zone (display.timezone, else this
+// machine's), with the zone named: 2026-11-22 15:10 EST.
 func whenIn(t time.Time, loc *time.Location) string {
 	return t.In(loc).Format("2006-01-02 15:04 MST")
 }

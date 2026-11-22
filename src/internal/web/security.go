@@ -58,6 +58,10 @@ type session struct {
 	// seen is when the session last made a request; guarded by sessions.mu.
 	seen time.Time
 
+	// browser is the remembered browser this session belongs to, "" when
+	// none: the session ends when that browser is forgotten.
+	browser string
+
 	// pinMu guards the PIN times: requests in one session run concurrently.
 	pinMu sync.Mutex
 	// unlocked is when the session gave the PIN after signing in, and
@@ -201,6 +205,7 @@ func (s *Server) hostAllowed(host string) bool {
 // they are the vendored public Tabler files and the 401 page uses them.
 func (s *Server) auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rb := remembered{s}
 		if strings.HasPrefix(r.URL.Path, "/assets/") {
 			next.ServeHTTP(w, r)
 			return
@@ -253,23 +258,30 @@ func (s *Server) auth(next http.Handler) http.Handler {
 			// A link is used up only by a GET: a HEAD (a link preview) or a
 			// stray POST cannot spend it.
 			if r.Method != http.MethodGet || !s.links.take(tok, s.now()) {
+				logAuth(r, "signin.refused", "")
 				s.renderUnauthorized(w, r)
 				return
 			}
-			id, _ := s.sessions.create(s.now())
-			http.SetCookie(w, &http.Cookie{
-				Name: SessionCookie, Value: id, Path: s.opts.BasePath + "/",
-				HttpOnly: true, SameSite: http.SameSiteStrictMode, Secure: s.secure(r),
-			})
+			id, sess := s.sessions.create(s.now())
+			sess.browser = rb.rememberBrowser(w, r)
+			rb.setSessionCookie(w, r, id)
+			logAuth(r, "signin.link", sess.browser)
 			redirectWithoutToken(w, r)
 			return
 		}
-		c, err := r.Cookie(SessionCookie)
-		if err != nil {
-			s.renderUnauthorized(w, r)
-			return
+		var sess *session
+		if c, err := r.Cookie(SessionCookie); err == nil {
+			sess = s.sessions.get(c.Value, s.now())
+			// A session a forgotten browser began ends with it.
+			if sess != nil && rb.browserForgotten(sess) {
+				s.sessions.end(c.Value)
+				rb.clearBrowserCookie(w, r)
+				sess = nil
+			}
 		}
-		sess := s.sessions.get(c.Value, s.now())
+		if sess == nil {
+			sess = rb.signInRemembered(w, r)
+		}
 		if sess == nil {
 			s.renderUnauthorized(w, r)
 			return

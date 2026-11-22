@@ -11,6 +11,7 @@ import (
 	"github.com/sangehq/authama/src/internal/services/webhooks"
 	"github.com/sangehq/authama/src/internal/util/envnames"
 	"github.com/sangehq/authama/src/internal/util/log"
+	"github.com/sangehq/authama/src/internal/util/tz"
 )
 
 // integrationsPage serves /api-tokens and /webhooks: `authama api token ...`
@@ -70,7 +71,7 @@ func shortDay(t time.Time) string {
 	if t.IsZero() {
 		return "-"
 	}
-	return t.Local().Format("2006-01-02")
+	return tz.Format(t, "2006-01-02")
 }
 
 func (ip integrationsPage) apiView() apiTokensView {
