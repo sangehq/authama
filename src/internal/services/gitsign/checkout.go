@@ -3,8 +3,10 @@ package gitsign
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -13,11 +15,27 @@ import (
 // gitTimeout bounds every git call: they are all local, so a slow one is stuck.
 const gitTimeout = 30 * time.Second
 
-// git runs git in dir with prompts off and returns its trimmed stdout.
+// safeConfig overrides what a checkout's own config could make git run while
+// authama reads it: an fsmonitor hook (git status), a pager, and the program
+// that checks SSH signatures (git log --show-signature). The command line
+// wins over every config file, so a checkout cannot swap them in.
+var safeConfig = []string{"-c", "core.fsmonitor=false", "-c", "core.pager=cat", "-c", "gpg.ssh.program=ssh-keygen"}
+
+// git runs git in dir with prompts off and returns its trimmed stdout. dir
+// comes from a person, at the terminal or in the web UI: it is made absolute
+// (so it can never read as an option) and must be a directory.
 func git(dir string, args ...string) (string, error) {
+	dir, err := filepath.Abs(dir)
+	if err != nil {
+		return "", err
+	}
+	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
+		return "", fmt.Errorf("%s is not a directory", dir)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), gitTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", dir}, args...)...)
+	full := append(append(slices.Clone(safeConfig), "-C", filepath.Clean(dir)), args...)
+	cmd := exec.CommandContext(ctx, "git", full...)
 	cmd.Env = append(cmd.Environ(), "GIT_TERMINAL_PROMPT=0")
 	out, err := cmd.Output()
 	if err != nil {

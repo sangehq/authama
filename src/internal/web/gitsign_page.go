@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -253,7 +254,9 @@ func gitSignSetChange(f url.Values, errs []error) (change.Change, []error) {
 	}
 	for _, d := range strings.Split(f.Get("dirs"), "\n") {
 		if d = strings.TrimSpace(d); d != "" {
-			g.Dirs = append(g.Dirs, d)
+			// git matches gitdir: with forward slashes on every system, and a
+			// backslash would end the config value early (C:\x is C:/x).
+			g.Dirs = append(g.Dirs, filepath.ToSlash(d))
 		}
 	}
 	for _, s := range append([]string{g.Email, g.Name}, g.Dirs...) {

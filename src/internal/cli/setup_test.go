@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -20,7 +21,7 @@ func TestSetupExportImportDocument(t *testing.T) {
 	if !strings.Contains(out, "1 profile(s)") {
 		t.Fatalf("export:\n%s", out)
 	}
-	if fi, err := os.Stat(doc); err != nil || fi.Mode().Perm() != 0o600 {
+	if fi, err := os.Stat(doc); err != nil || (runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600) {
 		t.Fatalf("document: %v %v", err, fi)
 	}
 
@@ -127,7 +128,7 @@ func TestSetupEncryptedExportCarriesKeysAndTokens(t *testing.T) {
 	if !strings.Contains(string(env), `SETUP_TEST_TOKEN="`+value+`"`) {
 		t.Fatalf(".env:\n%s", env)
 	}
-	if fi, _ := os.Stat(q.EnvFile()); fi.Mode().Perm() != 0o600 {
+	if fi, _ := os.Stat(q.EnvFile()); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
 		t.Fatalf(".env mode %v", fi.Mode())
 	}
 }

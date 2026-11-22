@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -114,7 +115,7 @@ func TestDocumentRoundTripCarriesNamesNeverValues(t *testing.T) {
 	}
 	for _, f := range []string{dst.Manifest(), dst.Tokens(), dst.SettingsFile()} {
 		fi, err := os.Stat(f)
-		if err != nil || fi.Mode().Perm() != 0o600 {
+		if err != nil || (runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600) {
 			t.Fatalf("%s: %v %v", f, err, fi)
 		}
 	}
@@ -236,7 +237,7 @@ func TestEnvMergeQuotesAndSettles(t *testing.T) {
 	if err != nil || again.Items[0].State != StateSame {
 		t.Fatalf("quoted value did not read back: %v %v\n%s", err, again.Items, got)
 	}
-	if fi, _ := os.Stat(p.EnvFile()); fi.Mode().Perm() != 0o600 {
+	if fi, _ := os.Stat(p.EnvFile()); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
 		t.Fatalf(".env mode %v", fi.Mode())
 	}
 }
@@ -262,7 +263,7 @@ func TestFullExportRoundTrip(t *testing.T) {
 	if strings.Contains(raw, value) || strings.Contains(raw, privBody) {
 		t.Fatal("the full export holds plaintext")
 	}
-	if fi, _ := os.Stat(out); fi.Mode().Perm() != 0o600 {
+	if fi, _ := os.Stat(out); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
 		t.Fatalf("export mode %v", fi.Mode())
 	}
 	if _, err := WriteFull(src, out, pass, "test", time.Now(), os.LookupEnv); err == nil {
@@ -305,10 +306,10 @@ func TestFullExportRoundTrip(t *testing.T) {
 	if read(t, dkey) != privBody {
 		t.Fatal("the key was not laid down")
 	}
-	if fi, _ := os.Stat(dkey); fi.Mode().Perm() != 0o600 {
+	if fi, _ := os.Stat(dkey); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
 		t.Fatalf("key mode %v", fi.Mode())
 	}
-	if fi, _ := os.Stat(filepath.Dir(dkey)); fi.Mode().Perm() != 0o700 {
+	if fi, _ := os.Stat(filepath.Dir(dkey)); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o700 {
 		t.Fatalf("key dir mode %v", fi.Mode())
 	}
 	if !strings.Contains(read(t, dst.EnvFile()), value) {

@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -38,6 +39,9 @@ func withSigner(t *testing.T, p paths.Paths, g manifest.ProfileGit, mint bool) *
 		g.SigningKey = "signer"
 	}
 	m := manifest.Starter(false)
+	for i, d := range g.Dirs {
+		g.Dirs[i] = filepath.ToSlash(d) // as the CLI and the web UI write them
+	}
 	m.SetProfile("work", manifest.Profile{KeyScope: "per_service", Keys: []manifest.KeySpec{{Name: "signer"}}, Git: &g})
 	if err := m.Validate(); err != nil {
 		t.Fatal(err)
@@ -91,7 +95,7 @@ func TestApplyWritesTheFragmentSignersAndOneManagedBlock(t *testing.T) {
 			t.Errorf("fragment lacks %q:\n%s", want, frag)
 		}
 	}
-	if fi, _ := os.Stat(FragmentPath(p, "work")); fi.Mode().Perm() != 0o600 {
+	if fi, _ := os.Stat(FragmentPath(p, "work")); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
 		t.Errorf("fragment mode %v, want 0600", fi.Mode().Perm())
 	}
 	signers, _ := os.ReadFile(AllowedSignersPath(p))

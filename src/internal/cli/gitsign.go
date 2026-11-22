@@ -137,7 +137,9 @@ func tildeHome(d string) string {
 	if rel, err := filepath.Rel(home, d); err == nil && filepath.IsLocal(rel) {
 		return "~/" + filepath.ToSlash(rel)
 	}
-	return d
+	// Forward slashes on every system: git matches gitdir: with them, and a
+	// backslash would end the config value early.
+	return filepath.ToSlash(d)
 }
 
 func newGitSignApplyCmd() *cobra.Command {

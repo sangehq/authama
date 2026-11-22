@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -131,11 +132,11 @@ func TestApplyMovesBacksUpDeclaresAndRepoints(t *testing.T) {
 	dest := filepath.Join(p.SSHDir, "profiles", "work", "laptop")
 	for f, mode := range map[string]os.FileMode{dest: 0o600, dest + ".pub": 0o644} {
 		fi, err := os.Stat(f)
-		if err != nil || fi.Mode().Perm() != mode {
+		if err != nil || (runtime.GOOS != "windows" && fi.Mode().Perm() != mode) {
 			t.Errorf("%s: %v %v", f, fi, err)
 		}
 	}
-	if fi, _ := os.Stat(filepath.Dir(dest)); fi.Mode().Perm() != 0o700 {
+	if fi, _ := os.Stat(filepath.Dir(dest)); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o700 {
 		t.Errorf("profile dir mode %v", fi.Mode())
 	}
 	if _, err := os.Lstat(filepath.Join(p.SSHDir, "id_work")); !os.IsNotExist(err) {
@@ -149,7 +150,7 @@ func TestApplyMovesBacksUpDeclaresAndRepoints(t *testing.T) {
 	if res.Backup == "" {
 		t.Fatal("no backup")
 	}
-	if fi, err := os.Stat(filepath.Join(res.Backup, "ssh", "id_work")); err != nil || fi.Mode().Perm() != 0o600 {
+	if fi, err := os.Stat(filepath.Join(res.Backup, "ssh", "id_work")); err != nil || (runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600) {
 		t.Errorf("backup: %v %v", fi, err)
 	}
 	m, err := manifest.Load(p.Manifest())
@@ -278,7 +279,7 @@ func TestCheckDismissAndNotify(t *testing.T) {
 	if got, missing := Find(all, []string{all[0].ID[:5], "zzzz"}); len(got) != 1 || len(missing) != 1 {
 		t.Fatalf("find: %v %v", got, missing)
 	}
-	if fi, err := os.Stat(StateFile(p)); err != nil || fi.Mode().Perm() != 0o600 {
+	if fi, err := os.Stat(StateFile(p)); err != nil || (runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600) {
 		t.Fatalf("state file: %v %v", fi, err)
 	}
 }
