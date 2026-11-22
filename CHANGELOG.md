@@ -15,6 +15,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `/` inside a name becomes `-`, so it cannot add a level. The web UI takes `?termius_groups=` on the Termius download
   and on `/exports/run`, and the hosts page has a **Download the Termius CSV, in profile/env groups** link; `?profile=`
   still chooses rows by profile there.
+- **A Termius import page in the web UI** (`/termius`: SSH → Termius import, `g u` in the palette, and
+  **Termius import** on the hosts page). It does everything `export hosts --format termius` and
+  `ssh termius keys` do: the group scheme (each with an example from your hosts), git hosts, the profile, env,
+  role, tag and status filters, and include and exclude text. It previews the CSV as Termius's template lays it out,
+  with **Copy CSV**, **Download** (the same selection through `/exports/run`) and the same export as a command line.
+  It also lists what was left out and why, the jump host of each `ProxyJump` host, and the import steps. For each
+  host it shows the key label and key path, and the `ssh termius keys <host> --clear-after 60s` command that copies
+  the key. The page never copies a private key itself, since nothing secret is copied from a page.
+
+### Changed
+
+- The hosts page leads to the Termius import instead of offering three Termius downloads; the plain Termius CSV
+  download stays. The palette names that download "Download the Termius CSV, grouped by profile".
 
 ### Fixed
 

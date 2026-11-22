@@ -151,6 +151,16 @@ type TermiusKey struct {
 	Agent   string // non-empty when the key lives in 1Password, not on disk
 }
 
+// TermiusKeyLabel is the label to give a host's key in Termius's Keychain:
+// the key file's name without .pub (clientco_db-01-ed25519), so the entry
+// says which file it came from. "" for a host with no key file.
+func TermiusKeyLabel(keyFile string) string {
+	if keyFile == "" {
+		return ""
+	}
+	return strings.TrimSuffix(filepath.Base(keyFile), ".pub")
+}
+
 // TermiusExport is a rendered Termius import: the CSV, the keys to attach, and
 // the hosts left out with the reason for each.
 type TermiusExport struct {

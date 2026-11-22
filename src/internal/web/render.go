@@ -620,7 +620,7 @@ type navItem struct {
 // a task's kind is what it does to things. The user menu's entries, written
 // out in layout.html, are "personal".
 var navKinds = map[string]string{
-	"profiles": "ssh", "hosts": "ssh", "keys": "ssh", "vms": "ssh", "naming": "ssh", "sshconfig": "ssh",
+	"profiles": "ssh", "hosts": "ssh", "keys": "ssh", "vms": "ssh", "naming": "ssh", "sshconfig": "ssh", "termius": "ssh",
 	"tokens": "tokens", "token-checklists": "tokens",
 	"audit": "security", "checklists": "security", "security": "security",
 	"history": "history", "events": "history", "snapshots": "history", "export": "history",
@@ -901,6 +901,7 @@ func paletteItems(readOnly bool) []paletteItem {
 		{"keys", "Keys", "/keys", "key", "SSH", "key fingerprint expiry reserve", "g k", ""},
 		{"vms", "VMs", "/vms", "box", "SSH", "vm hypervisor devbox sync", "g v", ""},
 		{"sshconfig", "SSH config", "/ssh-config", "file-code", "SSH", "config render drift check", "g c", ""},
+		{"termius", "Termius import", "/termius", "server-2", "SSH", "termius import csv groups subgroups keys keychain export", "g u", ""},
 		{"snapshots", "Snapshots", "/snapshots", "archive", "History", "snapshot bundle backup restore", "g s", ""},
 		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Tokens", "token npm composer docker git netrc pypi cargo gem gradle maven yarn helm gh", "g t", ""},
 		{"audit", "Audit", "/audit", "report-search", "Security", "audit key age", "g a", ""},
@@ -926,7 +927,7 @@ func paletteItems(readOnly bool) []paletteItem {
 	}
 	return append(items,
 		paletteItem{"export-config", "Download ssh_config, every host inline", "/exports/ssh_config", "download", "Export", "export flat ssh_config", "", ""},
-		paletteItem{"export-termius", "Download the Termius CSV", "/exports/termius-hosts.csv", "download", "Export", "export termius csv", "", ""},
+		paletteItem{"export-termius", "Download the Termius CSV, grouped by profile", "/exports/termius-hosts.csv", "download", "Export", "export termius csv", "", ""},
 		paletteItem{"export-hosts", "Download the hosts as CSV", "/exports/hosts.csv", "download", "Export", "export csv hosts spreadsheet", "", ""},
 		paletteItem{"export-keys", "Download the keys as CSV", "/exports/keys.csv", "download", "Export", "export csv keys spreadsheet", "", ""},
 		paletteItem{"export-tokens", "Download the installed tokens as CSV", "/exports/tokens.csv", "download", "Export", "export csv tokens spreadsheet", "", ""},

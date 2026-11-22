@@ -98,8 +98,7 @@ func TestTermiusDownloadNestsGroups(t *testing.T) {
 	if rec := c.get("/exports/termius-hosts.csv?termius_groups=env"); rec.Code != http.StatusBadRequest {
 		t.Errorf("an unknown scheme: %d", rec.Code)
 	}
-	if page := c.get("/hosts").Body.String(); !strings.Contains(page, "/exports/termius-hosts.csv?termius_groups=profile/env") &&
-		!strings.Contains(page, "/exports/termius-hosts.csv?termius_groups=profile%2fenv") {
-		t.Error("the hosts page offers no nested Termius download")
+	if page := c.get("/hosts").Body.String(); !strings.Contains(page, `href="/termius"`) {
+		t.Error("the hosts page does not lead to the Termius import, where the groups are chosen")
 	}
 }

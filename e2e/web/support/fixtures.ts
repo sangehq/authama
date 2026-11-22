@@ -14,6 +14,7 @@ export const pages: { path: string; heading: string }[] = [
   { path: '/hosts', heading: 'Hosts' },
   { path: '/hosts/hpc', heading: 'hpc' },
   { path: '/ssh-config', heading: 'SSH config' },
+  { path: '/termius', heading: 'Termius import' },
   { path: '/keys', heading: 'Keys' },
   { path: '/keys/work/work_hpc-ed25519', heading: 'work_hpc-ed25519' },
   { path: '/snapshots', heading: 'Snapshots' },

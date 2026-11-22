@@ -1,0 +1,145 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "SSH" $.Title "Choose the hosts and how Termius groups them, see the CSV as Termius will read it, then import it and attach each host's key." (download "Download termius-hosts.csv" .Download | withTip "termius-download"))}}
+<div class="row row-cards">
+  <div class="col-lg-4">
+    <form method="get" action="{{basePath}}/termius" class="card" id="termius-options" aria-labelledby="termius-options-title">
+      <div class="card-header"><h2 class="card-title" id="termius-options-title">Choose</h2></div>
+      <div class="card-body">
+        <fieldset class="mb-3">
+          <legend class="form-label">Groups in Termius</legend>
+          <p class="text-secondary small mb-2">Termius files <code>a/b</code> as the subgroup <code>b</code> of <code>a</code>. The example is one of your hosts.</p>
+          {{range .Schemes}}
+          <label class="form-check mb-2">
+            <input class="form-check-input" type="radio" name="termius_groups" value="{{.Value}}"{{if .Checked}} checked{{end}} data-autosubmit>
+            <span class="form-check-label"><span class="fw-medium">{{.Label}}</span> <code class="ms-1">{{.Example}}</code><span class="d-block text-secondary small">{{.Help}}</span></span>
+          </label>
+          {{end}}
+        </fieldset>
+        <fieldset class="mb-3">
+          <legend class="form-label">Hosts</legend>
+          <label class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="include_git" value="1"{{if .IncludeGit}} checked{{end}} data-autosubmit>
+            <span class="form-check-label">Include git hosts<span class="d-block text-secondary small">GitHub and GitLab hosts are not shells, so they are left out unless you ask.</span></span>
+          </label>
+        </fieldset>
+        {{range .Facets}}
+        <fieldset class="mb-3">
+          <legend class="form-label">{{.Label}}</legend>
+          <div class="d-flex flex-wrap gap-2">
+            {{$name := .Name}}{{range .Values}}
+            <label class="form-check form-check-inline me-0">
+              <input class="form-check-input" type="checkbox" name="{{$name}}" value="{{.Value}}"{{if .Checked}} checked{{end}} data-autosubmit>
+              <span class="form-check-label"><code>{{.Value}}</code> <span class="text-secondary small">{{.Rows}}</span></span>
+            </label>
+            {{end}}
+          </div>
+        </fieldset>
+        {{end}}
+        <div class="mb-3">
+          <label class="form-label" for="termius-include">Only hosts containing</label>
+          <input class="form-control" id="termius-include" name="include" value="{{.Include}}" autocomplete="off" spellcheck="false" placeholder="text, ignoring case">
+        </div>
+        <div>
+          <label class="form-label" for="termius-exclude">Leave out hosts containing</label>
+          <input class="form-control" id="termius-exclude" name="exclude" value="{{.Exclude}}" autocomplete="off" spellcheck="false" placeholder="text, ignoring case">
+        </div>
+      </div>
+      <div class="card-footer d-flex gap-2">
+        {{if .Filtered}}<a class="btn btn-outline-secondary flex-fill" href="{{basePath}}/termius"{{desc "filter-clear"}}>Clear</a>{{end}}
+        <button type="submit" class="btn btn-primary flex-fill"{{desc "termius-apply"}}>Show the CSV</button>
+      </div>
+    </form>
+  </div>
+  <div class="col-lg-8">
+    <div class="card mb-3">
+      <div class="card-header">
+        <h2 class="card-title">{{.Written}} of {{.Chosen}} host(s) in the file</h2>
+        <div class="card-actions d-flex gap-2">
+          {{if .Rows}}<button type="button" class="btn btn-sm btn-outline-secondary" data-copy="{{.CSV}}"{{desc "termius-copy-csv"}}>{{icon "copy"}}<span class="ms-1">Copy CSV</span></button>{{end}}
+          <a class="btn btn-sm btn-primary" href="{{u .Download}}" download{{desc "termius-download"}}>{{icon "download"}}<span class="ms-1">Download</span></a>
+        </div>
+      </div>
+      {{if .Rows}}
+      <div class="table-responsive" tabindex="0">
+        <table class="table table-vcenter card-table" id="termius-preview">
+          <caption class="visually-hidden">The Termius CSV, one row per host, in Termius's import template</caption>
+          <thead><tr>{{range .Header}}<th scope="col">{{.}}</th>{{end}}</tr></thead>
+          <tbody>
+            {{range .Rows}}<tr>{{range $i, $c := .}}{{if eq $i 0}}<td>{{if $c}}<code>{{$c}}</code>{{else}}<span class="text-secondary">(none)</span>{{end}}</td>{{else if eq $i 7}}<td><span class="text-secondary">never written</span></td>{{else}}<td class="text-break">{{$c}}</td>{{end}}{{end}}</tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+      <div class="card-body border-top">
+        <details>
+          <summary class="text-secondary">The CSV as text</summary>
+          <pre class="code-block mt-2 mb-0" tabindex="0">{{.CSV}}</pre>
+        </details>
+      </div>
+      {{else}}
+      <div class="card-body">{{template "empty" (empty "server" "No host goes into the file" "Tick fewer filters, include git hosts, or see below what was left out.")}}</div>
+      {{end}}
+      {{if .Skipped}}
+      <div class="card-body border-top">
+        <h3 class="card-title mb-2">Left out ({{len .Skipped}})</h3>
+        <ul class="mb-0">{{range .Skipped}}<li class="text-break">{{.}}</li>{{end}}</ul>
+        <p class="text-secondary small mt-2 mb-0">Termius does not run a ProxyCommand, so a VM or Cloudflare Access host cannot connect from it: use <code>ssh &lt;alias&gt;</code> for those.</p>
+      </div>
+      {{end}}
+      <div class="card-footer">
+        {{template "command_line" .Command}}
+        <span class="text-secondary small">The same file as this command. Reading only: nothing is written.</span>
+      </div>
+    </div>
+
+    {{if .Jumps}}
+    <div class="alert alert-info" role="status">
+      {{icon "info-circle"}}<span class="ms-1">These hosts connect through a jump host, which the CSV cannot carry. After importing, open each host in Termius and set its <strong>Host Chain</strong>:</span>
+      <ul class="mb-0 mt-2">{{range .Jumps}}<li><code>{{.Alias}}</code> through <code>{{.Jump}}</code></li>{{end}}</ul>
+    </div>
+    {{end}}
+
+    <div class="card mb-3">
+      <div class="card-header"><h2 class="card-title">Import into Termius</h2></div>
+      <div class="card-body">
+        <ol class="mb-0">
+          <li>Download the file above, or copy it.</li>
+          <li>In Termius: <strong>Hosts → New Host</strong> (the arrow beside it) <strong>→ Import → CSV</strong>, click <strong>Skip download</strong>, and choose <code>termius-hosts.csv</code>.</li>
+          <li>The CSV carries no SSH keys (Termius's template has no column for them), so attach each host's key as below. Until then, connecting stops at <strong>SSH key selection</strong>.</li>
+          <li>Importing again after a change can add duplicates: Termius does not say how it treats hosts it already has.</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Attach the keys</h2></div>
+      {{if .Keys}}
+      <div class="table-responsive" tabindex="0">
+        <table class="table table-vcenter card-table" id="termius-keys">
+          <caption class="visually-hidden">Each host in the file with the label to give its key in Termius and the command that copies it</caption>
+          <thead><tr><th scope="col">Host</th><th scope="col">Termius label</th><th scope="col">Copy the key at a terminal</th></tr></thead>
+          <tbody>
+            {{range .Keys}}
+            <tr>
+              <th scope="row"><a href="{{basePath}}/hosts/{{.Alias}}"><code>{{.Alias}}</code></a>{{if .Group}}<span class="d-block text-secondary small">{{.Group}}</span>{{end}}</th>
+              <td>{{if .Label}}<code>{{.Label}}</code> {{template "copy" (copy .Label "the label")}}{{if .Path}}<span class="d-block text-secondary small text-break">{{tilde .Path}}</span>{{end}}{{else}}<span class="text-secondary">no key</span>{{end}}</td>
+              <td>{{if .OnePassword}}<span class="text-secondary">In 1Password: add it to Termius from 1Password.</span>{{else if .Command}}<code class="text-break">{{.Command}}</code> {{template "copy" (copy .Command "the command")}}{{else}}<span class="text-secondary">-</span>{{end}}</td>
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+      {{end}}
+      <div class="card-body{{if .Keys}} border-top{{end}}">
+        <ol class="mb-3">
+          <li>Run the host's command: it copies the private key to the clipboard (you confirm with your owner PIN if one is set) and empties it after 60 seconds.</li>
+          <li>In Termius: <strong>Keychain → New Key</strong>, set <strong>Label</strong> to the label shown, paste into <strong>Private key</strong>, leave <strong>Certificate</strong> empty, and <strong>Save</strong>. (<strong>Import from key file</strong> with the path shown works too.)</li>
+          <li>Pick the key on the host and click <strong>Continue &amp; Save</strong>.</li>
+        </ol>
+        <p class="text-secondary small mb-2">This page never copies a private key: nothing secret is copied from a page, so a private key never reaches the browser, its clipboard or a page script. The terminal command reads it on this machine instead.</p>
+        {{template "command_line" .ClearCmd}}
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}{{end}}

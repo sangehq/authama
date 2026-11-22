@@ -111,7 +111,7 @@ top bar, the main menu holds every page, one kind of thing to a menu:
 | Menu | Holds |
 |---|---|
 | Overview | What needs attention, counts, and Get started for a new home |
-| **SSH** | *Inventory:* Profiles, Hosts, Keys, VMs. *Configuration:* Naming, SSH config. *Tasks:* Add a host, Pin host keys, Mint missing keys, Rotate keys, Revoke keys, Delete keys |
+| **SSH** | *Inventory:* Profiles, Hosts, Keys, VMs. *Configuration:* Naming, SSH config, Termius import. *Tasks:* Add a host, Pin host keys, Mint missing keys, Rotate keys, Revoke keys, Delete keys |
 | **Tokens** | Tokens, Token checklists (the Checklists page filtered to tokens). *Tasks:* Add a token |
 | **Security** | Audit, Checklists, Owner & PIN |
 | **History** | *Record:* Changes (the history page), File events. *Backups:* Snapshots, Export |
@@ -126,7 +126,7 @@ in the same colour (System's is Health's).
 
 | Kind | Colour (Tabler) | Entries |
 |---|---|---|
-| SSH pages | cyan | Profiles, Hosts, Keys, VMs, Naming, SSH config |
+| SSH pages | cyan | Profiles, Hosts, Keys, VMs, Naming, SSH config, Termius import |
 | Tokens pages | pink | Tokens, Token checklists |
 | Security | purple | Audit, Checklists, Owner & PIN |
 | History | yellow | Changes, File events, Snapshots, Export |
@@ -321,6 +321,7 @@ documentation, the source and the licences.
 | VMs | the VM hosts and their VMs' state, their Docker contexts (with an on-demand engine check), the pending `ssh vm sync` plan, the enabled hypervisors and their VMs, the declared devboxes (planned ones without a VM yet), the reserved keys, the loose keys that could be adopted, and whether the daily sync is scheduled |
 | Auth tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret), each tool's file with its mode and how many entries are installed, configured and resolvable, what `token apply` would skip, and the token audit, as `authama token list`, `token status` and `token audit` print. The audit card counts what to fix, what is owner-only and what is not set up; a file others can read has a *Make it owner-only* button (a preview of `doctor --fix`), a `.gitignore` that misses secret files offers the lines to add, and the tools with no file fold into a list, each opening *Add a token* for that tool |
 | SSH config | every file the manifest renders into `~/.ssh` and whether the files on disk match it, as `authama ssh config show` and `ssh config check` print |
+| Termius import (`/termius`) | the Termius CSV of the hosts chosen, previewed as Termius reads it, with what was left out and the key to attach to each host: [below](#termius-import) |
 | Doctor, Audit | the reports `authama doctor` and `authama ssh audit` print |
 | Validate | every validate check on one page, run when you open it: the manifest loads and passes its rules, `authama settings validate`, `authama ssh validate` (each keypair parses, matches and has safe permissions) and `authama ssh config check`. A manifest that does not load fails the two checks that need it rather than reporting them clean. Reads only |
 | Events | every change seen to a tracked file, with the authama operation that made it, as [`authama events`](events.md) lists them; filtered by area |
@@ -435,9 +436,39 @@ file. Confirming snapshots `~/.ssh` first, then restores. A snapshot that still 
 is refused here, as its page refuses to open it.
 
 **Exports download.** The hosts page offers the flat `ssh_config` (`authama ssh config export --flat`)
-and the Termius CSV (`authama export hosts --format termius`, with or without git hosts, or in profile/env groups;
-`?termius_groups=` takes any `--termius-groups` value) as downloads. Nothing is
-written to the home, so `--read-only` keeps them.
+and the Termius CSV grouped by profile (`authama export hosts --format termius`) as downloads, and leads to the
+[Termius import](#termius-import) for everything else. `/exports/termius-hosts.csv` also takes `?include_git=1` and
+`?termius_groups=` (any `--termius-groups` value). Nothing is written to the home, so `--read-only` keeps them.
+
+### <a name="termius-import"></a>Termius import
+
+**SSH → Termius import** (`/termius`, `g u`, or **Termius import** on the hosts page) does on one page what
+`authama export hosts --format termius` and `authama ssh termius keys` do at a terminal. It only reads, so
+`--read-only` keeps it.
+
+- **Choose** (left): the **Groups in Termius** scheme, one radio each for `profile`, `category/profile`,
+  `profile/env`, `category/profile/env` and `none`, each with the group one of your hosts would get, so the
+  choice shows what it does; **Include git hosts**; a tick box per profile, environment, role, tag and status,
+  with how many hosts each has; and **Only hosts containing** / **Leave out hosts containing** text. Ticking a box
+  or a scheme shows the new CSV at once; the text fields apply on Enter or **Show the CSV**. Every choice is in
+  the address, so a link keeps them.
+- **The CSV**: how many of the chosen hosts go into the file, the rows as Termius's template lays them out
+  (`Groups` first; `Password` is never written), the file as text, **Copy CSV**, and **Download**, which is the
+  same selection through `/exports/run`. Under it, what was left out and why (a ProxyCommand host, a git host),
+  and the same export as one command line with a copy button.
+- **Jump hosts**: a host behind a `ProxyJump` raw option is named with its jump host, to set as its **Host
+  Chain** in Termius.
+- **Import into Termius**: the steps, from **Hosts → New Host → Import → CSV**.
+- **Attach the keys**: each host in the file with the label to give its key in Termius's Keychain and the key
+  file's path, each with a copy button, and the command that copies the private key:
+  `authama ssh termius keys <host> --clear-after 60s`, then `authama ssh termius keys --clear`. A key kept in
+  1Password says to add it from 1Password.
+
+The page does not copy a private key itself. Nothing secret is copied from a page (see *Copying* above): a
+private key would have to reach the browser to land on its clipboard, where any page script, extension or
+clipboard history could read it, and with `--allow-remote` the browser is not even on the machine that holds
+the key. The terminal command reads the key on this machine, asks for the owner PIN when one is set, and
+empties the clipboard after 60 seconds.
 
 **A preview or a review answers its form, and has no address of its own.** Reloading one, going Back
 to it, or a server restart reloading open pages into a new build used to ask for its address and show

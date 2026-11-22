@@ -149,6 +149,20 @@ test('the CSV dialog downloads any format, and opens its choice in Export', asyn
   await expect(dialog.getByRole('link', { name: 'Open in Export' })).toBeHidden();
 });
 
+test('the Termius import regroups its preview as a scheme is picked, and downloads that file', async ({ page }) => {
+  await page.goto('/termius');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Termius import');
+  await expect(page.locator('#termius-preview thead')).toContainText('Hostname/IP');
+  await page.getByLabel(/Category, profile, environment/).check();
+  await expect(page).toHaveURL(/termius_groups=category%2Fprofile%2Fenv/);
+  await expect(page.getByLabel(/Category, profile, environment/)).toBeChecked();
+  const download = page.getByRole('link', { name: 'Download', exact: true });
+  await expect(download).toHaveAttribute('href', /format=termius.*termius_groups=category%2Fprofile%2Fenv|termius_groups=category%2Fprofile%2Fenv.*format=termius/);
+  const res = await page.request.get((await download.getAttribute('href')) ?? '');
+  expect((await res.text()).split('\n')[0]).toBe('Groups,Label,Tags,Hostname/IP,Protocol,Port,Username,Password');
+  await expect(page.locator('[data-copy*="--termius-groups category/profile/env"]').first()).toBeAttached();
+});
+
 test('tokens.json is checked as it is typed, and cannot be sent while it is not JSON', async ({ page }) => {
   await page.goto('/tokens');
   await page.getByRole('button', { name: 'Edit tokens.json' }).click();

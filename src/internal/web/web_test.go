@@ -43,6 +43,7 @@ func TestEveryPageRenders(t *testing.T) {
 		"/ssh-config":                           "authama ssh config check",
 		"/events":                               "authama events",
 		"/about":                                "This build",
+		"/termius":                              "Termius import",
 	}
 	if len(pages) < 19 {
 		t.Fatal("the page list shrank")

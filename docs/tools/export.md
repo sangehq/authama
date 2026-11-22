@@ -193,7 +193,8 @@ authama export hosts --format termius --profile clients        # any export filt
 authama export hosts --format termius --termius-groups profile/env   # nested groups: simtabi/prd, simtabi/stg
 ```
 
-The Export page in the web UI offers the same file. `ssh termius export`, which wrote it before, was removed on
+The web UI's **Termius import** page (`/termius`, [serve](serve.md#termius-import)) offers the same file with every
+option here, previews it, and lists the key to attach to each host; the Export page offers it too. `ssh termius export`, which wrote it before, was removed on
 2026-11-07; its `--open` (open Termius and show the file in Finder) has no replacement.
 
 | Column | Value |
@@ -207,8 +208,8 @@ The Export page in the web UI offers the same file. `ssh termius export`, which 
 ### Nested groups
 
 Termius reads a `/` in `Groups` as nesting: its own template files a host under `Project/Dev`, the subgroup `Dev` of
-`Project`. `--termius-groups` chooses the path (the web UI takes the same value as `?termius_groups=`, and the hosts
-page has a **Download the Termius CSV, in profile/env groups** link):
+`Project`. `--termius-groups` chooses the path (the web UI's Termius import page offers each one, with an example from your
+hosts, and its downloads take the same value as `?termius_groups=`):
 
 | `--termius-groups` | `Groups` | Example |
 |---|---|---|

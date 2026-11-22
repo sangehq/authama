@@ -74,7 +74,7 @@ func TestTheMainMenuGroupsPagesByWhatTheyAreAbout(t *testing.T) {
 		t.Fatalf("read %d menus, the pattern is not matching the menu", len(groups))
 	}
 	for group, hrefs := range map[string][]string{
-		"ssh": {"/profiles", "/hosts", "/keys", "/vms", "/naming", "/ssh-config",
+		"ssh": {"/profiles", "/hosts", "/keys", "/vms", "/naming", "/ssh-config", "/termius",
 			"/hosts#add-host", "/hosts#knownhosts-init", "/keys#mint-keys",
 			"/jobs/review?action=rotate-keys", "/jobs/review?action=revoke-keys", "/jobs/review?action=delete-keys"},
 		"tokens":   {"/tokens", "/checklists?show=tokens", "/tokens#add-token"},
