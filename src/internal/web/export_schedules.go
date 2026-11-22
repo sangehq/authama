@@ -89,7 +89,12 @@ func (x exportAPI) handleSchedule(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		var abs string
-		if abs, err = exportsched.Folder(p, expandHome(folder)); err != nil {
+		clean, ok := plainAbs(expandHome(folder))
+		if !ok {
+			err = badForm("%q is not a plain full path", folder)
+			break
+		}
+		if abs, err = exportsched.Folder(p, clean); err != nil {
 			break
 		}
 		m, lerr := manifest.Load(p.Manifest())

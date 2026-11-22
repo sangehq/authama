@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -331,12 +332,31 @@ func checkoutPaths(text string) ([]string, error) {
 		if !strings.HasPrefix(d, "/") && !strings.HasPrefix(d, "~/") && (len(d) < 3 || d[1] != ':') {
 			return nil, badForm("%q: give a checkout's full path (or ~/…); the server has no current directory of yours", d)
 		}
-		dirs = append(dirs, expandHome(d))
+		abs, ok := plainAbs(expandHome(d))
+		if !ok {
+			return nil, badForm("%q is not a plain full path", d)
+		}
+		dirs = append(dirs, abs)
 	}
 	if len(dirs) == 0 {
 		return nil, badForm("name at least one checkout")
 	}
 	return dirs, nil
+}
+
+// plainAbsRe is a cleaned absolute path with no control character: a slash,
+// a drive or a UNC prefix first, so it can never read as an option.
+var plainAbsRe = regexp.MustCompile(`^(/|[A-Za-z]:[\\/]|\\\\)[^\x00-\x1f\x7f]*$`)
+
+// plainAbs is p cleaned, when it is a plain absolute path a person named on
+// purpose (a checkout, a project, a folder); every path from a form that the
+// server opens goes through it.
+func plainAbs(p string) (string, bool) {
+	p = filepath.Clean(p)
+	if !plainAbsRe.MatchString(p) {
+		return "", false
+	}
+	return p, true
 }
 
 // expandHome turns a leading ~/ into the home directory, for paths the server

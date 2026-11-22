@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -43,7 +44,7 @@ func TestExportSchedulesFromTheWeb(t *testing.T) {
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "row(s) to") {
 		t.Fatalf("run: %d", rec.Code)
 	}
-	if fi, err := os.Stat(filepath.Join(folder, "prd.json")); err != nil || fi.Mode().Perm() != 0o600 {
+	if fi, err := os.Stat(filepath.Join(folder, "prd.json")); err != nil || (runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600) {
 		t.Fatalf("the file written: %v %v", fi, err)
 	}
 	if rec := c.change("/export/schedules/remove", url.Values{"selection": {"prd"}}); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Removed 1") {

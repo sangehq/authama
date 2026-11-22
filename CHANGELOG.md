@@ -181,6 +181,10 @@ Things that work differently after this release, and what to do if one affects y
 
 ### Fixed
 
+- **Form paths reach no command or file unchecked.** The project and config scope on Auth tokens, the checkouts
+  on Git identities → Remote mode and an export schedule's folder must be plain absolute paths before the server
+  opens them, and `ssh git status` and `ssh git use` run git in the checkout (its working directory) instead of
+  passing it as `-C`. The export schedule test no longer checks a POSIX mode on Windows.
 - `ssh notify send`, `ping` and `doctor` print their help for `--help` instead of passing it to the
   notification helper (which, for `doctor`, printed the live status).
 - A local key replacement now writes a retirement record for the key it moves to `old/`, naming where it is

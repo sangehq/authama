@@ -952,5 +952,9 @@ func scopePath(f url.Values, field string) (string, error) {
 	case !strings.HasPrefix(v, "/") && !strings.HasPrefix(v, "~/") && (len(v) < 3 || v[1] != ':'):
 		return "", badForm("%s %q: give a full path (or ~/…); the server has no current directory of yours", field, v)
 	}
-	return expandHome(v), nil
+	abs, ok := plainAbs(expandHome(v))
+	if !ok {
+		return "", badForm("%s %q is not a plain full path", field, v)
+	}
+	return abs, nil
 }

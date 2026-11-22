@@ -149,7 +149,10 @@ type Exec struct{}
 func (Exec) run(dir string, timeout time.Duration, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", dir}, args...)...)
+	// The checkout is where git runs, never an argument it could read as an
+	// option.
+	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd.Dir = dir
 	// Never stop to ask: a prompt in a batch over many checkouts would hang it. A user's own
 	// GIT_SSH_COMMAND is respected.
 	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
