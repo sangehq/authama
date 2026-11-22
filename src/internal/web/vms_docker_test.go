@@ -97,7 +97,7 @@ func TestVMsPageSaysAHypervisorTimedOut(t *testing.T) {
 	start := time.Now()
 	body := c.get("/vms").Body.String()
 	if took := time.Since(start); took > 5*time.Second {
-		t.Logf("%s", body[strings.Index(body, "Hypervisor drivers"):][:3000]); t.Errorf("/vms took %s with a hanging hypervisor", took)
+		t.Errorf("/vms took %s with a hanging hypervisor", took)
 	}
 	for _, want := range []string{`id="vms-timed-out"`, "<strong>Timed out:</strong> slowbox did not answer within 300ms", ">timed out</span>"} {
 		if !strings.Contains(body, want) {
