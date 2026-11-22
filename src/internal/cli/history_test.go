@@ -223,3 +223,41 @@ func TestHostApplyRecordsTheAliasNotTheSpec(t *testing.T) {
 		}
 	}
 }
+
+// --command takes the command as it is typed, with its group or the tool's
+// name in front, and an empty filtered list says the filters matched nothing
+// rather than that nothing was ever recorded (found by the QA walk).
+func TestHistoryCommandFilterTakesTheTypedSpelling(t *testing.T) {
+	editHome(t)
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	for _, spelling := range []string{"host add", "ssh host add", "authama ssh host add", "  ssh   host  add "} {
+		if out := run(t, "history", "--command", spelling); !strings.Contains(out, "host add") || strings.Contains(out, "profile add") {
+			t.Errorf("--command %q:\n%s", spelling, out)
+		}
+	}
+	if out := run(t, "history", "--command", "rotate"); !strings.Contains(out, "no operations match these filters") {
+		t.Errorf("an empty filtered list should say the filters matched nothing:\n%s", out)
+	}
+}
+
+// rotate --check tests a rotation and changes nothing, so the history records
+// it as a dry run; a rotate that names no key is a usage error and records
+// nothing (found by the QA walk).
+func TestRotateCheckIsADryRunAndAUsageErrorIsNotRecorded(t *testing.T) {
+	p := editHome(t)
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "key", "add", "work", "spare")
+	before := len(liveOps(t, p))
+	if _, err := runErr(t, "ssh", "rotate"); err == nil {
+		t.Fatal("rotate with no key should fail")
+	}
+	if got := len(liveOps(t, p)); got != before {
+		t.Errorf("a usage error recorded %d operation(s)", got-before)
+	}
+	run(t, "ssh", "rotate", "work/spare", "--check")
+	ops := liveOps(t, p)
+	if len(ops) != before+1 || ops[0].Command != "rotate" || ops[0].Result != history.ResultDryRun {
+		t.Errorf("rotate --check recorded %+v, want one dry-run rotate", ops[0])
+	}
+}

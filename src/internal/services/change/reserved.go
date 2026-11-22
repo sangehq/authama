@@ -1,8 +1,10 @@
 package change
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,7 +23,11 @@ import (
 // only the public half (for the fingerprint).
 func ResolveReserve(p paths.Paths, arg string) (name, fingerprint string, err error) {
 	arg = strings.TrimSpace(arg)
-	if home, herr := os.UserHomeDir(); herr == nil && strings.HasPrefix(arg, "~/") {
+	// ~/.ssh/ is the ssh directory this run uses, which --dev-root moves;
+	// any other ~/ path is the real home's.
+	if rest, ok := strings.CutPrefix(arg, "~/.ssh/"); ok {
+		arg = filepath.Join(p.SSHDir, rest)
+	} else if home, herr := os.UserHomeDir(); herr == nil && strings.HasPrefix(arg, "~/") {
 		arg = filepath.Join(home, arg[2:])
 	}
 	arg = strings.TrimSuffix(arg, ".pub")
@@ -37,7 +43,9 @@ func ResolveReserve(p paths.Paths, arg string) (name, fingerprint string, err er
 		return "", "", err
 	}
 	priv := filepath.Join(p.SSHDir, name)
-	if fi, serr := os.Lstat(priv); serr != nil {
+	if fi, serr := os.Lstat(priv); errors.Is(serr, fs.ErrNotExist) {
+		return "", "", fmt.Errorf("no key file ~/.ssh/%s to reserve", name)
+	} else if serr != nil {
 		return "", "", fmt.Errorf("~/.ssh/%s: %w", name, serr)
 	} else if !fi.Mode().IsRegular() {
 		return "", "", fmt.Errorf("~/.ssh/%s is not a regular file", name)

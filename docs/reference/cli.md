@@ -3039,7 +3039,7 @@ Subcommands:
 Say whether desktop notifications work here, and why not.
 
 ```
-authama ssh notify doctor [-title T] [-subtitle S] [-body B] [-group G] [-level info|warn|alert] [-sound] [-json]
+authama ssh notify doctor
 ```
 
 Examples:
@@ -3072,29 +3072,42 @@ Flags:
 
 Hand a notification to the running web UI (authama serve), which shows it.
 
+The flags are go-notifykit's, written with one dash: -title (or -message) is the first
+line, -subtitle the second, -body (or -description) the text under them; -icon is
+an absolute path to a PNG, JPEG or GIF; -open is a local http(s) URL or a program
+to run on click; -group replaces an earlier notification in the group; -level is
+info, warn or alert; -sound plays the default sound; -json reads one notification
+as JSON from stdin instead.
+
 ```
-authama ssh notify ping [-title T] [-subtitle S] [-body B] [-group G] [-level info|warn|alert] [-sound] [-json]
+authama ssh notify ping [-title T] [-subtitle S] [-body B] [-icon PATH] [-open URL|PATH] [-group G] [-level info|warn|alert] [-sound] [-json]
 ```
 
 Examples:
 
 ```sh
-  authama ssh notify ping -title "Deploy finished" -body "billing-api is on v1.4.0" -group deploy
+  authama ssh notify ping -title "Keys rotated" -body "3 keys" -level info
 ```
 
 ## authama ssh notify send
 
 Show a desktop notification from this process.
 
+The flags are go-notifykit's, written with one dash: -title (or -message) is the first
+line, -subtitle the second, -body (or -description) the text under them; -icon is
+an absolute path to a PNG, JPEG or GIF; -open is a local http(s) URL or a program
+to run on click; -group replaces an earlier notification in the group; -level is
+info, warn or alert; -sound plays the default sound; -json reads one notification
+as JSON from stdin instead.
+
 ```
-authama ssh notify send [-title T] [-subtitle S] [-body B] [-group G] [-level info|warn|alert] [-sound] [-json]
+authama ssh notify send [-title T] [-subtitle S] [-body B] [-icon PATH] [-open URL|PATH] [-group G] [-level info|warn|alert] [-sound] [-json]
 ```
 
 Examples:
 
 ```sh
-  authama ssh notify send -title Backup -body "42 files"
-  authama ssh notify send -json < notification.json
+  authama ssh notify send -title "Keys rotated" -body "3 keys" -level info
 ```
 
 ## authama ssh notify test

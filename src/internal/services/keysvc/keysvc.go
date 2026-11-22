@@ -249,11 +249,8 @@ type Selection struct {
 // selector or category that matches nothing is an error, so a typo never reads
 // as an empty batch, and an empty Selection is an error rather than "nothing".
 func (s *Service) Select(sel Selection) ([]Row, error) {
-	if sel.All && (len(sel.Selectors) > 0 || sel.Category != "") {
-		return nil, fmt.Errorf("--all selects every key; drop it, or drop the other selectors")
-	}
-	if !sel.All && len(sel.Selectors) == 0 && sel.Category == "" {
-		return nil, fmt.Errorf("name keys, profiles or host aliases, or pass --category <name> or --all")
+	if err := sel.Validate(); err != nil {
+		return nil, err
 	}
 	rows, err := s.Rows("")
 	if err != nil {
@@ -298,4 +295,17 @@ func hasCategory(m *manifest.Manifest, category string) bool {
 		}
 	}
 	return false
+}
+
+// Validate reports a selection that can choose nothing or contradicts
+// itself, from its shape alone, so a command can refuse it before it takes
+// the lock (and records an operation in the history).
+func (sel Selection) Validate() error {
+	if sel.All && (len(sel.Selectors) > 0 || sel.Category != "") {
+		return fmt.Errorf("--all selects every key; drop it, or drop the other selectors")
+	}
+	if !sel.All && len(sel.Selectors) == 0 && sel.Category == "" {
+		return fmt.Errorf("name keys, profiles or host aliases, or pass --category <name> or --all")
+	}
+	return nil
 }

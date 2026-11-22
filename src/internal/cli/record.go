@@ -137,7 +137,9 @@ func scopeFor(c *cobra.Command, args []string) mutation.Scope {
 		if f.Name == devRootFlag {
 			return
 		}
-		if f.Name == "dry-run" && f.Value.String() == "true" {
+		// --check (rotate, repair) changes nothing either: it is recorded
+		// as a dry run, not as the change it only tested.
+		if (f.Name == "dry-run" || f.Name == "check") && f.Value.String() == "true" {
 			s.DryRun = true
 		}
 		s.Args = append(s.Args, "--"+f.Name+"="+recordedValue(f))

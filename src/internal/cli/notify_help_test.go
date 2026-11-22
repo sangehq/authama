@@ -16,3 +16,18 @@ func TestNotifyVerbsHonourHelp(t *testing.T) {
 		}
 	}
 }
+
+// doctor takes no flags: an unknown one is refused rather than ignored, and
+// its help does not list send's flags (found by the QA walk).
+func TestNotifyDoctorRefusesAFlag(t *testing.T) {
+	editHome(t)
+	if _, err := runErr(t, "ssh", "notify", "doctor", "--title", "x"); err == nil || !strings.Contains(err.Error(), "unknown flag") {
+		t.Errorf("notify doctor --title = %v, want an unknown-flag error", err)
+	}
+	if out := run(t, "ssh", "notify", "doctor", "--help"); strings.Contains(out, "-title") {
+		t.Errorf("notify doctor --help lists send's flags:\n%s", out)
+	}
+	if out := run(t, "ssh", "notify", "send", "--help"); !strings.Contains(out, "-icon PATH") || !strings.Contains(out, "go-notifykit") {
+		t.Errorf("notify send --help should list every notifykit flag:\n%s", out)
+	}
+}

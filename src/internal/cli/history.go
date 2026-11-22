@@ -49,6 +49,7 @@ func newHistoryCmd() *cobra.Command {
 			if f.Until, err = parseWhen(until); err != nil {
 				return fmt.Errorf("--until: %w", err)
 			}
+			f.Command = historyCommand(f.Command)
 			s, err := openHistory(c, p)
 			if err != nil {
 				return err
@@ -69,6 +70,10 @@ func newHistoryCmd() *cobra.Command {
 						return err
 					}
 				}
+				return nil
+			}
+			if len(ops) == 0 && filtered(c) {
+				_, _ = fmt.Fprintln(out, "no operations match these filters (authama history lists them all)")
 				return nil
 			}
 			writeHistory(out, ops)
@@ -115,6 +120,30 @@ func newHistoryCmd() *cobra.Command {
 	})
 	cmd.AddCommand(newHistoryResetCmd())
 	return cmd
+}
+
+// historyCommand spells a --command filter the way the history records it:
+// `authama ssh host add` and `ssh host add` are both "host add", since every
+// ssh command is recorded without its group (scopeFor).
+func historyCommand(v string) string {
+	v = strings.Join(strings.Fields(v), " ")
+	v = strings.TrimPrefix(v, brand.Command+" ")
+	if v == sshGroup {
+		return v
+	}
+	return strings.TrimPrefix(v, sshGroup+" ")
+}
+
+// filtered reports whether any flag that narrows the list was given, so an
+// empty answer says the filters matched nothing rather than that nothing was
+// ever recorded.
+func filtered(c *cobra.Command) bool {
+	for _, name := range []string{"host", "profile", "key", "token", "since", "until", "command", "source"} {
+		if c.Flags().Changed(name) {
+			return true
+		}
+	}
+	return false
 }
 
 // openHistory opens the store for reading, importing what was on disk the
