@@ -138,7 +138,7 @@ func (ip integrationsPage) handleWebhooks(w http.ResponseWriter, r *http.Request
 // handleAPITokenCreate is `authama api token create <name> [--expires N]`:
 // the token is in this response only.
 func (ip integrationsPage) handleAPITokenCreate(w http.ResponseWriter, r *http.Request) {
-	if !(ownerGate{ip.s}).stepUp(w, r) {
+	if !ownerGate(ip).stepUp(w, r) {
 		return
 	}
 	p := ip.s.opts.Engine.Home()
@@ -169,7 +169,7 @@ func (ip integrationsPage) handleAPITokenCreate(w http.ResponseWriter, r *http.R
 
 // handleAPITokenRevoke is `authama api token revoke <name>`.
 func (ip integrationsPage) handleAPITokenRevoke(w http.ResponseWriter, r *http.Request) {
-	if !(ownerGate{ip.s}).stepUp(w, r) {
+	if !ownerGate(ip).stepUp(w, r) {
 		return
 	}
 	p := ip.s.opts.Engine.Home()
@@ -189,7 +189,7 @@ func (ip integrationsPage) handleAPITokenRevoke(w http.ResponseWriter, r *http.R
 // handleWebhookAdd is `authama webhook add <name> <url> [--event ...]`: the
 // signing secret is in this response only.
 func (ip integrationsPage) handleWebhookAdd(w http.ResponseWriter, r *http.Request) {
-	if !(ownerGate{ip.s}).stepUp(w, r) {
+	if !ownerGate(ip).stepUp(w, r) {
 		return
 	}
 	p := ip.s.opts.Engine.Home()
@@ -214,7 +214,7 @@ func (ip integrationsPage) handleWebhookAdd(w http.ResponseWriter, r *http.Reque
 // handleWebhookAct is `authama webhook remove|enable|disable|test <name>` and
 // `authama webhook deliver`.
 func (ip integrationsPage) handleWebhookAct(w http.ResponseWriter, r *http.Request) {
-	if !(ownerGate{ip.s}).stepUp(w, r) {
+	if !ownerGate(ip).stepUp(w, r) {
 		return
 	}
 	p := ip.s.opts.Engine.Home()

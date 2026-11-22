@@ -140,7 +140,7 @@ func (d *Deployer) Deploy(selector, targetAlias string) (DeployReport, error) {
 		provider := providers.Resolve(deref(host.Provider), d.p.Providers())
 		// A host ssh reaches through its config's route has no direct port
 		// to probe; ssh itself says whether it can get there.
-		if provider.Category() == "server" && !(route != "" && renderer.HasRoute(host)) {
+		if provider.Category() == "server" && (route == "" || !renderer.HasRoute(host)) {
 			st := netcheck.Check(host.Hostname, host.Port, host.RequiresVPN, deref(host.VPNName), deref(host.VPNURL), 4*time.Second, true)
 			if !st.Reachable {
 				recordDeployment(&rec, host.Alias, "unreachable", false)

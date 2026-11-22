@@ -64,7 +64,7 @@ func (x exportAPI) renderPage(w http.ResponseWriter, r *http.Request, status int
 
 // handleSchedule is POST /export/schedules/{act}: add, remove or run.
 func (x exportAPI) handleSchedule(w http.ResponseWriter, r *http.Request) {
-	if !(ownerGate{x.s}).stepUp(w, r) {
+	if !ownerGate(x).stepUp(w, r) {
 		return
 	}
 	p := x.s.opts.Engine.Home()
