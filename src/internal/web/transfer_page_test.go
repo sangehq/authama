@@ -193,3 +193,16 @@ func TestAReadOnlyTransferPageOnlyExports(t *testing.T) {
 		t.Errorf("a read-only server took an upload: %d", r.Code)
 	}
 }
+
+// A Termius group scheme not on the list is refused, never echoed into a zip.
+func TestTheTransferPackRefusesAnUnknownGroupScheme(t *testing.T) {
+	s, _, _ := newTestServer(t)
+	c := signIn(t, s)
+	rec := c.get("/transfer/pack.zip?part=termius&termius_groups=%3Cscript%3Ex")
+	if rec.Code != http.StatusBadRequest || strings.Contains(rec.Body.String(), "<script>x") {
+		t.Fatalf("pack: %d\n%.400s", rec.Code, rec.Body.String())
+	}
+	if rec := c.get("/transfer/pack.zip?part=termius&termius_groups=category/profile"); rec.Code != http.StatusOK || rec.Header().Get("Content-Type") != "application/zip" {
+		t.Fatalf("a known scheme: %d %s", rec.Code, rec.Header().Get("Content-Type"))
+	}
+}

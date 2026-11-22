@@ -6,10 +6,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
+
+	safepath "github.com/sangehq/authama/src/internal/util/fs"
 )
 
 // gitTimeout bounds every git call: they are all local, so a slow one is stuck.
@@ -21,26 +24,44 @@ const gitTimeout = 30 * time.Second
 // wins over every config file, so a checkout cannot swap them in.
 var safeConfig = []string{"-c", "core.fsmonitor=false", "-c", "core.pager=cat", "-c", "gpg.ssh.program=ssh-keygen"}
 
+// gitValue is a value a person gave (a path, a config value): it cannot
+// start with '-' and holds no control character, so git can only read it as
+// the value it is.
+var gitValue = regexp.MustCompile(`^[^-\x00-\x1f\x7f][^\x00-\x1f\x7f]*$`)
+
 // git runs git in dir with prompts off and returns its trimmed stdout. dir
-// comes from a person, at the terminal or in the web UI: it is made absolute
-// (so it can never read as an option) and must be a directory.
-func git(dir string, args ...string) (string, error) {
-	dir, err := filepath.Abs(dir)
+// comes from a person, at the terminal or in the web UI: it is made absolute,
+// must be a directory, and is where git runs (never an argument). opts are the
+// subcommand and its options, always literals here; vals follow a "--" and
+// each must be a plain value. env adds to the environment (GIT_CONFIG_* for a
+// setting that names a file).
+func git(dir string, env, opts []string, vals ...string) (string, error) {
+	dir, err := safepath.AbsDir(dir)
 	if err != nil {
 		return "", err
 	}
 	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
 		return "", fmt.Errorf("%s is not a directory", dir)
 	}
+	args := append(slices.Clone(safeConfig), opts...)
+	if len(vals) > 0 {
+		args = append(args, "--")
+		for _, v := range vals {
+			if !gitValue.MatchString(v) {
+				return "", fmt.Errorf("%q cannot be given to git", v)
+			}
+			args = append(args, v)
+		}
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), gitTimeout)
 	defer cancel()
-	full := append(append(slices.Clone(safeConfig), "-C", filepath.Clean(dir)), args...)
-	cmd := exec.CommandContext(ctx, "git", full...)
-	cmd.Env = append(cmd.Environ(), "GIT_TERMINAL_PROMPT=0")
+	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd.Dir = dir
+	cmd.Env = append(append(cmd.Environ(), "GIT_TERMINAL_PROMPT=0"), env...)
 	out, err := cmd.Output()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok && len(ee.Stderr) > 0 {
-			return strings.TrimSpace(string(out)), fmt.Errorf("git %s: %s", args[0], strings.TrimSpace(string(ee.Stderr)))
+			return strings.TrimSpace(string(out)), fmt.Errorf("git %s: %s", opts[0], strings.TrimSpace(string(ee.Stderr)))
 		}
 		return strings.TrimSpace(string(out)), err
 	}
@@ -49,7 +70,7 @@ func git(dir string, args ...string) (string, error) {
 
 // IsCheckout reports whether dir is inside a git work tree.
 func IsCheckout(dir string) bool {
-	out, err := git(dir, "rev-parse", "--is-inside-work-tree")
+	out, err := git(dir, nil, []string{"rev-parse", "--is-inside-work-tree"})
 	return err == nil && out == "true"
 }
 
@@ -68,7 +89,7 @@ func Use(dir, fragment, fragmentDir string, dryRun bool) (UseResult, error) {
 	if !IsCheckout(dir) {
 		return res, fmt.Errorf("%s is not a git checkout", dir)
 	}
-	cur, _ := git(dir, "config", "--local", "--get-all", "include.path")
+	cur, _ := git(dir, nil, []string{"config", "--local", "--get-all"}, "include.path")
 	var keep []string
 	have := false
 	for _, line := range strings.Split(cur, "\n") {
@@ -88,12 +109,12 @@ func Use(dir, fragment, fragmentDir string, dryRun bool) (UseResult, error) {
 		return res, nil
 	}
 	if cur != "" {
-		if _, err := git(dir, "config", "--local", "--unset-all", "include.path"); err != nil {
+		if _, err := git(dir, nil, []string{"config", "--local", "--unset-all"}, "include.path"); err != nil {
 			return res, err
 		}
 	}
 	for _, k := range append(keep, filepath.ToSlash(fragment)) {
-		if _, err := git(dir, "config", "--local", "--add", "include.path", k); err != nil {
+		if _, err := git(dir, nil, []string{"config", "--local", "--add"}, "include.path", k); err != nil {
 			return res, err
 		}
 	}
@@ -124,10 +145,10 @@ func Status(dir string) CheckoutStatus {
 	if !st.Checkout {
 		return st
 	}
-	get := func(key string) string { v, _ := git(dir, "config", "--get", key); return v }
+	get := func(key string) string { v, _ := git(dir, nil, []string{"config", "--get"}, key); return v }
 	st.Email, st.Name, st.SigningKey, st.Format = get("user.email"), get("user.name"), get("user.signingkey"), get("gpg.format")
 	st.Sign, _ = strconv.ParseBool(get("commit.gpgsign"))
-	if out, err := git(dir, "config", "--show-origin", "--get", "user.email"); err == nil {
+	if out, err := git(dir, nil, []string{"config", "--show-origin", "--get"}, "user.email"); err == nil {
 		if from, _, ok := strings.Cut(out, "\t"); ok {
 			st.From = strings.TrimPrefix(from, "file:")
 		}
@@ -178,12 +199,14 @@ func Verify(dir, allowedSigners string, n int) ([]Commit, error) {
 	if n <= 0 {
 		n = 10
 	}
-	args := []string{}
+	// The allowed signers file is a setting given in the environment, as -c
+	// would, so it is never an argument.
+	var env []string
 	if allowedSigners != "" {
-		args = append(args, "-c", "gpg.ssh.allowedSignersFile="+filepath.ToSlash(allowedSigners))
+		env = []string{"GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=gpg.ssh.allowedSignersFile",
+			"GIT_CONFIG_VALUE_0=" + filepath.ToSlash(allowedSigners)}
 	}
-	args = append(args, "log", "-n", strconv.Itoa(n), "--format=%H%x1f%G?%x1f%GS%x1f%s")
-	out, err := git(dir, args...)
+	out, err := git(dir, env, []string{"log", "--max-count=" + strconv.Itoa(min(n, 1000)), "--format=%H%x1f%G?%x1f%GS%x1f%s"})
 	if err != nil {
 		return nil, err
 	}

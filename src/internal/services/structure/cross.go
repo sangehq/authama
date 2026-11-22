@@ -12,6 +12,7 @@ import (
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/platform"
 	"github.com/sangehq/authama/src/internal/services/reconciler"
+	"github.com/sangehq/authama/src/internal/util/fs"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
@@ -286,7 +287,7 @@ func carriesOwnKey(m *manifest.Manifest, p paths.Paths, mv Move, h manifest.Host
 	if len(hosts) > 1 {
 		return false // several hosts share it: a key move line says so explicitly
 	}
-	_, err = os.Lstat(filepath.Join(m.ProfileDir(p.SSHDir, mv.From), from.KeyName))
+	_, err = os.Lstat(filepath.Join(m.ProfileDir(p.SSHDir, mv.From), fs.Segment(from.KeyName)))
 	return err == nil
 }
 

@@ -248,3 +248,17 @@ func TestACheckoutUnderTheDirectoryCommitsAndSignsAsTheProfile(t *testing.T) {
 		t.Errorf("includes after use: %s", inc)
 	}
 }
+
+// A value that could read as an option, or holds a control character, never
+// reaches git; a directory is where git runs, not an argument.
+func TestGitRefusesAValueThatCouldBeAnOption(t *testing.T) {
+	dir := t.TempDir()
+	for _, bad := range []string{"-c", "--upload-pack=x", "a\nb", "", "x\x00"} {
+		if _, err := git(dir, nil, []string{"config", "--get"}, bad); err == nil || !strings.Contains(err.Error(), "cannot be given to git") {
+			t.Errorf("git accepted %q: %v", bad, err)
+		}
+	}
+	if _, err := git(filepath.Join(dir, "missing"), nil, []string{"rev-parse"}); err == nil {
+		t.Error("git ran in a directory that does not exist")
+	}
+}

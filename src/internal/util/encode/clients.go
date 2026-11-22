@@ -110,6 +110,17 @@ const (
 var TermiusGroupSchemes = []string{TermiusGroupsProfile, TermiusGroupsCategoryProfile,
 	TermiusGroupsProfileEnv, TermiusGroupsCategoryProfileEnv, TermiusGroupsNone}
 
+// TermiusGroupsScheme is the scheme of TermiusGroupSchemes that s names, and
+// whether there is one. The result is the scheme itself, never s.
+func TermiusGroupsScheme(s string) (string, bool) {
+	for _, scheme := range TermiusGroupSchemes {
+		if s == scheme {
+			return scheme, true
+		}
+	}
+	return "", false
+}
+
 // CheckTermiusGroups refuses a group scheme that is not one of
 // TermiusGroupSchemes. "" is the default, profile.
 func CheckTermiusGroups(scheme string) error {

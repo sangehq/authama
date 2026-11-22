@@ -18,6 +18,7 @@ import (
 	"strings"
 	"unicode"
 
+
 	"github.com/sangehq/authama/src/internal/core/key"
 	"github.com/sangehq/authama/src/internal/util/fs"
 )
@@ -1181,11 +1182,16 @@ func (m *Manifest) ResolvedKeyName(profileName string, host Host) (string, error
 // or its old/ directory goes through ProfileRel or ProfileDir; a hand-built
 // filepath.Join(sshDir, "profiles", profile) is the defect a categorized
 // profile exposes, because it silently points one directory too high.
+//
+// Every part goes through the util/fs guards: a name that is not one plain
+// path element (which the validator refuses on load) cannot point the path
+// out of the key root.
 func (m *Manifest) ProfileRel(profileName string) string {
+	root, name := fs.LocalRel(KeyRoot(m)), fs.Segment(profileName)
 	if c := m.Profiles[profileName].Category; c != "" {
-		return KeyRoot(m) + "/" + c + "/" + profileName
+		return root + "/" + fs.Segment(c) + "/" + name
 	}
-	return KeyRoot(m) + "/" + profileName
+	return root + "/" + name
 }
 
 // ProfileDir is ProfileRel as an absolute path under sshDir.
@@ -1197,9 +1203,9 @@ func (m *Manifest) ProfileDir(sshDir, profileName string) string {
 // adopted path when it has one, else its file in the profile directory.
 func (m *Manifest) KeyPath(sshDir string, ref KeyRef) string {
 	if rel := AdoptedPath(m, ref); rel != "" {
-		return filepath.Join(sshDir, filepath.FromSlash(rel))
+		return filepath.Join(sshDir, filepath.FromSlash(fs.LocalRel(rel)))
 	}
-	return filepath.Join(m.ProfileDir(sshDir, ref.Profile), ref.KeyName)
+	return filepath.Join(m.ProfileDir(sshDir, ref.Profile), fs.Segment(ref.KeyName))
 }
 
 // AdoptedPath is the key's adopted path relative to ~/.ssh, or "" when the
@@ -1322,7 +1328,8 @@ func (m *Manifest) KeyRefs() ([]KeyRef, error) {
 	seen := map[KeyRef]bool{}
 	var out []KeyRef
 	add := func(profile, keyName string) {
-		ref := KeyRef{Profile: profile, KeyName: keyName}
+		// A ref names files: each part is one plain path element.
+		ref := KeyRef{Profile: fs.Segment(profile), KeyName: fs.Segment(keyName)}
 		if seen[ref] {
 			return
 		}

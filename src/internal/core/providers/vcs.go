@@ -16,9 +16,13 @@ import (
 // runEnv runs argv with an overlaid env (nil = inherit), returning stdout, stderr,
 // and the exit code (-1 on a non-exit failure).
 func runEnv(timeout time.Duration, env []string, argv ...string) (string, string, int) {
+	prog, err := program(argv[0])
+	if err != nil {
+		return "", err.Error(), -1
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	cmd := exec.CommandContext(ctx, prog, argv[1:]...)
 	if env != nil {
 		cmd.Env = env
 	}
@@ -182,7 +186,11 @@ func (g GitHub) sshLogin(t Target) string {
 	if t.KnownHosts != "" {
 		args = append(args, "-o", "UserKnownHostsFile="+t.KnownHosts)
 	}
-	args = append(args, "git@"+g.host())
+	dest, err := destArgs("git@" + g.host())
+	if err != nil {
+		return ""
+	}
+	args = append(args, dest...)
 	out, stderr, _ := runEnv(20*time.Second, nil, args...)
 	return greetedLogin(stderr + out)
 }

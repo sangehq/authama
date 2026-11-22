@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -85,10 +86,17 @@ type TransferView struct {
 const transferPreviewLines = 12
 
 func (tp transferPage) view(q url.Values) (TransferView, transfer.Options) {
-	o := transfer.Options{Include: q["part"], TermiusGroups: q.Get("termius_groups"), IncludeGit: q.Get("include_git") == "1",
+	o := transfer.Options{Include: q["part"], TermiusGroups: encode.TermiusGroupsProfile, IncludeGit: q.Get("include_git") == "1",
 		Version: version.Version, Now: tp.s.now()}
-	if o.TermiusGroups == "" {
-		o.TermiusGroups = encode.TermiusGroupsProfile
+	// Only a scheme of the list goes on, as the list's own string: nothing of
+	// the query is echoed into the zip.
+	problem := ""
+	if raw := q.Get("termius_groups"); raw != "" {
+		if scheme, ok := encode.TermiusGroupsScheme(raw); ok {
+			o.TermiusGroups = scheme
+		} else {
+			problem = "No Termius group scheme " + strconv.Quote(raw) + ": choose one of " + strings.Join(encode.TermiusGroupSchemes, ", ") + "."
+		}
 	}
 	chosen := map[string]bool{}
 	want := o.Include
@@ -102,7 +110,7 @@ func (tp transferPage) view(q url.Values) (TransferView, transfer.Options) {
 		MinPass: agepass.MinPassphrase, MaxUpload: fmt.Sprintf("%d KiB", maxTransferUpload>>10),
 		PackCmd:    brand.Command + " export pack --include " + strings.Join(want, ",") + " --termius-groups " + o.TermiusGroups,
 		EncryptCmd: brand.Command + " setup export --encrypt --out setup.age",
-		ImportCmd:  brand.Command + " setup import FILE --dry-run"}
+		ImportCmd:  brand.Command + " setup import FILE --dry-run", Problem: problem}
 	for _, p := range transfer.Parts {
 		v.Parts = append(v.Parts, TransferPart{Part: p, Checked: chosen[p.ID]})
 	}
@@ -120,7 +128,7 @@ func (tp transferPage) view(q url.Values) (TransferView, transfer.Options) {
 
 func (tp transferPage) handle(w http.ResponseWriter, r *http.Request) {
 	v, o := tp.view(r.URL.Query())
-	if r.URL.Query().Get("preview") == "1" {
+	if r.URL.Query().Get("preview") == "1" && v.Problem == "" {
 		files, err := transfer.Build(tp.s.opts.Engine.Home(), o)
 		if err != nil {
 			v.Problem = err.Error()
@@ -156,7 +164,11 @@ func previewFile(f transfer.File) TransferFile {
 
 // handlePack downloads the pack. It holds no secret and writes nothing.
 func (tp transferPage) handlePack(w http.ResponseWriter, r *http.Request) {
-	_, o := tp.view(r.URL.Query())
+	v, o := tp.view(r.URL.Query())
+	if v.Problem != "" {
+		tp.s.renderError(w, r, http.StatusBadRequest, "The export could not be made", v.Problem)
+		return
+	}
 	files, err := transfer.Build(tp.s.opts.Engine.Home(), o)
 	if err != nil {
 		tp.s.renderError(w, r, http.StatusBadRequest, "The export could not be made", err.Error())

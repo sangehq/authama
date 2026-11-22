@@ -467,7 +467,8 @@ func audit(p paths.Paths, mv Move, from, to string) {
 func findMisplaced(p paths.Paths, m *manifest.Manifest, ref manifest.KeyRef) string {
 	want := filepath.Dir(m.KeyPath(p.SSHDir, ref))
 	for _, f := range manifest.GlobKeyTree(p.SSHDir, manifest.KeyRoot(m), ref.KeyName) {
-		if filepath.Base(filepath.Dir(f)) == ref.Profile && filepath.Dir(f) != want {
+		f = inside(p.SSHDir, f)
+		if f != "" && filepath.Base(filepath.Dir(f)) == ref.Profile && filepath.Dir(f) != want {
 			if fi, err := os.Lstat(f); err == nil && fi.Mode().IsRegular() {
 				return f
 			}
