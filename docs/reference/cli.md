@@ -74,6 +74,9 @@ Every command also takes the global flag:
   - [`authama settings show`](#authama-settings-show) - Print authama.json, or with --effective every setting's value and where it came from
   - [`authama settings unset`](#authama-settings-unset) - Take one setting out of authama.json, so it goes back to its default
   - [`authama settings validate`](#authama-settings-validate) - Check authama.json (or FILE) against the schema, and .env's syntax and permissions
+- [`authama setup`](#authama-setup) - Export this setup to another machine, or import one (secrets-free, or encrypted with keys and tokens)
+  - [`authama setup export`](#authama-setup-export) - Write this setup as a secrets-free document, or (--encrypt) everything, keys and tokens included
+  - [`authama setup import`](#authama-setup-import) - Merge a setup document or an encrypted full export into this home, after showing what it would do
 - [`authama ssh`](#authama-ssh) - SSH keys, profiles, hosts, config and trust
   - [`authama ssh audit`](#authama-ssh-audit) - Deployment, expiry, and hygiene report
   - [`authama ssh bundle`](#authama-ssh-bundle) - Write an encrypted backup of keys + state (read back with restore)
@@ -1467,6 +1470,81 @@ Examples:
 ```sh
   authama settings validate
   authama settings validate ./authama.json
+```
+
+## authama setup
+
+Move a whole setup between machines.
+
+`setup export` writes a setup document: the manifest, providers, settings (without
+this machine's paths) and token config - the names of the variables tokens come from,
+never a value. It is JSON, safe to read and to keep in a repository.
+
+`setup export --encrypt` writes a full export: the same, plus every private key, the
+inventory and the token values, in an age file encrypted with a passphrase (`age -d`
+opens it too). It needs the owner PIN when one is set.
+
+`setup import` reads either, shows what it would add, keep and replace, and merges it
+into this home. --on-conflict settles what differs: keep (the default) leaves what is
+here, replace takes the import's - keeping a copy of every key file and .env it
+replaces in the state home's replaced/ folder - and fail writes nothing.
+
+```
+authama setup
+```
+
+Subcommands:
+
+- [`export`](#authama-setup-export) - Write this setup as a secrets-free document, or (--encrypt) everything, keys and tokens included
+- [`import`](#authama-setup-import) - Merge a setup document or an encrypted full export into this home, after showing what it would do
+
+## authama setup export
+
+Write this setup as a secrets-free document, or (--encrypt) everything, keys and tokens included.
+
+```
+authama setup export [flags]
+```
+
+Examples:
+
+```sh
+  authama setup export --out setup.json
+  authama setup export --encrypt --out ~/Desktop/setup.age
+```
+
+Flags:
+
+```
+      --encrypt[=true|false]     a full export: private keys, inventory and token values too, encrypted with a passphrase
+  -o, --out string               write to this file (mode 0600) instead of stdout; required with --encrypt, and never replaced
+      --passphrase-file string   read the passphrase from this owner-only file instead of asking
+```
+
+## authama setup import
+
+Merge a setup document or an encrypted full export into this home, after showing what it would do.
+
+```
+authama setup import FILE [flags]
+```
+
+Examples:
+
+```sh
+  authama setup import setup.json --dry-run
+  authama setup import setup.age --on-conflict replace
+  authama setup import setup.age --on-conflict fail --passphrase-file ~/.setup-pass
+```
+
+Flags:
+
+```
+      --allow-risky-options[=true|false]   import a manifest that sets SSH options that could redirect or weaken connections (you made it yourself)
+      --dry-run[=true|false]               show what the import would add, keep and replace; write nothing
+      --on-conflict string                 what differs from this home: keep (leave it), replace (take the import's, keeping a copy), fail (write nothing) (default "keep")
+      --passphrase-file string             an encrypted export: read its passphrase from this owner-only file instead of asking
+  -y, --yes[=true|false]                   import without confirming (implied when there is no terminal)
 ```
 
 ## authama ssh

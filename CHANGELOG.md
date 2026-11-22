@@ -33,6 +33,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   its link. `sign set` edits the block and applies it, `sign status` shows what each checkout resolves, `sign use`
   makes one checkout a profile's wherever it is, and `sign verify` checks recent commits against `allowed_signers`.
   Recipe: [Sign commits with each profile's SSH key](docs/recipes/sign-commits-with-ssh.md).
+- **Move a setup between machines** (`authama setup export` / `setup import`). The setup document is JSON with no
+  secret in it: the manifest, providers, settings (without this machine's `paths`) and token config, with the token
+  variables, profiles and keys named. `setup export --encrypt` writes a full export - the same plus every private
+  key, the inventory and the token values - as an age file encrypted with a passphrase (age's own scrypt format,
+  implemented with `golang.org/x/crypto`, so `age -d` opens it and no dependency was added); it asks for the owner
+  PIN. `setup import` reads either: `--dry-run` lists every item it would add, keep or replace, each config diff, and
+  each key path and token name (never a value); `--on-conflict keep|replace|fail` settles what differs, keeping
+  replaced key files and `.env` in `replaced/` first; keys land 0600 in 0700 folders; risky SSH options are refused
+  unless `--allow-risky-options`; the import is recorded in the history. The web UI's **History → Move setup**
+  (`/setup`, `g m`) downloads the document and imports a pasted one through the preview; the full export stays at
+  the terminal. `ssh restore` given a full export points to `setup import`. Recipe:
+  [Move to a new machine](docs/recipes/move-to-a-new-machine.md).
 - **`authama ssh git clone OWNER/REPO [DIR]`** clones through the URL `git resolve` gives, and makes the checkout
   commit as the profile when it has a git identity.
 

@@ -32,6 +32,7 @@ import (
 
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/util/fs"
+	"github.com/sangehq/authama/src/internal/util/log"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
@@ -373,6 +374,10 @@ func Apply(p paths.Paths, pl Plan, now time.Time) (Result, error) {
 			return res, err
 		}
 		res.Removed = append(res.Removed, path)
+	}
+	if len(res.Written)+len(res.Removed) > 0 {
+		log.Audit(p.AuditLog(), "git.sign.apply", log.Field{Key: "written", Value: len(res.Written)},
+			log.Field{Key: "removed", Value: len(res.Removed)}, log.Field{Key: "signers", Value: len(pl.Signers)})
 	}
 	return res, nil
 }

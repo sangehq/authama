@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/services/bundler"
 	"github.com/sangehq/authama/src/internal/services/keystore"
@@ -88,6 +89,10 @@ func newRestoreCmd() *cobra.Command {
 			p, err := resolvePaths(c)
 			if err != nil {
 				return err
+			}
+			if agepassIsPassphraseFile(args[0]) {
+				return fmt.Errorf("%s is a full setup export, encrypted with a passphrase: import it with `%s setup import %s`",
+					args[0], brand.Command, args[0])
 			}
 			lockForMutation(p)
 			ident := identity

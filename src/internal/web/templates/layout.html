@@ -146,7 +146,7 @@
                   {{template "navmenuitem" (navItem . "security" "/security" "user-shield" "Owner & PIN")}}
                 </div>
               </li>
-              <li class="nav-item dropdown{{if eq .Nav "history" "events" "snapshots" "export"}} active{{end}}">
+              <li class="nav-item dropdown{{if eq .Nav "history" "events" "snapshots" "export" "setup"}} active{{end}}">
                 <a class="nav-link dropdown-toggle" href="#navbar-history" id="navbar-history" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false" data-tour="5" data-tour-title="History" data-tour-text="What happened: every change authama made, and every file event under ~/.ssh, the config home and the token files. Snapshots of ~/.ssh and Export are here too."{{desc "nav-history"}}><span class="nav-link-icon nav-glyph text-{{navColour "history"}} d-md-none d-lg-inline-block">{{icon "clock"}}</span><span class="nav-link-title">History</span></a>
                 <div class="dropdown-menu" aria-labelledby="navbar-history">
                   <span class="dropdown-header">Record</span>
@@ -155,6 +155,7 @@
                   <span class="dropdown-header">Backups</span>
                   {{template "navmenuitem" (navItem . "snapshots" "/snapshots" "archive" "Snapshots")}}
                   {{if not .HideExport}}{{template "navmenuitem" (navItem . "export" "/export" "file-export" "Export")}}{{end}}
+                  {{template "navmenuitem" (navItem . "setup" "/setup" "stack-2" "Move setup")}}
                 </div>
               </li>
               <li class="nav-item dropdown{{if eq .Nav "doctor" "validate" "repair" "settings" "reset"}} active{{end}}">

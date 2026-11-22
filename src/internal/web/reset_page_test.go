@@ -79,7 +79,7 @@ func TestTheMainMenuGroupsPagesByWhatTheyAreAbout(t *testing.T) {
 			"/jobs/review?action=rotate-keys", "/jobs/review?action=revoke-keys", "/jobs/review?action=delete-keys"},
 		"tokens":   {"/tokens", "/checklists?show=tokens", "/tokens#add-token"},
 		"security": {"/audit", "/checklists", "/security"},
-		"history":  {"/history", "/events", "/snapshots", "/export"},
+		"history":  {"/history", "/events", "/snapshots", "/export", "/setup"},
 		"system":   {"/doctor", "/validate", "/repair", "/settings", "/reset"},
 		"new":      {"/hosts#add-host", "/tokens#add-token", "/keys#mint-keys"},
 		"user":     {"/about"},

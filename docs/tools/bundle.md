@@ -5,6 +5,9 @@ authama ssh bundle [--recipient age1...] [--output DIR] [--keep N]
 authama ssh restore <bundle.age> [--identity age-identity.txt]
 ```
 
+For moving to a new machine with a passphrase instead of an age key - token values included - see
+[setup](setup.md).
+
 Uses **age** (X25519 + ChaCha20-Poly1305) - modern, single-binary, far simpler
 than GPG. Install it first: `brew install age` (macOS) / `apt install age` (Linux).
 

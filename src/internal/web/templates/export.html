@@ -5,7 +5,7 @@
      through /exports/run?preview=1. Without it, the page lists each list's
      download. */}}
 {{define "content"}}{{with .Data}}
-{{template "page_header" (header "Export" "Export" "Any list as CSV, TSV, JSON, YAML, a PHP or JavaScript array, Markdown or HTML, and hosts as ssh_config or for an SSH client: filtered, with the columns you choose. Nothing here holds a secret.")}}
+{{template "page_header" (header "Export" "Export" "Any list as CSV, TSV, JSON, YAML, a PHP or JavaScript array, Markdown or HTML, and hosts as ssh_config or for an SSH client: filtered, with the columns you choose. Nothing here holds a secret." (action "Move setup" "/setup" "stack-2" | withTip "setup"))}}
 <div class="export-page" data-export-page data-run="{{u "/exports/run"}}" data-command="{{brandCommand}}" data-saved-url="{{u "/api/export/selections"}}" data-compare-url="{{u "/exports/compare"}}">
   <div class="card">
     <div class="card-header export-header">

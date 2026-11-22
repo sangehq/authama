@@ -98,6 +98,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newRepairCmd())
 	root.AddCommand(newResetCmd())
 	root.AddCommand(newExportCmd())
+	root.AddCommand(newSetupCmd())
 	root.AddCommand(newAPICmd())
 	root.AddCommand(newWebhookCmd())
 	root.AddCommand(newMCPCmd())

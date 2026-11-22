@@ -163,6 +163,19 @@ test('the Termius import regroups its preview as a scheme is picked, and downloa
   await expect(page.locator('[data-copy*="--termius-groups category/profile/env"]').first()).toBeAttached();
 });
 
+test('Move setup downloads a document with no secret, and previews a pasted import before writing', async ({ page }) => {
+  await page.goto('/setup');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Move setup');
+  const res = await page.request.get('/setup/export.json');
+  expect(res.ok()).toBeTruthy();
+  const doc = await res.json();
+  expect(doc.format).toBe('authama-setup');
+  expect(doc.secrets).toBe(false);
+  await page.locator('#setup-body').fill(JSON.stringify(doc));
+  await page.getByRole('button', { name: 'Preview the import' }).click();
+  await expect(page.getByText(/nothing to change|already the same/).first()).toBeVisible();
+});
+
 test('tokens.json is checked as it is typed, and cannot be sent while it is not JSON', async ({ page }) => {
   await page.goto('/tokens');
   await page.getByRole('button', { name: 'Edit tokens.json' }).click();

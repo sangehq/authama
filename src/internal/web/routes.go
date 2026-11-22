@@ -66,6 +66,8 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /settings", sp.handleSettings)
 	mux.HandleFunc("GET /ssh-config", sp.handleSSHConfig)
 	mux.HandleFunc("GET /termius", termiusPage{s}.handleTermius)
+	mux.HandleFunc("GET /setup", setupPage{s}.handleSetup)
+	mux.HandleFunc("GET /setup/export.json", setupPage{s}.handleExport)
 	mux.HandleFunc("GET /events", sp.handleEvents)
 	mux.HandleFunc("GET /about", sp.handleAbout)
 	mux.HandleFunc("GET /export", exportAPI{s}.handlePage)

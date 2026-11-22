@@ -85,6 +85,7 @@ var actionFields = map[string][]string{
 	"token-init":              {"t_composer", "t_npm", "t_docker", "t_git", "t_netrc", "t_pypi", "t_cargo", "t_gem", "t_gradle", "t_maven", "t_yarn", "t_helm", "t_helm-oci", "t_gh"},
 	"token-import":            {},
 	"token-config-edit":       {"body"},
+	"setup-import":            {"body", "on_conflict"},
 	"key-lifetime":            {"key", "lifetime"},
 	"key-regen-pub":           {"key", "profile", "all"},
 	"ssh-import":              {"source", "replace"},
@@ -589,6 +590,8 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		var err error
 		ch, err = namingChange(action, f, h)
 		errs = append(errs, err)
+	case "setup-import":
+		ch, errs = setupImportChange(f, errs)
 	case "token-config-edit":
 		body := f.Get("body")
 		switch {
