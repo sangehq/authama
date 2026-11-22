@@ -196,6 +196,15 @@ Things that work differently after this release, and what to do if one affects y
 
 ### Fixed
 
+- **Times on the pages read in this machine's zone.** The Structure page's last check, the overview, History
+  and the other pages showed UTC; they now show local time with the zone named (2026-11-22 15:10 EST).
+- **`ssh list` lines its columns up** across every profile, and no line ends in padding.
+- **Host-format zips are dated when exported.** A client export that is a zip (remmina's) dated its files
+  1980; each file now carries the export's time, as the export pack's already did.
+- **`setup export` counts every key the setup uses.** It listed only the keys a profile declares by name, so
+  a home whose keys come from its hosts said `0 key(s) named`; the document now lists each host's key too,
+  once each, and the line reads `N key(s), listed by name only (no key files)`.
+- **Saved selection names on /export read in full**: each takes its own row in the side panel.
 - **Name checks on /api-tokens and /webhooks work in the browser.** Their name fields' `pattern` was invalid
   under the v flag browsers compile it with, so the browser ignored it and only the server checked; a test now
   compiles every template pattern that way. A long saved selection name on /export is cut with an ellipsis

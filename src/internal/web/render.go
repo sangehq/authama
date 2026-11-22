@@ -140,7 +140,7 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		"brandCommand": func() string { return brand.Command },
 		"brandDocsURL": func() string { return brand.DocsURL },
 		"cmdline":      brand.Line,
-		"when":         func(t time.Time) string { return t.UTC().Format("2006-01-02 15:04 UTC") },
+		"when":         func(t time.Time) string { return whenIn(t, time.Local) },
 		// consoleLines reads a job's output into status, subject and text.
 		"consoleLines": consoleLines,
 		"itemTally":    itemTally,
@@ -174,7 +174,7 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		},
 		"stamp": func(s string) string {
 			if t, err := time.Parse(history.TimeFormat, s); err == nil {
-				return t.UTC().Format("2006-01-02 15:04:05 UTC")
+				return stampIn(t, time.Local)
 			}
 			return s
 		},
@@ -973,4 +973,15 @@ type crumb struct {
 // panelFooter is a panel form's footer.
 type panelFooter struct {
 	Command, Label, Style, Icon string
+}
+
+// whenIn is a moment as this machine's clock reads it, with the zone named
+// (2026-11-22 15:10 EST): the server runs on the machine whose owner reads it.
+func whenIn(t time.Time, loc *time.Location) string {
+	return t.In(loc).Format("2006-01-02 15:04 MST")
+}
+
+// stampIn is whenIn to the second, for a recorded operation's start.
+func stampIn(t time.Time, loc *time.Location) string {
+	return t.In(loc).Format("2006-01-02 15:04:05 MST")
 }

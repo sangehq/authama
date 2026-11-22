@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 )
 
 // fakeSource stands in for the manifest: it keeps or skips hosts by the same
@@ -98,7 +99,7 @@ func TestEveryClientFormatUsesItsClientsWriter(t *testing.T) {
 		if !strings.Contains(strings.Join(exp.Skipped, "\n"), "gh: git") {
 			t.Errorf("%s: a git host was kept without IncludeGit: %v", pn, exp.Skipped)
 		}
-		b, err := Bundle(f, exp)
+		b, err := Bundle(f, exp, time.Now())
 		if err != nil || len(b) == 0 {
 			t.Errorf("%s: bundle: %v", pn, err)
 		}
@@ -143,7 +144,7 @@ func TestSSHConfigFormatIsTheSourcesConfig(t *testing.T) {
 }
 
 // Remmina writes a file per host, so its single download is a zip holding
-// each under its own name, even for one host.
+// each under its own name, even for one host, dated when it was exported.
 func TestRemminaBundlesIntoAZip(t *testing.T) {
 	f, _ := Get("remmina")
 	for _, aliases := range [][]string{{"web"}, {"web", "gh"}} {
@@ -151,13 +152,19 @@ func TestRemminaBundlesIntoAZip(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		b, err := Bundle(f, exp)
+		at := time.Date(2026, 11, 22, 20, 10, 5, 0, time.UTC)
+		b, err := Bundle(f, exp, at)
 		if err != nil {
 			t.Fatal(err)
 		}
 		zr, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
 		if err != nil {
 			t.Fatal(err)
+		}
+		for _, zf := range zr.File {
+			if !zf.Modified.Equal(at) {
+				t.Errorf("%s is dated %s, not the export's %s", zf.Name, zf.Modified, at)
+			}
 		}
 		if len(zr.File) != len(aliases) || zr.File[0].Name != "authama-web.remmina" {
 			t.Errorf("zip holds %d files, first %q", len(zr.File), zr.File[0].Name)
@@ -166,7 +173,7 @@ func TestRemminaBundlesIntoAZip(t *testing.T) {
 			t.Errorf("file name = %s", FileName(f, exp, "authama-hosts"))
 		}
 	}
-	if _, err := Bundle(f, &ClientExport{Files: []ClientFile{{Name: "../x", Data: []byte("x")}}}); err == nil {
+	if _, err := Bundle(f, &ClientExport{Files: []ClientFile{{Name: "../x", Data: []byte("x")}}}, time.Now()); err == nil {
 		t.Error("a file name with a path went into the zip")
 	}
 }

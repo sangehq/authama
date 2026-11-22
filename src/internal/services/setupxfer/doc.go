@@ -60,7 +60,8 @@ type Doc struct {
 	// EnvNames are the environment variables the setup reads tokens from.
 	EnvNames []string `json:"env_names,omitempty"`
 	// Profiles and Keys list what the manifest declares, for the reader:
-	// the document carries none of the keys.
+	// every key a profile names or one of its hosts uses, as profile/name.
+	// The document carries none of the keys.
 	Profiles []string `json:"profiles,omitempty"`
 	Keys     []string `json:"keys,omitempty"`
 }
@@ -112,9 +113,7 @@ func Build(p paths.Paths, version string, now time.Time) (Doc, error) {
 	if m, err := manifest.Load(p.Manifest()); err == nil {
 		for _, name := range m.ProfileNames() {
 			d.Profiles = append(d.Profiles, name)
-			for _, k := range m.Profiles[name].Keys {
-				d.Keys = append(d.Keys, name+"/"+k.Name)
-			}
+			d.Keys = append(d.Keys, profileKeys(m, name)...)
 		}
 	}
 	return d, nil
@@ -244,4 +243,28 @@ func (d Doc) Risky() []manifest.RiskyOption {
 	}
 	r, _ := manifest.RiskyOptionsInJSON(d.Manifest)
 	return r
+}
+
+// profileKeys is every key profile name uses, once each as profile/key: the
+// keys it declares, then each host's (its own, the profile's shared one, or
+// the name derived from its alias).
+func profileKeys(m *manifest.Manifest, name string) []string {
+	var out []string
+	seen := map[string]bool{}
+	add := func(k string) {
+		if k != "" && !seen[k] {
+			seen[k] = true
+			out = append(out, name+"/"+k)
+		}
+	}
+	prof := m.Profiles[name]
+	for _, k := range prof.Keys {
+		add(k.Name)
+	}
+	for _, h := range prof.Hosts {
+		if k, err := m.ResolvedKeyName(name, h); err == nil {
+			add(k)
+		}
+	}
+	return out
 }

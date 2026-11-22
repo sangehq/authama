@@ -623,16 +623,16 @@ export class ExportPage extends Component {
     this.#part("saved").replaceChildren(...list.map((s) => {
       const where = s.store === "manifest" ? "manifest" : "mine";
       const note = s.error ? `Cannot be read: ${s.error}` : s.shadowed ? "Hidden by your own of the same name" : "";
-      // The name sits in its own block span: a button centres content that
-      // overflows it, so truncating the button itself clipped both ends.
-      const open = El.create("button").cls("btn btn-link p-0 justify-content-start overflow-hidden flex-fill").prop("type", "button")
+      // The name takes its own row, in a block span: a button centres content
+      // that overflows it, so truncating the button itself clipped both ends.
+      const open = El.create("button").cls("btn btn-link p-0 justify-content-start overflow-hidden export-saved-name").prop("type", "button")
         .prop("disabled", Boolean(s.error) || Boolean(s.shadowed)).attr("aria-description", note || `Open ${s.name}`)
         .attr("data-tip", s.name).append(El.create("span").cls("d-block text-truncate").text(s.name))
         .on("click", () => this.#openSaved(s));
       const item = El.create("div").cls("list-group-item").attr("data-saved", s.name).append(
         open,
         El.create("span").cls(`badge ${s.store === "manifest" ? "badge-info" : "badge-muted"}`).text(where),
-        El.create("span").cls("text-secondary small").text(s.selection?.grain ?? ""),
+        El.create("span").cls("text-secondary small me-auto").text(s.selection?.grain ?? ""),
       );
       if (note) {
         item.append(El.create("span").cls("badge badge-warning").attr("aria-description", note).text(s.error ? "unreadable" : "hidden"));

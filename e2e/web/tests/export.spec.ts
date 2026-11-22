@@ -117,6 +117,23 @@ test('Saved selections: save, open, compare, and delete; the manifest goes throu
   await expect(page.getByText('export selections save e2e-shared').first()).toBeVisible();
 });
 
+test('a saved selection\'s name reads in full in the side panel', async ({ page }) => {
+  await page.goto('/export');
+  const exp = page.locator('[data-export-page]');
+  await expect(exp.getByRole('region', { name: 'Preview of the first rows' }).locator('tbody tr').first()).toBeVisible();
+  const saved = exp.getByRole('group', { name: 'Saved selections' });
+  const name = 'e2e-production-web-hosts';
+  await saved.getByLabel('A name to save this selection as').fill(name);
+  await saved.getByRole('button', { name: 'Save', exact: true }).click();
+  const open = saved.getByRole('button', { name, exact: true });
+  await expect(open).toBeVisible();
+  // Not cut: the name's text fits the width it is given.
+  const fit = await open.locator('span').evaluate((e) => ({ scroll: e.scrollWidth, client: e.clientWidth }));
+  expect(fit.scroll).toBeLessThanOrEqual(fit.client);
+  await saved.getByRole('button', { name: `Delete ${name} (mine)` }).click();
+  await expect(open).toHaveCount(0);
+});
+
 test('Add column groups related fields', async ({ page }) => {
   await page.goto('/export');
   const exp = page.locator('[data-export-page]');

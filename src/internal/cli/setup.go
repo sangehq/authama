@@ -79,7 +79,7 @@ func newSetupExportCmd() *cobra.Command {
 				if err := fs.WriteTextAtomic(out, string(body), 0o600); err != nil {
 					return err
 				}
-				_, _ = fmt.Fprintf(c.OutOrStdout(), "wrote %s: %d profile(s), %d key(s) named (none carried), %d token variable(s) named (no values)\n",
+				_, _ = fmt.Fprintf(c.OutOrStdout(), "wrote %s: %d profile(s); %d key(s), listed by name only (no key files); %d token variable(s), names only (no values)\n",
 					out, len(d.Profiles), len(d.Keys), len(d.EnvNames))
 				if signKey != "" {
 					if err := signWritten(c, p, out, signKey); err != nil {

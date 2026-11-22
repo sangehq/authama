@@ -221,7 +221,7 @@ func hostFile(p paths.Paths, format string, o Options) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return encode.Bundle(f, exp)
+	return encode.Bundle(f, exp, o.Now)
 }
 
 // ClientFormats are the SSH client formats the ssh-clients part writes, as

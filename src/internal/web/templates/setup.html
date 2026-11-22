@@ -11,7 +11,7 @@
           <li>{{if .Providers}}the providers{{else}}<span class="text-secondary">no providers.json</span>{{end}}, {{if .Settings}}the settings (without this machine's paths){{else}}<span class="text-secondary">no settings file</span>{{end}} and {{if .Tokens}}the token config{{else}}<span class="text-secondary">no token config</span>{{end}}</li>
           <li>the names of <strong>{{len .EnvNames}}</strong> variable(s) tokens are read from{{if .EnvNames}}: {{range $i, $n := .EnvNames}}{{if $i}}, {{end}}<code>{{$n}}</code>{{end}}{{end}}</li>
         </ul>
-        <p class="text-secondary small">It carries no private key and no token value. The {{len .Keys}} key(s) the manifest declares are listed by name only; on the new machine <code>authama ssh reconcile</code> makes them, or the encrypted export brings them.</p>
+        <p class="text-secondary small">It carries no private key and no token value. The {{len .Keys}} key(s) the setup uses, its profiles' and its hosts', are listed by name only; on the new machine <code>authama ssh reconcile</code> makes them, or the encrypted export brings them.</p>
         <a class="btn btn-primary" href="{{u .Download}}" download{{desc "setup-download"}}>{{icon "download"}}<span class="ms-1">Download the setup document</span></a>
         {{template "command_line" .ExportCmd}}
       </div>

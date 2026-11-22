@@ -16,7 +16,7 @@
     <dl class="row mb-2">
       <dt class="col-sm-4">Made</dt><dd class="col-sm-8">{{.ExportedAt}}{{if .Authama}} by {{.Authama}}{{end}}</dd>
       <dt class="col-sm-4">Profiles</dt><dd class="col-sm-8">{{if .Profiles}}{{range $i, $n := .Profiles}}{{if $i}}, {{end}}<code>{{$n}}</code>{{end}}{{else}}<span class="text-secondary">none</span>{{end}}</dd>
-      <dt class="col-sm-4">Keys declared</dt><dd class="col-sm-8">{{len .Keys}}</dd>
+      <dt class="col-sm-4">Keys (names only)</dt><dd class="col-sm-8">{{len .Keys}}</dd>
       <dt class="col-sm-4">Token variables</dt><dd class="col-sm-8">{{if .EnvNames}}{{range $i, $n := .EnvNames}}{{if $i}}, {{end}}<code>{{$n}}</code>{{end}}{{else}}<span class="text-secondary">none</span>{{end}}</dd>
     </dl>
     {{end}}

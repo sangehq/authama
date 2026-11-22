@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 // Host formats write host rows as an SSH client or ssh itself imports them,
@@ -169,7 +170,7 @@ func TableNames() []string {
 // Bundle is an export as one file: its only file as it is, or, for a format
 // that writes a file per host (its extension is zip), every file in a zip
 // under its own name.
-func Bundle(f Format, exp *ClientExport) ([]byte, error) {
+func Bundle(f Format, exp *ClientExport, now time.Time) ([]byte, error) {
 	if f.Extension != "zip" {
 		if len(exp.Files) != 1 {
 			return nil, fmt.Errorf("encode: %s wrote %d files", f.Name, len(exp.Files))
@@ -182,7 +183,7 @@ func Bundle(f Format, exp *ClientExport) ([]byte, error) {
 		if f.Name != filepath.Base(f.Name) || strings.ContainsAny(f.Name, `\:`) {
 			return nil, fmt.Errorf("encode: unsafe file name %q", f.Name)
 		}
-		w, err := zw.Create(f.Name)
+		w, err := zw.CreateHeader(&zip.FileHeader{Name: f.Name, Method: zip.Deflate, Modified: now})
 		if err != nil {
 			return nil, err
 		}

@@ -18,7 +18,8 @@ func TestSetupExportImportDocument(t *testing.T) {
 	run(t, "ssh", "host", "add", "work", "web", "-H", "web.example.test", "-u", "deploy")
 	doc := filepath.Join(t.TempDir(), "setup.json")
 	out := run(t, "setup", "export", "--out", doc)
-	if !strings.Contains(out, "1 profile(s)") {
+	// The host's key counts, though the profile declares none by name.
+	if !strings.Contains(out, "1 profile(s); 1 key(s), listed by name only (no key files)") {
 		t.Fatalf("export:\n%s", out)
 	}
 	if fi, err := os.Stat(doc); err != nil || (runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600) {

@@ -260,7 +260,7 @@ func (x exportAPI) run(w http.ResponseWriter, r *http.Request, sel selection.Sel
 			x.fail(w, http.StatusBadRequest, err)
 			return
 		}
-		data, err := encode.Bundle(f, exp)
+		data, err := encode.Bundle(f, exp, x.s.now())
 		if err != nil {
 			x.fail(w, http.StatusInternalServerError, err)
 			return

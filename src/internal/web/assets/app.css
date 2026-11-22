@@ -269,7 +269,10 @@ main:focus { outline: none; }
 .export-steps:empty { display: none; }
 .export-saved:empty { display: none; }
 .export-compare-side { max-height: 16rem; overflow-y: auto; }
-.export-saved .list-group-item { display: flex; align-items: center; gap: .5rem; }
+.export-saved .list-group-item { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .5rem; }
+/* The name has its own row, the whole width of the narrow side panel, so it
+   reads in full; its store, grain and buttons sit on the row under it. */
+.export-saved .export-saved-name { flex: 1 0 100%; min-width: 0; }
 .export-steps .list-group-item::before { align-self: flex-start; padding-top: .25rem; }
 .export-steps textarea { min-height: 4.5rem; }
 

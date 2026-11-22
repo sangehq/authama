@@ -8,6 +8,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -331,7 +332,7 @@ func runHostExport(c *cobra.Command, p paths.Paths, ds *dataset.Dataset, sel sel
 	if err != nil {
 		return err
 	}
-	data, err := encode.Bundle(f, exp)
+	data, err := encode.Bundle(f, exp, time.Now())
 	if err != nil {
 		return err
 	}
