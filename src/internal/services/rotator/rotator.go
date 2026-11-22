@@ -135,8 +135,6 @@ func revokeFlag(b bool) string {
 
 // Rotator rotates keys.
 type Rotator struct {
-	// direct is Direct: the manifest's hostname instead of the alias's route.
-	direct bool
 	// results is what the last RotateEach did, key by key.
 	results []RunResult
 	p       paths.Paths
@@ -155,17 +153,13 @@ type Rotator struct {
 	// outgoing key (rotate --evict-old, and --force unless --keep-old);
 	// unset, it keeps it, and stops while a host still accepts it.
 	EvictOld bool
+	// Direct connects to each host's hostname, user and port instead of its
+	// alias through the managed config (rotate --direct).
+	Direct bool
 }
 
 // Unattended makes the rotation's deploys run with nobody to answer a prompt,
 // writing their ssh output to w. The web UI rotates this way.
-// Direct connects to each host's hostname, user and port instead of its
-// alias through the managed config (rotate --direct).
-func (r *Rotator) Direct(on bool) *Rotator {
-	r.direct = on
-	return r
-}
-
 func (r *Rotator) Unattended(w io.Writer) *Rotator {
 	r.unattended = w
 	return r
@@ -209,14 +203,14 @@ func (r *Rotator) target(h manifest.Host, profile, pubPath, pubText, identPath s
 		PubkeyPath: pubPath, PubkeyText: pubText, TokenEnv: deref(h.TokenEnv),
 		IdentityPath: identPath, KnownHosts: filepath.Join(r.p.SSHDir, "known_hosts"),
 		IdentityAgent: r.agentFor(profile, identPath), Unattended: r.unattended,
-		ConfigFile: renderer.RouteConfig(r.m, r.p.SSHDir, r.p.StateDir(), platform.EmitUseKeychain(), r.direct),
+		ConfigFile: renderer.RouteConfig(r.m, r.p.SSHDir, r.p.StateDir(), platform.EmitUseKeychain(), r.Direct),
 	}
 }
 
 func (r *Rotator) unreachable(hosts []manifest.Host) []string {
 	var msgs []string
 	for _, h := range hosts {
-		if r.provider(h).Category() != "server" || (!r.direct && !renderer.RouteDirect(nil) && renderer.HasRoute(h)) {
+		if r.provider(h).Category() != "server" || (!r.Direct && !renderer.RouteDirect(nil) && renderer.HasRoute(h)) {
 			continue
 		}
 		st := netcheck.Check(h.Hostname, h.Port, h.RequiresVPN, deref(h.VPNName), deref(h.VPNURL), 4*time.Second, true)

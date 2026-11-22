@@ -289,7 +289,8 @@ func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, o rotateOpts)
 	if err := j.Step(); err != nil {
 		return err
 	}
-	r := rotator.New(p, m, inv).Direct(o.direct).Unattended(j)
+	r := rotator.New(p, m, inv).Unattended(j)
+	r.Direct = o.direct
 	r.EvictOld = o.evict
 	if !force {
 		r = r.WithManualStep(manualPaste(j))
@@ -354,7 +355,9 @@ func rollbackJob(j *jobs.Job, p paths.Paths, retain int, key string, direct bool
 	sum := newSummaryOf(j, "rollback", "authama ssh rollback "+profile+"/"+keyName,
 		"Hosts marked not rolled back still trust the newer key.")
 	sum.pending(profile+"/"+keyName, "rolling back")
-	report, err := rotator.New(p, m, inv).Direct(direct).Unattended(j).Rollback(key)
+	rb := rotator.New(p, m, inv).Unattended(j)
+	rb.Direct = direct
+	report, err := rb.Rollback(key)
 	if err != nil {
 		sum.show([]rotator.SummaryKey{{Ref: profile + "/" + keyName, Result: "not rolled back", Severity: 2,
 			Kind: rotator.Classify(err.Error()), Note: err.Error()}})
@@ -499,7 +502,8 @@ func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection,
 	}
 	mutation.SnapshotBeforeMutation(p, retain)
 	j.Plan(names)
-	r := rotator.New(p, m, inv).Direct(o.direct).Unattended(j)
+	r := rotator.New(p, m, inv).Unattended(j)
+	r.Direct = o.direct
 	r.EvictOld = o.evict
 	if !force {
 		// Forced, nothing stops to ask for a paste: a target that takes the
@@ -1190,7 +1194,8 @@ func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string, o rotateOpts) (e
 	if err != nil {
 		return err
 	}
-	r := rotator.New(p, m, inv).Direct(o.direct)
+	r := rotator.New(p, m, inv)
+	r.Direct = o.direct
 	r.EvictOld = o.evict
 	j.Plan(names)
 	var failed []string
