@@ -627,3 +627,20 @@ main:focus { outline: none; }
 [draggable="true"].structure-node { cursor: grab; }
 .structure-node.is-dragging { opacity: .5; }
 .structure-node.is-drop-target { outline: 2px dashed var(--tblr-primary); outline-offset: 2px; background: var(--tblr-primary-lt, rgba(32, 107, 196, .06)); }
+
+/* Phone width. A visually-hidden column label ("Actions") is absolutely
+   positioned; with no positioned ancestor inside the table's scroller it
+   escaped the scroll and widened the whole page sideways on a phone. */
+.table-responsive { position: relative; }
+/* A badge holding a long value (the build version on About) wraps instead
+   of widening the page. */
+dd .badge { white-space: normal; max-width: 100%; text-align: start; overflow-wrap: anywhere; }
+
+/* Contrast (axe, both themes). Muted text on the tinted header row of an
+   Export facet list, an error in a table cell in the dark theme, and the
+   selected Export tab in the dark theme were under 4.5:1. */
+.list-group-item.bg-body-tertiary .text-secondary { color: #5f5f5f !important; }
+[data-bs-theme="dark"] .list-group-item.bg-body-tertiary .text-secondary { color: #b3b3b3 !important; }
+[data-bs-theme="dark"] .page-body .text-danger { color: color-mix(in oklab, var(--tblr-danger) 60%, white) !important; }
+[data-bs-theme="dark"] .export-grains .nav-link.active,
+[data-bs-theme="dark"] .export-grains .nav-link[aria-selected="true"] { color: color-mix(in oklab, var(--tblr-primary) 55%, white); }
