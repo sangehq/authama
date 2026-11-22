@@ -33,6 +33,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   its link. `sign set` edits the block and applies it, `sign status` shows what each checkout resolves, `sign use`
   makes one checkout a profile's wherever it is, and `sign verify` checks recent commits against `allowed_signers`.
   Recipe: [Sign commits with each profile's SSH key](docs/recipes/sign-commits-with-ssh.md).
+- **Git identities in the web UI** (`/git-sign`: SSH → Git identities, `g g`). Each profile's email, name, signing
+  key and directories, set, changed or removed through the usual preview - the manifest diff and every line the
+  fragment, `allowed_signers` and the managed `~/.gitconfig` block gain or lose - and applied only on confirmation
+  (with the owner PIN when one is set). The page also applies pending identities, points checkouts elsewhere at a
+  profile (`sign use`), checks a checkout's identity and recent signatures, works out the URL and command for
+  `ssh git clone`, and shows `allowed_signers`. A read-only server shows the commands instead of forms.
 - **A visual structure builder in the web UI** (`/structure`: SSH → Structure, `g b`). The SSH folder as a tree -
   key root, categories, profiles with their keys and hosts - beside the keys found outside it. Each movable item has
   a menu of moves, and dragging a profile onto a category or a stray key onto a profile picks the same entry, so

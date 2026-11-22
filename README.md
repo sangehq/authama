@@ -123,7 +123,7 @@ else is in the [documentation index](#documentation).
 - [`rotate`](docs/tools/rotate.md) — zero-downtime staged rotation and rollback.
 - [`expiry`](docs/tools/expiry.md) — rotation age and scheduled reminders.
 - [`knownhosts`](docs/tools/knownhosts.md) — pinning host keys into the trust store.
-- [`git`](docs/tools/git.md) — checkouts' GitHub remotes in profile SSH, plain SSH or HTTPS mode; `git sign` to commit as each profile and sign with its SSH key; `git clone` through the profile's alias.
+- [`git`](docs/tools/git.md) — checkouts' GitHub remotes in profile SSH, plain SSH or HTTPS mode; `git sign` to commit as each profile and sign with its SSH key; `git clone` through the profile's alias; the same from the web UI's Git identities page.
 - [`vm`](docs/tools/vm.md) — local VMs as hosts, addressed through their hypervisor; configuring hypervisors, `vm sync`, `vm adopt-key`, keeping a key for later (`key reserve`).
 - [`export`](docs/tools/export.md) — `authama export <list>`: any list (hosts, keys, profiles, tokens, history, events, snapshots, deployments), filtered, with the columns you choose, in nine formats; and a flat `ssh_config`, a Termius CSV, or your hosts for Windows Terminal, iTerm2, PuTTY, Remmina or any CSV importer.
 - [`net`](docs/tools/network.md) — reachability and VPN-gated hosts.
@@ -138,7 +138,7 @@ else is in the [documentation index](#documentation).
 - [MCP server](docs/tools/mcp.md) — `authama mcp`, read-only tools for an AI client over stdio; off by default.
 - [`companion`](docs/tools/companion.md) — the handshake a companion tool such as sange reads: version, contract, capabilities, homes.
 - [`man`](docs/tools/man.md) — a manual page for every command, and the layout every `--help` shares.
-- [`serve`](docs/tools/serve.md) — the web UI: overview, hosts, keys, snapshots, auth tokens and history in a browser, with previewed changes.
+- [`serve`](docs/tools/serve.md) — the web UI: overview, hosts, keys, the folder structure, git identities, setup transfer, snapshots, auth tokens and history in a browser, with previewed changes.
 - [`recover`](docs/tools/recover.md) — break-glass when you are locked out.
 - [`tui`](docs/tools/tui.md) — the terminal menu, removed: where each of its entries went.
 

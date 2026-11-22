@@ -20,6 +20,7 @@ import (
 	"github.com/sangehq/authama/src/internal/core/tokens"
 	"github.com/sangehq/authama/src/internal/services/change"
 	"github.com/sangehq/authama/src/internal/services/editor"
+	"github.com/sangehq/authama/src/internal/services/gitsign"
 	"github.com/sangehq/authama/src/internal/services/history"
 	"github.com/sangehq/authama/src/internal/services/mutation"
 	"github.com/sangehq/authama/src/internal/services/snapshots"
@@ -176,7 +177,7 @@ func TestReadOnlyServesNoChangeAndShowsNoForm(t *testing.T) {
 			t.Errorf("read-only %s: %d, want 405", path, rec.Code)
 		}
 	}
-	for _, page := range []string{"/", "/profiles", "/naming", "/import", "/hosts", "/hosts/gh", "/keys", "/snapshots", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export", "/setup", "/structure"} {
+	for _, page := range []string{"/", "/profiles", "/naming", "/import", "/hosts", "/hosts/gh", "/keys", "/snapshots", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export", "/setup", "/structure", "/git-sign"} {
 		if strings.Contains(c.get(page).Body.String(), "/changes/preview") {
 			t.Errorf("read-only %s shows a change form", page)
 		}
@@ -291,8 +292,20 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 	}
 	// A loose key gives the structure page a suggestion to move and dismiss.
 	looseKey(t, p.SSHDir, "id_stray")
+	// A git identity whose fragment is out of date gives the git page its
+	// use and apply forms.
+	sandboxGitConfig(t)
+	if err := editor.New(p).SetProfileGit("work", &manifest.ProfileGit{Email: "me@work.example", Sign: true}); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(gitsign.Dir(p), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(gitsign.FragmentPath(p, "work"), []byte("# old\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	for _, page := range []string{"/", "/profiles", "/naming", "/import", "/hosts", "/hosts/gh", "/hosts/devbox", "/keys", "/snapshots",
-		"/snapshots/" + openable, "/keys/" + fixtureKey(t, c), "/keys/work/spare", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export", "/setup", "/structure"} {
+		"/snapshots/" + openable, "/keys/" + fixtureKey(t, c), "/keys/work/spare", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export", "/setup", "/structure", "/git-sign"} {
 		for _, m := range action.FindAllStringSubmatch(c.get(page).Body.String(), -1) {
 			seen[m[1]] = true
 			_, change := actionFields[m[1]]

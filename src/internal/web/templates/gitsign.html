@@ -1,0 +1,156 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "SSH" $.Title "Each profile commits as its own email and signs commits and tags with its own SSH key, in the directories you name. Every change shows the manifest diff and each line of the git files it writes before anything is written. No private key is read: git signs through ssh-keygen." (action "Keys" "/keys" "key" | withTip "gitsign-keys"))}}
+{{if .NoManifest}}
+<div class="card"><div class="card-body">{{template "empty" (empty "git-compare" "No manifest yet" "")}}</div></div>
+{{else}}
+<div class="row row-cards">
+  <div class="col-lg-8">
+    <div class="card mb-3" id="gitsign-status">
+      <div class="card-header"><h2 class="card-title">Applied</h2>
+        <div class="card-actions">{{if .NoIdentities}}<span class="badge badge-muted">no identities yet</span>{{else if .UpToDate}}<span class="badge badge-ok">up to date</span>{{else}}<span class="badge badge-warn">needs apply</span>{{end}}</div>
+      </div>
+      <div class="card-body">
+        <p class="mb-2">The includeIf lines live in one managed block of <code>{{.Global}}</code>; nothing else in that file changes, and a copy is kept before each change.</p>
+        {{if .NoIdentities}}<p class="text-secondary mb-0">No profile has a git identity yet: set one below, and it is applied with it.</p>{{else}}
+        {{if .Pending}}<p class="small text-secondary mb-1">An apply would write:</p><ul class="small">{{range .Pending}}<li><code>{{.}}</code></li>{{end}}</ul>{{end}}
+        {{range .Problems}}<div class="alert alert-warning py-2 mb-2" role="status">{{.}}</div>{{end}}
+        {{if $.ReadOnly}}{{template "command_line" .ApplyCmd}}{{else if not .UpToDate}}
+        {{template "change_open" $}}<input type="hidden" name="action" value="git-sign-apply">
+          <button type="submit" class="btn btn-primary"{{desc "gitsign-apply"}}>Preview the apply</button>
+        </form>{{end}}{{end}}
+      </div>
+    </div>
+
+    {{range .Profiles}}{{$prof := .}}
+    <div class="card mb-3" id="gitsign-{{.Name}}">
+      <div class="card-header">
+        <h2 class="card-title">{{icon "users"}}<span class="ms-1">{{.Name}}</span></h2>
+        <div class="card-actions d-flex gap-1">
+          {{if not .HasGit}}<span class="badge badge-muted">no git identity</span>
+          {{else}}{{if .Signs}}<span class="badge badge-ok">signs with {{.Key}}</span>{{else if .Sign}}<span class="badge badge-warn">signing waits for a key</span>{{else}}<span class="badge badge-muted">identity only</span>{{end}}
+          {{if .Applied}}<span class="badge badge-info">fragment written</span>{{else}}<span class="badge badge-warn">not applied</span>{{end}}{{end}}
+        </div>
+      </div>
+      <div class="card-body">
+        {{if .HasGit}}
+        <dl class="row mb-2 small">
+          <dt class="col-sm-3">Email</dt><dd class="col-sm-9"><code>{{.Email}}</code></dd>
+          <dt class="col-sm-3">Name</dt><dd class="col-sm-9">{{if .UserName}}{{.UserName}}{{else}}<span class="text-secondary">the global user.name</span>{{end}}</dd>
+          <dt class="col-sm-3">Directories</dt><dd class="col-sm-9">{{range .Dirs}}<code class="me-2">{{.}}</code>{{else}}<span class="text-secondary">none: checkouts join with Use below</span>{{end}}</dd>
+          <dt class="col-sm-3">Fragment</dt><dd class="col-sm-9"><code>{{.Fragment}}</code></dd>
+        </dl>
+        {{end}}
+        {{if not $.ReadOnly}}
+        <details{{if not .HasGit}} open{{end}}>
+          <summary class="fw-medium">{{if .HasGit}}Change the identity{{else}}Set a git identity{{end}}</summary>
+          {{template "change_open" $}}<input type="hidden" name="action" value="git-sign-set"><input type="hidden" name="profile" value="{{.Name}}">
+            <div class="row g-2 mt-1">
+              <div class="col-md-6"><label class="form-label" for="gs-email-{{.Name}}">Email</label><input class="form-control" type="email" id="gs-email-{{.Name}}" name="email" value="{{.Email}}" autocomplete="off" required></div>
+              <div class="col-md-6"><label class="form-label" for="gs-name-{{.Name}}">Name</label><input class="form-control" id="gs-name-{{.Name}}" name="user_name" value="{{.UserName}}" autocomplete="off" placeholder="the global user.name"></div>
+              <div class="col-md-6"><label class="form-label" for="gs-key-{{.Name}}">Key that signs</label>
+                <select class="form-select" id="gs-key-{{.Name}}" name="key">
+                  {{if .HasGitHub}}<option value=""{{if not .KeyChoice}} selected{{end}}>Its github.com host's key</option>{{end}}
+                  {{range .Keys}}<option value="{{.}}"{{if eq . $prof.KeyChoice}} selected{{end}}>{{.}}</option>{{end}}
+                </select></div>
+              <div class="col-md-6 d-flex align-items-end"><label class="form-check mb-2"><input class="form-check-input" type="checkbox" name="sign" value="1"{{if .Sign}} checked{{end}}><span class="form-check-label">Sign commits and tags</span></label></div>
+              <div class="col-12"><label class="form-label" for="gs-dirs-{{.Name}}">Directories, one per line</label>
+                <textarea class="form-control font-monospace small" id="gs-dirs-{{.Name}}" name="dirs" rows="2" spellcheck="false" autocomplete="off" placeholder="~/code/{{.Name}}/">{{.DirsText}}</textarea>
+                <small class="form-hint">Every checkout below one of these commits as {{.Name}}. Absolute, or starting with <code>~/</code>; a directory belongs to one profile only.</small></div>
+            </div>
+            <div class="d-flex gap-2 mt-3">
+              <button type="submit" class="btn btn-primary"{{desc "gitsign-set"}}>Preview</button>
+              {{if .HasGit}}<button type="submit" class="btn btn-ghost-danger" name="clear" value="1" formnovalidate{{desc "gitsign-set"}}>Remove the identity</button>{{end}}
+            </div>
+          </form>
+        </details>
+        {{if and .HasGit .Applied}}
+        <details class="mt-2">
+          <summary class="fw-medium">Use it in checkouts elsewhere</summary>
+          {{template "change_open" $}}<input type="hidden" name="action" value="git-sign-use"><input type="hidden" name="profile" value="{{.Name}}">
+            <label class="form-label mt-2" for="gs-use-{{.Name}}">Checkouts, one per line</label>
+            <textarea class="form-control font-monospace small" id="gs-use-{{.Name}}" name="checkouts" rows="2" spellcheck="false" autocomplete="off" required placeholder="~/src/dotfiles"></textarea>
+            <small class="form-hint">Each one includes this profile's fragment from its own config, in place of another profile's, wherever it is.</small>
+            <div class="mt-2"><button type="submit" class="btn btn-outline-primary"{{desc "gitsign-use"}}>Preview</button></div>
+          </form>
+        </details>
+        {{end}}
+        {{end}}
+      </div>
+    </div>
+    {{end}}
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card mb-3" id="gitsign-check">
+      <div class="card-header"><h2 class="card-title">Check a checkout</h2></div>
+      <div class="card-body">
+        {{if $.ReadOnly}}<p class="text-secondary">This server is read-only. Check at a terminal:</p>{{template "command_line" .StatusCmd}}
+        {{else}}
+        <form method="get" action="{{u "/git-sign"}}#gitsign-check">
+          <label class="form-label" for="gs-check">Checkout path</label>
+          <input class="form-control font-monospace" id="gs-check" name="check" value="{{.Check}}" autocomplete="off" required placeholder="~/code/work/app">
+          <label class="form-label mt-2" for="gs-n">Recent commits</label>
+          <input class="form-control" type="number" id="gs-n" name="n" min="1" max="200" value="{{if .CheckN}}{{.CheckN}}{{else}}10{{end}}">
+          <button type="submit" class="btn btn-outline-primary mt-2"{{desc "gitsign-check"}}>Check</button>
+        </form>
+        {{end}}
+        {{with .Checkout}}
+        <hr>
+        {{if not .Checkout}}<p class="text-secondary mb-0"><code>{{.Dir}}</code> is not a git checkout.</p>
+        {{else}}
+        <dl class="row small mb-2">
+          <dt class="col-5">Commits as</dt><dd class="col-7">{{if .Email}}<code>{{.Email}}</code>{{else}}<span class="text-secondary">no user.email</span>{{end}}</dd>
+          <dt class="col-5">Signs</dt><dd class="col-7">{{if .Sign}}yes ({{.Format}}){{else}}no{{end}}</dd>
+          <dt class="col-5">From</dt><dd class="col-7"><code class="text-break">{{.From}}</code></dd>
+        </dl>
+        {{end}}{{end}}
+        {{if .CheckError}}<div class="alert alert-danger py-2" role="alert">{{.CheckError}}</div>{{end}}
+        {{if .Commits}}
+        <ul class="list-unstyled small mb-0">
+          {{range .Commits}}<li class="mb-1"><code>{{.Short}}</code> {{if .Good}}<span class="badge badge-ok">{{.Status}}</span>{{else if eq .Status "B"}}<span class="badge badge-bad">{{.Status}}</span>{{else}}<span class="badge badge-muted">{{.Status}}</span>{{end}} {{.Meaning}}{{if .Signer}} by <code>{{.Signer}}</code>{{end}}<span class="d-block text-secondary">{{.Subject}}</span></li>{{end}}
+        </ul>
+        {{end}}
+      </div>
+    </div>
+
+    <div class="card mb-3" id="gitsign-clone">
+      <div class="card-header"><h2 class="card-title">Clone through a profile</h2></div>
+      <div class="card-body">
+        <p class="small text-secondary">A clone goes through the owner's profile alias, and commits as that profile from its first commit. It runs at a terminal; this works out what it would use.</p>
+        {{if $.ReadOnly}}{{template "command_line" .CloneExample}}
+        {{else}}
+        <form method="get" action="{{u "/git-sign"}}#gitsign-clone">
+          <label class="form-label" for="gs-repo">Repository</label>
+          <input class="form-control font-monospace" id="gs-repo" name="repo" value="{{.Repo}}" autocomplete="off" required placeholder="owner/repo">
+          <div class="row g-2 mt-1">
+            <div class="col-6"><label class="form-label" for="gs-mode">Mode</label>
+              <select class="form-select" id="gs-mode" name="mode"><option value="">default ({{.DefaultMode}})</option>{{range .Modes}}<option value="{{.}}"{{if eq . $.Data.RepoMode}} selected{{end}}>{{.}}</option>{{end}}</select></div>
+            <div class="col-6"><label class="form-label" for="gs-profile">Profile</label>
+              <select class="form-select" id="gs-profile" name="profile"><option value="">the owner's</option>{{range .Profiles}}<option value="{{.Name}}"{{if eq .Name $.Data.RepoProfile}} selected{{end}}>{{.Name}}</option>{{end}}</select></div>
+          </div>
+          <button type="submit" class="btn btn-outline-primary mt-2"{{desc "gitsign-clone"}}>Work it out</button>
+        </form>
+        {{end}}
+        {{if .CloneError}}<div class="alert alert-danger py-2 mt-2" role="alert">{{.CloneError}}</div>{{end}}
+        {{with .Clone}}
+        <dl class="row small mt-2 mb-2">
+          <dt class="col-4">URL</dt><dd class="col-8"><code class="text-break">{{.URL}}</code></dd>
+          <dt class="col-4">Profile</dt><dd class="col-8">{{if .Profile}}{{.Profile}}{{else}}<span class="text-secondary">none mapped</span>{{end}}</dd>
+          <dt class="col-4">Mode</dt><dd class="col-8">{{.Mode}}</dd>
+        </dl>
+        {{template "command_line" $.Data.CloneCmd}}
+        {{end}}
+      </div>
+    </div>
+
+    <div class="card" id="gitsign-allowed">
+      <div class="card-header"><h2 class="card-title">allowed_signers</h2></div>
+      <div class="card-body">
+        <p class="small text-secondary">Public keys only: who may sign, used by <code>git log --show-signature</code> and the check above. <code class="text-break">{{.AllowedPath}}</code></p>
+        {{if .AllowedSigners}}<pre class="code-block small mb-0" tabindex="0">{{.AllowedSigners}}</pre>{{else}}<p class="text-secondary mb-0">Not written yet.</p>{{end}}
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
+{{end}}{{end}}

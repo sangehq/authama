@@ -88,8 +88,14 @@ var actionFields = map[string][]string{
 	"setup-import":            {"body", "on_conflict"},
 	// structure-plan carries every move select (one plan line each) and
 	// the free-form plan lines; structure-dismiss hides one suggestion.
-	"structure-plan":      {"move", "moves"},
-	"structure-dismiss":   {"id", "undo"},
+	"structure-plan":    {"move", "moves"},
+	"structure-dismiss": {"id", "undo"},
+	// git-sign-set is one profile's git identity (clear removes it);
+	// git-sign-use points checkouts at a profile; git-sign-apply writes the
+	// git files from the manifest as it is.
+	"git-sign-set":        {"profile", "email", "user_name", "key", "dirs", "sign", "clear"},
+	"git-sign-use":        {"profile", "checkouts"},
+	"git-sign-apply":      {},
 	"key-lifetime":        {"key", "lifetime"},
 	"key-regen-pub":       {"key", "profile", "all"},
 	"ssh-import":          {"source", "replace"},
@@ -600,6 +606,12 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch, errs = structurePlanChange(f, errs)
 	case "structure-dismiss":
 		ch, errs = structureDismissChange(f, errs)
+	case "git-sign-set":
+		ch, errs = gitSignSetChange(f, errs)
+	case "git-sign-use":
+		ch, errs = gitSignUseChange(f, errs)
+	case "git-sign-apply":
+		ch = change.GitSignApply()
 	case "token-config-edit":
 		body := f.Get("body")
 		switch {

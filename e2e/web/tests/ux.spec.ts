@@ -200,6 +200,22 @@ test('the structure tree moves a stray key by drag and drop or its menu, and pre
   await expect(page.getByText('creates ~/.ssh/profiles/work/id_e2e_stray').first()).toBeVisible();
 });
 
+test('the git identities page previews a profile identity, its git files and the global block, before writing', async ({ page }) => {
+  await page.goto('/git-sign');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Git identities');
+  const card = page.locator('#gitsign-work');
+  await card.getByLabel('Email').fill('me@work.example');
+  await card.getByLabel('Directories, one per line').fill('~/code/work/');
+  // No github.com host in this profile: its first key is chosen to sign.
+  await expect(card.getByLabel('Key that signs')).toHaveValue('work_hpc-ed25519');
+  await card.getByRole('button', { name: 'Preview', exact: true }).click();
+  await expect(page.getByText(/work\.gitconfig/).first()).toBeVisible();
+  await expect(page.getByText(/includeIf/).first()).toBeVisible();
+  // A checkout check and a clone lookup only read.
+  await page.goto('/git-sign?repo=acme%2Fapp&mode=https#gitsign-clone');
+  await expect(page.locator('#gitsign-clone')).toContainText('https://github.com/acme/app');
+});
+
 test('tokens.json is checked as it is typed, and cannot be sent while it is not JSON', async ({ page }) => {
   await page.goto('/tokens');
   await page.getByRole('button', { name: 'Edit tokens.json' }).click();

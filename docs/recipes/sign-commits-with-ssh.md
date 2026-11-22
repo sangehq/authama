@@ -43,6 +43,14 @@ To stop signing for a profile but keep its identity: `authama ssh git sign set w
 altogether: `authama ssh git sign set work --clear`; the includes and the fragment go with it, and the rest of
 your `~/.gitconfig` is untouched.
 
+## From the browser
+
+`authama serve`, then **SSH → Git identities** (`/git-sign`): fill in the profile's email, name, signing key and
+directories and press **Preview**. The preview lists the manifest change and every line of the fragment,
+`allowed_signers` and the `~/.gitconfig` block; confirm to write them. The same page points other checkouts at a
+profile, checks a checkout's signatures and works out the clone command for a repository. See
+[tools/git.md](../tools/git.md#in-the-web-ui).
+
 Remotes per profile (`git@github-work:acme/app.git`) are covered in
 [Switch checkouts to profile SSH](switch-git-remote-modes.md) and
 [Two GitHub accounts on one machine](two-github-accounts.md). Full reference: [tools/git.md](../tools/git.md).

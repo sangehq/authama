@@ -215,6 +215,26 @@ commits as Verified.
 `gitdir:` is matched against the checkout's real path: give a directory behind a symlink by its resolved path.
 Two profiles cannot claim one directory; the manifest refuses it.
 
+## In the web UI
+
+**SSH → Git identities** (`/git-sign`, `g g` in the palette) does the same in the browser:
+
+- Each profile has a card with its email, name, the key that signs, its directories and whether its fragment
+  is written. **Set a git identity** (or **Change the identity**) goes through the usual preview: the manifest
+  diff, then every line the fragment, `allowed_signers` and the managed block of the global git config gain or
+  lose. Nothing is written until you confirm, and the owner PIN is asked as for any change. **Remove the
+  identity** is `sign set --clear`.
+- **Preview the apply** is `sign apply` when the git files lag behind the manifest.
+- **Use it in checkouts elsewhere** is `sign use`: give each checkout's full path (or `~/…`).
+- **Check a checkout** reads how a checkout commits and checks its recent commits' signatures (`sign status`
+  and `sign verify`); it changes nothing.
+- **Clone through a profile** works out the URL, profile and mode `ssh git clone` would use and gives the
+  command; the clone itself runs at a terminal.
+- `allowed_signers` is shown as it is: public keys only.
+
+A read-only server (`serve --read-only`) shows the same status with the commands to run instead of forms.
+
+
 ---
 
 [← Docs index](../../README.md#documentation)
