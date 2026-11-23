@@ -9,7 +9,7 @@ import (
 )
 
 const orgsManifest = `{"version":1,"profiles":{"simtabi":{"category":"orgs","hosts":[
-	{"alias":"oribi-web","hostname":"143.198.186.131","user":"ploi"}]}}}`
+	{"alias":"oribi-web","hostname":"203.0.113.11","user":"ploi"}]}}}`
 
 // What Sim pasted into the managed orgs file by hand.
 const pastedSimbi = `
@@ -59,7 +59,7 @@ func TestARenderRefusesToDiscardHandEdits(t *testing.T) {
 	}
 	msg := err.Error()
 	for _, want := range []string{"profiles/orgs/config: warp-simbi-prd-web-00: adds the heading # simbi prod: private IPs",
-		"warp-simbi-prd-web-00: a Host block the manifest does not have", "adopt-edits", "render --force"} {
+		"warp-simbi-prd-web-00: a Host block the manifest does not have", "keep-edits", "render --force"} {
 		if !strings.Contains(msg, want) {
 			t.Errorf("missing %q in:\n%s", want, msg)
 		}
@@ -106,19 +106,19 @@ func TestAForcedRenderBacksTheEditsUp(t *testing.T) {
 func TestTheRecordTellsAuthamasLinesFromHandEdits(t *testing.T) {
 	ssh, state, orgs, _ := orgsHome(t)
 	b, _ := os.ReadFile(orgs)
-	if err := os.WriteFile(orgs, []byte(strings.Replace(string(b), "143.198.186.131", "10.0.0.9", 1)), 0o600); err != nil {
+	if err := os.WriteFile(orgs, []byte(strings.Replace(string(b), "203.0.113.11", "10.0.0.9", 1)), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	m := load(t, orgsManifest)
 	edits, err := New(ssh, m, false).WithState(state).HandEdits()
-	if err != nil || len(edits) != 1 || !strings.Contains(edits[0].What, "sets HostName 10.0.0.9 (authama wrote 143.198.186.131)") {
+	if err != nil || len(edits) != 1 || !strings.Contains(edits[0].What, "sets HostName 10.0.0.9 (authama wrote 203.0.113.11)") {
 		t.Errorf("edits: %v %v", edits, err)
 	}
 	// The manifest moving on (host renamed, address changed) is authama's own.
 	if err := os.WriteFile(orgs, b, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	m2 := load(t, strings.Replace(orgsManifest, "143.198.186.131", "10.9.9.9", 1))
+	m2 := load(t, strings.Replace(orgsManifest, "203.0.113.11", "10.9.9.9", 1))
 	if _, err := New(ssh, m2, false).WithState(state).Write(false); err != nil {
 		t.Errorf("a manifest change is not a hand edit: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestWithoutARecordOnlyForeignLinesAreEdits(t *testing.T) {
 		t.Fatal(err)
 	}
 	empty := load(t, `{"version":1,"profiles":{"simtabi":{"category":"orgs","hosts":[
-		{"alias":"oribi-db","hostname":"161.35.104.205","user":"ploi"}]}}}`)
+		{"alias":"oribi-db","hostname":"203.0.113.12","user":"ploi"}]}}}`)
 	if _, err := New(ssh, empty, false).WithState(state).Write(false); err != nil {
 		t.Errorf("the deleted host's rendered block is not a hand edit: %v", err)
 	}

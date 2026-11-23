@@ -4,9 +4,9 @@
     "simtabi": {
       "category": "orgs",
       "hosts": [
-        {"alias": "oribi-web", "hostname": "143.198.186.131", "user": "ploi"},
-        {"alias": "oribi-db-maria", "hostname": "161.35.104.205", "user": "ploi"},
-        {"alias": "oribi-db-psql", "hostname": "167.71.19.80", "user": "ploi"},
+        {"alias": "oribi-web", "hostname": "203.0.113.11", "user": "ploi"},
+        {"alias": "oribi-db-maria", "hostname": "203.0.113.12", "user": "ploi"},
+        {"alias": "oribi-db-psql", "hostname": "203.0.113.13", "user": "ploi"},
         {
           "alias": "simbi-prd-web-00", "hostname": "ssh-web-00.simtabi.com", "user": "ploi",
           "aliases": ["simbi-web-cf"], "proxy": {"kind": "cloudflared"},

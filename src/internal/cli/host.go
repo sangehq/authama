@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -20,15 +21,14 @@ func intPtrIf(cmd *cobra.Command, flag string, val int) *int {
 	return nil
 }
 
-const proxyFlagHelp = "reach the host through a proxy: cloudflared (Cloudflare Access; ssh runs " +
-	"'cloudflared access ssh --hostname %h')"
-
 func newHostCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "host", Short: "Manage a host within a profile (add/edit/delete/apply)"}
 
-	var hostname, user, provider, tokenEnv, keyName, proxy, env, role string
+	var hostname, user, provider, tokenEnv, keyName, env, role string
 	var port int
-	var tags []string
+	var tags, addAliases []string
+	var update bool
+	var addRoute routeFlags
 	add := &cobra.Command{
 		Use:   "add <profile> [<alias>]",
 		Short: "Add a host to a profile (or name it by the naming rules with --env and --role)",
@@ -38,7 +38,11 @@ func newHostCmd() *cobra.Command {
 			"the environment, the role and the next free number, so a third web server of\n" +
 			"simtabi in production is simbi-prd-web-02. The role and environment are added as\n" +
 			"tags. With defaults.naming.enforce at error, an alias that breaks the rules is\n" +
-			"refused; at warn it is added and the reason printed.",
+			"refused; at warn it is added and the reason printed.\n\n" +
+			"--update makes it create-or-update: a host the profile has already is changed by the\n" +
+			"flags given instead of refused. --alias gives the Host block more names, --proxy,\n" +
+			"--proxy-command, --proxy-jump, --connect-timeout and --option set how ssh reaches it,\n" +
+			"and --section and --comment write comments around its block.",
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(c *cobra.Command, args []string) error {
 			p, err := resolvePaths(c)
@@ -59,17 +63,42 @@ func newHostCmd() *cobra.Command {
 			} else if env != "" || role != "" {
 				return errors.New("--env and --role name the host; leave out <alias> to use them, or add them as --tag")
 			}
+			route, err := addRoute.fields(c)
+			if err != nil {
+				return err
+			}
+			if !update {
+				var missing []string
+				for _, fl := range []string{"hostname", "user"} {
+					if !c.Flags().Changed(fl) {
+						missing = append(missing, `"`+fl+`"`)
+					}
+				}
+				if len(missing) > 0 {
+					return fmt.Errorf("required flag(s) %s not set", strings.Join(missing, ", "))
+				}
+			}
 			lockForMutation(p)
 			f := editor.HostFields{
-				Hostname: &hostname, User: &user, Port: &port,
-				Provider: strPtrIf(c, "provider", provider),
-				TokenEnv: strPtrIf(c, "token-env", tokenEnv),
-				KeyName:  strPtrIf(c, "key-name", keyName),
-				Tags:     tags,
-				Proxy:    strPtrIf(c, "proxy", proxy),
+				Hostname: &hostname, User: &user, Port: &port, PortSet: c.Flags().Changed("port"),
+				Provider:   strPtrIf(c, "provider", provider),
+				TokenEnv:   strPtrIf(c, "token-env", tokenEnv),
+				KeyName:    strPtrIf(c, "key-name", keyName),
+				Tags:       tags,
+				AddAliases: addAliases, RouteFields: route,
 			}
 			snapshotBeforeMutation(p)
-			if err := editor.New(p).AddHost(args[0], args[1], f); err != nil {
+			ed := editor.New(p)
+			if update {
+				added, err := editor.RoutesOf(ed).UpsertHost(args[0], args[1], f)
+				if err != nil {
+					return err
+				}
+				if !added {
+					_, _ = fmt.Fprintf(c.OutOrStdout(), "updated host %s in %s\n", args[1], args[0])
+					return applyManifestEdit(c, p)
+				}
+			} else if err := ed.AddHost(args[0], args[1], f); err != nil {
 				return err
 			}
 			// The block renders now; the key it points at does not exist until
@@ -92,16 +121,17 @@ func newHostCmd() *cobra.Command {
 	add.Flags().StringVar(&tokenEnv, "token-env", "", "env var holding the provider API token (e.g. GH_TOKEN_WORK)")
 	add.Flags().StringVar(&keyName, "key-name", "", "use this key instead of the derived <profile>_<alias>-<algo> name")
 	add.Flags().StringArrayVar(&tags, "tag", nil, "repeatable")
-	add.Flags().StringVar(&proxy, "proxy", "", proxyFlagHelp)
+	add.Flags().StringArrayVar(&addAliases, "alias", nil, "another name for the same Host block (repeatable)")
+	add.Flags().BoolVar(&update, "update", false, "update the host if the profile has it already (create-or-update)")
+	addRoute.register(add.Flags(), false)
 	add.Flags().StringVar(&env, "env", "", "with no <alias>: the environment the generated alias names (prd, stg, dev)")
 	add.Flags().StringVar(&role, "role", "", "with no <alias>: the role the generated alias names (web, db, ...)")
-	_ = add.MarkFlagRequired("hostname")
-	_ = add.MarkFlagRequired("user")
 	cmd.AddCommand(add)
 
-	var eHostname, eUser, eProvider, eTokenEnv, eKeyName, eProxy string
+	var eHostname, eUser, eProvider, eTokenEnv, eKeyName string
 	var ePort int
-	var eTags, eUntag []string
+	var eTags, eUntag, eAddAliases, eRemoveAliases []string
+	var editRoute routeFlags
 	edit := &cobra.Command{
 		Use:   "edit <profile> <alias>",
 		Short: "Edit a host",
@@ -111,16 +141,20 @@ func newHostCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			route, err := editRoute.fields(c)
+			if err != nil {
+				return err
+			}
 			lockForMutation(p)
 			f := editor.HostFields{
-				Hostname: strPtrIf(c, "hostname", eHostname),
-				User:     strPtrIf(c, "user", eUser),
-				Port:     intPtrIf(c, "port", ePort),
-				Provider: strPtrIf(c, "provider", eProvider),
-				TokenEnv: strPtrIf(c, "token-env", eTokenEnv),
-				KeyName:  strPtrIf(c, "key-name", eKeyName),
-				Proxy:    strPtrIf(c, "proxy", eProxy),
-				Untag:    eUntag,
+				Hostname:   strPtrIf(c, "hostname", eHostname),
+				User:       strPtrIf(c, "user", eUser),
+				Port:       intPtrIf(c, "port", ePort),
+				Provider:   strPtrIf(c, "provider", eProvider),
+				TokenEnv:   strPtrIf(c, "token-env", eTokenEnv),
+				KeyName:    strPtrIf(c, "key-name", eKeyName),
+				Untag:      eUntag,
+				AddAliases: eAddAliases, RemoveAliases: eRemoveAliases, RouteFields: route,
 			}
 			if c.Flags().Changed("tag") {
 				f.SetTags = &eTags
@@ -151,7 +185,9 @@ func newHostCmd() *cobra.Command {
 	edit.Flags().StringVar(&eProvider, "provider", "", "deployment adapter for this host (see 'authama ssh providers')")
 	edit.Flags().StringVar(&eTokenEnv, "token-env", "", "env var holding the provider API token (e.g. GH_TOKEN_WORK)")
 	edit.Flags().StringVar(&eKeyName, "key-name", "", "use this key instead of the derived <profile>_<alias>-<algo> name")
-	edit.Flags().StringVar(&eProxy, "proxy", "", proxyFlagHelp+`; "none" removes it`)
+	edit.Flags().StringArrayVar(&eAddAliases, "alias", nil, "add another name to the Host block (repeatable)")
+	edit.Flags().StringArrayVar(&eRemoveAliases, "remove-alias", nil, "remove one of the Host block's extra names (repeatable)")
+	editRoute.register(edit.Flags(), true)
 	edit.Flags().StringArrayVar(&eTags, "tag", nil,
 		"replace the host's tags with these (repeatable); --tag '' removes them all")
 	edit.Flags().StringArrayVar(&eUntag, "untag", nil,
@@ -206,6 +242,7 @@ func newHostCmd() *cobra.Command {
 	cmd.AddCommand(del)
 
 	cmd.AddCommand(newHostApplyCmd())
+	cmd.AddCommand(newHostVariantCmd())
 
 	return cmd
 }

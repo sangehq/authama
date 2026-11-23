@@ -113,14 +113,17 @@ var commandLong = map[string]string{
 		"the desktop alert, at most as often as its cadence allows; `ssh notify install` runs that daily.",
 	"ssh config": "authama writes ~/.ssh/config and the per-profile config files from the manifest. `render` writes\n" +
 		"them, `check` reports drift without writing, `show` prints them (or what ssh resolves for one\n" +
-		"alias), `adopt` moves hand-written Host blocks that duplicate managed hosts out of the way, and\n" +
-		"`export` writes the config as one file for another tool.",
+		"alias), `adopt` moves hand-written Host blocks that duplicate managed hosts out of the way,\n" +
+		"`keep-edits` takes lines typed into authama's own files into the manifest, and `export` writes the\n" +
+		"config as one file for another tool.",
 	"ssh config check": "Compare the config files on disk with what the manifest renders. It writes nothing, prints what\n" +
 		"differs and exits 1 on drift, so a script or CI can gate on it; `ssh config render` brings them back\n" +
 		"in line.",
 	"ssh config render": "Write ~/.ssh/config and each profile's config file from the manifest, after showing what would\n" +
 		"change. A snapshot of ~/.ssh is taken first; hand-written lines outside authama's blocks are kept.\n" +
-		"--dry-run shows the change and writes nothing.",
+		"Lines typed into authama's own blocks since it last wrote them are not overwritten: render lists\n" +
+		"them and stops - `ssh config keep-edits` takes them into the manifest, and --force discards them\n" +
+		"after copying the files to the state home. --dry-run shows the change and writes nothing.",
 	"ssh config show": "Print the config authama renders for every profile. With an alias, print what `ssh -G` resolves for\n" +
 		"it instead: the hostname, user, port, identity file and options ssh will actually use.",
 	"ssh deploy": "Install a key's public half on its targets: the hosts that use it, or the one target named. It\n" +
@@ -132,11 +135,14 @@ var commandLong = map[string]string{
 	"ssh expiry": "A table of every key, by profile/key, with its state (ok, due soon, overdue), the date it expires\n" +
 		"and the days left, from each key's lifetime and when it was last minted or rotated.",
 	"ssh host": "A host is one server in a profile: its alias, hostname, user, port and key. `add` adds one (or names\n" +
-		"it by the naming rules), `apply` adds or updates many from compact specs, `edit` changes one, and\n" +
-		"`delete` removes it with its config block and pins.",
-	"ssh host edit": "Change a host in a profile: its hostname, user, port, key, provider, proxy or tags. Only the flags\n" +
-		"given change, and the config is rendered again. A key the host now names that is not on disk yet is\n" +
-		"minted by `ssh reconcile`.",
+		"it by the naming rules; --update makes it create-or-update), `apply` adds or updates many from compact\n" +
+		"specs, `edit` changes one, `variant` gives one a second route (warp-<alias>), and `delete` removes it\n" +
+		"with its config block and pins.",
+	"ssh host edit": "Change a host in a profile: its hostname, user, port, key, provider, tags, extra names, proxy,\n" +
+		"ssh options or comments. Only the flags given change, and the config is rendered again. A key the\n" +
+		"host now names that is not on disk yet is minted by `ssh reconcile`.",
+	"ssh host variant remove": "Remove one route variant of a host: its <name>-<alias> Host block goes from the config on the\n" +
+		"next render. The host and its other variants stay.",
 	"ssh key": "A profile's keys: `add` declares and mints one, `list` shows every key with its state, `adopt`\n" +
 		"manages a key where it already is, `delete` removes one no host uses, `revoke` takes one off every\n" +
 		"target for good, `lifetime` sets when rotation is due, `reserve` keeps a loose key on purpose, and\n" +

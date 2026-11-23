@@ -61,7 +61,7 @@ type CheckResult struct {
 	// ones the manifest reproduces).
 	Collisions []Collision
 	// HandEdits lists what was typed into the managed files by hand, which
-	// the next render would discard (`authama ssh config adopt-edits` keeps it).
+	// the next render would discard (`authama ssh config keep-edits` keeps it).
 	HandEdits []HandEdit
 }
 

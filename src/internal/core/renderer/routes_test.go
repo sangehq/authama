@@ -44,7 +44,9 @@ func TestTheSimbiRoutesRenderAsWrittenByHand(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != string(want) {
+	// The rendered file ends with a blank line; the golden copy leaves it
+	// off, as every tracked text file must.
+	if got != string(want)+"\n" {
 		t.Fatalf("rendered orgs config differs:\n--- got\n%s\n--- want\n%s", got, want)
 	}
 	block, err := os.ReadFile("testdata/routes/simbi.block")

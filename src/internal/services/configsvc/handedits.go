@@ -19,7 +19,7 @@ import (
 const RecordFile = "render-record.json"
 
 // HandEditFix is what to run about hand edits in a managed file.
-const HandEditFix = "keep them with `authama ssh config adopt-edits` (it adds them to the manifest), " +
+const HandEditFix = "keep them with `authama ssh config keep-edits` (it adds them to the manifest), " +
 	"or discard them with `authama ssh config render --force` (the file is backed up first)"
 
 // HandEdit is one thing typed into a managed file by hand that the next
@@ -29,6 +29,9 @@ type HandEdit struct {
 	File  string
 	Alias string
 	What  string
+	// key identifies the line whatever the wording, so an edit can be
+	// matched against what the render would write.
+	key string
 }
 
 func (h HandEdit) String() string {
@@ -150,10 +153,22 @@ func (s *Service) HandEdits() ([]HandEdit, error) {
 		if recorded && disk == baseline {
 			continue
 		}
+		parsed := renderer.ParseManaged(disk)
 		if !recorded {
-			baseline = rendered[rel]
+			out = append(out, diffBlocks(rel, parsed, renderer.ParseManaged(rendered[rel]), false)...)
+			continue
 		}
-		out = append(out, diffBlocks(rel, renderer.ParseManaged(disk), renderer.ParseManaged(baseline), recorded)...)
+		// Typed since the last render, and not something the render writes
+		// now (a host adopted into the manifest no longer counts).
+		lost := map[string]bool{}
+		for _, e := range diffBlocks(rel, parsed, renderer.ParseManaged(rendered[rel]), true) {
+			lost[e.key] = true
+		}
+		for _, e := range diffBlocks(rel, parsed, renderer.ParseManaged(baseline), true) {
+			if lost[e.key] {
+				out = append(out, e)
+			}
+		}
 	}
 	return out, nil
 }
@@ -177,37 +192,38 @@ func diffBlocks(rel string, disk, base renderer.Parsed, exact bool) []HandEdit {
 	for _, d := range disk.Blocks {
 		alias := d.Alias()
 		if d.Section != "" && !sections[d.Section] {
-			out = append(out, HandEdit{rel, alias, "adds the heading # " + d.Section})
+			out = append(out, HandEdit{rel, alias, "adds the heading # " + d.Section, "heading|" + d.Section})
 		}
 		b, ok := byAlias[strings.ToLower(alias)]
 		if !ok {
 			if !exact && looksRendered(d) {
 				continue
 			}
-			out = append(out, HandEdit{rel, alias, "a Host block the manifest does not have"})
+			out = append(out, HandEdit{rel, alias, "a Host block the manifest does not have", "block|" + strings.ToLower(alias)})
 			continue
 		}
 		for _, p := range d.Patterns[1:] {
 			if !names[strings.ToLower(p)] {
-				out = append(out, HandEdit{rel, alias, "adds the name " + p + " to its Host line"})
+				out = append(out, HandEdit{rel, alias, "adds the name " + p + " to its Host line", "name|" + strings.ToLower(alias) + "|" + strings.ToLower(p)})
 			}
 		}
 		if d.Comment != "" && d.Comment != b.Comment {
-			out = append(out, HandEdit{rel, alias, "comment # " + d.Comment})
+			out = append(out, HandEdit{rel, alias, "comment # " + d.Comment, "comment|" + strings.ToLower(alias) + "|" + d.Comment})
 		}
 		for _, o := range d.Options {
 			v, has := b.Get(o.Key)
+			key := "option|" + strings.ToLower(alias) + "|" + strings.ToLower(o.Key) + "|" + o.Value
 			switch {
 			case !has:
-				out = append(out, HandEdit{rel, alias, "adds " + o.Key + " " + o.Value})
+				out = append(out, HandEdit{rel, alias, "adds " + o.Key + " " + o.Value, key})
 			case exact && !hasValue(b, o):
-				out = append(out, HandEdit{rel, alias, fmt.Sprintf("sets %s %s (authama wrote %s)", o.Key, o.Value, v)})
+				out = append(out, HandEdit{rel, alias, fmt.Sprintf("sets %s %s (authama wrote %s)", o.Key, o.Value, v), key})
 			}
 		}
 	}
 	for _, l := range disk.Loose {
 		if !loose[l] {
-			out = append(out, HandEdit{rel, "", "comment # " + strings.TrimPrefix(l, "# ")})
+			out = append(out, HandEdit{rel, "", "comment # " + strings.TrimPrefix(l, "# "), "loose|" + l})
 		}
 	}
 	return out
@@ -259,4 +275,44 @@ func (s *Service) backupEdited(edits []HandEdit) error {
 		}
 	}
 	return nil
+}
+
+// EditedBlock is a Host block on disk that carries a hand edit, with the
+// managed file it is in.
+type EditedBlock struct {
+	File  string
+	Block renderer.Block
+}
+
+// EditedBlocks returns, in file order, every Host block on disk that a hand
+// edit touches, and the edits themselves. keep-edits turns the blocks into
+// manifest hosts; the edits without a block (a stray comment) are reported.
+func (s *Service) EditedBlocks() ([]EditedBlock, []HandEdit, error) {
+	edits, err := s.HandEdits()
+	if err != nil || len(edits) == 0 {
+		return nil, edits, err
+	}
+	touched := map[string]bool{}
+	for _, e := range edits {
+		if e.Alias != "" {
+			touched[e.File+"|"+strings.ToLower(e.Alias)] = true
+		}
+	}
+	rendered, err := s.Rendered()
+	if err != nil {
+		return nil, nil, err
+	}
+	var out []EditedBlock
+	for _, rel := range s.renderedOrder(rendered) {
+		current, ok := readFile(filepath.Join(s.sshDir, filepath.FromSlash(rel)))
+		if !ok {
+			continue
+		}
+		for _, b := range renderer.ParseManaged(managedPart(rel, current)).Blocks {
+			if touched[rel+"|"+strings.ToLower(b.Alias())] {
+				out = append(out, EditedBlock{File: rel, Block: b})
+			}
+		}
+	}
+	return out, edits, nil
 }

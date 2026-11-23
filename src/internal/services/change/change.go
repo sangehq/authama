@@ -255,6 +255,13 @@ func copyHome(p paths.Paths) (paths.Paths, func(), error) {
 		cleanup()
 		return paths.Paths{}, nil, err
 	}
+	// What authama last rendered goes too, so a render in the copy tells
+	// hand edits from its own lines the way it does in the home.
+	if b, err := os.ReadFile(filepath.Join(p.StateDir(), configsvc.RecordFile)); err == nil {
+		if rel, err := filepath.Rel(p.ConfigDir, filepath.Join(p.StateDir(), configsvc.RecordFile)); err == nil && !strings.HasPrefix(rel, "..") {
+			files["config/"+filepath.ToSlash(rel)] = string(b)
+		}
+	}
 	for key, body := range files {
 		var dst string
 		if rel, ok := strings.CutPrefix(key, "config/"); ok {
@@ -269,13 +276,6 @@ func copyHome(p paths.Paths) (paths.Paths, func(), error) {
 		if err := os.WriteFile(dst, []byte(body), 0o600); err != nil {
 			cleanup()
 			return paths.Paths{}, nil, err
-		}
-	}
-	// What authama last rendered, so a render in the copy tells hand edits
-	// from its own lines the way it does in the home.
-	if b, err := os.ReadFile(filepath.Join(p.StateDir(), configsvc.RecordFile)); err == nil {
-		if err := os.MkdirAll(shadow.StateDir(), 0o700); err == nil {
-			_ = os.WriteFile(filepath.Join(shadow.StateDir(), configsvc.RecordFile), b, 0o600)
 		}
 	}
 	// The layout matters as much as the contents: a command decides whether

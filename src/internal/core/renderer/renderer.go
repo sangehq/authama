@@ -371,7 +371,7 @@ func variantHosts(m *manifest.Manifest, profile string, hosts []manifest.Host) (
 			if !ok {
 				continue
 			}
-			vh, err := m.VariantHost(profile, h, v)
+			vh, err := manifest.VariantHostOf(m, profile, h, v)
 			if err != nil {
 				return nil, err
 			}

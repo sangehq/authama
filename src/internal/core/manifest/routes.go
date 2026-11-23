@@ -86,11 +86,11 @@ func (h Host) Names() []string {
 	return out
 }
 
-// VariantHost is the host a variant renders as: the base host with the
+// VariantHostOf is the host a variant renders as: the base host with the
 // variant's route. Its key is the base host's resolved key, named
 // explicitly, because a per-service key is otherwise derived from the
 // alias and the variant's alias differs.
-func (m *Manifest) VariantHost(profile string, base Host, v Variant) (Host, error) {
+func VariantHostOf(m *Manifest, profile string, base Host, v Variant) (Host, error) {
 	kname, err := m.ResolvedKeyName(profile, base)
 	if err != nil {
 		return Host{}, err

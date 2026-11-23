@@ -99,6 +99,7 @@ Every command also takes the global flag:
     - [`authama ssh config adopt`](#authama-ssh-config-adopt) - Move hand-written Host blocks that duplicate managed hosts out of ~/.ssh/config
     - [`authama ssh config check`](#authama-ssh-config-check) - Verify the config matches the manifest (read-only; exit non-zero on drift)
     - [`authama ssh config export`](#authama-ssh-config-export) - Write the config as one file for another tool (never touches ~/.ssh)
+    - [`authama ssh config keep-edits`](#authama-ssh-config-keep-edits) - Take hand edits in the managed config into the manifest, so a render keeps them
     - [`authama ssh config render`](#authama-ssh-config-render) - Render the config files from the manifest
     - [`authama ssh config show`](#authama-ssh-config-show) - Print the rendered config, or ssh -G for one alias
   - [`authama ssh deploy`](#authama-ssh-deploy) - Install a public key on its target
@@ -120,6 +121,9 @@ Every command also takes the global flag:
     - [`authama ssh host apply`](#authama-ssh-host-apply) - Add or update hosts from compact specs (one, many, or a file)
     - [`authama ssh host delete`](#authama-ssh-host-delete) - Delete a host, its config block and its pins
     - [`authama ssh host edit`](#authama-ssh-host-edit) - Edit a host
+    - [`authama ssh host variant`](#authama-ssh-host-variant) - Add, change or remove a host's route variants (warp-<alias> ...)
+      - [`authama ssh host variant remove`](#authama-ssh-host-variant-remove) - Remove a route variant of a host
+      - [`authama ssh host variant set`](#authama-ssh-host-variant-set) - Create or update a route variant of a host
   - [`authama ssh import`](#authama-ssh-import) - Onboard an existing ssh setup - a config file or any folder of them - into the manifest
   - [`authama ssh key`](#authama-ssh-key) - Manage a profile's keys (add/list/delete)
     - [`authama ssh key ack`](#authama-ssh-key-ack) - Clear the new label on keys you have seen
@@ -2039,8 +2043,9 @@ Flags:
 
 authama writes ~/.ssh/config and the per-profile config files from the manifest. `render` writes
 them, `check` reports drift without writing, `show` prints them (or what ssh resolves for one
-alias), `adopt` moves hand-written Host blocks that duplicate managed hosts out of the way, and
-`export` writes the config as one file for another tool.
+alias), `adopt` moves hand-written Host blocks that duplicate managed hosts out of the way,
+`keep-edits` takes lines typed into authama's own files into the manifest, and `export` writes the
+config as one file for another tool.
 
 ```
 authama ssh config
@@ -2051,6 +2056,7 @@ Subcommands:
 - [`adopt`](#authama-ssh-config-adopt) - Move hand-written Host blocks that duplicate managed hosts out of ~/.ssh/config
 - [`check`](#authama-ssh-config-check) - Verify the config matches the manifest (read-only; exit non-zero on drift)
 - [`export`](#authama-ssh-config-export) - Write the config as one file for another tool (never touches ~/.ssh)
+- [`keep-edits`](#authama-ssh-config-keep-edits) - Take hand edits in the managed config into the manifest, so a render keeps them
 - [`render`](#authama-ssh-config-render) - Render the config files from the manifest
 - [`show`](#authama-ssh-config-show) - Print the rendered config, or ssh -G for one alias
 
@@ -2123,11 +2129,40 @@ Flags:
   -o, --out string          where to write (default <config home>/exports/ssh_config; - for stdout)
 ```
 
+## authama ssh config keep-edits
+
+A render refuses to replace what was typed into a managed config file by hand. This takes it in:
+a block for a managed host updates that host (address, extra names, proxy, options, heading,
+comment); a block named <name>-<alias> with the user and key of host <alias> becomes its route
+variant <name>; any other block becomes a new host of the profile whose banner it sits under,
+using the key its IdentityFile names in that profile's directory. A block it cannot take in whole
+is left as it is, with the reason. The config is rendered again afterwards.
+
+```
+authama ssh config keep-edits [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh config keep-edits --dry-run
+  authama ssh config keep-edits --yes
+```
+
+Flags:
+
+```
+  -n, --dry-run[=true|false]   show what would be adopted without changing anything
+  -y, --yes[=true|false]       adopt without confirming (implied when there is no terminal)
+```
+
 ## authama ssh config render
 
 Write ~/.ssh/config and each profile's config file from the manifest, after showing what would
 change. A snapshot of ~/.ssh is taken first; hand-written lines outside authama's blocks are kept.
---dry-run shows the change and writes nothing.
+Lines typed into authama's own blocks since it last wrote them are not overwritten: render lists
+them and stops - `ssh config keep-edits` takes them into the manifest, and --force discards them
+after copying the files to the state home. --dry-run shows the change and writes nothing.
 
 ```
 authama ssh config render [flags]
@@ -2138,12 +2173,14 @@ Examples:
 ```sh
   authama ssh config render --dry-run
   authama ssh config render --yes
+  authama ssh config render --force --yes   # discard hand edits (backed up first)
 ```
 
 Flags:
 
 ```
   -n, --dry-run[=true|false]   preview changes without writing
+      --force[=true|false]     replace hand edits in the managed files (they are copied to the state home first)
   -y, --yes[=true|false]       render without confirming (implied when there is no terminal)
 ```
 
@@ -2514,8 +2551,9 @@ Flags:
 ## authama ssh host
 
 A host is one server in a profile: its alias, hostname, user, port and key. `add` adds one (or names
-it by the naming rules), `apply` adds or updates many from compact specs, `edit` changes one, and
-`delete` removes it with its config block and pins.
+it by the naming rules; --update makes it create-or-update), `apply` adds or updates many from compact
+specs, `edit` changes one, `variant` gives one a second route (warp-<alias>), and `delete` removes it
+with its config block and pins.
 
 ```
 authama ssh host
@@ -2527,6 +2565,7 @@ Subcommands:
 - [`apply`](#authama-ssh-host-apply) - Add or update hosts from compact specs (one, many, or a file)
 - [`delete`](#authama-ssh-host-delete) - Delete a host, its config block and its pins
 - [`edit`](#authama-ssh-host-edit) - Edit a host
+- [`variant`](#authama-ssh-host-variant) - Add, change or remove a host's route variants (warp-<alias> ...)
 
 ## authama ssh host add
 
@@ -2539,6 +2578,11 @@ simtabi in production is simbi-prd-web-02. The role and environment are added as
 tags. With defaults.naming.enforce at error, an alias that breaks the rules is
 refused; at warn it is added and the reason printed.
 
+--update makes it create-or-update: a host the profile has already is changed by the
+flags given instead of refused. --alias gives the Host block more names, --proxy,
+--proxy-command, --proxy-jump, --connect-timeout and --option set how ssh reaches it,
+and --section and --comment write comments around its block.
+
 ```
 authama ssh host add <profile> [<alias>] [flags]
 ```
@@ -2548,21 +2592,30 @@ Examples:
 ```sh
   authama ssh host add work web1 --hostname web1.example.com --user deploy
   authama ssh host add work gh --hostname github.com --user git --provider github --token-env GH_TOKEN_WORK
+  authama ssh host add work web1 --hostname ssh-web1.example.com --user deploy --alias web1-cf --proxy cloudflared --update
 ```
 
 Flags:
 
 ```
-      --env string         with no <alias>: the environment the generated alias names (prd, stg, dev)
-  -H, --hostname string    host to connect to
-      --key-name string    use this key instead of the derived <profile>_<alias>-<algo> name
-  -p, --port int           ssh port (default 22)
-      --provider string    deployment adapter for this host (see 'authama ssh providers')
-      --proxy string       reach the host through a proxy: cloudflared (Cloudflare Access; ssh runs 'cloudflared access ssh --hostname %h')
-      --role string        with no <alias>: the role the generated alias names (web, db, ...)
-      --tag stringArray    repeatable
-      --token-env string   env var holding the provider API token (e.g. GH_TOKEN_WORK)
-  -u, --user string        ssh user
+      --alias stringArray      another name for the same Host block (repeatable)
+      --comment string         a comment rendered inside the block, under its Host line ('' removes it)
+      --connect-timeout int    seconds ssh waits to connect (ConnectTimeout); 0 removes it
+      --env string             with no <alias>: the environment the generated alias names (prd, stg, dev)
+  -H, --hostname string        host to connect to
+      --key-name string        use this key instead of the derived <profile>_<alias>-<algo> name
+      --option stringArray     any other ssh_config option as KEY=VALUE, e.g. ServerAliveInterval=30 (repeatable; checked against the keywords OpenSSH knows; KEY= removes it)
+  -p, --port int               ssh port (default 22)
+      --provider string        deployment adapter for this host (see 'authama ssh providers')
+      --proxy string           how ssh reaches the host: cloudflared (Cloudflare Access: ssh runs '<cloudflared> access ssh --hostname %h'), none (ProxyCommand none: connect directly, e.g. over WARP), or off to remove the proxy
+      --proxy-command string   a ProxyCommand of your own, e.g. '/usr/bin/nc -X 5 -x proxy:1080 %h %p' (each argument is quoted for the shell; none and the cloudflared command become those proxies; '' removes it)
+      --proxy-jump string      connect through this jump host (ProxyJump); '' removes it
+      --role string            with no <alias>: the role the generated alias names (web, db, ...)
+      --section string         a heading rendered as a comment above the block; hosts after it without one sit under it ('' removes it)
+      --tag stringArray        repeatable
+      --token-env string       env var holding the provider API token (e.g. GH_TOKEN_WORK)
+      --update[=true|false]    update the host if the profile has it already (create-or-update)
+  -u, --user string            ssh user
 ```
 
 ## authama ssh host apply
@@ -2648,9 +2701,9 @@ Flags:
 
 ## authama ssh host edit
 
-Change a host in a profile: its hostname, user, port, key, provider, proxy or tags. Only the flags
-given change, and the config is rendered again. A key the host now names that is not on disk yet is
-minted by `ssh reconcile`.
+Change a host in a profile: its hostname, user, port, key, provider, tags, extra names, proxy,
+ssh options or comments. Only the flags given change, and the config is rendered again. A key the
+host now names that is not on disk yet is minted by `ssh reconcile`.
 
 ```
 authama ssh host edit <profile> <alias> [flags]
@@ -2661,20 +2714,99 @@ Examples:
 ```sh
   authama ssh host edit work web1 --port 2222
   authama ssh host edit work web1 --tag prod --untag staging
+  authama ssh host edit work web1 --alias web1-cf --option ServerAliveInterval=30
+  authama ssh host edit work web1 --proxy-jump bastion --connect-timeout 10
 ```
 
 Flags:
 
 ```
-  -H, --hostname string     host to connect to
-      --key-name string     use this key instead of the derived <profile>_<alias>-<algo> name
-  -p, --port int            ssh port (default 22)
-      --provider string     deployment adapter for this host (see 'authama ssh providers')
-      --proxy string        reach the host through a proxy: cloudflared (Cloudflare Access; ssh runs 'cloudflared access ssh --hostname %h'); "none" removes it
-      --tag stringArray     replace the host's tags with these (repeatable); --tag '' removes them all
-      --token-env string    env var holding the provider API token (e.g. GH_TOKEN_WORK)
-      --untag stringArray   remove this tag (repeatable; applied after --tag; a tag the host lacks is ignored)
-  -u, --user string         ssh user
+      --alias stringArray          add another name to the Host block (repeatable)
+      --comment string             a comment rendered inside the block, under its Host line ('' removes it)
+      --connect-timeout int        seconds ssh waits to connect (ConnectTimeout); 0 removes it
+  -H, --hostname string            host to connect to
+      --key-name string            use this key instead of the derived <profile>_<alias>-<algo> name
+      --option stringArray         any other ssh_config option as KEY=VALUE, e.g. ServerAliveInterval=30 (repeatable; checked against the keywords OpenSSH knows; KEY= removes it)
+  -p, --port int                   ssh port (default 22)
+      --provider string            deployment adapter for this host (see 'authama ssh providers')
+      --proxy string               how ssh reaches the host: cloudflared (Cloudflare Access: ssh runs '<cloudflared> access ssh --hostname %h'), none (ProxyCommand none: connect directly, e.g. over WARP), or off to remove the proxy
+      --proxy-command string       a ProxyCommand of your own, e.g. '/usr/bin/nc -X 5 -x proxy:1080 %h %p' (each argument is quoted for the shell; none and the cloudflared command become those proxies; '' removes it)
+      --proxy-jump string          connect through this jump host (ProxyJump); '' removes it
+      --remove-alias stringArray   remove one of the Host block's extra names (repeatable)
+      --section string             a heading rendered as a comment above the block; hosts after it without one sit under it ('' removes it)
+      --tag stringArray            replace the host's tags with these (repeatable); --tag '' removes them all
+      --token-env string           env var holding the provider API token (e.g. GH_TOKEN_WORK)
+      --unset-option stringArray   remove this ssh option (repeatable)
+      --untag stringArray          remove this tag (repeatable; applied after --tag; a tag the host lacks is ignored)
+  -u, --user string                ssh user
+```
+
+## authama ssh host variant
+
+A route variant is a second way to reach the same server: one host reached through Cloudflare
+Access everywhere, and its WARP twin on the private address, say. `set` creates or updates one and
+renders it as its own Host block named <name>-<alias> (warp-simbi-prd-web-00), with the host's user
+and key - rotating the key or changing the user moves both routes. The variant sets only what
+differs: --hostname, --port, the proxy and options. Its blocks follow the profile's hosts, every
+variant of one name together under its --section heading.
+
+```
+authama ssh host variant
+```
+
+Subcommands:
+
+- [`remove`](#authama-ssh-host-variant-remove) - Remove a route variant of a host
+- [`set`](#authama-ssh-host-variant-set) - Create or update a route variant of a host
+
+## authama ssh host variant remove
+
+Remove one route variant of a host: its <name>-<alias> Host block goes from the config on the
+next render. The host and its other variants stay.
+
+```
+authama ssh host variant remove <profile> <alias> <name>
+```
+
+Examples:
+
+```sh
+  authama ssh host variant remove work web1 warp
+```
+
+## authama ssh host variant set
+
+A route variant is a second way to reach the same server: one host reached through Cloudflare
+Access everywhere, and its WARP twin on the private address, say. `set` creates or updates one and
+renders it as its own Host block named <name>-<alias> (warp-simbi-prd-web-00), with the host's user
+and key - rotating the key or changing the user moves both routes. The variant sets only what
+differs: --hostname, --port, the proxy and options. Its blocks follow the profile's hosts, every
+variant of one name together under its --section heading.
+
+```
+authama ssh host variant set <profile> <alias> <name> [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh host variant set work web1 warp --hostname 10.0.0.3 --proxy none --connect-timeout 10
+  authama ssh host variant set work web1 warp --section "work: private IPs over WARP"
+```
+
+Flags:
+
+```
+      --comment string             a comment rendered inside the block, under its Host line ('' removes it)
+      --connect-timeout int        seconds ssh waits to connect (ConnectTimeout); 0 removes it
+  -H, --hostname string            the address this route connects to (the host's when unset)
+      --option stringArray         any other ssh_config option as KEY=VALUE, e.g. ServerAliveInterval=30 (repeatable; checked against the keywords OpenSSH knows; KEY= removes it)
+  -p, --port int                   the port this route connects to (the host's when unset) (default 22)
+      --proxy string               how ssh reaches the host: cloudflared (Cloudflare Access: ssh runs '<cloudflared> access ssh --hostname %h'), none (ProxyCommand none: connect directly, e.g. over WARP), or off to remove the proxy
+      --proxy-command string       a ProxyCommand of your own, e.g. '/usr/bin/nc -X 5 -x proxy:1080 %h %p' (each argument is quoted for the shell; none and the cloudflared command become those proxies; '' removes it)
+      --proxy-jump string          connect through this jump host (ProxyJump); '' removes it
+      --section string             a heading rendered as a comment above the block; hosts after it without one sit under it ('' removes it)
+      --unset-option stringArray   remove this ssh option (repeatable)
 ```
 
 ## authama ssh import
