@@ -88,7 +88,7 @@ test('structure classifies a purpose key, remembers a rule, previews approve, an
   await expect(watch.getByRole('heading', { level: 2 })).toHaveText(/Watching|Polling/);
   await audit(page, info, 'structure');
 
-  const suggestion = page.locator('li.structure-key', { hasText: 'git-signing' }).first();
+  const suggestion = page.locator('li.structure-key[id^="suggestion-"]', { hasText: 'git-signing' }).filter({ hasText: /purpose/ }).first();
   await expect(suggestion).toBeVisible();
   await expect(suggestion).toContainText(/purpose|git/);
   await suggestion.getByRole('button', { name: 'Remember this as a rule' }).click();
@@ -97,7 +97,7 @@ test('structure classifies a purpose key, remembers a rule, previews approve, an
 
   await page.goto('/structure');
   await expect(page.locator('#structure-rules')).toContainText('git');
-  const listed = page.locator('li.structure-key', { hasText: 'git-signing' }).first();
+  const listed = page.locator('li.structure-key[id^="suggestion-"]', { hasText: 'git-signing' }).filter({ hasText: /purpose/ }).first();
   await expect(listed).toBeVisible();
 
   const menu = listed.getByRole('combobox').first();
