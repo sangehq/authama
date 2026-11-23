@@ -116,7 +116,7 @@ func (r *CheckResult) Format() string {
 		if r.BlockInSync() {
 			return strings.TrimRight(b.String(), "\n")
 		}
-		b.WriteString("config: DRIFT detected - " + HandEditFix)
+		b.WriteString("config: DRIFT detected - the hand edits above")
 		return b.String()
 	}
 	if len(r.Collisions) > 0 {

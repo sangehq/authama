@@ -12,7 +12,8 @@
       <div class="card-footer d-flex flex-wrap gap-2 align-items-center">
         <span class="text-secondary me-auto">The same as <code>authama ssh config check</code>.</span>
         {{if not $.ReadOnly}}{{template "change_open" $}}<input type="hidden" name="action" value="config-render"><button type="submit" class="btn btn-primary"{{desc "render"}}>{{icon "refresh"}}<span class="ms-1">Re-render ~/.ssh/config</span></button></form>
-        {{template "change_open" $}}<input type="hidden" name="action" value="config-adopt"><button type="submit" class="btn btn-outline-primary"{{desc "config-adopt"}}>{{icon "stack-2"}}<span class="ms-1">Adopt duplicate Host blocks</span></button></form>{{end}}
+        {{template "change_open" $}}<input type="hidden" name="action" value="config-adopt"><button type="submit" class="btn btn-outline-primary"{{desc "config-adopt"}}>{{icon "stack-2"}}<span class="ms-1">Adopt duplicate Host blocks</span></button></form>
+        {{template "change_open" $}}<input type="hidden" name="action" value="config-keep-edits"><button type="submit" class="btn btn-outline-primary"{{desc "config-keep-edits"}}>{{icon "pencil"}}<span class="ms-1">Keep hand edits</span></button></form>{{end}}
         <a class="btn btn-outline-secondary" href="{{basePath}}/exports/ssh_config" download{{desc "download"}}>{{icon "download"}}<span class="ms-1">ssh_config, every host inline</span></a>
       </div>
     </div>

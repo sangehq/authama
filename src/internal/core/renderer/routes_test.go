@@ -145,3 +145,67 @@ func TestSectionsHeadRunsOfHosts(t *testing.T) {
 		t.Errorf("heading above, comment inside:\n%s", out)
 	}
 }
+
+// Termius and the other clients that do not run ssh get the WARP twins - a
+// direct connection, ProxyCommand none - and skip the Cloudflare Access
+// hosts, whose cloudflared ProxyCommand they would not run. Extra Host names
+// are not rows of their own.
+func TestTheExportsTakeTheWarpTwinsAndSkipTheAccessHosts(t *testing.T) {
+	pinCloudflared(t, "/opt/homebrew/bin/cloudflared")
+	m := loadRoutesManifest(t)
+	exp, err := RenderTermiusCSV(m, testExportPaths, TermiusOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"warp-simbi-prd-web-00", "10.116.0.3", "warp-simbi-prd-db-00", "10.116.0.5"} {
+		if !strings.Contains(exp.CSV, want) {
+			t.Errorf("the Termius CSV lacks %s:\n%s", want, exp.CSV)
+		}
+	}
+	if strings.Contains(exp.CSV, "simbi-web-cf") || strings.Contains(exp.CSV, "ssh-web-00.simtabi.com") {
+		t.Errorf("the Termius CSV has a Cloudflare Access host:\n%s", exp.CSV)
+	}
+	skipped := strings.Join(exp.Skipped, "\n")
+	if !strings.Contains(skipped, "simbi-prd-web-00: reached through cloudflared") {
+		t.Errorf("skipped: %s", skipped)
+	}
+	keys := map[string]string{}
+	for _, k := range exp.Keys {
+		keys[k.Label] = k.KeyFile
+	}
+	if !strings.HasSuffix(keys["warp-simbi-prd-web-00"], "simtabi_simbi-prd-web-00-ed25519") {
+		t.Errorf("the twin's key is %q, want the host's", keys["warp-simbi-prd-web-00"])
+	}
+
+	// A client that goes through ssh takes every route, by its Host name.
+	for _, format := range ClientFormatNames() {
+		f := ClientFormats[format]
+		if !f.ViaSSH {
+			continue
+		}
+		exp, err := RenderClientExport(m, testExportPaths, format, TermiusOptions{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var content strings.Builder
+		for _, f := range exp.Files {
+			content.Write(f.Data)
+		}
+		for _, want := range []string{"simbi-prd-web-00", "warp-simbi-prd-web-00"} {
+			if !strings.Contains(content.String(), want) {
+				t.Errorf("%s lacks %s", format, want)
+			}
+		}
+	}
+
+	// The flat ssh_config carries the extra names and both proxies.
+	flat, err := RenderFlatConfig(m, testExportPaths, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"Host simbi-prd-web-00 simbi-web-cf\n", "Host warp-simbi-prd-db-00\n", "    ProxyCommand none\n"} {
+		if !strings.Contains(flat, want) {
+			t.Errorf("the flat export lacks %q", want)
+		}
+	}
+}

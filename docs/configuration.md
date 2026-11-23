@@ -219,10 +219,47 @@ reaches the host with no SSH port open to the internet. `hostname` is the Access
  "proxy": {"kind": "cloudflared"}}
 ```
 
-Set it with `authama ssh host add|edit ... --proxy cloudflared` (`--proxy none` removes it). A host is a VM or
-proxied, not both. `doctor` reports a proxied host when `cloudflared` is not installed, and the Termius
-export skips it (Termius ignores ProxyCommand). See
-[Reach a server through Cloudflare Access](recipes/cloudflare-access.md).
+Two more kinds:
+
+```jsonc
+"proxy": {"kind": "none"}                                    // ProxyCommand none: connect directly
+"proxy": {"kind": "command", "command": ["/usr/bin/nc", "-X", "5", "-x", "proxy:1080", "%h", "%p"]}
+```
+
+`none` renders `ProxyCommand none`, a direct connection even under a broader block that sets a proxy (a WARP twin on
+a private address, say). `command` renders the argv quoted for the shell argument by argument; an argument may not
+hold `;`, `&`, `|`, `<`, `>`, `$`, a backtick or parentheses, and a `%` token must be one ssh expands. A plain
+cloudflared path is written unquoted (`/opt/homebrew/bin/cloudflared access ssh --hostname %h`, the line Cloudflare
+documents); when cloudflared is not on `PATH` (a launchd job), its usual install paths are tried before the bare name.
+
+Set it with `authama ssh host add|edit ... --proxy cloudflared|none|off` or `--proxy-command '<command>'`; `off`
+removes it. (Before this release `--proxy none` removed the proxy; it now writes `ProxyCommand none`.) A host is a VM
+or proxied, not both, and a proxy and a `ProxyJump` raw option are refused together. `doctor` reports a cloudflared
+host when `cloudflared` is not installed, and the Termius export skips cloudflared and command hosts (Termius ignores
+ProxyCommand) but keeps `none` ones. See [Reach a server through Cloudflare
+Access](recipes/cloudflare-access.md).
+
+### <a name="host-routes-aliases-section-comment-variants"></a>Host routes: `aliases`, `section`, `comment`, `variants`
+
+```jsonc
+{"alias": "simbi-prd-web-00", "hostname": "ssh-web-00.simtabi.com", "user": "ploi",
+ "aliases": ["simbi-web-cf"],                       // more names on the Host line
+ "section": "simbi prod: Cloudflare Access",        // a heading comment above the block
+ "comment": "the web box",                          // a comment inside the block
+ "proxy": {"kind": "cloudflared"},
+ "variants": [                                      // more routes to the same server
+   {"name": "warp", "hostname": "10.116.0.3", "proxy": {"kind": "none"},
+    "raw_options": {"ConnectTimeout": "10"},
+    "section": "simbi prod: private IPs over Cloudflare WARP"}
+ ]}
+```
+
+An alias in `aliases` is held to the alias rules and may not collide with any other host's name. A host with no
+`section` sits under the last heading above it. A variant renders as `Host <name>-<alias>` with the host's user and
+key, overriding `hostname`, `port`, `proxy`, `raw_options` (merged over the host's), `section` and `comment`; a
+variant's own proxy drops an inherited `ProxyJump`. Variants render after the profile's hosts. Set them with
+`authama ssh host add|edit --alias/--section/--comment` and `authama ssh host variant set|remove`; see [Give a host
+more names, a proxy, and a second route](recipes/host-routes.md).
 
 ### `provider` / `token_env`
 
@@ -568,7 +605,8 @@ characters; `hostname`/`user` may not contain whitespace, newlines, or a leading
 config, or open a new block (`ProxyCommand`, `LocalCommand`, `PermitLocalCommand`,
 `RemoteCommand`, `Host`, `Match`, `Include`, `KnownHostsCommand`, `PKCS11Provider`,
 `SecurityKeyProvider`, `XAuthLocation`), in any letter case.
-`ProxyJump` (a host, not a command) is allowed. `key_scope` must be `per_service`
+`ProxyJump` (a host, not a command) is allowed. `authama ssh host add|edit --option KEY=VALUE` writes
+`raw_options` after checking the key against the options OpenSSH knows. `key_scope` must be `per_service`
 or `shared`.
 
 ## <a name="settings-env-and-authamajson"></a>Settings: `.env` and `authama.json`

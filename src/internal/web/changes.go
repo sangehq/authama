@@ -45,17 +45,24 @@ var actionFields = map[string][]string{
 	"profile-category": {"name", "category"},
 	// host-add with no alias names the host by the naming rules from env and
 	// role (`host add <profile> --env --role`).
-	"host-add":      {"profile", "alias", "env", "role", "hostname", "user", "port", "tags", "key_name", "provider", "token_env", "proxy"},
-	"host-edit":     {"profile", "alias", "hostname", "user", "port", "tags", "key_name", "provider", "token_env", "proxy"},
-	"host-delete":   {"profile", "alias"},
-	"key-delete":    {"profile", "key"},
-	"key-reserve":   {"key", "for", "note"},
-	"key-unreserve": {"key"},
+	"host-add": {"profile", "alias", "env", "role", "hostname", "user", "port", "tags", "key_name", "provider", "token_env",
+		"aliases", "proxy", "proxy_command", "proxy_jump", "connect_timeout", "options", "section", "comment"},
+	"host-edit": {"profile", "alias", "hostname", "user", "port", "tags", "key_name", "provider", "token_env",
+		"aliases", "proxy", "proxy_command", "proxy_jump", "connect_timeout", "options", "section", "comment"},
+	// host-variant-set is `host variant set`: a second route to a host.
+	"host-variant-set": {"profile", "alias", "name", "hostname", "port", "proxy", "proxy_command", "proxy_jump",
+		"connect_timeout", "options", "section", "comment"},
+	"host-variant-remove": {"profile", "alias", "name"},
+	"host-delete":         {"profile", "alias"},
+	"key-delete":          {"profile", "key"},
+	"key-reserve":         {"key", "for", "note"},
+	"key-unreserve":       {"key"},
 	// key-ack acknowledges one key, every key (all) or a category's.
 	"key-ack":           {"key", "all", "category"},
 	"vm-add":            {"profile", "alias", "hypervisor", "vm", "user", "key_name"},
 	"config-render":     {},
 	"config-adopt":      {},
+	"config-keep-edits": {},
 	"reconcile":         {},
 	"keygen":            {"target"},
 	"key-add":           {"profile", "key", "key_type", "host", "rotate_after_days"},
@@ -215,35 +222,28 @@ func optionalName(f url.Values, field string) (string, error) {
 // envVarRe is an environment variable name, as --token-env takes.
 var envVarRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,127}$`)
 
-// hostExtras reads the host form's optional --key-name, --provider,
-// --token-env and --proxy. Each left empty is nil: unset on a new host,
-// unchanged on an edit. A provider must be one the catalog or providers.json
-// names, and a proxy one authama renders, or "none" to clear it.
-func hostExtras(f url.Values, h home) (keyName, provider, tokenEnv, proxy *string, err error) {
+// hostExtras reads the host form's optional --key-name, --provider and
+// --token-env. Each left empty is nil: unset on a new host, unchanged on an
+// edit. A provider must be one the catalog or providers.json names.
+func hostExtras(f url.Values, h home) (keyName, provider, tokenEnv *string, err error) {
 	if v, e := optionalName(f, "key_name"); e != nil {
-		return nil, nil, nil, nil, e
+		return nil, nil, nil, e
 	} else if v != "" {
 		keyName = &v
 	}
 	if v := strings.TrimSpace(f.Get("provider")); v != "" {
 		if _, ok := providers.AllSpecs(h.p.Providers())[v]; !ok {
-			return nil, nil, nil, nil, badForm("provider %q is not one `authama ssh providers` lists", v)
+			return nil, nil, nil, badForm("provider %q is not one `authama ssh providers` lists", v)
 		}
 		provider = &v
 	}
 	if v := strings.TrimSpace(f.Get("token_env")); v != "" {
 		if !envVarRe.MatchString(v) {
-			return nil, nil, nil, nil, badForm("token env %q is not an environment variable name", v)
+			return nil, nil, nil, badForm("token env %q is not an environment variable name", v)
 		}
 		tokenEnv = &v
 	}
-	if v := strings.TrimSpace(f.Get("proxy")); v != "" {
-		if v != "none" && !slices.Contains(manifest.ProxyKinds, v) {
-			return nil, nil, nil, nil, badForm("proxy must be none or one of %s", strings.Join(manifest.ProxyKinds, ", "))
-		}
-		proxy = &v
-	}
-	return keyName, provider, tokenEnv, proxy, nil
+	return keyName, provider, tokenEnv, nil
 }
 
 // hostSpecs parses the host apply box, one spec per line, and holds every
@@ -362,7 +362,10 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		// whole new list: an emptied box clears them.
 		in.Tags, err = tagsOf(f)
 		errs = append(errs, err)
-		in.KeyName, in.Provider, in.TokenEnv, in.Proxy, err = hostExtras(f, h)
+		in.KeyName, in.Provider, in.TokenEnv, err = hostExtras(f, h)
+		errs = append(errs, err)
+		in.AddAliases, in.RemoveAliases, in.RouteInput, err = hostRoutes(f, h, strings.TrimSpace(f.Get("profile")),
+			strings.TrimSpace(f.Get("alias")), edit)
 		errs = append(errs, err)
 		return in
 	}
@@ -448,6 +451,12 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch = change.HostEdit(n("profile"), n("alias"), host(true))
 	case "host-delete":
 		ch = change.HostDelete(n("profile"), n("alias"))
+	case "host-variant-set":
+		in, err := variantInput(f)
+		errs = append(errs, err)
+		ch = change.HostVariantSet(n("profile"), n("alias"), n("name"), in)
+	case "host-variant-remove":
+		ch = change.HostVariantRemove(n("profile"), n("alias"), n("name"))
 	case "key-delete":
 		ch = change.KeyDelete(manifest.KeyRef{Profile: n("profile"), KeyName: n("key")})
 	case "vm-add":
@@ -468,6 +477,8 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch = change.ConfigRender()
 	case "config-adopt":
 		ch = change.ConfigAdopt()
+	case "config-keep-edits":
+		ch = change.ConfigKeepEdits()
 	case "reconcile":
 		ch = change.Reconcile()
 	case "keygen":

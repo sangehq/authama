@@ -19,15 +19,15 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 
 | | Count |
 | --- | --- |
-| Commands (runnable, not hidden, not help-only parents) | 166 |
-| Help-only parent commands left out | 26 |
-| Web | 144 |
+| Commands (runnable, not hidden, not help-only parents) | 169 |
+| Help-only parent commands left out | 27 |
+| Web | 147 |
 | Partial | 3 |
 | CLI-only by design | 19 |
 | Gap | 0 |
-| Flags on those commands | 431 |
-| Flags covered | 357 |
-| Flags CLI-only by design | 74 |
+| Flags on those commands | 461 |
+| Flags covered | 385 |
+| Flags CLI-only by design | 76 |
 | Flags with no web control | 0 |
 
 
@@ -103,7 +103,8 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `ssh config adopt` | web | /ssh-config: Adopt duplicate Host blocks | `--dry-run`, `--yes` | New in this branch. |
 | `ssh config check` | web | /ssh-config | - |  |
 | `ssh config export` | web | /ssh-config: download ssh_config | `--flat`, `--out` |  |
-| `ssh config render` | web | /ssh-config, overview: Re-render | `--dry-run`, `--yes` |  |
+| `ssh config keep-edits` | web | /ssh-config: Keep hand edits | `--dry-run`, `--yes` | New in this branch. |
+| `ssh config render` | web | /ssh-config, overview: Re-render | `--dry-run`, `--force` (CLI), `--yes` | Discarding hand edits stays in the terminal; the web keeps them (Keep hand edits). |
 | `ssh config show` | web | /ssh-config | - |  |
 | `ssh deploy` | web | key page: Deploy (job) | `--direct`, `--yes` |  |
 | `ssh diff` | web | Reconcile preview | - |  |
@@ -117,10 +118,12 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `ssh git sign verify` | web | /git-sign?check= | `--json`, `--number`, `--strict` (CLI) |  |
 | `ssh git status` | web | /git-sign: Remote mode (?remotes=) | `--json` | Mode and owner per checkout. |
 | `ssh git use` | web | /git-sign: Remote mode, Switch (preview) | `--dry-run`, `--json`, `--mode`, `--profile`, `--yes` | Checks with ls-remote on apply. |
-| `ssh host add` | web | /hosts: Add a host | `--env`, `--hostname`, `--key-name`, `--port`, `--provider`, `--proxy`, `--role`, `--tag`, `--token-env`, `--user` | Alias empty: generated from env and role. |
+| `ssh host add` | web | /hosts: Add a host | `--alias`, `--comment`, `--connect-timeout`, `--env`, `--hostname`, `--key-name`, `--option`, `--port`, `--provider`, `--proxy`, `--proxy-command`, `--proxy-jump`, `--role`, `--section`, `--tag`, `--token-env`, `--update` (CLI), `--user` | Alias empty: generated from env and role. Routes under Routes; the web updates a host from its Edit panel, so `--update` stays CLI. |
 | `ssh host apply` | web | /hosts: Add or update in bulk | `--category`, `--create-profile`, `--dry-run`, `--file` (CLI), `--host`, `--no-pin`, `--reconcile`, `--tag`, `--yes` | The web reconcile is always --no-pin; pin from /hosts. |
 | `ssh host delete` | web | host page: Delete; --revoke/--purge as a job | `--no-key-backup` (CLI), `--purge`, `--revoke`, `--yes` |  |
-| `ssh host edit` | web | host page: Edit | `--hostname`, `--key-name`, `--port`, `--provider`, `--proxy`, `--tag`, `--token-env`, `--untag`, `--user` | --key-name/--provider/--token-env/--proxy added in this branch. |
+| `ssh host edit` | web | host page: Edit | `--alias`, `--comment`, `--connect-timeout`, `--hostname`, `--key-name`, `--option`, `--port`, `--provider`, `--proxy`, `--proxy-command`, `--proxy-jump`, `--remove-alias`, `--section`, `--tag`, `--token-env`, `--unset-option`, `--untag`, `--user` | Routes section filled in with the current values: a name or option taken out is --remove-alias/--unset-option. |
+| `ssh host variant remove` | web | host page: Route variants, remove | - | New in this branch. |
+| `ssh host variant set` | web | host page: Route variants, Add or change one | `--comment`, `--connect-timeout`, `--hostname`, `--option`, `--port`, `--proxy`, `--proxy-command`, `--proxy-jump`, `--section`, `--unset-option` | Empty fields leave a variant's settings; unset one from the CLI or remove and set again. |
 | `ssh import` | web | /import | `--dry-run`, `--force`, `--yes` |  |
 | `ssh key ack` | web | key page: Acknowledge; /keys: Acknowledge new keys | `--all`, `--category` |  |
 | `ssh key add` | web | /keys: Add a key | `--host`, `--passphrase` (CLI), `--rotate-after-days`, `--type` | A passphrase stays in the terminal. |
@@ -210,6 +213,7 @@ None. Every command and flag is on the web, or CLI-only by design for the reason
 - `rotate --keep-old`: Take the previous key off servers, unticked.
 - `rotate --failed`: Choose the keys the last rotation left, on the rotate review.
 - `host apply --no-pin`: the web reconcile always runs with `--no-pin`; host keys are pinned from /hosts.
+- `host edit --remove-alias/--unset-option`: take the name or option out of the Routes fields on the Edit panel.
 - `knownhosts pin --all`: Pin host keys on /hosts (`knownhosts init`), which pins every host.
 - `host delete`, `profile delete --revoke/--purge`: a job, linked from the plain delete.
 

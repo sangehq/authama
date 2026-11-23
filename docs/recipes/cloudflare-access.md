@@ -20,11 +20,20 @@ move an existing host behind Access, change its hostname to the Access hostname 
 authama ssh host edit acme app-web -H ssh.example.com --proxy cloudflared
 ```
 
-In the web UI, the same choice is **Proxy** under *More options* in the Add a host panel and on the host's
-Edit panel, where *None* takes the proxy off again.
+In the web UI, the same choice is **Proxy** under *Routes* in the Add a host panel and on the host's
+Edit panel, where *off* takes the proxy off again.
 
-`authama ssh host edit ... --proxy none` takes it off again. `authama doctor` reports a proxied host when `cloudflared`
-is missing.
+`authama ssh host edit ... --proxy off` takes it off again (`--proxy none` writes `ProxyCommand none`, a direct
+connection). `authama doctor` reports a proxied host when `cloudflared` is missing.
+
+To keep a second route to the same server - its private address over Cloudflare WARP, say - add a route variant:
+
+```bash
+authama ssh host variant set acme app-web warp -H 10.0.0.3 --proxy none --connect-timeout 10
+ssh warp-app-web
+```
+
+See [Give a host more names, a proxy, and a second route](host-routes.md).
 
 Reference: [`proxy`](../configuration.md#proxy).
 

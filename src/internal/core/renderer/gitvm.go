@@ -115,13 +115,25 @@ func proxyFor(h manifest.Host) string {
 // ProxyCommand runs. A variable so tests pin it.
 var CloudflaredPath = defaultCloudflaredPath
 
+// cloudflaredInstalls are where cloudflared's installers put it, for a
+// render run with a PATH that lacks them - a launchd job's or a service's -
+// which would otherwise write the bare name and see every Access block as
+// changed.
+var cloudflaredInstalls = []string{"/opt/homebrew/bin/cloudflared", "/usr/local/bin/cloudflared", "/usr/bin/cloudflared"}
+
 // defaultCloudflaredPath is the PATH entry - Homebrew's /opt/homebrew/bin
-// symlink, which survives upgrades - or the bare name when cloudflared is not
-// installed yet, so the block still renders and resolves once it is. doctor
-// reports a cloudflared host with no cloudflared to run.
+// symlink, which survives upgrades - else the first of cloudflaredInstalls
+// there, else the bare name when cloudflared is not installed yet, so the
+// block still renders and resolves once it is. doctor reports a cloudflared
+// host with no cloudflared to run.
 func defaultCloudflaredPath() string {
 	if p, err := exec.LookPath("cloudflared"); err == nil {
 		return p
+	}
+	for _, p := range cloudflaredInstalls {
+		if fi, err := os.Stat(p); err == nil && !fi.IsDir() && fi.Mode()&0o111 != 0 {
+			return p
+		}
 	}
 	return "cloudflared"
 }

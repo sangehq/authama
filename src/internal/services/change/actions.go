@@ -160,9 +160,13 @@ type HostInput struct {
 	Port           *int
 	Tags           *[]string
 	KeyName        *string
-	// Provider, TokenEnv and Proxy are --provider, --token-env and --proxy;
-	// nil leaves them as they are. Proxy "none" clears the proxy.
-	Provider, TokenEnv, Proxy *string
+	// Provider and TokenEnv are --provider and --token-env; nil leaves them
+	// as they are.
+	Provider, TokenEnv *string
+	// AddAliases and RemoveAliases are --alias and --remove-alias.
+	AddAliases, RemoveAliases []string
+	// RouteInput is the proxy, ssh options and comments.
+	RouteInput
 }
 
 func (h HostInput) args() []string {
@@ -185,9 +189,13 @@ func (h HostInput) args() []string {
 	if h.TokenEnv != nil {
 		a = append(a, "--token-env="+*h.TokenEnv)
 	}
-	if h.Proxy != nil {
-		a = append(a, "--proxy="+*h.Proxy)
+	for _, x := range h.AddAliases {
+		a = append(a, "--alias="+x)
 	}
+	for _, x := range h.RemoveAliases {
+		a = append(a, "--remove-alias="+x)
+	}
+	a = append(a, h.RouteInput.args()...)
 	if h.Tags != nil {
 		for _, t := range *h.Tags {
 			a = append(a, "--tag="+t)
@@ -210,7 +218,7 @@ func HostAdd(profile, alias string, in HostInput) Change {
 				port = *in.Port
 			}
 			f := editor.HostFields{Hostname: in.Hostname, User: in.User, Port: &port, KeyName: in.KeyName,
-				Provider: in.Provider, TokenEnv: in.TokenEnv, Proxy: in.Proxy}
+				Provider: in.Provider, TokenEnv: in.TokenEnv, AddAliases: in.AddAliases, RouteFields: in.fields()}
 			if in.Tags != nil {
 				f.Tags = *in.Tags
 			}
@@ -231,7 +239,8 @@ func HostEdit(profile, alias string, in HostInput) Change {
 		Subjects: []history.Subject{{Kind: history.KindProfile, Name: profile}, {Kind: history.KindHost, Name: alias}},
 		Run: func(p paths.Paths, out io.Writer) error {
 			f := editor.HostFields{Hostname: in.Hostname, User: in.User, Port: in.Port, KeyName: in.KeyName, SetTags: in.Tags,
-				Provider: in.Provider, TokenEnv: in.TokenEnv, Proxy: in.Proxy}
+				Provider: in.Provider, TokenEnv: in.TokenEnv, AddAliases: in.AddAliases, RemoveAliases: in.RemoveAliases,
+				RouteFields: in.fields()}
 			if err := editor.New(p).EditHost(profile, alias, f); err != nil {
 				return err
 			}

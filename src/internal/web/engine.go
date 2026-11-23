@@ -122,6 +122,9 @@ type HostView struct {
 	Pins   []knownhosts.Entry
 	Token  string
 	VM     bool // a VM host, which can have a Docker context
+	// Route is the host's extra names, proxy, options, comments and route
+	// variants, as its edit form shows them.
+	Route RouteView
 	// KeyRecency is the host's key's recency, for its pill; empty when the
 	// host has no key or it was never minted.
 	KeyRecency recency.Status
@@ -325,7 +328,7 @@ func (e AppEngine) Host(alias string) (HostView, error) {
 				// A profile and a host share the name; Detail prefers the profile.
 				hd = &query.HostDetail{Profile: pname, Alias: h.Alias, Hostname: h.Hostname, User: h.User, Port: h.Port}
 			}
-			v := HostView{Detail: hd, Token: knownHostsToken(h), VM: h.VM != nil}
+			v := HostView{Detail: hd, Token: knownHostsToken(h), VM: h.VM != nil, Route: routeView(h)}
 			if block, err := renderer.RenderHostBlockFor(m, pname, h); err == nil {
 				v.Block = block
 			}

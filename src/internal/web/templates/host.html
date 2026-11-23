@@ -28,9 +28,22 @@
           <dt class="col-5">Fingerprint</dt><dd class="col-7 text-break"><code>{{orDash (deref .Fingerprint)}}</code></dd>
           <dt class="col-5">Expires</dt><dd class="col-7">{{orDash (deref .ExpiresOn)}}</dd>
           <dt class="col-5">Tags</dt><dd class="col-7">{{orDash (join .Tags ", ")}}</dd>
+          {{with $.Data.Route}}{{if .Aliases}}<dt class="col-5">Also named</dt><dd class="col-7 font-monospace">{{.Aliases}}</dd>{{end}}
+          {{if .Proxy}}<dt class="col-5">Proxy</dt><dd class="col-7">{{if .ProxyCommand}}<code>{{.ProxyCommand}}</code>{{else}}{{.Proxy}}{{end}}</dd>{{end}}
+          {{if .ProxyJump}}<dt class="col-5">Jump host</dt><dd class="col-7"><code>{{.ProxyJump}}</code></dd>{{end}}
+          {{if .Section}}<dt class="col-5">Section</dt><dd class="col-7">{{.Section}}</dd>{{end}}{{end}}
           {{if .RequiresVPN}}<dt class="col-5">VPN</dt><dd class="col-7">required{{with deref .VPNName}}: {{.}}{{end}}</dd>{{end}}
         </dl>
       </div>
+    </div>
+    <div class="card mt-3">
+      <div class="card-header"><h2 class="card-title">Route variants</h2>{{if not $.ReadOnly}}<div class="card-actions"><a href="#host-variant" class="btn btn-sm btn-outline-primary" data-bs-toggle="offcanvas" role="button" aria-controls="host-variant"{{desc "host-variant-set"}}>{{icon "route"}}<span class="ms-1">Add or change one</span></a></div>{{end}}</div>
+      {{if $.Data.Route.Variants}}
+      <ul class="list-group list-group-flush">{{range $.Data.Route.Variants}}<li class="list-group-item">
+        <div class="d-flex justify-content-between align-items-center"><span><code>{{.Alias}}</code>{{with .Hostname}} <span class="text-secondary">to</span> {{.}}{{end}}{{with .Port}}:{{.}}{{end}}{{with .Proxy}} <span class="text-secondary">via</span> {{.}}{{end}}{{with .ConnectTimeout}} <span class="text-secondary">timeout</span> {{.}}s{{end}}</span>
+        {{if not $.ReadOnly}}{{template "change_open" $}}<input type="hidden" name="action" value="host-variant-remove"><input type="hidden" name="profile" value="{{$.Data.Detail.Profile}}"><input type="hidden" name="alias" value="{{$.Data.Detail.Alias}}"><input type="hidden" name="name" value="{{.Name}}"><button type="submit" class="btn btn-sm btn-ghost-danger"{{desc "host-variant-remove"}}>{{icon "trash"}}<span class="visually-hidden">Remove {{.Alias}}</span></button></form>{{end}}</div>
+        {{with .Section}}<div class="small text-secondary"># {{.}}</div>{{end}}</li>{{end}}</ul>
+      {{else}}{{template "empty" (empty "route" "No other routes" (printf "A variant is a second Host block for the same server, such as warp-%s on its private address. Add one, or run authama ssh host variant set." .Alias))}}{{end}}
     </div>
     <div class="card mt-3">
       <div class="card-header"><h2 class="card-title">Deployments</h2></div>
@@ -67,11 +80,13 @@
             <div class="col-4"><label class="form-label" for="e-port">Port</label><input class="form-control" id="e-port" name="port" value="{{.Port}}" inputmode="numeric" pattern="[0-9]+"></div>
           </div>
           <div class="mb-3"><label class="form-label" for="e-tags">Tags</label><input class="form-control" id="e-tags" name="tags" value="{{join .Tags ", "}}" autocomplete="off" spellcheck="false"><small class="form-hint">Comma-separated; empty clears them.</small></div>
-          <details class="mb-3"><summary class="text-secondary">More options: key, provider, proxy</summary>
+          <details class="mb-3"><summary class="text-secondary">More options: key, provider</summary>
             <div class="mt-2 mb-3"><label class="form-label" for="e-keyname">Key name</label><input class="form-control" id="e-keyname" name="key_name" autocomplete="off" spellcheck="false"><small class="form-hint">Leave empty to keep it. The same as <code>--key-name</code>.</small></div>
             <div class="mb-3"><label class="form-label" for="e-provider">Provider</label><input class="form-control" id="e-provider" name="provider" list="e-providers" autocomplete="off" spellcheck="false"><datalist id="e-providers">{{range providerNames}}<option value="{{.}}">{{end}}</datalist><small class="form-hint">Leave empty to keep it. The same as <code>--provider</code>.</small></div>
             <div class="mb-3"><label class="form-label" for="e-tokenenv">Token variable</label><input class="form-control" id="e-tokenenv" name="token_env" autocomplete="off" spellcheck="false" placeholder="GH_TOKEN_WORK"><small class="form-hint">The name of the environment variable that holds the provider's API token, never the token. The same as <code>--token-env</code>.</small></div>
-            <div><label class="form-label" for="e-proxy">Proxy</label><select class="form-select" id="e-proxy" name="proxy"><option value="">Unchanged</option><option value="none">None (clear it)</option>{{range proxyKinds}}<option value="{{.}}">{{.}}</option>{{end}}</select><small class="form-hint">The same as <code>--proxy</code>.</small></div>
+          </details>
+          <details class="mb-3"{{if or $.Data.Route.Aliases $.Data.Route.Proxy $.Data.Route.Options $.Data.Route.ProxyJump $.Data.Route.ConnectTimeout}} open{{end}}><summary class="text-secondary">Routes: names, proxy, ssh options, comments</summary>
+            <div class="mt-2">{{template "route_fields" (routeForm "e" $.Data.Route true false)}}</div>
           </details>
           {{template "panel_actions" ""}}
         </form>
@@ -89,6 +104,18 @@
             <a class="btn btn-link text-danger" href="{{basePath}}/jobs/review?action=delete-host&amp;profile={{.Profile}}&amp;alias={{.Alias}}"{{desc "delete-options"}}>Revoke its keys or purge their files too…</a>
           </form>
         </div>
+{{template "panel_close"}}
+{{template "panel_open" (header "host-variant" (printf "Route variant of %s" .Alias) "")}}
+        {{template "change_open" $}}<input type="hidden" name="action" value="host-variant-set"><input type="hidden" name="profile" value="{{.Profile}}"><input type="hidden" name="alias" value="{{.Alias}}">
+          <p class="text-secondary small">A second Host block for this server, named <code>&lt;name&gt;-{{.Alias}}</code>, with its user and key. Give only what differs; an existing variant keeps what is left empty. The same as <code>authama ssh host variant set</code>.</p>
+          <div class="row g-2 mb-3">
+            <div class="col-4"><label class="form-label" for="v-name">Name</label><input class="form-control" id="v-name" name="name" value="warp" required autocomplete="off" spellcheck="false"></div>
+            <div class="col-5"><label class="form-label" for="v-hostname">Hostname</label><input class="form-control" id="v-hostname" name="hostname" autocomplete="off" spellcheck="false" placeholder="10.0.0.3"></div>
+            <div class="col-3"><label class="form-label" for="v-port">Port</label><input class="form-control" id="v-port" name="port" inputmode="numeric" pattern="[0-9]*"></div>
+          </div>
+          {{template "route_fields" (routeForm "v" noRoute false true)}}
+          {{template "panel_actions" ""}}
+        </form>
 {{template "panel_close"}}
     {{end}}{{end}}
   </div>
