@@ -278,6 +278,11 @@ func collectBlocks(text, file, baseDir string, seen map[string]bool, top bool, r
 			at = i
 		}
 		keyword, value := splitKV(line)
+		// A comment line between a block's options is that block's comment
+		// (an option typed in above it moves it down), not a section.
+		if section != "" && keyword != "host" && keyword != "match" && current != nil && !current.all && current.comment == "" {
+			current.comment, section = section, ""
+		}
 		switch {
 		case keyword == "host":
 			current = &block{patterns: argvSplit(value), file: file, start: i, end: i + 1,

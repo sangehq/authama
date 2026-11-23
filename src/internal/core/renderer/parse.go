@@ -113,7 +113,9 @@ func ParseManaged(content string) Parsed {
 		if indented && cur != nil {
 			if strings.HasPrefix(t, "#") {
 				c := strings.TrimSpace(strings.TrimPrefix(t, "#"))
-				if len(cur.Options) == 0 && cur.Comment == "" {
+				// The block's first comment is its comment, wherever it sits
+				// among the options (one typed in above it moves it down).
+				if cur.Comment == "" {
 					cur.Comment = c
 				} else {
 					out.Loose = append(out.Loose, cur.Alias()+": "+t)
