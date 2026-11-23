@@ -260,7 +260,9 @@ func (s *Set) resolveOne(sp Spec, get Lookup) {
 // pyRepr quotes a string the way Python's repr does for plain text.
 func pyRepr(s string) string {
 	if strings.Contains(s, "'") && !strings.Contains(s, `"`) {
-		return `"` + s + `"`
+		// Escaped as for single quotes: s holds no '"', so only backslashes
+		// change, as in Python's repr.
+		return `"` + strings.ReplaceAll(strings.ReplaceAll(s, `\`, `\\`), `"`, `\"`) + `"`
 	}
 	return "'" + strings.ReplaceAll(strings.ReplaceAll(s, `\`, `\\`), "'", `\'`) + "'"
 }
