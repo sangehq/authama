@@ -154,10 +154,9 @@ func applyOnePurpose(p paths.Paths, m *manifest.Manifest, mv Move, backup string
 	if kind == manifest.ToolKindGitSigning || mv.Tool == manifest.ToolGit {
 		from := src + ".pub"
 		to := dest + ".pub"
-		cmd := SangeRetargetArgs(from, to)
 		// Prefer ~-form for the command the owner may re-run.
 		fromShow, toShow := "~/.ssh/"+relSSH(p, from), "~/.ssh/"+relSSH(p, to)
-		cmd = SangeRetargetArgs(fromShow, toShow)
+		cmd := SangeRetargetArgs(fromShow, toShow)
 		msg, err := runSange(cmd...)
 		if err != nil {
 			line := "sange " + strings.Join(cmd, " ")

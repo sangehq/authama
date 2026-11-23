@@ -64,7 +64,7 @@ func StartWatch(ctx context.Context, roots []Tracked, debounce time.Duration, on
 }
 
 func runWatch(ctx context.Context, w *fsnotify.Watcher, roots []Tracked, debounce time.Duration, onChange func()) {
-	defer w.Close()
+	defer func() { _ = w.Close() }()
 	var mu sync.Mutex
 	timer := time.NewTimer(debounce)
 	if !timer.Stop() {

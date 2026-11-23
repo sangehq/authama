@@ -167,9 +167,7 @@ func keyTree(p paths.Paths, m *manifest.Manifest) []Suggestion {
 			// A directory no profile owns: keep the old guess (the folder name).
 			loc = manifest.LocateKey{Profile: filepath.Base(dir), Name: name}
 		}
-		if strings.HasSuffix(loc.Name, ".pub") {
-			loc.Name = strings.TrimSuffix(loc.Name, ".pub")
-		}
+		loc.Name = strings.TrimSuffix(loc.Name, ".pub")
 		ref := manifest.KeyRef{Profile: loc.Profile, KeyName: loc.Name}
 		rel := relSSH(p, priv)
 		expected := m.KeyPath(p.SSHDir, ref)

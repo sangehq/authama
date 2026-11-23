@@ -316,22 +316,19 @@ func dockerSSHHosts(p paths.Paths) []string {
 			continue
 		}
 		if ep, ok := doc.Endpoints["docker"]; ok {
-			if host, ok := strings.CutPrefix(ep.Host, "ssh://"); ok {
-				host = strings.TrimSuffix(host, "/")
-				if h, _, ok := strings.Cut(host, "@"); ok {
-					host = h
-					// ssh://user@alias — actually user@host; take after @
-				}
-				if _, after, ok := strings.Cut(ep.Host, "ssh://"); ok {
-					host = after
-					if _, h, ok := strings.Cut(host, "@"); ok {
-						host = h
-					}
-					if i := strings.IndexAny(host, "/:"); i >= 0 {
-						host = host[:i]
-					}
-					out = append(out, host)
-				}
+			host, ok := strings.CutPrefix(ep.Host, "ssh://")
+			if !ok {
+				continue
+			}
+			host = strings.TrimSuffix(host, "/")
+			if _, h, ok := strings.Cut(host, "@"); ok {
+				host = h
+			}
+			if i := strings.IndexAny(host, "/:"); i >= 0 {
+				host = host[:i]
+			}
+			if host != "" {
+				out = append(out, host)
 			}
 		}
 	}
@@ -346,9 +343,6 @@ func PurposeLine(profile, key, tool, kind string) string {
 	}
 	return line
 }
-
-// Public comment helper used by tests.
-func pubLineComment(line string) string { return strings.TrimSpace(line) }
 
 // FingerprintOfPub is a thin wrapper around keyaudit so tests and apply can
 // compare leftover copies without reading a private key.

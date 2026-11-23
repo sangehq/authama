@@ -3,7 +3,6 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -201,5 +200,3 @@ func newStructureRulesRemoveCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "remove without confirming")
 	return cmd
 }
-
-func formatEvidence(ev []string) string { return strings.Join(ev, "; ") }

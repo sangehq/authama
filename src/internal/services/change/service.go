@@ -50,7 +50,7 @@ func ServiceRemove(name string) Change {
 			if err := editor.New(p).RemoveService(name); err != nil {
 				return err
 			}
-			fmt.Fprintf(out, "removed service %s\n", name)
+			_, _ = fmt.Fprintf(out, "removed service %s\n", name)
 			return ApplyManifestEdit(out, p)
 		},
 	}
