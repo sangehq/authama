@@ -256,9 +256,11 @@ func copyHome(p paths.Paths) (paths.Paths, func(), error) {
 		return paths.Paths{}, nil, err
 	}
 	// What authama last rendered goes too, so a render in the copy tells
-	// hand edits from its own lines the way it does in the home.
+	// hand edits from its own lines the way it does in the home. It goes to
+	// the copy's state directory, inside its config home, wherever the
+	// home's own state lives (a separate state home included).
 	if b, err := os.ReadFile(filepath.Join(p.StateDir(), configsvc.RecordFile)); err == nil {
-		if rel, err := filepath.Rel(p.ConfigDir, filepath.Join(p.StateDir(), configsvc.RecordFile)); err == nil && !strings.HasPrefix(rel, "..") {
+		if rel, err := filepath.Rel(shadow.ConfigDir, filepath.Join(shadow.StateDir(), configsvc.RecordFile)); err == nil && !strings.HasPrefix(rel, "..") {
 			files["config/"+filepath.ToSlash(rel)] = string(b)
 		}
 	}
