@@ -110,7 +110,7 @@ test('structure classifies a purpose key, remembers a rule, previews approve, an
   await page.getByRole('button', { name: 'Preview the moves' }).click();
   await expect(panel(page).getByRole('heading', { level: 1 })).toHaveText('Review the change');
   await expect(panel(page)).toContainText(/tools\/git|git-signing/);
-  await panel(page).getByRole('button', { name: 'Cancel' }).click();
+  await panel(page).getByRole('button', { name: 'Close' }).click();
 
   const toolDrop = page.locator('li[data-drop^="tool:"][data-drop$=":git"]').first();
   if (await toolDrop.count()) {
