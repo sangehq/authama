@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -119,13 +120,14 @@ func (sp structurePage) view(showAll bool) (StructureView, error) {
 	}
 	v.Root = "~/.ssh/" + manifest.KeyRoot(m)
 	v.Categories = m.Categories()
-	v.Groups = structureGroups(p, m)
 	v.Rules, _ = structure.LoadRules(p)
 
 	all, checked, err := structure.Current(p)
 	if err != nil {
+		v.Groups = structureGroups(p, m, nil)
 		return v, err
 	}
+	v.Groups = structureGroups(p, m, all)
 	v.Checked = checked
 	for _, s := range all {
 		row := StructureSuggestion{Suggestion: s, Moves: suggestionMoves(m, s)}
@@ -140,7 +142,7 @@ func (sp structurePage) view(showAll bool) (StructureView, error) {
 
 // structureGroups lays the manifest out as the tree: the profiles in no
 // category first, then each category in manifest order.
-func structureGroups(p paths.Paths, m *manifest.Manifest) []StructureGroup {
+func structureGroups(p paths.Paths, m *manifest.Manifest, suggestions []structure.Suggestion) []StructureGroup {
 	keysOf := map[string][]StructureKey{}
 	if refs, err := m.KeyRefs(); err == nil {
 		for _, ref := range refs {
@@ -182,7 +184,7 @@ func structureGroups(p paths.Paths, m *manifest.Manifest) []StructureGroup {
 			if prof.Category != c {
 				continue
 			}
-			hostKeys, toolFolders := splitToolKeys(p, m, name, keysOf[name])
+			hostKeys, toolFolders := splitToolKeys(p, m, name, keysOf[name], purposeTools(suggestions, name))
 			sp := StructureProfile{Name: name, Category: c, Dir: "~/.ssh/" + m.ProfileRel(name),
 				OnePassword: prof.InOnePassword(), Keys: hostKeys, Hosts: hostsOf[name], Tools: toolFolders}
 			for _, to := range cats {
@@ -265,7 +267,20 @@ func purposeKeyName(s structure.Suggestion, profile string) string {
 	return strings.TrimSuffix(filepath.Base(s.Path), "")
 }
 
-func splitToolKeys(_ paths.Paths, m *manifest.Manifest, profile string, keys []StructureKey) ([]StructureKey, []StructureToolFolder) {
+func purposeTools(suggestions []structure.Suggestion, profile string) []string {
+	var out []string
+	for _, s := range suggestions {
+		if s.Dismissed || s.Kind != structure.KindPurpose || s.Profile != profile || s.Tool == "" {
+			continue
+		}
+		if !slices.Contains(out, s.Tool) {
+			out = append(out, s.Tool)
+		}
+	}
+	return out
+}
+
+func splitToolKeys(_ paths.Paths, m *manifest.Manifest, profile string, keys []StructureKey, extra []string) ([]StructureKey, []StructureToolFolder) {
 	byTool := map[string][]StructureKey{}
 	var hostKeys []StructureKey
 	for _, k := range keys {
@@ -279,6 +294,9 @@ func splitToolKeys(_ paths.Paths, m *manifest.Manifest, profile string, keys []S
 	var folders []StructureToolFolder
 	seen := map[string]bool{}
 	for _, tool := range manifest.BuiltinToolSlugs() {
+		if len(byTool[tool]) == 0 && !slices.Contains(extra, tool) {
+			continue
+		}
 		seen[tool] = true
 		folders = append(folders, StructureToolFolder{
 			Tool: tool, Dir: "~/.ssh/" + m.ProfileRel(profile) + "/tools/" + tool, Keys: byTool[tool],

@@ -156,7 +156,7 @@
             </form>
             <form method="post" action="{{basePath}}/changes/preview" class="d-inline" data-inline>
               <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="structure-rule-remove"><input type="hidden" name="id" value="{{.ID}}">
-              <button type="submit" class="btn btn-sm btn-ghost-danger"{{desc "structure-rule-remove"}}>Remove</button>
+              <button type="submit" class="btn btn-sm btn-outline-danger"{{desc "structure-rule-remove"}}>Remove</button>
             </form>
             {{end}}
           </li>
@@ -181,7 +181,7 @@
           <label class="form-label small" for="rule-remove-id">Remove a rule</label>
           <div class="d-flex gap-2 mb-2">
             <input class="form-control form-control-sm" id="rule-remove-id" name="id" placeholder="rule id" required>
-            <button type="submit" class="btn btn-sm btn-ghost-danger"{{desc "structure-rule-remove"}}>Preview remove</button>
+            <button type="submit" class="btn btn-sm btn-outline-danger"{{desc "structure-rule-remove"}}>Preview remove</button>
           </div>
         </form>
         <form method="post" action="{{basePath}}/changes/preview" data-inline>
