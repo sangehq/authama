@@ -46,11 +46,6 @@ type VariantFields struct {
 	RouteFields
 }
 
-func (f RouteFields) empty() bool {
-	return f.Proxy == nil && f.ProxyCommand == nil && len(f.SetOptions) == 0 && len(f.UnsetOptions) == 0 &&
-		f.Section == nil && f.Comment == nil
-}
-
 // resolveProxy applies --proxy / --proxy-command to the current proxy.
 func resolveProxy(cur *manifest.ProxySpec, f RouteFields) (*manifest.ProxySpec, error) {
 	if f.Proxy != nil && f.ProxyCommand != nil && *f.Proxy != "" && *f.ProxyCommand != "" {

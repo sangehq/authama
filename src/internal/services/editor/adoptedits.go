@@ -81,7 +81,7 @@ func hostFromBlock(m *manifest.Manifest, profile string, b renderer.Block) (mani
 	if p, ok := b.Get("Port"); ok {
 		n, err := strconv.Atoi(p)
 		if err != nil || n < 1 || n > 65535 {
-			return h, fmt.Errorf("Port %q is not a port", p)
+			return h, fmt.Errorf("its Port %q is not a port number", p)
 		}
 		h.Port = n
 	}
