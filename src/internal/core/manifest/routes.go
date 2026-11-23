@@ -28,6 +28,8 @@ type Variant struct {
 	RawOptions OrderedOptions `json:"raw_options"`
 	Section    string         `json:"section,omitempty"`
 	Comment    string         `json:"comment,omitempty"`
+	// Services are reachability dependencies this variant's route needs.
+	Services []string `json:"services,omitempty"`
 }
 
 // MarshalJSON leaves out empty raw_options, so a variant reads as what it changes.
@@ -40,8 +42,9 @@ func (v Variant) MarshalJSON() ([]byte, error) {
 		RawOptions *OrderedOptions `json:"raw_options,omitempty"`
 		Section    string          `json:"section,omitempty"`
 		Comment    string          `json:"comment,omitempty"`
+		Services   []string        `json:"services,omitempty"`
 	}
-	w := wire{Name: v.Name, Hostname: v.Hostname, Port: v.Port, Proxy: v.Proxy, Section: v.Section, Comment: v.Comment}
+	w := wire{Name: v.Name, Hostname: v.Hostname, Port: v.Port, Proxy: v.Proxy, Section: v.Section, Comment: v.Comment, Services: v.Services}
 	if v.RawOptions.Len() > 0 {
 		w.RawOptions = &v.RawOptions
 	}

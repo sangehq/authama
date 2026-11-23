@@ -107,14 +107,24 @@ func GlobKeyTree(sshDir, root string, tail ...string) []string {
 	tail = safe
 	flat, _ := filepath.Glob(filepath.Join(append([]string{base, "*"}, tail...)...))
 	nested, _ := filepath.Glob(filepath.Join(append([]string{base, "*", "*"}, tail...)...))
+	// tools/<tool>/<key> under an uncategorised profile, or under category/profile.
+	toolFlat, _ := filepath.Glob(filepath.Join(append([]string{base, "*", "tools", "*"}, tail...)...))
+	toolNested, _ := filepath.Glob(filepath.Join(append([]string{base, "*", "*", "tools", "*"}, tail...)...))
 	out := append([]string{}, flat...)
-	for _, p := range nested {
+	for _, p := range append(append(nested, toolFlat...), toolNested...) {
 		rel, err := filepath.Rel(base, p)
 		if err != nil {
 			continue
 		}
-		mid := strings.Split(filepath.ToSlash(rel), "/")[1]
-		if mid == "old" || strings.HasPrefix(mid, ".") {
+		parts := strings.Split(filepath.ToSlash(rel), "/")
+		skip := false
+		for _, mid := range parts[:len(parts)-1] {
+			if mid == "old" || strings.HasPrefix(mid, ".") {
+				skip = true
+				break
+			}
+		}
+		if skip {
 			continue
 		}
 		out = append(out, p)
