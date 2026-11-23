@@ -11,7 +11,7 @@
     {{template "change_open" $}}<input type="hidden" name="action" value="config-render-force"><button type="submit" class="btn btn-outline-danger"{{desc "config-render-force"}}>{{icon "trash"}}<span class="ms-1">Discard them and render</span></button></form>
   </div></div></div>{{end}}
 {{if .OfferUpdate}}<div class="card mb-3" id="offer-update"><div class="card-body d-flex flex-wrap align-items-center gap-2"><span class="me-auto">The profile already has this host. Update it with what you entered instead (<code>--update</code>)?</span>
-  <form method="post" action="{{basePath}}/changes/preview"><input type="hidden" name="csrf" value="{{$.CSRF}}">{{range .Update}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}<button type="submit" class="btn btn-primary"{{desc "host-add-update"}}>{{icon "refresh"}}<span class="ms-1">Preview the update</span></button></form>
+  <form method="post" action="{{basePath}}/changes/preview" data-inline><input type="hidden" name="csrf" value="{{$.CSRF}}">{{range .Update}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}<button type="submit" class="btn btn-primary"{{desc "host-add-update"}}>{{icon "refresh"}}<span class="ms-1">Preview the update</span></button></form>
 </div></div>{{end}}
 {{else}}
 {{if .Plan.Output}}<div class="card mb-3"><div class="card-header"><h2 class="card-title">What authama would say</h2></div><div class="card-body"><pre class="code-block" tabindex="0">{{.Plan.Output}}</pre></div></div>{{end}}

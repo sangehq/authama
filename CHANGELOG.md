@@ -18,7 +18,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a host more names, a proxy, and a second route](docs/recipes/host-routes.md).
 - **Hand edits are kept.** `ssh config render` remembers what it wrote and refuses to overwrite lines typed into a
   managed file since; `ssh config keep-edits` (web: **SSH config › Keep hand edits**) takes them into the manifest,
-  `render --force` discards them after a backup, and `ssh config check` lists them.
+  `render --force` discards them after a backup, and `ssh config check` lists them. The web does all of it: a
+  Hand edits card on SSH config, Keep or Discard (previewed, confirmed, backup path shown) there and on a refused
+  render; host add's `--update` is a checkbox and is offered when the host exists; variants have an edit panel.
+- **Import takes in host routes.** `ssh import` (and the web importer) reads extra `Host` names as aliases,
+  `ProxyCommand none`, the Cloudflare Access command or a command of your own, other options, and the comment lines
+  above and inside a block as its section and comment, so the blocks authama writes import back the same.
 
 - **Every launch opens the browser, signed in.** Double-clicking authama, `authama` and `authama serve`
   now check the server before anything else: a stale record or a hung server (one that holds its port

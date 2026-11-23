@@ -26,8 +26,8 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | CLI-only by design | 19 |
 | Gap | 0 |
 | Flags on those commands | 461 |
-| Flags covered | 385 |
-| Flags CLI-only by design | 76 |
+| Flags covered | 387 |
+| Flags CLI-only by design | 74 |
 | Flags with no web control | 0 |
 
 
@@ -101,10 +101,10 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `ssh bundle` | web | /snapshots: Bundle | `--keep`, `--output` (CLI), `--recipient`, `--sign-key` (CLI) | Written to the state home dist/. --sign-key stays in the terminal: ssh-keygen may ask for the key's passphrase. |
 | `ssh clean` | web | /doctor: Clean | `--adopt`, `--dry-run`, `--yes` |  |
 | `ssh config adopt` | web | /ssh-config: Adopt duplicate Host blocks | `--dry-run`, `--yes` | New in this branch. |
-| `ssh config check` | web | /ssh-config | - |  |
+| `ssh config check` | web | /ssh-config | - | HAND-EDIT lines show as the Hand edits card, with Keep and Discard. |
 | `ssh config export` | web | /ssh-config: download ssh_config | `--flat`, `--out` |  |
-| `ssh config keep-edits` | web | /ssh-config: Keep hand edits | `--dry-run`, `--yes` | New in this branch. |
-| `ssh config render` | web | /ssh-config, overview: Re-render | `--dry-run`, `--force` (CLI), `--yes` | Discarding hand edits stays in the terminal; the web keeps them (Keep hand edits). |
+| `ssh config keep-edits` | web | /ssh-config: Keep hand edits; offered on a render refused over hand edits | `--dry-run`, `--yes` | The preview is the dry run: it lists each block adopted and the manifest diff. |
+| `ssh config render` | web | /ssh-config, overview: Re-render; /ssh-config: Discard hand edits and render | `--dry-run`, `--force`, `--yes` | A render refused over hand edits lists them and offers Keep or Discard. --force is a destructive change (confirm dialog, owner PIN when set); its result names the backup. |
 | `ssh config show` | web | /ssh-config | - |  |
 | `ssh deploy` | web | key page: Deploy (job) | `--direct`, `--yes` |  |
 | `ssh diff` | web | Reconcile preview | - |  |
@@ -118,13 +118,13 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `ssh git sign verify` | web | /git-sign?check= | `--json`, `--number`, `--strict` (CLI) |  |
 | `ssh git status` | web | /git-sign: Remote mode (?remotes=) | `--json` | Mode and owner per checkout. |
 | `ssh git use` | web | /git-sign: Remote mode, Switch (preview) | `--dry-run`, `--json`, `--mode`, `--profile`, `--yes` | Checks with ls-remote on apply. |
-| `ssh host add` | web | /hosts: Add a host | `--alias`, `--comment`, `--connect-timeout`, `--env`, `--hostname`, `--key-name`, `--option`, `--port`, `--provider`, `--proxy`, `--proxy-command`, `--proxy-jump`, `--role`, `--section`, `--tag`, `--token-env`, `--update` (CLI), `--user` | Alias empty: generated from env and role. Routes under Routes; the web updates a host from its Edit panel, so `--update` stays CLI. |
+| `ssh host add` | web | /hosts: Add a host | `--alias`, `--comment`, `--connect-timeout`, `--env`, `--hostname`, `--key-name`, `--option`, `--port`, `--provider`, `--proxy`, `--proxy-command`, `--proxy-jump`, `--role`, `--section`, `--tag`, `--token-env`, `--update`, `--user` | Alias empty: generated from env and role. Routes under Routes. --update: the Update it if it exists box, and a preview of an alias the profile has offers the update. |
 | `ssh host apply` | web | /hosts: Add or update in bulk | `--category`, `--create-profile`, `--dry-run`, `--file` (CLI), `--host`, `--no-pin`, `--reconcile`, `--tag`, `--yes` | The web reconcile is always --no-pin; pin from /hosts. |
 | `ssh host delete` | web | host page: Delete; --revoke/--purge as a job | `--no-key-backup` (CLI), `--purge`, `--revoke`, `--yes` |  |
 | `ssh host edit` | web | host page: Edit | `--alias`, `--comment`, `--connect-timeout`, `--hostname`, `--key-name`, `--option`, `--port`, `--provider`, `--proxy`, `--proxy-command`, `--proxy-jump`, `--remove-alias`, `--section`, `--tag`, `--token-env`, `--unset-option`, `--untag`, `--user` | Routes section filled in with the current values: a name or option taken out is --remove-alias/--unset-option. |
 | `ssh host variant remove` | web | host page: Route variants, remove | - | New in this branch. |
 | `ssh host variant set` | web | host page: Route variants, Add or change one | `--comment`, `--connect-timeout`, `--hostname`, `--option`, `--port`, `--proxy`, `--proxy-command`, `--proxy-jump`, `--section`, `--unset-option` | Empty fields leave a variant's settings; unset one from the CLI or remove and set again. |
-| `ssh import` | web | /import | `--dry-run`, `--force`, `--yes` |  |
+| `ssh import` | web | /import | `--dry-run`, `--force`, `--yes` | Takes in extra Host names as aliases, ProxyCommand (cloudflared, none, a command), options, section and comment lines. |
 | `ssh key ack` | web | key page: Acknowledge; /keys: Acknowledge new keys | `--all`, `--category` |  |
 | `ssh key add` | web | /keys: Add a key | `--host`, `--passphrase` (CLI), `--rotate-after-days`, `--type` | A passphrase stays in the terminal. |
 | `ssh key adopt` | web | /structure: keep in place | `--host`, `--yes` |  |
@@ -213,6 +213,10 @@ None. Every command and flag is on the web, or CLI-only by design for the reason
 - `rotate --keep-old`: Take the previous key off servers, unticked.
 - `rotate --failed`: Choose the keys the last rotation left, on the rotate review.
 - `host apply --no-pin`: the web reconcile always runs with `--no-pin`; host keys are pinned from /hosts.
+- `host add --update`: Update it if the profile has it already; a preview of an alias the profile has also offers the update.
+- `host edit --remove-alias`, `--unset-option`, `host variant set --unset-option`: take the name or option out of its field; the preview shows the flag.
+- `ssh config keep-edits --dry-run`: the preview, which lists each block adopted; Make this change is `--yes`.
+- `ssh config render --force`: Discard hand edits and render, on /ssh-config or on a refused render; the backup path is in the result.
 - `host edit --remove-alias/--unset-option`: take the name or option out of the Routes fields on the Edit panel.
 - `knownhosts pin --all`: Pin host keys on /hosts (`knownhosts init`), which pins every host.
 - `host delete`, `profile delete --revoke/--purge`: a job, linked from the plain delete.

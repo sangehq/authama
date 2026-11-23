@@ -113,9 +113,20 @@ Hand-written blocks outside authama's managed files and blocks are still kept as
 
 The host page's **Edit** panel has a **Routes** section with the same fields, filled in with the host's current
 values: names, proxy (or a command), jump host, connect timeout, other options one `KEY=VALUE` a line, the section
-heading and the comment. A name or option taken out of the box is removed. **Route variants** on the host page lists
-the host's variants with a remove button, and **Add or change one** sets a variant. The **Add a host** panel has the
-same Routes section. **SSH config › Keep hand edits** is `ssh config keep-edits`. Every one is previewed first.
+heading and the comment. A name or option taken out of the box is removed (`--remove-alias`, `--unset-option`).
+**Route variants** on the host page lists the host's variants; each has an edit panel filled in with its values (an
+option taken out is unset; proxy **off** goes back to the host's) and a remove button, and **Add or change one** sets
+a variant. The **Add a host** panel has the same Routes section and **Update it if the profile has it already**
+(`--update`); adding a host the profile has offers **Preview the update** instead. A bad option is refused with the
+closest keyword ssh knows.
+
+**SSH config** lists hand edits in a **Hand edits** card (the `HAND-EDIT` lines of `ssh config check`), with **Keep
+hand edits** (`ssh config keep-edits`: its preview lists each block it takes in and the manifest change) and
+**Discard hand edits and render** (`ssh config render --force`: a destructive change, confirmed, behind the owner
+PIN when one is set; the result names the backup directory). A render refused over hand edits shows the list and both
+choices. Every one is previewed first. **Import** takes in blocks with more names, `ProxyCommand` (`none`, the
+Cloudflare Access command or one of your own), other options and their section and comment lines, so a block
+written by hand round-trips.
 
 ## Exports
 
