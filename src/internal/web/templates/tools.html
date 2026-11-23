@@ -1,9 +1,38 @@
 {{define "content"}}{{with .Data}}
 {{template "page_header" (header "SSH" $.Title "Keys used by tools such as git signing and Docker, kept under ~/.ssh/profiles/<category>/<profile>/tools/<tool>/. Moving a key there is done on Structure: classify, then approve. Git signing path updates are applied through sange, not by writing ~/.gitconfig here." (action "Structure" "/structure" "folder" | withTip "structure") (action "Services" "/services" "activity" | withTip "services"))}}
+<div class="card mb-3" id="tool-status">
+  <div class="card-header"><h2 class="card-title">Status</h2></div>
+  <div class="card-body">
+    <p class="mb-0" data-tool-status>{{.Declared}} tool key(s) declared, {{.Present}} present, {{.Missing}} missing</p>
+    {{if .Missing}}
+    <ul class="mt-2 mb-0">
+      {{range .Rows}}{{if not .Present}}<li>missing <a href="{{u (printf "/tools?show=%s" .Ref)}}"><code>{{.Ref}}</code></a> <span class="text-secondary">{{.Path}}</span></li>{{end}}{{end}}
+    </ul>
+    {{end}}
+  </div>
+  <div class="card-footer"><span class="small text-secondary">CLI: </span>{{template "command_line" .StatusCmd}}</div>
+</div>
+{{if .ShowOf}}
+<div class="card mb-3" id="tool-show" data-tool-show="{{.ShowOf}}">
+  <div class="card-header"><h2 class="card-title">Show {{.ShowOf}}</h2></div>
+  <div class="card-body">
+    {{if .Show}}
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Profile</dt><dd class="col-sm-9">{{.Show.Profile}}</dd>
+      <dt class="col-sm-3">Key</dt><dd class="col-sm-9"><code>{{.Show.Name}}</code></dd>
+      <dt class="col-sm-3">Tool</dt><dd class="col-sm-9">{{.Show.Tool}}{{if .Show.Kind}} <span class="text-secondary">{{.Show.Kind}}</span>{{end}}</dd>
+      <dt class="col-sm-3">Path</dt><dd class="col-sm-9"><code>{{.Show.Path}}</code></dd>
+      <dt class="col-sm-3">On disk</dt><dd class="col-sm-9">{{if .Show.Present}}present{{else}}missing{{end}}</dd>
+    </dl>
+    {{else}}<p class="text-secondary mb-0">No tool key <code>{{.ShowOf}}</code>. See the list, or <code>ssh tool list</code>.</p>{{end}}
+  </div>
+  <div class="card-footer"><span class="small text-secondary">CLI: </span>{{template "command_line" .ShowCmd}}</div>
+</div>
+{{end}}
 {{if not .Rows}}
 <div class="card"><div class="card-body">{{template "empty" (empty "key" "No tool keys declared" "Classify a key on the Structure page, or declare role: tool in the manifest.")}}</div></div>
 {{else}}
-<div class="card">
+<div class="card" id="tool-list">
   <div class="table-responsive">
     <table class="table table-vcenter card-table">
       <thead><tr><th>Profile</th><th>Key</th><th>Tool</th><th>Path</th><th>On disk</th></tr></thead>
@@ -11,7 +40,7 @@
         {{range .Rows}}
         <tr>
           <td>{{.Profile}}</td>
-          <td><code>{{.Name}}</code></td>
+          <td><a href="{{u (printf "/tools?show=%s" .Ref)}}"><code>{{.Name}}</code></a></td>
           <td>{{.Tool}}{{if .Kind}} <span class="text-secondary small">{{.Kind}}</span>{{end}}</td>
           <td><code>{{.Path}}</code></td>
           <td>{{if .Present}}<span class="badge badge-ok">present</span>{{else}}<span class="badge badge-warn">missing</span>{{end}}</td>
@@ -20,7 +49,7 @@
       </tbody>
     </table>
   </div>
+  <div class="card-footer"><span class="small text-secondary">CLI: </span>{{template "command_line" .ListCmd}}</div>
 </div>
 {{end}}
-<p class="text-secondary small mt-3 mb-0">CLI: {{template "command_line" .ListCmd}}</p>
 {{end}}{{end}}

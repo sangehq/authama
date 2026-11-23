@@ -41,7 +41,7 @@
           </tbody>
         </table>
       </div>
-      {{else}}<div class="card-body"><p class="text-secondary mb-0">No host has a service attached yet. Use <code>ssh host edit --service</code>.</p></div>{{end}}
+      {{else}}<div class="card-body"><p class="text-secondary mb-0">No host has a service attached yet. Use the host or variant form, or <code>ssh host edit --service</code>.</p></div>{{end}}
     </div>
   </div>
   <div class="col-lg-5">
@@ -54,10 +54,13 @@
           <div class="d-flex justify-content-between gap-2">
             <div><strong>{{.Ref}}</strong> <span class="text-secondary small">{{.Kind}}</span>{{if .Label}}<div class="small text-secondary">{{.Label}}</div>{{end}}</div>
             {{if not $.ReadOnly}}
-            <form method="post" action="{{basePath}}/changes/preview" data-inline>
-              <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="service-remove"><input type="hidden" name="name" value="{{.Ref}}">
-              <button type="submit" class="btn btn-sm btn-ghost-danger"{{desc "service-remove"}}>Remove</button>
-            </form>
+            <div class="d-flex gap-1">
+              <a class="btn btn-sm btn-ghost-secondary" href="#service-edit-form">Edit</a>
+              <form method="post" action="{{basePath}}/changes/preview" data-inline>
+                <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="service-remove"><input type="hidden" name="name" value="{{.Ref}}">
+                <button type="submit" class="btn btn-sm btn-ghost-danger"{{desc "service-remove"}}>Remove</button>
+              </form>
+            </div>
             {{end}}
           </div>
         </li>
@@ -66,6 +69,27 @@
       {{else}}<div class="card-body"><p class="text-secondary mb-0">No extra catalog entries. Built-in kinds can be attached by name.</p></div>{{end}}
     </div>
     {{if not $.ReadOnly}}
+    <form method="post" action="{{basePath}}/changes/preview" class="card mb-3" data-inline id="service-edit-form">
+      <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="service-edit">
+      <div class="card-header"><h2 class="card-title">Edit a catalog service</h2></div>
+      <div class="card-body">
+        <label class="form-label" for="svc-edit-name">Name</label>
+        <input class="form-control mb-2" id="svc-edit-name" name="name" required>
+        <label class="form-label" for="svc-edit-kind">Kind</label>
+        <select class="form-select mb-2" id="svc-edit-kind" name="kind" required>
+          <option value="">Choose a kind</option>
+          {{range .Kinds}}<option value="{{.}}">{{.}}</option>{{end}}
+        </select>
+        <label class="form-label" for="svc-edit-label">Label (optional)</label>
+        <input class="form-control mb-2" id="svc-edit-label" name="label">
+        <label class="form-label" for="svc-edit-binary">Binary override (optional)</label>
+        <input class="form-control" id="svc-edit-binary" name="binary" placeholder="cloudflared">
+        <p class="small text-secondary mb-0 mt-2">The same as <code>ssh service edit</code>. A name that is not in the catalog is refused.</p>
+      </div>
+      <div class="card-footer text-end">
+        <button type="submit" class="btn btn-primary"{{desc "service-edit"}}>Preview edit</button>
+      </div>
+    </form>
     <form method="post" action="{{basePath}}/changes/preview" class="card mb-3" data-inline>
       <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="service-remove">
       <div class="card-header"><h2 class="card-title">Remove a catalog service</h2></div>

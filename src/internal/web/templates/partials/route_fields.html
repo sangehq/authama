@@ -11,5 +11,18 @@
 </div>
 <div class="mb-3"><label class="form-label" for="{{$p}}-options">Other ssh options</label><textarea class="form-control font-monospace" id="{{$p}}-options" name="options" rows="3" spellcheck="false" placeholder="ServerAliveInterval=30">{{$r.Options}}</textarea><small class="form-hint">One <code>KEY=VALUE</code> a line, any option OpenSSH knows{{if .Edit}}; a line taken out removes it{{end}}. The same as <code>--option</code>{{if .Edit}} and <code>--unset-option</code>{{end}}.</small></div>
 <div class="mb-3"><label class="form-label" for="{{$p}}-section">Section heading</label><input class="form-control" id="{{$p}}-section" name="section" value="{{$r.Section}}" autocomplete="off" placeholder="prod: Cloudflare Access"><small class="form-hint">A comment above the block; the blocks after it sit under it. <code>--section</code></small></div>
-<div><label class="form-label" for="{{$p}}-comment">Comment</label><input class="form-control" id="{{$p}}-comment" name="comment" value="{{$r.Comment}}" autocomplete="off"><small class="form-hint">A comment inside the block, under its <code>Host</code> line. <code>--comment</code></small></div>
+<div class="mb-3"><label class="form-label" for="{{$p}}-comment">Comment</label><input class="form-control" id="{{$p}}-comment" name="comment" value="{{$r.Comment}}" autocomplete="off"><small class="form-hint">A comment inside the block, under its <code>Host</code> line. <code>--comment</code></small></div>
+<div>
+  <div class="form-label">Services</div>
+  <input type="hidden" name="service_set" value="1">
+  {{range $r.ServiceOptions}}
+  <label class="form-check" for="{{$p}}-svc-{{.Name}}">
+    <input class="form-check-input" type="checkbox" id="{{$p}}-svc-{{.Name}}" name="service" value="{{.Name}}"{{if .Checked}} checked{{end}}>
+    <span class="form-check-label"><code>{{.Name}}</code></span>
+  </label>
+  {{end}}
+  <label class="form-label mt-2" for="{{$p}}-svc-extra">Other services</label>
+  <input class="form-control" id="{{$p}}-svc-extra" name="service_extra" autocomplete="off" spellcheck="false" placeholder="access-prod, warp">
+  <small class="form-hint">Reachability services attached to this route. The same as <code>--service</code>{{if $.Edit}}; unchecking one is <code>--remove-service</code>{{end}}. Health is on the Services page; this does not start a tunnel or change WARP.</small>
+</div>
 {{end}}

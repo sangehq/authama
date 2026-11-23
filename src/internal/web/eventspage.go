@@ -25,35 +25,39 @@ const defaultEventInterval = 30 * time.Second
 const fastEventInterval = 2 * time.Second
 const eventDebounce = 1500 * time.Millisecond
 
-// watchEvents scans once at start, then on a short poll and a 30s full
-// scan, until ctx ends. A failed scan is tried again next time.
+// watchEvents scans once at start, then again on filesystem events (debounced
+// 1–2s) and on a 30s full scan, until ctx ends. When fsnotify cannot be
+// established, a short poll is the fallback. A failed scan is tried again
+// next time.
 func (s *Server) watchEvents(ctx context.Context) {
 	every := s.opts.EventInterval
 	if every <= 0 {
 		every = defaultEventInterval
 	}
+	s.watchMode.Store(events.ModePolling)
 	s.scanEvents()
-	var last time.Time
-	run := func() {
-		if !last.IsZero() && time.Since(last) < eventDebounce {
-			return
-		}
-		s.scanEvents()
-		last = time.Now()
+	var roots []events.Tracked
+	if s.opts.EventRoots != nil {
+		roots = s.opts.EventRoots(s.opts.Engine.Home())
 	}
+	mode := events.StartWatch(ctx, roots, eventDebounce, s.scanEvents)
+	s.watchMode.Store(mode)
 	full := time.NewTicker(every)
-	fast := time.NewTicker(fastEventInterval)
 	defer full.Stop()
-	defer fast.Stop()
+	var fastC <-chan time.Time
+	if mode != events.ModeWatching {
+		fast := time.NewTicker(fastEventInterval)
+		defer fast.Stop()
+		fastC = fast.C
+	}
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-full.C:
 			s.scanEvents()
-			last = time.Now()
-		case <-fast.C:
-			run()
+		case <-fastC:
+			s.scanEvents()
 		}
 	}
 }
@@ -86,7 +90,7 @@ func (s *Server) scanEvents() {
 func checkStructure(seen *atomic.Bool, p paths.Paths, evs []events.Event, now time.Time) {
 	changed := !seen.Load()
 	for _, e := range evs {
-		if e.Area == events.AreaSSH || e.Area == events.AreaConfig {
+		if e.Area == events.AreaSSH || e.Area == events.AreaConfig || e.Area == events.AreaAuth {
 			changed = true
 			break
 		}

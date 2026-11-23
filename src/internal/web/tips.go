@@ -81,6 +81,7 @@ var tips = map[string]string{
 	"tools":                 "Tool keys under profiles/<category>/<profile>/tools/<tool>/.",
 	"services":              "Reachability services attached to hosts, and read-only health checks.",
 	"service-add":           "Adds a catalog service. Hosts attach it with --service; this does not start a tunnel.",
+	"service-edit":          "Updates a catalog service of the same name. This does not start a tunnel or change WARP.",
 	"service-remove":        "Removes a catalog service. Hosts that still name it will need a later edit.",
 	"gitsign-keys":          "Opens Keys: the keys each profile can sign with, and whether each one is made yet.",
 	"gitsign-set":           "Shows the manifest diff and every line of the git files it writes. Nothing is written until you confirm.",

@@ -126,10 +126,14 @@
       </div>
     </form>
     {{end}}
-    <div class="card mb-3" id="structure-watch">
-      <div class="card-header"><h2 class="card-title">Watching</h2></div>
+    <div class="card mb-3" id="structure-watch" data-watch-mode="{{.WatchMode}}">
+      <div class="card-header"><h2 class="card-title">{{if eq .WatchMode "watching"}}Watching{{else}}Polling{{end}}</h2></div>
       <div class="card-body">
-        <p>While this server runs, it checks again whenever a file under <code>~/.ssh</code> or the config home changes{{if not .Checked.IsZero}} (last check {{when .Checked}}){{end}}. Nothing moves until you approve it.</p>
+        {{if eq .WatchMode "watching"}}
+        <p>While this server runs, it watches <code>~/.ssh</code> (including <code>profiles/</code>), the config home, <code>~/.gitconfig</code>, <code>~/.config/git</code> and <code>~/.docker/contexts</code>, and checks again a moment after a change. A full scan still runs every 30 seconds as a fallback{{if not .Checked.IsZero}} (last check {{when .Checked}}){{end}}. Nothing moves until you approve it.</p>
+        {{else}}
+        <p>Filesystem watching is not available on this run, so the server polls <code>~/.ssh</code> (including <code>profiles/</code>), the config home, <code>~/.gitconfig</code>, <code>~/.config/git</code> and <code>~/.docker/contexts</code> every couple of seconds, with a full scan every 30 seconds{{if not .Checked.IsZero}} (last check {{when .Checked}}){{end}}. Nothing moves until you approve it.</p>
+        {{end}}
         <p class="small text-secondary mb-1">To be notified when the server is not running, add the background check (every 15 minutes):</p>
         {{template "command_line" .InstallCmd}}
         <p class="small text-secondary mb-0">Each approved move is backed up to <code>.state/moved/</code> in the state home first and listed in <a href="{{u "/history"}}">History</a>.</p>

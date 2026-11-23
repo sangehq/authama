@@ -11,6 +11,7 @@ import (
 	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/services/change"
+	"github.com/sangehq/authama/src/internal/services/events"
 	"github.com/sangehq/authama/src/internal/services/structure"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
@@ -36,6 +37,8 @@ type StructureView struct {
 	ListCmd     string
 	InstallCmd  string
 	Rules       []structure.Rule
+	// WatchMode is "watching" (fsnotify) or "polling" (the 2s fallback).
+	WatchMode string
 }
 
 // StructureGroup is one category (Name "" is the profiles in none).
@@ -100,7 +103,11 @@ func (sp structurePage) handleStructure(w http.ResponseWriter, r *http.Request) 
 
 func (sp structurePage) view(showAll bool) (StructureView, error) {
 	p := sp.s.opts.Engine.Home()
-	v := StructureView{ShowAll: showAll,
+	mode, _ := sp.s.watchMode.Load().(string)
+	if mode == "" {
+		mode = events.ModePolling
+	}
+	v := StructureView{ShowAll: showAll, WatchMode: mode,
 		ListCmd:    brand.Command + " ssh structure list",
 		InstallCmd: brand.Command + " ssh structure install"}
 	m, err := manifest.Load(p.Manifest())

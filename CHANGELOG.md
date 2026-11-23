@@ -15,9 +15,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   snapshots. When a git-signing key moves, authama calls `sange profile signing retarget` and does not write
   `~/.gitconfig`. Services (Cloudflare Access, WARP, Tailscale, …) attach to hosts and variants (`--service`);
   `ssh service health` and the Services page are read-only. The Tools and Services pages, `ssh tool` and
-  `ssh service`, and a 2-second debounced poll in `serve` (30-second full scan still runs) ship with this.
-  `ssh structure install` is still CLI-only and is not run for you. See [structure](docs/tools/structure.md),
-  [tools](docs/tools/tools.md) and [services](docs/tools/services.md).
+  `ssh service`, ship with this. `authama serve` watches `~/.ssh` (including `profiles/`), the config home,
+  `~/.gitconfig`, `~/.config/git` and `~/.docker/contexts` with fsnotify (debounced 1–2s) and still does a
+  30-second full scan; the Structure page shows Watching or Polling. Host and variant forms attach
+  `--service` / `--remove-service`; the Services page adds, edits and removes catalog entries; the Tools
+  page covers `ssh tool list|show|status`. `ssh structure install` is still CLI-only and is not run for you.
+  See [structure](docs/tools/structure.md), [tools](docs/tools/tools.md) and [services](docs/tools/services.md).
 
 - **Host routes.** `ssh host add|edit` take `--alias` (more names on the `Host` line; `edit --remove-alias`),
   `--proxy none` (`ProxyCommand none`), `--proxy-command` (a quoted argv of your own), `--proxy-jump`,

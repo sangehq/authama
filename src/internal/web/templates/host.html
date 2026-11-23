@@ -85,7 +85,7 @@
             <div class="mb-3"><label class="form-label" for="e-provider">Provider</label><input class="form-control" id="e-provider" name="provider" list="e-providers" autocomplete="off" spellcheck="false"><datalist id="e-providers">{{range providerNames}}<option value="{{.}}">{{end}}</datalist><small class="form-hint">Leave empty to keep it. The same as <code>--provider</code>.</small></div>
             <div class="mb-3"><label class="form-label" for="e-tokenenv">Token variable</label><input class="form-control" id="e-tokenenv" name="token_env" autocomplete="off" spellcheck="false" placeholder="GH_TOKEN_WORK"><small class="form-hint">The name of the environment variable that holds the provider's API token, never the token. The same as <code>--token-env</code>.</small></div>
           </details>
-          <details class="mb-3"{{if or $.Data.Route.Aliases $.Data.Route.Proxy $.Data.Route.Options $.Data.Route.ProxyJump $.Data.Route.ConnectTimeout}} open{{end}}><summary class="text-secondary">Routes: names, proxy, ssh options, comments</summary>
+          <details class="mb-3"{{if or $.Data.Route.Aliases $.Data.Route.Proxy $.Data.Route.Options $.Data.Route.ProxyJump $.Data.Route.ConnectTimeout $.Data.Route.Services}} open{{end}}><summary class="text-secondary">Routes: names, proxy, ssh options, comments, services</summary>
             <div class="mt-2">{{template "route_fields" (routeForm "e" $.Data.Route true false)}}</div>
           </details>
           {{template "panel_actions" ""}}

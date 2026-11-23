@@ -165,11 +165,11 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `ssh snapshots prune` | web | /snapshots: Prune | `--keep` |  |
 | `ssh snapshots restore` | web | /snapshots/{id}: Restore | `--yes` |  |
 | `ssh service add` | web | /services: Add a catalog service | `--binary`, `--kind`, `--label` |  |
-| `ssh service edit` | web | /services: Add a catalog service (same name updates) | `--binary`, `--kind`, `--label` | Upsert; the add form updates an existing name. |
+| `ssh service edit` | web | /services: Edit a catalog service | `--binary`, `--kind`, `--label` | Dedicated edit form; the add form also updates an existing name. |
 | `ssh service health` | web | /services: Health | `--json` | Read-only; never starts a tunnel or changes WARP. |
 | `ssh service list` | web | /services | `--json` |  |
 | `ssh service remove` | web | /services: Remove | `--yes` |  |
-| `ssh service show` | web | /services | - |  |
+| `ssh service show` | web | /services: Catalog | - |  |
 | `ssh service status` | web | /services: Health | `--json` | Alias of health. |
 | `ssh structure approve` | web | /structure: drag-and-drop, Approve | `--dry-run`, `--name`, `--plan`, `--profile`, `--yes` |  |
 | `ssh structure check` | web | /structure (live watcher) | `--notify` (CLI), `--quiet` (CLI) | Auto-applies rules you enabled with --auto. |
@@ -182,9 +182,9 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `ssh structure rules remove` | web | /structure: Purpose rules | `--yes` |  |
 | `ssh structure rules set` | web | /structure: Enable/disable auto | `--auto`, `--yes` |  |
 | `ssh structure uninstall` | CLI-only by design | - | - | Background service. |
-| `ssh tool list` | web | /tools | `--json` |  |
-| `ssh tool show` | web | /tools | - |  |
-| `ssh tool status` | web | /tools | `--json` |  |
+| `ssh tool list` | web | /tools: list | `--json` |  |
+| `ssh tool show` | web | /tools?show=profile/key | - | Open a row, or pass `?show=`. |
+| `ssh tool status` | web | /tools: Status | `--json` | Declared / present / missing counts and the missing list. |
 | `ssh termius keys` | web | /termius: keys | `--clear` (CLI), `--clear-after` (CLI), `--include-git`, `--print` (CLI), `--skip` |  |
 | `ssh validate` | web | /validate | - |  |
 | `ssh view` | web | host page | - |  |
@@ -233,6 +233,9 @@ None. Every command and flag is on the web, or CLI-only by design for the reason
 - `ssh config keep-edits --dry-run`: the preview, which lists each block adopted; Make this change is `--yes`.
 - `ssh config render --force`: Discard hand edits and render, on /ssh-config or on a refused render; the backup path is in the result.
 - `host edit --remove-alias/--unset-option`: take the name or option out of the Routes fields on the Edit panel.
+- `host add|edit` and `host variant set --service` / `--remove-service`: Services checkboxes (and Other services) on the host add, edit and variant panels; unchecking one is `--remove-service`.
+- `ssh service edit`: the Edit a catalog service form on /services.
+- `ssh tool show` / `ssh tool status`: a row on /tools (`?show=profile/key`) and the Status card.
 - `knownhosts pin --all`: Pin host keys on /hosts (`knownhosts init`), which pins every host.
 - `host delete`, `profile delete --revoke/--purge`: a job, linked from the plain delete.
 

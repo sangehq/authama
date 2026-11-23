@@ -139,6 +139,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     if (!bundle) throw new Error(`ssh bundle wrote no .age file into ${join(state, 'dist')}`);
     // A key loose in ~/.ssh, for the structure page to suggest moving.
     run(env, 'ssh-keygen', ['-q', '-t', 'ed25519', '-N', '', '-C', 'stray@e2e', '-f', join(home, '.ssh', 'id_e2e_stray')]);
+    // A git-signing key at a profile root, so Structure can classify it into tools/git/.
+    run(env, 'ssh-keygen', ['-q', '-t', 'ed25519', '-N', '', '-C', 'work/git-signing', '-f', join(profileDir(join(home, '.ssh'), 'work'), 'git-signing')]);
 
     const tokenFile = join(home, 'serve-url');
     let output = '';
@@ -179,4 +181,14 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
       rmSync(home, { recursive: true, force: true });
     }
   };
+}
+
+// profileDir is ~/.ssh/profiles/<category>/<name> after reconcile.
+function profileDir(ssh: string, name: string): string {
+  const root = join(ssh, 'profiles');
+  for (const cat of readdirSync(root)) {
+    const dir = join(root, cat, name);
+    if (existsSync(dir)) return dir;
+  }
+  throw new Error(`no profile ${name} under ${root}`);
 }

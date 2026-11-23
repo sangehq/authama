@@ -29,6 +29,8 @@ type RouteInput struct {
 	Unset   []string
 	// Section and Comment are --section and --comment; "" removes them.
 	Section, Comment *string
+	// Services are --service names to attach; RemoveServices are --remove-service.
+	Services, RemoveServices []string
 }
 
 func (r RouteInput) args() []string {
@@ -57,13 +59,19 @@ func (r RouteInput) args() []string {
 	if r.Comment != nil {
 		a = append(a, "--comment="+*r.Comment)
 	}
+	for _, n := range r.Services {
+		a = append(a, "--service="+n)
+	}
+	for _, n := range r.RemoveServices {
+		a = append(a, "--remove-service="+n)
+	}
 	return a
 }
 
 // fields is the editor's form of the input.
 func (r RouteInput) fields() editor.RouteFields {
 	f := editor.RouteFields{Proxy: r.Proxy, ProxyCommand: r.ProxyCommand, Section: r.Section, Comment: r.Comment,
-		UnsetOptions: r.Unset}
+		UnsetOptions: r.Unset, Services: r.Services, RemoveServices: r.RemoveServices}
 	if r.ProxyJump != nil {
 		f.SetOptions = append(f.SetOptions, [2]string{"ProxyJump", *r.ProxyJump})
 	}

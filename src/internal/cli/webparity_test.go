@@ -371,6 +371,17 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 	_, _ = rand.Read(importKey)
 	_ = os.WriteFile(filepath.Join(importSrc, "legacy_key"), importKey, 0o600)
 
+	withHostService := func(p paths.Paths) {
+		r := editor.RoutesOf(editor.New(p))
+		if _, err := r.UpsertHost("work", "db", editor.HostFields{RouteFields: editor.RouteFields{Services: []string{"cloudflare-warp"}}}); err != nil {
+			panic(err)
+		}
+	}
+	withCatalogService := func(p paths.Paths) {
+		if err := editor.New(p).UpsertService(manifest.ServiceSpec{Name: "cf-prod", Kind: "cloudflare-access", Label: "Prod Access"}); err != nil {
+			panic(err)
+		}
+	}
 	// withRoutes gives db a second name, a variant and an option on both, as
 	// the route cases change them.
 	withRoutes := func(p paths.Paths) {
@@ -458,6 +469,26 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 				Unset: []string{"Compression"}}}), withRoutes, nil, nil},
 		{"host variant remove", []string{"ssh", "host", "variant", "remove", "work", "db", "warp"},
 			change.HostVariantRemove("work", "db", "warp"), withRoutes, nil, nil},
+		{"host add --service", []string{"ssh", "host", "add", "work", "web", "-H", "web.example", "-u", "deploy",
+			"--service", "cloudflare-access"},
+			change.HostAdd("work", "web", change.HostInput{Hostname: ptr("web.example"), User: ptr("deploy"),
+				RouteInput: change.RouteInput{Services: []string{"cloudflare-access"}}}), nil, nil, nil},
+		{"host edit --service", []string{"ssh", "host", "edit", "work", "db", "--service", "tailscale",
+			"--remove-service", "cloudflare-warp"},
+			change.HostEdit("work", "db", change.HostInput{RouteInput: change.RouteInput{Services: []string{"tailscale"},
+				RemoveServices: []string{"cloudflare-warp"}}}), withHostService, nil, nil},
+		{"host variant set --service", []string{"ssh", "host", "variant", "set", "work", "db", "warp",
+			"--service", "cloudflare-warp"},
+			change.HostVariantSet("work", "db", "warp", change.VariantInput{RouteInput: change.RouteInput{Services: []string{"cloudflare-warp"}}}),
+			withRoutes, nil, nil},
+		{"service add", []string{"ssh", "service", "add", "cf-prod", "--kind", "cloudflare-access", "--label", "Prod Access"},
+			change.ServiceUpsert(manifest.ServiceSpec{Name: "cf-prod", Kind: "cloudflare-access", Label: "Prod Access"}, false),
+			nil, nil, nil},
+		{"service edit", []string{"ssh", "service", "edit", "cf-prod", "--kind", "cloudflare-access", "--label", "Updated"},
+			change.ServiceUpsert(manifest.ServiceSpec{Name: "cf-prod", Kind: "cloudflare-access", Label: "Updated"}, true),
+			withCatalogService, nil, nil},
+		{"service remove", []string{"ssh", "service", "remove", "cf-prod", "--yes"},
+			change.ServiceRemove("cf-prod"), withCatalogService, nil, nil},
 		{"config keep-edits", []string{"ssh", "config", "keep-edits", "--yes"}, change.ConfigKeepEdits(), handEdited, nil, nil},
 		{"config render --force", []string{"ssh", "config", "render", "--force", "--yes"}, change.ConfigRenderWith(true),
 			handEdited, nil, nil},
@@ -562,7 +593,7 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 		{"key root", []string{"ssh", "key", "root", "keys", "--yes"}, change.KeyRoot("keys", "keys"), nil, nil, nil},
 		{"key ack", []string{"ssh", "key", "ack", "work"}, change.KeyAck(keysvc.Selection{Selectors: []string{"work"}}), nil, nil, nil},
 	}
-	if len(cases) != 52 {
+	if len(cases) != 58 {
 		t.Fatalf("%d cases; every change the web offers needs one", len(cases))
 	}
 	for _, tc := range cases {

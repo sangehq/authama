@@ -103,8 +103,11 @@ move is skipped unless sange is on `PATH`.
 
 ## Installing the background job
 
-The running server polls `~/.ssh` every two seconds (debounced) and does a full scan every 30 seconds, then refreshes
-suggestions (and auto-applies enabled rules). When the server is not running, this optional job checks every 15 minutes:
+The running server watches `~/.ssh` (including `profiles/`), the config home, `~/.gitconfig`, `~/.config/git` and
+`~/.docker/contexts` with fsnotify, debounced 1–2 seconds, and still does a full scan every 30 seconds. If a watch
+cannot be established, it polls those same trees every couple of seconds. The Structure page shows **Watching** or
+**Polling**. After a scan it refreshes suggestions (and auto-applies enabled rules). When the server is not running,
+this optional job checks every 15 minutes:
 
 ```sh
 authama ssh structure install
@@ -144,9 +147,11 @@ the tree and the suggestions, without the menus.
 
 ## The watcher
 
-- **Inside `authama serve`.** The server already scans `~/.ssh`, the config home and token files every 30 seconds
-  for the [events](events.md) log. When a scan sees a change under `~/.ssh` or the config home, it refreshes the
-  suggestions (kept in `.state/structure.json`), which the structure page shows.
+- **Inside `authama serve`.** The server watches `~/.ssh` (including `profiles/`), the config home, token files,
+  `~/.gitconfig`, `~/.config/git` and `~/.docker/contexts` with fsnotify (debounced 1–2s) and still scans them every
+  30 seconds for the [events](events.md) log. If a watch cannot be established, a short poll is the fallback; the
+  Structure page shows **Watching** or **Polling**. When a scan sees a change, it refreshes the suggestions (kept in
+  `.state/structure.json`).
 - **In the background.** `ssh structure install` registers a job that runs
   `authama ssh structure check --notify --quiet` every 15 minutes: a launchd agent (`StartInterval`) on macOS, a
   systemd user timer (`OnUnitActiveSec=15min`, or a cron line where there is no systemd) on Linux, a Scheduled Task

@@ -47,12 +47,12 @@ var actionFields = map[string][]string{
 	// host-add with no alias names the host by the naming rules from env and
 	// role (`host add <profile> --env --role`).
 	"host-add": {"profile", "alias", "env", "role", "hostname", "user", "port", "tags", "key_name", "provider", "token_env",
-		"update", "aliases", "proxy", "proxy_command", "proxy_jump", "connect_timeout", "options", "section", "comment"},
+		"update", "aliases", "proxy", "proxy_command", "proxy_jump", "connect_timeout", "options", "section", "comment", "service", "service_set", "service_extra"},
 	"host-edit": {"profile", "alias", "hostname", "user", "port", "tags", "key_name", "provider", "token_env",
-		"aliases", "proxy", "proxy_command", "proxy_jump", "connect_timeout", "options", "section", "comment"},
+		"aliases", "proxy", "proxy_command", "proxy_jump", "connect_timeout", "options", "section", "comment", "service", "service_set", "service_extra"},
 	// host-variant-set is `host variant set`: a second route to a host.
 	"host-variant-set": {"profile", "alias", "name", "hostname", "port", "proxy", "proxy_command", "proxy_jump",
-		"connect_timeout", "options", "section", "comment"},
+		"connect_timeout", "options", "section", "comment", "service", "service_set", "service_extra"},
 	"host-variant-remove": {"profile", "alias", "name"},
 	"host-delete":         {"profile", "alias"},
 	"key-delete":          {"profile", "key"},
@@ -114,6 +114,7 @@ var actionFields = map[string][]string{
 	"structure-rule-auto":   {"id", "auto"},
 	"structure-rule-remove": {"id"},
 	"service-add":           {"name", "kind", "binary", "label"},
+	"service-edit":          {"name", "kind", "binary", "label"},
 	"service-remove":        {"name"},
 	// git-sign-set is one profile's git identity (clear removes it);
 	// git-sign-use points checkouts at a profile; git-sign-apply writes the
@@ -781,6 +782,8 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch, errs = structureRuleRemoveChange(f, errs)
 	case "service-add":
 		ch, errs = serviceUpsertChange(f, errs, false)
+	case "service-edit":
+		ch, errs = serviceUpsertChange(f, errs, true)
 	case "service-remove":
 		ch, errs = serviceRemoveChange(f, errs)
 	case "git-sign-set":
