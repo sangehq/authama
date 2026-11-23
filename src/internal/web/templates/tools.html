@@ -1,5 +1,5 @@
 {{define "content"}}{{with .Data}}
-{{template "page_header" (header "SSH" $.Title "Keys used by tools such as git signing and Docker, kept under ~/.ssh/profiles/<category>/<profile>/tools/<tool>/. Moving a key there is done on Structure: classify, then approve. Git signing path updates are applied through sange, not by writing ~/.gitconfig here." (action "Structure" "/structure" "folder" | withTip "structure") (action "Services" "/services" "activity" | withTip "services"))}}
+{{template "page_header" (header "SSH" $.Title "Keys used by git signing, Docker and other tools, kept under each profile's tools folder. Classify and approve moves on Structure. Git signing path updates go through sange; authama does not write ~/.gitconfig." (action "Structure" "/structure" "folder" | withTip "structure") (action "Services" "/services" "activity" | withTip "services"))}}
 <div class="card mb-3" id="tool-status">
   <div class="card-header"><h2 class="card-title">Status</h2></div>
   <div class="card-body">
