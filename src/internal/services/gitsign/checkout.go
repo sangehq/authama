@@ -19,10 +19,18 @@ import (
 const gitTimeout = 30 * time.Second
 
 // safeConfig overrides what a checkout's own config could make git run while
-// authama reads it: an fsmonitor hook (git status), a pager, and the program
-// that checks SSH signatures (git log --show-signature). The command line
-// wins over every config file, so a checkout cannot swap them in.
-var safeConfig = []string{"-c", "core.fsmonitor=false", "-c", "core.pager=cat", "-c", "gpg.ssh.program=ssh-keygen"}
+// authama reads it: an fsmonitor hook (git status), a pager, and every program
+// that checks a signature (git log %G?). SSH signatures go to ssh-keygen; the
+// OpenPGP and X.509 checkers point at a path that cannot exist, because
+// authama only reads SSH signatures and a checkout must never choose a program
+// that runs. The command line wins over every config file, so a checkout
+// cannot swap them in.
+var safeConfig = []string{"-c", "core.fsmonitor=false", "-c", "core.pager=cat", "-c", "gpg.ssh.program=ssh-keygen",
+	"-c", "gpg.program=" + noProgram, "-c", "gpg.openpgp.program=" + noProgram, "-c", "gpg.x509.program=" + noProgram}
+
+// noProgram is a path no file can have (/dev/null is not a directory), so a
+// signature check that is not SSH fails instead of running anything.
+const noProgram = "/dev/null/authama-no-signature-program"
 
 // gitValue is a value a person gave (a path, a config value): it cannot
 // start with '-' and holds no control character, so git can only read it as

@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -96,6 +97,9 @@ func Configure(cfg Config) {
 	if cfg.MaxSizeMB < 1 {
 		cfg.MaxSizeMB = DefaultMaxSizeMB
 	}
+	// Retention is kept on every start, not only when the log rotates, so a
+	// quiet home still drops rotated logs past RetentionDays.
+	Prune(cfg.Dir, cfg.RetentionDays, time.Now())
 	w := &rotating{cfg: cfg}
 	h := slog.NewJSONHandler(w, &slog.HandlerOptions{Level: cfg.Level, ReplaceAttr: replace})
 	mu.Lock()
@@ -136,6 +140,13 @@ var secretValue = []*regexp.Regexp{
 	regexp.MustCompile(`\b(gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{20,}|xox[abprs]-[A-Za-z0-9-]{10,})`),
 	regexp.MustCompile(`AGE-SECRET-KEY-1[0-9A-Z]{20,}`),
 	regexp.MustCompile(`(?i)\b(bearer)\s+[A-Za-z0-9._~+/=-]{8,}`),
+	// A password in the user-info part of a URL (user, a colon, the password, an at sign).
+	regexp.MustCompile(`(://[^/\s:@]+:)[^@\s/]+@`),
+	// Any query parameter named like a secret (access_token=, api_key=, sig=).
+	regexp.MustCompile(`(?i)([?&][^=&\s"]*(token|key|secret|sig|signature|password|passwd|auth)[^=&\s"]*=)[^&\s"]+`),
+	// Other token shapes: npm, AWS access keys, OpenAI/Anthropic-style keys,
+	// Slack webhooks.
+	regexp.MustCompile(`\b(npm_[A-Za-z0-9]{30,}|A(KIA|SIA)[0-9A-Z]{16}|sk-[A-Za-z0-9_-]{20,}|hooks\.slack\.com/services/[A-Za-z0-9/]+)`),
 }
 
 // Redacted replaces whatever Redact removes.
@@ -149,6 +160,10 @@ func Redact(s string) string {
 			s = re.ReplaceAllString(s, "${1}"+Redacted)
 		case 4:
 			s = re.ReplaceAllString(s, "${1} "+Redacted)
+		case 5:
+			s = re.ReplaceAllString(s, "${1}"+Redacted+"@")
+		case 6:
+			s = re.ReplaceAllString(s, "${1}"+Redacted)
 		default:
 			s = re.ReplaceAllString(s, Redacted)
 		}
@@ -183,9 +198,54 @@ func replace(groups []string, a slog.Attr) slog.Attr {
 			}
 			return slog.Any(a.Key, redactArgs(out))
 		}
-		return slog.String(a.Key, Redact(fmt.Sprint(a.Value.Any())))
+		return slog.String(a.Key, Redact(fmt.Sprint(redactValue(a.Value.Any()))))
 	}
 	return a
+}
+
+// redactValue blanks, in a map or slice an attribute holds, every field named
+// like a secret, however deep; a struct is read through its JSON form, so its
+// field names count too.
+func redactValue(v any) any {
+	switch t := v.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(t))
+		for k, x := range t {
+			if secretKey.MatchString(k) {
+				out[k] = Redacted
+			} else {
+				out[k] = redactValue(x)
+			}
+		}
+		return out
+	case map[string]string:
+		out := make(map[string]any, len(t))
+		for k, x := range t {
+			if secretKey.MatchString(k) {
+				out[k] = Redacted
+			} else {
+				out[k] = x
+			}
+		}
+		return out
+	case []any:
+		out := make([]any, len(t))
+		for i, x := range t {
+			out[i] = redactValue(x)
+		}
+		return out
+	case string, fmt.Stringer, nil:
+		return v
+	}
+	b, err := json.Marshal(v)
+	if err != nil || len(b) == 0 || (b[0] != '{' && b[0] != '[') {
+		return v
+	}
+	var generic any
+	if json.Unmarshal(b, &generic) != nil {
+		return v
+	}
+	return redactValue(generic)
 }
 
 // redactArgs blanks a flag's value when the flag is named like a secret
@@ -214,8 +274,9 @@ func Args(args []string) []string { return redactArgs(args) }
 
 // rotating appends to Dir/authama.log, rotating it past MaxSizeMB.
 type rotating struct {
-	cfg Config
-	mu  sync.Mutex
+	cfg      Config
+	mu       sync.Mutex
+	modesSet bool
 }
 
 func (w *rotating) Write(p []byte) (int, error) {
@@ -231,11 +292,21 @@ func (w *rotating) Write(p []byte) (int, error) {
 			Prune(w.cfg.Dir, w.cfg.RetentionDays, time.Now())
 		}
 	}
+	if fi, err := os.Lstat(path); err == nil && !fi.Mode().IsRegular() {
+		return 0, fmt.Errorf("%s is not a regular file, so nothing is logged to it", path)
+	}
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return 0, err
 	}
 	defer func() { _ = f.Close() }()
+	if !w.modesSet {
+		// A log or folder left wider by an older build or a restore is made
+		// owner-only again, once per process.
+		_ = os.Chmod(w.cfg.Dir, 0o700)
+		_ = f.Chmod(0o600)
+		w.modesSet = true
+	}
 	return f.Write(p)
 }
 
@@ -316,27 +387,97 @@ func Parse(line string) (Entry, bool) {
 	return e, true
 }
 
-// Read is every record in dir that f picks, oldest first.
+// Read is every record in dir that f picks, oldest first. With a Limit it
+// reads the newest files first and stops once it has Limit records, so a
+// long history is not parsed on every view. A line too long to be a record is
+// skipped, never the rest of its file.
 func Read(dir string, f Filter) ([]Entry, error) {
-	var out []Entry
-	for _, path := range Files(dir) {
-		file, err := os.Open(path)
-		if err != nil {
-			return nil, err
-		}
-		sc := bufio.NewScanner(file)
-		sc.Buffer(make([]byte, 64*1024), 1<<20)
-		for sc.Scan() {
-			if e, ok := Parse(sc.Text()); ok && f.Match(e) {
-				out = append(out, e)
+	out, _, err := read(dir, f)
+	return out, err
+}
+
+// ReadFollow is Read, and the offset in the live log just after the last
+// record it read: where a follow (Tail) picks up, so a record written while
+// Read ran is neither lost nor shown twice.
+func ReadFollow(dir string, f Filter) ([]Entry, int64, error) {
+	return read(dir, f)
+}
+
+// maxRecordBytes bounds one record read back.
+const maxRecordBytes = 1 << 20
+
+func read(dir string, f Filter) ([]Entry, int64, error) {
+	files := Files(dir)
+	live := filepath.Join(dir, FileName)
+	var groups [][]Entry
+	total := 0
+	var liveEnd int64
+	for i := len(files) - 1; i >= 0; i-- {
+		path := files[i]
+		var got []Entry
+		end, err := scanFile(path, func(e Entry) {
+			if f.Match(e) {
+				got = append(got, e)
 			}
+		})
+		if err != nil {
+			return nil, 0, err
 		}
-		_ = file.Close()
+		if path == live {
+			liveEnd = end
+		}
+		groups = append(groups, got)
+		total += len(got)
+		if f.Limit > 0 && total >= f.Limit {
+			break
+		}
+	}
+	out := make([]Entry, 0, total)
+	for i := len(groups) - 1; i >= 0; i-- {
+		out = append(out, groups[i]...)
 	}
 	if f.Limit > 0 && len(out) > f.Limit {
 		out = out[len(out)-f.Limit:]
 	}
-	return out, nil
+	return out, liveEnd, nil
+}
+
+// scanFile calls each for every record in path and returns the offset just
+// past its last complete line.
+func scanFile(path string, each func(Entry)) (int64, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return 0, nil // rotated away while we read
+		}
+		return 0, err
+	}
+	defer func() { _ = file.Close() }()
+	r := bufio.NewReaderSize(file, maxRecordBytes+1)
+	var off int64
+	for {
+		line, err := r.ReadSlice('\n')
+		long := false
+		for errors.Is(err, bufio.ErrBufferFull) {
+			// A line longer than the buffer: skip the rest of it.
+			long = true
+			off += int64(len(line))
+			line, err = r.ReadSlice('\n')
+		}
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return off, nil // a partial last line is not yet a record
+			}
+			return off, err
+		}
+		off += int64(len(line))
+		if long {
+			continue
+		}
+		if e, ok := Parse(strings.TrimRight(string(line), "\r\n")); ok {
+			each(e)
+		}
+	}
 }
 
 // Size is how long the live log is now: where a follow starts.

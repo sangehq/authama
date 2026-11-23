@@ -44,7 +44,7 @@ The file is owner-only (0600).
 
 `authama.log` is in the state home's `log/` directory, beside `audit.log` and `history.db`
 (`authama logs path`). It rotates to `authama-<time>.log` when it reaches `log.max_size_mb` (5 MB),
-and rotated files are deleted after `log.retention_days` (14 days).
+and rotated files are deleted after `log.retention_days` (14 days), checked whenever authama starts.
 
 ```sh
 authama logs level debug        # log.level: debug, info (default), warn or error

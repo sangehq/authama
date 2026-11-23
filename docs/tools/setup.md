@@ -113,6 +113,11 @@ Import tells the two forms apart by their first bytes. It shows, before writing 
 A manifest that sets SSH options that could redirect or weaken connections (a `ControlPath` or `IdentityAgent`
 outside `~/.ssh`, `ForwardAgent` or `StrictHostKeyChecking no` for every host) is refused, as `ssh restore`
 refuses one, unless you pass `--allow-risky-options` for a file you made yourself: neither form proves who made it.
+The same goes for settings that declare custom hypervisor commands (authama runs them whenever it lists VMs) and for
+a `providers.json` that would send a token to a host this build's catalog does not; the refusal names each command
+and host. A full export's `.env` brings only the variables the setup reads tokens from; any other name, and any that
+changes how programs run (`GIT_*`, `SSH_*`, `LD_*`, `DYLD_*`, `AUTHAMA_*`, `PATH`, proxies), is listed as not
+imported.
 A signature does: `setup export --out FILE --sign-key KEY` writes `FILE.sig`, and `setup import` checks it,
 refusing a file changed after it was signed (`--require-signature` and `--signers` as for `ssh restore`; see
 [signed bundles](../reference/bundle-signatures.md)).

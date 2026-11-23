@@ -299,6 +299,22 @@ Things that work differently after this release, and what to do if one affects y
   confident "new" or "current" (audit A-BUG-06).
 - `ssh structure approve` refuses a destination whose profile or category directory is a symlink, as the
   importer does, so nothing is created or chmodded outside `~/.ssh`.
+- `ssh structure approve` checks a key line's `name`, refuses two lines moving the same key, and checks the
+  names it would declare before moving any key file. A key's `-cert.pub` is backed up and checked for a clash and
+  a symlink like its `.pub`.
+- A git profile with signing off (`sign set --no-sign`), or whose key cannot be found, has its identity applied
+  unsigned instead of being dropped (which deleted its fragment and left checkouts on the global identity).
+- `ssh git sign apply` includes a directory inside another profile's after it, so the most specific claim decides
+  the identity; refuses a managed block whose end marker was deleted instead of rewriting the lines after it; and
+  keeps two backups taken in the same second.
+- Rotated logs past `log.retention_days` are pruned whenever authama starts, not only when the log rotates. The
+  Logs page and `authama logs --limit` read the newest files first and stop at the limit; a record too long to read
+  back no longer hides the rest of its file; `logs --follow` no longer drops records written while the first read
+  ran; and a `--since` date is midnight in the display zone, as the times beside it are.
+- The web UI goes back to the system zone when the settings file is deleted while it runs, and tells a zone the
+  settings file set from one the environment gave by how it was set, not only by its value.
+- On Windows, a file with an access-granting ACE the owner-only check cannot read (compound, object, callback) is
+  not reported as owner-only.
 
 ### Security
 
@@ -310,6 +326,21 @@ Things that work differently after this release, and what to do if one affects y
   checkout instead of passing it as `-C`, puts values after `--` where none can read as an option, and gives the
   allowed signers file through `GIT_CONFIG_*`. A Termius group scheme not on the list is refused rather than written
   into the export zip.
+- **Checking a checkout's signatures never runs a program that checkout chose.** `ssh git sign verify` and the
+  web UI's signature check pinned only the SSH checker; a checkout's own `gpg.program`, `gpg.openpgp.program` or
+  `gpg.x509.program` ran on any OpenPGP- or X.509-signed commit. All three now point at a path that cannot exist.
+- **A setup import refuses what would run a program or send a token elsewhere.** Besides risky SSH options, a
+  setup document or full export is refused (at a terminal: unless `--allow-risky-options`) when its settings
+  declare custom hypervisor commands, which authama runs whenever it lists VMs, or its `providers.json` sends a
+  token to a host this build's catalog does not (a redefined `github`, say). The refusal names each command and host.
+- **A full export's `.env` brings only the setup's own token variables.** A name the setup reads no token from, or
+  one that changes how authama or the programs it runs behave (`GIT_*`, `SSH_*`, `LD_*`, `DYLD_*`, `AUTHAMA_*`,
+  `PATH`, proxies, ...), is listed in the preview as not imported and never written.
+- **A copied browser cookie is caught however old it is** (up to 128 rotations back), not only one rotation back:
+  presenting it forgets the browser.
+- **`authama.log` redacts more.** Passwords in URLs, any query parameter named like a secret, npm and AWS access
+  keys, `sk-` keys, Slack webhooks, and secret-named fields nested in a logged map. A log or log folder left wider
+  is made owner-only again, and a log path that is not a regular file is not written through.
 
 ## [0.1.0] - 2026-11-17
 

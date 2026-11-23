@@ -97,9 +97,11 @@ type Signer struct {
 	OnePassword bool
 }
 
-// Signers resolves every profile with a git block, in name order. A profile
-// whose key cannot be found is reported in problems and left out, so the
-// others still apply.
+// Signers resolves every profile with a git block, in name order. A key is
+// looked up only for a profile that signs or names one. A profile whose key
+// cannot be found is reported in problems and kept with its identity alone
+// (no Key, no PubLine): its checkouts still commit under its email, unsigned,
+// rather than under the global identity.
 func Signers(m *manifest.Manifest, sshDir string) (out []Signer, problems []string) {
 	for _, name := range m.ProfileNames() {
 		prof := m.Profiles[name]
@@ -107,25 +109,34 @@ func Signers(m *manifest.Manifest, sshDir string) (out []Signer, problems []stri
 			continue
 		}
 		s := Signer{Profile: name, Git: *prof.Git, OnePassword: prof.InOnePassword()}
+		if !prof.Git.Sign && prof.Git.SigningKey == "" {
+			out = append(out, s) // the identity alone: no key to find
+			continue
+		}
+		identityOnly := func(problem string) {
+			problems = append(problems, problem)
+			out = append(out, s)
+		}
 		key := prof.Git.SigningKey
 		if key == "" {
 			h, ok := manifest.GitHubHostOf(m, name)
 			if !ok {
-				problems = append(problems, fmt.Sprintf("%s: no git.signing_key and no github.com host to take a key from", name))
+				identityOnly(fmt.Sprintf("%s: no git.signing_key and no github.com host to take a key from; its identity applies unsigned", name))
 				continue
 			}
 			k, err := m.ResolvedKeyName(name, h)
 			if err != nil {
-				problems = append(problems, fmt.Sprintf("%s: %v", name, err))
+				identityOnly(fmt.Sprintf("%s: %v; its identity applies unsigned", name, err))
 				continue
 			}
 			key = k
 		}
-		s.Key = manifest.KeyRef{Profile: name, KeyName: key}
-		if !declares(m, s.Key) {
-			problems = append(problems, fmt.Sprintf("%s: git.signing_key %q is not one of the profile's keys", name, key))
+		ref := manifest.KeyRef{Profile: name, KeyName: key}
+		if !declares(m, ref) {
+			identityOnly(fmt.Sprintf("%s: git.signing_key %q is not one of the profile's keys; its identity applies unsigned", name, key))
 			continue
 		}
+		s.Key = ref
 		s.PubPath = m.KeyPath(sshDir, s.Key) + ".pub"
 		if b, err := os.ReadFile(s.PubPath); err == nil {
 			if f := strings.Fields(string(b)); len(f) >= 2 {
@@ -219,6 +230,10 @@ func Render(p paths.Paths, m *manifest.Manifest, getenv func(string) string) (Pl
 		}
 	}
 	old := read(pl.Global)
+	if i := strings.Index(old, BeginMarker); i >= 0 && !strings.Contains(old[i:], EndMarker) {
+		return pl, fmt.Errorf("%s has authama's begin marker but no end marker, so the managed block cannot be told from your own lines; "+
+			"put back the line %q after the block, or delete the block, then apply again", pl.Global, EndMarker)
+	}
 	block := Block(p, signers)
 	pl.Writes = append(pl.Writes, Write{Path: pl.Global, Old: old, New: ReplaceBlock(old, block), Mode: 0o644})
 	return pl, nil
@@ -299,11 +314,20 @@ func AllowedSigners(signers []Signer) string {
 // Block is the managed includeIf block for the global git config; "" when no
 // profile claims a directory.
 func Block(p paths.Paths, signers []Signer) string {
-	var b strings.Builder
+	type include struct{ dir, path string }
+	var incs []include
 	for _, s := range signers {
 		for _, d := range s.Git.Dirs {
-			fmt.Fprintf(&b, "[includeIf \"gitdir:%s\"]\n\tpath = %s\n", manifest.GitDir(d), configPath(FragmentPath(p, s.Profile)))
+			incs = append(incs, include{manifest.GitDir(d), FragmentPath(p, s.Profile)})
 		}
+	}
+	// Git applies every matching include in file order and the last one wins,
+	// so a directory inside another profile's comes after it: the most
+	// specific claim decides who a checkout commits and signs as.
+	sort.SliceStable(incs, func(i, j int) bool { return len(incs[i].dir) < len(incs[j].dir) })
+	var b strings.Builder
+	for _, in := range incs {
+		fmt.Fprintf(&b, "[includeIf \"gitdir:%s\"]\n\tpath = %s\n", in.dir, configPath(in.path))
 	}
 	if b.Len() == 0 {
 		return ""
@@ -365,7 +389,7 @@ func Apply(p paths.Paths, pl Plan, now time.Time) (Result, error) {
 				mode = fi.Mode().Perm()
 			}
 			if w.Old != "" {
-				backup := filepath.Join(p.State(), "backups", "gitconfig", now.UTC().Format("20060102T150405Z")+".gitconfig")
+				backup := freeBackupPath(filepath.Join(p.State(), "backups", "gitconfig"), now.UTC().Format("20060102T150405Z"))
 				if err := fs.WriteTextAtomic(backup, w.Old, 0o600); err != nil {
 					return res, fmt.Errorf("keep a copy of %s first: %w", w.Path, err)
 				}
@@ -398,4 +422,17 @@ func resolveLink(path string) (string, error) {
 		return path, nil
 	}
 	return filepath.EvalSymlinks(path)
+}
+
+// freeBackupPath is dir/<stamp>.gitconfig, or dir/<stamp>-N.gitconfig when an
+// earlier apply in the same second already kept one: a backup is the only
+// copy of the file it was taken from, so it is never overwritten.
+func freeBackupPath(dir, stamp string) string {
+	path := filepath.Join(dir, stamp+".gitconfig")
+	for n := 2; ; n++ {
+		if _, err := os.Lstat(path); errors.Is(err, os.ErrNotExist) {
+			return path
+		}
+		path = filepath.Join(dir, fmt.Sprintf("%s-%d.gitconfig", stamp, n))
+	}
 }

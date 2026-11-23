@@ -229,7 +229,7 @@ func newSetupImportCmd() *cobra.Command {
 				return err
 			}
 			if risky := d.Risky(); len(risky) > 0 && !allowRisky {
-				return bundler.RiskyError(risky)
+				return setupxfer.RiskyError(risky, brand.Command)
 			}
 			ch := change.SetupImport(d, nil, policy)
 			plan, err := change.Preview(p, ch)
@@ -259,7 +259,7 @@ func newSetupImportCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "show what the import would add, keep and replace; write nothing")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "import without confirming (implied when there is no terminal)")
 	cmd.Flags().StringVar(&passFile, "passphrase-file", "", "an encrypted export: read its passphrase from this owner-only file instead of asking")
-	cmd.Flags().BoolVar(&allowRisky, "allow-risky-options", false, "import a manifest that sets SSH options that could redirect or weaken connections (you made it yourself)")
+	cmd.Flags().BoolVar(&allowRisky, "allow-risky-options", false, "import a document that sets SSH options that could redirect or weaken connections, providers that send a token to another host, or custom hypervisor commands (you made it yourself)")
 	verifyFlags(cmd, &requireSig, &signers)
 	return cmd
 }
@@ -294,7 +294,7 @@ func importFull(c *cobra.Command, p paths.Paths, file, passFile string, policy s
 		return err
 	}
 	if risky := full.Risky(); len(risky) > 0 && !allowRisky {
-		return bundler.RiskyError(risky)
+		return setupxfer.RiskyError(risky, brand.Command)
 	}
 	keys, err := full.KeyItems(policy)
 	if err != nil {
@@ -314,6 +314,10 @@ func importFull(c *cobra.Command, p paths.Paths, file, passFile string, policy s
 	_, _ = fmt.Fprint(w, keys.Format())
 	_, _ = fmt.Fprintln(w, "token values in .env (names only):")
 	_, _ = fmt.Fprint(w, env.Format())
+	if len(full.EnvSkipped) > 0 {
+		_, _ = fmt.Fprintf(w, "not imported from its .env (the setup reads no token from them, or they would change how programs run): %s\n",
+			strings.Join(full.EnvSkipped, ", "))
+	}
 	_, _ = fmt.Fprintln(w, "config:")
 	printSetupPlan(w, plan)
 	if plan.Err != "" {

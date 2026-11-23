@@ -27,8 +27,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sangehq/authama/src/internal/core/hypervisor"
 	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/providers"
 	"github.com/sangehq/authama/src/internal/core/tokens"
+	"github.com/sangehq/authama/src/internal/services/settings"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
@@ -136,9 +139,20 @@ func withoutMachineSections(settings json.RawMessage) (json.RawMessage, error) {
 // EnvNames lists, sorted, the environment variables p's setup reads tokens
 // from: every *env field of the token config, and each host's token_env.
 func EnvNames(p paths.Paths) []string {
+	tok, _ := os.ReadFile(p.Tokens())
+	var m *manifest.Manifest
+	if loaded, err := manifest.Load(p.Manifest()); err == nil {
+		m = loaded
+	}
+	return envNames(tok, m)
+}
+
+// envNames is EnvNames over a token config's text and a manifest (either may
+// be empty or nil).
+func envNames(tok []byte, m *manifest.Manifest) []string {
 	seen := map[string]bool{}
-	if b, err := os.ReadFile(p.Tokens()); err == nil {
-		if c, err := tokens.ParseConfig(string(b)); err == nil {
+	if len(tok) > 0 {
+		if c, err := tokens.ParseConfig(string(tok)); err == nil {
 			for _, s := range c.Specs() {
 				for _, n := range []string{s.Env, s.UserEnv, s.PassEnv, s.KeyEnv, s.SecretEnv} {
 					if n != "" {
@@ -148,7 +162,7 @@ func EnvNames(p paths.Paths) []string {
 			}
 		}
 	}
-	if m, err := manifest.Load(p.Manifest()); err == nil {
+	if m != nil {
 		for _, prof := range m.Profiles {
 			for _, h := range prof.Hosts {
 				if h.TokenEnv != nil && *h.TokenEnv != "" {
@@ -235,13 +249,60 @@ func parseManifest(b []byte) (*manifest.Manifest, error) {
 	return &m, nil
 }
 
-// Risky lists the SSH options in the document's manifest that could redirect
-// or weaken connections: a document does not prove who made it.
+// Risky lists what in the document could redirect or weaken connections, or
+// run a program, once imported: a document does not prove who made it. That is
+// the SSH options in its manifest, the providers that would send a token to a
+// host this build's catalog does not, and the custom hypervisor commands in its
+// settings, which authama runs whenever it lists VMs.
 func (d Doc) Risky() []manifest.RiskyOption {
-	if len(d.Manifest) == 0 {
-		return nil
+	var r []manifest.RiskyOption
+	if len(d.Manifest) > 0 {
+		r, _ = manifest.RiskyOptionsInJSON(d.Manifest)
 	}
-	r, _ := manifest.RiskyOptionsInJSON(d.Manifest)
+	return append(r, d.riskyContent()...)
+}
+
+// riskyContent is Risky without the manifest's SSH options.
+func (d Doc) riskyContent() []manifest.RiskyOption {
+	var r []manifest.RiskyOption
+	if len(d.Providers) > 0 {
+		redirects, err := providers.RedirectsIn(d.Providers)
+		if err != nil {
+			r = append(r, manifest.RiskyOption{Where: "providers.json", Key: "providers", Value: "?", Why: "does not parse, so where it sends tokens cannot be shown"})
+		}
+		for _, rd := range redirects {
+			token := rd.TokenEnv
+			if token == "" {
+				token = "its token"
+			}
+			r = append(r, manifest.RiskyOption{Where: "providers.json", Key: rd.Name, Value: rd.Dest,
+				Why: "sends " + token + " to this host, which this build's catalog does not"})
+		}
+	}
+	if len(d.Settings) > 0 {
+		var top map[string]json.RawMessage
+		_ = json.Unmarshal(d.Settings, &top)
+		var hv map[string]hypervisor.CommandSpec
+		if raw, ok := top[settings.SectionHypervisors]; ok && json.Unmarshal(raw, &hv) == nil {
+			names := make([]string, 0, len(hv))
+			for n := range hv {
+				names = append(names, n)
+			}
+			sort.Strings(names)
+			for _, n := range names {
+				spec := hv[n]
+				for _, c := range []struct {
+					field string
+					argv  []string
+				}{{"list", spec.List}, {"address", spec.Address}, {"start", spec.Start}, {"exec", spec.Exec}} {
+					if len(c.argv) > 0 {
+						r = append(r, manifest.RiskyOption{Where: "settings hypervisors." + n, Key: c.field,
+							Value: strings.Join(c.argv, " "), Why: "authama runs this command"})
+					}
+				}
+			}
+		}
+	}
 	return r
 }
 
@@ -267,4 +328,18 @@ func profileKeys(m *manifest.Manifest, name string) []string {
 		}
 	}
 	return out
+}
+
+// RiskyError refuses an import over risky, naming each item and how to
+// import it anyway at a terminal.
+func RiskyError(risky []manifest.RiskyOption, command string) error {
+	lines := []string{"refusing the import: it holds settings that could redirect or weaken your connections, send a token elsewhere, or run a program:"}
+	for _, r := range risky {
+		lines = append(lines, "  "+r.String())
+	}
+	lines = append(lines,
+		"A setup document or export does not prove who made it.",
+		"If you made it yourself, import it with: "+command+" setup import FILE --allow-risky-options",
+		"Otherwise do not import it, or ask whoever sent it.")
+	return errors.New(strings.Join(lines, "\n"))
 }

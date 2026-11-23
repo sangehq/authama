@@ -51,7 +51,7 @@ func logFilter(q url.Values, now time.Time) (applog.Filter, error) {
 		f.Level = applog.ParseLevel(l)
 	}
 	if s := strings.TrimSpace(q.Get("since")); s != "" {
-		t, err := recency.ParseSince(s, now)
+		t, err := recency.ParseSinceIn(s, now, tz.Location())
 		if err != nil {
 			return f, err
 		}

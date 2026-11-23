@@ -272,8 +272,12 @@ func newGitSignStatusCmd() *cobra.Command {
 			doc := gitSignStatusDoc{Version: 1, Global: pl.Global, UpToDate: pl.UpToDate(),
 				Profiles: []gitSignProfileRow{}, Problems: append([]string{}, pl.Problems...), Checkouts: []gitsign.CheckoutStatus{}}
 			for _, s := range pl.Signers {
+				key := ""
+				if s.Key.KeyName != "" {
+					key = s.Key.String()
+				}
 				doc.Profiles = append(doc.Profiles, gitSignProfileRow{Profile: s.Profile, Email: s.Git.Email, Name: s.Git.Name,
-					Key: s.Key.String(), Sign: s.Git.Sign, Signs: s.Git.Sign && s.PubLine != "", Dirs: append([]string{}, s.Git.Dirs...)})
+					Key: key, Sign: s.Git.Sign, Signs: s.Git.Sign && s.PubLine != "", Dirs: append([]string{}, s.Git.Dirs...)})
 			}
 			if len(args) == 0 && gitsign.IsCheckout(".") {
 				args = []string{"."}

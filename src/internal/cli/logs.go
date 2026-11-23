@@ -46,7 +46,7 @@ func (lf logFilterFlags) filter(now time.Time) (applog.Filter, error) {
 		f.Level = applog.ParseLevel("debug")
 	}
 	if lf.since != "" {
-		t, err := recency.ParseSince(lf.since, now)
+		t, err := recency.ParseSinceIn(lf.since, now, tz.Location())
 		if err != nil {
 			return f, err
 		}
@@ -103,7 +103,9 @@ func newLogsCmd() *cobra.Command {
 			}
 			dir := p.LogDir()
 			out := c.OutOrStdout()
-			entries, err := applog.Read(dir, f)
+			// The follow starts just after the last record read, so one written
+			// meanwhile is neither lost nor shown twice.
+			entries, offset, err := applog.ReadFollow(dir, f)
 			if err != nil {
 				return err
 			}
@@ -115,10 +117,6 @@ func newLogsCmd() *cobra.Command {
 					_, _ = fmt.Fprintf(c.ErrOrStderr(), "no log records match (log: %s)\n", filepath.Join(dir, applog.FileName))
 				}
 				return nil
-			}
-			var offset int64
-			if fi, err := os.Stat(filepath.Join(dir, applog.FileName)); err == nil {
-				offset = fi.Size()
 			}
 			stop := make(chan os.Signal, 1)
 			signal.Notify(stop, os.Interrupt)

@@ -135,6 +135,9 @@ func parseLine(f []string) (Move, error) {
 		if mv.Name == "" {
 			mv.Name = path.Base(strings.TrimPrefix(mv.Src, "config/"))
 		}
+		if !planName(mv.Name) || !planName(mv.Profile) {
+			return Move{}, fmt.Errorf("%q / %q: a profile or key name is letters, digits, '.', '_' and '-', not starting with '.' or '-'", mv.Profile, mv.Name)
+		}
 		return mv, nil
 	case len(f) == 2 && f[0] == MoveMisplaced:
 		prof, key, ok := strings.Cut(f[1], "/")
@@ -236,7 +239,10 @@ type Result struct {
 // naming it repointed. Config-home sources are skipped here: MoveConfigHome
 // lays them down first, on apply only (a preview's copy does not hold them),
 // so here they are declared where they will be. Each move is audited as
-// structure.move. Everything is checked before anything is touched.
+// structure.move. The key moves are checked (sources, destinations, clashes,
+// the names the manifest would declare) before any key file moves; category
+// moves run first, and an I/O failure part-way leaves the moves done so far
+// in place with their backups. The preview runs the same plan on a copy first.
 func Apply(p paths.Paths, moves []Move, out io.Writer) (Result, error) {
 	var res Result
 	for _, mv := range moves {
@@ -300,7 +306,8 @@ func Apply(p paths.Paths, moves []Move, out io.Writer) (Result, error) {
 				return res, fmt.Errorf("%s: %w", mv.Line(), err)
 			}
 			if src != dest {
-				for _, f := range []string{dest, dest + ".pub"} {
+				for _, suffix := range pairSuffixes {
+					f := dest + suffix
 					if _, err := os.Lstat(f); err == nil {
 						return res, fmt.Errorf("%s: ~/.ssh/%s is already there", mv.Line(), relSSH(p, f))
 					}
@@ -309,6 +316,7 @@ func Apply(p paths.Paths, moves []Move, out io.Writer) (Result, error) {
 			steps = append(steps, step{mv, src, dest})
 		}
 	}
+	moved := map[string]bool{}
 	for _, s := range steps {
 		if err := checkDestDir(p, s.dest); err != nil {
 			return res, fmt.Errorf("%s: %w", s.mv.Line(), err)
@@ -317,6 +325,26 @@ func Apply(p paths.Paths, moves []Move, out io.Writer) (Result, error) {
 			return res, fmt.Errorf("two moves put a key at ~/.ssh/%s", relSSH(p, s.dest))
 		}
 		taken[s.dest] = true
+		if s.src != "" {
+			if moved[s.src] {
+				return res, fmt.Errorf("%s: an earlier line already moves that key", s.mv.Line())
+			}
+			moved[s.src] = true
+		}
+	}
+	// The declarations are checked before any key file moves, so a name the
+	// manifest refuses fails here, not after its file was moved.
+	if trial, err := manifest.Load(p.Manifest()); err == nil {
+		for _, s := range steps {
+			if s.mv.Kind == MoveKey {
+				prof := trial.Profiles[s.mv.Profile]
+				prof.Keys = append(prof.Keys, manifest.KeySpec{Name: s.mv.Name})
+				trial.SetProfile(s.mv.Profile, prof)
+			}
+		}
+		if err := trial.Validate(); err != nil {
+			return res, err
+		}
 	}
 
 	backup := BackupDir(p, time.Now())
@@ -487,11 +515,17 @@ func checkPair(priv string) error {
 	if !fi.Mode().IsRegular() {
 		return fmt.Errorf("%s is not a regular file (a symlink is never moved)", priv)
 	}
-	if fi, err := os.Lstat(priv + ".pub"); err == nil && !fi.Mode().IsRegular() {
-		return fmt.Errorf("%s.pub is not a regular file", priv)
+	for _, suffix := range pairSuffixes[1:] {
+		if fi, err := os.Lstat(priv + suffix); err == nil && !fi.Mode().IsRegular() {
+			return fmt.Errorf("%s%s is not a regular file", priv, suffix)
+		}
 	}
 	return nil
 }
+
+// pairSuffixes are the files a key move carries: the private key, its .pub
+// and its certificate.
+var pairSuffixes = []string{"", ".pub", "-cert.pub"}
 
 // backupPair copies the pair at src (owner-only) into dir, under its path
 // relative to its home, before it moves.
@@ -502,10 +536,10 @@ func backupPair(p paths.Paths, src, dir string) error {
 	} else {
 		rel = filepath.Join("ssh", filepath.FromSlash(rel))
 	}
-	for _, f := range []string{"", ".pub"} {
+	for _, f := range pairSuffixes {
 		b, err := os.ReadFile(src + f)
 		if err != nil {
-			if f == ".pub" && os.IsNotExist(err) {
+			if f != "" && os.IsNotExist(err) {
 				continue
 			}
 			return err
@@ -545,7 +579,7 @@ func movePair(src, dest string) error {
 	if err := os.MkdirAll(filepath.Dir(dest), perms.DirMode); err != nil {
 		return err
 	}
-	for _, f := range []string{"", ".pub", "-cert.pub"} {
+	for _, f := range pairSuffixes {
 		if _, err := os.Lstat(src + f); err != nil {
 			continue
 		}

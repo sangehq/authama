@@ -123,3 +123,26 @@ func TestCookiesAndLabels(t *testing.T) {
 	}
 	_ = filepath.Join
 }
+
+// A cookie copied several rotations ago still trips the alarm: every secret
+// a browser has been given is remembered by hash (B-03).
+func TestACookieSeveralRotationsOldForgetsTheBrowser(t *testing.T) {
+	path := File(t.TempDir())
+	now := time.Now()
+	id, first, _ := Remember(path, "x", now, time.Hour)
+	sec := first
+	for i := 0; i < 3; i++ {
+		next, ok, err := SignIn(path, id, sec, now.Add(time.Duration(i)*time.Minute), time.Hour)
+		if !ok || err != nil {
+			t.Fatalf("rotation %d: %v %v", i, ok, err)
+		}
+		sec = next
+	}
+	_, ok, err := SignIn(path, id, first, now.Add(10*time.Minute), time.Hour)
+	if ok || !errors.Is(err, ErrReused) {
+		t.Fatalf("a cookie three rotations old: ok=%v err=%v", ok, err)
+	}
+	if Known(path, id, now.Add(10*time.Minute)) {
+		t.Fatal("the browser is still remembered")
+	}
+}

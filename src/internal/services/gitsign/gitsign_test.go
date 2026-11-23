@@ -278,3 +278,135 @@ func TestCheckGitVersionNamesTheMinimum(t *testing.T) {
 		}
 	}
 }
+
+// A checkout's own config cannot choose the program that checks an OpenPGP
+// or X.509 signature: Verify must never run it (S-04).
+func TestVerifyNeverRunsTheCheckoutsSignatureProgram(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	if runtime.GOOS == "windows" {
+		t.Skip("the planted program is a shell script")
+	}
+	dir := t.TempDir()
+	repo := filepath.Join(dir, "repo")
+	marker := filepath.Join(dir, "ran")
+	script := filepath.Join(dir, "planted.sh")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\ntouch '"+marker+"'\nexit 1\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(dir, "none"))
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+	run := func(args ...string) string {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-C", repo}, args...)...)
+		cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=a", "GIT_AUTHOR_EMAIL=a@x", "GIT_COMMITTER_NAME=a", "GIT_COMMITTER_EMAIL=a@x")
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	if err := os.MkdirAll(repo, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	run("init", "-q")
+	tree := run("write-tree")
+	for _, sig := range []string{"-----BEGIN PGP SIGNATURE-----", "-----BEGIN SIGNED MESSAGE-----"} {
+		obj := "tree " + tree + "\nauthor a <a@x> 0 +0000\ncommitter a <a@x> 0 +0000\ngpgsig " + sig +
+			"\n x\n -----END-----\n\nsigned\n"
+		f := filepath.Join(dir, "obj")
+		if err := os.WriteFile(f, []byte(obj), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		sha := run("hash-object", "-t", "commit", "-w", f)
+		run("update-ref", "HEAD", sha)
+		for _, key := range []string{"gpg.program", "gpg.openpgp.program", "gpg.x509.program"} {
+			run("config", "--local", key, script)
+		}
+		if _, err := Verify(repo, "", 5); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := os.Stat(marker); err == nil {
+			t.Fatalf("Verify ran the checkout's own signature program for %q", sig)
+		}
+	}
+}
+
+// A profile that sets the identity alone keeps its fragment and include even
+// with no key to sign with (B-02).
+func TestAnIdentityOnlyProfileIsAppliedWithoutAKey(t *testing.T) {
+	p := sandbox(t)
+	m := manifest.Starter(false)
+	g := manifest.ProfileGit{Email: "ada@acme.example", Sign: false, Dirs: []string{filepath.ToSlash(filepath.Join(p.DevRoot, "code"))}}
+	m.SetProfile("plain", manifest.Profile{KeyScope: "per_service", Keys: []manifest.KeySpec{{Name: "main"}}, Git: &g})
+	if err := m.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	pl, _ := Render(p, m, nil)
+	if len(pl.Signers) != 1 || len(pl.Problems) != 0 {
+		t.Fatalf("signers %+v problems %v", pl.Signers, pl.Problems)
+	}
+	frag := FragmentPath(p, "plain")
+	var found bool
+	for _, w := range pl.Writes {
+		if w.Path == frag {
+			found = strings.Contains(w.New, "email = ada@acme.example") && !strings.Contains(w.New, "gpgsign")
+		}
+	}
+	for _, r := range pl.Removes {
+		if r == frag {
+			t.Fatal("the identity's fragment would be removed")
+		}
+	}
+	if !found {
+		t.Fatalf("no identity fragment: %+v", pl.Writes)
+	}
+	// Asked to sign with no key to find: the identity still applies, unsigned.
+	g.Sign = true
+	m.SetProfile("plain", manifest.Profile{KeyScope: "per_service", Keys: []manifest.KeySpec{{Name: "main"}}, Git: &g})
+	pl, _ = Render(p, m, nil)
+	if len(pl.Signers) != 1 || len(pl.Problems) == 0 || pl.Signers[0].signs() {
+		t.Fatalf("signing without a key: %+v %v", pl.Signers, pl.Problems)
+	}
+}
+
+// A directory inside another profile's is included after it, so git's last
+// match, the most specific claim, decides the identity (S-06).
+func TestANestedDirectoryIsIncludedAfterItsParent(t *testing.T) {
+	p := sandbox(t)
+	signers := []Signer{
+		{Profile: "acme", Git: manifest.ProfileGit{Email: "a@x", Dirs: []string{"/code/acme"}}},
+		{Profile: "zeta", Git: manifest.ProfileGit{Email: "z@x", Dirs: []string{"/code"}}},
+	}
+	b := Block(p, signers)
+	parent, nested := strings.Index(b, "gitdir:/code/\""), strings.Index(b, "gitdir:/code/acme/\"")
+	if parent < 0 || nested < 0 || parent > nested {
+		t.Fatalf("the parent comes after the nested directory:\n%s", b)
+	}
+}
+
+// A begin marker with no end is refused, not guessed at (B-06).
+func TestRenderRefusesABlockWithNoEndMarker(t *testing.T) {
+	p := sandbox(t)
+	m := withSigner(t, p, manifest.ProfileGit{Email: "a@x", Dirs: []string{filepath.Join(p.DevRoot, "code")}}, false)
+	global := GlobalConfigPath(p, nil)
+	if err := os.WriteFile(global, []byte("[user]\n\tname = me\n"+BeginMarker+"\n[includeIf \"gitdir:/x/\"]\n\tpath = y\n[alias]\n\tst = status\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Render(p, m, nil); err == nil || !strings.Contains(err.Error(), "no end marker") {
+		t.Fatalf("render: %v", err)
+	}
+}
+
+// Two backups in the same second are both kept (B-07).
+func TestBackupsInTheSameSecondAreBothKept(t *testing.T) {
+	dir := t.TempDir()
+	a := freeBackupPath(dir, "20260101T000000Z")
+	if err := os.WriteFile(a, []byte("one"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if b := freeBackupPath(dir, "20260101T000000Z"); b == a || filepath.Base(b) != "20260101T000000Z-2.gitconfig" {
+		t.Fatalf("second backup %s", b)
+	}
+}

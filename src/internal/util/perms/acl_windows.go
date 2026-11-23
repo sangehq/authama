@@ -3,6 +3,7 @@
 package perms
 
 import (
+	"fmt"
 	"os"
 	"unsafe"
 
@@ -42,15 +43,30 @@ func ownerOnlyACL(path string) (bool, string) {
 				Allow:       ace.Header.AceType == windows.ACCESS_ALLOWED_ACE_TYPE,
 				InheritOnly: ace.Header.AceFlags&windows.INHERIT_ONLY_ACE != 0,
 			}
-			// Allowed and denied ACEs share this layout; other ACE types
-			// (object, callback, audit) are not access grants we read.
-			if ace.Header.AceType == windows.ACCESS_ALLOWED_ACE_TYPE || ace.Header.AceType == windows.ACCESS_DENIED_ACE_TYPE {
+			// Allowed and denied ACEs share this layout. Any other type that
+			// grants access (compound, object, callback) is one this check
+			// cannot read the trustee of, so the file is not owner-only by it.
+			switch ace.Header.AceType {
+			case windows.ACCESS_ALLOWED_ACE_TYPE, windows.ACCESS_DENIED_ACE_TYPE:
 				e.SID = (*windows.SID)(unsafe.Pointer(&ace.SidStart)).String()
-			} else {
+			case aceAllowedCompound, aceAllowedObject, aceAllowedCallback, aceAllowedCallbackObject:
+				if !e.InheritOnly {
+					return false, fmt.Sprintf("it has an access-granting ACE of type %d that authama cannot check", ace.Header.AceType)
+				}
 				continue
+			default:
+				continue // denies and audit entries grant nothing
 			}
 			entries = append(entries, e)
 		}
 	}
 	return aclOwnerOnly(tu.User.Sid.String(), owner.String(), dacl == nil, entries)
 }
+
+// The access-granting ACE types besides ACCESS_ALLOWED_ACE_TYPE (winnt.h).
+const (
+	aceAllowedCompound       = 4
+	aceAllowedObject         = 5
+	aceAllowedCallback       = 9
+	aceAllowedCallbackObject = 11
+)

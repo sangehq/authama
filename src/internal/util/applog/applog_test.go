@@ -135,3 +135,78 @@ func TestTheLogRotatesAndOldFilesArePruned(t *testing.T) {
 		t.Fatal("prune removed the live log")
 	}
 }
+
+// More secret shapes, and a secret nested in a map, are blanked (S-05).
+func TestMoreSecretShapesNeverReachTheLog(t *testing.T) {
+	dir := configure(t, "debug")
+	pw := fake("pw", 'z', 12)
+	q := fake("qv", 'y', 16)
+	npm := fake("np"+"m_", 'n', 36)
+	aws := fake("AK"+"IA", 'W', 16)
+	nested := fake("nv", 'x', 14)
+	Info("url", "remote", "https://ada:"+pw+"@git.example/x.git", "call", "https://api.example/v1?access_token="+q+"&page=2")
+	Info("tokens", "detail", npm+" "+aws)
+	Info("nested", "cfg", map[string]any{"name": "work", "inner": map[string]any{"password": nested}})
+	b, err := os.ReadFile(filepath.Join(dir, FileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range []string{pw, q, npm, aws, nested} {
+		if strings.Contains(string(b), s) {
+			t.Errorf("the log holds %q:\n%s", s, b)
+		}
+	}
+	for _, s := range []string{"ada:", "git.example", "page=2", "work"} {
+		if !strings.Contains(string(b), s) {
+			t.Errorf("redaction removed %q:\n%s", s, b)
+		}
+	}
+}
+
+// A record too long to read back is skipped, and the records after it in the
+// same file are still read (B-13); a limit reads the newest records (S-07).
+func TestAnOverlongLineHidesNothingAfterIt(t *testing.T) {
+	dir := t.TempDir()
+	line := func(msg string) string {
+		return `{"time":"2026-11-23T00:00:00Z","level":"INFO","msg":"` + msg + `"}` + "\n"
+	}
+	body := line("first") + `{"msg":"` + strings.Repeat("x", 2<<20) + `"}` + "\n" + line("after") + line("last")
+	if err := os.WriteFile(filepath.Join(dir, FileName), []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, end, err := ReadFollow(dir, Filter{})
+	if err != nil || len(got) != 3 || got[1].Msg != "after" || end != int64(len(body)) {
+		t.Fatalf("read %d records %v, end %d of %d", len(got), err, end, len(body))
+	}
+	got, _ = Read(dir, Filter{Limit: 1})
+	if len(got) != 1 || got[0].Msg != "last" {
+		t.Fatalf("limit 1: %+v", got)
+	}
+}
+
+// Retention is kept when logging starts, not only on rotation (B-08); a log
+// left world-readable is made owner-only again (S-07).
+func TestConfigurePrunesAndTightensModes(t *testing.T) {
+	dir := t.TempDir()
+	old := filepath.Join(dir, "authama-20200101T000000.000.log")
+	if err := os.WriteFile(old, []byte("{}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	past := time.Now().Add(-72 * time.Hour)
+	if err := os.Chtimes(old, past, past); err != nil {
+		t.Fatal(err)
+	}
+	live := filepath.Join(dir, FileName)
+	if err := os.WriteFile(live, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	Configure(Config{Dir: dir, Level: slog.LevelInfo, RetentionDays: 1, MaxSizeMB: 1})
+	t.Cleanup(func() { Configure(Config{}) })
+	if _, err := os.Stat(old); !os.IsNotExist(err) {
+		t.Error("an expired rotated log survived Configure")
+	}
+	Info("x")
+	if fi, _ := os.Stat(live); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
+		t.Errorf("authama.log is %v after a write", fi.Mode().Perm())
+	}
+}

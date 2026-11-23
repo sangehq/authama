@@ -89,7 +89,7 @@ func setupImportChange(f url.Values, errs []error) (change.Change, []error) {
 		for _, r := range risky {
 			opts = append(opts, r.String())
 		}
-		return change.Change{}, append(errs, badForm("the document's manifest sets SSH options that could redirect or weaken your connections (%s); "+
+		return change.Change{}, append(errs, badForm("the document sets SSH options that could redirect or weaken your connections, providers that send a token to another host, or commands authama would run (%s); "+
 			"a document does not prove who made it. If you set them yourself, import it at a terminal with `%s setup import FILE --allow-risky-options`",
 			strings.Join(opts, "; "), brand.Command))
 	}

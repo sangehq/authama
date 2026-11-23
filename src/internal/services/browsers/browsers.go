@@ -7,7 +7,8 @@
 // a browser in. Every time a remembered browser is signed in by its cookie the
 // secret is replaced (rotated), and the one it replaced is kept for a short
 // grace, for a second tab that sent the old cookie at the same moment. An old
-// secret presented after that means the cookie was copied: the browser is
+// secret presented after that, the one just replaced or any of the last
+// maxRetired before it, means the cookie was copied: the browser is
 // forgotten, so neither copy works any more.
 package browsers
 
@@ -43,6 +44,11 @@ const Grace = time.Minute
 // maxBrowsers bounds the file; the oldest is forgotten past it.
 const maxBrowsers = 32
 
+// maxRetired bounds the retired secret hashes kept per browser. A browser in
+// daily use rotates about once a day, so this covers a cookie copied within
+// the last few months; an older copy is refused, without the alarm.
+const maxRetired = 128
+
 // Browser is one remembered browser.
 type Browser struct {
 	ID       string    `json:"id"`
@@ -50,6 +56,9 @@ type Browser struct {
 	Hash     string    `json:"hash"`
 	Prev     string    `json:"prev,omitempty"`
 	PrevTill time.Time `json:"prev_till,omitempty"`
+	// Retired are the hashes of the secrets before Prev, newest first, up to
+	// maxRetired: any of them presented again means the cookie was copied.
+	Retired  []string  `json:"retired,omitempty"`
 	Created  time.Time `json:"created"`
 	LastUsed time.Time `json:"last_used"`
 	Expires  time.Time `json:"expires"`
@@ -179,6 +188,12 @@ func SignIn(path, id, sec string, now time.Time, lifetime time.Duration) (next s
 			switch {
 			case same(b.Hash, h):
 				next = secret()
+				if b.Prev != "" {
+					b.Retired = append([]string{b.Prev}, b.Retired...)
+					if len(b.Retired) > maxRetired {
+						b.Retired = b.Retired[:maxRetired]
+					}
+				}
 				b.Prev, b.PrevTill, b.Hash = b.Hash, now.Add(Grace), hash(next)
 				b.LastUsed, b.Expires = now, now.Add(lifetime)
 				ok = true
@@ -186,7 +201,7 @@ func SignIn(path, id, sec string, now time.Time, lifetime time.Duration) (next s
 			case b.Prev != "" && same(b.Prev, h) && now.Before(b.PrevTill):
 				ok = true
 				return false, nil
-			case b.Prev != "" && same(b.Prev, h):
+			case b.Prev != "" && same(b.Prev, h), retired(b.Retired, h):
 				f.Browsers = append(f.Browsers[:i], f.Browsers[i+1:]...)
 				return true, ErrReused
 			}
@@ -206,7 +221,7 @@ func List(path string, now time.Time) ([]Browser, error) {
 	out := make([]Browser, 0, len(f.Browsers))
 	for _, b := range f.Browsers {
 		if now.Before(b.Expires) {
-			b.Hash, b.Prev = "", ""
+			b.Hash, b.Prev, b.Retired = "", "", nil
 			out = append(out, b)
 		}
 	}
@@ -289,4 +304,13 @@ func Label(userAgent string) string {
 		return browser
 	}
 	return browser + " on " + system
+}
+
+// retired reports whether h is one of a browser's retired secret hashes.
+func retired(hashes []string, h string) bool {
+	found := false
+	for _, r := range hashes {
+		found = same(r, h) || found // every one compared, in constant time each
+	}
+	return found
 }

@@ -418,8 +418,12 @@ func gitSigning(p paths.Paths) ([]File, error) {
 		if dirs == nil {
 			dirs = []string{}
 		}
+		key := ""
+		if s.Key.KeyName != "" {
+			key = s.Key.Profile + "/" + s.Key.KeyName
+		}
 		doc.Profiles = append(doc.Profiles, GitSigningRow{Profile: s.Profile, Email: s.Git.Email, Name: s.Git.Name,
-			Key: s.Key.Profile + "/" + s.Key.KeyName, PublicKey: s.PubLine, Sign: s.Git.Sign, Dirs: dirs, OnePassword: s.OnePassword})
+			Key: key, PublicKey: s.PubLine, Sign: s.Git.Sign, Dirs: dirs, OnePassword: s.OnePassword})
 	}
 	body, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {

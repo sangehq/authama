@@ -24,6 +24,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sangehq/authama/src/internal/core/recency"
@@ -361,9 +362,22 @@ func (f *File) Apply(env Env) ApplyResult {
 		}
 		if env.Setenv(s.Env, v) == nil {
 			res.Set = append(res.Set, s.Env)
+			appliedFromFile.Store(s.Env, true)
 		}
 	}
 	return res
+}
+
+// appliedFromFile holds, for this process, the variables Apply set from
+// authama.json: their value is the file's, not one the environment gave.
+var appliedFromFile sync.Map
+
+// AppliedFromFile reports whether this process set name from authama.json
+// (Apply), so a reader can tell the file's value from the environment's even
+// when the two are equal.
+func AppliedFromFile(name string) bool {
+	_, ok := appliedFromFile.Load(name)
+	return ok
 }
 
 func expandHome(p string) string {

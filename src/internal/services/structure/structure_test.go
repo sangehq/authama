@@ -176,10 +176,15 @@ func TestApplyRefusesBeforeTouchingAnything(t *testing.T) {
 	pair(t, filepath.Join(p.SSHDir, "profiles", "work", "id_a"), pubOther)
 	pair(t, filepath.Join(p.SSHDir, "id_b"), pubOther)
 	for name, plan := range map[string]string{
-		"dest taken":      "key ~/.ssh/id_b profile work\nkey ~/.ssh/id_a profile work",
-		"unknown profile": "key ~/.ssh/id_b profile nobody",
-		"two to one":      "key ~/.ssh/id_b profile work name z\nkey ~/.ssh/id_a profile home name z\nkey ~/.ssh/id_a profile work name z",
+		"dest taken":        "key ~/.ssh/id_b profile work\nkey ~/.ssh/id_a profile work",
+		"unknown profile":   "key ~/.ssh/id_b profile nobody",
+		"two to one":        "key ~/.ssh/id_b profile work name z\nkey ~/.ssh/id_a profile home name z\nkey ~/.ssh/id_a profile work name z",
+		"one source twice":  "key ~/.ssh/id_b profile work name x\nkey ~/.ssh/id_b profile home name y",
+		"certificate there": "key ~/.ssh/id_b profile work name withcert",
 	} {
+		if name == "certificate there" {
+			write(t, filepath.Join(p.SSHDir, "profiles", "work", "withcert-cert.pub"), "cert\n", 0o644)
+		}
 		moves, err := ParsePlan(plan)
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
@@ -204,7 +209,8 @@ func TestParsePlanRefusesEscapes(t *testing.T) {
 	for _, bad := range []string{
 		"key ../x profile work", "key ~/.ssh/../x profile work", "key /etc/passwd profile work",
 		"key config/a/b profile work", "key config/.env profile work", "rm -rf ~", "misplaced work",
-		"key ~/.ssh/x profile work name", "", "# only a comment",
+		"key ~/.ssh/x profile work name", "key ~/.ssh/x profile work name a/b", "key ~/.ssh/x profile work name .hidden",
+		"", "# only a comment",
 	} {
 		if _, err := ParsePlan(bad); err == nil {
 			t.Errorf("%q parsed", bad)

@@ -1,6 +1,7 @@
 package web
 
 import (
+	"errors"
 	"net/http"
 	"os"
 	"sync"
@@ -72,30 +73,37 @@ const zoneKey = "display.timezone"
 // next page, without a restart, and taking the setting out goes back to this
 // system's zone. The settings file is read only when its modification time
 // moves. A zone from the environment wins over the file, as it does at
-// start-up, and so does --tz: then nothing is followed.
+// start-up, and so does --tz: then nothing is followed. A settings file
+// deleted while the server runs goes back to this system's zone.
 func followZone(file string, next http.Handler) http.Handler {
 	var mu sync.Mutex
 	var seen time.Time
+	// The variable holds the file's value when this process set it from the
+	// file (settings.Apply), or when a parent did and it was inherited; only a
+	// value the environment gave, and the file does not hold, pins the zone.
 	env := os.Getenv(envnames.Timezone)
 	fv, inFile := settings.FileValue(file, zoneKey)
-	fromEnv := env != "" && (!inFile || fv != env)
+	fromEnv := env != "" && !settings.AppliedFromFile(envnames.Timezone) && (!inFile || fv != env)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if fromEnv || tz.Pinned() {
 			next.ServeHTTP(w, r)
 			return
 		}
-		if fi, err := os.Stat(file); err == nil {
-			mu.Lock()
-			if !fi.ModTime().Equal(seen) {
-				seen = fi.ModTime()
-				if v, ok := settings.FileValue(file, zoneKey); ok {
-					_ = tz.Set(v) // a bad value keeps the zone in use; the setting's check refuses one anyway
-				} else {
-					_ = tz.Set("")
-				}
+		fi, err := os.Stat(file)
+		mu.Lock()
+		switch {
+		case err == nil && !fi.ModTime().Equal(seen):
+			seen = fi.ModTime()
+			if v, ok := settings.FileValue(file, zoneKey); ok {
+				_ = tz.Set(v) // a bad value keeps the zone in use; the setting's check refuses one anyway
+			} else {
+				_ = tz.Set("")
 			}
-			mu.Unlock()
+		case errors.Is(err, os.ErrNotExist) && !seen.IsZero():
+			seen = time.Time{}
+			_ = tz.Set("")
 		}
+		mu.Unlock()
 		next.ServeHTTP(w, r)
 	})
 }

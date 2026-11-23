@@ -5,12 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/sangehq/authama/src/internal/core/inventory"
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/services/bundler"
+	"github.com/sangehq/authama/src/internal/services/settings"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
@@ -58,9 +61,13 @@ func WriteFull(p paths.Paths, path string, passphrase []byte, version string, no
 type Full struct {
 	Doc       Doc    // its config, as a setup document (checked by Parse)
 	Inventory []byte // its inventory.json, or nil
-	Env       string // its token values, as .env lines
-	b         *bundler.Bundler
-	opened    *bundler.Opened // the key files only
+	Env       string // its token values, as .env lines: only the names its setup reads tokens from
+	// EnvSkipped names the export's .env lines that are not imported: a name
+	// its setup reads no token from, or one that would change how authama or
+	// the programs it runs behave (GIT_*, SSH_*, LD_*, PATH, ...).
+	EnvSkipped []string
+	b          *bundler.Bundler
+	opened     *bundler.Opened // the key files only
 }
 
 // OpenFull decrypts the full export at path with passphrase and checks it:
@@ -91,6 +98,9 @@ func OpenFull(p paths.Paths, path string, passphrase []byte, replacedDir string,
 	if f.Doc, err = Parse(body); err != nil {
 		return nil, err
 	}
+	if f.Env, f.EnvSkipped, err = onlyTokenNames(f.Env, f.Doc); err != nil {
+		return nil, err
+	}
 	if len(f.Inventory) > 0 {
 		var inv inventory.Inventory
 		if err := json.Unmarshal(f.Inventory, &inv); err != nil {
@@ -100,9 +110,13 @@ func OpenFull(p paths.Paths, path string, passphrase []byte, replacedDir string,
 	return f, nil
 }
 
-// Risky lists the SSH options in the export's manifest that could redirect
-// or weaken connections.
-func (f *Full) Risky() []manifest.RiskyOption { return f.opened.Risky() }
+// Risky lists what in the export could redirect or weaken connections, or run
+// a program, once imported: the SSH options in its manifest (as the key backup
+// checks them), its providers that send a token elsewhere, and its custom
+// hypervisor commands.
+func (f *Full) Risky() []manifest.RiskyOption {
+	return append(f.opened.Risky(), f.Doc.riskyContent()...)
+}
 
 // KeyItems lists the key files the export would lay down, settled by policy.
 func (f *Full) KeyItems(policy Policy) (Result, error) {
@@ -195,4 +209,63 @@ func MergeInventory(p paths.Paths, raw []byte, policy Policy) (Result, error) {
 		return res, nil
 	}
 	return res, local.Save(p.Inventory())
+}
+
+// onlyTokenNames keeps the lines of env whose name d's setup reads a token
+// from (as the export wrote them: EnvText over EnvNames) and is not a name
+// that changes how authama or a program it runs behaves. An export does not
+// prove who made it, and every name in .env is set in authama's environment.
+func onlyTokenNames(env string, d Doc) (kept string, skipped []string, err error) {
+	if env == "" {
+		return "", nil, nil
+	}
+	pairs, warns := settings.ParseDotenv(strings.NewReader(env))
+	if len(warns) > 0 {
+		return "", nil, fmt.Errorf("the export's token values do not parse: %s", strings.Join(warns, "; "))
+	}
+	var m *manifest.Manifest
+	if len(d.Manifest) > 0 {
+		if m, err = parseManifest(d.Manifest); err != nil {
+			return "", nil, err
+		}
+	}
+	allowed := map[string]bool{}
+	for _, n := range envNames(d.Tokens, m) {
+		allowed[n] = !envNameReserved(n)
+	}
+	var b strings.Builder
+	for _, p := range pairs {
+		if !allowed[p.Key] {
+			skipped = append(skipped, p.Key)
+			continue
+		}
+		b.WriteString(p.Key + "=" + Quote(p.Value) + "\n")
+	}
+	sort.Strings(skipped)
+	return b.String(), slices.Compact(skipped), nil
+}
+
+// reservedEnvPrefixes and reservedEnvNames change how authama, git, ssh or the
+// dynamic loader behave, so no import writes them into .env, whatever the
+// setup names.
+var (
+	reservedEnvPrefixes = []string{"AUTHAMA_", "GIT_", "SSH_", "LD_", "DYLD_", "GNUPG", "GPG_"}
+	reservedEnvNames    = map[string]bool{"PATH": true, "HOME": true, "SHELL": true, "TMPDIR": true, "USER": true,
+		"XDG_CONFIG_HOME": true, "XDG_STATE_HOME": true, "XDG_DATA_HOME": true, "XDG_RUNTIME_DIR": true,
+		"BROWSER": true, "EDITOR": true, "VISUAL": true, "PAGER": true, "IFS": true, "ENV": true, "BASH_ENV": true,
+		"PROMPT_COMMAND": true, "SSL_CERT_FILE": true, "SSL_CERT_DIR": true, "HTTP_PROXY": true, "HTTPS_PROXY": true,
+		"ALL_PROXY": true, "NO_PROXY": true, "http_proxy": true, "https_proxy": true, "all_proxy": true, "no_proxy": true,
+		"GOFLAGS": true, "GOPATH": true, "GOROOT": true, "GOPROXY": true, "GOTOOLCHAIN": true}
+)
+
+func envNameReserved(n string) bool {
+	if reservedEnvNames[n] {
+		return true
+	}
+	for _, p := range reservedEnvPrefixes {
+		if strings.HasPrefix(n, p) {
+			return true
+		}
+	}
+	return false
 }
