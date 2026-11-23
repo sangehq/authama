@@ -31,7 +31,7 @@ func FinishRestore(p paths.Paths) error {
 	if err != nil {
 		return fmt.Errorf("config render skipped: %w", err)
 	}
-	if _, err := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).Write(false); err != nil {
+	if _, err := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).WithState(p.StateDir()).Force("").Write(false); err != nil {
 		return fmt.Errorf("config render failed: %w", err)
 	}
 	return nil

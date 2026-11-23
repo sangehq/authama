@@ -28,7 +28,7 @@ func loadConfigService(c *cobra.Command) (paths.Paths, *manifest.Manifest, *conf
 	if err != nil {
 		return paths.Paths{}, nil, nil, err
 	}
-	return p, m, configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()), nil
+	return p, m, configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).WithState(p.StateDir()), nil
 }
 
 // migrateLegacyKnownHosts merges any known_hosts left over under profiles/*/

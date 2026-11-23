@@ -319,6 +319,9 @@ func (a *adoption) apply(im *Importer, m *manifest.Manifest) (string, error) {
 		}
 	}
 	svc := configsvc.New(a.editDir, m, im.emitUseKeychain)
+	if a.editDir == im.p.SSHDir {
+		svc = svc.WithState(im.p.StateDir()).Force(filepath.Join(backup, "hand-edits"))
+	}
 	rendered, err := svc.Rendered()
 	if err != nil {
 		return backup, err

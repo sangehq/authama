@@ -26,7 +26,7 @@ func sshConfigView(p paths.Paths) SSHConfigView {
 	if err != nil {
 		return SSHConfigView{Problem: err.Error()}
 	}
-	svc := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain())
+	svc := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).WithState(p.StateDir())
 	v := SSHConfigView{}
 	if v.Rendered, err = svc.Show(""); err != nil {
 		return SSHConfigView{Problem: err.Error()}

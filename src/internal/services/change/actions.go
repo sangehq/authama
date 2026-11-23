@@ -340,7 +340,7 @@ func ConfigRender() Change {
 						rep.Merged, strings.Join(rep.Removed, ", "))
 				}
 			}
-			res, err := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).Write(false)
+			res, err := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).WithState(p.StateDir()).Write(false)
 			if err != nil {
 				return err
 			}
@@ -371,7 +371,7 @@ func ConfigAdopt() Change {
 				return err
 			}
 			backup := filepath.Join(p.StateDir(), "config-adopt-"+time.Now().Format("20060102-150405"))
-			res, err := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).Adopt(false, backup)
+			res, err := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).WithState(p.StateDir()).Adopt(false, backup)
 			if err != nil {
 				return err
 			}
