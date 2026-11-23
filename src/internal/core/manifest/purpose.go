@@ -239,13 +239,13 @@ func ServiceKind(m *Manifest, name string) string {
 }
 
 // ToolDir is the directory of a tool key under the profile: ProfileDir/tools/<tool>.
-func (m *Manifest) ToolDir(sshDir, profile, tool string) string {
+func ToolDir(m *Manifest, sshDir, profile, tool string) string {
 	return filepath.Join(m.ProfileDir(sshDir, profile), "tools", fs.Segment(tool))
 }
 
 // KeyRel is the private key's path relative to ~/.ssh, in forward slashes,
 // when the key is not adopted.
-func (m *Manifest) KeyRel(ref KeyRef) string {
+func KeyRel(m *Manifest, ref KeyRef) string {
 	base := m.ProfileRel(ref.Profile)
 	if spec, ok := m.KeySpecFor(ref); ok {
 		if spec.Path != "" {
@@ -268,7 +268,7 @@ type LocateKey struct {
 
 // LocateKeyPath maps a private-key path under sshDir onto a profile, when
 // it sits in that profile's directory or in tools/<tool>/ beneath it.
-func (m *Manifest) LocateKeyPath(sshDir, abs string) (LocateKey, bool) {
+func LocateKeyPath(m *Manifest, sshDir, abs string) (LocateKey, bool) {
 	abs = filepath.Clean(abs)
 	for _, name := range m.ProfileNames() {
 		dir := filepath.Clean(m.ProfileDir(sshDir, name))

@@ -186,6 +186,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
 // profileDir is ~/.ssh/profiles/<category>/<name> after reconcile.
 function profileDir(ssh: string, name: string): string {
   const root = join(ssh, 'profiles');
+  const direct = join(root, name);
+  if (existsSync(direct)) return direct;
   for (const cat of readdirSync(root)) {
     const dir = join(root, cat, name);
     if (existsSync(dir)) return dir;

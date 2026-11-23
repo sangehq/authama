@@ -162,7 +162,7 @@ func keyTree(p paths.Paths, m *manifest.Manifest) []Suggestion {
 			continue
 		}
 		seen[priv] = true
-		loc, ok := m.LocateKeyPath(p.SSHDir, priv)
+		loc, ok := manifest.LocateKeyPath(m, p.SSHDir, priv)
 		if !ok {
 			// A directory no profile owns: keep the old guess (the folder name).
 			loc = manifest.LocateKey{Profile: filepath.Base(dir), Name: name}

@@ -55,7 +55,7 @@
             <div><strong>{{.Ref}}</strong> <span class="text-secondary small">{{.Kind}}</span>{{if .Label}}<div class="small text-secondary">{{.Label}}</div>{{end}}</div>
             {{if not $.ReadOnly}}
             <div class="d-flex gap-1">
-              <a class="btn btn-sm btn-ghost-secondary" href="#service-edit-form">Edit</a>
+              <a class="btn btn-sm btn-ghost-secondary" href="#service-edit-form"{{desc "service-edit"}}>Edit</a>
               <form method="post" action="{{basePath}}/changes/preview" data-inline>
                 <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="service-remove"><input type="hidden" name="name" value="{{.Ref}}">
                 <button type="submit" class="btn btn-sm btn-ghost-danger"{{desc "service-remove"}}>Remove</button>

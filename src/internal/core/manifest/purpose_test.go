@@ -26,10 +26,10 @@ func TestKeyPathToolRole(t *testing.T) {
 	if git != want {
 		t.Fatalf("git path: got %s want %s", git, want)
 	}
-	if rel := m.KeyRel(KeyRef{Profile: "imanimanyara", KeyName: "git-signing"}); rel != "profiles/personal/imanimanyara/tools/git/git-signing" {
+	if rel := KeyRel(m, KeyRef{Profile: "imanimanyara", KeyName: "git-signing"}); rel != "profiles/personal/imanimanyara/tools/git/git-signing" {
 		t.Fatalf("key rel: %s", rel)
 	}
-	loc, ok := m.LocateKeyPath(ssh, git)
+	loc, ok := LocateKeyPath(m, ssh, git)
 	if !ok || loc.Profile != "imanimanyara" || loc.Tool != "git" || loc.Name != "git-signing" {
 		t.Fatalf("locate: %+v ok=%v", loc, ok)
 	}

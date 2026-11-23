@@ -221,6 +221,31 @@ var commandLong = map[string]string{
 	"ssh structure uninstall": "Remove the background job `ssh structure install` registered, which checks the layout and raises\n" +
 		"suggestions. Suggestions already found are kept. It is refused in dev mode, since the job is\n" +
 		"machine-wide.",
+	"ssh structure rules": "Remembered classification rules for purpose keys. `list` shows them, `add` records a match into\n" +
+		"tools/<tool>/, `set --auto` lets serve and `structure check` apply a later identical suggestion,\n" +
+		"and `remove` drops one. Auto-apply is off until you enable it; leftover copy-remove is never auto-applied.",
+	"ssh structure rules add": "Remember a classification: keys matching --name, --comment and/or --path go into tools/<tool>/\n" +
+		"(and --kind when set). Auto-apply stays off until `ssh structure rules set --auto`.",
+	"ssh structure rules list": "List remembered purpose-key rules, each with its id, match, destination tool, and whether auto-apply\n" +
+		"is on.",
+	"ssh structure rules set": "Change a remembered rule, named by the id `ssh structure rules list` shows. `--auto` turns auto-apply\n" +
+		"on; `--auto=false` turns it off. Auto-apply still needs confidence 1.0 and a complete plan, and never\n" +
+		"deletes a leftover copy.",
+	"ssh structure rules remove": "Drop a remembered classification rule, named by the id `ssh structure rules list` shows.",
+	"ssh service add": "Add a reachability service to the catalog (Cloudflare Access, WARP, Tailscale, a bastion, and the\n" +
+		"rest). Hosts and variants attach it with `--service`. This does not start a tunnel or change WARP.",
+	"ssh service edit": "Update a catalog service of the same name: its kind, optional label, and optional binary override.\n" +
+		"This does not start a tunnel or change WARP.",
+	"ssh service remove": "Remove a catalog service. Hosts that still attach it need a later `ssh host edit --remove-service`.",
+	"ssh service list":   "List catalog services and which hosts or variants attach each one.",
+	"ssh service show":   "Show one catalog service: its kind, label, binary and the hosts that attach it.",
+	"ssh service health": "Read-only status of each catalog service (and built-in kinds): is the CLI present, and what does a\n" +
+		"status command report. It never starts a tunnel, changes WARP, or opens a browser.",
+	"ssh service status": "The same as `ssh service health`: a read-only status of each service.",
+	"ssh tool list": "List declared tool keys (git signing, docker, …) under profiles/<category>/<profile>/tools/<tool>/,\n" +
+		"and whether each file is on disk.",
+	"ssh tool show":   "Show one declared tool key, named as <profile>/<key>: its tool, kind, path and whether it is on disk.",
+	"ssh tool status": "How many declared tool keys are present on disk, and list any that are missing.",
 	"ssh view": "One host as ssh will connect to it: the resolved config (what `ssh -G` reports), the key it offers\n" +
 		"and whether that key is on disk, and whether it is deployed to the host. Name a host's alias, or a\n" +
 		"profile to see each of its hosts.",

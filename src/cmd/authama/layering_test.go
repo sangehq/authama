@@ -221,6 +221,10 @@ func TestTheBinaryLinksOnlyItsTwoChosenDependencies(t *testing.T) {
 		"golang.org/x/oauth2":                    true,
 		"golang.org/x/sync":                      true,
 		"golang.org/x/time":                      true,
+		// Filesystem watching in `authama serve`, the owner's decision of
+		// 2026-11-23: github.com/fsnotify/fsnotify, so key and config
+		// changes are noticed in 1–2s instead of only on the 30s poll.
+		"github.com/fsnotify/fsnotify": true,
 	}
 	var linked []string
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
@@ -295,6 +299,9 @@ func TestTheToolRunsOnlyTheBinariesItDeclares(t *testing.T) {
 		"git",
 		// docker: `authama ssh vm docker-context` creates or updates an ssh:// context.
 		"docker",
+		// sange: when a git-signing key moves, structure apply delegates
+		// the user.signingkey update (`sange profile signing retarget`).
+		"sange",
 		// cloudflared: looked up to write a Cloudflare Access host's ProxyCommand; ssh runs it, authama never does.
 		"cloudflared",
 		// Hypervisor CLIs (`authama ssh vm`), each optional: a missing one is listed as not installed.

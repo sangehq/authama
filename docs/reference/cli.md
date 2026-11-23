@@ -3938,10 +3938,17 @@ Subcommands:
 
 ## authama ssh service add
 
-Add a service to the catalog (defaults.services).
+Add a reachability service to the catalog (Cloudflare Access, WARP, Tailscale, a bastion, and the
+rest). Hosts and variants attach it with `--service`. This does not start a tunnel or change WARP.
 
 ```
 authama ssh service add <name> [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh service add access --kind cloudflare-access --label "Prod Access"
 ```
 
 Flags:
@@ -3954,10 +3961,17 @@ Flags:
 
 ## authama ssh service edit
 
-Edit a catalog service.
+Update a catalog service of the same name: its kind, optional label, and optional binary override.
+This does not start a tunnel or change WARP.
 
 ```
 authama ssh service edit <name> [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh service edit access --label "Prod Access via tunnel"
 ```
 
 Flags:
@@ -3970,10 +3984,18 @@ Flags:
 
 ## authama ssh service health
 
-Read-only health check (never starts a tunnel or changes WARP).
+Read-only status of each catalog service (and built-in kinds): is the CLI present, and what does a
+status command report. It never starts a tunnel, changes WARP, or opens a browser.
 
 ```
 authama ssh service health [name] [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh service health
+  authama ssh service health access
 ```
 
 Flags:
@@ -3984,13 +4006,20 @@ Flags:
 
 ## authama ssh service list
 
-List built-in kinds and catalog entries.
+List catalog services and which hosts or variants attach each one.
 
 ```
 authama ssh service list [flags]
 ```
 
 Aliases: `ls`
+
+Examples:
+
+```sh
+  authama ssh service list
+  authama ssh service list --json
+```
 
 Flags:
 
@@ -4000,10 +4029,16 @@ Flags:
 
 ## authama ssh service remove
 
-Remove a catalog service.
+Remove a catalog service. Hosts that still attach it need a later `ssh host edit --remove-service`.
 
 ```
 authama ssh service remove <name> [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh service remove access --yes
 ```
 
 Flags:
@@ -4014,18 +4049,30 @@ Flags:
 
 ## authama ssh service show
 
-Show one service and the hosts that attach it.
+Show one catalog service: its kind, label, binary and the hosts that attach it.
 
 ```
 authama ssh service show <name>
 ```
 
+Examples:
+
+```sh
+  authama ssh service show access
+```
+
 ## authama ssh service status
 
-Alias of health: read-only status of attached services.
+The same as `ssh service health`: a read-only status of each service.
 
 ```
 authama ssh service status [name] [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh service status
 ```
 
 Flags:
@@ -4325,7 +4372,9 @@ Flags:
 
 ## authama ssh structure rules
 
-List, add, change or remove learned purpose rules.
+Remembered classification rules for purpose keys. `list` shows them, `add` records a match into
+tools/<tool>/, `set --auto` lets serve and `structure check` apply a later identical suggestion,
+and `remove` drops one. Auto-apply is off until you enable it; leftover copy-remove is never auto-applied.
 
 ```
 authama ssh structure rules
@@ -4340,10 +4389,18 @@ Subcommands:
 
 ## authama ssh structure rules add
 
-Add a purpose rule (auto-apply is off unless --auto is set).
+Remember a classification: keys matching --name, --comment and/or --path go into tools/<tool>/
+(and --kind when set). Auto-apply stays off until `ssh structure rules set --auto`.
 
 ```
 authama ssh structure rules add [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh structure rules add --name git-signing --tool git
+  authama ssh structure rules add --comment "git-signing" --tool git
 ```
 
 Flags:
@@ -4361,13 +4418,20 @@ Flags:
 
 ## authama ssh structure rules list
 
-List purpose rules.
+List remembered purpose-key rules, each with its id, match, destination tool, and whether auto-apply
+is on.
 
 ```
 authama ssh structure rules list [flags]
 ```
 
 Aliases: `ls`
+
+Examples:
+
+```sh
+  authama ssh structure rules list
+```
 
 Flags:
 
@@ -4377,10 +4441,16 @@ Flags:
 
 ## authama ssh structure rules remove
 
-Remove a purpose rule.
+Drop a remembered classification rule, named by the id `ssh structure rules list` shows.
 
 ```
 authama ssh structure rules remove <id> [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh structure rules remove a1b2c3d4
 ```
 
 Flags:
@@ -4391,10 +4461,19 @@ Flags:
 
 ## authama ssh structure rules set
 
-Change a rule (currently --auto / --auto=false).
+Change a remembered rule, named by the id `ssh structure rules list` shows. `--auto` turns auto-apply
+on; `--auto=false` turns it off. Auto-apply still needs confidence 1.0 and a complete plan, and never
+deletes a leftover copy.
 
 ```
 authama ssh structure rules set <id> [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh structure rules set a1b2c3d4 --auto
+  authama ssh structure rules set a1b2c3d4 --auto=false
 ```
 
 Flags:
@@ -4483,13 +4562,21 @@ Subcommands:
 
 ## authama ssh tool list
 
-List declared tool keys.
+List declared tool keys (git signing, docker, …) under profiles/<category>/<profile>/tools/<tool>/,
+and whether each file is on disk.
 
 ```
 authama ssh tool list [flags]
 ```
 
 Aliases: `ls`
+
+Examples:
+
+```sh
+  authama ssh tool list
+  authama ssh tool list --json
+```
 
 Flags:
 
@@ -4499,18 +4586,30 @@ Flags:
 
 ## authama ssh tool show
 
-Show one tool key.
+Show one declared tool key, named as <profile>/<key>: its tool, kind, path and whether it is on disk.
 
 ```
 authama ssh tool show <profile>/<key>
 ```
 
+Examples:
+
+```sh
+  authama ssh tool show work/git-signing
+```
+
 ## authama ssh tool status
 
-Show whether each declared tool key is present on disk.
+How many declared tool keys are present on disk, and list any that are missing.
 
 ```
 authama ssh tool status [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh tool status
 ```
 
 Flags:
