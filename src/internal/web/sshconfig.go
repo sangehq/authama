@@ -16,7 +16,10 @@ type SSHConfigView struct {
 	Rendered string
 	Check    string
 	InSync   bool
-	Problem  string // the manifest could not be read or rendered
+	// HandEdits are the lines typed into authama's files by hand since it
+	// last wrote them (HAND-EDIT in config check).
+	HandEdits []string
+	Problem   string // the manifest could not be read or rendered
 }
 
 // sshConfigView reads the page for a home. It is not an Engine method: it
@@ -37,6 +40,9 @@ func sshConfigView(p paths.Paths) SSHConfigView {
 		return v
 	}
 	v.Check, v.InSync = res.Format(), res.InSync()
+	for _, h := range res.HandEdits {
+		v.HandEdits = append(v.HandEdits, h.String())
+	}
 	return v
 }
 

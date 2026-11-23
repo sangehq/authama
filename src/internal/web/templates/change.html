@@ -4,6 +4,15 @@
 {{template "command_card" (commandCard .Command)}}
 {{if .Plan.Err}}
 <div class="alert alert-danger" role="alert">{{icon "circle-x"}}<span class="ms-1">This change would fail, so it cannot be made: {{.Plan.Err}}</span></div>
+{{if .HandEdits}}<div class="card mb-3" id="hand-edit-choice"><div class="card-header"><h2 class="card-title">Keep the hand edits, or discard them</h2></div>
+  <div class="card-body"><p class="text-secondary">Keeping them adds them to the manifest, so the render writes them back (<code>authama ssh config keep-edits</code>). Discarding them copies the edited files to the state home first, then renders over them (<code>authama ssh config render --force</code>). Both are previewed.</p>
+  <div class="d-flex flex-wrap gap-2">
+    {{template "change_open" $}}<input type="hidden" name="action" value="config-keep-edits"><button type="submit" class="btn btn-primary"{{desc "config-keep-edits"}}>{{icon "pencil"}}<span class="ms-1">Keep hand edits</span></button></form>
+    {{template "change_open" $}}<input type="hidden" name="action" value="config-render-force"><button type="submit" class="btn btn-outline-danger"{{desc "config-render-force"}}>{{icon "trash"}}<span class="ms-1">Discard them and render</span></button></form>
+  </div></div></div>{{end}}
+{{if .OfferUpdate}}<div class="card mb-3" id="offer-update"><div class="card-body d-flex flex-wrap align-items-center gap-2"><span class="me-auto">The profile already has this host. Update it with what you entered instead (<code>--update</code>)?</span>
+  <form method="post" action="{{basePath}}/changes/preview"><input type="hidden" name="csrf" value="{{$.CSRF}}">{{range .Update}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}<button type="submit" class="btn btn-primary"{{desc "host-add-update"}}>{{icon "refresh"}}<span class="ms-1">Preview the update</span></button></form>
+</div></div>{{end}}
 {{else}}
 {{if .Plan.Output}}<div class="card mb-3"><div class="card-header"><h2 class="card-title">What authama would say</h2></div><div class="card-body"><pre class="code-block" tabindex="0">{{.Plan.Output}}</pre></div></div>{{end}}
 {{if .Plan.Effects}}<div class="card mb-3"><div class="card-header"><h2 class="card-title">What it would do</h2></div><ul class="list-group list-group-flush">{{range .Plan.Effects}}<li class="list-group-item">{{.}}</li>{{end}}</ul></div>{{end}}

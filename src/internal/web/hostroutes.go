@@ -37,6 +37,8 @@ type routeFormData struct {
 // VariantView is one route variant: the Host it renders and what it sets.
 type VariantView struct {
 	Name, Alias, Hostname, Port, Proxy, ConnectTimeout, Options, Section, Comment string
+	// Route is what its edit form starts with.
+	Route RouteView
 }
 
 func proxyLabel(p *manifest.ProxySpec) (kind, command string) {
@@ -72,6 +74,7 @@ func routeView(h manifest.Host) RouteView {
 		if x.Port != 0 {
 			vv.Port = strconv.Itoa(x.Port)
 		}
+		vv.Route = routeView(manifest.Host{Proxy: x.Proxy, RawOptions: x.RawOptions, Section: x.Section, Comment: x.Comment})
 		vv.Proxy, _ = proxyLabel(x.Proxy)
 		if k, c := proxyLabel(x.Proxy); c != "" {
 			vv.Proxy = k + ": " + c
@@ -269,19 +272,51 @@ func hostRoutes(f url.Values, h home, profile, alias string, edit bool) (add, re
 	return add, remove, in, err
 }
 
-// variantInput reads the route variant form. Its fields set what is given
-// and leave the rest; the CLI unsets one.
-func variantInput(f url.Values) (change.VariantInput, error) {
+// variantInput reads the route variant form. A variant the host has is
+// edited as the host is: its form starts filled in, only what differs is a
+// flag, and an option taken out is unset. A new one takes what is given.
+func variantInput(f url.Values, h home) (change.VariantInput, error) {
 	var in change.VariantInput
-	var err error
-	if in.Hostname, err = optional(f, "hostname"); err != nil {
-		return in, err
-	}
-	if strings.TrimSpace(f.Get("port")) != "" {
-		if in.Port, err = portOf(f); err != nil {
-			return in, err
+	var cur *manifest.Variant
+	if m, err := manifest.Load(h.p.Manifest()); err == nil {
+		for _, x := range m.Profiles[strings.TrimSpace(f.Get("profile"))].Hosts {
+			if x.Alias == strings.TrimSpace(f.Get("alias")) {
+				if v, ok := x.Variant(strings.TrimSpace(f.Get("name"))); ok {
+					cur = &v
+				}
+			}
 		}
 	}
-	in.RouteInput, err = routeInput(f, nil)
+	hostname, err := plain(f, "hostname")
+	if err != nil {
+		return in, err
+	}
+	port, err := portOf(f)
+	if err != nil {
+		return in, err
+	}
+	if cur == nil {
+		if hostname != "" {
+			in.Hostname = &hostname
+		}
+		in.Port = port
+		in.RouteInput, err = routeInput(f, nil)
+		return in, err
+	}
+	if _, ok := f["hostname"]; ok && hostname != cur.Hostname {
+		in.Hostname = &hostname
+	}
+	if _, ok := f["port"]; ok {
+		was := cur.Port
+		switch {
+		case port != nil && *port != was:
+			in.Port = port
+		case port == nil && was != 0:
+			zero := 0 // the host's port again
+			in.Port = &zero
+		}
+	}
+	in.RouteInput, err = routeInput(f, &manifest.Host{Proxy: cur.Proxy, RawOptions: cur.RawOptions,
+		Section: cur.Section, Comment: cur.Comment})
 	return in, err
 }
