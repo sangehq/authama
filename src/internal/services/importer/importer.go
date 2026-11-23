@@ -39,6 +39,14 @@ type ParsedHost struct {
 	Profile      string
 	Category     string // "" unless the IdentityFile sat under profiles/<category>/<profile>/
 	Extra        []kv
+	// Aliases are the other names on its own Host line (Host web1 web1-cf),
+	// when no block of their own names them first.
+	Aliases []string
+	// ProxyCommand is its own block's ProxyCommand, as written; "" if none.
+	ProxyCommand string
+	// Section is the comment right above its own Host line, and Comment the
+	// one right under it, as authama renders a host's section and comment.
+	Section, Comment string
 }
 
 // ImportResult summarizes an import run.
@@ -143,6 +151,9 @@ type block struct {
 	patterns []string // as written, "!" negations included
 	all      bool     // the lines before the first Host line: they apply to every host
 	opts     []kv
+	// section is the comment line right above the Host line, comment the
+	// first one right under it, before any option.
+	section, comment string
 
 	// Where the block is, so import can take it out of the file once the
 	// manifest holds it. file is the path the block was reached by (a link
@@ -236,6 +247,7 @@ func collectBlocks(text, file, baseDir string, seen map[string]bool, top bool, r
 	}
 	managedFile := renderer.IsManagedFile(text)
 	inManaged := false
+	pending := "" // the comment line just read, which a Host line may take as its section
 	for i, raw := range strings.Split(text, "\n") {
 		line := strings.TrimSpace(raw)
 		if renderer.IsManagedHeaderLine(line) {
@@ -243,9 +255,24 @@ func collectBlocks(text, file, baseDir string, seen map[string]bool, top bool, r
 		} else if renderer.IsManagedEndLine(line) {
 			inManaged = false
 		}
-		if line == "" || strings.HasPrefix(line, "#") {
+		if line == "" {
+			pending = ""
 			continue
 		}
+		if strings.HasPrefix(line, "#") {
+			text := strings.TrimSpace(strings.TrimLeft(line, "#"))
+			switch {
+			case isBanner(line):
+				pending = ""
+			case current != nil && !current.all && len(current.opts) == 0 && current.comment == "" && pending == "":
+				current.comment = text
+			default:
+				pending = text
+			}
+			continue
+		}
+		section := pending
+		pending = ""
 		at := rootLine
 		if at < 0 {
 			at = i
@@ -254,7 +281,7 @@ func collectBlocks(text, file, baseDir string, seen map[string]bool, top bool, r
 		switch {
 		case keyword == "host":
 			current = &block{patterns: argvSplit(value), file: file, start: i, end: i + 1,
-				rootLine: at, managed: managedFile || inManaged}
+				rootLine: at, managed: managedFile || inManaged, section: section}
 			blocks = append(blocks, current)
 			for _, p := range current.patterns {
 				if strings.ContainsAny(p, "*?!") || known[p] {
@@ -300,6 +327,9 @@ func resolveHost(alias string, blocks []*block) *ParsedHost {
 			continue
 		}
 		carry := own && b.names(alias)
+		if carry {
+			h.Section, h.Comment = b.section, b.comment
+		}
 		for _, o := range b.opts {
 			applyOption(h, set, o.Key, o.Val, carry)
 		}
@@ -357,6 +387,14 @@ func applyOption(h *ParsedHost, set map[string]bool, keyword, value string, carr
 			h.IdentityFile = arg
 		}
 		set[keyword] = true
+	case "proxycommand":
+		// Its own block's ProxyCommand becomes the host's proxy (none,
+		// cloudflared, or a command authama can quote); build leaves out a
+		// host whose command it cannot hold.
+		if carry && !set[keyword] {
+			h.ProxyCommand = value
+			set[keyword] = true
+		}
 	default:
 		if !carry || manifest.IsDangerousOption(keyword) {
 			return // drop command/config-executing directives
@@ -644,16 +682,54 @@ func parseSourceBlocks(src Source) ([]*ParsedHost, []*block) {
 		blocks = append(blocks, bs...)
 		aliases = append(aliases, as...)
 	}
+	extras, folded := nameGroups(blocks)
 	hosts := make([]*ParsedHost, 0, len(aliases))
 	done := map[string]bool{}
 	for _, alias := range aliases {
-		if done[alias] {
+		if done[alias] || folded[alias] {
 			continue
 		}
 		done[alias] = true
-		hosts = append(hosts, resolveHost(alias, blocks))
+		h := resolveHost(alias, blocks)
+		h.Aliases = extras[alias]
+		hosts = append(hosts, h)
 	}
 	return hosts, blocks
+}
+
+// nameGroups reads the Host lines that give one host more than one name
+// (Host web1 web1-cf): the first name is the host, and each other name that
+// no block names first is one of its aliases rather than a host of its own.
+// folded holds those other names.
+func nameGroups(blocks []*block) (extras map[string][]string, folded map[string]bool) {
+	extras, folded = map[string][]string{}, map[string]bool{}
+	first := map[string]bool{}
+	for _, b := range blocks {
+		if lit, wild := literals(b.patterns); !b.all && len(wild) == 0 && len(lit) > 0 {
+			first[lit[0]] = true
+		}
+	}
+	for _, b := range blocks {
+		lit, wild := literals(b.patterns)
+		if b.all || len(wild) > 0 || len(lit) < 2 || b.include || folded[lit[0]] {
+			continue
+		}
+		for _, n := range lit[1:] {
+			if !first[n] && !folded[n] && n != lit[0] {
+				folded[n] = true
+				extras[lit[0]] = append(extras[lit[0]], n)
+			}
+		}
+	}
+	return extras, folded
+}
+
+// isBanner is a comment authama writes around what it renders - the
+// managed header, a profile banner - which is no host's section.
+func isBanner(line string) bool {
+	t := strings.TrimSpace(strings.TrimLeft(line, "#"))
+	return renderer.IsManagedHeaderLine(line) || renderer.IsManagedEndLine(line) || strings.HasPrefix(t, "---") ||
+		strings.HasPrefix(t, "Managed by ") || strings.HasPrefix(t, "Category: ") || strings.HasPrefix(t, "Git (")
 }
 
 // New builds an importer.
@@ -782,6 +858,9 @@ type built struct {
 	byProfile map[string][]manifest.Host
 	resolved  []resolvedHost
 	skipped   []string
+	// unheld are hosts left out because their block holds what a manifest
+	// host cannot (a ProxyCommand authama cannot quote), with the reason.
+	unheld map[string]string
 }
 
 type resolvedHost struct {
@@ -796,7 +875,7 @@ func (im *Importer) build(parsed []*ParsedHost, root string, excluded map[string
 	if root != manifest.DefaultKeyRoot {
 		m.Defaults.KeyRoot = root
 	}
-	out := built{m: m, byProfile: map[string][]manifest.Host{}}
+	out := built{m: m, byProfile: map[string][]manifest.Host{}, unheld: map[string]string{}}
 	order := []string{}
 	category := map[string]string{} // profile -> the first category its keys were found under
 	seen := map[string]bool{}
@@ -829,6 +908,17 @@ func (im *Importer) build(parsed []*ParsedHost, root string, excluded map[string
 			Alias: h.Alias, Hostname: hostName, User: user, Port: h.Port,
 			Provider: inferProvider(hostName), KeyName: &kn,
 			RawOptions: manifest.NewOrderedOptions(pairs(h.Extra)),
+			Aliases:    h.Aliases, Section: h.Section, Comment: h.Comment,
+		}
+		if h.ProxyCommand != "" {
+			proxy, err := manifest.ProxyFromCommand(h.ProxyCommand)
+			if err != nil {
+				why := "its ProxyCommand cannot be held: " + err.Error()
+				out.skipped = append(out.skipped, h.Alias+": "+why)
+				out.unheld[h.Alias] = why
+				continue
+			}
+			host.Proxy = proxy
 		}
 		// One host the manifest would refuse is left out and reported; the
 		// rest of the config is still imported.
@@ -989,7 +1079,8 @@ func (e *importError) Error() string { return e.msg }
 func pairs(extra []kv) [][2]string {
 	out := make([][2]string, len(extra))
 	for i, e := range extra {
-		out[i] = [2]string{e.Key, e.Val}
+		// The parser lower-cases keywords; the manifest keeps OpenSSH's spelling.
+		out[i] = [2]string{manifest.CanonicalOption(e.Key), e.Val}
 	}
 	return out
 }

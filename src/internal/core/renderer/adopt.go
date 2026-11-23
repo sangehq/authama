@@ -3,6 +3,7 @@ package renderer
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -80,6 +81,14 @@ func Represents(m *manifest.Manifest, profile string, h manifest.Host, opt Optio
 		return lost()
 	case "identitiesonly":
 		if strings.EqualFold(arg, identitiesOnly(h.RawOptions)) {
+			return true, ""
+		}
+		return lost()
+	case "proxycommand":
+		// The same proxy, however it was spelled: cloudflared from any path,
+		// none, or the same command.
+		p, err := manifest.ProxyFromCommand(val)
+		if err == nil && h.Proxy != nil && p.Kind == h.Proxy.Kind && slices.Equal(p.Command, h.Proxy.Command) {
 			return true, ""
 		}
 		return lost()
