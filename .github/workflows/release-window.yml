@@ -16,4 +16,4 @@ concurrency:
 
 jobs:
   window:
-    uses: simtabi/.github/.github/workflows/release-window.yml@1f1f5d08895c9474ed266edf98f32204bb8b243d # v0.1.2
+    uses: simtabi/.github/.github/workflows/release-window.yml@f654932e261752737eb3d3eb941c97f59bcff1bd # v0.1.3
