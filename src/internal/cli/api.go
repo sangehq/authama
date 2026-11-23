@@ -12,6 +12,7 @@ import (
 	"github.com/sangehq/authama/src/internal/services/apitokens"
 	"github.com/sangehq/authama/src/internal/services/settings"
 	"github.com/sangehq/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/tz"
 )
 
 // newAPICmd is `authama api`: the tokens programs call the read API with.
@@ -153,7 +154,7 @@ func day(t time.Time) string {
 	if t.IsZero() {
 		return ""
 	}
-	return t.Format("2006-01-02")
+	return tz.Format(t, "2006-01-02")
 }
 
 func orNever(s string) string {

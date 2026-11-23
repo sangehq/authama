@@ -1,0 +1,11 @@
+[SessionInfo]
+Version=7.0
+Description=personal
+[CONNECTION]
+Protocol=SSH
+Host=github.com
+Port=22
+[CONNECTION:AUTHENTICATION]
+UserName=git
+Method=1
+UserKey=imani_github-ed25519

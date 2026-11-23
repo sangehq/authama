@@ -1,0 +1,11 @@
+[SessionInfo]
+Version=7.0
+Description=simtabi
+[CONNECTION]
+Protocol=SSH
+Host=203.0.113.23
+Port=22
+[CONNECTION:AUTHENTICATION]
+UserName=ploi
+Method=1
+UserKey=simtabi_oribi-web-ed25519

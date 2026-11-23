@@ -34,6 +34,7 @@ var rawWriterExempt = map[string]struct {
 	"internal/services/rotator/summary.go":        {1, "the list of failed keys, a state-home record rewritten whole"},
 	"internal/services/vmsync/probe.go":           {1, "a known_hosts in a temporary directory, for one probe"},
 	"internal/services/vmsync/apply.go":           {1, "a timestamped copy of a file it is about to change"},
+	"internal/web/transfer_page.go":               {1, "an uploaded encrypted export, in a new private temporary folder, for OpenFull to read; removed at once"},
 }
 
 var rawWriter = regexp.MustCompile(`os\.WriteFile\(|O_TRUNC`)

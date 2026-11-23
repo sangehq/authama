@@ -409,6 +409,7 @@ func Deliver(ctx context.Context, p paths.Paths, client *http.Client, now time.T
 			out = append(out, res)
 			continue
 		}
+		stopped := false
 		evs, next, err := feed.List(p, ep.Cursor, 100)
 		if err != nil {
 			res.Err = err
@@ -419,6 +420,14 @@ func Deliver(ctx context.Context, p paths.Paths, client *http.Client, now time.T
 			if !feed.Matches(e, ep.Events) {
 				ep.Cursor = e.Cursor()
 				continue
+			}
+			// The endpoint may have been removed, disabled or given a new
+			// secret or URL while earlier events went out: stop sending it
+			// the rest of the batch (audit A-SEC-11).
+			if ok, err := stillCurrent(p, *ep); err != nil || !ok {
+				res.Err = err
+				stopped = true
+				break
 			}
 			status, err := send(ctx, client, *ep, forWebhook(e, detail), now)
 			ep.LastStatus = status
@@ -433,7 +442,7 @@ func Deliver(ctx context.Context, p paths.Paths, client *http.Client, now time.T
 		}
 		// Every event listed went (or was filtered out): carry on from the
 		// feed's next cursor, not a comparison of cursors as strings.
-		if res.Err == nil {
+		if res.Err == nil && !stopped {
 			ep.Cursor = next
 		}
 		if err := mergeDelivery(p, *ep); err != nil {
@@ -470,6 +479,22 @@ func mergeDelivery(p paths.Paths, d Endpoint) error {
 		cur.Disabled, cur.DisabledWhy = true, d.DisabledWhy
 	}
 	return save(p, eps)
+}
+
+// stillCurrent reports whether d is still in the file, enabled, with the
+// same secret and URL it is about to be sent with.
+func stillCurrent(p paths.Paths, d Endpoint) (bool, error) {
+	release, err := lockState(p)
+	if err != nil {
+		return false, err
+	}
+	defer release()
+	eps, err := List(p)
+	if err != nil {
+		return false, err
+	}
+	i := slices.IndexFunc(eps, func(e Endpoint) bool { return e.Name == d.Name })
+	return i >= 0 && !eps[i].Disabled && eps[i].Secret == d.Secret && eps[i].URL == d.URL, nil
 }
 
 func fail(ep *Endpoint, status int, err error, now time.Time) {

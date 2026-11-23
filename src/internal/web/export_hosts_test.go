@@ -3,6 +3,7 @@ package web
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 
@@ -64,5 +65,40 @@ func TestHostFormatsDownloadFromTheExportPipeline(t *testing.T) {
 		if f.Hosts {
 			t.Errorf("keys offer the host format %s", f.Name)
 		}
+	}
+}
+
+// ?termius_groups= nests the Termius download's Groups as --termius-groups
+// does, on the old download and the pipeline alike. ?profile= still chooses
+// rows by profile, since a nested group is not a profile name, and the rows
+// it keeps carry their nested group; a scheme that is not one is a 400.
+func TestTermiusDownloadNestsGroups(t *testing.T) {
+	s, p, _ := newTestServer(t)
+	if err := os.WriteFile(p.Manifest(), []byte(`{"version":1,"profiles":{
+		"work":{"code":"wrk","category":"clients","hosts":[{"alias":"wrk-prd-web-00","hostname":"203.0.113.5","user":"deploy"}]},
+		"solo":{"hosts":[{"alias":"box","hostname":"box.example","user":"me"}]}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	c := signIn(t, s)
+	old := c.get("/exports/termius-hosts.csv?termius_groups=category/profile/env")
+	if old.Code != http.StatusOK || !strings.Contains(old.Body.String(), "\nclients/work/prd,wrk-prd-web-00,") ||
+		!strings.Contains(old.Body.String(), "\nsolo,box,") {
+		t.Fatalf("nested download (%d):\n%s", old.Code, old.Body.String())
+	}
+	if run := c.get("/exports/run?preset=hosts&format=termius&termius_groups=category/profile/env"); run.Body.String() != old.Body.String() {
+		t.Errorf("the pipeline differs from the download:\n%s\n---\n%s", run.Body.String(), old.Body.String())
+	}
+	if plain := c.get("/exports/termius-hosts.csv").Body.String(); !strings.Contains(plain, "\nwork,wrk-prd-web-00,") {
+		t.Errorf("the default groups by profile alone:\n%s", plain)
+	}
+	shaped := c.get("/exports/termius-hosts.csv?termius_groups=profile/env&profile=work").Body.String()
+	if !strings.Contains(shaped, "work/prd,wrk-prd-web-00,") || strings.Contains(shaped, "box") {
+		t.Errorf("?profile=work with nested groups:\n%s", shaped)
+	}
+	if rec := c.get("/exports/termius-hosts.csv?termius_groups=env"); rec.Code != http.StatusBadRequest {
+		t.Errorf("an unknown scheme: %d", rec.Code)
+	}
+	if page := c.get("/hosts").Body.String(); !strings.Contains(page, `href="/termius"`) {
+		t.Error("the hosts page does not lead to the Termius import, where the groups are chosen")
 	}
 }

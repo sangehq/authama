@@ -2,15 +2,16 @@ package web
 
 import (
 	"errors"
-	"github.com/sangehq/authama/src/internal/services/settings"
-	"github.com/sangehq/authama/src/internal/util/envnames"
-	"github.com/sangehq/authama/src/internal/util/paths"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sangehq/authama/src/internal/services/settings"
+	"github.com/sangehq/authama/src/internal/util/envnames"
+	"github.com/sangehq/authama/src/internal/util/paths"
 
 	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/core/inventory"
@@ -20,6 +21,7 @@ import (
 	"github.com/sangehq/authama/src/internal/services/history"
 	"github.com/sangehq/authama/src/internal/services/snapshots"
 	"github.com/sangehq/authama/src/internal/util/csvout"
+	"github.com/sangehq/authama/src/internal/util/encode"
 )
 
 // tokenFilterParam is the history filter for one token, as target/host.
@@ -64,18 +66,33 @@ func (s *Server) routes() http.Handler {
 	sp := systemPages{s: s}
 	mux.HandleFunc("GET /settings", sp.handleSettings)
 	mux.HandleFunc("GET /ssh-config", sp.handleSSHConfig)
+	mux.HandleFunc("GET /termius", termiusPage{s}.handleTermius)
+	mux.HandleFunc("GET /setup", setupPage{s}.handleSetup)
+	mux.HandleFunc("GET /setup/export.json", setupPage{s}.handleExport)
+	mux.HandleFunc("GET /transfer", transferPage{s}.handle)
+	mux.HandleFunc("GET /transfer/pack.zip", transferPage{s}.handlePack)
+	mux.HandleFunc("GET /structure", structurePage{s}.handleStructure)
+	mux.HandleFunc("GET /git-sign", gitSignPage{s}.handle)
 	mux.HandleFunc("GET /events", sp.handleEvents)
+	lp := logsPage{s}
+	mux.HandleFunc("GET /logs", lp.handle)
+	mux.HandleFunc("GET /logs/tail", lp.handleTail)
+	mux.HandleFunc("GET /logs/download", lp.handleDownload)
 	mux.HandleFunc("GET /about", sp.handleAbout)
 	mux.HandleFunc("GET /export", exportAPI{s}.handlePage)
 	// Restarting changes nothing in the home, so read-only servers have it too.
 	mux.HandleFunc("POST /server/restart", restartAPI{s}.handleRestart)
 	mux.HandleFunc("POST /signout", signOut{s}.handle)
+	mux.HandleFunc("POST /browsers/forget", forgetBrowsers{s}.handle)
 	mux.HandleFunc("GET /exports/run", exportAPI{s}.handleRun)
 	mux.HandleFunc("GET /exports/{name}", h.handleExport)
 	mux.HandleFunc("GET /api/dataset", exportAPI{s}.handleDataset)
 	mux.HandleFunc("GET /api/export/selections", exportSelectionsAPI{s}.handleList)
 	mux.HandleFunc("GET /exports/compare", exportSelectionsAPI{s}.handleCompare)
 	mux.HandleFunc("GET /about/licenses", h.handleLicences)
+	ip := integrationsPage{s}
+	mux.HandleFunc("GET /api-tokens", ip.handleAPITokens)
+	mux.HandleFunc("GET /webhooks", ip.handleWebhooks)
 	if !s.opts.ReadOnly {
 		mux.HandleFunc("POST /api/export/selections", exportSelectionsAPI{s}.handleSave)
 		mux.HandleFunc("POST /api/export/selections/delete", exportSelectionsAPI{s}.handleDelete)
@@ -83,6 +100,19 @@ func (s *Server) routes() http.Handler {
 		// directory and touches nothing under ~/.ssh: no preview.
 		mux.HandleFunc("POST /checklist/tick", checklistPages{s}.handleTick)
 		mux.HandleFunc("POST /checklist/revoking", checklistPages{s}.handleRevoking)
+		// The encrypted full export changes nothing in the home, but it
+		// carries every private key: it is a confirmed, PIN-gated step that a
+		// read-only server does not offer. An import goes on to the preview.
+		mux.HandleFunc("POST /transfer/encrypted", transferPage{s}.handleEncrypted)
+		// API tokens and webhook endpoints live in the state directory; a
+		// new one's secret is shown once, in the answer to its PIN-gated form.
+		mux.HandleFunc("POST /api-tokens/create", ip.handleAPITokenCreate)
+		mux.HandleFunc("POST /api-tokens/revoke", ip.handleAPITokenRevoke)
+		mux.HandleFunc("POST /webhooks/add", ip.handleWebhookAdd)
+		mux.HandleFunc("POST /webhooks/{act}", ip.handleWebhookAct)
+		// A schedule writes files outside the home: PIN-gated, no preview.
+		mux.HandleFunc("POST /export/schedules/{act}", exportAPI{s}.handleSchedule)
+		mux.HandleFunc("POST /transfer/import", transferPage{s}.handleImport)
 		mux.HandleFunc("POST /changes/preview", h.handlePreview)
 		mux.HandleFunc("POST /changes/apply", h.handleApply)
 		mux.HandleFunc("POST /jobs/review", jh.handleJobReview)
@@ -364,7 +394,19 @@ func (h pages) handleVMs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h pages) handleTokens(w http.ResponseWriter, r *http.Request) {
-	v, err := h.s.opts.Engine.Tokens()
+	q := r.URL.Query()
+	project, perr := scopePath(q, "project")
+	config, cerr := scopePath(q, "config")
+	var v TokensView
+	var err error
+	if (project != "" || config != "") && perr == nil && cerr == nil {
+		v, err = tokensView(h.s.opts.Engine.Home(), project, config)
+	} else {
+		v, err = h.s.opts.Engine.Tokens()
+		if e := errors.Join(perr, cerr); e != nil {
+			v.ScopeError = e.Error()
+		}
+	}
 	if err != nil {
 		h.fail(w, r, err)
 		return
@@ -388,6 +430,7 @@ func (h systemPages) handleSettings(w http.ResponseWriter, r *http.Request) {
 		v = SettingsView{ConfigHome: p.ConfigDir, StateHome: p.State(), Dotenv: p.EnvFile(),
 			Settings: p.SettingsFile(), HasSettings: err == nil, Effective: effectiveSettings(p)}
 	}
+	v.Browsers, v.RememberDays = remembered(h).browserRows(r), int(h.s.opts.RememberFor/(24*time.Hour))
 	h.s.render(w, http.StatusOK, "settings", h.s.newView(r, "settings", "Settings", v))
 }
 
@@ -415,20 +458,48 @@ func (h pages) handleExport(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, ErrNotFound)
 		return
 	}
-	body, err := h.s.opts.Engine.Export(name, r.URL.Query().Get("include_git") == "1")
+	q := r.URL.Query()
+	includeGit, groups := q.Get("include_git") == "1", q.Get("termius_groups")
+	if name == ExportTermius {
+		if err := encode.CheckTermiusGroups(groups); err != nil {
+			h.s.renderError(w, r, http.StatusBadRequest, "Bad request", err.Error())
+			return
+		}
+	} else {
+		groups = ""
+	}
+	body, err := h.s.opts.Engine.Export(name, includeGit, groups)
 	if err != nil {
 		h.fail(w, r, err)
 		return
 	}
 	// The Termius file is a CSV too: shaped like the lists' when asked to be,
-	// and written exactly as rendered when not.
-	if name == ExportTermius && shapeOf(r.URL.Query()).any() {
-		t, err := csvout.Parse(body)
+	// and written exactly as rendered when not. Its rows are chosen by profile
+	// in the profile-grouped file, since a nested group (clients/simtabi/prd)
+	// is not a profile name, and get their nested group back by label.
+	if name == ExportTermius && shapeOf(q).any() {
+		byProfile := body
+		if groups != "" && groups != encode.TermiusGroupsProfile {
+			if byProfile, err = h.s.opts.Engine.Export(name, includeGit, ""); err != nil {
+				h.fail(w, r, err)
+				return
+			}
+		}
+		t, err := csvout.Parse(byProfile)
 		if err != nil {
 			h.fail(w, r, err)
 			return
 		}
-		h.writeCSV(w, r, name, t, nil)
+		shape := shapeOf(q)
+		if byProfile != body {
+			nested, err := csvout.Parse(body)
+			if err != nil {
+				h.fail(w, r, err)
+				return
+			}
+			shape.regroup = termiusRegroup(nested)
+		}
+		writeShapedCSV(w, name, t, shape)
 		return
 	}
 	ctype := "text/plain; charset=utf-8"

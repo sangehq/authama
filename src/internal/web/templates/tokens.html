@@ -4,6 +4,18 @@
 {{else}}
 {{template "page_header" (header "Security" "Auth tokens" "Package-manager and git credentials: what is installed and how it audits. A secret is never shown." (panel "Add a token" "add-token" "plus" | withTip "token-add") (action "Apply the config" "#apply-config" "refresh" | withTip "token-apply") (only (ne .ConfigText "") (modal "Edit tokens.json" "edit-token-config" "pencil" | withTip "token-config")))}}
 {{end}}
+<div class="card mb-3" id="token-scope">
+  <div class="card-body py-2">
+    <form method="get" action="{{u "/tokens"}}" class="row g-2 align-items-end" autocomplete="off">
+      <div class="col-md-5"><label class="form-label" for="tk-project">Project</label><input class="form-control font-monospace" id="tk-project" name="project" value="{{.Project}}" placeholder="your user files" aria-describedby="tk-scope-hint"></div>
+      <div class="col-md-5"><label class="form-label" for="tk-config">Token config</label><input class="form-control font-monospace" id="tk-config" name="config" value="{{.ConfigArg}}" placeholder="discovered"></div>
+      <div class="col-md-2 d-flex gap-2"><button type="submit" class="btn btn-outline-primary"{{desc "token-scope"}}>Show</button>{{if or .Project .ConfigArg}}<a class="btn btn-link" href="{{u "/tokens"}}"{{desc "token-scope-clear"}}>Clear</a>{{end}}</div>
+      <small class="form-hint col-12" id="tk-scope-hint">A project's full path reads and writes its own auth.json and .npmrc instead of yours (<code>--project</code>); a token config's full path is read instead of the one discovered (<code>--config</code>).</small>
+    </form>
+    {{if .ScopeError}}<div class="alert alert-danger py-2 mt-2 mb-0" role="alert">{{.ScopeError}}</div>{{end}}
+    {{if .Project}}<div class="alert alert-info py-2 mt-2 mb-0" role="status">Showing the project at <code>{{.Project}}</code>: adding, deleting and applying write its files.</div>{{end}}
+  </div>
+</div>
 <div class="card mb-3">
   <div class="card-header"><h2 class="card-title">Installed</h2>{{if .Items}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Items}} installed</span>{{template "csv" "/exports/tokens.csv"}}</div>{{end}}</div>
   {{if .Items}}
@@ -21,7 +33,7 @@
           <td>{{if .SecretPresent}}<span class="badge badge-ok">set</span>{{else}}<span class="badge badge-warn">empty</span>{{end}}</td>
           <td><code class="text-nowrap">{{tilde .File}}</code> {{template "copy" (copy .File "the file's full path")}}</td>
           <td class="text-end">
-            {{if not $.ReadOnly}}<form method="post" action="{{basePath}}/changes/preview" data-inline id="f-token-{{.Target}}-{{.Host}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="token-delete"><input type="hidden" name="target" value="{{.Target}}"><input type="hidden" name="host" value="{{.Host}}"></form>{{end}}
+            {{if not $.ReadOnly}}<form method="post" action="{{basePath}}/changes/preview" data-inline id="f-token-{{.Target}}-{{.Host}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="token-delete"><input type="hidden" name="target" value="{{.Target}}"><input type="hidden" name="host" value="{{.Host}}"><input type="hidden" name="project" value="{{$.Data.Project}}"></form>{{end}}
             {{template "menu_open" (printf "Actions for the %s token for %s" .Target .Host)}}
               <a class="dropdown-item" href="{{basePath}}/checklist?item=token:{{.Target}}/{{.Host}}" data-inline{{desc "row-checklist"}}>{{icon "check"}}<span class="ms-2">Checklist</span></a>
               <a class="dropdown-item" href="{{basePath}}/history?credential={{.Target}}/{{.Host}}"{{desc "row-history"}}>{{icon "history"}}<span class="ms-2">History</span></a>
@@ -123,7 +135,7 @@
 
 {{if not $.ReadOnly}}
 {{template "panel_open" (header "add-token" "Add or replace a token" "One credential, written into its tool's file over the one already there for that server: how a token is added, rotated or edited.")}}
-      {{template "change_open" $}}<input type="hidden" name="action" value="token-set">
+      {{template "change_open" $}}<input type="hidden" name="action" value="token-set"><input type="hidden" name="project" value="{{.Project}}">
         <div class="mb-3">
           <label class="form-label required" for="ts-target">Tool</label>
           <select class="form-select" id="ts-target" name="target" required>
@@ -201,9 +213,17 @@
     <div class="card h-100" id="apply-config">
       <div class="card-header"><h2 class="card-title">Apply the token config</h2></div>
       <div class="card-body">
-        <p class="text-secondary mb-0">Resolve the config from the environment <code>authama serve</code> was started in, and merge every tool's file, as <code>authama token apply</code> does. A variable set in another terminal is not seen.</p>
+        <p class="text-secondary">Resolve the config from the environment <code>authama serve</code> was started in, and merge every tool's file, as <code>authama token apply</code> does. A variable set in another terminal is not seen; an env file given below is read after it.</p>
+        {{if not $.ReadOnly}}{{template "change_open" $}}<input type="hidden" name="action" value="token-apply">
+          <div class="row g-2">
+            <div class="col-md-6"><label class="form-label" for="ta-config">Token config</label><input class="form-control font-monospace" id="ta-config" name="config" value="{{.ConfigArg}}" placeholder="discovered" autocomplete="off"></div>
+            <div class="col-md-6"><label class="form-label" for="ta-project">Project</label><input class="form-control font-monospace" id="ta-project" name="project" value="{{.Project}}" placeholder="your user files" autocomplete="off"></div>
+            <div class="col-12"><label class="form-label" for="ta-source">Env file</label><input class="form-control font-monospace" id="ta-source" name="source" placeholder="none: the server's environment only" autocomplete="off" aria-describedby="ta-source-hint"><small class="form-hint" id="ta-source-hint">VAR=value lines read after the environment (<code>--source</code>); a variable already set wins. Its values are never shown.</small></div>
+            <div class="col-12"><span class="form-label">Only these tools</span><div class="d-flex flex-wrap gap-3">{{range .AllTargets}}<label class="form-check form-check-inline mb-0"><input class="form-check-input" type="checkbox" name="only_{{.}}" value="1"><span class="form-check-label">{{.}}</span></label>{{end}}</div><small class="form-hint">None ticked: every tool the config resolves (<code>--target</code>).</small></div>
+          </div>
+          <button type="submit" class="btn btn-primary mt-3"{{desc "token-apply"}}>Preview applying the token config</button>
+        </form>{{end}}
       </div>
-      <div class="card-footer">{{template "change_open" $}}<input type="hidden" name="action" value="token-apply"><button type="submit" class="btn btn-primary"{{desc "token-apply"}}>Preview applying the token config</button></form></div>
     </div>
   </div>
   <div class="col-lg-6">

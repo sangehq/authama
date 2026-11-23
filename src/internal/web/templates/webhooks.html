@@ -1,0 +1,91 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "System" "Webhooks" "Endpoints sent what authama does, signed as Standard Webhooks are.")}}
+{{if .Once}}{{template "once_secret" .Once}}{{end}}
+{{if .Done}}<div class="alert alert-success" role="status">{{.Done}}{{if .Results}}<ul class="mb-0 mt-1">{{range .Results}}<li>{{.}}</li>{{end}}</ul>{{end}}</div>{{end}}
+{{if .Problem}}<div class="alert alert-danger" role="alert">{{.Problem}}</div>{{end}}
+{{if not .On}}<div class="alert alert-info" role="status">Webhooks are off: <code>authama serve</code> sends nothing until <a href="{{u "/settings#setting-webhooks.enabled"}}">webhooks.enabled</a> is on. Deliver now sends them by hand.</div>{{end}}
+<div class="row row-cards">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Endpoints</h2>
+        {{if and (not $.ReadOnly) .Endpoints}}
+        <div class="card-actions">
+          <form method="post" action="{{u "/webhooks/deliver"}}" class="d-inline-flex gap-2 align-items-center">
+            <input type="hidden" name="csrf" value="{{$.CSRF}}">
+            {{template "pin_field" $}}
+            <button type="submit" class="btn btn-sm btn-outline-primary"{{desc "webhook-deliver"}}>{{icon "player-play"}}<span class="ms-1">Deliver now</span></button>
+          </form>
+        </div>
+        {{end}}
+      </div>
+      {{if .Endpoints}}
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <thead><tr><th scope="col">Name</th><th scope="col">URL</th><th scope="col">Events</th><th scope="col">State</th><th scope="col">Last sent</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+          <tbody>
+            {{range .Endpoints}}
+            <tr>
+              <td class="font-monospace">{{.Name}}</td>
+              <td class="text-break">{{.URL}}</td>
+              <td>{{.Events}}</td>
+              <td>{{.State}}{{if .LastError}}<div class="small text-secondary text-break">{{.LastError}}</div>{{end}}</td>
+              <td>{{.LastSent}}</td>
+              <td class="text-end">
+                {{if not $.ReadOnly}}
+                <form method="post" class="d-inline-flex flex-wrap gap-1 justify-content-end align-items-center">
+                  <input type="hidden" name="csrf" value="{{$.CSRF}}">
+                  <input type="hidden" name="name" value="{{.Name}}">
+                  {{template "pin_field" $}}
+                  <button type="submit" formaction="{{u "/webhooks/test"}}" class="btn btn-sm btn-outline-secondary"{{desc "webhook-test"}}>Test</button>
+                  {{if .Disabled}}<button type="submit" formaction="{{u "/webhooks/enable"}}" class="btn btn-sm btn-outline-secondary"{{desc "webhook-enable"}}>Turn on</button>
+                  {{else}}<button type="submit" formaction="{{u "/webhooks/disable"}}" class="btn btn-sm btn-outline-secondary"{{desc "webhook-disable"}}>Turn off</button>{{end}}
+                  <button type="submit" formaction="{{u "/webhooks/remove"}}" class="btn btn-sm btn-outline-danger"{{desc "webhook-remove"}}>Remove</button>
+                </form>
+                {{end}}
+              </td>
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+      {{else}}
+      <div class="card-body text-secondary">No webhooks yet.</div>
+      {{end}}
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Add an endpoint</h2></div>
+      <div class="card-body">
+        {{if $.ReadOnly}}
+        <p class="text-secondary mb-1">This server is read-only. Add one at a terminal:</p>
+        {{template "command_line" "authama webhook add <name> <https-url>"}}
+        {{else}}
+        <form method="post" action="{{u "/webhooks/add"}}" autocomplete="off">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <div class="mb-2">
+            <label class="form-label" for="webhook-name">Name</label>
+            <input class="form-control" id="webhook-name" name="name" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._\-]*">
+          </div>
+          <div class="mb-2">
+            <label class="form-label" for="webhook-url">URL</label>
+            <input class="form-control" id="webhook-url" name="url" type="url" required placeholder="https://" aria-describedby="webhook-url-hint">
+            <small class="form-hint" id="webhook-url-hint">HTTPS{{if not .AllowPrivate}}, to a public address (webhooks.allow_private is off){{end}}.</small>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="webhook-events">Events</label>
+            <input class="form-control" id="webhook-events" name="events" placeholder="every event" aria-describedby="webhook-events-hint">
+            <small class="form-hint" id="webhook-events-hint">Event type prefixes separated by commas, such as operation.finished or file.; empty sends every event.</small>
+          </div>
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            {{template "pin_field" $}}
+            <button type="submit" class="btn btn-primary"{{desc "webhook-add"}}>{{icon "plus"}}<span class="ms-1">Add endpoint</span></button>
+          </div>
+        </form>
+        {{end}}
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}{{end}}

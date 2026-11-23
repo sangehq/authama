@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 )
 
 // fakeSource stands in for the manifest: it keeps or skips hosts by the same
@@ -98,7 +99,7 @@ func TestEveryClientFormatUsesItsClientsWriter(t *testing.T) {
 		if !strings.Contains(strings.Join(exp.Skipped, "\n"), "gh: git") {
 			t.Errorf("%s: a git host was kept without IncludeGit: %v", pn, exp.Skipped)
 		}
-		b, err := Bundle(f, exp)
+		b, err := Bundle(f, exp, time.Now())
 		if err != nil || len(b) == 0 {
 			t.Errorf("%s: bundle: %v", pn, err)
 		}
@@ -114,7 +115,7 @@ func TestTermiusFormatIsTheTermiusCSV(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want, _ := TermiusCSV([]Host{src.hosts["web"], src.hosts["gh"]})
+	want, _ := TermiusCSV([]Host{src.hosts["web"], src.hosts["gh"]}, "")
 	if string(exp.Files[0].Data) != want || exp.Files[0].Name != "termius-hosts.csv" {
 		t.Errorf("termius = %q, want %q", exp.Files[0].Data, want)
 	}
@@ -143,7 +144,7 @@ func TestSSHConfigFormatIsTheSourcesConfig(t *testing.T) {
 }
 
 // Remmina writes a file per host, so its single download is a zip holding
-// each under its own name, even for one host.
+// each under its own name, even for one host, dated when it was exported.
 func TestRemminaBundlesIntoAZip(t *testing.T) {
 	f, _ := Get("remmina")
 	for _, aliases := range [][]string{{"web"}, {"web", "gh"}} {
@@ -151,13 +152,19 @@ func TestRemminaBundlesIntoAZip(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		b, err := Bundle(f, exp)
+		at := time.Date(2026, 11, 22, 20, 10, 5, 0, time.UTC)
+		b, err := Bundle(f, exp, at)
 		if err != nil {
 			t.Fatal(err)
 		}
 		zr, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
 		if err != nil {
 			t.Fatal(err)
+		}
+		for _, zf := range zr.File {
+			if !zf.Modified.Equal(at) {
+				t.Errorf("%s is dated %s, not the export's %s", zf.Name, zf.Modified, at)
+			}
 		}
 		if len(zr.File) != len(aliases) || zr.File[0].Name != "authama-web.remmina" {
 			t.Errorf("zip holds %d files, first %q", len(zr.File), zr.File[0].Name)
@@ -166,7 +173,32 @@ func TestRemminaBundlesIntoAZip(t *testing.T) {
 			t.Errorf("file name = %s", FileName(f, exp, "authama-hosts"))
 		}
 	}
-	if _, err := Bundle(f, &ClientExport{Files: []ClientFile{{Name: "../x", Data: []byte("x")}}}); err == nil {
+	if _, err := Bundle(f, &ClientExport{Files: []ClientFile{{Name: "../x", Data: []byte("x")}}}, time.Now()); err == nil {
 		t.Error("a file name with a path went into the zip")
+	}
+}
+
+// --termius-groups reaches the CSV, a scheme that is not one is refused before
+// any host is read, and a host behind a ProxyJump stays in the file with a
+// note saying where Termius takes the jump host instead.
+func TestTermiusFormatGroupsAndProxyJump(t *testing.T) {
+	f, _ := Get("termius")
+	src := newFake()
+	web := src.hosts["web"]
+	web.Env, web.Category, web.ProxyJump = "prd", "clients", "bastion"
+	src.hosts["web"] = web
+	exp, err := f.Hosts(src, []string{"web"}, Options{TermiusGroups: TermiusGroupsCategoryProfileEnv})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Split(string(exp.Files[0].Data), "\n")[1]; got != "clients/acme/prd,web,prd,203.0.113.5,ssh,22,deploy," {
+		t.Errorf("row = %q", got)
+	}
+	if !strings.Contains(strings.Join(exp.Notes, "\n"), "web  reaches its host through ProxyJump bastion") {
+		t.Errorf("no ProxyJump note: %v", exp.Notes)
+	}
+	src.asked = nil
+	if _, err := f.Hosts(src, []string{"web"}, Options{TermiusGroups: "env/profile"}); err == nil || src.asked != nil {
+		t.Errorf("a scheme that is not one: err %v, asked %v", err, src.asked)
 	}
 }

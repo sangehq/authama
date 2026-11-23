@@ -26,6 +26,13 @@ type Host struct {
 	Tags                         []string
 	KeyFile                      string // absolute; "" when the key is in 1Password
 	Agent                        string // the 1Password agent socket, when it is
+	// Category is the profile's category ("" when it has none) and Env the
+	// environment the naming rules read from the alias ("" for a name they
+	// do not parse). Only the Termius export's nested groups read them.
+	Category, Env string
+	// ProxyJump is the host's raw ProxyJump option, when it sets one: a client
+	// handed only the host, port and user connects directly and misses it.
+	ProxyJump string
 }
 
 // ClientFile is one file an export writes: its name and its bytes.
@@ -55,8 +62,8 @@ type Client struct {
 
 // Clients are the SSH client formats, by their own name ("csv" is hosts-csv
 // in the pipeline).
-var Clients = map[string]Client{
-	"csv":              {Name: "csv", Client: "any client that imports a CSV (Royal TS, Xshell, SecureCRT's import script, a spreadsheet)", Render: renderGenericCSV},
+var Clients = withClients(map[string]Client{
+	"csv":              {Name: "csv", Client: "any client that imports a CSV (SecureCRT's import script, a spreadsheet)", Render: renderGenericCSV},
 	"windows-terminal": {Name: "windows-terminal", Client: "Windows Terminal (a JSON fragment)", ViaSSH: true, Render: renderWindowsTerminal},
 	"iterm2":           {Name: "iterm2", Client: "iTerm2 (Dynamic Profiles)", ViaSSH: true, Render: renderITerm2},
 	"putty":            {Name: "putty", Client: "PuTTY and KiTTY (a .reg file)", Render: renderPuTTY},
@@ -65,6 +72,13 @@ var Clients = map[string]Client{
 		Client: "SecureCRT (an XML settings file for File > Import Settings; Termius imports it too)", Render: renderSecureCRT},
 	"mobaxterm": {Name: "mobaxterm",
 		Client: "MobaXterm (a .mxtsessions file for Sessions > Import; Termius imports it too)", Render: renderMobaXterm},
+}, moreClients)
+
+func withClients(base, more map[string]Client) map[string]Client {
+	for n, c := range more {
+		base[n] = c
+	}
+	return base
 }
 
 // ClientNames are the client format names, sorted.
@@ -86,19 +100,96 @@ var GenericCSVColumns = []string{"alias", "group", "hostname", "port", "user", "
 // one place to change if it moves.
 var TermiusColumns = []string{"Groups", "Label", "Tags", "Hostname/IP", "Protocol", "Port", "Username", "Password"}
 
-// TermiusCSV is a Termius CSV import of hosts, one row each: group = profile,
-// label = alias, tags = the host's tags. No password is ever written: the
-// column is part of the template and stays empty.
-func TermiusCSV(hosts []Host) (string, error) {
+// The Termius group schemes: what the Groups column holds. Termius reads a
+// '/' in a group as nesting (Project/Dev is the subgroup Dev of Project), so
+// each scheme but the default writes a path; a part that is empty for a host
+// (no category, an alias the naming rules do not parse) is left out of its
+// path, so such a host files one level up instead of under an empty group.
+const (
+	TermiusGroupsProfile            = "profile"              // simtabi (the default)
+	TermiusGroupsCategoryProfile    = "category/profile"     // clients/simtabi
+	TermiusGroupsProfileEnv         = "profile/env"          // simtabi/prd
+	TermiusGroupsCategoryProfileEnv = "category/profile/env" // clients/simtabi/prd
+	TermiusGroupsNone               = "none"                 // no group: every host at the top
+)
+
+// TermiusGroupSchemes are the group schemes, the default first.
+var TermiusGroupSchemes = []string{TermiusGroupsProfile, TermiusGroupsCategoryProfile,
+	TermiusGroupsProfileEnv, TermiusGroupsCategoryProfileEnv, TermiusGroupsNone}
+
+// TermiusGroupsScheme is the scheme of TermiusGroupSchemes that s names, and
+// whether there is one. The result is the scheme itself, never s.
+func TermiusGroupsScheme(s string) (string, bool) {
+	for _, scheme := range TermiusGroupSchemes {
+		if s == scheme {
+			return scheme, true
+		}
+	}
+	return "", false
+}
+
+// CheckTermiusGroups refuses a group scheme that is not one of
+// TermiusGroupSchemes. "" is the default, profile.
+func CheckTermiusGroups(scheme string) error {
+	if scheme == "" {
+		return nil
+	}
+	for _, s := range TermiusGroupSchemes {
+		if scheme == s {
+			return nil
+		}
+	}
+	return fmt.Errorf("termius groups %q: use one of %s", scheme, strings.Join(TermiusGroupSchemes, ", "))
+}
+
+// TermiusGroup is the Groups cell of h under scheme. Each part is one level:
+// a '/' inside a part would read as one more level, so it becomes '-'. The
+// manifest refuses '/' in a profile, a category and an alias, so this only
+// guards against a name that was never validated.
+func TermiusGroup(h Host, scheme string) string {
+	var parts []string
+	switch scheme {
+	case TermiusGroupsNone:
+		return ""
+	case TermiusGroupsCategoryProfile:
+		parts = []string{h.Category, h.Group}
+	case TermiusGroupsProfileEnv:
+		parts = []string{h.Group, h.Env}
+	case TermiusGroupsCategoryProfileEnv:
+		parts = []string{h.Category, h.Group, h.Env}
+	default:
+		parts = []string{h.Group}
+	}
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if p = strings.TrimSpace(strings.ReplaceAll(p, "/", "-")); p != "" {
+			out = append(out, p)
+		}
+	}
+	return strings.Join(out, "/")
+}
+
+// TermiusCSV is a Termius CSV import of hosts, one row each: group = the
+// scheme's path (TermiusGroup; "" is the profile), label = alias, tags = the
+// host's tags. No password is ever written: the column is part of the
+// template and stays empty.
+func TermiusCSV(hosts []Host, groups string) (string, error) {
+	if err := CheckTermiusGroups(groups); err != nil {
+		return "", err
+	}
 	var buf bytes.Buffer
 	w := csv.NewWriter(&buf)
 	if err := w.Write(TermiusColumns); err != nil {
 		return "", err
 	}
 	for _, h := range hosts {
+		port := ""
+		if h.Port > 0 {
+			port = strconv.Itoa(h.Port)
+		}
 		row := []string{
-			cell(h.Group), cell(h.Alias), termiusTags(h.Tags),
-			cell(h.Hostname), "ssh", strconv.Itoa(h.Port), cell(h.User), "",
+			cell(TermiusGroup(h, groups)), cell(h.Alias), termiusTags(h.Tags),
+			cell(h.Hostname), "ssh", port, cell(h.User), "",
 		}
 		if err := w.Write(row); err != nil {
 			return "", err
@@ -154,7 +245,7 @@ func renderGenericCSV(hosts []Host) (*ClientExport, error) {
 	}
 	return &ClientExport{
 		Files: []ClientFile{{Name: "hosts.csv", Data: buf.Bytes()}},
-		Notes: []string{"Royal TS maps the host to its URI column, not hostname; Royal TS's and Xshell's CSV imports do not take key_path, so attach each key in the client."},
+		Notes: []string{"A generic CSV: map its columns in the client's import. Royal TS, Remote Desktop Manager and Xshell have formats of their own (royalts, rdm, xshell) that carry the key."},
 	}, nil
 }
 

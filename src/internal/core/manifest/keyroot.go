@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/sangehq/authama/src/internal/util/fs"
 )
 
 // DefaultKeyRoot is the directory under ~/.ssh that holds the profile
@@ -93,8 +95,16 @@ func checkKeyRootFor(m *Manifest) error {
 // that is a flat profile's rotation archive or staging directory, not a
 // categorized profile, and a flat-only glob never saw inside them either.
 // The result is sorted.
+//
+// root and each tail element go through the util/fs guards: a tail is one
+// plain name (or a glob of one), never a path that climbs out of the tree.
 func GlobKeyTree(sshDir, root string, tail ...string) []string {
-	base := filepath.Join(sshDir, root)
+	base := filepath.Join(sshDir, filepath.FromSlash(fs.LocalRel(root)))
+	safe := make([]string, 0, len(tail))
+	for _, t := range tail {
+		safe = append(safe, fs.Segment(t))
+	}
+	tail = safe
 	flat, _ := filepath.Glob(filepath.Join(append([]string{base, "*"}, tail...)...))
 	nested, _ := filepath.Glob(filepath.Join(append([]string{base, "*", "*"}, tail...)...))
 	out := append([]string{}, flat...)
@@ -116,7 +126,7 @@ func GlobKeyTree(sshDir, root string, tail ...string) []string {
 // CategoryConfigRelIn is the forward-slash path, relative to ~/.ssh, of the
 // file holding a category's Host blocks under the key root.
 func CategoryConfigRelIn(root, category string) string {
-	return root + "/" + category + "/config"
+	return fs.LocalRel(root) + "/" + fs.Segment(category) + "/config"
 }
 
 // CategoryConfigFileIn is the ~ form path the root config Includes for a

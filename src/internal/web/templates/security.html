@@ -22,9 +22,9 @@
       <div class="card-body">
         <dl class="row mb-0">
           {{with $c}}
-          <dt class="col-5">Bound since</dt><dd class="col-7">{{.Created.Local.Format "2006-01-02 15:04"}}</dd>
+          <dt class="col-5">Bound since</dt><dd class="col-7">{{when .Created}}</dd>
           <dt class="col-5">Key kept in {{template "help" (help "Key store" "Where the sealing key lives: the macOS Keychain, the Secret Service on Linux, DPAPI on Windows, or an owner-only file. It never leaves that store but into authama's memory.")}}</dt><dd class="col-7"><code>{{.Store}}</code></dd>
-          <dt class="col-5">PIN</dt><dd class="col-7">{{if .HasPIN}}<span class="badge badge-ok">set</span> <span class="text-secondary small">since {{.PINSet.Local.Format "2006-01-02"}}</span>{{else}}<span class="badge badge-warn">not set</span>{{end}}</dd>
+          <dt class="col-5">PIN</dt><dd class="col-7">{{if .HasPIN}}<span class="badge badge-ok">set</span> <span class="text-secondary small">since {{when .PINSet}}</span>{{else}}<span class="badge badge-warn">not set</span>{{end}}</dd>
           <dt class="col-5">Fingerprint</dt><dd class="col-7">{{if .Biometric}}<span class="badge badge-ok">on</span>{{else}}<span class="badge badge-muted">off</span>{{end}}{{if not $.Data.Biometric}} <span class="text-secondary small d-block">{{$.Data.Why}}</span>{{end}}</dd>
           {{end}}
         </dl>

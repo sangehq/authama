@@ -146,6 +146,12 @@ func ownerOf(m *manifest.Manifest, target string) (string, bool) {
 // KeyAdd is `authama ssh key add <profile> <name> [--type] [--host]`: declare the
 // key, mint it, and wire it to a host when one is named.
 func KeyAdd(profile, name, keyType, host string) Change {
+	return KeyAddWith(profile, name, keyType, host, nil)
+}
+
+// KeyAddWith is KeyAdd with --rotate-after-days: the key's own rotation
+// period, nil for the profile's or the default.
+func KeyAddWith(profile, name, keyType, host string, rotateAfterDays *int) Change {
 	args := []string{profile, name}
 	var kt *string
 	if keyType != "" {
@@ -154,6 +160,9 @@ func KeyAdd(profile, name, keyType, host string) Change {
 	}
 	if host != "" {
 		args = append(args, "--host="+host)
+	}
+	if rotateAfterDays != nil {
+		args = append(args, fmt.Sprintf("--rotate-after-days=%d", *rotateAfterDays))
 	}
 	return Change{
 		Command: "key add", Args: args, Mints: true,
@@ -166,7 +175,7 @@ func KeyAdd(profile, name, keyType, host string) Change {
 			if err := refuseOnePassword(m, profile); err != nil {
 				return err
 			}
-			if err := editor.New(p).AddKey(profile, name, kt, nil, host); err != nil {
+			if err := editor.New(p).AddKey(profile, name, kt, rotateAfterDays, host); err != nil {
 				return err
 			}
 			if m, err = manifest.Load(p.Manifest()); err != nil {

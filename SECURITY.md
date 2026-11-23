@@ -63,6 +63,15 @@ in these:
   credential helper is logged in with `docker login --password-stdin` (the
   token on stdin, never argv) or refused; a non-interactive run with no setting
   refuses.
+- **Data never becomes a program or an option.**
+  - Providers run only `ssh`, `ssh-copy-id`, `gh` or `glab`.
+  - An ssh destination is checked and passed after `--`.
+  - Git runs in the checkout's directory, with its values after `--`.
+  - Every path built from a manifest name goes through the `util/fs` guards (`Segment`, `LocalRel`,
+    `Within`, `AbsDir`), so it stays inside its root.
+- **The web UI never renders a private key or a token secret.** What reveals one (`token show`,
+  `token list --reveal`, `token copy`, key passphrases) stays in the terminal; see
+  [CLI and web parity](docs/reference/cli-web-parity.md).
 - **Dev mode cannot reach real credentials.** Under `--dev-root` every token file
   maps into the sandbox, the tools' path variables are ignored, and `docker
   login` is refused.

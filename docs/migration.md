@@ -255,6 +255,7 @@ commands) and `--list --json` (with and without secrets).
 | `AUTH_TOKEN_MANAGER_CONFIG`, `COMPOSER_AUTH_CONFIG`, `./auth-token-manager.json`, `~/.config/auth-token-manager.json` | still read, with a deprecation notice, after the new locations; `token import` moves the file | `TestTokenApplyReadsALegacyConfigWithANotice`, `TestTokenImportFromALegacyLocationOrAFile` |
 | `SHELL` (alias rc file, export syntax) | the same, plus PowerShell and cmd | `TestEnvExportShellVariants`, `TestDetectShellPowerShell` |
 | Windows owner-only ACL (`icacls`, `USERNAME`) | the same | `util/perms/windows_acl_test.go`, `TestOwnerOnlyAndPermsOnWindows` |
+| Windows permission check (v1: any existing file passed) | the DACL is read: only you, SYSTEM and Administrators may have access | `util/perms/acl_rules_test.go`, `acl_windows_test.go` |
 | `AUTH_TOKEN_MANAGER_CATALOG` (a replacement `catalog.json`) | `AUTHAMA_TOKENS_CATALOG`; the old name is still read, with a deprecation notice | `TestTokenCatalogOverride` |
 | `ATM_DEBUG` (show the Python traceback) | dropped | Go errors are already one line; there is no traceback to show |
 | 0600 atomic writes | the same (owner-only ACL on Windows) | `TestOwnerOnlyAndPermsOnWindows`, E |

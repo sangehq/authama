@@ -44,6 +44,7 @@ make check               # the CI gate plus lint: gofmt, build, vet, tests, gola
 make ci-linux            # the same gate inside a linux container (needs docker)
 make lint-all            # lint every GOOS - one run only ever sees one
 make e2e                 # end-to-end smoke against a real binary (build-tagged)
+make qa                  # the QA walk alone: every command's help, a bad flag, and a walk through the main flags
 make e2e-web             # the web UI in a browser: Playwright e2e and axe (needs node, age)
 make feature-check       # the per-command assertions
 ```

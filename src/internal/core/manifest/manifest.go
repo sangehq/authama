@@ -325,9 +325,12 @@ type Profile struct {
 	KeyName  *string `json:"key_name,omitempty"`
 	// KeyComment is the ssh-keygen -C template for keys minted in this
 	// profile; empty inherits defaults.key_comment (see KeyCommentTemplate).
-	KeyComment string    `json:"key_comment,omitempty"`
-	Keys       []KeySpec `json:"keys,omitempty"`
-	Hosts      []Host    `json:"hosts"`
+	KeyComment string `json:"key_comment,omitempty"`
+	// Git is the identity the profile commits as, and how it signs; nil
+	// leaves git alone (see ProfileGit).
+	Git   *ProfileGit `json:"git,omitempty"`
+	Keys  []KeySpec   `json:"keys,omitempty"`
+	Hosts []Host      `json:"hosts"`
 }
 
 func (p *Profile) UnmarshalJSON(b []byte) error {
@@ -347,22 +350,23 @@ func (p *Profile) UnmarshalJSON(b []byte) error {
 // written before these fields existed - byte-identical across a load/save cycle.
 func (p Profile) MarshalJSON() ([]byte, error) {
 	type wire struct {
-		Category   string    `json:"category,omitempty"`
-		Code       string    `json:"code,omitempty"`
-		Naming     *Naming   `json:"naming,omitempty"`
-		KeyStore   string    `json:"key_store,omitempty"`
-		OPVault    string    `json:"op_vault,omitempty"`
-		KeyScope   string    `json:"key_scope"`
-		KeyName    *string   `json:"key_name"`
-		KeyComment string    `json:"key_comment,omitempty"`
-		Keys       []KeySpec `json:"keys,omitempty"`
-		Hosts      []Host    `json:"hosts"`
+		Category   string      `json:"category,omitempty"`
+		Code       string      `json:"code,omitempty"`
+		Naming     *Naming     `json:"naming,omitempty"`
+		KeyStore   string      `json:"key_store,omitempty"`
+		OPVault    string      `json:"op_vault,omitempty"`
+		KeyScope   string      `json:"key_scope"`
+		KeyName    *string     `json:"key_name"`
+		KeyComment string      `json:"key_comment,omitempty"`
+		Git        *ProfileGit `json:"git,omitempty"`
+		Keys       []KeySpec   `json:"keys,omitempty"`
+		Hosts      []Host      `json:"hosts"`
 	}
 	hosts := p.Hosts
 	if hosts == nil {
 		hosts = []Host{}
 	}
-	return json.Marshal(wire{Category: p.Category, Code: p.Code, Naming: p.Naming, KeyStore: p.KeyStore, OPVault: p.OPVault, KeyScope: p.KeyScope, KeyName: p.KeyName, KeyComment: p.KeyComment, Keys: p.Keys, Hosts: hosts})
+	return json.Marshal(wire{Category: p.Category, Code: p.Code, Naming: p.Naming, KeyStore: p.KeyStore, OPVault: p.OPVault, KeyScope: p.KeyScope, KeyName: p.KeyName, KeyComment: p.KeyComment, Git: p.Git, Keys: p.Keys, Hosts: hosts})
 }
 
 // ExpiryCheck is the notifier policy.
@@ -1043,6 +1047,9 @@ func (m *Manifest) validate() error {
 	if err := checkGit(m); err != nil {
 		return err
 	}
+	if err := checkProfileGit(m); err != nil {
+		return err
+	}
 	if err := checkReserved(m); err != nil {
 		return err
 	}
@@ -1174,11 +1181,16 @@ func (m *Manifest) ResolvedKeyName(profileName string, host Host) (string, error
 // or its old/ directory goes through ProfileRel or ProfileDir; a hand-built
 // filepath.Join(sshDir, "profiles", profile) is the defect a categorized
 // profile exposes, because it silently points one directory too high.
+//
+// Every part goes through the util/fs guards: a name that is not one plain
+// path element (which the validator refuses on load) cannot point the path
+// out of the key root.
 func (m *Manifest) ProfileRel(profileName string) string {
+	root, name := fs.LocalRel(KeyRoot(m)), fs.Segment(profileName)
 	if c := m.Profiles[profileName].Category; c != "" {
-		return KeyRoot(m) + "/" + c + "/" + profileName
+		return root + "/" + fs.Segment(c) + "/" + name
 	}
-	return KeyRoot(m) + "/" + profileName
+	return root + "/" + name
 }
 
 // ProfileDir is ProfileRel as an absolute path under sshDir.
@@ -1190,9 +1202,9 @@ func (m *Manifest) ProfileDir(sshDir, profileName string) string {
 // adopted path when it has one, else its file in the profile directory.
 func (m *Manifest) KeyPath(sshDir string, ref KeyRef) string {
 	if rel := AdoptedPath(m, ref); rel != "" {
-		return filepath.Join(sshDir, filepath.FromSlash(rel))
+		return filepath.Join(sshDir, filepath.FromSlash(fs.LocalRel(rel)))
 	}
-	return filepath.Join(m.ProfileDir(sshDir, ref.Profile), ref.KeyName)
+	return filepath.Join(m.ProfileDir(sshDir, ref.Profile), fs.Segment(ref.KeyName))
 }
 
 // AdoptedPath is the key's adopted path relative to ~/.ssh, or "" when the
@@ -1315,7 +1327,8 @@ func (m *Manifest) KeyRefs() ([]KeyRef, error) {
 	seen := map[KeyRef]bool{}
 	var out []KeyRef
 	add := func(profile, keyName string) {
-		ref := KeyRef{Profile: profile, KeyName: keyName}
+		// A ref names files: each part is one plain path element.
+		ref := KeyRef{Profile: fs.Segment(profile), KeyName: fs.Segment(keyName)}
 		if seen[ref] {
 			return
 		}

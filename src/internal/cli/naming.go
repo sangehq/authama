@@ -17,30 +17,7 @@ import (
 // generatedAlias names a new host of profile by its naming rules, and returns
 // the tags it should carry (its role and environment).
 func generatedAlias(m *manifest.Manifest, profile, env, role string) (string, []string, error) {
-	if _, ok := m.Profiles[profile]; !ok {
-		return "", nil, fmt.Errorf("unknown profile: %q", profile)
-	}
-	if env == "" && role == "" {
-		return "", nil, errors.New("name the host, or give --env and --role to have it named by the naming rules")
-	}
-	r := manifest.ProfileNamingRules(m, profile)
-	code := manifest.ProfileCode(m, profile)
-	if code == "" && naming.Required(r.Alias, "code") {
-		return "", nil, fmt.Errorf("profile %s has no code to name its servers by; set one (%s ssh profile edit %s --code <code>), "+
-			"or let profiles without one use their name (%s ssh naming set --code-fallback profile)",
-			profile, brand.Command, profile, brand.Command)
-	}
-	alias, err := r.Generate(map[string]string{"env": env, "role": role, "code": code}, editor.TakenAliases(m))
-	if err != nil {
-		return "", nil, err
-	}
-	var tags []string
-	for _, v := range []string{role, env} {
-		if v != "" {
-			tags = append(tags, v)
-		}
-	}
-	return alias, tags, nil
+	return editor.GenerateAlias(m, profile, env, role)
 }
 
 // reportKept lists the hosts whose key name a naming change kept.

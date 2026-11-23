@@ -16,7 +16,8 @@ interpreter to keep current.
   so deployment falls back to plain `ssh` there.
 - Optional, each degrading to a manual path when absent: `age` and `age-keygen`
   (encrypted bundles), `sops`, `gitleaks`, `gh` and `glab` (VCS key deployment), `age-plugin-yubikey`,
-  `docker` (only for `token apply` against a registry kept in a credential store).
+  `docker` (only for `token apply` against a registry kept in a credential store),
+  git 2.34 or newer (only for `ssh git sign`, which needs SSH signing).
 
 The auth-token side needs nothing: it writes the tools' files itself.
 
@@ -328,7 +329,14 @@ about what is managed.
 We never `chgrp`/`chown` (that needs root); denying group and other access is the
 safe, correct hardening for a single-user tool - run it as the file owner. On
 Windows the equivalent is an owner-only ACL applied with `icacls`, since mode
-bits do not apply there.
+bits do not apply there. `doctor`, `validate`, `repair` and the token audit check
+it by reading the file's owner and DACL through the Windows security API: a
+private file passes only when it is owned by you (or SYSTEM or Administrators)
+and no ACE that applies to it grants access to anyone else. An ACE for Everyone,
+Users, Authenticated Users or another account fails the check, and `repair` (or
+`doctor --fix`) applies the `icacls` ACL again. SYSTEM and Administrators are
+allowed because they can read every file on the machine anyway. A public file,
+such as a `.pub` (`0644`), only has to exist.
 
 ---
 

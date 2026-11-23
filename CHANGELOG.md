@@ -6,6 +6,342 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Every launch opens the browser, signed in.** Double-clicking authama, `authama` and `authama serve`
+  now check the server before anything else: a stale record or a hung server (one that holds its port
+  but no longer answers) is cleared, a server from an older or rebuilt binary, or on another base path
+  or `web.port`, is replaced, and the default browser opens with a fresh one-time link, whether the
+  server was started or found running. No address to copy. `--no-open`, SSH sessions and machines with
+  no desktop skip the browser and say why. See [every launch checks the
+  server](docs/tools/serve.md#every-launch-checks-the-server).
+- **Remembered browsers.** After a link sign-in the browser is remembered for `web.remember_days` (30;
+  `0` turns it off) with a rotating, hashed, `HttpOnly`, `SameSite=Strict` cookie, so a restart or a
+  closed browser no longer means a 401. `authama serve browsers` and **Settings › Remembered browsers**
+  list them and forget them; signing out forgets the browser too. A replayed old cookie forgets the
+  browser. Nothing signs a browser in for being local. See [remembered
+  browsers](docs/tools/serve.md#remembered-browsers).
+- **A display time zone.** `display.timezone` (an IANA name; unset is this system's zone) sets the zone
+  of every time shown, in the terminal and the web UI; stored times stay UTC. `authama settings
+  timezone show|set|list`, a global `--tz` for one command, `$AUTHAMA_TIMEZONE`, and
+  a searchable field with the time there now on the Settings page. See [times](docs/tools/logs.md#times).
+- **`authama.log`.** A structured, levelled log of every command, web change, job, watched-file change
+  and sign-in, in the state home's `log/`, rotated at `log.max_size_mb` and kept `log.retention_days`.
+  Keys, tokens, passphrases, PINs and sign-in links are redacted before anything is written. `authama
+  logs` reads it (`--follow`, `--level`, `--since`, `--grep`, `--json`, `export`, `path`, `level`,
+  `retention`), and **System › Logs** filters, searches, follows and downloads it. See
+  [logs](docs/tools/logs.md).
+- **Hosts for twelve more clients.** `export hosts --format` writes `royalts` (Royal TS/TSX, Royal JSON for a
+  dynamic folder), `rdm` (Remote Desktop Manager CSV), `tabby` (`ssh-profiles.yaml`), `mremoteng` (`confCons.xml`),
+  `xshell` (a zip of `.xsh` sessions), `blink` and `prompt3` (an ssh config snippet with the steps each app needs),
+  `winscp` (`WinSCP.ini` sessions), `filezilla` (Site Manager XML), `cyberduck` (a zip of `.duck` bookmarks),
+  `transmit` (the FileZilla XML Transmit 5 imports, with its limits) and `ansible` (a YAML inventory grouped by
+  category, profile and `env_<env>`). No file holds a password or a private key, only key paths or key names; a
+  ProxyJump is written where the client takes one and reported where it cannot. `export pack --clients` and
+  checkboxes on the Export / Import hub choose which clients the **Hosts for other SSH clients** part writes. Each
+  format has golden-file tests. See [Other SSH clients](docs/tools/export.md#other-ssh-clients).
+- **`make qa`: a walk through every command.** `cmd/authama/qa_test.go` (part of `make e2e` too) checks every
+  command's help and that it refuses an unknown flag, walks the commands and their main flags in a throwaway home
+  whose hosts are 127.0.0.1 on a closed port, and runs every read-only command line in README.md and docs/ so a
+  documented command this build refuses fails the run. The browser suite gains every page at 375px wide (no
+  sideways scroll), Tab order and focus rings, and the Connections, Import, VMs, Export, Checklists, API tokens
+  and Webhooks pages in its page and axe sweeps; its server now takes a free port, never the default 7822.
+- **Signed bundles (P-06).** `ssh bundle --sign-key KEY` and `setup export --out FILE --sign-key KEY` write a detached
+  SSH signature, `<file>.sig`, with `ssh-keygen -Y sign` in the `authama-bundle` namespace, and trust the key in the
+  config home's new `bundle_signers` file (allowed_signers format). `ssh restore` and `setup import` check a `.sig`
+  before they decrypt or read the file: one changed after it was signed is always refused, and
+  `--require-signature` also refuses an unsigned file or an untrusted signer (`--signers FILE` for another trust
+  file). The web **Restore bundle** job checks the same way, with a **Require a trusted signature** option. See
+  [signed bundles](docs/reference/bundle-signatures.md).
+
+- **A real permission check on Windows (P-04).** `doctor`, `validate`, `repair`, `reconcile` and the token audit used
+  to pass any existing file on Windows. They now read its owner and DACL through the Windows security API: a private
+  file passes only when you, SYSTEM or Administrators own it and no ACE that applies to it grants anyone else access.
+  Everyone, Users, Authenticated Users or another account fails the check, and `repair` applies the owner-only
+  `icacls` ACL again. The rules are tested on every OS and the ACL read on the windows-latest CI leg.
+
+- **The remaining CLI flags on the web.** Every command flag in
+  [CLI and web parity](docs/reference/cli-web-parity.md) is now on a page or CLI-only by design, with 0 gaps
+  (156 commands; 412 flags: 339 covered, 73 CLI-only). New controls: `profile add --code`; `host add --env --role`
+  (the alias is generated by the naming rules when left empty); `host apply --tag --reconcile`; `key add
+  --rotate-after-days`; `key ack --all --category` (**Keys → Acknowledge new keys**); `vm add --key-name`; `vm
+  adopt-key --move --docker-context`; `vm sync --no-probe`; `repair --area`; and `rotate --failed` (**Choose the keys
+  the last rotation left** on the rotate review). `host delete` and `profile delete --revoke --purge` run as jobs,
+  with an encrypted backup before a purge and a snapshot first. `knownhosts pin --port` stays CLI-only: a form never
+  sends a free hostname to `ssh-keyscan`.
+
+- **Export schedules, remote modes and project tokens in the web UI.** The Export page's **Schedules** card adds,
+  lists, removes and runs export schedules (`export schedule add|list|remove|run`), behind the PIN. **Git
+  identities → Remote mode** shows each checkout's origin mode and switches it through the preview, proving the
+  new URL with `git ls-remote` first (`ssh git status`, `ssh git use --mode --profile`). The **Auth tokens** page's
+  scope bar reads and writes a project's own files and another token config (`--project`, `--config`), and
+  **Apply** takes `--source` and `--target`. Writing schedules moved into `services/exportsched`, shared by the
+  command line and the page.
+- **API tokens and Webhooks pages in the web UI** (System → API tokens, `/api-tokens`, `g j`; System → Webhooks,
+  `/webhooks`, `g q`). They make, list and revoke API tokens, and add, list, test, turn off and on, remove and
+  deliver webhooks, as `authama api token` and `authama webhook` do. Each change asks for the owner PIN within the
+  step-up window and is written to the audit log. A new token or signing secret is shown once, in the answer to
+  the form that made it, under a warning and with a **Copy** button and `Cache-Control: no-store`. It is never put
+  in the session or a URL, and it is never shown again. A read-only server lists both and shows the commands.
+- **Nested Termius groups.** `export hosts --format termius --termius-groups <scheme>` writes the `Groups` column
+  as a path Termius files as subgroups, the way its own import template's `Project/Dev` does: `profile` (the
+  default, unchanged), `category/profile`, `profile/env`, `category/profile/env`, or `none` for no group. The
+  environment is the `{env}` the profile's naming rules read from the alias; a part a host lacks is left out, and a
+  `/` inside a name becomes `-`, so it cannot add a level. The web UI takes `?termius_groups=` on the Termius download
+  and on `/exports/run`, and the hosts page has a **Download the Termius CSV, in profile/env groups** link; `?profile=`
+  still chooses rows by profile there.
+- **A Termius import page in the web UI** (`/termius`: SSH → Termius import, `g u` in the palette, and
+  **Termius import** on the hosts page). It does everything `export hosts --format termius` and
+  `ssh termius keys` do: the group scheme (each with an example from your hosts), git hosts, the profile, env,
+  role, tag and status filters, and include and exclude text. It previews the CSV as Termius's template lays it out,
+  with **Copy CSV**, **Download** (the same selection through `/exports/run`) and the same export as a command line.
+  It also lists what was left out and why, the jump host of each `ProxyJump` host, and the import steps. For each
+  host it shows the key label and key path, and the `ssh termius keys <host> --clear-after 60s` command that copies
+  the key. The page never copies a private key itself, since nothing secret is copied from a page.
+
+- **Commit as each profile, signed with its SSH key** (`authama ssh git sign`). A profile's new `git` block in the
+  manifest (`email`, `name`, `signing_key`, `sign`, `dirs`) is rendered by `sign apply` into
+  `<config home>/git/<profile>.gitconfig`, one `allowed_signers` file, and one managed block of `includeIf
+  "gitdir:…"` lines in the global git config, so every checkout under a profile's directories commits as its address
+  and signs commits and tags with its key (`gpg.format ssh`; 1Password profiles sign through `op-ssh-sign`). Only
+  the managed block is changed, the file is copied to the state home first, and a symlinked `~/.gitconfig` keeps
+  its link. `sign set` edits the block and applies it, `sign status` shows what each checkout resolves, `sign use`
+  makes one checkout a profile's wherever it is, and `sign verify` checks recent commits against `allowed_signers`.
+  Recipe: [Sign commits with each profile's SSH key](docs/recipes/sign-commits-with-ssh.md).
+- **Git identities in the web UI** (`/git-sign`: SSH → Git identities, `g g`). Each profile's email, name, signing
+  key and directories, set, changed or removed through the usual preview - the manifest diff and every line the
+  fragment, `allowed_signers` and the managed `~/.gitconfig` block gain or lose - and applied only on confirmation
+  (with the owner PIN when one is set). The page also applies pending identities, points checkouts elsewhere at a
+  profile (`sign use`), checks a checkout's identity and recent signatures, works out the URL and command for
+  `ssh git clone`, and shows `allowed_signers`. A read-only server shows the commands instead of forms.
+- **A visual structure builder in the web UI** (`/structure`: SSH → Structure, `g b`). The SSH folder as a tree -
+  key root, categories, profiles with their keys and hosts - beside the keys found outside it. Each movable item has
+  a menu of moves, and dragging a profile onto a category or a stray key onto a profile picks the same entry, so
+  the keyboard and the mouse reach the same moves. The chosen moves, plus any plan lines typed in, go through the
+  usual preview (the key files that move, by path only, and the manifest and config diffs) before anything is
+  written; suggestions can be dismissed and shown again. Plain Tabler markup and one small script component.
+- **A structure watcher for `~/.ssh`** (`authama ssh structure`). It finds keys outside the expected layout - a
+  pair loose in `~/.ssh`, a key no profile declares in a profile's directory, a key in a directory no profile owns,
+  a declared key in the wrong directory, a key in the config home - and suggests a move for each, guessing the
+  profile from the key's name or comment. Nothing moves until it is approved: `structure approve <id>` (or a plan
+  of move lines) previews the change on a throwaway copy, then backs up each moved key to `.state/moved/<time>/`,
+  moves the pair with the right modes, declares and records it, repoints `IdentityFile` lines in hand-written ssh
+  config, re-renders, and records each move in the history. `serve` refreshes the suggestions whenever its 30-second
+  file scan sees a change; `structure install` adds a background check every 15 minutes (launchd, a systemd user
+  timer or cron, a Scheduled Task) that notifies about new suggestions. The scheduler gained interval jobs for it.
+  Recipe: [Tidy loose keys into their profiles](docs/recipes/tidy-keys-into-profiles.md).
+- **Move a setup between machines** (`authama setup export` / `setup import`). The setup document is JSON with no
+  secret in it: the manifest, providers, settings (without this machine's `paths`) and token config, with the token
+  variables, profiles and keys named. `setup export --encrypt` writes a full export - the same plus every private
+  key, the inventory and the token values - as an age file encrypted with a passphrase (age's own scrypt format,
+  implemented with `golang.org/x/crypto`, so `age -d` opens it and no dependency was added); it asks for the owner
+  PIN. `setup import` reads either: `--dry-run` lists every item it would add, keep or replace, each config diff, and
+  each key path and token name (never a value); `--on-conflict keep|replace|fail` settles what differs, keeping
+  replaced key files and `.env` in `replaced/` first; keys land 0600 in 0700 folders; risky SSH options are refused
+  unless `--allow-risky-options`; the import is recorded in the history. The web UI's **History → Move setup**
+  (`/setup`, `g m`) downloads the document and imports a pasted one through the preview; the full export stays at
+  the terminal. `ssh restore` given a full export points to `setup import`. Recipe:
+  [Move to a new machine](docs/recipes/move-to-a-new-machine.md).
+- **Export / Import, beside New in the web UI's header** (`/transfer`, `g f`). **Export** lists every file the home
+  exports as - the Termius CSV with its group scheme, every other SSH client's files (`clients/`: hosts-csv, Windows
+  Terminal, iTerm2, PuTTY, Remmina, SecureCRT and MobaXterm, with `NOTES.txt`), the flat ssh config, the setup document, `structure.json` (the
+  categories, profiles, where each key lives and which hosts use it, and the moves suggested now), `git-signing.json`
+  with `allowed_signers`, the tokens list (names and where each value is read from, never a value) and the hosts,
+  keys, profiles, deployments, history, events and snapshots lists. You tick what to include, **Preview** shows each
+  file's size and first lines, and **Download zip** gets one zip. None of these files holds a private key or a token value.
+  **Encrypted export** downloads the full export (`setup export --encrypt`) under a passphrase typed twice, behind
+  the owner PIN. The page never shows it. **Import** takes an uploaded setup document, export zip or encrypted export, tells
+  them apart by what they hold, and lists what it would bring by name only: key files and token values with
+  add / keep / replace. It then goes through the usual preview and confirm. The upload and its passphrase are kept in
+  the session's secret stash (15 minutes, used once), never in the page. An ssh config is pointed to SSH import, a
+  backup bundle to `ssh restore`, and a Termius CSV is refused with the reason. A read-only server offers the export
+  only. At a terminal, `authama export pack [--include …|all] [--termius-groups …] [--dry-run]` writes the same zip,
+  and `setup import` takes it for its `setup.json`.
+- **Hosts and declared keys move between profiles** in `ssh structure approve --plan` (`host <profile>/<alias>
+  profile <to>`, `key <profile>/<key> profile <to> [name <key>]`) and in the `/structure` tree, from each key's and
+  host's menu or by dragging it onto another profile. A host takes its own key along when no other host uses it;
+  otherwise it takes the key its new profile gives it. A declared key moves only with every host of its profile that
+  uses it, and keeps its inventory record and deployments. Adopted keys, shared keys, a shared-scope target and
+  1Password profiles are refused, and every move is checked before anything moves.
+- **`authama ssh git clone OWNER/REPO [DIR]`** clones through the URL `git resolve` gives, and makes the checkout
+  commit as the profile when it has a git identity.
+
+- **The web UI catches up with more of the CLI.** [CLI and web parity](docs/reference/cli-web-parity.md)
+  maps every command and flag to its page or control, says what stays in the terminal by design, and lists
+  the open gaps. New in this round:
+  - **`ssh config adopt`** on the SSH config page, previewed as a diff.
+  - **The `ssh recover` break-glass snippet** on each key's page (public key only).
+  - **`--key-name`, `--provider`, `--token-env` and `--proxy`** under *More options* on the Add a host and
+    Edit host panels. *None* clears a proxy, and an unknown provider, variable name or proxy is refused
+    before the preview.
+
+### Changed
+
+- The hosts page leads to the Termius import instead of offering three Termius downloads; the plain Termius CSV
+  download stays. The palette names that download "Download the Termius CSV, grouped by profile".
+
+### Behaviour changes (upgrade notes)
+
+Things that work differently after this release, and what to do if one affects you:
+
+- **ssh destinations are checked before `deploy`, `verify` and `remove`.**
+  - What is allowed:
+    - The user may hold dots, dashes, `@`, `\` and `$` (`first.last`, `DOMAIN\user`, `svc$`).
+    - The hostname may be a name with `_`, an IPv4 address, or a bare or bracketed IPv6 address.
+  - What is refused, with a message naming the host and `authama ssh host edit` as the fix:
+    - either part starting with `-`;
+    - whitespace, quotes or any of `` `;&|<>(){} ``;
+    - `$` or `\` in the hostname.
+  - The destination is passed after `--` to `ssh` and `ssh-copy-id` (OpenSSH has accepted that for years).
+  - See [deploy](docs/tools/deploy.md#what-a-destination-may-hold).
+- **Deploy, verify, rotate, rollback and revoke reach a host through its alias.**
+  - authama runs `ssh -F <state home>/route.conf -- <alias>`, a flat copy of the managed config, so a
+    host's `ProxyJump`, `ProxyCommand`, Cloudflare Access proxy or VM route now applies.
+  - Before, these commands connected to the manifest's hostname, user and port, and a host behind a jump
+    or a tunnel could not be reached.
+  - `--direct` (on `deploy`, `rotate`, `rollback`, `key revoke`), *Connect directly* on a web job's
+    review, or `ssh.deploy_route` `direct` brings back the old route.
+  - See [deploy](docs/tools/deploy.md#how-deploy-reaches-a-server).
+- **`ssh git sign` needs git 2.34 or newer** (SSH signing arrived in 2.34).
+  - With an older git, `ssh git sign status`, `ssh git sign verify` and `/git-sign` name the version and
+    write nothing. Before, git failed later with its own error.
+  - Git runs in the checkout as its working directory instead of `git -C`, and values go after `--`. A value
+    that starts with `-` (an email, name or key path) is refused.
+  - `verify` hands git the allowed signers file through `GIT_CONFIG_*` (git 2.31+) instead of `-c`.
+- **The Export pack's Termius group scheme must be one of the listed ones.** Any other value in
+  `termius_groups` is answered with 400 and the list of choices, instead of being written into the zip.
+- **A `serve` started by an older build cannot be reused.** The new link check (audit P-02) asks for
+  `authama serve --restart` once after upgrading. The next run reuses the server as before.
+- **Manifest names that would leave `~/.ssh` become `_invalid-name_`.** A profile, category or key name
+  with a path separator, `..` or NUL is not allowed by validation anyway. Where one reached a path builder
+  regardless, the segment is now `_invalid-name_`, inside the key root, instead of a path outside it.
+  `doctor` and `validate` still report the name.
+
+### Fixed
+
+- **A Finder double-click opened no browser.** The browser opener was killed with the Terminal window's
+  shell before the browser started, so a launch that found a server running printed its address and
+  nothing opened. The opener now runs in its own session and the launch waits for it.
+- **Keys and Events settings were missing from the Settings page.** `keys.*` and `events.source` had no
+  card, so they could be set only from the terminal; a test now holds every section to a card.
+- **A restarted server's adopted sessions had no owner id**, so a job they started could not be
+  answered from them.
+- **Times on the pages read in this machine's zone.** The Structure page's last check, the overview, History
+  and the other pages showed UTC; they now show local time with the zone named (2026-11-22 15:10 EST).
+- **`ssh list` lines its columns up** across every profile, and no line ends in padding.
+- **Host-format zips are dated when exported.** A client export that is a zip (remmina's) dated its files
+  1980; each file now carries the export's time, as the export pack's already did.
+- **`setup export` counts every key the setup uses.** It listed only the keys a profile declares by name, so
+  a home whose keys come from its hosts said `0 key(s) named`; the document now lists each host's key too,
+  once each, and the line reads `N key(s), listed by name only (no key files)`.
+- **Saved selection names on /export read in full**: each takes its own row in the side panel.
+- **Name checks on /api-tokens and /webhooks work in the browser.** Their name fields' `pattern` was invalid
+  under the v flag browsers compile it with, so the browser ignored it and only the server checked; a test now
+  compiles every template pattern that way. A long saved selection name on /export is cut with an ellipsis
+  (full name on hover) instead of losing letters at both ends.
+- **Every command's help explains it.** 78 commands showed only their one-line summary under DESCRIPTION;
+  each now says what it does, what it reads or writes, and what its main flags change (docs/reference/cli.md
+  follows), and a test keeps every visible command described. `init --help` no longer suggests the deprecated
+  `--backup`, and its `--force` names where the copies go.
+
+- **A hypervisor that does not answer no longer holds the VMs page.** Listing a hypervisor's VMs now stops
+  after 5 seconds (it was 20) and says so: /vms shows a **Timed out** notice naming it and a `timed out` badge
+  on its row, `vm list` prints `timed out`, and the hypervisors are asked at once, so one hanging CLI costs the
+  page 5 seconds in all. A CLI that leaves a helper holding its output is no longer waited on after the kill.
+  Finding one VM's address for ssh still waits 20 seconds, so a slow answer is not taken for a stopped VM.
+
+- **Web pages at phone width and contrast.** At 375px the Profiles, Naming, Hosts, Keys, Snapshots, API tokens
+  and About pages scrolled sideways (a visually hidden label escaped its table); they no longer do. The Export
+  page's muted text and active tab, and red text on the VMs page in the dark theme, now meet 4.5:1.
+
+- **`history --command` takes the command as typed.** `--command "ssh host add"` (or `"authama ssh host add"`)
+  found nothing, because ssh commands are recorded without their group; it now matches `host add`. A filtered
+  list that matches nothing says so, instead of "no operations recorded yet".
+- **`ssh rotate --check` is recorded as a dry run.** It was recorded as a rotation that ended `ok`, though it
+  changes nothing; `repair --check` is the same. A `rotate` that names no key is refused before it takes the lock,
+  so a usage error is no longer recorded as a failed rotation.
+- **`ssh key reserve ~/.ssh/<name>` honours `--dev-root`.** `~/.ssh/` was read as the real home's, so the path
+  form was refused in a sandbox; it now names the ssh directory the run uses. A missing key says
+  "no key file ~/.ssh/<name> to reserve" instead of an lstat error.
+- **`ssh notify doctor` refuses flags.** It ignored any flag it was given, and its help listed `send`'s flags,
+  which it never read. `notify send` and `ping` now list every flag go-notifykit takes (`-icon` and `-open` were
+  missing) and say what each does.
+- **Form paths reach no command or file unchecked.** The project and config scope on Auth tokens, the checkouts
+  on Git identities → Remote mode and an export schedule's folder must be plain absolute paths before the server
+  opens them, and `ssh git status` and `ssh git use` run git in the checkout (its working directory) instead of
+  passing it as `-C`. The export schedule test no longer checks a POSIX mode on Windows.
+- `ssh notify send`, `ping` and `doctor` print their help for `--help` instead of passing it to the
+  notification helper (which, for `doctor`, printed the live status).
+- A local key replacement now writes a retirement record for the key it moves to `old/`, naming where it is
+  still deployed. A key in `old/` with no record at all is "cannot tell" unless the inventory shows it was never
+  deployed, so it is no longer treated as free to evict (audit A-BUG-07, follow-up).
+- The keys and key pages say so in a notice when `revoked.json` or `retired.json` cannot be read, so the
+  "unknown" pills have a reason on the page (audit A-BUG-06, follow-up).
+- `serve` reusing a running server links with an HMAC challenge and proof, and the control key no longer crosses the
+  wire. The proof is time-limited, can be used once, and is refused from a non-loopback or forwarded request. A server
+  from an older build asks to be restarted with `serve --restart` (audit P-02).
+- `install.sh` runs only once it has been read whole: its body is a function called on the last line. CI checks
+  that the script cut short at any line inside it runs nothing (audit P-03).
+- `make ci-linux` runs in the digest-pinned Go image the Dockerfile names, instead of a tag (audit S-07).
+- The tests pass on Windows: Unix mode checks are skipped there, and git directories are kept in forward slashes.
+  `git` is run only in an existing absolute directory, with `core.fsmonitor` and the pager turned off, and every
+  structure move's source and destination is checked to be inside its root.
+- The Termius export's notes name the jump host of a host that reaches its server through a `ProxyJump` raw option,
+  to set as its Host Chain in Termius: the CSV has no column for one, so the host was imported as a direct host
+  with nothing saying why it could not connect.
+- A key in `old/` whose fingerprint cannot be read is no longer evicted by a rotation or local replacement as if
+  it were free to go: "cannot tell" is refused like "still logs in" unless `--evict-old` (audit A-BUG-07).
+- A webhook removed, disabled or given a new secret or URL while a delivery was under way is no longer sent the
+  rest of that batch: each send first checks the endpoint as it is now (audit A-SEC-11).
+- The read API's bad-token throttle counts an IPv6 caller by its /64, and a ceiling on failures from every
+  address together holds when addresses rotate (audit A-SEC-10).
+- A key's recency pill reads "unknown" when `revoked.json` or `retired.json` cannot be read, instead of a
+  confident "new" or "current" (audit A-BUG-06).
+- `ssh structure approve` refuses a destination whose profile or category directory is a symlink, as the
+  importer does, so nothing is created or chmodded outside `~/.ssh`.
+- `ssh structure approve` checks a key line's `name`, refuses two lines moving the same key, and checks the
+  names it would declare before moving any key file. A key's `-cert.pub` is backed up and checked for a clash and
+  a symlink like its `.pub`.
+- A git profile with signing off (`sign set --no-sign`), or whose key cannot be found, has its identity applied
+  unsigned instead of being dropped (which deleted its fragment and left checkouts on the global identity).
+- `ssh git sign apply` includes a directory inside another profile's after it, so the most specific claim decides
+  the identity; refuses a managed block whose end marker was deleted instead of rewriting the lines after it; and
+  keeps two backups taken in the same second.
+- Rotated logs past `log.retention_days` are pruned whenever authama starts, not only when the log rotates. The
+  Logs page and `authama logs --limit` read the newest files first and stop at the limit; a record too long to read
+  back no longer hides the rest of its file; `logs --follow` no longer drops records written while the first read
+  ran; and a `--since` date is midnight in the display zone, as the times beside it are.
+- The web UI goes back to the system zone when the settings file is deleted while it runs, and tells a zone the
+  settings file set from one the environment gave by how it was set, not only by its value.
+- On Windows, a file with an access-granting ACE the owner-only check cannot read (compound, object, callback) is
+  not reported as owner-only.
+
+### Security
+
+- **Paths, commands and responses from a web form or an uploaded document are guarded where they are used**
+  (CodeQL's 98 alerts on the combined PR). Every profile, key, category and key-root path the manifest builds goes
+  through one set of guards in `util/fs` (`Segment`, `LocalRel`, `Within`, `AbsDir`), so a name that skipped
+  validation still cannot leave `~/.ssh`. Providers run only `ssh`, `ssh-copy-id`, `gh` or `glab`, never a program
+  named by data, and every ssh destination follows `--` and is checked first (see Behaviour changes). Git signing runs git in the
+  checkout instead of passing it as `-C`, puts values after `--` where none can read as an option, and gives the
+  allowed signers file through `GIT_CONFIG_*`. A Termius group scheme not on the list is refused rather than written
+  into the export zip.
+- **Checking a checkout's signatures never runs a program that checkout chose.** `ssh git sign verify` and the
+  web UI's signature check pinned only the SSH checker; a checkout's own `gpg.program`, `gpg.openpgp.program` or
+  `gpg.x509.program` ran on any OpenPGP- or X.509-signed commit. All three now point at a path that cannot exist.
+- **A setup import refuses what would run a program or send a token elsewhere.** Besides risky SSH options, a
+  setup document or full export is refused (at a terminal: unless `--allow-risky-options`) when its settings
+  declare custom hypervisor commands, which authama runs whenever it lists VMs, or its `providers.json` sends a
+  token to a host this build's catalog does not (a redefined `github`, say). The refusal names each command and host.
+- **A full export's `.env` brings only the setup's own token variables.** A name the setup reads no token from, or
+  one that changes how authama or the programs it runs behave (`GIT_*`, `SSH_*`, `LD_*`, `DYLD_*`, `AUTHAMA_*`,
+  `PATH`, proxies, ...), is listed in the preview as not imported and never written.
+- **A copied browser cookie is caught however old it is** (up to 128 rotations back), not only one rotation back:
+  presenting it forgets the browser.
+- **`authama.log` redacts more.** Passwords in URLs, any query parameter named like a secret, npm and AWS access
+  keys, `sk-` keys, Slack webhooks, and secret-named fields nested in a logged map. A log or log folder left wider
+  is made owner-only again, and a log path that is not a regular file is not written through.
+
 ## [0.1.0] - 2026-11-17
 
 The first release under `sangehq/authama`, tagged 2026-11-14 and re-tagged on 2026-11-16 and 2026-11-17 with everything

@@ -27,13 +27,82 @@ press Ctrl-C to stop
 
 The token in the address signs one browser in, once, within 10 minutes. The browser swaps it for a
 session cookie and drops it from the address bar; after that the address signs nobody in, so a copy
-left in a terminal, a file or a browser's history is of no use. Without a session, every page
-answers 401. For another sign-in, run `authama serve` again: it asks the running server for a new
-link (see [one server per home](#one-server-per-home)).
+left in a terminal, a file or a browser's history is of no use. The browser is then remembered (see
+[remembered browsers](#remembered-browsers)), so later visits sign in by themselves. A browser that
+is not remembered gets a 401 page that says how to get in: open authama (double-click it, or run
+`authama`), which opens the browser with a fresh link.
+
+You never need to copy the address. Every launch opens your default browser with a new link (`open`
+on macOS, `xdg-open` on Linux, `start` on Windows), whether it starts the server or finds one already
+running (see [every launch checks the server](#every-launch-checks-the-server)).
 
 A session ends after 8 hours without a request, or 24 hours after you signed in, whichever comes
 first, when the server stops, and when you choose **Sign out** in the user menu, which ends it on the
-server as well as in the browser. The page then answers 401, and `authama serve` gives a new link.
+server as well as in the browser and forgets the browser. A remembered browser starts a new session
+by itself on its next page.
+
+### Every launch checks the server
+
+Double-clicking authama, running `authama`, and `authama serve` all do the same checks before they
+open the browser:
+
+1. **Is a server running for this home, and is it this server?** The launch reads `serve.json` and
+   proves the server holds its control key (below). A record left by a crashed server is removed.
+   A process that holds the port but no longer answers `/healthz` is stopped, but only when it is
+   an `authama` process serving a web UI; anything else is left alone and named.
+2. **Is it up to date?** When the binary on disk was rebuilt since the server started (the same
+   file, another version), or the server runs an older release than this one, it is replaced: the
+   launch stops it, waits for the port, and starts this build. A server that is *newer* than the
+   binary you ran is kept, and the launch says so.
+3. **Is it where the settings say?** A server under another base path, or on another port than
+   `web.port` names (when that port is free), is replaced too.
+4. **Open the browser** with a fresh one-time link. The opener runs in its own session, so closing
+   the Terminal window a Finder double-click opened does not kill it before the browser starts.
+
+`--no-open` skips the browser. So does a launch with no desktop: over SSH (`SSH_CONNECTION`,
+`SSH_CLIENT` or `SSH_TTY` set), with no `DISPLAY` or `WAYLAND_DISPLAY` on Linux and the BSDs, or with
+no terminal; the address is printed instead, and the launch says why.
+
+### Remembered browsers
+
+A browser that signed in with a link gets a second cookie, `authama_browser`, and is remembered for
+`web.remember_days` days (30 by default; `0` turns it off). When it has no session (the server
+restarted, the session timed out, the browser was closed), its next page signs it in with that
+cookie. The PIN still guards every change: a home with an owner PIN asks for it again before any
+page opens.
+
+```sh
+authama serve browsers                 # the remembered browsers: id, browser, signed in, last used, expiry
+authama serve browsers forget <id>     # sign one out; it needs a link again
+authama serve browsers forget --all
+```
+
+**Settings › Remembered browsers** lists and forgets them too. A forgotten browser's session ends on
+its next page.
+
+Why it is safe:
+
+- The cookie is `HttpOnly`, `SameSite=Strict`, scoped to the server's base path and `Secure` behind
+  TLS. A page on another site cannot read it, and a browser does not send it with another site's
+  request.
+- It signs in only on a `GET` or `HEAD`, which change nothing. Every change still needs the session's
+  form token and the same origin. A forged form that carried the cookie would gain nothing.
+- Its secret changes on every sign-in. authama keeps only its SHA-256 hash, in the owner-only
+  `browsers.json` in the state home, so a copy of that file signs nobody in. A cookie used after it
+  was replaced (a stolen copy, used after you) forgets the browser at once and is logged as
+  `browser.reused`. Two tabs racing within a minute are allowed.
+- It belongs to this home, not to one server: a restart, a new build or a reboot keeps it. That is
+  why it is bound to the home's own store rather than to the server's control key, which changes on
+  every start and would sign every browser out with it.
+- The Host check comes first. A rebinding name never reaches it, and the cookie is scoped to the
+  host it was set on (`127.0.0.1` or `localhost`).
+
+**What it does not do.** A request from this machine with no cookie is never signed in for being
+local. Another user on the same machine, or a web page that rebinds a name to `127.0.0.1`, can
+reach the port as easily as you can, so a local address proves nothing. That is why the 401 page has
+no "sign me in" button: anything that page could do, an attacker's page could do too. Signing in
+needs something only you have: a link from a launch you ran (proved by the control key in your
+owner-only state home), or the cookie that link left in your browser.
 
 If port 7822 is taken, `serve` uses the next free port and says which. If all twenty from 7822 up are
 taken, it uses any free port the system offers. `--port` pins a port and fails when that port is
@@ -103,19 +172,20 @@ accepted. A running server is reused only when its base path is the one asked fo
 
 The layout is Tabler's, in two bars. The top bar holds the name (with a *read-only* badge when the
 server only reads), a search box that opens the command palette, a theme toggle (light or dark), a
-bell listing the newest [file events](events.md), a **New** button for the common creates, and the
-user menu, named for the system user the server runs as. The user menu is personal: it opens with
+bell listing the newest [file events](events.md), a **New** button for the common creates, an **Export / Import**
+button (every export in one zip, the encrypted full export, and importing a setup file; a read-only server offers
+the export only), and the user menu, named for the system user the server runs as. The user menu is personal: it opens with
 *Running as <user> on <host>*, then **Take the tour**, **About authama** and **Sign out**. Under the
 top bar, the main menu holds every page, one kind of thing to a menu:
 
 | Menu | Holds |
 |---|---|
 | Overview | What needs attention, counts, and Get started for a new home |
-| **SSH** | *Inventory:* Profiles, Hosts, Keys, VMs. *Configuration:* Naming, SSH config. *Tasks:* Add a host, Pin host keys, Mint missing keys, Rotate keys, Revoke keys, Delete keys |
+| **SSH** | *Inventory:* Profiles, Hosts, Keys, VMs. *Configuration:* Naming, SSH config, Termius import. *Tasks:* Add a host, Pin host keys, Mint missing keys, Rotate keys, Revoke keys, Delete keys |
 | **Tokens** | Tokens, Token checklists (the Checklists page filtered to tokens). *Tasks:* Add a token |
 | **Security** | Audit, Checklists, Owner & PIN |
 | **History** | *Record:* Changes (the history page), File events. *Backups:* Snapshots, Export |
-| **System** | *Health:* Doctor, Validate, Repair. *Configure:* Settings. Then Reset…, set apart in red |
+| **System** | *Health:* Doctor, Validate, Repair. *Configure:* Settings, API tokens, Webhooks. Then Reset…, set apart in red |
 | **New** | Add a host, Add a token, Mint missing keys |
 
 Each entry has its own icon and a line under its name saying what the page shows or does; no two
@@ -126,12 +196,12 @@ in the same colour (System's is Health's).
 
 | Kind | Colour (Tabler) | Entries |
 |---|---|---|
-| SSH pages | cyan | Profiles, Hosts, Keys, VMs, Naming, SSH config |
+| SSH pages | cyan | Profiles, Hosts, Keys, VMs, Naming, SSH config, Termius import |
 | Tokens pages | pink | Tokens, Token checklists |
 | Security | purple | Audit, Checklists, Owner & PIN |
 | History | yellow | Changes, File events, Snapshots, Export |
 | Health | teal | Doctor, Validate, Repair |
-| Settings | secondary (grey) | Settings |
+| Settings | secondary (grey) | Settings, API tokens, Webhooks |
 | Personal (user menu) | secondary (grey) | Running as, Take the tour, About, Sign out |
 | Create or add | green | Add a host, Add a token, Mint missing keys (in Tasks and New) |
 | Change | blue | Pin host keys, Rotate keys |
@@ -181,6 +251,9 @@ documentation, the source and the licences.
 - **Connection status is checked on request.** *Check connections* on the Overview and Hosts pages
   (and *Check connection* on a host's page) runs `ssh net` and shows the result in the side panel.
   No page probes the network as it loads. See [network](network.md#in-the-web-ui).
+- **Break-glass snippet.** A key with a public half has **Break-glass** on its page: the
+  `authama ssh recover <key>` snippet to paste into a locked-out server's console. It holds only the
+  public key.
 - **Copying** puts public values on the clipboard: a public key, a fingerprint, a path, a hostname,
   `ssh <alias>`. A toast says it worked. Nothing secret can be copied from a page: a private key
   is copied only from the terminal (`authama ssh termius keys`), and a token's secret only with
@@ -313,21 +386,28 @@ documentation, the source and the licences.
 | Page | Shows |
 |---|---|
 | Overview | the state rows (`overview.Rows`), each problem with the command that fixes it and a button that previews the fix or opens the page that makes it (`init` and `migrate` stay CLI-only); counts; key health, auth tokens and snapshots; quick actions; hosts by profile; the newest file events; keys due for rotation; recent changes |
-| Profiles | each profile's category, key scope, key store, and host and key counts |
-| Hosts | every host by profile. A host's page shows its manifest entry, its deployments, the block rendered into `~/.ssh/config`, and the host keys pinned for it |
+| Profiles | each profile's category, key scope, key store, and host and key counts. **Add** takes a code (`--code`); **Delete, revoking or purging…** runs `ssh profile delete --revoke/--purge` as a job |
+| Hosts | every host by profile. **Add a host** generates the alias from an environment and role when it is left empty (`--env`, `--role`); **Add a VM host** takes a key name (`--key-name`); **Add hosts in bulk** takes tags and can reconcile after (`--tag`, `--reconcile`, always `--no-pin`). A host's page shows its manifest entry, its deployments, the block rendered into `~/.ssh/config`, and the host keys pinned for it; its Delete links to `ssh host delete --revoke/--purge` as a job |
 | Keys | every key with its fingerprint and expiry, and the reserved keys (loose keys kept on purpose). A key's page shows its public key and fingerprint, each with a copy button, where the key is deployed and every operation that touched it. A `.pub` that is not a single public key line is not shown |
 | Snapshots | every snapshot. A snapshot's page diffs it against `~/.ssh` now or against another snapshot |
 | History | the [`history`](history.md), filtered the same way. An operation's page shows its events and the manifest before and after |
 | VMs | the VM hosts and their VMs' state, their Docker contexts (with an on-demand engine check), the pending `ssh vm sync` plan, the enabled hypervisors and their VMs, the declared devboxes (planned ones without a VM yet), the reserved keys, the loose keys that could be adopted, and whether the daily sync is scheduled |
-| Auth tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret), each tool's file with its mode and how many entries are installed, configured and resolvable, what `token apply` would skip, and the token audit, as `authama token list`, `token status` and `token audit` print. The audit card counts what to fix, what is owner-only and what is not set up; a file others can read has a *Make it owner-only* button (a preview of `doctor --fix`), a `.gitignore` that misses secret files offers the lines to add, and the tools with no file fold into a list, each opening *Add a token* for that tool |
+| Auth tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret), each tool's file with its mode and how many entries are installed, configured and resolvable, what `token apply` would skip, and the token audit, as `authama token list`, `token status` and `token audit` print. The audit card counts what to fix, what is owner-only and what is not set up; a file others can read has a *Make it owner-only* button (a preview of `doctor --fix`), a `.gitignore` that misses secret files offers the lines to add, and the tools with no file fold into a list, each opening *Add a token* for that tool. The scope bar reads a project (`--project`) or another token config (`--config`), and set, delete and apply then write the project's files; apply also takes `--source` and `--target` |
 | SSH config | every file the manifest renders into `~/.ssh` and whether the files on disk match it, as `authama ssh config show` and `ssh config check` print |
+| Termius import (`/termius`) | the Termius CSV of the hosts chosen, previewed as Termius reads it, with what was left out and the key to attach to each host: [below](#termius-import) |
+| Git identities (`/git-sign`) | each profile's git identity - email, name, signing key, directories - and whether it is applied; set, change or remove one, apply, and point other checkouts at a profile, each through the preview (the manifest diff and every line of the git files). **Check a checkout** reads how it commits and its commits' signatures; **Clone through a profile** gives the URL and the `ssh git clone` command. `allowed_signers` is shown (public keys only). See [git](git.md#in-the-web-ui). **Remote mode** shows checkouts' origin modes and switches them through the preview, as `ssh git status` and `ssh git use` do |
+| Structure (`/structure`) | the SSH folder as a tree - categories, profiles, their keys and hosts - and the keys found outside it, each with a move menu; drag a profile onto a category or a stray key onto a profile to choose the same move. **Preview the moves** shows each key file that moves and the manifest and config diffs; **Dismiss** hides a suggestion. See [ssh structure](structure.md#in-the-web-ui) |
+| Move setup (`/setup`) | what the setup document holds (profiles, providers, settings, token config, the token variables by name), **Download the setup document** (`/setup/export.json`; no key and no token value), and an import form that takes a pasted document through the preview with a keep / replace / stop choice for what differs: see [setup](setup.md#in-the-web-ui) |
+| Export / Import (`/transfer`, the header button) | **Export**: tick any of the exports (Termius CSV and its groups, flat ssh config, setup document, structure, git identities and `allowed_signers`, tokens and the lists), **Preview** each file's size and first lines, **Download zip** (`/transfer/pack.zip`; no key and no token value; `export pack` at a terminal). **Encrypted export**: the full export under a passphrase and the owner PIN, sent straight to the download. **Import**: upload a setup document, export zip or encrypted export; it is told apart, listed by name only, and imported through the preview. See [export](export.md#export-pack) and [setup](setup.md#in-the-web-ui) |
 | Doctor, Audit | the reports `authama doctor` and `authama ssh audit` print |
 | Validate | every validate check on one page, run when you open it: the manifest loads and passes its rules, `authama settings validate`, `authama ssh validate` (each keypair parses, matches and has safe permissions) and `authama ssh config check`. A manifest that does not load fails the two checks that need it rather than reporting them clean. Reads only |
 | Events | every change seen to a tracked file, with the authama operation that made it, as [`authama events`](events.md) lists them; filtered by area |
 | About | this build (version, commit, Go, platform), the user and machine it runs as, this computer (OS and version, build, kernel, architecture, model, processor, cores, memory, uptime, read from the OS without running a command), where it keeps things, links to the documentation and the source, and the third-party licences of the bundled front-end assets |
 | Owner & PIN | whether the home is [bound to its owner](owner.md), where the sealing key is kept, whether a PIN and fingerprint unlock are on, and whether the sealed files match, naming each one changed outside authama. Changing any of it is done at a terminal, which proves the OS account; the page shows the commands |
-| Repair | what is wrong with the home, `~/.ssh` and the token files, the fixes made as one previewed change, and a factory reset; see [repair](repair.md) |
+| Repair | what is wrong with the home, `~/.ssh` and the token files, the fixes made as one previewed change (tick areas for `--area`; none fixes every area), and a factory reset; see [repair](repair.md) |
 | Settings | the colour theme (light, dark, or following the system); where the config home, state home, `.env` and `authama.json` are, and what `authama settings validate` reports; every setting in a card for its section, with its description, value and where it came from. **Edit** opens a form whose input fits the setting and saves it into `authama.json`, previewed (the server uses it at once unless the environment or `.env` sets it); **Go back to the default** removes it; *Create a backup key* shows while no backup recipient is set. The same as `authama settings path`, `show --effective`, `validate`, `set`, `unset` and `backup-key` |
+| API tokens | the read API's tokens: name, scope, dates, last use. **Make token** (name, days until it expires) and **Revoke**, each behind the PIN; a new token is shown once, in the answer to its form, with a copy button, and never again. The same as `authama api token create`, `list` and `revoke` |
+| Webhooks | the endpoints, their events and how delivery stands, never a secret. **Add endpoint**, **Test**, **Turn off**/**Turn on**, **Remove** and **Deliver now**, each behind the PIN; a new endpoint's signing secret is shown once. The same as `authama webhook add`, `list`, `test`, `disable`, `enable`, `remove` and `deliver` |
 | Third-party licences | the licences of the web UI's bundled front-end assets (Tabler, Tabler Icons, Bootstrap, Popper), at `/about/licenses` |
 
 ## Changes
@@ -345,18 +425,19 @@ These changes can be made from the pages:
 | Change the naming rules, for every profile or one | Naming | `authama ssh naming set [--profile] …` (only the fields changed) |
 | Change how new keys are named | Naming | `authama ssh naming key-template <template> --yes` |
 | Set or clear a profile's code | Naming (a profile's menu) | `authama ssh profile edit <name> --code` |
-| Add a host, or a VM host | Hosts | `authama ssh host add`, `authama ssh vm add` |
+| Add a host, or a VM host; a host's key name, provider, token variable and proxy are under *More options* | Hosts | `authama ssh host add [--key-name] [--provider] [--token-env] [--proxy]`, `authama ssh vm add` |
 | Add or update hosts from specs | Hosts | `authama ssh host apply --host … --yes` |
 | Create a VM host's Docker context | the host's page | `authama ssh vm docker-context` |
 | Sync the VM hosts with their VMs (optionally replacing changed pins) | VMs | `authama ssh vm sync --yes` (`--repin`) |
 | Adopt a loose key as a VM host's key | VMs | `authama ssh vm adopt-key <key> <profile> <alias> --hypervisor … --vm … --user … --yes` |
 | Install or remove the daily VM sync | VMs | `authama ssh vm sync --install-schedule` / `--remove-schedule` |
-| Edit a host's hostname, user, port or tags | the host's page | `authama ssh host edit` |
+| Edit a host's hostname, user, port or tags, and under *More options* its key name, provider, token variable or proxy (*None* clears it) | the host's page | `authama ssh host edit [--key-name] [--provider] [--token-env] [--proxy]` |
 | Delete a host and its pins | the host's page | `authama ssh host delete --yes` |
 | Delete a declared key that no host uses | Keys | `authama ssh key delete --yes` |
 | Reserve a loose key (keep it on purpose) | Keys | `authama ssh key reserve <key> --for … --note … --yes` |
 | Drop a key's reservation | Keys | `authama ssh key unreserve <key> --yes` |
 | Re-render `~/.ssh/config` | Overview, SSH config | `authama ssh config render --yes` |
+| Take out hand-written `Host` blocks the managed block already reproduces (the config is copied first; a block that differs stays and is listed) | SSH config | `authama ssh config adopt --yes` |
 | Reconcile: mint missing keys, record keys on disk, render | Overview | `authama ssh reconcile --yes --no-pin` |
 | Mint a profile's or host's missing keys | Keys | `authama ssh keygen <target> --no-pin --yes` |
 | Rebuild one key's `.pub`, a profile's, or every key's | Keys (row menu, or *Rebuild public keys*), a key's page | `authama ssh key regen-pub <profile/key \| profile \| --all> --yes` |
@@ -368,6 +449,8 @@ These changes can be made from the pages:
 | Fix file modes | Doctor | `authama doctor --fix` |
 | Write an editable `providers.json` | Doctor | `authama ssh providers --export` |
 | Create a starter `authama.json` | Settings, when there is none | `authama settings init` |
+| Make or revoke an API token | API tokens | `authama api token create <name>`, `revoke <name>` |
+| Add, test, pause or remove a webhook; deliver now | Webhooks | `authama webhook add`, `test`, `disable`, `enable`, `remove`, `deliver` |
 | Remove stale pins and records, optionally adopting pins first | Doctor | `authama ssh clean --yes [--adopt]` |
 | Write an encrypted bundle | Snapshots | `authama ssh bundle [--keep]` |
 | Send the desktop alert, if one is due | Audit | `authama ssh audit --notify` |
@@ -435,8 +518,39 @@ file. Confirming snapshots `~/.ssh` first, then restores. A snapshot that still 
 is refused here, as its page refuses to open it.
 
 **Exports download.** The hosts page offers the flat `ssh_config` (`authama ssh config export --flat`)
-and the Termius CSV (`authama export hosts --format termius`, with or without git hosts) as downloads. Nothing is
-written to the home, so `--read-only` keeps them.
+and the Termius CSV grouped by profile (`authama export hosts --format termius`) as downloads, and leads to the
+[Termius import](#termius-import) for everything else. `/exports/termius-hosts.csv` also takes `?include_git=1` and
+`?termius_groups=` (any `--termius-groups` value). Nothing is written to the home, so `--read-only` keeps them.
+
+### <a name="termius-import"></a>Termius import
+
+**SSH → Termius import** (`/termius`, `g u`, or **Termius import** on the hosts page) does on one page what
+`authama export hosts --format termius` and `authama ssh termius keys` do at a terminal. It only reads, so
+`--read-only` keeps it.
+
+- **Choose** (left): the **Groups in Termius** scheme, one radio each for `profile`, `category/profile`,
+  `profile/env`, `category/profile/env` and `none`, each with the group one of your hosts would get, so the
+  choice shows what it does; **Include git hosts**; a tick box per profile, environment, role, tag and status,
+  with how many hosts each has; and **Only hosts containing** / **Leave out hosts containing** text. Ticking a box
+  or a scheme shows the new CSV at once; the text fields apply on Enter or **Show the CSV**. Every choice is in
+  the address, so a link keeps them.
+- **The CSV**: how many of the chosen hosts go into the file, the rows as Termius's template lays them out
+  (`Groups` first; `Password` is never written), the file as text, **Copy CSV**, and **Download**, which is the
+  same selection through `/exports/run`. Under it, what was left out and why (a ProxyCommand host, a git host),
+  and the same export as one command line with a copy button.
+- **Jump hosts**: a host behind a `ProxyJump` raw option is named with its jump host, to set as its **Host
+  Chain** in Termius.
+- **Import into Termius**: the steps, from **Hosts → New Host → Import → CSV**.
+- **Attach the keys**: each host in the file with the label to give its key in Termius's Keychain and the key
+  file's path, each with a copy button, and the command that copies the private key:
+  `authama ssh termius keys <host> --clear-after 60s`, then `authama ssh termius keys --clear`. A key kept in
+  1Password says to add it from 1Password.
+
+The page does not copy a private key itself. Nothing secret is copied from a page (see *Copying* above): a
+private key would have to reach the browser to land on its clipboard, where any page script, extension or
+clipboard history could read it, and with `--allow-remote` the browser is not even on the machine that holds
+the key. The terminal command reads the key on this machine, asks for the owner PIN when one is set, and
+empties the clipboard after 60 seconds.
 
 **A preview or a review answers its form, and has no address of its own.** Reloading one, going Back
 to it, or a server restart reloading open pages into a new build used to ask for its address and show
@@ -565,6 +679,9 @@ Some changes are terminal-only:
 - **Open a snapshot that holds private keys.** A snapshot written before private keys were left out
   is listed but never opened. `authama ssh snapshots prune --keep 0` removes it.
 - **Show private keys.** Pages read public keys, `known_hosts` and config only.
+- **Print a token or reveal a secret.** `token show`, `token list --reveal` and `token copy` stay in
+  the terminal. So do a key passphrase, `keygen --force` and the other commands
+  [CLI and web parity](../reference/cli-web-parity.md) lists as CLI-only by design.
 - **Create the history from a page view.** A page reads `log/history.db` if it exists. Only a change
   creates the database or imports into it, and only while it holds the lock.
 
@@ -584,6 +701,18 @@ Some changes are terminal-only:
   selection (`/checklist/*`, `/api/export/selections*`) change only authama's own notes and saved
   views, never a key, a host or a server, so they take no PIN step-up: the owner's decision on
   R-GAP-06 (2026-11-16). They still need the session and its CSRF token.
+- **Export / Import never shows a secret.** The export zip holds no private key and no token value.
+  The encrypted full export is a POST that needs the form token, the owner PIN (within the step-up
+  window) and a passphrase typed twice. It is written to a private temporary folder in the state home,
+  sent as the download and removed, and nothing of it is rendered. An uploaded encrypted export is
+  opened only to list its key files and token variables by name. The file and its passphrase then
+  wait in the session's secret stash (15 minutes, used once), and the page carries only random
+  references to them. A read-only server offers neither the encrypted export nor an import.
+- **Linking to a running server proves the control key without sending it.** `serve`, finding a
+  server already running, asks for a challenge and answers it with an HMAC proof. The server proves
+  itself back the same way, each proof is single-use and time-limited, and only a loopback request that
+  was not forwarded is answered (audit P-02). A server from an older build is replaced by the launch
+  (see [every launch checks the server](#every-launch-checks-the-server)).
 - **Bounded requests.** A request body over 1 MiB is refused with 413 before it is parsed; headers
   are held to 64 KiB, a body must arrive within 30 seconds, and `Permissions-Policy` turns off every
   device API (camera, microphone, location, USB and the rest).
@@ -610,6 +739,11 @@ Some changes are terminal-only:
   removes; the environment carries only its name.
 - **Session cookie.** `HttpOnly` and `SameSite=Strict`. Every change is also held to the page's own
   origin and a per-session form token.
+- **Remembered browsers.** See [remembered browsers](#remembered-browsers): a rotating, hashed,
+  `HttpOnly`, `SameSite=Strict` cookie that signs in on `GET` only, and is forgotten on sign-out, on
+  reuse, from Settings or with `serve browsers forget`. Nothing signs a browser in for being local.
+- **Logged.** Sign-ins (by link or remembered browser), refusals, reuse and sign-outs go to
+  [authama.log](logs.md), with the browser's id but never a cookie, token or link.
 - **Forms take names, never paths.** Profile, host and key names must be letters, digits, `.`, `_`
   and `-`. A hostname or user with a control character in it is refused, so a form cannot smuggle a
   line into `~/.ssh/config`.

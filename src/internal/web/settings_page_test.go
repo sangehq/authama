@@ -22,7 +22,7 @@ func TestSettingsCanBeEditedFromTheirPage(t *testing.T) {
 	for _, want := range []string{`id="settings-backup"`, `id="settings-web"`, `id="setting-git.mode"`,
 		`name="action" value="settings-set"`, `type="number" id="v-AUTHAMA_WEB_PORT"`,
 		`<select class="form-select setting-input" id="v-AUTHAMA_GIT_MODE"`, `<option value="true"`, "data-settings-filter",
-		`name="action" value="backup-key"`} {
+		`name="action" value="backup-key"`, `id="settings-display"`, `id="settings-log"`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the settings page lacks %q", want)
 		}
@@ -117,5 +117,19 @@ func TestARotationCanBeTestedOrRunWithoutABackup(t *testing.T) {
 	}
 	if strings.Contains(clean, "A backup recipient is set") {
 		t.Error("a rotation without a backup still checks for a recipient")
+	}
+}
+
+// Every section of authama.json has a card on the Settings page: a setting
+// in a section without a title would never be shown.
+func TestEverySettingsSectionHasACard(t *testing.T) {
+	titled := map[string]bool{}
+	for _, s := range sectionTitles {
+		titled[s.Key] = true
+	}
+	for _, spec := range settings.Specs {
+		if !titled[spec.Section] {
+			t.Errorf("%s is in section %q, which the Settings page has no card for", spec.Key(), spec.Section)
+		}
 	}
 }

@@ -1,7 +1,6 @@
 package perms
 
 import (
-	"os"
 	"os/user"
 )
 
@@ -50,17 +49,23 @@ func icaclsCommands(path, owner string) (required [][]string, optional [][]strin
 	return required, optional
 }
 
-// windowsPermsOK treats any existing file as correct. Windows permissions are
-// ACLs, not mode bits: a synthetic st_mode would flag every file as wrong, and
-// the actual enforcement happens through icacls on write. Mirrors
-// v1's windows layer (perms_ok).
+// windowsPermsOK is the Windows stand-in for a mode check (P-04): on Windows
+// it reads the file's owner and DACL and passes only when no one but you,
+// SYSTEM and Administrators can reach it (aclOwnerOnly). Off Windows there is
+// no ACL to read, so an existing file passes.
 func windowsPermsOK(path string) bool {
 	return WindowsPermsOK(path)
 }
 
-// WindowsPermsOK is windowsPermsOK, exported so callers can test their
-// Windows branch on any host.
+// WindowsPermsOK is windowsPermsOK, exported for the token checkup.
 func WindowsPermsOK(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
+	ok, _ := ownerOnlyACL(path)
+	return ok
+}
+
+// WindowsACLProblem says why path fails the Windows ACL check, or "" when it
+// passes, for a finding to show.
+func WindowsACLProblem(path string) string {
+	_, why := ownerOnlyACL(path)
+	return why
 }

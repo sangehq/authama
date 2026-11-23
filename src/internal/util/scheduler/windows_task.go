@@ -1,5 +1,7 @@
 package scheduler
 
+import "strconv"
+
 // The Windows task definition, kept out of the build-tagged file that runs it,
 // so the argv can be checked on any machine rather than only on Windows.
 
@@ -24,6 +26,20 @@ func timerUnit() string { return timerUnitFor(Label) }
 // timerUnitFor is the systemd timer for label's job.
 func timerUnitFor(label string) string {
 	j := jobFor(label)
+	if j.every > 0 {
+		every := strconv.Itoa(j.every)
+		return `[Unit]
+Description=` + j.description + ` (every ` + every + ` minutes)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=` + every + `min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+`
+	}
 	return `[Unit]
 Description=` + j.description + ` (daily)
 
@@ -43,6 +59,10 @@ WantedBy=timers.target
 // prompt nobody is there to answer. Re-registering is how the command upgrades
 // an existing task, so overwriting is the intended behaviour, not a shortcut.
 func schtasksArgs(command, label string) []string {
+	if j := jobFor(label); j.every > 0 {
+		return []string{"schtasks", "/Create", "/TN", label, "/TR", command,
+			"/SC", "MINUTE", "/MO", strconv.Itoa(j.every), "/F"}
+	}
 	return []string{"schtasks", "/Create", "/TN", label, "/TR", command,
 		"/SC", "DAILY", "/ST", jobFor(label).at, "/F"}
 }
@@ -51,4 +71,15 @@ func schtasksArgs(command, label string) []string {
 // the same reason as in schtasksArgs.
 func schtasksDeleteArgs(label string) []string {
 	return []string{"schtasks", "/Delete", "/TN", label, "/F"}
+}
+
+// cronLine is the crontab entry for label's job (cron is the Linux fallback
+// when there is no systemd): daily at its hour, or every n minutes.
+func cronLine(label, command, marker string) string {
+	j := jobFor(label)
+	if j.every > 0 {
+		return "*/" + strconv.Itoa(j.every) + " * * * * " + command + " " + marker
+	}
+	h, m := hourMinute(j.at)
+	return m + " " + h + " * * * " + command + " " + marker
 }

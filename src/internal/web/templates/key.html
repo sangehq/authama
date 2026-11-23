@@ -8,10 +8,12 @@
     {{if not $.ReadOnly}}<div class="col-auto ms-auto btn-list">
       {{template "change_open" $}}<input type="hidden" name="action" value="key-regen-pub"><input type="hidden" name="key" value="{{.Detail.Ref}}"><button type="submit" class="btn btn-outline-secondary"{{desc "key-regen-pub"}}>{{icon "refresh"}}<span class="ms-1">Rebuild the .pub</span></button></form>
       <a href="#lifetime" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" role="button" aria-controls="lifetime"{{desc "key-lifetime"}}>{{icon "hourglass"}}<span class="ms-1">Set lifetime</span></a>
+      {{if .Recover}}<a href="#recover" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" role="button" aria-controls="recover"{{desc "key-recover"}}>{{icon "key"}}<span class="ms-1">Break-glass</span></a>{{end}}
       {{if not $.DevRoot}}<a href="#revoke" class="btn btn-outline-danger" data-bs-toggle="offcanvas" role="button" aria-controls="revoke"{{desc "key-revoke"}}>{{icon "ban"}}<span class="ms-1">Revoke</span></a>{{end}}
     </div>{{end}}
   </div>
 </div>
+{{with .RecordsNotice}}<div class="alert alert-warning" role="status" id="records-notice">{{icon "alert-triangle"}}<span class="ms-1">Whether this key was revoked or retired cannot be read, so its recency shows as <strong>unknown</strong> rather than new or current: {{.}}. <code>authama doctor</code> names the file to repair.</span></div>{{end}}
 <div class="row row-cards">
   <div class="col-lg-6">
     <div class="card">
@@ -98,6 +100,12 @@
     {{template "panel_footer" (footer "authama ssh key lifetime" "Preview" "btn-primary" "")}}
   </form>
 {{template "panel_close"}}
+{{if .Recover}}
+{{template "panel_open" (header "recover" "Break-glass snippet" "Locked out of a server? Paste this into its console (a cloud provider's web shell or a KVM) to put this key back in authorized_keys. It holds only the public key.")}}
+  <div class="d-flex align-items-center mb-1"><span class="text-secondary small">The same as <code>authama ssh recover {{.Detail.Ref}}</code>.</span><span class="ms-auto">{{template "copy" (copy .Recover "the snippet")}}</span></div>
+  <pre class="code-block mb-0 small" tabindex="0">{{.Recover}}</pre>
+{{template "panel_close"}}
+{{end}}
 {{if not $.DevRoot}}
 {{template "panel_open" (header "revoke" "Revoke this key" "Removes it from every target it is deployed to, through each host's provider, and records it as revoked: deploy and rollback refuse it from then on.")}}
   <form method="post" action="{{basePath}}/jobs/review"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="revoke"><input type="hidden" name="key" value="{{.Detail.Ref}}">

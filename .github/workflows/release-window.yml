@@ -1,19 +1,38 @@
 # The release-train freeze (DEC-044): from Friday 18:00 to Tuesday 12:30 America/New_York only pull
-# requests labelled release-fix, or the train's own release/train-* pull request, may merge. This
-# repository is on the train (simtabi/.github release-train/train.json); see that repository's
-# release-train/README.md.
+# requests labelled release-fix, or the train's own release/train-* pull request, may merge. On
+# Tuesday at 12:47, after the freeze lifts, the reopen job re-runs the check on every open pull
+# request it failed. This repository is on the train (simtabi/.github release-train/train.json); see
+# that repository's release-train/README.md.
 name: Release window
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
+  schedule:
+    - cron: "47 12 * * 2"
+      timezone: America/New_York
 
 permissions: {}
 
 concurrency:
-  group: release-window-${{ github.event.pull_request.number }}
+  group: release-window-${{ github.event.pull_request.number || 'reopen' }}
   cancel-in-progress: true
 
 jobs:
   window:
-    uses: simtabi/.github/.github/workflows/release-window.yml@1f1f5d08895c9474ed266edf98f32204bb8b243d # v0.1.2
+    if: github.event_name == 'pull_request'
+    # The called workflow also holds the reopen job, and GitHub checks every nested job's permissions
+    # against this caller job before it starts, even a skipped one. The called window job narrows its
+    # own token back to permissions: {}, so this grant reaches only the reopen job's validation.
+    permissions:
+      actions: write
+      pull-requests: read
+    uses: simtabi/.github/.github/workflows/release-window.yml@f654932e261752737eb3d3eb941c97f59bcff1bd # v0.1.3
+  reopen:
+    if: github.event_name == 'schedule'
+    permissions:
+      actions: write
+      pull-requests: read
+    uses: simtabi/.github/.github/workflows/release-window.yml@f654932e261752737eb3d3eb941c97f59bcff1bd # v0.1.3
+    with:
+      mode: reopen

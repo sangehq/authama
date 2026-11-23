@@ -3,8 +3,6 @@ package web
 import (
 	"errors"
 	"fmt"
-	"github.com/sangehq/authama/src/internal/platform"
-	"github.com/sangehq/authama/src/internal/services/reconciler"
 	"io"
 	"net/http"
 	"net/url"
@@ -15,6 +13,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sangehq/authama/src/internal/platform"
+	"github.com/sangehq/authama/src/internal/services/bundlesig"
+	"github.com/sangehq/authama/src/internal/services/reconciler"
 
 	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/core/inventory"
@@ -46,26 +48,30 @@ import (
 
 // jobFields are the form fields each job reads.
 var jobFields = map[string][]string{
-	"deploy":   {"key", "target"},
-	"rotate":   {"key", "allow_unverified", "no_backup", "check", "force", "evict_old"},
-	"rollback": {"key"},
+	"deploy":   {"key", "target", "direct"},
+	"rotate":   {"key", "allow_unverified", "no_backup", "check", "force", "evict_old", "direct"},
+	"rollback": {"key", "direct"},
 	// revoke removes a key from every target and records it as revoked.
 	"revoke": {"key", "reason"},
 	// rotate-keys rotates the chosen keys (sel: keys, profiles, categories),
 	// a profile's keys, or every key, one after another.
-	"rotate-keys": {"sel", "profile", "all", "allow_unverified", "no_backup", "check", "force", "evict_old"},
+	"rotate-keys": {"sel", "profile", "all", "failed", "allow_unverified", "no_backup", "check", "force", "evict_old", "direct"},
 	// revoke-keys revokes each chosen key, as `authama ssh key revoke` does.
 	"revoke-keys": {"sel", "all", "reason"},
 	// delete-keys deletes each chosen key, as `authama ssh key delete` does.
 	"delete-keys": {"sel", "all", "revoke", "purge"},
 	// bundle-restore lays a bundle from the state home's dist/ back.
-	"bundle-restore": {"bundle"},
+	"bundle-restore": {"bundle", "require_signature"},
 	// knownhosts-init scans a profile's hosts, or every host, and pins what
 	// answers (trust on first use), as `ssh knownhosts init` does.
 	"knownhosts-init": {"profile", "all", "force"},
 	// knownhosts-pin scans one manifest host and pins its keys once the
 	// person has seen their fingerprints, as `ssh knownhosts pin` does.
 	"knownhosts-pin": {"host"},
+	// delete-host and delete-profile are `ssh host delete` and `ssh profile
+	// delete` with --revoke or --purge; the plain delete is a change.
+	"delete-host":    {"profile", "alias", "revoke", "purge"},
+	"delete-profile": {"name", "revoke", "purge"},
 }
 
 // readsOnlyHostKeys is the jobs that only ask a host for its public keys and
@@ -112,7 +118,7 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 	// Everything but a bundle restore reaches real servers, which a sandbox
 	// cannot contain: refused here, as the CLI refuses it.
 	// Deleting keys without revoking them reaches no server.
-	localOnly := action == "delete-keys" && !checked(f, "revoke")
+	localOnly := (action == "delete-keys" || action == "delete-host" || action == "delete-profile") && !checked(f, "revoke")
 	if action != "bundle-restore" && !readsOnlyHostKeys[action] && !localOnly {
 		verb := action
 		switch verb {
@@ -120,7 +126,7 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 			verb = "rotate"
 		case "revoke-keys":
 			verb = "revoke"
-		case "delete-keys":
+		case "delete-keys", "delete-host", "delete-profile":
 			verb = "delete"
 		}
 		if err := h.p.RefuseOutsideSandbox(verb); err != nil {
@@ -144,6 +150,8 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 		return knownhostsInitSpec(f, h, retain)
 	case "knownhosts-pin":
 		return knownhostsPinSpec(f, h, retain)
+	case "delete-host", "delete-profile":
+		return deleteWithOptionsSpec(f, h)
 	}
 	ref, err := keyRef(f)
 	if err != nil {
@@ -162,6 +170,10 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 		if target != "" {
 			args, where = append(args, target), target
 		}
+		direct := checked(f, "direct")
+		if direct {
+			args = append(args, "--direct")
+		}
 		return jobSpec{
 			scope: mutation.Scope{Command: "deploy", Args: append(args, "--yes"), Source: history.SourceWeb, Subjects: subjects},
 			what: []string{
@@ -169,7 +181,7 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 				"snapshots ~/.ssh first",
 				"cannot answer a password prompt: a target that needs a password fails, and is deployed from a terminal",
 			},
-			run: func(j *jobs.Job) error { return deployJob(j, h.p, retain, key, target) },
+			run: func(j *jobs.Job) error { return deployJob(j, h.p, retain, key, target, direct) },
 		}, nil
 	case "rotate":
 		o := rotateOptsOf(f)
@@ -207,14 +219,19 @@ func buildJob(f url.Values, h home) (jobSpec, error) {
 			run: func(j *jobs.Job) error { return revokeJob(j, h.p, ref, reason) },
 		}, nil
 	default: // rollback
+		direct := checked(f, "direct")
+		rbArgs := []string{key, "--yes"}
+		if direct {
+			rbArgs = append(rbArgs, "--direct")
+		}
 		return jobSpec{
-			scope: mutation.Scope{Command: "rollback", Args: []string{key, "--yes"}, Source: history.SourceWeb, Subjects: subjects},
+			scope: mutation.Scope{Command: "rollback", Args: rbArgs, Source: history.SourceWeb, Subjects: subjects},
 			what: []string{
 				"puts " + key + "'s old/ predecessor back, and keeps the rotated-in key in old/ so this can be undone",
 				"checks every target is reachable first, and changes nothing if one is not",
 				"deploys the restored key to each target, and snapshots ~/.ssh first",
 			},
-			run: func(j *jobs.Job) error { return rollbackJob(j, h.p, retain, key) },
+			run: func(j *jobs.Job) error { return rollbackJob(j, h.p, retain, key, direct) },
 		}, nil
 	}
 }
@@ -232,7 +249,7 @@ func loadState(p paths.Paths) (*manifest.Manifest, *inventory.Inventory, error) 
 }
 
 // deployJob is `authama ssh deploy` after its confirmation.
-func deployJob(j *jobs.Job, p paths.Paths, retain int, key, target string) error {
+func deployJob(j *jobs.Job, p paths.Paths, retain int, key, target string, direct bool) error {
 	m, inv, err := loadState(p)
 	if err != nil {
 		return err
@@ -245,7 +262,7 @@ func deployJob(j *jobs.Job, p paths.Paths, retain int, key, target string) error
 	sum := newSummaryOf(j, "deploy", "authama ssh deploy "+profile+"/"+keyName,
 		"Hosts marked not deployed do not have the key: it cannot log in there yet.")
 	sum.pending(profile+"/"+keyName, "deploying")
-	report, err := deployer.New(p, m, inv).Unattended(j).Deploy(key, target)
+	report, err := deployer.New(p, m, inv).Direct(direct).Unattended(j).Deploy(key, target)
 	if err != nil {
 		sum.show([]rotator.SummaryKey{{Ref: profile + "/" + keyName, Result: "not deployed", Severity: 2,
 			Kind: rotator.Classify(err.Error()), Note: err.Error()}})
@@ -281,6 +298,7 @@ func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, o rotateOpts)
 		return err
 	}
 	r := rotator.New(p, m, inv).Unattended(j)
+	r.Direct = o.direct
 	r.EvictOld = o.evict
 	if !force {
 		r = r.WithManualStep(manualPaste(j))
@@ -332,7 +350,7 @@ func rotateJob(j *jobs.Job, p paths.Paths, retain int, key string, o rotateOpts)
 }
 
 // rollbackJob is `authama ssh rollback` after its confirmation.
-func rollbackJob(j *jobs.Job, p paths.Paths, retain int, key string) error {
+func rollbackJob(j *jobs.Job, p paths.Paths, retain int, key string, direct bool) error {
 	m, inv, err := loadState(p)
 	if err != nil {
 		return err
@@ -345,7 +363,9 @@ func rollbackJob(j *jobs.Job, p paths.Paths, retain int, key string) error {
 	sum := newSummaryOf(j, "rollback", "authama ssh rollback "+profile+"/"+keyName,
 		"Hosts marked not rolled back still trust the newer key.")
 	sum.pending(profile+"/"+keyName, "rolling back")
-	report, err := rotator.New(p, m, inv).Unattended(j).Rollback(key)
+	rb := rotator.New(p, m, inv).Unattended(j)
+	rb.Direct = direct
+	report, err := rb.Rollback(key)
 	if err != nil {
 		sum.show([]rotator.SummaryKey{{Ref: profile + "/" + keyName, Result: "not rolled back", Severity: 2,
 			Kind: rotator.Classify(err.Error()), Note: err.Error()}})
@@ -399,12 +419,12 @@ func rotateKeysSpec(f url.Values, h home, retain int) (jobSpec, error) {
 // rotateOpts are a rotation's options as the review chose them: go on
 // unverified, skip the backup, force, and the previous-key policy (evict the
 // key in old/, or keep it).
-type rotateOpts struct{ allow, skip, force, evict bool }
+type rotateOpts struct{ allow, skip, force, evict, direct bool }
 
 // rotateOptsOf reads a rotation's options from its form.
 func rotateOptsOf(f url.Values) rotateOpts {
 	return rotateOpts{allow: checked(f, "allow_unverified"), skip: checked(f, "no_backup"),
-		force: checked(f, "force"), evict: evictOld(f)}
+		force: checked(f, "force"), evict: evictOld(f), direct: checked(f, "direct")}
 }
 
 // evictOld is the previous-key policy a form chose: evict_old=1 evicts,
@@ -443,6 +463,9 @@ func rotateFlags(args []string, o rotateOpts) []string {
 		out = append(out, "--evict-old")
 	case o.force:
 		out = append(out, "--keep-old")
+	}
+	if o.direct {
+		out = append(out, "--direct")
 	}
 	return out
 }
@@ -488,6 +511,7 @@ func rotateKeysJob(j *jobs.Job, p paths.Paths, retain int, sel keysvc.Selection,
 	mutation.SnapshotBeforeMutation(p, retain)
 	j.Plan(names)
 	r := rotator.New(p, m, inv).Unattended(j)
+	r.Direct = o.direct
 	r.EvictOld = o.evict
 	if !force {
 		// Forced, nothing stops to ask for a paste: a target that takes the
@@ -569,20 +593,31 @@ func bundleRestoreSpec(f url.Values, h home, retain int) (jobSpec, error) {
 	if _, err := os.Stat(path); err != nil {
 		return jobSpec{}, badForm("no bundle %s in %s", b, h.p.DistDir())
 	}
+	require := checked(f, "require_signature")
+	args := []string{b, "--yes"}
+	if require {
+		args = append(args, "--require-signature")
+	}
 	return jobSpec{
-		scope: mutation.Scope{Command: "restore", Args: []string{b, "--yes"}, Source: history.SourceWeb},
+		scope: mutation.Scope{Command: "restore", Args: args, Source: history.SourceWeb},
 		what: []string{
+			"checks the signature next to it (" + b + ".sig), if any, against bundle_signers: a bundle changed after it was signed is refused",
 			"decrypts " + b + " with the identity in AUTHAMA_AGE_IDENTITY_FILE, which cannot have a passphrase here",
 			"refuses it, writing nothing, if its manifest sets SSH options that could redirect or weaken connections; " +
 				"a bundle you made yourself is restored with `authama ssh restore " + b + " --allow-risky-options`",
 			"lays its keys and config-home files back over what is there, snapshotting ~/.ssh first",
 			"then sets every mode right and renders ~/.ssh/config",
 		},
-		run: func(j *jobs.Job) error { return bundleRestoreJob(j, h.p, retain, path) },
+		run: func(j *jobs.Job) error { return bundleRestoreJob(j, h.p, retain, path, require) },
 	}, nil
 }
 
-func bundleRestoreJob(j *jobs.Job, p paths.Paths, retain int, path string) error {
+func bundleRestoreJob(j *jobs.Job, p paths.Paths, retain int, path string, requireSig bool) error {
+	sig, err := bundlesig.Check(path, bundlesig.Options{Signers: bundlesig.SignersPath(p), Require: requireSig})
+	if err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintln(j, sig.String())
 	ident := envnames.Get(nil, envnames.AgeIdentityFile)
 	if ident == "" {
 		return errors.New("AUTHAMA_AGE_IDENTITY_FILE is not set where authama serve runs; restore from a terminal " +
@@ -673,11 +708,17 @@ func jobOptions(f url.Values, fields []formField) ([]jobOption, []formField) {
 			{Name: "force", Label: "Force: replace what cannot rotate in place", Danger: true,
 				Detail: "A factory reset of the keys chosen: a key never deployed, whose host cannot be reached, whose target takes the key by hand, or that no host uses, is replaced on this computer anyway and must be deployed next. Until then a host that trusted the old key cannot be logged in to with it; the old key stays under old/ for a rollback."},
 			evictOption(checked(f, "force")),
+			directOption,
 		}
+	case "deploy", "rollback":
+		opts = []jobOption{directOption}
 	case "revoke-keys":
 		opts = []jobOption{{Name: "reason", Label: "Reason (optional)", Text: true, Placeholder: "laptop lost, contractor left…",
 			Detail: "Kept with the revocation record and shown in the history."}}
-	case "delete-keys":
+	case "bundle-restore":
+		opts = []jobOption{{Name: "require_signature", Label: "Require a trusted signature",
+			Detail: "Refuse the bundle unless its .sig is a good signature by a key in bundle_signers, as restore --require-signature does."}}
+	case "delete-keys", "delete-host", "delete-profile":
 		opts = []jobOption{
 			{Name: "revoke", Label: "Revoke each from its targets first",
 				Detail: "Removes the key from every server it was deployed to before forgetting it."},
@@ -706,6 +747,12 @@ func jobOptions(f url.Values, fields []formField) ([]jobOption, []formField) {
 	return opts, kept
 }
 
+// directOption is deploy, rotate and rollback's --direct: connect to each
+// host's hostname, user and port instead of its alias through the managed
+// config (ssh.deploy_route direct for one job).
+var directOption = jobOption{Name: "direct", Label: "Connect directly, not through the host's ssh config",
+	Detail: "Off (the default), each host is reached as `ssh <alias>` reaches it, through its ProxyJump, ProxyCommand, Cloudflare Access or VM route. On, authama connects to the hostname, user and port the manifest names, as before; a host behind a jump or a tunnel is then out of reach."}
+
 // evictOption is the previous-key switch on a rotation's review: off, the key
 // in old/ is kept, and a key whose previous key still logs in somewhere does
 // not rotate; on, that previous key is taken off those servers first. Under
@@ -733,6 +780,10 @@ func jobBack(f url.Values) (href, label string) {
 		return "/snapshots", "Snapshots"
 	case "knownhosts-init", "knownhosts-pin":
 		return "/hosts", "Hosts"
+	case "delete-host":
+		return "/hosts/" + f.Get("profile") + "/" + f.Get("alias"), f.Get("alias")
+	case "delete-profile":
+		return "/profiles", "Profiles"
 	}
 	return "/keys", "Keys"
 }
@@ -828,6 +879,21 @@ func (h jobPages) handleJobReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	f := r.Form
+	// rotate --failed: the keys the last rotation or dry run left, from the
+	// command line or the page, chosen for this one.
+	if f.Get("action") == "rotate-keys" && checked(f, "failed") {
+		left, err := rotator.LoadFailed(h.s.opts.Engine.Home())
+		if err != nil {
+			h.fail(w, r, err)
+			return
+		}
+		if len(left) == 0 {
+			h.s.renderError(w, r, http.StatusBadRequest, "Nothing to run again", "No key was left by the last rotation or dry run.")
+			return
+		}
+		f["sel"] = left
+		f.Del("failed")
+	}
 	// Asked for by its address with no job named - a reload of an older
 	// review, Back - it says so, as any form's answer does.
 	if r.Method == http.MethodGet && f.Get("action") == "" {
@@ -1170,6 +1236,7 @@ func rotateCheckJob(j *jobs.Job, p paths.Paths, names []string, o rotateOpts) (e
 		return err
 	}
 	r := rotator.New(p, m, inv)
+	r.Direct = o.direct
 	r.EvictOld = o.evict
 	j.Plan(names)
 	var failed []string

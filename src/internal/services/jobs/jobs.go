@@ -16,6 +16,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/sangehq/authama/src/internal/util/applog"
 	"strings"
 	"sync"
 	"time"
@@ -363,9 +364,16 @@ func (r *Registry) StartFor(owner string, p paths.Paths, scope mutation.Scope, r
 		r.order = r.order[1:]
 	}
 	r.mu.Unlock()
+	applog.Info("job started", "area", "job", "job", j.id, "command", j.command, "op", j.opID)
 	go func() {
 		defer release()
 		err := mutation.Scoped(p, scope, func() error { return run(j) })
+		took := time.Since(j.started).Milliseconds()
+		if err != nil {
+			applog.Warn("job finished", "area", "job", "job", j.id, "command", j.command, "duration_ms", took, "error", err)
+		} else {
+			applog.Info("job finished", "area", "job", "job", j.id, "command", j.command, "duration_ms", took)
+		}
 		j.mu.Lock()
 		switch {
 		case errors.Is(err, ErrCancelled):

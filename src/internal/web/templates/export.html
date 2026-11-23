@@ -5,7 +5,7 @@
      through /exports/run?preview=1. Without it, the page lists each list's
      download. */}}
 {{define "content"}}{{with .Data}}
-{{template "page_header" (header "Export" "Export" "Any list as CSV, TSV, JSON, YAML, a PHP or JavaScript array, Markdown or HTML, and hosts as ssh_config or for an SSH client: filtered, with the columns you choose. Nothing here holds a secret.")}}
+{{template "page_header" (header "Export" "Export" "Any list as CSV, TSV, JSON, YAML, a PHP or JavaScript array, Markdown or HTML, and hosts as ssh_config or for an SSH client: filtered, with the columns you choose. Nothing here holds a secret." (action "Move setup" "/setup" "stack-2" | withTip "setup"))}}
 <div class="export-page" data-export-page data-run="{{u "/exports/run"}}" data-command="{{brandCommand}}" data-saved-url="{{u "/api/export/selections"}}" data-compare-url="{{u "/exports/compare"}}">
   <div class="card">
     <div class="card-header export-header">
@@ -135,6 +135,39 @@
           <div class="alert alert-warning mb-0 py-2" role="alert" data-export-blocked></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div class="card mt-3" id="export-schedules">
+    <div class="card-header"><h2 class="card-title">{{icon "clock"}}<span class="ms-1">Schedules</span></h2>
+      {{if and (not $.ReadOnly) .Schedules.Rows}}<div class="card-actions">
+        <form method="post" action="{{u "/export/schedules/run"}}" class="d-inline-flex gap-2 align-items-center"><input type="hidden" name="csrf" value="{{$.CSRF}}">{{template "pin_field" $}}<button type="submit" class="btn btn-sm btn-outline-primary"{{desc "schedule-run"}}>{{icon "player-play"}}<span class="ms-1">Run now</span></button></form>
+      </div>{{end}}
+    </div>
+    <div class="card-body">
+      {{with .Schedules}}
+      <p class="small text-secondary">A schedule writes a saved selection to a folder every day, as <code>&lt;name&gt;.&lt;extension&gt;</code>, replacing the file each time. The daily job runs once it is registered with this system's scheduler, at a terminal:</p>
+      {{template "command_line" .InstallCmd}}
+      {{if .Done}}<div class="alert alert-success" role="status">{{.Done}}{{if .Results}}<ul class="mb-0 mt-1">{{range .Results}}<li class="text-break">{{.}}</li>{{end}}</ul>{{end}}</div>{{end}}
+      {{if .Problem}}<div class="alert alert-danger" role="alert">{{.Problem}}</div>{{end}}
+      {{if .Rows}}
+      <div class="table-responsive"><table class="table table-vcenter card-table">
+        <thead><tr><th scope="col">Selection</th><th scope="col">Format</th><th scope="col">File</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+        <tbody>{{range .Rows}}<tr><td>{{.Selection}}</td><td>{{.Format}}</td><td class="text-break font-monospace small">{{.File}}</td>
+          <td class="text-end">{{if not $.ReadOnly}}<form method="post" action="{{u "/export/schedules/remove"}}" class="d-inline-flex gap-2 align-items-center"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="selection" value="{{.Selection}}"><input type="hidden" name="format" value="{{.Format}}">{{template "pin_field" $}}<button type="submit" class="btn btn-sm btn-outline-danger"{{desc "schedule-remove"}}>Remove</button></form>{{end}}</td></tr>{{end}}</tbody>
+      </table></div>
+      {{else}}<p class="text-secondary">No schedules yet.</p>{{end}}
+      {{if $.ReadOnly}}<p class="text-secondary mb-1">This server is read-only. Add one at a terminal:</p>{{template "command_line" "authama export schedule add <selection> --to <folder>"}}
+      {{else if .Selections}}
+      <form method="post" action="{{u "/export/schedules/add"}}" class="row g-2 align-items-end mt-2" autocomplete="off">
+        <input type="hidden" name="csrf" value="{{$.CSRF}}">
+        <div class="col-md-3"><label class="form-label" for="sched-sel">Saved selection</label><select class="form-select" id="sched-sel" name="selection" required>{{range .Selections}}<option value="{{.}}">{{.}}</option>{{end}}</select></div>
+        <div class="col-md-2"><label class="form-label" for="sched-format">Format</label><select class="form-select" id="sched-format" name="format">{{range .Formats}}<option value="{{.}}"{{if eq . "csv"}} selected{{end}}>{{.}}</option>{{end}}</select></div>
+        <div class="col-md-4"><label class="form-label" for="sched-folder">Folder</label><input class="form-control font-monospace" id="sched-folder" name="folder" required placeholder="~/Reports"></div>
+        <div class="col-md-3 d-flex flex-wrap gap-2 align-items-center">{{template "pin_field" $}}<button type="submit" class="btn btn-primary"{{desc "schedule-add"}}>{{icon "plus"}}<span class="ms-1">Schedule</span></button></div>
+      </form>
+      {{else}}<p class="text-secondary mb-0">Save a selection above first; a schedule writes a saved selection.</p>{{end}}
+      {{end}}
     </div>
   </div>
 

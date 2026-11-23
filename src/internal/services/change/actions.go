@@ -5,6 +5,7 @@ import (
 	"io"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/platform"
@@ -33,6 +34,12 @@ func ProfileAdd(name, keyScope, keyName, keyComment string) Change {
 // ProfileAddIn is ProfileAdd with --category: the profile is filed under
 // profiles/<category>/ from the start. An empty category is ProfileAdd.
 func ProfileAddIn(name, keyScope, keyName, keyComment, category string) Change {
+	return ProfileAddWith(name, keyScope, keyName, keyComment, category, "")
+}
+
+// ProfileAddWith is ProfileAddIn with --code: the organisation's code name
+// its servers' aliases start with. An empty code sets none.
+func ProfileAddWith(name, keyScope, keyName, keyComment, category, code string) Change {
 	if keyScope == "" {
 		keyScope = "per_service"
 	}
@@ -47,6 +54,9 @@ func ProfileAddIn(name, keyScope, keyName, keyComment, category string) Change {
 	}
 	if category != "" {
 		args = append(args, "--category="+category)
+	}
+	if code != "" {
+		args = append(args, "--code="+code)
 	}
 	return Change{
 		Command: "profile add", Args: args,
@@ -63,6 +73,11 @@ func ProfileAddIn(name, keyScope, keyName, keyComment, category string) Change {
 			}
 			if keyComment != "" {
 				if err := ed.SetKeyComment(name, keyComment); err != nil {
+					return err
+				}
+			}
+			if code != "" {
+				if _, err := editor.SetProfileCode(ed, name, code); err != nil {
 					return err
 				}
 			}
@@ -145,6 +160,9 @@ type HostInput struct {
 	Port           *int
 	Tags           *[]string
 	KeyName        *string
+	// Provider, TokenEnv and Proxy are --provider, --token-env and --proxy;
+	// nil leaves them as they are. Proxy "none" clears the proxy.
+	Provider, TokenEnv, Proxy *string
 }
 
 func (h HostInput) args() []string {
@@ -160,6 +178,15 @@ func (h HostInput) args() []string {
 	}
 	if h.KeyName != nil {
 		a = append(a, "--key-name="+*h.KeyName)
+	}
+	if h.Provider != nil {
+		a = append(a, "--provider="+*h.Provider)
+	}
+	if h.TokenEnv != nil {
+		a = append(a, "--token-env="+*h.TokenEnv)
+	}
+	if h.Proxy != nil {
+		a = append(a, "--proxy="+*h.Proxy)
 	}
 	if h.Tags != nil {
 		for _, t := range *h.Tags {
@@ -182,7 +209,8 @@ func HostAdd(profile, alias string, in HostInput) Change {
 			if in.Port != nil {
 				port = *in.Port
 			}
-			f := editor.HostFields{Hostname: in.Hostname, User: in.User, Port: &port, KeyName: in.KeyName}
+			f := editor.HostFields{Hostname: in.Hostname, User: in.User, Port: &port, KeyName: in.KeyName,
+				Provider: in.Provider, TokenEnv: in.TokenEnv, Proxy: in.Proxy}
 			if in.Tags != nil {
 				f.Tags = *in.Tags
 			}
@@ -202,7 +230,8 @@ func HostEdit(profile, alias string, in HostInput) Change {
 		Command: "host edit", Args: append([]string{profile, alias}, in.args()...),
 		Subjects: []history.Subject{{Kind: history.KindProfile, Name: profile}, {Kind: history.KindHost, Name: alias}},
 		Run: func(p paths.Paths, out io.Writer) error {
-			f := editor.HostFields{Hostname: in.Hostname, User: in.User, Port: in.Port, KeyName: in.KeyName, SetTags: in.Tags}
+			f := editor.HostFields{Hostname: in.Hostname, User: in.User, Port: in.Port, KeyName: in.KeyName, SetTags: in.Tags,
+				Provider: in.Provider, TokenEnv: in.TokenEnv, Proxy: in.Proxy}
 			if err := editor.New(p).EditHost(profile, alias, f); err != nil {
 				return err
 			}
@@ -258,16 +287,28 @@ func KeyDelete(ref manifest.KeyRef) Change {
 
 // VMAdd is `authama ssh vm add <profile> <alias> --hypervisor --vm -u <user> --yes`.
 func VMAdd(profile, alias, hypervisor, vmName, user string) Change {
+	return VMAddWith(profile, alias, hypervisor, vmName, user, "")
+}
+
+// VMAddWith is VMAdd with --key-name: the host uses that key instead of the
+// derived one. An empty keyName derives it.
+func VMAddWith(profile, alias, hypervisor, vmName, user, keyName string) Change {
+	args := []string{profile, alias, "--hypervisor=" + hypervisor, "--vm=" + vmName, "--user=" + user}
+	var kn *string
+	if keyName != "" {
+		kn = &keyName
+		args = append(args, "--key-name="+keyName)
+	}
 	return Change{
 		Command:  "vm add",
-		Args:     []string{profile, alias, "--hypervisor=" + hypervisor, "--vm=" + vmName, "--user=" + user, "--yes"},
+		Args:     append(args, "--yes"),
 		Subjects: []history.Subject{{Kind: history.KindProfile, Name: profile}, {Kind: history.KindHost, Name: alias}},
 		Run: func(p paths.Paths, out io.Writer) error {
 			if hypervisor == manifest.HypervisorOrbStack || hypervisor == manifest.HypervisorPodman {
 				return fmt.Errorf("%s", manifest.OwnSSHRefusal(hypervisor))
 			}
 			name := alias
-			f := editor.HostFields{Hostname: &name, User: &user,
+			f := editor.HostFields{Hostname: &name, User: &user, KeyName: kn,
 				VM: &manifest.VMSpec{Hypervisor: hypervisor, Name: vmName}}
 			if err := editor.New(p).AddHost(profile, alias, f); err != nil {
 				return err
@@ -312,6 +353,29 @@ func ConfigRender() Change {
 			if len(res.Written) == 0 && len(res.Pruned) == 0 {
 				_, _ = fmt.Fprintln(out, "config: already in sync")
 			}
+			return nil
+		},
+	}
+}
+
+// ConfigAdopt is `authama ssh config adopt --yes`: take out of ~/.ssh/config
+// the hand-written Host blocks the managed block already reproduces line for
+// line, after copying the config to the state home. A block that sets
+// anything the manifest does not is kept and listed.
+func ConfigAdopt() Change {
+	return Change{
+		Command: "ssh config adopt", Args: []string{"--yes"},
+		Run: func(p paths.Paths, out io.Writer) error {
+			m, err := manifest.Load(p.Manifest())
+			if err != nil {
+				return err
+			}
+			backup := filepath.Join(p.StateDir(), "config-adopt-"+time.Now().Format("20060102-150405"))
+			res, err := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).Adopt(false, backup)
+			if err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintln(out, res.Format())
 			return nil
 		},
 	}

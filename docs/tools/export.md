@@ -1,8 +1,9 @@
 # `export` — any list, and copies of the config for other tools
 
 `authama export` writes any list in any format (below), and hosts also as `ssh_config` or as an SSH client imports
-them, for Termius, Windows Terminal, iTerm2, PuTTY, Remmina, SecureCRT, MobaXterm and any client that imports a
-CSV. `config export --flat` writes the whole config as one `ssh_config`, for anything that reads that format. The
+them, for Termius, Windows Terminal, iTerm2, PuTTY, Remmina, SecureCRT, MobaXterm, Royal TS/TSX, Remote Desktop
+Manager, Tabby, mRemoteNG, Xshell, Blink Shell, Prompt 3, WinSCP, FileZilla, Cyberduck, Transmit, an Ansible inventory
+and any client that imports a CSV. `config export --flat` writes the whole config as one `ssh_config`, for anything that reads that format. The
 older `termius export` and `host export <client>` were removed on 2026-11-07; `export hosts --format <client>`
 writes the same files.
 
@@ -32,7 +33,7 @@ authama export hosts --env prd --format putty -o prd.reg
 | filters | `--profile`, `--key` (a key's name or `profile/name`), `--env`, `--role`, `--tag`, `--status`, `--tool`, `--kind`, `--area`, `--source`, `--command`, `--since`/`--until` (a prefix such as `2026-11`), `--include`/`--exclude` text |
 | columns | `--columns field,field=heading,…` by field, in order; related fields by path (`key.fingerprint`, `profile.code`) |
 | order | `--sort field,-field` (`-` descends), `--limit n` |
-| format | `--format csv` (default), `tsv`, `json`, `jsonl`, `yaml`, `php`, `js`, `markdown`, `html`; `--no-header`, `--compact`, `--shape table`. For hosts also `ssh_config`, `termius` and the clients below; `--include-git` |
+| format | `--format csv` (default), `tsv`, `json`, `jsonl`, `yaml`, `php`, `js`, `markdown`, `html`; `--no-header`, `--compact`, `--shape table`. For hosts also `ssh_config`, `termius` and the clients below; `--include-git`; for `termius`, `--termius-groups` |
 | output | stdout, or `--out <file>` (mode 0600) |
 
 `authama export hosts` and `authama export keys` with no options print exactly what `ssh list --csv` and
@@ -132,6 +133,11 @@ schedule and reports any that fails (a deleted selection, say) while the rest st
 folder inside `~/.ssh` is refused, and the SSH client formats are not scheduled. `remove` leaves the files
 already written.
 
+The Export page's **Schedules** card (`/export#export-schedules`) lists the schedules and adds, removes and
+runs them, each behind the owner PIN when one is set and the last was given more than five minutes ago. Give a
+folder's full path (or `~/…`): the server has no current directory of yours. `install` and `uninstall` stay at a
+terminal, since they change the system's scheduler rather than authama's home; the card shows the command.
+
 ### Hosts for ssh and SSH clients
 
 | `--format` | Writes |
@@ -139,8 +145,8 @@ already written.
 | `ssh_config` | the managed config of the hosts kept: each block as the flat export writes it, under its profile's banner, the git ssh-mode block when its `github.com` host is kept, `Host *` last; byte for byte `ssh config export --flat` when every host is kept |
 | `termius` | the Termius CSV import ([Termius](#termius)) |
 | `hosts-csv` | the generic client CSV (`alias, group, hostname, port, user, key_path, tags`) |
-| `windows-terminal`, `iterm2`, `putty`, `securecrt`, `mobaxterm` | the client's file, named as the client expects (`authama-putty.reg`, …) ([Other SSH clients](#other-ssh-clients)) |
-| `remmina` | a zip holding one `authama-<alias>.remmina` per host |
+| `windows-terminal`, `iterm2`, `putty`, `securecrt`, `mobaxterm`, `royalts`, `rdm`, `tabby`, `mremoteng`, `blink`, `prompt3`, `winscp`, `filezilla`, `transmit`, `ansible` | the client's file, named as the client expects (`authama-putty.reg`, …) ([Other SSH clients](#other-ssh-clients)) |
+| `remmina`, `xshell`, `cyberduck` | a zip holding one file per host (`authama-<alias>.remmina`, `<alias>.xsh`, `<alias>.duck`) |
 
 The filters choose the hosts; `--columns` does not apply, since each client reads its own fields. With no `--sort`,
 hosts come in manifest order; with one, in the sort's order. Git hosts are left out
@@ -152,6 +158,32 @@ holds and where it goes.
 The Export page offers the same formats on its Hosts tab, with an *Include git hosts* switch, and says how many hosts
 the chosen format leaves out. *Copy as command* copies the `authama export` command that writes the file the page
 previews, with its list, filters, columns, sort, format and options.
+
+## Export pack
+
+`authama export pack` zips any of the exports in one file: the same zip as the web UI's **Export / Import** page
+(the header button beside **New**, `/transfer`). No file in it holds a private key or a token value.
+
+| Part (`--include`) | File(s) | What |
+|---|---|---|
+| `termius` | `termius-hosts.csv` | the Termius CSV, grouped by `--termius-groups` (`--include-git` adds git hosts) |
+| `ssh-clients` | `clients/<format>/…`, `clients/NOTES.txt` | the hosts for every other client `export hosts --format` writes (hosts-csv, windows-terminal, iterm2, putty, remmina, securecrt, mobaxterm, royalts, rdm, tabby, mremoteng, xshell, blink, prompt3, winscp, filezilla, cyberduck, transmit, ansible), or only those `--clients` names (the web hub's client checkboxes), with what each needs to finish its import; no key |
+| `ssh-config` | `ssh_config` | every host inline, as `ssh config export --flat` writes it |
+| `setup` | `setup.json` | the [setup document](setup.md#the-setup-document) |
+| `structure` | `structure.json` | categories, profiles, each key's path and the hosts using it, and the suggested moves |
+| `git-signing` | `git-signing.json`, `allowed_signers` | each profile's git identity, signing key (public half) and directories |
+| `tokens` | `tokens.csv` | each token's name, tool and where its value is read from, never the value |
+| `hosts`, `keys`, `profiles`, `deployments`, `history`, `events`, `snapshots` | `<part>.csv` | the lists, as `export <list>` writes them |
+
+With no `--include` the pack holds `termius,ssh-config,setup,structure,git-signing,tokens`. `--include all` takes
+every part. A `README.txt` names what is inside. The zip goes to
+`<config home>/exports/authama-export-<time>.zip`, or `--out`, and never inside `~/.ssh`. `--dry-run` lists the files
+and their sizes and writes nothing, as the page's **Preview** does. `setup import` takes the zip for its `setup.json`.
+
+```sh
+authama export pack --include termius,ssh-config --termius-groups category/profile --out hosts.zip
+authama export pack --include all --dry-run
+```
 
 ## Why a flat copy
 
@@ -190,23 +222,49 @@ authama export hosts --format termius --out termius-hosts.csv  # the CSV, mode 0
 authama export hosts --format termius --include-git            # also git hosts, to stdout
 authama export hosts --format termius --exclude uni            # leave out hosts containing "uni"
 authama export hosts --format termius --profile clients        # any export filter applies
+authama export hosts --format termius --termius-groups profile/env   # nested groups: simtabi/prd, simtabi/stg
 ```
 
-The Export page in the web UI offers the same file. `ssh termius export`, which wrote it before, was removed on
+The web UI's **Termius import** page (`/termius`, [serve](serve.md#termius-import)) offers the same file with every
+option here, previews it, and lists the key to attach to each host; the Export page offers it too. `ssh termius export`, which wrote it before, was removed on
 2026-11-07; its `--open` (open Termius and show the file in Finder) has no replacement.
 
 | Column | Value |
 |---|---|
-| `Groups` | the profile |
+| `Groups` | the profile, or the path `--termius-groups` names (below) |
 | `Label` | the host alias |
 | `Tags` | the host's tags (a comma inside one tag becomes a space) |
-| `Hostname/IP` · `Port` · `Username` | from the host; `Protocol` is `ssh` |
+| `Hostname/IP` · `Port` · `Username` | from the host (port 22 when the host sets none); `Protocol` is `ssh` |
 | `Password` | always empty |
+
+### Nested groups
+
+Termius reads a `/` in `Groups` as nesting: its own template files a host under `Project/Dev`, the subgroup `Dev` of
+`Project`. `--termius-groups` chooses the path (the web UI's Termius import page offers each one, with an example from your
+hosts, and its downloads take the same value as `?termius_groups=`):
+
+| `--termius-groups` | `Groups` | Example |
+|---|---|---|
+| `profile` (default) | the profile | `simtabi` |
+| `category/profile` | the profile under its [category](../recipes/group-profiles-into-categories.md) | `orgs/simtabi` |
+| `profile/env` | the profile, then the environment | `simtabi/prd` |
+| `category/profile/env` | both | `orgs/simtabi/prd` |
+| `none` | empty: every host at the top level | |
+
+The environment is the `{env}` the profile's [naming rules](../configuration.md#naming-servers) read from the alias (`simbi-prd-web-00` gives
+`prd`), the same value `--env` filters on. A part a host does not have is left out rather than written as an empty
+level: an uncategorized profile's hosts file under `simtabi/prd`, and a host whose alias the naming rules do not parse
+files under its profile. A `/` inside one part becomes `-`, so a name can never add a level. The default output is
+unchanged. `--termius-groups` is refused with any other `--format`.
 
 Left out, and reported on stderr:
 
 - **VM hosts** — reached only through authama's ProxyCommand, which Termius ignores;
 - **git hosts** — user `git`, or a `github`/`gitlab` provider: not shells (`--include-git` adds them);
+
+A host that reaches its server through a `ProxyJump` raw option stays in the file, since Termius can reach it through
+a jump host, but the CSV has no column for one: the notes on stderr name the jump host to set as the host's **Host
+Chain** in Termius.
 
 A value starting with `=`, `+`, `-` or `@` is prefixed with `'`, so the file cannot run a formula if opened in a
 spreadsheet.
@@ -241,7 +299,9 @@ differs, `TermiusColumns` in `src/internal/util/encode/clients.go` is the one pl
 ## Other SSH clients
 
 `authama export hosts --format <client>` writes the hosts as another SSH client imports them. A client that takes one
-file gets that file; one that takes a file per host (`remmina`) gets a zip of them.
+file gets that file; one that takes a file per host (`remmina`, `xshell`, `cyberduck`) gets a zip of them. No file
+holds a password or a private key: keys go by path (or, where the client keeps its own key store, by the name to import
+them under).
 
 ```bash
 authama export hosts --format windows-terminal --out authama.json
@@ -251,6 +311,9 @@ authama export hosts --format remmina --include-git --out remmina.zip         # 
 authama export hosts --format securecrt --out authama-securecrt.xml           # SecureCRT, and Termius's SecureCRT import
 authama export hosts --format mobaxterm --out authama.mxtsessions             # MobaXterm, and Termius's MobaXterm import
 authama export hosts --format hosts-csv > hosts.csv                           # the generic CSV
+authama export hosts --format tabby --out ssh-profiles.yaml                    # Tabby
+authama export hosts --format ansible --env prd --out inventory.yml           # an Ansible inventory of the prd hosts
+authama export pack --include ssh-clients --clients royalts,winscp,filezilla  # several clients in one zip
 ```
 
 `ssh host export <client>`, which wrote these before, was removed on 2026-11-07. Its `csv` client is `hosts-csv` here.
@@ -263,6 +326,18 @@ authama export hosts --format hosts-csv > hosts.csv                           # 
 | `remmina` | one `authama-<alias>.remmina` per host | copy them to `~/.local/share/remmina/`, or import them from Remmina's menu | `ssh_privatekey`, with `ssh_auth=1`; Remmina also wants the `.pub` beside it |
 | `securecrt` | `authama-securecrt.xml`, SecureCRT's settings XML: a session folder per profile, an SSH2 session per host | SecureCRT: **File → Import Settings**; Termius: **Import → SecureCRT** | each session's own `Identity Filename V2` (SecureCRT 8 and later read OpenSSH keys) |
 | `mobaxterm` | `authama.mxtsessions`: a bookmark folder per profile, an SSH session per host | MobaXterm: **Sessions → Import sessions from file**; Termius: **Import → MobaXterm** | the session's private key field (MobaXterm reads OpenSSH keys) |
+| `royalts` | `authama-royalts.json`, Royal JSON: a folder per group, an SSH terminal connection per host | Royal TS / TSX: add a **Dynamic Folder**, script type **JSON**, paste the file, **Reload** | `KeyFilePath` on each connection |
+| `rdm` | `authama-rdm.csv`: `Name, Group, ConnectionType, Host, Port, Username, PrivateKeyPath, Description` | Remote Desktop Manager: **File → Import → Import from CSV**, mapping each column to the field of its name | `PrivateKeyPath`; set the entry's key source to a file |
+| `tabby` | `ssh-profiles.yaml`, Tabby's static SSH profiles | copy it beside Tabby's `config.yaml` and restart Tabby | `privateKeys`; a ProxyJump to an exported host becomes `jumpHost` |
+| `mremoteng` | `confCons.xml`: a container per group, an SSH2 connection per host | mRemoteNG: **File → Import → Import from File** | through the PuTTY session named after the alias: import the `putty` `.reg` too |
+| `xshell` | one `<alias>.xsh` per host | copy them under Xshell's **Sessions** folder | Xshell keeps its own key store: import each key in **Tools → User Key Manager** under the name the report lists |
+| `blink` | `authama-blink.ssh_config`, an ssh config snippet | Blink: import each key in **Settings → Keys** under the name listed, then paste the snippet in **Settings → Hosts → SSH Config** | `IdentityFile` names the imported key; ProxyJump is kept |
+| `prompt3` | `authama-prompt3.ssh_config`, the same snippet | Prompt 3 has no host file import: add each server by hand from it (the jump host in **Jump Server**) and import the keys in **Settings → Keys** | by imported key name |
+| `winscp` | `authama-winscp.ini`, `[Sessions\group/alias]` sections | with WinSCP closed, append it to its `WinSCP.ini` (or **Import Sites** from the `filezilla` file) | `PublicKeyFile` names `<key>.ppk`; the report prints the `puttygen` command for each |
+| `filezilla` | `authama-filezilla.xml`, Site Manager XML: a folder per group, an SFTP site per host | FileZilla: **File → Import** | `Keyfile` (FileZilla reads OpenSSH keys) |
+| `cyberduck` | one `<alias>.duck` bookmark per host (Mountain Duck reads them too) | drag them onto Cyberduck's **Bookmarks** | `Private Key File` |
+| `transmit` | `authama-transmit.xml`, the FileZilla XML, which is the import Transmit 5 reads best | Transmit 5: **File → Import…**, as a FileZilla file | not carried: add each key under **Settings → Keys** (or use the agent) and pick it per server; the report lists them |
+| `ansible` | `inventory.yml`: groups by category, then profile (`ungrouped_profiles` for a profile with no category), and `env_<env>` | `ansible all -i inventory.yml -m ping` | `ansible_ssh_private_key_file`; ProxyJump goes in `ansible_ssh_common_args` |
 | `hosts-csv` | `hosts.csv`: `alias, group, hostname, port, user, key_path, tags` (tags `;`-separated) | import it, mapping the columns | `key_path` |
 
 `windows-terminal` and `iterm2` launch `ssh`, which reads your `~/.ssh/config`, so a host reached through a
@@ -271,10 +346,10 @@ Windows Terminal derives each profile's id from its name, and iTerm2's `Guid` is
 are handed a host, port, user and key path and do not run a ProxyCommand, so such hosts are left out and listed under
 `skipped:`. Git hosts are left out of every export unless `--include-git`.
 
-Royal TS reads the CSV with its column-mapping dialog; map `hostname` to its `URI` column. Royal TS's and Xshell's CSV
-imports have no key column, so attach each key in the client. Tabby, WinSCP and Termius import an OpenSSH config, so
-give them the file `config export --flat` writes. Xshell's own session files are not written: its format keeps keys
-in a store of its own.
+A host whose key is in 1Password has no key file; every format leaves its key out and the report says to use the
+1Password SSH agent in that client. A ProxyJump is written where the client takes one (Tabby, when the jump host is
+exported too; Blink's and Prompt's snippet; Ansible); for the rest the report names each host and its jump host, to set
+in the client. Termius can also import an OpenSSH config: give it the file `config export --flat` writes.
 
 **Termius imports all five ways it offers**: `~/.ssh` (the config authama renders, or `config export --flat`), CSV
 (`export hosts --format termius`), SecureCRT (`--format securecrt`), PuTTY (`--format putty`, the `.reg`) and

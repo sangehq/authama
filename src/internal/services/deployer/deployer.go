@@ -16,6 +16,8 @@ import (
 	"github.com/sangehq/authama/src/internal/core/inventory"
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/core/providers"
+	"github.com/sangehq/authama/src/internal/core/renderer"
+	"github.com/sangehq/authama/src/internal/platform"
 	"github.com/sangehq/authama/src/internal/services/keystore"
 	"github.com/sangehq/authama/src/internal/util/netcheck"
 	"github.com/sangehq/authama/src/internal/util/paths"
@@ -73,6 +75,8 @@ type Deployer struct {
 	// unattended, when set, is where the deploy's ssh output goes, and means
 	// no prompt can be answered (see providers.Target.Unattended).
 	unattended io.Writer
+	// direct is Direct: the manifest's hostname instead of the alias's route.
+	direct bool
 }
 
 // New builds a Deployer.
@@ -82,6 +86,13 @@ func New(p paths.Paths, m *manifest.Manifest, inv *inventory.Inventory) *Deploye
 
 // Unattended makes the deploy run with nobody to answer a prompt, writing the
 // output of ssh and ssh-copy-id to w. The web UI deploys this way.
+// Direct connects to each host's hostname, user and port instead of its
+// alias through the managed config, for this deployer (deploy --direct).
+func (d *Deployer) Direct(on bool) *Deployer {
+	d.direct = on
+	return d
+}
+
 func (d *Deployer) Unattended(w io.Writer) *Deployer {
 	d.unattended = w
 	return d
@@ -124,9 +135,12 @@ func (d *Deployer) Deploy(selector, targetAlias string) (DeployReport, error) {
 
 	report := DeployReport{KeyName: keyName, Fingerprint: fp}
 	knownHosts := filepath.Join(d.p.SSHDir, "known_hosts")
+	route := renderer.RouteConfig(d.m, d.p.SSHDir, d.p.StateDir(), platform.EmitUseKeychain(), d.direct)
 	for _, host := range hosts {
 		provider := providers.Resolve(deref(host.Provider), d.p.Providers())
-		if provider.Category() == "server" {
+		// A host ssh reaches through its config's route has no direct port
+		// to probe; ssh itself says whether it can get there.
+		if provider.Category() == "server" && (route == "" || !renderer.HasRoute(host)) {
 			st := netcheck.Check(host.Hostname, host.Port, host.RequiresVPN, deref(host.VPNName), deref(host.VPNURL), 4*time.Second, true)
 			if !st.Reachable {
 				recordDeployment(&rec, host.Alias, "unreachable", false)
@@ -140,7 +154,7 @@ func (d *Deployer) Deploy(selector, targetAlias string) (DeployReport, error) {
 		tgt := providers.Target{
 			Alias: host.Alias, Hostname: host.Hostname, User: host.User, Port: host.Port,
 			PubkeyPath: pub, PubkeyText: pubText, TokenEnv: deref(host.TokenEnv),
-			KnownHosts: knownHosts, Unattended: d.unattended,
+			KnownHosts: knownHosts, ConfigFile: route, Unattended: d.unattended,
 		}
 		outcome := provider.Deploy(tgt)
 		recordDeployment(&rec, host.Alias, outcome.Method, outcome.Verified)

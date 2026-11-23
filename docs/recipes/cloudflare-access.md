@@ -20,6 +20,9 @@ move an existing host behind Access, change its hostname to the Access hostname 
 authama ssh host edit acme app-web -H ssh.example.com --proxy cloudflared
 ```
 
+In the web UI, the same choice is **Proxy** under *More options* in the Add a host panel and on the host's
+Edit panel, where *None* takes the proxy off again.
+
 `authama ssh host edit ... --proxy none` takes it off again. `authama doctor` reports a proxied host when `cloudflared`
 is missing.
 

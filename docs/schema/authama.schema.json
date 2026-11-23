@@ -108,6 +108,17 @@
       },
       "type": "object"
     },
+    "display": {
+      "additionalProperties": false,
+      "properties": {
+        "timezone": {
+          "description": "The IANA time zone times are shown in, by the CLI and the web UI (America/New_York, Europe/Berlin, UTC). Empty: this system's own zone. Times are stored in UTC either way. `authama settings timezone list` names every zone; --tz overrides it for one command. Sets $AUTHAMA_TIMEZONE.",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "events": {
       "additionalProperties": false,
       "properties": {
@@ -261,6 +272,34 @@
       },
       "type": "object"
     },
+    "log": {
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "description": "The least level authama.log records: debug adds every web request and more detail; info records commands, changes, jobs, watcher events and sign-ins; warn and error record only what went wrong. Secrets are never logged at any level. Sets $AUTHAMA_LOG_LEVEL. Default: info.",
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ],
+          "type": "string"
+        },
+        "max_size_mb": {
+          "default": 5,
+          "description": "The size in MB at which authama.log is rotated: it is renamed with the time and a new one begun. Sets $AUTHAMA_LOG_MAX_SIZE_MB. Default: 5.",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "retention_days": {
+          "default": 14,
+          "description": "How many days rotated logs are kept before they are removed. `authama logs` and the Logs page read them. Sets $AUTHAMA_LOG_RETENTION_DAYS. Default: 14.",
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
     "mcp": {
       "additionalProperties": false,
       "properties": {
@@ -316,6 +355,14 @@
           "default": true,
           "description": "Pin a new host's key on first use (trust on first use) when a profile is minted. Sets $AUTHAMA_AUTO_PIN. Default: true.",
           "type": "boolean"
+        },
+        "deploy_route": {
+          "description": "How deploy, verify, rotate and remove reach a server: alias runs ssh with the host's alias against a flat copy of the managed config (-F), so its ProxyJump, ProxyCommand, cloudflared or VM route applies; direct connects to the manifest's hostname, user and port, as before. `--direct` on deploy and rotate picks direct for one run. Sets $AUTHAMA_DEPLOY_ROUTE. Default: alias.",
+          "enum": [
+            "alias",
+            "direct"
+          ],
+          "type": "string"
         }
       },
       "type": "object"
@@ -391,6 +438,12 @@
           "default": 7822,
           "description": "The port `serve` listens on first. When it is taken the next free one is used, as with the default; only --port makes a taken port an error. Sets $AUTHAMA_WEB_PORT. Default: 7822.",
           "minimum": 1,
+          "type": "integer"
+        },
+        "remember_days": {
+          "default": 30,
+          "description": "How many days a browser that signed in with a link from `authama` is remembered after it was last used, so opening the web UI's address signs it in again with no new link. 0 remembers none. Remembered browsers are listed, and forgotten, on the Settings page and by `authama serve browsers`; changes still ask for the owner PIN. Sets $AUTHAMA_WEB_REMEMBER_DAYS. Default: 30.",
+          "minimum": 0,
           "type": "integer"
         }
       },

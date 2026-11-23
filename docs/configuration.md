@@ -119,6 +119,13 @@ guarantees each alias offers only its own key and trusts only its own host keys.
       "key_scope": "per_service",         // or "shared"
       "key_name": null,                    // set only when key_scope == "shared"
       "key_comment": "alice-{device}-{date}", // optional: overrides defaults.key_comment
+      "git": {                             // optional: written by `ssh git sign set`
+        "email": "alice@work.example",     // user.email, and the allowed_signers principal
+        "name": "Alice",                   // user.name (optional)
+        "signing_key": "work_gh-ed25519",  // optional: default is the profile's github.com key
+        "sign": true,                      // sign commits and tags with that key
+        "dirs": ["~/code/work/"]           // checkouts under these commit as this profile
+      },
       "hosts": [
         {
           "alias": "hpc",                  // the ssh Host alias you type
@@ -578,7 +585,8 @@ or `shared`.
 The config home holds what you write or back up: `.env`, `authama.json`, the
 manifest, inventory, providers, token config and the age identity. The state
 home holds what authama writes for itself: `log/audit.log`, `log/history.db`,
-`snapshots/` and `dist/`. `authama settings path` prints all four locations and
+`snapshots/` and `dist/`, and under `.state/` the `ssh structure` suggestions
+(`structure.json`) and the owner-only backups of every key it moved (`moved/<time>/`). `authama settings path` prints all four locations and
 whether each file loaded.
 
 ### Precedence
@@ -665,6 +673,7 @@ every setting stays at its default until you add it.
 | `backup.snapshot_retain` | `AUTHAMA_SNAPSHOT_RETAIN` | `10` (at least 1); a command that fails or is declined having changed nothing keeps no snapshot, and the oldest snapshots are pruned only once a command's own is kept, so refusals never push a restore point out (while a command runs there can be one more than the limit) |
 | `backup.old_key_max_age_days` | `AUTHAMA_OLD_KEY_MAX_AGE_DAYS` | `90` (`0` turns the check off) |
 | `ssh.auto_pin` | `AUTHAMA_AUTO_PIN` | `true` |
+| `ssh.deploy_route` | `AUTHAMA_DEPLOY_ROUTE` | `alias` (deploy, verify, rotate and remove reach a host through its alias and the managed config, so its ProxyJump, ProxyCommand, cloudflared or VM route applies; `direct` connects to the manifest's hostname, user and port; see [deploy](tools/deploy.md#how-deploy-reaches-a-server)) |
 | `history.enabled` | `AUTHAMA_HISTORY` | `true` |
 | `history.permanent` | `AUTHAMA_HISTORY_PERMANENT` | `false` (`true` makes `history reset` and the web UI's *Start the history again* refuse) |
 | `git.mode` | `AUTHAMA_GIT_MODE` | the manifest's `defaults.git.mode`, else `profile` |
@@ -690,6 +699,11 @@ every setting stays at its default until you add it.
 | `mcp.enabled` | `AUTHAMA_MCP` | `false` (let `authama mcp` serve MCP over stdio; see [MCP server](tools/mcp.md)) |
 | `web.base_path` | `AUTHAMA_WEB_BASE_PATH` | `/` (serve the UI under a path such as `/authama`; see [tools/serve.md](tools/serve.md#address)) |
 | `web.auto_restart` | `AUTHAMA_WEB_AUTO_RESTART` | `true` (restart `serve` by itself when its binary is rebuilt, and reload open pages into the new build; see [installation.md](installation.md#updating)) |
+| `web.remember_days` | `AUTHAMA_WEB_REMEMBER_DAYS` | `30` (how long a browser stays signed in after a sign-in link; `0` turns remembering off. See [serve.md](tools/serve.md#remembered-browsers)) |
+| `display.timezone` | `AUTHAMA_TIMEZONE` | unset: this system's zone (the IANA zone every time is shown in, CLI and web; stored times stay UTC. `--tz` overrides it for one command) |
+| `log.level` | `AUTHAMA_LOG_LEVEL` | `info` (`debug`, `info`, `warn` or `error`: the least severe entry written to `authama.log`) |
+| `log.retention_days` | `AUTHAMA_LOG_RETENTION_DAYS` | `14` (days a rotated log file is kept) |
+| `log.max_size_mb` | `AUTHAMA_LOG_MAX_SIZE_MB` | `5` (`authama.log` rotates when it reaches this size) |
 
 Two sections are not settings but declarations: `hypervisors` adds a command driver for a VM tool
 authama has no driver for, and `devboxes` names the VM hosts `ssh vm sync` keeps (a devbox without `vm` only keeps its key reserved). Both are described,

@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"time"
 
@@ -87,17 +86,17 @@ func autoPinOff() bool {
 }
 
 func (g GenericSSH) sshBase(t Target) []string {
-	base := append([]string{"ssh"}, hostKeyOpts()...)
+	base := append([]string{"ssh"}, t.routeOpts()...)
+	base = append(base, hostKeyOpts()...)
 	base = append(base, "-o", "ConnectTimeout=10")
 	base = append(base, g.knownHostsOpts(t)...)
-	if t.Port != 22 {
-		base = append(base, "-p", strconv.Itoa(t.Port))
-	}
-	return base
+	return append(base, t.portOpts()...)
 }
 
 func (g GenericSSH) Deploy(t Target) DeployOutcome {
-	if _, err := exec.LookPath("ssh-copy-id"); err != nil {
+	// A routed target goes through plain ssh -F: ssh-copy-id before OpenSSH
+	// 9.x has no -F, and the ssh path does what it does.
+	if _, err := exec.LookPath("ssh-copy-id"); err != nil || t.routed() {
 		return g.deployOverSSH(t)
 	}
 	args := append([]string{"-o", "ConnectTimeout=10"}, g.knownHostsOpts(t)...)
@@ -105,10 +104,12 @@ func (g GenericSSH) Deploy(t Target) DeployOutcome {
 		args = append(args, "-o", "BatchMode=yes")
 	}
 	args = append(args, "-i", t.PubkeyPath)
-	if t.Port != 22 {
-		args = append(args, "-p", strconv.Itoa(t.Port))
+	args = append(args, t.portOpts()...)
+	dest, err := destArgs(t.SSHDest())
+	if err != nil {
+		return DeployOutcome{Method: "ssh-copy-id", Detail: err.Error(), Error: true}
 	}
-	args = append(args, t.SSHDest())
+	args = append(args, dest...)
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "ssh-copy-id", args...)
@@ -147,10 +148,18 @@ func (g GenericSSH) deployOverSSH(t Target) DeployOutcome {
 	if t.Unattended != nil {
 		args = append(args, "-o", "BatchMode=yes")
 	}
-	args = append(args, t.SSHDest(), appendKeyScript)
+	dest, err := destArgs(t.dest())
+	if err != nil {
+		return DeployOutcome{Method: "ssh", Detail: err.Error(), Error: true}
+	}
+	args = append(append(args, dest...), appendKeyScript)
+	prog, err := program(args[0])
+	if err != nil {
+		return DeployOutcome{Method: "ssh", Detail: err.Error(), Error: true}
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+	cmd := exec.CommandContext(ctx, prog, args[1:]...)
 	cmd.Stdin = strings.NewReader(strings.TrimSpace(t.PubkeyText) + "\n")
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	if t.Unattended != nil {
@@ -177,14 +186,17 @@ func (g GenericSSH) Verify(t Target) bool {
 	if t.IdentityPath == "" {
 		return false
 	}
-	args := append([]string{"ssh"}, t.identityOpts()...)
+	args := append([]string{"ssh"}, t.routeOpts()...)
+	args = append(args, t.identityOpts()...)
 	args = append(args, "-o", "BatchMode=yes")
 	args = append(args, hostKeyOpts()...)
 	args = append(args, g.knownHostsOpts(t)...)
-	if t.Port != 22 {
-		args = append(args, "-p", strconv.Itoa(t.Port))
+	args = append(args, t.portOpts()...)
+	dest, err := destArgs(t.dest())
+	if err != nil {
+		return false
 	}
-	args = append(args, t.SSHDest(), "true")
+	args = append(append(args, dest...), "true")
 	return runOK(20*time.Second, args...)
 }
 
@@ -199,12 +211,20 @@ func (g GenericSSH) Remove(t Target) bool {
 		return false
 	}
 	script := strings.ReplaceAll(removeScript, "{body}", strings.ReplaceAll(body, "'", "'\\''"))
-	args := append(g.sshBase(t), t.SSHDest(), script)
+	dest, err := destArgs(t.dest())
+	if err != nil {
+		return false
+	}
+	args := append(append(g.sshBase(t), dest...), script)
 	return runOK(30*time.Second, args...)
 }
 
 func (g GenericSSH) readAuthorizedKeys(t Target) string {
-	args := append(g.sshBase(t), t.SSHDest(), "cat ~/.ssh/authorized_keys 2>/dev/null || true")
+	dest, err := destArgs(t.dest())
+	if err != nil {
+		return ""
+	}
+	args := append(append(g.sshBase(t), dest...), "cat ~/.ssh/authorized_keys 2>/dev/null || true")
 	out, err := runOutput(20*time.Second, args...)
 	if err != nil {
 		return ""
@@ -213,14 +233,22 @@ func (g GenericSSH) readAuthorizedKeys(t Target) string {
 }
 
 func runOK(timeout time.Duration, argv ...string) bool {
+	prog, err := program(argv[0])
+	if err != nil {
+		return false
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	return exec.CommandContext(ctx, argv[0], argv[1:]...).Run() == nil
+	return exec.CommandContext(ctx, prog, argv[1:]...).Run() == nil
 }
 
 func runOutput(timeout time.Duration, argv ...string) (string, error) {
+	prog, err := program(argv[0])
+	if err != nil {
+		return "", err
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, argv[0], argv[1:]...).Output()
+	out, err := exec.CommandContext(ctx, prog, argv[1:]...).Output()
 	return string(out), err
 }

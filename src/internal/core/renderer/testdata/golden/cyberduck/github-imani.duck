@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Protocol</key>
+	<string>sftp</string>
+	<key>Nickname</key>
+	<string>github-imani</string>
+	<key>UUID</key>
+	<string>authama-github-imani</string>
+	<key>Hostname</key>
+	<string>github.com</string>
+	<key>Port</key>
+	<string>22</string>
+	<key>Username</key>
+	<string>git</string>
+	<key>Private Key File</key>
+	<string>/home/u/.ssh/profiles/internal/personal/imani_github-ed25519</string>
+	<key>Notes</key>
+	<string>personal</string>
+</dict>
+</plist>

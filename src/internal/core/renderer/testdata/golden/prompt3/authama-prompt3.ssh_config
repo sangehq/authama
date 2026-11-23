@@ -1,0 +1,22 @@
+# Hosts for Prompt 3, written by authama. Each IdentityFile is the name to import that key under.
+
+# personal
+Host github-imani
+  HostName github.com
+  Port 22
+  User git
+  IdentityFile imani_github-ed25519
+
+# legacy
+Host box
+  HostName box.example
+  Port 2222
+  User me
+  IdentityFile legacy-ed25519
+
+# simtabi
+Host oribi-web
+  HostName 203.0.113.23
+  Port 22
+  User ploi
+  IdentityFile simtabi_oribi-web-ed25519

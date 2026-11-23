@@ -52,7 +52,14 @@ func fakeServe(t *testing.T, taken ...int) (*[]string, context.CancelFunc) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	prevListen, prevBrowser, prevCtx, prevNotify := serveListen, serveBrowser, serveContext, serveNotifications
+	prevHung, prevReap, prevStop, prevInteractive, prevExe := serveHung, serveReap, serveStop, serveInteractive, serveProcessExe
 	serveNotifications = func(context.Context, io.Writer) {}
+	// Nothing here reaches a real process or port: a recorded pid is made up.
+	serveHung = func(*serveRecord) bool { return false }
+	serveReap = func(*serveRecord) error { return errors.New("no processes in tests") }
+	serveStop = func(*serveRecord) error { return errors.New("no processes in tests") }
+	serveInteractive = func() bool { return false }
+	serveProcessExe = func(int) string { return "" }
 	serveListen = func(_, address string) (net.Listener, error) {
 		tried = append(tried, address)
 		host, port, _ := net.SplitHostPort(address)
@@ -67,6 +74,7 @@ func fakeServe(t *testing.T, taken ...int) (*[]string, context.CancelFunc) {
 	serveContext = func(context.Context) (context.Context, context.CancelFunc) { return ctx, cancel }
 	t.Cleanup(func() {
 		serveListen, serveBrowser, serveContext, serveNotifications = prevListen, prevBrowser, prevCtx, prevNotify
+		serveHung, serveReap, serveStop, serveInteractive, serveProcessExe = prevHung, prevReap, prevStop, prevInteractive, prevExe
 		cancel()
 	})
 	return &tried, cancel

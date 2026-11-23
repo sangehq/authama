@@ -20,6 +20,7 @@ import (
 	"github.com/sangehq/authama/src/internal/core/tokens"
 	"github.com/sangehq/authama/src/internal/services/change"
 	"github.com/sangehq/authama/src/internal/services/editor"
+	"github.com/sangehq/authama/src/internal/services/gitsign"
 	"github.com/sangehq/authama/src/internal/services/history"
 	"github.com/sangehq/authama/src/internal/services/mutation"
 	"github.com/sangehq/authama/src/internal/services/snapshots"
@@ -176,7 +177,7 @@ func TestReadOnlyServesNoChangeAndShowsNoForm(t *testing.T) {
 			t.Errorf("read-only %s: %d, want 405", path, rec.Code)
 		}
 	}
-	for _, page := range []string{"/", "/profiles", "/naming", "/import", "/hosts", "/hosts/gh", "/keys", "/snapshots", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export"} {
+	for _, page := range []string{"/", "/profiles", "/naming", "/import", "/hosts", "/hosts/gh", "/keys", "/snapshots", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export", "/setup", "/structure", "/git-sign"} {
 		if strings.Contains(c.get(page).Body.String(), "/changes/preview") {
 			t.Errorf("read-only %s shows a change form", page)
 		}
@@ -257,7 +258,8 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := signIn(t, s)
-	action := regexp.MustCompile(`name="action" value="([a-z-]+)"`)
+	// A job is offered by a form, or by a link to its review.
+	action := regexp.MustCompile(`(?:name="action" value="|/jobs/review\?action=)([a-z-]+)`)
 	seen := map[string]bool{}
 	// A bundle, for the snapshots page to offer a restore of.
 	if err := os.MkdirAll(p.DistDir(), 0o700); err != nil {
@@ -289,8 +291,22 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 	if openable == "" {
 		t.Fatal("the changes above took no snapshot to offer a restore of")
 	}
+	// A loose key gives the structure page a suggestion to move and dismiss.
+	looseKey(t, p.SSHDir, "id_stray")
+	// A git identity whose fragment is out of date gives the git page its
+	// use and apply forms.
+	sandboxGitConfig(t)
+	if err := editor.New(p).SetProfileGit("work", &manifest.ProfileGit{Email: "me@work.example", Sign: true}); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(gitsign.Dir(p), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(gitsign.FragmentPath(p, "work"), []byte("# old\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	for _, page := range []string{"/", "/profiles", "/naming", "/import", "/hosts", "/hosts/gh", "/hosts/devbox", "/keys", "/snapshots",
-		"/snapshots/" + openable, "/keys/" + fixtureKey(t, c), "/keys/work/spare", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export"} {
+		"/snapshots/" + openable, "/keys/" + fixtureKey(t, c), "/keys/work/spare", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export", "/setup", "/structure", "/git-sign"} {
 		for _, m := range action.FindAllStringSubmatch(c.get(page).Body.String(), -1) {
 			seen[m[1]] = true
 			_, change := actionFields[m[1]]
@@ -324,6 +340,8 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 	}
 	collect("/repair")
 	collect("/reset")
+	// Switching remotes is offered once checkouts are read.
+	collect("/git-sign?remotes=" + url.QueryEscape(t.TempDir()))
 	// The bulk key jobs are offered on their own review page, where their
 	// keys are chosen.
 	for _, a := range []string{"rotate-keys", "revoke-keys", "delete-keys"} {
@@ -363,6 +381,9 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 	if len(actionFields) < 22 {
 		t.Fatalf("%d actions; the list is not being read", len(actionFields))
 	}
+	// Offered only once an encrypted export is uploaded:
+	// TestTheTransferPageImportsAnEncryptedExport follows it there.
+	seen["transfer-import-full"] = true
 	for want := range actionFields {
 		if !seen[want] {
 			t.Errorf("no page offers %s", want)

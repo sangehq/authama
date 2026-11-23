@@ -13,12 +13,14 @@ import (
 // events recorded for it, how long ago each was, whether it is new under p,
 // and its pill. inventoryPath locates revoked.json and retired.json, whose
 // days stand in for a revocation or retirement key-events.json has no time
-// for. A file that cannot be read is treated as empty: this is a display. A
-// key never minted has no events and no pill.
+// for. When either cannot be read, a minted key's pill is "unknown" rather
+// than a confident new or current: it may have been revoked (audit
+// A-BUG-06). A key never minted has no events and no pill.
 func Recency(m *manifest.Manifest, inv *inventory.Inventory, inventoryPath string, rows []Row,
 	p recency.Policy, now time.Time) map[string]recency.Status {
-	revs, _ := inventory.LoadRevocations(inventory.RevokedPath(inventoryPath))
-	rets, _ := inventory.LoadRetirements(inventory.RetiredPath(inventoryPath))
+	revs, revErr := inventory.LoadRevocations(inventory.RevokedPath(inventoryPath))
+	rets, retErr := inventory.LoadRetirements(inventory.RetiredPath(inventoryPath))
+	unreadable := revErr != nil || retErr != nil
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	states := map[string]string{}
 	for _, st := range expiry.ComputeStatesIn(inv, m.Defaults.WarnBeforeDays, today, manifest.KeyRoot(m)) {
@@ -36,7 +38,25 @@ func Recency(m *manifest.Manifest, inv *inventory.Inventory, inventoryPath strin
 		if state == "" {
 			state = expiry.Unknown
 		}
-		out[r.Ref.String()] = recency.Evaluate(events, r.RotateAfterDays, state, p, now)
+		st := recency.Evaluate(events, r.RotateAfterDays, state, p, now)
+		if unreadable {
+			st.Pill = recency.Pill{Label: "unknown", Tone: recency.ToneMuted}
+		}
+		out[r.Ref.String()] = st
 	}
 	return out
+}
+
+// RecordsUnreadable says why revoked.json or retired.json beside the
+// inventory at inventoryPath cannot be read, "" when both can. A page that
+// shows recency pills shows it as a notice, so an "unknown" pill comes with
+// its reason (audit A-BUG-06).
+func RecordsUnreadable(inventoryPath string) string {
+	if _, err := inventory.LoadRevocations(inventory.RevokedPath(inventoryPath)); err != nil {
+		return err.Error()
+	}
+	if _, err := inventory.LoadRetirements(inventory.RetiredPath(inventoryPath)); err != nil {
+		return err.Error()
+	}
+	return ""
 }

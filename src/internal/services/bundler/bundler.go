@@ -155,6 +155,7 @@ type Bundler struct {
 	keyRoot           string
 	replacedDir       string
 	allowRisky        bool
+	extra             map[string][]byte // setup members (WithSetupMembers)
 }
 
 // New builds a Bundler over the default key root, ~/.ssh/profiles.
@@ -176,7 +177,7 @@ func (b *Bundler) WithKeyRoot(root string) *Bundler {
 // and writes the .sha256 + .contents sidecars. The tar is piped directly into the
 // cipher, so the plaintext archive exists only in memory.
 func (b *Bundler) Bundle(recipient, destDir, stamp string) (BundleResult, error) {
-	if recipient == "" {
+	if _, passphrase := b.cipher.(PassphraseCipher); recipient == "" && !passphrase {
 		return BundleResult{}, fmt.Errorf("no age recipient - set AUTHAMA_AGE_RECIPIENT or pass --recipient")
 	}
 	if err := os.MkdirAll(destDir, 0o700); err != nil {
@@ -302,6 +303,12 @@ func (b *Bundler) writeTarGz(w io.Writer) ([]string, error) {
 			members = append(members, arc)
 		}
 	}
+	extra, err := b.writeExtra(tw)
+	if err != nil {
+		closeAll(tw, gz)
+		return nil, err
+	}
+	members = append(members, extra...)
 	if err := tw.Close(); err != nil {
 		_ = gz.Close()
 		return nil, err

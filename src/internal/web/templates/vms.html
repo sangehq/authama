@@ -60,12 +60,14 @@
     {{if not $.ReadOnly}}
     {{template "change_open" $}}<input type="hidden" name="action" value="vm-sync">
       <label class="form-check"><input class="form-check-input" type="checkbox" name="repin" value="1"><span class="form-check-label">replace the pin of a guest whose host key changed (<code>--repin</code>)</span></label>
+      <label class="form-check"><input class="form-check-input" type="checkbox" name="no_probe" value="1"{{desc "vm-no-probe"}}><span class="form-check-label">do not connect to the guests: only hypervisor state (<code>--no-probe</code>)</span></label>
       <button type="submit" class="btn btn-primary"{{desc "vm-sync"}}>Preview sync</button>
     </form>
     {{end}}
     <p class="text-secondary small mt-2 mb-0">A sync backs the manifest up first and takes a snapshot of <code>~/.ssh</code>; a Docker context it removes is exported first.</p>
   </div>
 </div>
+{{if .TimedOut}}<div class="alert alert-warning" role="status" id="vms-timed-out">{{icon "clock"}} <strong>Timed out:</strong> {{join .TimedOut ", "}} did not answer within {{.ListTimeout}}, so {{if eq (len .TimedOut) 1}}its{{else}}their{{end}} VMs are not listed. The hypervisor may be starting, hung or waiting for a sign-in; reload once it answers, or turn it off with <code>vm.hypervisors</code>.</div>{{end}}
 <div class="row row-cards">
   <div class="col-lg-6">
     <div class="card">
@@ -80,7 +82,7 @@
               <th scope="row"><code>{{.Name}}</code></th>
               <td class="text-secondary">{{.Kind}}</td>
               <td>{{if not .Enabled}}<span class="badge badge-muted">disabled</span>{{else if not .CLI}}<span class="badge badge-muted">not installed</span>{{else}}<span class="badge badge-ok">enabled</span>{{end}}</td>
-              <td>{{if .Err}}<span class="text-danger">{{.Err}}</span>{{else}}{{range .VMs}}<div>{{.Name}} <span class="text-secondary">({{.State}})</span></div>{{else}}<span class="text-secondary">–</span>{{end}}{{end}}</td>
+              <td>{{if .TimedOut}}<span class="badge badge-warn">timed out</span> <span class="text-secondary small">{{.Err}}</span>{{else if .Err}}<span class="text-danger">{{.Err}}</span>{{else}}{{range .VMs}}<div>{{.Name}} <span class="text-secondary">({{.State}})</span></div>{{else}}<span class="text-secondary">–</span>{{end}}{{end}}</td>
             </tr>
             {{end}}
           </tbody>
@@ -128,6 +130,8 @@
           <div class="mb-3"><label class="form-label" for="ak-hv">Hypervisor</label><select class="form-select" id="ak-hv" name="hypervisor">{{range hypervisors}}{{if and (ne . "orbstack") (ne . "podman")}}<option value="{{.}}">{{.}}</option>{{end}}{{end}}</select></div>
           <div class="mb-3"><label class="form-label required" for="ak-vm">VM name</label><input class="form-control" id="ak-vm" name="vm" required autocomplete="off" spellcheck="false" list="ak-vms"><datalist id="ak-vms">{{range .Drivers}}{{range .VMs}}<option value="{{.Name}}">{{end}}{{end}}</datalist></div>
           <div class="mb-3"><label class="form-label required" for="ak-user">Guest user</label><input class="form-control" id="ak-user" name="user" required autocomplete="off" spellcheck="false"></div>
+          <div class="mb-2"><label class="form-check"><input class="form-check-input" type="checkbox" name="move" value="1"{{desc "vm-adopt-move"}}><span class="form-check-label">Move the keypair instead of copying it (<code>--move</code>)</span></label></div>
+          <div class="mb-3"><label class="form-check"><input class="form-check-input" type="checkbox" name="docker_context" value="1"{{desc "vm-adopt-docker"}}><span class="form-check-label">Also create a Docker context for the host (<code>--docker-context</code>)</span></label></div>
           {{template "panel_actions" ""}}
         </form>
 {{template "panel_close"}}

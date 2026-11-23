@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -203,6 +204,23 @@ func TestBundleRestoreTakesABundleFromDistAndTheIdentityFromTheEnvironment(t *te
 	v := waitJob(t, s, strings.TrimPrefix(start.Header().Get("Location"), "/jobs/"))
 	if v.State != jobs.Failed || !strings.Contains(v.Err, "AUTHAMA_AGE_IDENTITY_FILE") {
 		t.Errorf("job = %s %q", v.State, v.Err)
+	}
+	// Require a trusted signature: an unsigned bundle is refused before
+	// anything is decrypted; a .sig that does not match is refused always.
+	start = c.change("/jobs", url.Values{"action": {"bundle-restore"}, "bundle": {name}, "require_signature": {"1"}})
+	v = waitJob(t, s, strings.TrimPrefix(start.Header().Get("Location"), "/jobs/"))
+	if v.State != jobs.Failed || !strings.Contains(v.Err, "not signed") {
+		t.Errorf("unsigned, required: %s %q", v.State, v.Err)
+	}
+	if _, err := exec.LookPath("ssh-keygen"); err == nil {
+		if err := os.WriteFile(filepath.Join(p.DistDir(), name+".sig"), []byte("-----BEGIN SSH SIGNATURE-----\nbad\n-----END SSH SIGNATURE-----\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		start = c.change("/jobs", url.Values{"action": {"bundle-restore"}, "bundle": {name}})
+		v = waitJob(t, s, strings.TrimPrefix(start.Header().Get("Location"), "/jobs/"))
+		if v.State != jobs.Failed || !strings.Contains(v.Err, "does not match") {
+			t.Errorf("a bad signature: %s %q", v.State, v.Err)
+		}
 	}
 }
 

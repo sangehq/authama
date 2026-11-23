@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -55,9 +54,7 @@ func systemClipboardWrite(text string) error {
 // termiusKeyLabel is the label to give the key in Termius: the key file's
 // basename (clientco_db-01-ed25519), so the keychain entry says which
 // file it came from.
-func termiusKeyLabel(k renderer.TermiusKey) string {
-	return strings.TrimSuffix(filepath.Base(k.KeyFile), ".pub")
-}
+func termiusKeyLabel(k renderer.TermiusKey) string { return renderer.TermiusKeyLabel(k.KeyFile) }
 
 func privateKeyPath(k renderer.TermiusKey) string { return strings.TrimSuffix(k.KeyFile, ".pub") }
 

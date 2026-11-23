@@ -241,3 +241,53 @@ func TestProxyBinaryReadsBothRenderedProxies(t *testing.T) {
 		}
 	}
 }
+
+// The nested groups read the profile's category and the environment its naming
+// rules parse from the alias; a host whose alias they do not parse files under
+// its profile. A raw ProxyJump is kept for the export's note, and a scheme
+// that is not one is refused.
+func TestTermiusCSVNestedGroups(t *testing.T) {
+	m := mustManifest(t, `{"version":1,"profiles":{
+		"simtabi":{"code":"simbi","category":"orgs","hosts":[
+			{"alias":"simbi-prd-web-00","hostname":"203.0.113.10","user":"deploy"},
+			{"alias":"simbi-stg-db-01","hostname":"203.0.113.11","user":"deploy","raw_options":{"ProxyJump":"simbi-prd-web-00"}},
+			{"alias":"oddname","hostname":"203.0.113.12","user":"deploy"}]},
+		"legacy":{"hosts":[{"alias":"box","hostname":"box.example","user":"me"}]}}}`)
+	groups := func(scheme string) map[string]string {
+		t.Helper()
+		exp, err := RenderTermiusCSV(m, testExportPaths, TermiusOptions{Groups: scheme})
+		if err != nil {
+			t.Fatal(err)
+		}
+		out := map[string]string{}
+		for _, r := range parseCSV(t, exp.CSV)[1:] {
+			out[r[1]] = r[0]
+		}
+		return out
+	}
+	for scheme, want := range map[string]map[string]string{
+		"":                 {"simbi-prd-web-00": "simtabi", "simbi-stg-db-01": "simtabi", "oddname": "simtabi", "box": "legacy"},
+		"profile/env":      {"simbi-prd-web-00": "simtabi/prd", "simbi-stg-db-01": "simtabi/stg", "oddname": "simtabi", "box": "legacy"},
+		"category/profile": {"simbi-prd-web-00": "orgs/simtabi", "simbi-stg-db-01": "orgs/simtabi", "oddname": "orgs/simtabi", "box": "legacy"},
+		"category/profile/env": {"simbi-prd-web-00": "orgs/simtabi/prd", "simbi-stg-db-01": "orgs/simtabi/stg",
+			"oddname": "orgs/simtabi", "box": "legacy"},
+		"none": {"simbi-prd-web-00": "", "simbi-stg-db-01": "", "oddname": "", "box": ""},
+	} {
+		got := groups(scheme)
+		for alias, g := range want {
+			if got[alias] != g {
+				t.Errorf("%q: %s in %q, want %q", scheme, alias, got[alias], g)
+			}
+		}
+	}
+	if _, err := RenderTermiusCSV(m, testExportPaths, TermiusOptions{Groups: "env"}); err == nil {
+		t.Error("an unknown scheme was accepted")
+	}
+	hosts, _, err := Source{M: m, P: testExportPaths}.ClientHosts([]string{"simbi-stg-db-01", "box"}, "Termius", false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hosts[0].ProxyJump != "simbi-prd-web-00" || hosts[0].Env != "stg" || hosts[0].Category != "orgs" || hosts[1].ProxyJump != "" {
+		t.Errorf("placement: %+v", hosts)
+	}
+}

@@ -1,0 +1,5 @@
+devbox: reached through a ProxyCommand, which Xshell (one .xsh session file per host) does not run; use windows-terminal or iterm2, which go through ssh
+Copy the .xsh files into a folder under Xshell's Sessions (Documents\NetSarang Computer\<version>\Xshell\Sessions) or open the zip's folder from Xshell's Sessions dialog. Each session names its key by file name; import each into Tools > User Key Manager under that name:
+  /home/u/.ssh/profiles/internal/personal/imani_github-ed25519  as imani_github-ed25519
+  /home/u/.ssh/profiles/legacy/legacy-ed25519  as legacy-ed25519
+  /home/u/.ssh/profiles/orgs/simtabi/simtabi_oribi-web-ed25519  as simtabi_oribi-web-ed25519

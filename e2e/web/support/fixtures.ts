@@ -7,24 +7,38 @@ import { test as base, expect, type Page } from '@playwright/test';
 export const bundle = (): string => process.env.AUTHAMA_E2E_BUNDLE ?? '';
 
 // The pages the specs walk, in nav order, with the heading each one carries.
+// /net is left out: opening it probes every host's SSH port, and the shipped
+// example manifest names real ones (github.com). Its Go tests cover it.
 export const pages: { path: string; heading: string }[] = [
   { path: '/', heading: 'Overview' },
   { path: '/profiles', heading: 'Profiles' },
   { path: '/naming', heading: 'Naming' },
   { path: '/hosts', heading: 'Hosts' },
   { path: '/hosts/hpc', heading: 'hpc' },
+  { path: '/import', heading: 'Import an ssh config' },
+  { path: '/vms', heading: 'VMs' },
   { path: '/ssh-config', heading: 'SSH config' },
+  { path: '/termius', heading: 'Termius import' },
+  { path: '/structure', heading: 'Structure' },
+  { path: '/git-sign', heading: 'Git identities' },
   { path: '/keys', heading: 'Keys' },
   { path: '/keys/work/work_hpc-ed25519', heading: 'work_hpc-ed25519' },
   { path: '/snapshots', heading: 'Snapshots' },
   { path: '/history', heading: 'History' },
   { path: '/events', heading: 'Events' },
+  { path: '/export', heading: 'Export' },
+  { path: '/checklists', heading: 'Checklists' },
+  { path: '/setup', heading: 'Move setup' },
+  { path: '/transfer', heading: 'Export / Import' },
   { path: '/doctor', heading: 'Doctor' },
   { path: '/validate', heading: 'Validate' },
   { path: '/audit', heading: 'Audit' },
   { path: '/tokens', heading: 'Auth tokens' },
   { path: '/security', heading: 'Owner & PIN' },
+  { path: '/api-tokens', heading: 'API tokens' },
+  { path: '/webhooks', heading: 'Webhooks' },
   { path: '/repair', heading: 'Repair' },
+  { path: '/logs', heading: 'Logs' },
   { path: '/reset', heading: 'Reset' },
   { path: '/settings', heading: 'Settings' },
   { path: '/about', heading: 'About' },

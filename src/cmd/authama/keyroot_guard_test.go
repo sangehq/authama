@@ -31,6 +31,7 @@ var keyRootExempt = map[string]struct {
 	"internal/web/sshimport.go":                  {1, "the Profiles nav section the import page sits under, not a path (measured 2026-11-07)"},
 	"internal/web/tips.go":                       {1, "the Profiles page's menu key in pageTips, not a path (measured 2026-11-06)"},
 	"internal/services/overview/overview.go":     {1, `the English plural "profiles"`},
+	"internal/services/transfer/pack.go":         {1, `the export pack's part named for the profiles list (--include profiles), not a path (measured 2026-11-22)`},
 	"internal/services/selection/presets.go":     {1, `the built-in export preset named for the profiles list (?preset=profiles), not a path (measured 2026-11-06)`},
 }
 

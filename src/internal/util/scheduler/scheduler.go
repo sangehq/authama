@@ -27,21 +27,35 @@ const VMSyncLabel = "authama.vmsync"
 // writes every scheduled export to its folder.
 const ExportsLabel = "authama.exports"
 
-// job is what each label's job is called, and when it runs.
-type job struct{ description, at string }
+// StructureLabel is the job `authama ssh structure install` installs: it
+// checks ~/.ssh and the config home for keys outside the expected layout
+// every StructureEveryMinutes and notifies about new suggestions. It never
+// moves anything.
+const StructureLabel = "authama.structure"
+
+// StructureEveryMinutes is how often the structure check runs.
+const StructureEveryMinutes = 15
+
+// job is what each label's job is called, and when it runs: daily at at, or
+// every `every` minutes when that is set.
+type job struct {
+	description, at string
+	every           int
+}
 
 var jobs = map[string]job{
-	Label:        {"authama key-expiry notifier", notifyHour},
-	LegacyLabel:  {"authama key-expiry notifier", notifyHour},
-	VMSyncLabel:  {"authama VM host sync", vmSyncHour},
-	ExportsLabel: {"authama scheduled exports", exportsHour},
+	Label:          {"authama key-expiry notifier", notifyHour, 0},
+	LegacyLabel:    {"authama key-expiry notifier", notifyHour, 0},
+	VMSyncLabel:    {"authama VM host sync", vmSyncHour, 0},
+	ExportsLabel:   {"authama scheduled exports", exportsHour, 0},
+	StructureLabel: {"authama SSH structure check", "", StructureEveryMinutes},
 }
 
 func jobFor(label string) job {
 	if j, ok := jobs[label]; ok {
 		return j
 	}
-	return job{"authama " + label, notifyHour}
+	return job{"authama " + label, notifyHour, 0}
 }
 
 // hourMinute splits "HH:MM" into the numbers launchd and cron want ("9", "30").
@@ -61,8 +75,7 @@ const plistTmpl = `<?xml version="1.0" encoding="UTF-8"?>
     <array>
 %ARGS%
     </array>
-    <key>StartCalendarInterval</key>
-    <dict><key>Hour</key><integer>%HOUR%</integer><key>Minute</key><integer>%MINUTE%</integer></dict>
+%WHEN%
     <key>RunAtLoad</key><false/>
 </dict>
 </plist>
@@ -82,8 +95,16 @@ func buildPlist(label, command string) string {
 	for _, tok := range shlexSplit(command) {
 		args = append(args, "        <string>"+xmlEscape(tok)+"</string>")
 	}
-	h, m := hourMinute(jobFor(label).at)
-	p := strings.NewReplacer("%LABEL%", label, "%HOUR%", h, "%MINUTE%", m).Replace(plistTmpl)
+	j := jobFor(label)
+	when := ""
+	if j.every > 0 {
+		when = "    <key>StartInterval</key><integer>" + strconv.Itoa(j.every*60) + "</integer>"
+	} else {
+		h, m := hourMinute(j.at)
+		when = "    <key>StartCalendarInterval</key>\n" +
+			"    <dict><key>Hour</key><integer>" + h + "</integer><key>Minute</key><integer>" + m + "</integer></dict>"
+	}
+	p := strings.NewReplacer("%LABEL%", label, "%WHEN%", when).Replace(plistTmpl)
 	return strings.ReplaceAll(p, "%ARGS%", strings.Join(args, "\n"))
 }
 

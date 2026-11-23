@@ -6,16 +6,19 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/providers"
 	"github.com/sangehq/authama/src/internal/core/tokens"
 	"github.com/sangehq/authama/src/internal/services/change"
 	"github.com/sangehq/authama/src/internal/services/editor"
 	"github.com/sangehq/authama/src/internal/services/keysvc"
+	"github.com/sangehq/authama/src/internal/services/repair"
 	"github.com/sangehq/authama/src/internal/services/savedsel"
 	"github.com/sangehq/authama/src/internal/services/settings"
 	"github.com/sangehq/authama/src/internal/services/tokensvc"
@@ -35,39 +38,46 @@ import (
 // actionFields are the form fields each action reads, in the order the
 // confirmation carries them.
 var actionFields = map[string][]string{
-	"profile-add":       {"name", "key_scope", "key_name", "key_comment", "category"},
-	"profile-comment":   {"name", "key_comment"},
-	"profile-edit":      {"name", "key_scope", "key_name"},
-	"profile-delete":    {"name", "purge"},
-	"profile-category":  {"name", "category"},
-	"host-add":          {"profile", "alias", "hostname", "user", "port", "tags"},
-	"host-edit":         {"profile", "alias", "hostname", "user", "port", "tags"},
-	"host-delete":       {"profile", "alias"},
-	"key-delete":        {"profile", "key"},
-	"key-reserve":       {"key", "for", "note"},
-	"key-unreserve":     {"key"},
-	"key-ack":           {"key"},
-	"vm-add":            {"profile", "alias", "hypervisor", "vm", "user"},
+	"profile-add":      {"name", "key_scope", "key_name", "key_comment", "category", "code"},
+	"profile-comment":  {"name", "key_comment"},
+	"profile-edit":     {"name", "key_scope", "key_name"},
+	"profile-delete":   {"name", "purge"},
+	"profile-category": {"name", "category"},
+	// host-add with no alias names the host by the naming rules from env and
+	// role (`host add <profile> --env --role`).
+	"host-add":      {"profile", "alias", "env", "role", "hostname", "user", "port", "tags", "key_name", "provider", "token_env", "proxy"},
+	"host-edit":     {"profile", "alias", "hostname", "user", "port", "tags", "key_name", "provider", "token_env", "proxy"},
+	"host-delete":   {"profile", "alias"},
+	"key-delete":    {"profile", "key"},
+	"key-reserve":   {"key", "for", "note"},
+	"key-unreserve": {"key"},
+	// key-ack acknowledges one key, every key (all) or a category's.
+	"key-ack":           {"key", "all", "category"},
+	"vm-add":            {"profile", "alias", "hypervisor", "vm", "user", "key_name"},
 	"config-render":     {},
+	"config-adopt":      {},
 	"reconcile":         {},
 	"keygen":            {"target"},
-	"key-add":           {"profile", "key", "key_type", "host"},
+	"key-add":           {"profile", "key", "key_type", "host", "rotate_after_days"},
 	"providers-export":  {},
 	"snapshots-prune":   {"keep"},
 	"doctor-fix":        {},
-	"host-apply":        {"profile", "specs", "create", "category"},
+	"host-apply":        {"profile", "specs", "create", "category", "tags", "reconcile"},
 	"clean":             {"adopt"},
 	"bundle":            {"keep"},
 	"vm-docker-context": {"alias"},
 	"snapshots-restore": {"id"},
 	"notify-test":       {},
 	"audit-notify":      {},
-	"token-delete":      {"target", "host"},
-	"token-apply":       {},
-	"vm-sync":           {"repin"},
-	"vm-adopt-key":      {"key", "profile", "alias", "hypervisor", "vm", "user"},
-	"vm-schedule":       {"install"},
-	"settings-init":     {},
+	"token-delete":      {"target", "host", "project"},
+	// token-apply takes the command line's --config, --project, --source and
+	// --target (only_<tool>, one box each).
+	"token-apply": {"config", "project", "source", "only_composer", "only_npm", "only_docker", "only_git", "only_netrc", "only_pypi",
+		"only_cargo", "only_gem", "only_gradle", "only_maven", "only_yarn", "only_helm", "only_helm-oci", "only_gh"},
+	"vm-sync":       {"repin", "no_probe"},
+	"vm-adopt-key":  {"key", "profile", "alias", "hypervisor", "vm", "user", "move", "docker_context"},
+	"vm-schedule":   {"install"},
+	"settings-init": {},
 	// settings-reset writes authama.json again at its defaults, keeping the
 	// old file beside it.
 	"settings-reset": {},
@@ -81,25 +91,40 @@ var actionFields = map[string][]string{
 	"home-init":               {"confirm"},
 	"export-selection-save":   {"name", "selection"},
 	"export-selection-delete": {"name"},
-	"token-set":               {"target", "service", "server", "username", "scope", "docker_mode", "secret_ref"},
+	"token-set":               {"target", "service", "server", "username", "scope", "docker_mode", "project", "secret_ref"},
 	"token-init":              {"t_composer", "t_npm", "t_docker", "t_git", "t_netrc", "t_pypi", "t_cargo", "t_gem", "t_gradle", "t_maven", "t_yarn", "t_helm", "t_helm-oci", "t_gh"},
 	"token-import":            {},
 	"token-config-edit":       {"body"},
-	"key-lifetime":            {"key", "lifetime"},
-	"key-regen-pub":           {"key", "profile", "all"},
-	"ssh-import":              {"source", "replace"},
-	"key-root":                {"root", "confirm"},
-	"naming-set":              {"profile", "alias", "envs", "roles", "enforce", "start", "code_fallback"},
-	"naming-key-template":     {"profile", "key_name"},
-	"profile-code":            {"name", "code"},
-	"owner-init":              {},
-	"owner-pin-set":           {"pin_current_ref", "pin_new_ref", "pin_confirm_ref"},
-	"owner-pin-remove":        {"pin_current_ref"},
-	"owner-reseal":            {},
-	"owner-forget":            {"confirm"},
-	"owner-fingerprint":       {"on"},
-	"repair":                  {},
-	"factory-reset":           {"confirm"},
+	"setup-import":            {"body", "on_conflict"},
+	"transfer-import-full":    {"file_ref", "pass_ref", "on_conflict"},
+	// structure-plan carries every move select (one plan line each) and
+	// the free-form plan lines; structure-dismiss hides one suggestion.
+	"structure-plan":    {"move", "moves"},
+	"structure-dismiss": {"id", "undo"},
+	// git-sign-set is one profile's git identity (clear removes it);
+	// git-sign-use points checkouts at a profile; git-sign-apply writes the
+	// git files from the manifest as it is.
+	"git-sign-set":   {"profile", "email", "user_name", "key", "dirs", "sign", "clear"},
+	"git-sign-use":   {"profile", "checkouts"},
+	"git-sign-apply": {},
+	// git-remote-use is `ssh git use`: checkouts' origin pointed at a mode.
+	"git-remote-use":      {"mode", "profile", "checkouts"},
+	"key-lifetime":        {"key", "lifetime"},
+	"key-regen-pub":       {"key", "profile", "all"},
+	"ssh-import":          {"source", "replace"},
+	"key-root":            {"root", "confirm"},
+	"naming-set":          {"profile", "alias", "envs", "roles", "enforce", "start", "code_fallback"},
+	"naming-key-template": {"profile", "key_name"},
+	"profile-code":        {"name", "code"},
+	"owner-init":          {},
+	"owner-pin-set":       {"pin_current_ref", "pin_new_ref", "pin_confirm_ref"},
+	"owner-pin-remove":    {"pin_current_ref"},
+	"owner-reseal":        {},
+	"owner-forget":        {"confirm"},
+	"owner-fingerprint":   {"on"},
+	// repair takes --area as one box per area; none is every area.
+	"repair":        {"area_tool", "area_ssh", "area_tokens"},
+	"factory-reset": {"confirm"},
 }
 
 // secretFields are the typed secrets each action takes. Each goes into the
@@ -185,6 +210,40 @@ func optionalName(f url.Values, field string) (string, error) {
 		return "", nil
 	}
 	return name(f, field)
+}
+
+// envVarRe is an environment variable name, as --token-env takes.
+var envVarRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,127}$`)
+
+// hostExtras reads the host form's optional --key-name, --provider,
+// --token-env and --proxy. Each left empty is nil: unset on a new host,
+// unchanged on an edit. A provider must be one the catalog or providers.json
+// names, and a proxy one authama renders, or "none" to clear it.
+func hostExtras(f url.Values, h home) (keyName, provider, tokenEnv, proxy *string, err error) {
+	if v, e := optionalName(f, "key_name"); e != nil {
+		return nil, nil, nil, nil, e
+	} else if v != "" {
+		keyName = &v
+	}
+	if v := strings.TrimSpace(f.Get("provider")); v != "" {
+		if _, ok := providers.AllSpecs(h.p.Providers())[v]; !ok {
+			return nil, nil, nil, nil, badForm("provider %q is not one `authama ssh providers` lists", v)
+		}
+		provider = &v
+	}
+	if v := strings.TrimSpace(f.Get("token_env")); v != "" {
+		if !envVarRe.MatchString(v) {
+			return nil, nil, nil, nil, badForm("token env %q is not an environment variable name", v)
+		}
+		tokenEnv = &v
+	}
+	if v := strings.TrimSpace(f.Get("proxy")); v != "" {
+		if v != "none" && !slices.Contains(manifest.ProxyKinds, v) {
+			return nil, nil, nil, nil, badForm("proxy must be none or one of %s", strings.Join(manifest.ProxyKinds, ", "))
+		}
+		proxy = &v
+	}
+	return keyName, provider, tokenEnv, proxy, nil
 }
 
 // hostSpecs parses the host apply box, one spec per line, and holds every
@@ -303,6 +362,8 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		// whole new list: an emptied box clears them.
 		in.Tags, err = tagsOf(f)
 		errs = append(errs, err)
+		in.KeyName, in.Provider, in.TokenEnv, in.Proxy, err = hostExtras(f, h)
+		errs = append(errs, err)
 		return in
 	}
 	var ch change.Change
@@ -318,7 +379,11 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		}
 		category, err := optionalName(f, "category")
 		errs = append(errs, err)
-		ch = change.ProfileAddIn(n("name"), scope, keyName, pl("key_comment"), category)
+		code := ""
+		if strings.TrimSpace(f.Get("code")) != "" {
+			code = n("code")
+		}
+		ch = change.ProfileAddWith(n("name"), scope, keyName, pl("key_comment"), category, code)
 	case "profile-comment":
 		ch = change.ProfileKeyComment(n("name"), pl("key_comment"))
 	case "profile-edit":
@@ -343,7 +408,42 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		errs = append(errs, err)
 		ch = change.ProfileCategory(n("name"), category)
 	case "host-add":
-		ch = change.HostAdd(n("profile"), n("alias"), host(false))
+		in := host(false)
+		alias := strings.TrimSpace(f.Get("alias"))
+		env, role := strings.TrimSpace(f.Get("env")), strings.TrimSpace(f.Get("role"))
+		switch {
+		case alias == "" && (env != "" || role != ""):
+			if (env != "" && !nameRe.MatchString(env)) || (role != "" && !nameRe.MatchString(role)) {
+				errs = append(errs, badForm("env and role are names: letters, digits, '.', '_' and '-'"))
+				break
+			}
+			m, err := manifest.Load(h.p.Manifest())
+			if err != nil {
+				errs = append(errs, err)
+				break
+			}
+			generated, extra, err := editor.GenerateAlias(m, n("profile"), env, role)
+			if err != nil {
+				errs = append(errs, badForm("%s", err.Error()))
+				break
+			}
+			alias = generated
+			tags := []string{}
+			if in.Tags != nil {
+				tags = *in.Tags
+			}
+			for _, t := range extra {
+				if !slices.Contains(tags, t) {
+					tags = append(tags, t)
+				}
+			}
+			in.Tags = &tags
+		case alias != "" && (env != "" || role != ""):
+			errs = append(errs, badForm("env and role name the host; leave the alias empty to use them, or add them as tags"))
+		default:
+			alias = n("alias")
+		}
+		ch = change.HostAdd(n("profile"), alias, in)
 	case "host-edit":
 		ch = change.HostEdit(n("profile"), n("alias"), host(true))
 	case "host-delete":
@@ -359,9 +459,15 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		if vm == "" || user == "" {
 			errs = append(errs, badForm("a VM host needs the VM's name and a guest user"))
 		}
-		ch = change.VMAdd(n("profile"), n("alias"), hv, vm, user)
+		keyName := ""
+		if strings.TrimSpace(f.Get("key_name")) != "" {
+			keyName = n("key_name")
+		}
+		ch = change.VMAddWith(n("profile"), n("alias"), hv, vm, user, keyName)
 	case "config-render":
 		ch = change.ConfigRender()
+	case "config-adopt":
+		ch = change.ConfigAdopt()
 	case "reconcile":
 		ch = change.Reconcile()
 	case "keygen":
@@ -377,7 +483,15 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		if strings.TrimSpace(f.Get("host")) != "" {
 			host = n("host")
 		}
-		ch = change.KeyAdd(n("profile"), n("key"), kt, host)
+		var days *int
+		if v := strings.TrimSpace(f.Get("rotate_after_days")); v != "" {
+			d, err := strconv.Atoi(v)
+			if err != nil || d < 0 || d > 3650 {
+				errs = append(errs, badForm("rotate after is a number of days from 0 to 3650"))
+			}
+			days = &d
+		}
+		ch = change.KeyAddWith(n("profile"), n("key"), kt, host, days)
 	case "key-reserve":
 		forWhat, note := pl("for"), pl("note")
 		if len(forWhat) > 200 || len(note) > 200 {
@@ -387,9 +501,17 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 	case "key-unreserve":
 		ch = change.KeyUnreserve(n("key"))
 	case "key-ack":
-		ref, err := keyRef(f)
-		errs = append(errs, err)
-		ch = change.KeyAck(keysvc.Selection{Selectors: []string{ref.String()}})
+		// A category narrows the form's "every key" to its keys.
+		switch {
+		case strings.TrimSpace(f.Get("category")) != "":
+			ch = change.KeyAck(keysvc.Selection{Category: n("category")})
+		case checked(f, "all"):
+			ch = change.KeyAck(keysvc.Selection{All: true})
+		default:
+			ref, err := keyRef(f)
+			errs = append(errs, err)
+			ch = change.KeyAck(keysvc.Selection{Selectors: []string{ref.String()}})
+		}
 	case "providers-export":
 		ch = change.ProvidersExport()
 	case "settings-init":
@@ -431,7 +553,7 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 	case "doctor-fix":
 		ch = change.DoctorFix()
 	case "vm-sync":
-		ch = change.VMSync(checked(f, "repin"))
+		ch = change.VMSyncWith(checked(f, "repin"), checked(f, "no_probe"))
 	case "vm-adopt-key":
 		hv := pl("hypervisor")
 		if !knownHypervisor(hv) {
@@ -441,7 +563,7 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		if vm == "" || user == "" {
 			errs = append(errs, badForm("adopting a key onto a VM needs the VM's name and a guest user"))
 		}
-		ch = change.VMAdoptKey(n("key"), n("profile"), n("alias"), hv, vm, user)
+		ch = change.VMAdoptKeyWith(n("key"), n("profile"), n("alias"), hv, vm, user, checked(f, "move"), checked(f, "docker_context"))
 	case "vm-schedule":
 		ch = change.VMSchedule(checked(f, "install"))
 	case "host-apply":
@@ -449,7 +571,13 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		errs = append(errs, err)
 		category, err := optionalName(f, "category")
 		errs = append(errs, err)
-		ch = change.HostApply(n("profile"), specs, checked(f, "create"), category)
+		var extra []string
+		if t, err := tagsOf(f); err != nil {
+			errs = append(errs, err)
+		} else if t != nil {
+			extra = *t
+		}
+		ch = change.HostApplyWith(n("profile"), specs, checked(f, "create"), category, extra, checked(f, "reconcile"))
 	case "clean":
 		ch = change.Clean(checked(f, "adopt"))
 	case "bundle":
@@ -472,7 +600,13 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 	case "notify-test":
 		ch = change.NotifyTest()
 	case "repair":
-		ch = change.Repair(repairHome)
+		var areas []repair.Area
+		for _, a := range repair.Areas {
+			if checked(f, "area_"+string(a)) {
+				areas = append(areas, a)
+			}
+		}
+		ch = change.RepairAreas(repairHome, areas)
 	case "factory-reset":
 		ch = change.FactoryReset(strings.TrimSpace(f.Get("confirm")) == "reset")
 	case "owner-init":
@@ -498,9 +632,25 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		if host == "" {
 			errs = append(errs, badForm("host is required"))
 		}
-		ch = change.TokenDelete(target, host)
+		project, err := scopePath(f, "project")
+		errs = append(errs, err)
+		ch = change.TokenDeleteIn(target, host, project)
 	case "token-apply":
-		ch = change.TokenApply()
+		var sc change.TokenScope
+		var err error
+		for _, fld := range []struct {
+			name string
+			dst  *string
+		}{{"config", &sc.Config}, {"project", &sc.Project}, {"source", &sc.Source}} {
+			*fld.dst, err = scopePath(f, fld.name)
+			errs = append(errs, err)
+		}
+		for _, t := range tokens.Targets() {
+			if checked(f, "only_"+t) {
+				sc.Targets = append(sc.Targets, t)
+			}
+		}
+		ch = change.TokenApplyIn(sc)
 	case "token-set":
 		spec := tokensvc.SetSpec{Target: strings.TrimSpace(f.Get("target")), Service: strings.TrimSpace(f.Get("service")),
 			Server: pl("server"), Username: pl("username"), Scope: pl("scope")}
@@ -521,8 +671,10 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		if ref == "" {
 			errs = append(errs, badForm("the token form sent no secret"))
 		}
+		project, err := scopePath(f, "project")
+		errs = append(errs, err)
 		resolve := h.secret
-		ch = change.TokenSet(spec, mode, func() (string, error) {
+		ch = change.TokenSetIn(spec, mode, project, func() (string, error) {
 			if resolve != nil {
 				if v, ok := resolve(ref); ok {
 					return v, nil
@@ -589,6 +741,25 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		var err error
 		ch, err = namingChange(action, f, h)
 		errs = append(errs, err)
+	case "transfer-import-full":
+		var err error
+		if ch, err = transferImportFullChange(f, h); err != nil {
+			errs = append(errs, err)
+		}
+	case "setup-import":
+		ch, errs = setupImportChange(f, errs)
+	case "structure-plan":
+		ch, errs = structurePlanChange(f, errs)
+	case "structure-dismiss":
+		ch, errs = structureDismissChange(f, errs)
+	case "git-sign-set":
+		ch, errs = gitSignSetChange(f, errs)
+	case "git-sign-use":
+		ch, errs = gitSignUseChange(f, errs)
+	case "git-sign-apply":
+		ch = change.GitSignApply()
+	case "git-remote-use":
+		ch, errs = gitRemoteUseChange(f, errs)
 	case "token-config-edit":
 		body := f.Get("body")
 		switch {
@@ -613,8 +784,10 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 func carried(f url.Values) []formField {
 	out := []formField{{"action", f.Get("action")}}
 	for _, k := range actionFields[f.Get("action")] {
-		if f.Has(k) {
-			out = append(out, formField{k, f.Get(k)})
+		// Every value: a field a form repeats (the structure page's move
+		// selects) reaches the confirmation whole.
+		for _, v := range f[k] {
+			out = append(out, formField{k, v})
 		}
 	}
 	return append(out, thenFields(f, thenPrefix)...)
@@ -736,6 +909,12 @@ func (h pages) handleApply(w http.ResponseWriter, r *http.Request) {
 				h.s.secrets.drop(ref)
 			}
 		}
+		// An uploaded full export and its passphrase are used once too.
+		for _, field := range []string{"file_ref", "pass_ref"} {
+			if ref := r.PostForm.Get(field); ref != "" {
+				h.s.secrets.drop(ref)
+			}
+		}
 		h.s.render(w, http.StatusOK, "done", h.s.newView(r, "", "Done",
 			donePage{Command: strings.TrimSpace(brand.Line(ch.Command) + " " + strings.Join(ch.Args, " ")), Result: res,
 				Then: thenFields(r.PostForm, "")}))
@@ -758,4 +937,24 @@ func knownHypervisor(hv string) bool {
 		}
 	}
 	return false
+}
+
+// scopePath reads an optional path field of a token change: --project,
+// --config or --source. It must be absolute (or ~/...), since the server has
+// no current directory of yours, and hold no control character.
+func scopePath(f url.Values, field string) (string, error) {
+	v := strings.TrimSpace(f.Get(field))
+	switch {
+	case v == "":
+		return "", nil
+	case strings.ContainsFunc(v, func(r rune) bool { return r < 0x20 || r == 0x7f }):
+		return "", badForm("%s holds a control character", field)
+	case !strings.HasPrefix(v, "/") && !strings.HasPrefix(v, "~/") && (len(v) < 3 || v[1] != ':'):
+		return "", badForm("%s %q: give a full path (or ~/…); the server has no current directory of yours", field, v)
+	}
+	abs, ok := plainAbs(expandHome(v))
+	if !ok {
+		return "", badForm("%s %q is not a plain full path", field, v)
+	}
+	return abs, nil
 }

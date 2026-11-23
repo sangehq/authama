@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"path/filepath"
+	"strconv"
 )
 
 // Target is everything a provider needs to act on one host (resolved from the
@@ -21,6 +22,12 @@ type Target struct {
 	// key (a key kept in 1Password); "" == the key is a file.
 	IdentityAgent string
 	KnownHosts    string // per-profile known_hosts; "" == none
+	// ConfigFile, when set, is a flat copy of the managed ssh config: ssh runs
+	// with -F ConfigFile and the host's alias as its destination, so the
+	// ProxyJump, ProxyCommand, cloudflared or VM route the config gives the
+	// alias applies, and the config's HostName, User and Port with it. ""
+	// connects to Hostname, User and Port directly (ssh.deploy_route direct).
+	ConfigFile string
 	// Unattended is set when nobody can answer a prompt - a deploy started
 	// from the web UI. ssh and ssh-copy-id then run with stdin closed and
 	// BatchMode=yes, so a password prompt fails at once instead of reaching
@@ -42,6 +49,34 @@ func (t Target) identityOpts() []string {
 
 // SSHDest is user@hostname, or the hostname alone when the host names no
 // user, so ssh takes the user from its config or the local account.
+func (t Target) routed() bool { return t.ConfigFile != "" && t.Alias != "" }
+
+// dest is what ssh connects to: the alias through the route config, else
+// user@hostname.
+func (t Target) dest() string {
+	if t.routed() {
+		return t.Alias
+	}
+	return t.SSHDest()
+}
+
+// routeOpts are -F and the route config when the target is routed.
+func (t Target) routeOpts() []string {
+	if t.routed() {
+		return []string{"-F", t.ConfigFile}
+	}
+	return nil
+}
+
+// portOpts is -p for a direct connection to a port other than 22; a routed
+// one takes the port from the config.
+func (t Target) portOpts() []string {
+	if t.routed() || t.Port == 22 || t.Port == 0 {
+		return nil
+	}
+	return []string{"-p", strconv.Itoa(t.Port)}
+}
+
 func (t Target) SSHDest() string {
 	if t.User == "" {
 		return t.Hostname

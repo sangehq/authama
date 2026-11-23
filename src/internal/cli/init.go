@@ -47,7 +47,7 @@ func newInitCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVarP(&force, "force", "f", false, "overwrite manifest/inventory/.env with fresh defaults, keeping a copy of each in the state home's .state/ first")
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "overwrite manifest/inventory/.env with fresh defaults, keeping a copy of each in the state home (init-backup-<time>) first")
 	cmd.Flags().BoolVar(&noBackup, "no-backup", false, "with --force, keep no copy of the files it overwrites")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the confirmation prompt")
 	// Deprecated: a backup is the default since 2026-11-14 (review R-BUG-02).

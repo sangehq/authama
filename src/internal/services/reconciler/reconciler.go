@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -643,6 +644,7 @@ func (r *Reconciler) archiveRecord(ref manifest.KeyRef, priv, newFP string) {
 	if rec, ok := r.inv.Keys[outgoing]; ok && outgoing != "" {
 		rec.Path = oldIdent
 		r.inv.Keys[outgoing] = rec
+		r.recordRetirement(ref, outgoing, newFP, rec)
 		return
 	}
 	// The archived .pub could not be read (a half pair, say), so the outgoing
@@ -655,6 +657,36 @@ func (r *Reconciler) archiveRecord(ref manifest.KeyRef, priv, newFP string) {
 				r.inv.Keys[fp] = rec
 			}
 		}
+	}
+}
+
+// recordRetirement keeps where a key an overwrite displaced was deployed and
+// never removed - a local replacement takes it off nowhere - so a later
+// rotation or replacement can tell whether evicting it from old/ is safe
+// (audit A-BUG-07). A rotation records its own, fuller retirement after this.
+// A failure is said, not fatal: the predecessor check then reads "cannot
+// tell" and refuses, which is the safe side.
+func (r *Reconciler) recordRetirement(ref manifest.KeyRef, fp, successor string, rec inventory.KeyRecord) {
+	path := inventory.RetiredPath(r.p.Inventory())
+	all, err := inventory.LoadRetirements(path)
+	if err != nil {
+		log.Audit(r.p.AuditLog(), "retirement.unrecorded", log.Field{Key: "key", Value: ref.String()},
+			log.Field{Key: "error", Value: err.Error()})
+		return
+	}
+	if _, ok := all[fp]; ok {
+		return
+	}
+	ret := inventory.Retirement{Key: ref.String(), Successor: successor, RetiredOn: inventory.Today()}
+	for _, d := range rec.Deployments {
+		if d.Target != "" && !slices.Contains(ret.NotRemoved, d.Target) {
+			ret.NotRemoved = append(ret.NotRemoved, d.Target)
+		}
+	}
+	all[fp] = ret
+	if err := all.Save(path); err != nil {
+		log.Audit(r.p.AuditLog(), "retirement.unrecorded", log.Field{Key: "key", Value: ref.String()},
+			log.Field{Key: "error", Value: err.Error()})
 	}
 }
 

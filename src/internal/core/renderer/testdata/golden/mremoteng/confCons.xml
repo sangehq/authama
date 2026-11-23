@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mrng:Connections xmlns:mrng="http://mremoteng.org" Name="Connections" Export="false" EncryptionEngine="AES" BlockCipherMode="GCM" KdfIterations="1000" FullFileEncryption="false" ConfVersion="2.6">
+  <Node Name="legacy" Type="Container" Expanded="true">
+    <Node Name="box" Type="Connection" Descr="prod, eu,west" Hostname="box.example" Port="2222" Username="me" Protocol="SSH2" PuttySession="box" />
+  </Node>
+  <Node Name="personal" Type="Container" Expanded="true">
+    <Node Name="github-imani" Type="Connection" Descr="" Hostname="github.com" Port="22" Username="git" Protocol="SSH2" PuttySession="github-imani" />
+  </Node>
+  <Node Name="simtabi" Type="Container" Expanded="true">
+    <Node Name="oribi-web" Type="Connection" Descr="" Hostname="203.0.113.23" Port="22" Username="ploi" Protocol="SSH2" PuttySession="oribi-web" />
+  </Node>
+</mrng:Connections>

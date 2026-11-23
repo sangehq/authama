@@ -50,20 +50,20 @@ func (r *serveRecord) address() string { return "http://" + r.Addr + r.BasePath 
 
 // newLink asks the recorded server for a new sign-in address, which works once
 // within web.LinkLifetime: the one it printed when it started may be used or
-// expired.
+// expired. One request, and the control key is never sent: it carries a fresh
+// challenge and a proof the caller holds the key, and the link is taken only
+// with the server's proof under the same key (audit P-02).
 func (r *serveRecord) newLink() (string, error) {
 	if r.Control == "" {
 		return "", errors.New("its record has no control key (a server from an older build)")
-	}
-	// The key goes only to the server that proves it holds it.
-	if !r.checkAlive() {
-		return "", fmt.Errorf("the server at %s did not prove it is the one this home recorded", r.Addr)
 	}
 	req, err := http.NewRequest(http.MethodPost, "http://"+r.Addr+r.BasePath+web.LinkPath, nil)
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set(web.ControlHeader, r.Control)
+	challenge := web.LinkChallenge(time.Now())
+	req.Header.Set(web.LinkChallengeHeader, challenge)
+	req.Header.Set(web.LinkProofHeader, web.LinkCallerProof(r.Control, r.Instance, challenge))
 	resp, err := healthClient.Do(req)
 	if err != nil {
 		return "", err
@@ -71,9 +71,15 @@ func (r *serveRecord) newLink() (string, error) {
 	defer func() { _ = resp.Body.Close() }()
 	var reply struct {
 		SignIn string `json:"sign_in"`
+		Proof  string `json:"proof"`
 	}
-	if resp.StatusCode != http.StatusOK || json.NewDecoder(resp.Body).Decode(&reply) != nil || !strings.HasPrefix(reply.SignIn, "?token=") {
-		return "", fmt.Errorf("it answered %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusOK || json.NewDecoder(io.LimitReader(resp.Body, 4096)).Decode(&reply) != nil ||
+		!strings.HasPrefix(reply.SignIn, "?token=") {
+		return "", fmt.Errorf("the server at %s answered %d (a server from a build before 2026-11-22 needs a restart: %s serve --restart)",
+			r.Addr, resp.StatusCode, brand.Command)
+	}
+	if !hmac.Equal([]byte(reply.Proof), []byte(web.LinkProof(r.Control, challenge, reply.SignIn))) {
+		return "", fmt.Errorf("the server at %s did not prove it is the one this home recorded", r.Addr)
 	}
 	return r.address() + reply.SignIn, nil
 }

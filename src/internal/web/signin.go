@@ -1,8 +1,13 @@
 package web
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -39,6 +44,29 @@ type LinkState struct {
 type links struct {
 	mu    sync.Mutex
 	byTok map[string]time.Time
+	// seen are the link challenges answered, by when each stops being
+	// accepted, so a recorded request cannot be replayed.
+	seen map[string]time.Time
+}
+
+// fresh reports whether challenge has not been answered before, and marks it
+// answered until until. Expired marks are dropped as it goes.
+func (l *links) fresh(challenge string, now, until time.Time) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.seen == nil {
+		l.seen = map[string]time.Time{}
+	}
+	for c, t := range l.seen {
+		if now.After(t) {
+			delete(l.seen, c)
+		}
+	}
+	if _, ok := l.seen[challenge]; ok || len(l.seen) >= 4*maxLinks {
+		return false
+	}
+	l.seen[challenge] = until
+	return true
 }
 
 func (l *links) add(tok string, expires time.Time) {
@@ -109,21 +137,84 @@ func NewLink(s *Server) LinkState { return s.links.issue(s.now()) }
 type linkReply struct {
 	SignIn  string    `json:"sign_in"` // "?token=...", to add to the server's address
 	Expires time.Time `json:"expires"`
+	// Proof is LinkProof, when the request carried a challenge.
+	Proof string `json:"proof,omitempty"`
+}
+
+// LinkChallengeHeader and LinkProofHeader ask for a new sign-in link in one
+// request without sending the control key: the caller's challenge
+// ("<unix seconds>.<random>") and LinkCallerProof over it. The answer carries
+// LinkProof, so the caller trusts the link only from the server that holds
+// the key. Before, the caller proved the server at /healthz and then sent the
+// key itself on a second connection, which a process taking the port between
+// the two received (audit P-02).
+const (
+	LinkChallengeHeader = "X-Authama-Challenge"
+	LinkProofHeader     = "X-Authama-Proof"
+)
+
+// linkSkew is how far a link challenge's time may be from the server's.
+const linkSkew = 2 * time.Minute
+
+// LinkChallenge is a fresh challenge for a link request made at now.
+func LinkChallenge(now time.Time) string {
+	return strconv.FormatInt(now.Unix(), 10) + "." + NewToken()
+}
+
+// LinkCallerProof proves the caller holds the control key: an HMAC of the
+// server's instance and the challenge, under a label of its own.
+func LinkCallerProof(control, instance, challenge string) string {
+	m := hmac.New(sha256.New, []byte(control))
+	_, _ = m.Write([]byte("authama-link-caller\x00" + instance + "\x00" + challenge))
+	return hex.EncodeToString(m.Sum(nil))
+}
+
+// LinkProof proves the server that answered holds the control key, bound to
+// the caller's challenge and the link it gives.
+func LinkProof(control, challenge, signIn string) string {
+	m := hmac.New(sha256.New, []byte(control))
+	_, _ = m.Write([]byte("authama-link\x00" + challenge + "\x00" + signIn))
+	return hex.EncodeToString(m.Sum(nil))
 }
 
 // handleLink answers `authama serve` with a new sign-in link. Only a caller on
-// this machine that presents the control key gets one: the key is in the
+// this machine that holds the control key gets one: the key is in the
 // server's record in the state home (mode 0600), beside nothing a browser can
-// read. A server started without a key makes no links this way.
+// read. The caller proves it with LinkCallerProof over a fresh, timely
+// challenge, and the answer proves the server with LinkProof; the key itself
+// crosses no connection. The key in ControlHeader, as builds before
+// 2026-11-22 send it, is still taken. A server started without a key makes no
+// links this way.
 func handleLink(s *Server, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
-	if s.opts.Control == "" || !isLoopbackRequest(r) || !equal(r.Header.Get(ControlHeader), s.opts.Control) {
+	if s.opts.Control == "" || !isLoopbackRequest(r) || forwarded(r) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	challenge := r.Header.Get(LinkChallengeHeader)
+	switch {
+	case challenge != "":
+		now := s.now()
+		secs, _, ok := strings.Cut(challenge, ".")
+		at, err := strconv.ParseInt(secs, 10, 64)
+		if !ok || err != nil || len(challenge) > maxChallenge ||
+			now.Sub(time.Unix(at, 0)).Abs() > linkSkew ||
+			!hmac.Equal([]byte(r.Header.Get(LinkProofHeader)), []byte(LinkCallerProof(s.opts.Control, s.opts.Instance, challenge))) ||
+			!s.links.fresh(challenge, now, now.Add(2*linkSkew)) {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+	case !equal(r.Header.Get(ControlHeader), s.opts.Control):
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
 	st := NewLink(s)
+	reply := linkReply{SignIn: "?token=" + st.Token, Expires: st.Expires}
+	if challenge != "" {
+		reply.Proof = LinkProof(s.opts.Control, challenge, reply.SignIn)
+	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	_ = json.NewEncoder(w).Encode(linkReply{SignIn: "?token=" + st.Token, Expires: st.Expires})
+	_ = json.NewEncoder(w).Encode(reply)
 }
 
 // expired reports whether a session last seen at seen, begun at created, has

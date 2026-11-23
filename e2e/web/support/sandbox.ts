@@ -14,6 +14,7 @@
 // file name).
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, copyFileSync, rmSync } from 'node:fs';
+import { createServer } from 'node:net';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -45,6 +46,10 @@ export function sandboxEnv(home: string): NodeJS.ProcessEnv {
     XDG_STATE_HOME: join(home, '.local', 'state'),
     AUTHAMA_NO_DOTENV: '1',
     AUTHAMA_AUTO_PIN: '0', // no network reach from a test
+    // Only a hypervisor the test machines do not have: the real ones' CLIs
+    // would list the developer's own VMs, and orbctl, without OrbStack's
+    // state under the real HOME, holds /vms for its whole 5s list timeout.
+    AUTHAMA_VM_HYPERVISORS: 'lima',
     AUTHAMA_AGE_IDENTITY_FILE: join(home, '.config', 'authama', 'age-identity.txt'),
   };
 }
@@ -75,6 +80,23 @@ async function waitForFile(path: string, server: ChildProcess, log: () => string
     await new Promise((r) => setTimeout(r, 100));
   }
   throw new Error(`authama serve wrote no sign-in address in ${ms}ms:\n${log()}`);
+}
+
+// freePort asks the OS for a free loopback port. The server is started on it
+// through AUTHAMA_WEB_PORT, so it never takes the default port (7822) a real
+// `authama serve` on this machine uses; set by env rather than --port, the
+// port is not pinned, so the server still records itself (and its control
+// key) in the sandbox's state home.
+async function freePort(): Promise<number> {
+  return new Promise((ok, fail) => {
+    const srv = createServer();
+    srv.once('error', fail);
+    srv.listen(0, '127.0.0.1', () => {
+      const addr = srv.address();
+      const port = typeof addr === 'object' && addr ? addr.port : 0;
+      srv.close(() => (port ? ok(port) : fail(new Error('no free port'))));
+    });
+  });
 }
 
 export default async function globalSetup(): Promise<() => Promise<void>> {
@@ -115,14 +137,18 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     run(env, bin, ['ssh', 'bundle', '--recipient', recipient]);
     const bundle = readdirSync(join(state, 'dist')).find((f) => f.endsWith('.age'));
     if (!bundle) throw new Error(`ssh bundle wrote no .age file into ${join(state, 'dist')}`);
+    // A key loose in ~/.ssh, for the structure page to suggest moving.
+    run(env, 'ssh-keygen', ['-q', '-t', 'ed25519', '-N', '', '-C', 'stray@e2e', '-f', join(home, '.ssh', 'id_e2e_stray')]);
 
     const tokenFile = join(home, 'serve-url');
     let output = '';
-    // No --port: a server on a port it picked records itself in the state
-    // home, with the control key the specs use for a sign-in link each, since
-    // a link works once.
+    // No --port: a server on a port it was not pinned to records itself in
+    // the state home, with the control key the specs use for a sign-in link
+    // each, since a link works once. The port comes from AUTHAMA_WEB_PORT.
+    const port = await freePort();
+    if (port === 7822) throw new Error('the OS offered the default port 7822; run again');
     server = spawn(bin, ['serve', '--no-open', '--token-file', tokenFile], {
-      env,
+      env: { ...env, AUTHAMA_WEB_PORT: String(port) },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     server.stdout?.on('data', (d) => (output += d));

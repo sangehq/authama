@@ -149,6 +149,100 @@ test('the CSV dialog downloads any format, and opens its choice in Export', asyn
   await expect(dialog.getByRole('link', { name: 'Open in Export' })).toBeHidden();
 });
 
+test('the Termius import regroups its preview as a scheme is picked, and downloads that file', async ({ page }) => {
+  await page.goto('/termius');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Termius import');
+  await expect(page.locator('#termius-preview thead')).toContainText('Hostname/IP');
+  await page.getByLabel(/Category, profile, environment/).check();
+  await expect(page).toHaveURL(/termius_groups=category%2Fprofile%2Fenv/);
+  await expect(page.getByLabel(/Category, profile, environment/)).toBeChecked();
+  const download = page.getByRole('link', { name: 'Download', exact: true });
+  await expect(download).toHaveAttribute('href', /format=termius.*termius_groups=category%2Fprofile%2Fenv|termius_groups=category%2Fprofile%2Fenv.*format=termius/);
+  const res = await page.request.get((await download.getAttribute('href')) ?? '');
+  expect((await res.text()).split('\n')[0]).toBe('Groups,Label,Tags,Hostname/IP,Protocol,Port,Username,Password');
+  await expect(page.locator('[data-copy*="--termius-groups category/profile/env"]').first()).toBeAttached();
+});
+
+test('Move setup downloads a document with no secret, and previews a pasted import before writing', async ({ page }) => {
+  await page.goto('/setup');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Move setup');
+  const res = await page.request.get('/setup/export.json');
+  expect(res.ok()).toBeTruthy();
+  const doc = await res.json();
+  expect(doc.format).toBe('authama-setup');
+  expect(doc.secrets).toBe(false);
+  await page.locator('#setup-body').fill(JSON.stringify(doc));
+  await page.getByRole('button', { name: 'Preview the import' }).click();
+  await expect(page.getByText(/nothing to change|already the same/).first()).toBeVisible();
+});
+
+test('Export / Import in the header previews a pack, downloads it, and imports it back through the preview', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#navbar-transfer').click();
+  await page.getByRole('link', { name: /^Export\b/ }).first().click();
+  await expect(page).toHaveURL(/\/transfer#export$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Export / Import');
+  const exportCard = page.locator('#export');
+  await exportCard.getByRole('checkbox', { name: /Hosts for Termius/ }).check();
+  await exportCard.getByRole('checkbox', { name: /Setup document/ }).check();
+  await exportCard.getByLabel('Termius groups').selectOption('category/profile');
+  await exportCard.getByRole('button', { name: 'Preview' }).click();
+  const preview = page.locator('#export-preview');
+  await expect(preview).toContainText('termius-hosts.csv');
+  await expect(preview).toContainText('setup.json');
+  await expect(preview).not.toContainText('PRIVATE KEY');
+  const href = (await preview.getByRole('link', { name: 'Download these as a zip' }).getAttribute('href')) ?? '';
+  expect(href).toContain('termius_groups=category%2Fprofile');
+  const zip = await page.request.get(href);
+  expect(zip.headers()['content-type']).toBe('application/zip');
+  const body = await zip.body();
+  await page.locator('#import-file').setInputFiles({ name: 'authama-export.zip', mimeType: 'application/zip', buffer: body });
+  await page.getByRole('button', { name: 'Read the file' }).click();
+  await expect(page.locator('#import-review')).toContainText('Export pack');
+  await page.locator('#import-review').getByRole('button', { name: 'Preview the import' }).click();
+  await expect(page.getByText(/nothing to change|already the same/).first()).toBeVisible();
+});
+
+test('the structure tree moves a stray key by drag and drop or its menu, and previews before writing', async ({ page }) => {
+  // Tall enough that the stray key and the profile are both on screen: a
+  // drag that has to scroll the page never starts in headless Chromium.
+  await page.setViewportSize({ width: 1280, height: 1600 });
+  await page.goto('/structure');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Structure');
+  const stray = page.locator('li[draggable="true"]', { hasText: '~/.ssh/id_e2e_stray' });
+  await expect(stray).toBeVisible();
+  const menu = page.getByLabel('Move ~/.ssh/id_e2e_stray');
+  await expect(menu).toHaveValue('');
+  // Dragging onto a profile picks that profile in the item's menu.
+  await stray.dragTo(page.locator('li[data-drop="profile:work"] > details > summary').first(), { sourcePosition: { x: 4, y: 4 } });
+  await expect(menu).toHaveValue('key ~/.ssh/id_e2e_stray profile work');
+  const pending = page.locator('[data-structure-pending]');
+  await expect(pending).toContainText('~/.ssh/id_e2e_stray: into work');
+  // The menu is the keyboard way to the same choice.
+  await menu.selectOption({ label: 'Leave it' });
+  await expect(pending).toContainText('Nothing yet');
+  await menu.focus();
+  await menu.selectOption({ value: 'key ~/.ssh/id_e2e_stray profile work' });
+  await page.getByRole('button', { name: 'Preview the moves' }).click();
+  await expect(page.getByText('creates ~/.ssh/profiles/work/id_e2e_stray').first()).toBeVisible();
+});
+
+test('the git identities page previews a profile identity, its git files and the global block, before writing', async ({ page }) => {
+  await page.goto('/git-sign');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Git identities');
+  const card = page.locator('#gitsign-work');
+  await card.getByLabel('Email').fill('me@work.example');
+  await card.getByLabel('Directories, one per line').fill('~/code/work/');
+  // No github.com host in this profile: its first key is chosen to sign.
+  await expect(card.getByLabel('Key that signs')).toHaveValue('work_hpc-ed25519');
+  await card.getByRole('button', { name: 'Preview', exact: true }).click();
+  await expect(page.getByText(/work\.gitconfig/).first()).toBeVisible();
+  await expect(page.getByText(/includeIf/).first()).toBeVisible();
+  // A checkout check and a clone lookup only read.
+  await page.goto('/git-sign?repo=acme%2Fapp&mode=https#gitsign-clone');
+  await expect(page.locator('#gitsign-clone')).toContainText('https://github.com/acme/app');
+});
+
 test('tokens.json is checked as it is typed, and cannot be sent while it is not JSON', async ({ page }) => {
   await page.goto('/tokens');
   await page.getByRole('button', { name: 'Edit tokens.json' }).click();

@@ -44,7 +44,7 @@ VERSION := $(shell git describe --tags --match 'v[0-9]*' --always --dirty 2>/dev
 LDFLAGS := -s -w -X github.com/sangehq/authama/src/internal/version.Version=$(VERSION)
 GO      := go -C $(MODULE)
 
-.PHONY: help build build-all test vet fmt fmt-check lint lint-tool lint-all ci check gates ci-linux e2e e2e-web feature-check docker-shell docker-run docker-down \
+.PHONY: help build build-all test vet fmt fmt-check lint lint-tool lint-all ci check gates ci-linux e2e qa e2e-web feature-check docker-shell docker-run docker-down \
         cross dist release-snapshot clean install link uninstall doctor reconcile render rotate bundle settings generate tabler-check tabler-update tabler-vendor man
 
 help:  ## list targets
@@ -154,13 +154,16 @@ gates: ci lint-all e2e e2e-web ## every local gate before a push: ci, lint-all, 
 # says so. When CI cannot say so (a runner outage, a fork without Actions, a
 # flight), this is the same gate on the same Go version the module asks for.
 #
-# It reads the version from go.mod rather than pinning one, so it cannot drift
-# from what setup-go installs in the workflow.
-GOVERSION = $(shell awk '/^go /{print $$2}' $(MODULE)/go.mod)
+# It runs on the dev container's base image, golang pinned by tag and digest in
+# the Dockerfile (which Dependabot keeps current), not on a tag that can change
+# under it (audit S-07). GOTOOLCHAIN=auto fetches the exact go.mod version when
+# the image's is older, so it cannot drift from what setup-go installs either.
+GOIMAGE = $(shell sed -n 's/^FROM \(golang:[^ ]*@sha256:[0-9a-f]*\) AS base$$/\1/p' Dockerfile)
 
 ci-linux: ## run the CI gate inside a linux container (needs docker)
 	@command -v docker >/dev/null 2>&1 || { echo "docker is not installed"; exit 1; }
-	docker run --rm -v "$(CURDIR)":/w -w /w golang:$(GOVERSION) \
+	@test -n "$(GOIMAGE)" || { echo "no pinned golang base (FROM golang:<tag>@sha256:<digest> AS base) in the Dockerfile"; exit 1; }
+	docker run --rm -e GOTOOLCHAIN=auto -v "$(CURDIR)":/w -w /w $(GOIMAGE) \
 		sh -c 'apt-get -qq update >/dev/null && apt-get -qq install -y openssh-client >/dev/null && \
 		       go -C $(MODULE) build ./... && go -C $(MODULE) vet ./... && go -C $(MODULE) test ./...'
 
@@ -192,6 +195,13 @@ docker-down: ## stop and remove the dev container
 # The CI job keeps its own 15-minute limit.
 e2e: ## end-to-end smoke in a throwaway sandbox
 	$(GO) test -tags e2e -count=1 -timeout 600s ./cmd/authama/
+
+# The QA walk alone (cmd/authama/qa_test.go, part of e2e too): every command's
+# help and an unknown flag, then a walk through each command and its main flags
+# against a throwaway HOME whose hosts are 127.0.0.1 on a closed port. Nothing
+# leaves the machine; installs, the clipboard, the agent and serve run as --help.
+qa: ## the QA command walk: every command, its help and main flags, in a throwaway HOME
+	$(GO) test -tags e2e -count=1 -timeout 600s -run TestQA ./cmd/authama/
 
 # The web UI in a real browser: Playwright drives every page and the write flows
 # of `authama serve`, and axe checks each page in both themes. It builds the

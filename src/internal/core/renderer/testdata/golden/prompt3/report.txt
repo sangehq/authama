@@ -1,0 +1,5 @@
+devbox: reached through a ProxyCommand, which Prompt 3 (an ssh config of the hosts, to enter or paste in Prompt) does not run; use windows-terminal or iterm2, which go through ssh
+Prompt 3 has no file import: add each server under Servers > + with the values from authama-prompt3.ssh_config (the jump host goes in the server's Jump Server field), and import each key under Settings > Keys with the name below. Panic Sync carries them to Prompt on other devices. Keys to import:
+  /home/u/.ssh/profiles/internal/personal/imani_github-ed25519  as imani_github-ed25519
+  /home/u/.ssh/profiles/legacy/legacy-ed25519  as legacy-ed25519
+  /home/u/.ssh/profiles/orgs/simtabi/simtabi_oribi-web-ed25519  as simtabi_oribi-web-ed25519

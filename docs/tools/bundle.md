@@ -5,6 +5,9 @@ authama ssh bundle [--recipient age1...] [--output DIR] [--keep N]
 authama ssh restore <bundle.age> [--identity age-identity.txt]
 ```
 
+For moving to a new machine with a passphrase instead of an age key - token values included - see
+[setup](setup.md).
+
 Uses **age** (X25519 + ChaCha20-Poly1305) - modern, single-binary, far simpler
 than GPG. Install it first: `brew install age` (macOS) / `apt install age` (Linux).
 
@@ -82,6 +85,13 @@ If you set them yourself, `authama ssh restore <bundle> --allow-risky-options` r
 question before it writes lists the options, and the summary says which it laid down. The web UI has
 no such switch; it shows the refusal and the command. A manifest you edit by hand is not checked:
 these options are yours to set.
+
+### Signed bundles
+
+`authama ssh bundle --sign-key <private key>` writes `<bundle>.sig` with `ssh-keygen -Y sign` and trusts the key in
+this home's `bundle_signers`. `ssh restore` checks a `.sig` it finds before it decrypts: a bundle changed after it
+was signed is refused, and `--require-signature` also refuses an unsigned bundle, or one signed by a key
+`bundle_signers` (or `--signers FILE`) does not trust. See [signed bundles](../reference/bundle-signatures.md).
 
 ```sh
 authama settings backup-key                # once: makes an age key and sets the recipient (or set

@@ -6,7 +6,8 @@
 
 Every `authama` command, with its flags and examples, exactly as `--help` prints
 them. The feature pages under [docs/tools](../tools/) explain what each one is for; this page is the
-complete list. [Choosing between similar commands](#choosing-between-similar-commands)
+complete list. Which of them the web UI offers, flag by flag, is in
+[CLI and web parity](cli-web-parity.md). [Choosing between similar commands](#choosing-between-similar-commands)
 is at the end.
 
 Every command also takes the global flag:
@@ -14,6 +15,7 @@ Every command also takes the global flag:
 ```
       --dev-root string          run against a sandbox directory instead of ~/.ssh (also $AUTHAMA_DEV_ROOT)
       --no-dotenv[=true|false]   do not read <config home>/.env this run (also $AUTHAMA_NO_DOTENV=1)
+      --tz string                show times in this IANA time zone for this run, e.g. UTC or Europe/Berlin (else display.timezone, else this system's)
 ```
 
 ## Contents
@@ -33,6 +35,7 @@ Every command also takes the global flag:
 - [`authama doctor`](#authama-doctor) - Diagnose deps, perms, agent, known_hosts, drift, dangling keys, and token-file perms
 - [`authama events`](#authama-events) - Every change seen to a file under ~/.ssh, the config home or a token file, newest first
 - [`authama export`](#authama-export) - Write any list as CSV, JSON, YAML, a PHP or JS array, Markdown or HTML, or hosts for an SSH client, filtered
+  - [`authama export pack`](#authama-export-pack) - Zip any of the exports - Termius hosts, ssh config, setup, structure, git signing, lists - in one file
   - [`authama export schedule`](#authama-export-schedule) - Write saved selections to a folder every day
     - [`authama export schedule add`](#authama-export-schedule-add) - Schedule a saved selection to be written to a folder every day
     - [`authama export schedule install`](#authama-export-schedule-install) - Register a daily job that writes the scheduled exports
@@ -49,6 +52,11 @@ Every command also takes the global flag:
   - [`authama history reset`](#authama-history-reset) - Start the history again: move the history and audit log aside (kept)
   - [`authama history show`](#authama-history-show) - Show one operation: its events and what it changed in the manifest
 - [`authama init`](#authama-init) - Create/converge the per-user home
+- [`authama logs`](#authama-logs) - Show authama's log: commands, web actions, jobs, file changes and sign-ins
+  - [`authama logs export`](#authama-logs-export) - Write the log records (JSON lines) to a file, or stdout
+  - [`authama logs level`](#authama-logs-level) - Set the least severe level written to the log
+  - [`authama logs path`](#authama-logs-path) - Print where authama.log is
+  - [`authama logs retention`](#authama-logs-retention) - Set how many days rotated log files are kept
 - [`authama man`](#authama-man) - Write a manual page (troff, section 1) for every command into DIR
 - [`authama mcp`](#authama-mcp) - Serve the Model Context Protocol over stdio, for an AI client
 - [`authama migrate`](#authama-migrate) - Copy a pre-0.1.1 home (ssh-manager, sshmgr) into the authama home; the old one is kept and marked
@@ -66,14 +74,23 @@ Every command also takes the global flag:
 - [`authama repair`](#authama-repair) - Find and fix what is wrong with the authama home, ~/.ssh and the token files
 - [`authama reset`](#authama-reset) - Factory reset: move the authama home aside (kept) and start again; ~/.ssh is not touched
 - [`authama serve`](#authama-serve) - Open the web UI on this machine
+  - [`authama serve browsers`](#authama-serve-browsers) - List the browsers the web UI remembers, or forget them
+    - [`authama serve browsers forget`](#authama-serve-browsers-forget) - Forget remembered browsers: they sign in with a link again
 - [`authama settings`](#authama-settings) - Your settings files (.env and authama.json): where they are, what is in effect, validate, create
   - [`authama settings backup-key`](#authama-settings-backup-key) - Make an age key for encrypted backups and set backup.age_recipient to it
   - [`authama settings init`](#authama-settings-init) - Create a starter authama.json (schema reference and version; every setting at its default)
   - [`authama settings path`](#authama-settings-path) - Print where the config home, state home, .env and authama.json are
   - [`authama settings set`](#authama-settings-set) - Write one setting into authama.json, keeping the rest
   - [`authama settings show`](#authama-settings-show) - Print authama.json, or with --effective every setting's value and where it came from
+  - [`authama settings timezone`](#authama-settings-timezone) - Show, set or list the time zone times are shown in
+    - [`authama settings timezone list`](#authama-settings-timezone-list) - List the IANA zones, or those matching a search
+    - [`authama settings timezone set`](#authama-settings-timezone-set) - Show times in an IANA zone (Europe/Berlin, UTC), or local for this system's
+    - [`authama settings timezone show`](#authama-settings-timezone-show) - Show the zone times are shown in, and the time there now
   - [`authama settings unset`](#authama-settings-unset) - Take one setting out of authama.json, so it goes back to its default
   - [`authama settings validate`](#authama-settings-validate) - Check authama.json (or FILE) against the schema, and .env's syntax and permissions
+- [`authama setup`](#authama-setup) - Export this setup to another machine, or import one (secrets-free, or encrypted with keys and tokens)
+  - [`authama setup export`](#authama-setup-export) - Write this setup as a secrets-free document, or (--encrypt) everything, keys and tokens included
+  - [`authama setup import`](#authama-setup-import) - Merge a setup document, an export pack or an encrypted full export into this home, after showing what it would do
 - [`authama ssh`](#authama-ssh) - SSH keys, profiles, hosts, config and trust
   - [`authama ssh audit`](#authama-ssh-audit) - Deployment, expiry, and hygiene report
   - [`authama ssh bundle`](#authama-ssh-bundle) - Write an encrypted backup of keys + state (read back with restore)
@@ -87,8 +104,15 @@ Every command also takes the global flag:
   - [`authama ssh deploy`](#authama-ssh-deploy) - Install a public key on its target
   - [`authama ssh diff`](#authama-ssh-diff) - Preview what reconcile would change (manifest vs. ~/.ssh)
   - [`authama ssh expiry`](#authama-ssh-expiry) - Per-key rotation-age table
-  - [`authama ssh git`](#authama-ssh-git) - Show or switch checkouts' GitHub remotes between profile SSH, plain SSH and HTTPS
+  - [`authama ssh git`](#authama-ssh-git) - Switch checkouts' GitHub remotes between profile SSH, plain SSH and HTTPS; commit and sign as a profile
+    - [`authama ssh git clone`](#authama-ssh-git-clone) - Clone a GitHub repository through the right profile's SSH alias, committing as that profile
     - [`authama ssh git resolve`](#authama-ssh-git-resolve) - Show the profile, mode, URL, SSH alias and key a GitHub repository would use; changes nothing
+    - [`authama ssh git sign`](#authama-ssh-git-sign) - Commit as each profile, and sign commits and tags with its SSH key
+      - [`authama ssh git sign apply`](#authama-ssh-git-sign-apply) - Write each profile's git config fragment, allowed_signers, and the includeIf block
+      - [`authama ssh git sign set`](#authama-ssh-git-sign-set) - Set a profile's git email, name, signing key and directories, then apply
+      - [`authama ssh git sign status`](#authama-ssh-git-sign-status) - Show each profile's git identity, whether it is applied, and how checkouts commit
+      - [`authama ssh git sign use`](#authama-ssh-git-sign-use) - Make checkouts commit and sign as a profile, wherever they are
+      - [`authama ssh git sign verify`](#authama-ssh-git-sign-verify) - Check the signatures of a checkout's recent commits against allowed_signers
     - [`authama ssh git status`](#authama-ssh-git-status) - Show each checkout's remote mode, owner and profile
     - [`authama ssh git use`](#authama-ssh-git-use) - Point checkouts' origin at a mode, after proving the new URL with ls-remote
   - [`authama ssh host`](#authama-ssh-host) - Manage a host within a profile (add/edit/delete/apply)
@@ -142,6 +166,13 @@ Every command also takes the global flag:
     - [`authama ssh snapshots list`](#authama-ssh-snapshots-list) - List local ~/.ssh snapshots (oldest -> newest)
     - [`authama ssh snapshots prune`](#authama-ssh-snapshots-prune) - Prune old snapshots, keeping the most recent N
     - [`authama ssh snapshots restore`](#authama-ssh-snapshots-restore) - Restore ~/.ssh config from a snapshot (private keys are left as they are)
+  - [`authama ssh structure`](#authama-ssh-structure) - Find keys outside the expected layout and move them, once you approve each move
+    - [`authama ssh structure approve`](#authama-ssh-structure-approve) - Preview, then carry out, the moves you approve
+    - [`authama ssh structure check`](#authama-ssh-structure-check) - Record file changes and refresh the suggestions; what the background job runs
+    - [`authama ssh structure dismiss`](#authama-ssh-structure-dismiss) - Hide suggestions you mean to leave as they are (--undo shows them again)
+    - [`authama ssh structure install`](#authama-ssh-structure-install) - Check in the background every 15 minutes and notify about new suggestions
+    - [`authama ssh structure list`](#authama-ssh-structure-list) - List the suggested moves (dismissed ones with --all)
+    - [`authama ssh structure uninstall`](#authama-ssh-structure-uninstall) - Remove the background structure check
   - [`authama ssh termius`](#authama-ssh-termius) - Termius: the key to attach to each host
     - [`authama ssh termius keys`](#authama-ssh-termius-keys) - List the Termius key label for each host, or copy one host's private key to the clipboard
   - [`authama ssh validate`](#authama-ssh-validate) - Check keypairs parse, match, and have safe perms
@@ -192,7 +223,9 @@ Subcommands:
 
 ## authama api token
 
-Make, list and revoke API tokens.
+API tokens let a program read authama's API (served by `authama serve` at /api/v1/ when api.enabled
+is on). `create` prints a token once - authama keeps only its hash - `list` shows names, ages and
+expiry but never a token, and `revoke` stops one at once.
 
 ```
 authama api token
@@ -206,7 +239,9 @@ Subcommands:
 
 ## authama api token create
 
-Make an API token, shown once.
+Make a read-only API token called <name> and print it once; authama keeps only its hash, so copy it
+now. It expires after --expires days (90 by default; 0 never expires). Programs send it as
+`Authorization: Bearer ama_...`.
 
 ```
 authama api token create <name> [flags]
@@ -227,7 +262,8 @@ Flags:
 
 ## authama api token list
 
-List API tokens (never the tokens themselves).
+List the API tokens: name, scopes, when each was made, when it expires and when it was last used.
+The tokens themselves are never shown; they cannot be, since only their hashes are kept.
 
 ```
 authama api token list [flags]
@@ -250,7 +286,8 @@ Flags:
 
 ## authama api token revoke
 
-Revoke an API token: it stops working at once.
+Revoke the API token called <name>. Calls that use it are refused from that moment; the programs
+holding it need a new one from `api token create`.
 
 ```
 authama api token revoke <name>
@@ -328,7 +365,9 @@ Flags:
 
 ## authama checklist show
 
-One item's checklist: every step, what is done, and the command for the rest.
+Show one key's or token's checklist: every place it is used, each step of rotating or revoking it,
+which steps are done, and the command for each step left. Name a key as profile/key and a token as
+token:<tool>/<host>.
 
 ```
 authama checklist show <item> [flags]
@@ -380,7 +419,9 @@ Examples:
 
 ## authama companion
 
-Answer a companion tool such as sange: what this build can do and where it keeps things.
+Answers for a companion tool such as sange, which drives authama and needs to know what this build
+supports. `companion info` prints the name, version, contract versions, capabilities and homes, and
+changes nothing.
 
 ```
 authama companion
@@ -415,7 +456,12 @@ Flags:
 
 ## authama doctor
 
-Diagnose deps, perms, agent, known_hosts, drift, dangling keys, and token-file perms.
+Check this machine and home: the tools authama needs, file permissions, the ssh agent, known_hosts,
+drift between the manifest and ~/.ssh, dangling or loose keys, VM hosts and token files others can
+read. It changes nothing unless --fix, which repairs permissions, removes stale authama pins and
+runs a VM sync, backing up before it removes anything (--dry-run shows it first). It exits non-zero
+when something blocks; --strict also fails on every dangling-key state and on readable token files,
+for CI.
 
 ```
 authama doctor [flags]
@@ -496,13 +542,15 @@ braces), --dedupe (keep the first row of each), then --group-by with --aggregate
 count by default) with --totals. A column can name
 the fields they write. The SSH client formats below take none.
 
-Hosts also go out as an SSH client imports them: --format hosts-csv, iterm2, mobaxterm, putty, remmina, securecrt, ssh_config, termius, windows-terminal.
+Hosts also go out as an SSH client imports them: --format ansible, blink, cyberduck, filezilla, hosts-csv, iterm2, mobaxterm, mremoteng, prompt3, putty, rdm, remmina, royalts, securecrt, ssh_config, tabby, termius, transmit, windows-terminal, winscp, xshell.
 ssh_config is the managed config of the hosts kept, byte for byte what `ssh config export --flat`
-writes when every host is kept; termius is the Termius CSV; hosts-csv is a generic CSV; the rest
+writes when every host is kept; termius is the Termius CSV, grouped by profile or, with
+--termius-groups, in nested groups (category/profile, profile/env, category/profile/env, or
+none); hosts-csv is a generic CSV; the rest
 are the clients' own files. Those formats write hosts in manifest order unless --sort is
 given, ignore --columns, leave out git hosts unless --include-git and, except ssh_config,
 windows-terminal and iterm2, hosts behind a ProxyCommand. remmina writes a zip of one file per
-host. What was left out, and what is left to do in the client, goes to stderr.
+host, as do xshell and cyberduck. What was left out, and what is left to do in the client, goes to stderr.
 
 The file goes to stdout, or to --out.
 
@@ -512,6 +560,7 @@ authama export [deployments|events|history|hosts|keys|profiles|snapshots|tokens|
 
 Subcommands:
 
+- [`pack`](#authama-export-pack) - Zip any of the exports - Termius hosts, ssh config, setup, structure, git signing, lists - in one file
 - [`schedule`](#authama-export-schedule) - Write saved selections to a folder every day
 - [`selections`](#authama-export-selections) - List, show, save and delete export selections saved by name
 
@@ -529,6 +578,7 @@ Examples:
   authama export prd-hosts --format json
   authama export hosts --profile simtabi --format ssh_config --out simtabi.ssh_config
   authama export hosts --env prd --format putty --out prd.reg
+  authama export hosts --format termius --termius-groups profile/env --out termius-hosts.csv
 ```
 
 Flags:
@@ -543,7 +593,7 @@ Flags:
       --env strings                only these environments
       --exclude string             leave out rows containing this text, ignoring case
       --fields[=true|false]        list every field the list's rows have, after any transforms, and write nothing
-      --format string              csv, tsv, json, jsonl, yaml, php, js, markdown or html; for hosts also hosts-csv, iterm2, mobaxterm, putty, remmina, securecrt, ssh_config, termius, windows-terminal (default "csv")
+      --format string              csv, tsv, json, jsonl, yaml, php, js, markdown or html; for hosts also ansible, blink, cyberduck, filezilla, hosts-csv, iterm2, mobaxterm, mremoteng, prompt3, putty, rdm, remmina, royalts, securecrt, ssh_config, tabby, termius, transmit, windows-terminal, winscp, xshell (default "csv")
       --group-by strings           a row per distinct value of these fields
       --include string             only rows containing this text, ignoring case
       --include-git[=true|false]   host formats: also export git hosts (user git, or a github or gitlab provider)
@@ -564,10 +614,62 @@ Flags:
       --status strings             only these statuses (a host's status, a key's state)
       --tag strings                only rows with one of these tags
       --template stringArray       a column from a template: as={profile}/{alias}
+      --termius-groups string      termius: the Groups column, nested by '/': profile, category/profile, profile/env, category/profile/env, none (default "profile")
       --tool strings               tokens: only these tools
       --totals[=true|false]        with --group-by: a last row over every group; with --pivot, also a total column
       --transform stringArray      a transform step as JSON, e.g. {"kind":"map","field":"status","values":{"needs-redeploy":"pending"}}
       --until string               only rows at or before this time
+```
+
+## authama export pack
+
+Zip the files the home exports as, chosen by part: the same pack the web UI's
+Export / Import page downloads. No part holds a private key or a token value; the encrypted
+full export is `authama setup export --encrypt`.
+
+Parts (--include, comma-separated, or all):
+  termius      Hosts for Termius (termius-hosts.csv)
+  ssh-clients  Hosts for other SSH clients (clients/)
+  ssh-config   SSH config, one file (ssh_config)
+  setup        Setup document (setup.json)
+  structure    SSH folder structure (structure.json)
+  git-signing  Git identities and signing (git-signing.json, allowed_signers)
+  tokens       Tokens (tokens.csv)
+  hosts        Hosts list (hosts.csv)
+  keys         Keys list (keys.csv)
+  profiles     Profiles list (profiles.csv)
+  deployments  Deployments (deployments.csv)
+  history      History (history.csv)
+  events       File events (events.csv)
+  snapshots    Snapshots (snapshots.csv)
+
+With no --include the pack holds termius, ssh-config, setup, structure, git-signing, tokens.
+The zip goes to <config home>/exports/authama-export-<time>.zip, or --out (never inside
+~/.ssh). --dry-run lists the files and their sizes and writes nothing. `setup import` takes the
+zip as it takes setup.json.
+
+```
+authama export pack [flags]
+```
+
+Examples:
+
+```sh
+  authama export pack
+  authama export pack --include termius,ssh-config --termius-groups category/profile --out hosts.zip
+  authama export pack --include all --dry-run
+  authama export pack --include ssh-clients --clients tabby,filezilla,ansible
+```
+
+Flags:
+
+```
+      --clients strings            ssh-clients: only these client formats (hosts-csv, windows-terminal, iterm2, putty, remmina, securecrt, mobaxterm, royalts, rdm, tabby, mremoteng, xshell, blink, prompt3, winscp, filezilla, cyberduck, transmit, ansible); every one by default
+      --dry-run[=true|false]       list the files and sizes; write nothing
+      --include strings            the parts: termius, ssh-clients, ssh-config, setup, structure, git-signing, tokens, hosts, keys, profiles, deployments, history, events, snapshots, or all
+      --include-git[=true|false]   termius: also list git hosts
+  -o, --out string                 where to write the zip (mode 0600)
+      --termius-groups string      termius: the Groups column: profile, category/profile, profile/env, category/profile/env, none (default "profile")
 ```
 
 ## authama export schedule
@@ -617,7 +719,9 @@ Flags:
 
 ## authama export schedule install
 
-Register a daily job that writes the scheduled exports.
+Register one daily job with this system's scheduler (launchd, systemd or cron, schtasks) that runs
+`export schedule run`, which writes every export schedule. Run it once; adding or removing schedules
+later needs no reinstall. It is refused in dev mode, since the job is machine-wide.
 
 ```
 authama export schedule install
@@ -631,7 +735,7 @@ Examples:
 
 ## authama export schedule list
 
-List the export schedules.
+List the export schedules: each saved selection, and the folder and format it is written to.
 
 ```
 authama export schedule list
@@ -690,7 +794,8 @@ Flags:
 
 ## authama export schedule uninstall
 
-Remove the daily job that writes the scheduled exports.
+Remove the daily job `export schedule install` registered. The schedules themselves are kept;
+`export schedule run` still writes them by hand.
 
 ```
 authama export schedule uninstall
@@ -748,7 +853,8 @@ Flags:
 
 ## authama export selections list
 
-List the saved selections, both stores.
+List the saved export selections from both stores: the shared one in the manifest and your own under
+the state home. Each shows its name, store and what it selects; --json prints them as JSON.
 
 ```
 authama export selections list [flags]
@@ -797,7 +903,8 @@ Flags:
 
 ## authama export selections show
 
-Print a saved selection as JSON.
+Print a saved selection as JSON, the same shape `export --selection` and the Export page read. Which
+store it came from goes to stderr, so stdout can be saved as a file.
 
 ```
 authama export selections show <name>
@@ -881,7 +988,9 @@ Flags:
 
 ## authama history show
 
-Show one operation: its events and what it changed in the manifest.
+Show one operation from the history: what ran, when, from where (CLI, web or a job), its result, its
+events, and what it changed in the manifest. Name it by the OP id `authama history` lists, or a
+unique prefix of it.
 
 ```
 authama history show <op_id>
@@ -895,7 +1004,10 @@ Examples:
 
 ## authama init
 
-Create/converge the per-user home.
+Create the authama home - the config home with its manifest, inventory and .env, and the state home
+- or bring an existing one up to date without touching what is in it. Safe to run again. --force
+resets manifest.json, inventory.json and .env to their defaults, copying the current ones into the
+state home first unless --no-backup; it asks before it does.
 
 ```
 authama init [flags]
@@ -905,15 +1017,125 @@ Examples:
 
 ```sh
   authama init
-  authama init --force --backup   # reset manifest, inventory and .env, keeping copies
+  authama init --force   # reset manifest, inventory and .env, keeping copies
 ```
 
 Flags:
 
 ```
-  -f, --force[=true|false]       overwrite manifest/inventory/.env with fresh defaults, keeping a copy of each in the state home's .state/ first
+  -f, --force[=true|false]       overwrite manifest/inventory/.env with fresh defaults, keeping a copy of each in the state home (init-backup-<time>) first
       --no-backup[=true|false]   with --force, keep no copy of the files it overwrites
   -y, --yes[=true|false]         skip the confirmation prompt
+```
+
+## authama logs
+
+Show authama.log: one record per command, web action, job, file change and sign-in, newest
+last, with times in the display zone. Keys, tokens, passphrases, PINs and sign-in links are blanked
+before anything is written. --level, --since and --grep filter; --follow keeps printing new records
+until Ctrl-C; --json prints each record as written. The log is in the state home's log directory
+(`authama logs path`), rotated at log.max_size_mb and kept log.retention_days days.
+
+```
+authama logs [flags]
+```
+
+Subcommands:
+
+- [`export`](#authama-logs-export) - Write the log records (JSON lines) to a file, or stdout
+- [`level`](#authama-logs-level) - Set the least severe level written to the log
+- [`path`](#authama-logs-path) - Print where authama.log is
+- [`retention`](#authama-logs-retention) - Set how many days rotated log files are kept
+
+Examples:
+
+```sh
+  authama logs
+  authama logs --follow
+  authama logs --level warn --since 24h
+  authama logs --grep signin --json
+```
+
+Flags:
+
+```
+  -f, --follow[=true|false]   keep printing new records until Ctrl-C
+      --grep string           records containing this text (any case)
+      --json[=true|false]     print each record as its JSON line
+      --level string          the least severe level to show: debug, info, warn or error
+      --limit int             the newest N records (0 for all) (default 200)
+      --since string          records from then on: 36h, 7d, 2026-11-20, or RFC 3339
+```
+
+## authama logs export
+
+Write the log records the filters match as JSON lines, to a new file (--out, never overwritten)
+or to stdout: for a bug report or another tool. They are already redacted.
+
+```
+authama logs export [flags]
+```
+
+Examples:
+
+```sh
+  authama logs export --out authama-log.jsonl
+  authama logs export --since 7d --level warn
+```
+
+Flags:
+
+```
+      --grep string    records containing this text (any case)
+      --level string   the least severe level to show: debug, info, warn or error
+      --limit int      the newest N records (0 for all)
+  -o, --out string     the file to write (new; never overwritten), or - for stdout
+      --since string   records from then on: 36h, 7d, 2026-11-20, or RFC 3339
+```
+
+## authama logs level
+
+Set log.level in authama.json: the least severe record written (debug, info, warn or error).
+debug adds every page the web UI serves. The next command, or the web UI after a restart, uses it.
+
+```
+authama logs level <debug|info|warn|error>
+```
+
+Examples:
+
+```sh
+  authama logs level debug
+  authama logs level info
+```
+
+## authama logs path
+
+Print the path of authama.log. Rotated files sit beside it as authama-<time>.log.
+
+```
+authama logs path
+```
+
+Examples:
+
+```sh
+  authama logs path
+```
+
+## authama logs retention
+
+Set log.retention_days in authama.json: how many days a rotated log file is kept before it is
+deleted. The live authama.log is never deleted.
+
+```
+authama logs retention <days>
+```
+
+Examples:
+
+```sh
+  authama logs retention 30
 ```
 
 ## authama man
@@ -953,7 +1175,9 @@ Examples:
 
 ## authama migrate
 
-Copy a pre-0.1.1 home (ssh-manager, sshmgr) into the authama home; the old one is kept and marked.
+Copy a home made before 0.1.1, under the tool's earlier names, into the authama home. The old
+home is kept and marked as migrated, never deleted. When an authama home exists too, --force backs
+it up and replaces it.
 
 ```
 authama migrate [flags]
@@ -1049,7 +1273,10 @@ Flags:
 
 ## authama owner init
 
-Bind this home to you and this machine, and seal its state files.
+Bind this home to you and this machine: authama makes a random sealing key, keeps it where the OS
+keeps your secrets (the login Keychain, the Secret Service, a DPAPI file, or else an owner-only file
+in the state home), and seals the state files so a change made outside authama is noticed. You can
+then set a PIN with `owner pin set`.
 
 ```
 authama owner init [flags]
@@ -1070,7 +1297,11 @@ Flags:
 
 ## authama owner pin
 
-Set, change, reset or remove the PIN.
+With a PIN set, the web UI asks for it after the sign-in link and again on confirmations, and the
+command line asks before revealing or copying a token value and before destructive commands (delete,
+revoke, rotate, rollback, restore, prune, clean, recover, deploy, keygen --force). `set` sets or
+changes it, `remove` turns it off (asking for it first), and `reset` replaces a forgotten one by
+proving your OS account instead.
 
 ```
 authama owner pin
@@ -1084,7 +1315,8 @@ Subcommands:
 
 ## authama owner pin remove
 
-Turn the PIN off (asks for it first).
+Turn the owner PIN off. It asks for the current PIN first; what it guarded is then guarded by the
+bound home and the web sign-in alone.
 
 ```
 authama owner pin remove
@@ -1152,7 +1384,8 @@ Flags:
 
 ## authama owner status
 
-Show whether the home is bound, where its key is kept, and whether a PIN is set.
+Show whether this home is bound to you and this machine, since when, where its sealing key is kept,
+whether a PIN and fingerprint unlock are on, and whether the seal still matches the state files.
 
 ```
 authama owner status
@@ -1255,16 +1488,19 @@ a change is checked and made, so a running server does not hold up a command.
 
 Listens on 127.0.0.1, port 7822 by default. If that port is taken it takes the
 next free one and prints the address it bound; --port pins a port and fails if it
-is taken. The printed address carries a one-time token that signs the browser in;
-without it every page answers 401.
+is taken. Every launch opens the default browser with a one-time link that signs
+it in, and the browser is remembered for web.remember_days (`serve browsers`);
+--no-open, an SSH session or no desktop prints the address instead.
 
-One server per home: when one is already running for this home, serve opens
-it again instead of starting another, so launching twice - or double-clicking
-the app - never piles servers up. --new starts another anyway; --status says
+One server per home: when one is already running for this home, serve checks
+it and opens it instead of starting another, so launching twice - or
+double-clicking the app - never piles servers up. A server that hung, or runs
+an older or rebuilt binary, another base path or another web.port, is replaced.
+--new starts another anyway; --status says
 whether one is running and where; --stop stops it. --stop-all stops every
 authama web UI on this machine's usual ports that proves it holds this home's
 control key, and names the others with the command that stops each;
---restart does that and starts a fresh one, which is how to load a new build.
+--restart does that and starts a fresh one.
 A page from an older build says so, and can restart its server itself. When every port from the
 default up is taken, any free port is used.
 
@@ -1279,6 +1515,10 @@ tunnel: ssh -L 7822:127.0.0.1:7822 <host>.
 ```
 authama serve [flags]
 ```
+
+Subcommands:
+
+- [`browsers`](#authama-serve-browsers) - List the browsers the web UI remembers, or forget them
 
 Examples:
 
@@ -1305,6 +1545,56 @@ Flags:
       --token-file string           also write the sign-in address to this file, mode 0600, for scripts
 ```
 
+## authama serve browsers
+
+List the browsers the web UI remembers. A browser is remembered when it signs in with a link
+(what `authama` opens), for web.remember_days (30 by default): later visits sign in by themselves,
+with an HttpOnly, SameSite=Strict cookie whose secret changes on every sign-in. Only a hash of it
+is kept. The Settings page lists them too.
+
+```
+authama serve browsers [flags]
+```
+
+Subcommands:
+
+- [`forget`](#authama-serve-browsers-forget) - Forget remembered browsers: they sign in with a link again
+
+Examples:
+
+```sh
+  authama serve browsers
+  authama serve browsers --json
+```
+
+Flags:
+
+```
+      --json[=true|false]   print the list as JSON
+```
+
+## authama serve browsers forget
+
+Forget remembered browsers, by the ids `serve browsers` lists, or every one with --all. A
+forgotten browser's session ends on its next page, and it needs a sign-in link again (run `authama`).
+
+```
+authama serve browsers forget [id...] [flags]
+```
+
+Examples:
+
+```sh
+  authama serve browsers forget 3f9c2a1b7e4d5c6a   # an id from serve browsers
+  authama serve browsers forget --all
+```
+
+Flags:
+
+```
+      --all[=true|false]   forget every remembered browser
+```
+
 ## authama settings
 
 authama reads two files from its config home at start-up:
@@ -1327,6 +1617,7 @@ Subcommands:
 - [`path`](#authama-settings-path) - Print where the config home, state home, .env and authama.json are
 - [`set`](#authama-settings-set) - Write one setting into authama.json, keeping the rest
 - [`show`](#authama-settings-show) - Print authama.json, or with --effective every setting's value and where it came from
+- [`timezone`](#authama-settings-timezone) - Show, set or list the time zone times are shown in
 - [`unset`](#authama-settings-unset) - Take one setting out of authama.json, so it goes back to its default
 - [`validate`](#authama-settings-validate) - Check authama.json (or FILE) against the schema, and .env's syntax and permissions
 
@@ -1350,7 +1641,8 @@ Examples:
 
 ## authama settings init
 
-Create a starter authama.json (schema reference and version; every setting at its default).
+Write a starter authama.json in the config home: the schema reference and version, with every
+setting at its default, ready to edit. It will not replace an existing file without --force.
 
 ```
 authama settings init [flags]
@@ -1371,7 +1663,8 @@ Flags:
 
 ## authama settings path
 
-Print where the config home, state home, .env and authama.json are.
+Print where authama keeps things: the config home, the state home, the .env file and authama.json.
+--json prints them for a script.
 
 ```
 authama settings path [flags]
@@ -1409,7 +1702,8 @@ Examples:
 
 ## authama settings show
 
-Print authama.json, or with --effective every setting's value and where it came from.
+Print authama.json as it is on disk. --effective prints every setting instead, with the value in
+effect and where it came from: the environment, .env, authama.json or the default.
 
 ```
 authama settings show [flags]
@@ -1429,9 +1723,80 @@ Flags:
       --json[=true|false]        machine-readable output (with --effective)
 ```
 
+## authama settings timezone
+
+The time zone every time is shown in, in the terminal and the web UI: display.timezone, an IANA
+name such as Europe/Berlin or UTC. Unset, it is this system's zone. Stored times stay UTC. --tz
+<zone>, or $AUTHAMA_TIMEZONE, overrides it for one command.
+
+```
+authama settings timezone
+```
+
+Subcommands:
+
+- [`list`](#authama-settings-timezone-list) - List the IANA zones, or those matching a search
+- [`set`](#authama-settings-timezone-set) - Show times in an IANA zone (Europe/Berlin, UTC), or local for this system's
+- [`show`](#authama-settings-timezone-show) - Show the zone times are shown in, and the time there now
+
+Examples:
+
+```sh
+  authama settings timezone
+```
+
+## authama settings timezone list
+
+List the IANA zones with the time in each now, or those whose name holds the search text.
+
+```
+authama settings timezone list [search]
+```
+
+Aliases: `ls`
+
+Examples:
+
+```sh
+  authama settings timezone list
+  authama settings timezone list europe
+```
+
+## authama settings timezone set
+
+Set display.timezone in authama.json, after checking it is an IANA zone. `local` takes the
+setting out, so this system's zone is used. A running web UI uses the new zone from its next page.
+
+```
+authama settings timezone set <zone>
+```
+
+Examples:
+
+```sh
+  authama settings timezone set America/New_York
+  authama settings timezone set local   # this system's zone
+```
+
+## authama settings timezone show
+
+Show the zone times are shown in, and the time there now.
+
+```
+authama settings timezone show
+```
+
+Examples:
+
+```sh
+  authama settings timezone show
+  authama --tz UTC settings timezone show   # one command in another zone
+```
+
 ## authama settings unset
 
-Take one setting out of authama.json, so it goes back to its default.
+Take one setting out of authama.json, so the environment, .env or the default decides it again. Name
+it as section.name, as `settings show --effective` lists it.
 
 ```
 authama settings unset <key>
@@ -1445,7 +1810,8 @@ Examples:
 
 ## authama settings validate
 
-Check authama.json (or FILE) against the schema, and .env's syntax and permissions.
+Check authama.json (or FILE) against the schema - unknown keys, wrong types, invalid values - and
+.env's syntax and permissions. It exits non-zero when anything is wrong and changes nothing.
 
 ```
 authama settings validate [FILE]
@@ -1456,6 +1822,95 @@ Examples:
 ```sh
   authama settings validate
   authama settings validate ./authama.json
+```
+
+## authama setup
+
+Move a whole setup between machines.
+
+`setup export` writes a setup document: the manifest, providers, settings (without
+this machine's paths) and token config - the names of the variables tokens come from,
+never a value. It is JSON, safe to read and to keep in a repository.
+
+`setup export --encrypt` writes a full export: the same, plus every private key, the
+inventory and the token values, in an age file encrypted with a passphrase (`age -d`
+opens it too). It needs the owner PIN when one is set.
+
+`setup import` reads either (or an `export pack` zip, for its setup.json), shows what it
+would add, keep and replace, and merges it
+into this home. --on-conflict settles what differs: keep (the default) leaves what is
+here, replace takes the import's - keeping a copy of every key file and .env it
+replaces in the state home's replaced/ folder - and fail writes nothing.
+
+```
+authama setup
+```
+
+Subcommands:
+
+- [`export`](#authama-setup-export) - Write this setup as a secrets-free document, or (--encrypt) everything, keys and tokens included
+- [`import`](#authama-setup-import) - Merge a setup document, an export pack or an encrypted full export into this home, after showing what it would do
+
+## authama setup export
+
+Write this setup as a document another machine can import. By default it is secrets-free JSON: the
+manifest, providers, settings without this machine's paths, and the token config naming the
+variables tokens come from, never a value. --encrypt writes a full export instead: every private
+key, the inventory and the token values too, in an age file encrypted with a passphrase (needs
+--out, and the owner PIN when one is set). --sign-key also writes <file>.sig, which `setup import`
+checks.
+
+```
+authama setup export [flags]
+```
+
+Examples:
+
+```sh
+  authama setup export --out setup.json
+  authama setup export --encrypt --out ~/Desktop/setup.age
+```
+
+Flags:
+
+```
+      --encrypt[=true|false]     a full export: private keys, inventory and token values too, encrypted with a passphrase
+  -o, --out string               write to this file (mode 0600) instead of stdout; required with --encrypt, and never replaced
+      --passphrase-file string   read the passphrase from this owner-only file instead of asking
+      --sign-key string          sign the file with this SSH private key, writing <file>.sig (ssh-keygen -Y sign)
+```
+
+## authama setup import
+
+Merge a setup into this home: a setup document, an `export pack` zip (its setup.json) or an
+encrypted full export. It shows what it would add, keep and replace first. --on-conflict settles
+what differs: keep (the default) leaves what is here, replace takes the import's and keeps a copy of
+every key file and .env it replaces, fail writes nothing. A <file>.sig beside it is checked before
+anything is read; --require-signature also refuses a file with no trusted signature.
+
+```
+authama setup import FILE [flags]
+```
+
+Examples:
+
+```sh
+  authama setup import setup.json --dry-run
+  authama setup import authama-export.zip --dry-run
+  authama setup import setup.age --on-conflict replace
+  authama setup import setup.age --on-conflict fail --passphrase-file ~/.setup-pass
+```
+
+Flags:
+
+```
+      --allow-risky-options[=true|false]   import a document that sets SSH options that could redirect or weaken connections, providers that send a token to another host, or custom hypervisor commands (you made it yourself)
+      --dry-run[=true|false]               show what the import would add, keep and replace; write nothing
+      --on-conflict string                 what differs from this home: keep (leave it), replace (take the import's, keeping a copy), fail (write nothing) (default "keep")
+      --passphrase-file string             an encrypted export: read its passphrase from this owner-only file instead of asking
+      --require-signature[=true|false]     refuse the file unless <file>.sig is a good signature by a trusted signer
+      --signers string                     trusted signers, allowed_signers lines (else bundle_signers in the config home)
+  -y, --yes[=true|false]                   import without confirming (implied when there is no terminal)
 ```
 
 ## authama ssh
@@ -1475,7 +1930,7 @@ Subcommands:
 - [`deploy`](#authama-ssh-deploy) - Install a public key on its target
 - [`diff`](#authama-ssh-diff) - Preview what reconcile would change (manifest vs. ~/.ssh)
 - [`expiry`](#authama-ssh-expiry) - Per-key rotation-age table
-- [`git`](#authama-ssh-git) - Show or switch checkouts' GitHub remotes between profile SSH, plain SSH and HTTPS
+- [`git`](#authama-ssh-git) - Switch checkouts' GitHub remotes between profile SSH, plain SSH and HTTPS; commit and sign as a profile
 - [`host`](#authama-ssh-host) - Manage a host within a profile (add/edit/delete/apply)
 - [`import`](#authama-ssh-import) - Onboard an existing ssh setup - a config file or any folder of them - into the manifest
 - [`key`](#authama-ssh-key) - Manage a profile's keys (add/list/delete)
@@ -1495,6 +1950,7 @@ Subcommands:
 - [`rotate`](#authama-ssh-rotate) - Zero-downtime staged key rotation
 - [`show`](#authama-ssh-show) - Everything about a profile, host or key: files, config blocks, pins (the inventory view)
 - [`snapshots`](#authama-ssh-snapshots) - List/restore/prune local ~/.ssh backups
+- [`structure`](#authama-ssh-structure) - Find keys outside the expected layout and move them, once you approve each move
 - [`termius`](#authama-ssh-termius) - Termius: the key to attach to each host
 - [`validate`](#authama-ssh-validate) - Check keypairs parse, match, and have safe perms
 - [`view`](#authama-ssh-view) - One host as ssh will use it: resolved config, key and deployment status (the connect view)
@@ -1502,7 +1958,9 @@ Subcommands:
 
 ## authama ssh audit
 
-Deployment, expiry, and hygiene report.
+Report on every key: where it is deployed, how close it is to its rotation date, and the recent
+activity behind it. --csv prints the deployments, one row per key and target. --notify also fires
+the desktop alert, at most as often as its cadence allows; `ssh notify install` runs that daily.
 
 ```
 authama ssh audit [flags]
@@ -1547,6 +2005,7 @@ Flags:
       --keep int           after bundling, keep only the newest N bundles (0 keeps all)
   -o, --output string      destination dir (else dist/ in the state home)
   -r, --recipient string   age recipient (else $AUTHAMA_AGE_RECIPIENT)
+      --sign-key string    sign the file with this SSH private key, writing <file>.sig (ssh-keygen -Y sign)
 ```
 
 ## authama ssh clean
@@ -1578,7 +2037,10 @@ Flags:
 
 ## authama ssh config
 
-Render, check, or show the SSH config.
+authama writes ~/.ssh/config and the per-profile config files from the manifest. `render` writes
+them, `check` reports drift without writing, `show` prints them (or what ssh resolves for one
+alias), `adopt` moves hand-written Host blocks that duplicate managed hosts out of the way, and
+`export` writes the config as one file for another tool.
 
 ```
 authama ssh config
@@ -1621,7 +2083,9 @@ Flags:
 
 ## authama ssh config check
 
-Verify the config matches the manifest (read-only; exit non-zero on drift).
+Compare the config files on disk with what the manifest renders. It writes nothing, prints what
+differs and exits 1 on drift, so a script or CI can gate on it; `ssh config render` brings them back
+in line.
 
 ```
 authama ssh config check
@@ -1661,7 +2125,9 @@ Flags:
 
 ## authama ssh config render
 
-Render the config files from the manifest.
+Write ~/.ssh/config and each profile's config file from the manifest, after showing what would
+change. A snapshot of ~/.ssh is taken first; hand-written lines outside authama's blocks are kept.
+--dry-run shows the change and writes nothing.
 
 ```
 authama ssh config render [flags]
@@ -1683,7 +2149,8 @@ Flags:
 
 ## authama ssh config show
 
-Print the rendered config, or ssh -G for one alias.
+Print the config authama renders for every profile. With an alias, print what `ssh -G` resolves for
+it instead: the hostname, user, port, identity file and options ssh will actually use.
 
 ```
 authama ssh config show [alias]
@@ -1698,7 +2165,10 @@ Examples:
 
 ## authama ssh deploy
 
-Install a public key on its target.
+Install a key's public half on its targets: the hosts that use it, or the one target named. It
+connects through the host's alias, so its ProxyJump or ProxyCommand applies (--direct uses the
+manifest's hostname, user and port instead), or through the provider's API for a git host. The
+inventory records each deployment.
 
 ```
 authama ssh deploy <[profile/]key> [target] [flags]
@@ -1714,12 +2184,14 @@ Examples:
 Flags:
 
 ```
-  -y, --yes[=true|false]   deploy without confirming (implied when there is no terminal)
+      --direct[=true|false]   connect to the manifest's hostname, user and port, not the host's alias through the managed config (its ProxyJump, ProxyCommand, cloudflared or VM route); the same as ssh.deploy_route direct
+  -y, --yes[=true|false]      deploy without confirming (implied when there is no terminal)
 ```
 
 ## authama ssh diff
 
-Preview what reconcile would change (manifest vs. ~/.ssh).
+Preview what `ssh reconcile` would change: how the config files differ from what the manifest
+renders, and which keys the manifest wants that are not on disk yet. It writes nothing.
 
 ```
 authama ssh diff
@@ -1733,7 +2205,8 @@ Examples:
 
 ## authama ssh expiry
 
-Per-key rotation-age table.
+A table of every key, by profile/key, with its state (ok, due soon, overdue), the date it expires
+and the days left, from each key's lifetime and when it was last minted or rotated.
 
 ```
 authama ssh expiry
@@ -1755,15 +2228,45 @@ Each checkout's origin reaches GitHub one of three ways:
 
 The owner picks the profile through defaults.git.orgs, then defaults.git.profile.
 
+`clone` clones through the right alias; `sign` makes checkouts commit as a profile
+and sign with its SSH key (profiles.<name>.git in the manifest).
+
 ```
 authama ssh git
 ```
 
 Subcommands:
 
+- [`clone`](#authama-ssh-git-clone) - Clone a GitHub repository through the right profile's SSH alias, committing as that profile
 - [`resolve`](#authama-ssh-git-resolve) - Show the profile, mode, URL, SSH alias and key a GitHub repository would use; changes nothing
+- [`sign`](#authama-ssh-git-sign) - Commit as each profile, and sign commits and tags with its SSH key
 - [`status`](#authama-ssh-git-status) - Show each checkout's remote mode, owner and profile
 - [`use`](#authama-ssh-git-use) - Point checkouts' origin at a mode, after proving the new URL with ls-remote
+
+## authama ssh git clone
+
+Resolves the URL as `resolve` does (the owner's profile, the default mode), clones
+it, and when the profile has a git identity adds its fragment to the new checkout
+(as `sign use` does), so the first commit is already made and signed as that profile.
+
+```
+authama ssh git clone <owner>/<repo> [dir] [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh git clone acme/app ~/code/acme/app
+  authama ssh git clone me/dotfiles --profile personal --mode profile
+```
+
+Flags:
+
+```
+      --dry-run[=true|false]   show the URL and directory, clone nothing
+      --mode string            profile, ssh or https (overrides $AUTHAMA_GIT_MODE and the manifest)
+      --profile string         use this profile instead of the owner's mapping
+```
 
 ## authama ssh git resolve
 
@@ -1792,6 +2295,162 @@ Flags:
       --json[=true|false]   machine-readable output (scripting); fields are only ever added
       --mode string         profile, ssh or https (overrides $AUTHAMA_GIT_MODE and the manifest)
       --profile string      use this profile instead of the owner's mapping
+```
+
+## authama ssh git sign
+
+Each profile can carry a git identity (profiles.<name>.git in the manifest): the email
+and name its commits are made as, the key that signs them (its github.com host's key
+unless signing_key names another), and the directories whose checkouts are its own.
+
+`apply` renders that into <config home>/git/<profile>.gitconfig, one allowed_signers
+file, and one managed block of includeIf lines in the global git config, so every
+checkout under a profile's directories commits and signs as that profile. `use` does
+the same for one checkout wherever it is. `verify` checks recent commits' signatures.
+No private key is read: git signs through ssh-keygen (or 1Password's op-ssh-sign).
+
+```
+authama ssh git sign
+```
+
+Subcommands:
+
+- [`apply`](#authama-ssh-git-sign-apply) - Write each profile's git config fragment, allowed_signers, and the includeIf block
+- [`set`](#authama-ssh-git-sign-set) - Set a profile's git email, name, signing key and directories, then apply
+- [`status`](#authama-ssh-git-sign-status) - Show each profile's git identity, whether it is applied, and how checkouts commit
+- [`use`](#authama-ssh-git-sign-use) - Make checkouts commit and sign as a profile, wherever they are
+- [`verify`](#authama-ssh-git-sign-verify) - Check the signatures of a checkout's recent commits against allowed_signers
+
+## authama ssh git sign apply
+
+Renders every profile's git block: <config home>/git/<profile>.gitconfig and
+<config home>/git/allowed_signers (owner-only), and one managed block of includeIf
+lines in the global git config ($GIT_CONFIG_GLOBAL, else ~/.gitconfig). Only that
+block is ever changed, a copy of the file is kept under the state home's
+backups/gitconfig/ first, and a symlinked ~/.gitconfig keeps its link. Every
+change is shown as a diff before it is made.
+
+```
+authama ssh git sign apply [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh git sign apply --dry-run
+  authama ssh git sign apply -y
+```
+
+Flags:
+
+```
+      --dry-run[=true|false]   show the diff, write nothing
+  -y, --yes[=true|false]       write without confirming (implied when there is no terminal)
+```
+
+## authama ssh git sign set
+
+Sets profiles.<profile>.git in the manifest and applies it (see `sign apply`).
+--dir is repeatable and replaces the list; give it once per directory whose
+checkouts commit as this profile. Signing is on unless --no-sign. --clear removes
+the profile's git block, and apply takes its includes out of the global config.
+
+```
+authama ssh git sign set <profile> [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh git sign set work --email me@acme.example --name "Ada Lovelace" --dir ~/code/acme
+  authama ssh git sign set personal --email me@example.com --dir ~/code/personal --key github
+  authama ssh git sign set old-client --clear
+```
+
+Flags:
+
+```
+      --clear[=true|false]      remove the profile's git identity
+      --dir stringArray         a directory whose checkouts commit as this profile (repeatable; replaces the list)
+      --email string            user.email, and the signer's principal in allowed_signers
+      --key string              the profile's key that signs (default: its github.com host's key)
+      --name string             user.name (empty leaves the global one)
+      --no-apply[=true|false]   change the manifest only
+      --no-sign[=true|false]    set the identity only, without signing
+  -y, --yes[=true|false]        apply without confirming (implied when there is no terminal)
+```
+
+## authama ssh git sign status
+
+Lists the profiles with a git identity, says whether `apply` would change
+anything, and for each path (default: the current directory, when it is a checkout)
+the email, signing key and format git resolves there and the file the email comes from.
+
+```
+authama ssh git sign status [path...] [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh git sign status
+  authama ssh git sign status ~/code/acme/app --json
+```
+
+Flags:
+
+```
+      --json[=true|false]   machine-readable output (scripting); fields are only ever added
+```
+
+## authama ssh git sign use
+
+Adds the profile's fragment to each checkout's own config (include.path), in
+place of another profile's, so the checkout commits as that profile whatever
+directory it is in. Includes that are not authama's stay. Run `sign apply` first
+so the fragment exists.
+
+```
+authama ssh git sign use <profile> [path...] [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh git sign use work .
+  authama ssh git sign use personal ~/src/dotfiles --dry-run
+```
+
+Flags:
+
+```
+      --dry-run[=true|false]   show what would change, touch nothing
+  -y, --yes[=true|false]       change without confirming (implied when there is no terminal)
+```
+
+## authama ssh git sign verify
+
+Checks the last -n commits (default 10) with git's own signature check, against
+authama's allowed_signers. Exits non-zero when a signature is bad, and with --strict
+when any commit is not a good signature from an allowed signer.
+
+```
+authama ssh git sign verify [path] [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh git sign verify
+  authama ssh git sign verify ~/code/acme/app -n 50 --strict
+```
+
+Flags:
+
+```
+      --json[=true|false]     machine-readable output (scripting); fields are only ever added
+  -n, --number int            how many recent commits to check (default 10)
+      --strict[=true|false]   fail unless every checked commit is a good signature from an allowed signer
 ```
 
 ## authama ssh git status
@@ -1854,7 +2513,9 @@ Flags:
 
 ## authama ssh host
 
-Manage a host within a profile (add/edit/delete/apply).
+A host is one server in a profile: its alias, hostname, user, port and key. `add` adds one (or names
+it by the naming rules), `apply` adds or updates many from compact specs, `edit` changes one, and
+`delete` removes it with its config block and pins.
 
 ```
 authama ssh host
@@ -1987,7 +2648,9 @@ Flags:
 
 ## authama ssh host edit
 
-Edit a host.
+Change a host in a profile: its hostname, user, port, key, provider, proxy or tags. Only the flags
+given change, and the config is rendered again. A key the host now names that is not on disk yet is
+minted by `ssh reconcile`.
 
 ```
 authama ssh host edit <profile> <alias> [flags]
@@ -2062,7 +2725,10 @@ Flags:
 
 ## authama ssh key
 
-Manage a profile's keys (add/list/delete).
+A profile's keys: `add` declares and mints one, `list` shows every key with its state, `adopt`
+manages a key where it already is, `delete` removes one no host uses, `revoke` takes one off every
+target for good, `lifetime` sets when rotation is due, `reserve` keeps a loose key on purpose, and
+`root` moves the directory that holds the profiles.
 
 ```
 authama ssh key
@@ -2232,7 +2898,9 @@ Flags:
 
 ## authama ssh key list
 
-Every key with its fingerprint, expiry, hosts and state.
+Every key with its fingerprint, the hosts that use it, its expiry and state (new, due, deployed,
+retired). Name a profile, alias or key to narrow it; --new and --since show only the recent ones,
+and --json and --csv print them for a script.
 
 ```
 authama ssh key list [profile|alias|key] [flags]
@@ -2348,10 +3016,11 @@ Examples:
 Flags:
 
 ```
-      --all[=true|false]   revoke every minted key
-      --category string    revoke every minted key in profiles of this category
-      --reason string      why, recorded with the revocation (e.g. "laptop lost")
-  -y, --yes[=true|false]   skip the confirmation prompt
+      --all[=true|false]      revoke every minted key
+      --category string       revoke every minted key in profiles of this category
+      --direct[=true|false]   connect to the manifest's hostname, user and port, not the host's alias through the managed config (its ProxyJump, ProxyCommand, cloudflared or VM route); the same as ssh.deploy_route direct
+      --reason string         why, recorded with the revocation (e.g. "laptop lost")
+  -y, --yes[=true|false]      skip the confirmation prompt
 ```
 
 ## authama ssh key root
@@ -2390,7 +3059,8 @@ Flags:
 
 ## authama ssh key unreserve
 
-Drop a key's reservation (doctor lists it as loose again).
+Drop a loose key's reservation, so `doctor` lists it as loose again. The key file is left where it
+is.
 
 ```
 authama ssh key unreserve <name> [flags]
@@ -2410,7 +3080,9 @@ Flags:
 
 ## authama ssh keygen
 
-Generate a profile's or host's keys.
+Mint the keys a profile or host needs that are missing, into their place under ~/.ssh, and pin the
+reachable hosts' host keys into known_hosts (--no-pin skips that). --force replaces existing keys,
+moving each to old/ after an encrypted backup; --passphrase protects new keys.
 
 ```
 authama ssh keygen <profile|alias> [flags]
@@ -2435,7 +3107,9 @@ Flags:
 
 ## authama ssh knownhosts
 
-Pin host keys into the single ~/.ssh/known_hosts trust store.
+authama keeps one trust store, ~/.ssh/known_hosts. `init` pins every reachable host on first use and
+reports the fingerprints; `pin` scans a host (or --all) with ssh-keyscan and asks before trusting
+what it found.
 
 ```
 authama ssh knownhosts
@@ -2474,7 +3148,9 @@ Flags:
 
 ## authama ssh knownhosts pin
 
-Seed known_hosts via ssh-keyscan, with confirmation.
+Scan a host's keys with ssh-keyscan, show their fingerprints, and add them to ~/.ssh/known_hosts
+once you confirm. Name a manifest host or any host (with --port for a non-standard one), or --all
+for every host in the manifest.
 
 ```
 authama ssh knownhosts pin [host] [flags]
@@ -2498,7 +3174,9 @@ Flags:
 
 ## authama ssh list
 
-Filterable tree across profiles.
+A tree of profiles and their hosts, each with its hostname, provider, key and deployment state.
+Filter by --profile, --tag, --provider or provider --type (vcs for git hosts); --csv prints one row
+per host.
 
 ```
 authama ssh list [flags]
@@ -2526,7 +3204,9 @@ Flags:
 
 ## authama ssh load
 
-Add a profile's keys to the agent.
+Add a profile's private keys to the running ssh agent (ssh-add, with the keychain on macOS). Keys
+not on disk are skipped and named; it fails when ssh-add adds nothing, which usually means no agent
+is running (SSH_AUTH_SOCK).
 
 ```
 authama ssh load <profile>
@@ -2648,7 +3328,8 @@ Flags:
 
 ## authama ssh naming show
 
-Show the naming rules in effect, and each profile's code and own rules.
+Show the naming rules in effect for aliases and key names, the template each follows, and each
+profile's code and any rules of its own.
 
 ```
 authama ssh naming show
@@ -2662,7 +3343,9 @@ Examples:
 
 ## authama ssh net
 
-Per-host connection status + VPN indicator.
+Check each host's connection: whether its port answers, and whether it needs a VPN that is down.
+Name a profile or alias to check fewer. It exits non-zero when a host behind a VPN cannot be
+reached.
 
 ```
 authama ssh net [selector]
@@ -2677,7 +3360,9 @@ Examples:
 
 ## authama ssh notify
 
-Manage the scheduled expiry notifier and desktop notifications.
+Desktop notifications for keys that are due. `install` registers a daily job that runs `ssh audit
+--notify`; `test` fires one now; `doctor` says whether notifications can show here and why not;
+`send` and `ping` show any message, from this process or through the running web UI.
 
 ```
 authama ssh notify
@@ -2693,10 +3378,11 @@ Subcommands:
 
 ## authama ssh notify doctor
 
-Say whether desktop notifications work here, and why not.
+Say whether desktop notifications can show on this machine: which backend would carry them, whether
+it is installed and allowed, and what to change when it is not. It sends nothing.
 
 ```
-authama ssh notify doctor [-title T] [-subtitle S] [-body B] [-group G] [-level info|warn|alert] [-sound] [-json]
+authama ssh notify doctor
 ```
 
 Examples:
@@ -2707,7 +3393,9 @@ Examples:
 
 ## authama ssh notify install
 
-Install the scheduled expiry notifier.
+Register a daily job with this system's scheduler (launchd, systemd or schtasks) that runs `ssh
+audit --notify`, so a key coming due shows a desktop notification. It asks first, and is refused in
+dev mode since the job is machine-wide.
 
 ```
 authama ssh notify install [flags]
@@ -2729,34 +3417,48 @@ Flags:
 
 Hand a notification to the running web UI (authama serve), which shows it.
 
+The flags are go-notifykit's, written with one dash: -title (or -message) is the first
+line, -subtitle the second, -body (or -description) the text under them; -icon is
+an absolute path to a PNG, JPEG or GIF; -open is a local http(s) URL or a program
+to run on click; -group replaces an earlier notification in the group; -level is
+info, warn or alert; -sound plays the default sound; -json reads one notification
+as JSON from stdin instead.
+
 ```
-authama ssh notify ping [-title T] [-subtitle S] [-body B] [-group G] [-level info|warn|alert] [-sound] [-json]
+authama ssh notify ping [-title T] [-subtitle S] [-body B] [-icon PATH] [-open URL|PATH] [-group G] [-level info|warn|alert] [-sound] [-json]
 ```
 
 Examples:
 
 ```sh
-  authama ssh notify ping -title "Deploy finished" -body "billing-api is on v1.4.0" -group deploy
+  authama ssh notify ping -title "Keys rotated" -body "3 keys" -level info
 ```
 
 ## authama ssh notify send
 
 Show a desktop notification from this process.
 
+The flags are go-notifykit's, written with one dash: -title (or -message) is the first
+line, -subtitle the second, -body (or -description) the text under them; -icon is
+an absolute path to a PNG, JPEG or GIF; -open is a local http(s) URL or a program
+to run on click; -group replaces an earlier notification in the group; -level is
+info, warn or alert; -sound plays the default sound; -json reads one notification
+as JSON from stdin instead.
+
 ```
-authama ssh notify send [-title T] [-subtitle S] [-body B] [-group G] [-level info|warn|alert] [-sound] [-json]
+authama ssh notify send [-title T] [-subtitle S] [-body B] [-icon PATH] [-open URL|PATH] [-group G] [-level info|warn|alert] [-sound] [-json]
 ```
 
 Examples:
 
 ```sh
-  authama ssh notify send -title Backup -body "42 files"
-  authama ssh notify send -json < notification.json
+  authama ssh notify send -title "Keys rotated" -body "3 keys" -level info
 ```
 
 ## authama ssh notify test
 
-Fire a test notification.
+Fire one test desktop notification now, to check that notifications show. When no backend is found
+it says what to install or allow.
 
 ```
 authama ssh notify test
@@ -2770,7 +3472,9 @@ Examples:
 
 ## authama ssh profile
 
-Manage a profile (add/edit/delete).
+A profile groups hosts that share an identity - a client, an employer, your own servers - with its
+keys under ~/.ssh/profiles/. `add` makes one, `edit` changes its category, code, key scope or key
+comment, and `delete` removes it with its config blocks and host pins.
 
 ```
 authama ssh profile
@@ -2784,7 +3488,10 @@ Subcommands:
 
 ## authama ssh profile add
 
-Add a profile.
+Add a profile. By default each host gets its own key (per_service); --shared (or --key-scope shared
+with --key-name) uses one key for every host. --category files it under profiles/<category>/, --code
+sets the organisation code its server aliases start with, and --key-comment sets the comment of keys
+minted from now on.
 
 ```
 authama ssh profile add <name> [flags]
@@ -2841,7 +3548,9 @@ Flags:
 
 ## authama ssh profile edit
 
-Edit a profile.
+Change a profile: move it to another category (its key directory and inventory follow), set its
+code, switch between one key per host and one shared key, or change the key comment template. Only
+the flags given change.
 
 ```
 authama ssh profile edit <name> [flags]
@@ -2867,7 +3576,9 @@ Flags:
 
 ## authama ssh providers
 
-List the active provider catalog + credential state.
+List the providers hosts can deploy keys through (GitHub, GitLab, web panels and the like): each
+one's category, kind, the environment variable its API token comes from, and whether that token is
+set. --export writes the shipped catalog to providers.json in the config home to customise.
 
 ```
 authama ssh providers [flags]
@@ -2889,7 +3600,9 @@ Flags:
 
 ## authama ssh reconcile
 
-Build ~/.ssh from the manifest.
+Make ~/.ssh match the manifest: mint the keys it wants that are missing, render the config files,
+and pin reachable hosts' host keys. It shows the plan and asks first, and takes a snapshot of ~/.ssh
+before it writes; --dry-run shows the plan and writes nothing.
 
 ```
 authama ssh reconcile [flags]
@@ -2913,7 +3626,9 @@ Flags:
 
 ## authama ssh recover
 
-Print a break-glass snippet for regaining access when a key is lost.
+Print a break-glass snippet for getting back into a server when a key is lost: the public key to put
+back in authorized_keys and the commands to do it from a console. With no key, print the standalone
+fixkeys tool for every key.
 
 ```
 authama ssh recover [[profile/]key]
@@ -2936,6 +3651,10 @@ or IdentityAgent outside ~/.ssh and $XDG_RUNTIME_DIR, ForwardAgent or
 StrictHostKeyChecking no for every host) is refused, naming each one: a bundle does
 not prove who made it. Pass --allow-risky-options to restore one you made yourself.
 
+A bundle written with --sign-key has a signature, <bundle>.sig, next to it. It is
+checked first: a bundle changed after it was signed is refused. --require-signature
+also refuses one that is unsigned, or signed by a key bundle_signers does not trust.
+
 ```
 authama ssh restore <bundle.age> [flags]
 ```
@@ -2951,12 +3670,16 @@ Flags:
 ```
       --allow-risky-options[=true|false]   restore a bundle whose manifest sets SSH options that could redirect or weaken connections (you made it yourself)
   -i, --identity string                    age identity file (else $AUTHAMA_AGE_IDENTITY_FILE)
+      --require-signature[=true|false]     refuse the file unless <file>.sig is a good signature by a trusted signer
+      --signers string                     trusted signers, allowed_signers lines (else bundle_signers in the config home)
   -y, --yes[=true|false]                   skip the confirmation prompt
 ```
 
 ## authama ssh rollback
 
-Undo a rotation: put a key's previous version back.
+Undo a rotation: move a key's previous version back from old/, deploy it to the key's targets again
+and revoke the key the rotation put in. It asks first, snapshots ~/.ssh, and exits non-zero if it
+could not finish.
 
 ```
 authama ssh rollback <[profile/]key> [flags]
@@ -2971,7 +3694,8 @@ Examples:
 Flags:
 
 ```
-  -y, --yes[=true|false]   skip the confirmation prompt
+      --direct[=true|false]   connect to the manifest's hostname, user and port, not the host's alias through the managed config (its ProxyJump, ProxyCommand, cloudflared or VM route); the same as ssh.deploy_route direct
+  -y, --yes[=true|false]      skip the confirmation prompt
 ```
 
 ## authama ssh rotate
@@ -3024,6 +3748,7 @@ Flags:
       --allow-unverified[=true|false]   commit even if a target can't auto-verify
       --category string                 rotate every key in profiles of this category
       --check[=true|false]              test each key's rotation and change nothing: every server answers and the current key logs in, or the target takes it by hand
+      --direct[=true|false]             connect to the manifest's hostname, user and port, not the host's alias through the managed config (its ProxyJump, ProxyCommand, cloudflared or VM route); the same as ssh.deploy_route direct
       --dry-run[=true|false]            list the keys that would rotate, and change nothing
       --evict-old[=true|false]          evict the previous key in old/: take it off every host it was never removed from, then drop it (the default under --force)
       --failed[=true|false]             run again the keys the last rotation or dry run left (not rotated, or would fail)
@@ -3036,7 +3761,9 @@ Flags:
 
 ## authama ssh show
 
-Everything about a profile, host or key: files, config blocks, pins (the inventory view).
+Everything authama knows about a profile, host or key: the files on disk, the config blocks rendered
+for it, the known_hosts pins and where each key is deployed. This is the inventory view; `ssh view`
+shows one host as ssh will use it.
 
 ```
 authama ssh show <profile|alias|profile/key>
@@ -3052,7 +3779,9 @@ Examples:
 
 ## authama ssh snapshots
 
-List/restore/prune local ~/.ssh backups.
+authama copies the files it manages in ~/.ssh before each change. `list` shows the snapshots,
+`restore` puts a snapshot's config back (private keys are left as they are), and `prune` deletes old
+ones.
 
 ```
 authama ssh snapshots
@@ -3066,7 +3795,8 @@ Subcommands:
 
 ## authama ssh snapshots list
 
-List local ~/.ssh snapshots (oldest -> newest).
+List the snapshots of ~/.ssh, oldest first, each a tar.gz in the state home with its size. --csv
+prints one row each.
 
 ```
 authama ssh snapshots list [flags]
@@ -3088,7 +3818,7 @@ Flags:
 
 ## authama ssh snapshots prune
 
-Prune old snapshots, keeping the most recent N.
+Delete old snapshots, keeping the --keep most recent (10 by default).
 
 ```
 authama ssh snapshots prune [flags]
@@ -3130,6 +3860,182 @@ Flags:
 
 ```
   -y, --yes[=true|false]   skip the confirmation prompt
+```
+
+## authama ssh structure
+
+Watches ~/.ssh and the config home for keys that are not where authama expects them -
+a pair loose in ~/.ssh, a key in the wrong profile directory, a key dropped in the
+config home - and suggests a move for each. Nothing moves until you approve it, here
+or on the web structure page. An approved move is previewed first, backs up each
+file it moves (owner-only, in the state home's .state/moved/), declares the key in
+its profile, records it, repoints IdentityFile lines in your hand-written ssh config,
+re-renders the managed config, and is recorded in history.
+
+`authama serve` checks after every file change it sees; `install` adds
+a background job that checks every 15 minutes and notifies about new suggestions.
+
+```
+authama ssh structure
+```
+
+Subcommands:
+
+- [`approve`](#authama-ssh-structure-approve) - Preview, then carry out, the moves you approve
+- [`check`](#authama-ssh-structure-check) - Record file changes and refresh the suggestions; what the background job runs
+- [`dismiss`](#authama-ssh-structure-dismiss) - Hide suggestions you mean to leave as they are (--undo shows them again)
+- [`install`](#authama-ssh-structure-install) - Check in the background every 15 minutes and notify about new suggestions
+- [`list`](#authama-ssh-structure-list) - List the suggested moves (dismissed ones with --all)
+- [`uninstall`](#authama-ssh-structure-uninstall) - Remove the background structure check
+
+## authama ssh structure approve
+
+Approves suggestions by id (or an id prefix of 4+ characters), or a plan of move lines
+with --plan (- reads stdin):
+
+  key <~/.ssh/path|config/name> profile <profile> [name <key>]
+  key <profile>/<key> profile <profile> [name <key>]   (a declared key, with its hosts)
+  host <profile>/<alias> profile <profile>
+  misplaced <profile>/<key>
+  profile <profile> category <category|->
+
+A host moved to another profile takes its own key when no other host uses it;
+otherwise it takes the key its new profile gives it. A declared key moves only
+with every host of its profile that uses it, and keeps its record and deployments.
+
+A suggestion with no guessed profile needs --profile. The preview lists each file
+moved and the manifest and config diffs; nothing is written before you confirm.
+
+```
+authama ssh structure approve [<id>...] [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh structure approve 1a2b3c4d
+  authama ssh structure approve 9f8e --profile work --name laptop
+  authama ssh structure approve --plan moves.txt --dry-run
+  echo "host work/gh profile home" | authama ssh structure approve --plan -
+```
+
+Flags:
+
+```
+      --dry-run[=true|false]   show the preview; move nothing
+      --name string            the key's name in that profile (one id only; default: its file name)
+      --plan string            approve these move lines instead of ids (- reads stdin)
+      --profile string         the profile to move the key into (for a suggestion with none guessed, or to override the guess)
+  -y, --yes[=true|false]       move without confirming (implied when there is no terminal)
+```
+
+## authama ssh structure check
+
+Scans for file changes (the same scan as `authama events`), refreshes the
+suggestions and, with --notify, posts one desktop notification naming the new ones.
+It never moves anything.
+
+```
+authama ssh structure check [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh structure check --notify
+```
+
+Flags:
+
+```
+      --notify[=true|false]   post a desktop notification about new suggestions
+  -q, --quiet[=true|false]    print nothing
+```
+
+## authama ssh structure dismiss
+
+Hide structure suggestions you mean to leave as they are, by the ids `ssh structure list` shows;
+they stop appearing in the list and the web UI. --undo shows them again.
+
+```
+authama ssh structure dismiss <id>... [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh structure dismiss 1a2b3c4d
+  authama ssh structure dismiss 1a2b3c4d --undo
+```
+
+Flags:
+
+```
+      --undo[=true|false]   show the suggestions again
+```
+
+## authama ssh structure install
+
+Registers a job with launchd (macOS), a systemd user timer (or cron) on Linux, or a
+Scheduled Task on Windows, that runs `ssh structure check --notify --quiet`. It only
+suggests; moves still need your approval.
+
+```
+authama ssh structure install [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh structure install
+```
+
+Flags:
+
+```
+  -y, --yes[=true|false]   install without confirming (implied when there is no terminal)
+```
+
+## authama ssh structure list
+
+List the moves authama suggests for keys outside the expected layout (~/.ssh/profiles/<profile>/),
+each with its id, kind, path and what approving it would do. --all includes dismissed ones; --json
+prints them for a script.
+
+```
+authama ssh structure list [flags]
+```
+
+Aliases: `ls`
+
+Examples:
+
+```sh
+  authama ssh structure list
+  authama ssh structure list --all --json
+```
+
+Flags:
+
+```
+      --all[=true|false]    include dismissed suggestions
+      --json[=true|false]   print the suggestions as JSON
+```
+
+## authama ssh structure uninstall
+
+Remove the background job `ssh structure install` registered, which checks the layout and raises
+suggestions. Suggestions already found are kept. It is refused in dev mode, since the job is
+machine-wide.
+
+```
+authama ssh structure uninstall
+```
+
+Examples:
+
+```sh
+  authama ssh structure uninstall
 ```
 
 ## authama ssh termius
@@ -3194,7 +4100,9 @@ Examples:
 
 ## authama ssh view
 
-One host as ssh will use it: resolved config, key and deployment status (the connect view).
+One host as ssh will connect to it: the resolved config (what `ssh -G` reports), the key it offers
+and whether that key is on disk, and whether it is deployed to the host. Name a host's alias, or a
+profile to see each of its hosts.
 
 ```
 authama ssh view <profile|alias>
@@ -3235,7 +4143,10 @@ Subcommands:
 
 ## authama ssh vm add
 
-Add a VM as a host: its address comes from the hypervisor at connect time.
+Add a local VM as a host in a profile. Its address is not stored: at connect time ssh asks the
+hypervisor for it (and starts the VM if it is stopped), so a new IP on each boot does not matter.
+Name the hypervisor and the VM as it lists it; the key is <profile>_<alias>-<algo> unless --key-
+name.
 
 ```
 authama ssh vm add <profile> <alias> [flags]
@@ -3294,7 +4205,8 @@ Flags:
 
 ## authama ssh vm docker-context
 
-Create or update a Docker context ssh://<alias> for a VM host.
+Create or update a Docker context called <alias> that reaches the VM host's Docker engine over
+ssh://<alias>, through the managed config. Needs the docker CLI.
 
 ```
 authama ssh vm docker-context <alias>
@@ -3308,7 +4220,8 @@ Examples:
 
 ## authama ssh vm list
 
-List every hypervisor's VMs, and which manifest host uses each.
+List every enabled hypervisor's VMs with their state, and which manifest host uses each. A
+hypervisor whose CLI does not answer within 5 seconds is reported as timed out.
 
 ```
 authama ssh vm list
@@ -3553,7 +4466,9 @@ Flags:
 
 ## authama token init
 
-Write a starter token config (never over an existing file).
+Write a starter token config, tokens.json in the config home (or FILE), from the shipped templates:
+an entry per tool to fill in with the environment variable each token comes from, then `token
+apply`. --target starts from those tools' templates only. It never writes over an existing file.
 
 ```
 authama token init [FILE] [flags]
@@ -3574,7 +4489,9 @@ Flags:
 
 ## authama token list
 
-List the tokens installed in the credential files (secrets masked).
+List the tokens installed in the tools' credential files - Composer's auth.json, .npmrc, Docker's
+config, git credentials, .netrc and the rest - with their hosts and masked values. --target narrows
+the tools, --project reads a project's own files, and --reveal shows the values after asking.
 
 ```
 authama token list [flags]
@@ -3737,7 +4654,7 @@ Flags:
 
 ## authama version
 
-Print the authama version.
+Print the authama version, the commit it was built from and its build date.
 
 ```
 authama version
@@ -3772,7 +4689,10 @@ Subcommands:
 
 ## authama webhook add
 
-Add an endpoint; its signing secret is shown once.
+Add a webhook endpoint called <name> (https only) that receives authama's events as signed POSTs:
+each a CloudEvent, signed as Standard Webhooks describes (webhook-id, webhook-timestamp, webhook-
+signature). The signing secret is printed once; verify each request with it. --event sends only the
+event types named, by prefix.
 
 ```
 authama webhook add <name> <url> [flags]
@@ -3793,7 +4713,9 @@ Flags:
 
 ## authama webhook deliver
 
-Send every endpoint the events due to it now.
+Send every enabled endpoint the events due to it now, including failed ones whose backoff has
+passed, and report each delivery. Use it to deliver without `serve` running, from a job or by hand.
+It exits non-zero when a delivery failed.
 
 ```
 authama webhook deliver
@@ -3807,7 +4729,8 @@ Examples:
 
 ## authama webhook disable
 
-Stop sending to an endpoint; it keeps its place.
+Stop sending to an endpoint. It keeps its secret and its place in the event stream, so `webhook
+enable` resumes where it stopped.
 
 ```
 authama webhook disable <name>
@@ -3821,7 +4744,7 @@ Examples:
 
 ## authama webhook enable
 
-Send to an endpoint again, from where it stopped.
+Send to a disabled endpoint again, starting from the first event it has not received.
 
 ```
 authama webhook enable <name>
@@ -3835,7 +4758,8 @@ Examples:
 
 ## authama webhook list
 
-List endpoints and how their delivery stands (never their secrets).
+List the webhook endpoints: name, URL, the events each takes, whether it is on, and when it was last
+sent to and with what result. Secrets are never shown; --json prints the list for a script.
 
 ```
 authama webhook list [flags]
@@ -3858,7 +4782,7 @@ Flags:
 
 ## authama webhook remove
 
-Remove an endpoint and its secret.
+Remove a webhook endpoint and its signing secret. Nothing more is sent to it.
 
 ```
 authama webhook remove <name>
@@ -3872,7 +4796,8 @@ Examples:
 
 ## authama webhook test
 
-Send one webhook.test event now.
+Send one webhook.test event to an endpoint now and print the HTTP status it answered with, to check
+the URL and the signature check on the receiving side.
 
 ```
 authama webhook test <name>

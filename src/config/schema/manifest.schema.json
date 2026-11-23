@@ -330,6 +330,39 @@
             "type": "string",
             "description": "ssh-keygen -C template for keys minted in this profile; empty inherits defaults.key_comment."
           },
+          "git": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "email"
+            ],
+            "description": "The git identity the profile commits as, and whether it signs commits and tags with its SSH key; `authama ssh git sign apply` renders it.",
+            "properties": {
+              "email": {
+                "type": "string",
+                "description": "user.email, and the signer's principal in allowed_signers."
+              },
+              "name": {
+                "type": "string",
+                "description": "user.name; empty leaves the global one."
+              },
+              "signing_key": {
+                "type": "string",
+                "description": "The profile's key that signs; empty uses its github.com host's key."
+              },
+              "sign": {
+                "type": "boolean",
+                "description": "Sign commits and tags (gpg.format ssh); false writes the identity alone."
+              },
+              "dirs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Directories (absolute or ~/) whose checkouts commit as this profile; one includeIf each."
+              }
+            }
+          },
           "keys": {
             "type": "array",
             "items": {

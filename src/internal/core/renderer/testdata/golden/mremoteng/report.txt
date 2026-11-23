@@ -1,0 +1,2 @@
+devbox: reached through a ProxyCommand, which mRemoteNG (a confCons.xml for File > Import) does not run; use windows-terminal or iterm2, which go through ssh
+In mRemoteNG, File > Import > Import from File and choose confCons.xml. mRemoteNG takes a key from a PuTTY saved session: each connection names the session `export hosts --format putty` makes for its alias, so import that .reg too (or set each connection's PuTTY session by hand).

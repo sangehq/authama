@@ -36,7 +36,8 @@ const MaxSelection = 16 << 10
 
 // exportPage is what the Export page starts from: the grains it offers.
 type exportPage struct {
-	Grains []exportGrain
+	Grains    []exportGrain
+	Schedules exportSchedules
 }
 
 type exportGrain struct {
@@ -70,7 +71,7 @@ var exportGrains = func() []exportGrain {
 // file, previewed as they are chosen. The page's script drives it through
 // /exports/run; without the script it lists each preset's download.
 func (x exportAPI) handlePage(w http.ResponseWriter, r *http.Request) {
-	x.s.render(w, http.StatusOK, "export", x.s.newView(r, "export", "Export", exportPage{Grains: exportGrains}))
+	x.renderPage(w, r, http.StatusOK, x.schedules())
 }
 
 func (x exportAPI) handleDataset(w http.ResponseWriter, r *http.Request) {
@@ -259,7 +260,7 @@ func (x exportAPI) run(w http.ResponseWriter, r *http.Request, sel selection.Sel
 			x.fail(w, http.StatusBadRequest, err)
 			return
 		}
-		data, err := encode.Bundle(f, exp)
+		data, err := encode.Bundle(f, exp, x.s.now())
 		if err != nil {
 			x.fail(w, http.StatusInternalServerError, err)
 			return
@@ -284,7 +285,8 @@ func (x exportAPI) run(w http.ResponseWriter, r *http.Request, sel selection.Sel
 }
 
 // hostExport writes the hosts sel keeps in the host format f, from this
-// home's manifest. ?include_git=1 keeps git hosts, as --include-git does.
+// home's manifest. ?include_git=1 keeps git hosts, as --include-git does, and
+// ?termius_groups= is --termius-groups.
 func (x exportAPI) hostExport(ds *dataset.Dataset, sel selection.Selection, f encode.Format, q url.Values) (*encode.ClientExport, error) {
 	home := x.s.opts.Engine.Home()
 	m, err := manifest.Load(home.Manifest())
@@ -292,7 +294,7 @@ func (x exportAPI) hostExport(ds *dataset.Dataset, sel selection.Selection, f en
 		return nil, err
 	}
 	src := renderer.Source{M: m, P: renderer.ExportPathsFor(home.SSHDir), EmitUseKeychain: platform.EmitUseKeychain()}
-	exp, _, err := selection.HostExport(ds, sel, f, src, encode.Options{IncludeGit: q.Get("include_git") == "1"})
+	exp, _, err := selection.HostExport(ds, sel, f, src, encode.Options{IncludeGit: q.Get("include_git") == "1", TermiusGroups: q.Get("termius_groups")})
 	return exp, err
 }
 

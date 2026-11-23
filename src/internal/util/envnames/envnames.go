@@ -28,6 +28,10 @@ const (
 	SnapshotRetain   = "AUTHAMA_SNAPSHOT_RETAIN"
 	OldKeyMaxAgeDays = "AUTHAMA_OLD_KEY_MAX_AGE_DAYS"
 	AutoPin          = "AUTHAMA_AUTO_PIN"
+	// DeployRoute is how deploy, verify and remove reach a server: alias
+	// (through the managed config, so ProxyJump, ProxyCommand, cloudflared
+	// and VM routes apply) or direct (the manifest's hostname, user and port).
+	DeployRoute      = "AUTHAMA_DEPLOY_ROUTE"
 	History          = "AUTHAMA_HISTORY"
 	HistoryPermanent = "AUTHAMA_HISTORY_PERMANENT"
 	GitMode          = "AUTHAMA_GIT_MODE"
@@ -49,6 +53,17 @@ const (
 	WebBasePath    = "AUTHAMA_WEB_BASE_PATH"
 	WebAutoRestart = "AUTHAMA_WEB_AUTO_RESTART"
 	WebMenuExport  = "AUTHAMA_WEB_MENU_EXPORT"
+	// WebRememberDays is how many days a browser signed in with a link is
+	// remembered, so the address alone signs it in again; 0 remembers none.
+	WebRememberDays = "AUTHAMA_WEB_REMEMBER_DAYS"
+	// Timezone is the IANA zone times are shown in; empty is this system's.
+	Timezone = "AUTHAMA_TIMEZONE"
+	// LogLevel is the least level authama.log records: debug, info, warn, error.
+	LogLevel = "AUTHAMA_LOG_LEVEL"
+	// LogRetentionDays is how many days of rotated logs are kept.
+	LogRetentionDays = "AUTHAMA_LOG_RETENTION_DAYS"
+	// LogMaxSizeMB is the size at which authama.log is rotated.
+	LogMaxSizeMB = "AUTHAMA_LOG_MAX_SIZE_MB"
 	// API serves the read API (/api/v1/) on `serve`, for API tokens; off by default.
 	API = "AUTHAMA_API"
 	// Webhooks has `serve` deliver the event feed to registered endpoints.
@@ -84,10 +99,11 @@ const (
 // Names returns every name authama reads, sorted.
 func Names() []string {
 	out := []string{
-		API, AgeIdentityFile, AgeRecipient, AskpassMode, AskpassSecret, AutoPin, ConfigDir,
-		DevRoot, DockerCredsStore, EventsSource, ExportSaveTo, GitMode, HelloCheck, History, HistoryPermanent, KeysAgePills, KeysNewEvents, KeysNewUntil, KeysNewWindowDays, MCP, NoDotenv, Notifications,
-		OldKeyMaxAgeDays, OwnerStore, ServeHandoff, SnapshotRetain, StateDir, TokensCatalog, TokensConfig,
-		VMHypervisors, VMMultiplex, VMPruneGone, VMRepin, WebAddr, WebAutoRestart, WebBasePath, WebMenuExport, WebPort, Webhooks, WebhooksAllowPrivate,
+		API, AgeIdentityFile, AgeRecipient, AskpassMode, AskpassSecret, AutoPin, ConfigDir, DeployRoute,
+		DevRoot, DockerCredsStore, EventsSource, ExportSaveTo, GitMode, HelloCheck, History, HistoryPermanent, KeysAgePills, KeysNewEvents, KeysNewUntil, KeysNewWindowDays,
+		LogLevel, LogMaxSizeMB, LogRetentionDays, MCP, NoDotenv, Notifications,
+		OldKeyMaxAgeDays, OwnerStore, ServeHandoff, SnapshotRetain, StateDir, Timezone, TokensCatalog, TokensConfig,
+		VMHypervisors, VMMultiplex, VMPruneGone, VMRepin, WebAddr, WebAutoRestart, WebBasePath, WebMenuExport, WebPort, WebRememberDays, Webhooks, WebhooksAllowPrivate,
 		WebhooksIncludeDetails,
 	}
 	sort.Strings(out)

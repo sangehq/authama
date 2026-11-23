@@ -34,5 +34,13 @@ func SetPerms(path string, _ os.FileMode) error {
 	return nil
 }
 
-// PermsOK - see windowsPermsOK for why any existing file passes.
-func PermsOK(path string, _ os.FileMode) bool { return windowsPermsOK(path) }
+// PermsOK is the ACL check for a private mode (no group or other bits): only
+// you, SYSTEM and Administrators may have access. A mode that lets others
+// read, such as 0644 for a .pub, only needs the file to exist.
+func PermsOK(path string, mode os.FileMode) bool {
+	if mode.Perm()&0o077 != 0 {
+		_, err := os.Stat(path)
+		return err == nil
+	}
+	return windowsPermsOK(path)
+}

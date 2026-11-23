@@ -18,12 +18,14 @@ import (
 	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/core/expiry"
 	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/providers"
 	"github.com/sangehq/authama/src/internal/services/checklist"
 	"github.com/sangehq/authama/src/internal/services/events"
 	"github.com/sangehq/authama/src/internal/services/history"
 	"github.com/sangehq/authama/src/internal/services/jobs"
 	"github.com/sangehq/authama/src/internal/services/owner"
 	"github.com/sangehq/authama/src/internal/util/highlight"
+	"github.com/sangehq/authama/src/internal/util/tz"
 )
 
 // assetSet is the embedded assets with a content hash each, for
@@ -139,7 +141,10 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		"brandCommand": func() string { return brand.Command },
 		"brandDocsURL": func() string { return brand.DocsURL },
 		"cmdline":      brand.Line,
-		"when":         func(t time.Time) string { return t.UTC().Format("2006-01-02 15:04 UTC") },
+		"when":         func(t time.Time) string { return whenIn(t, tz.Location()) },
+		"day":          func(t time.Time) string { return tz.Format(t, "2006-01-02") },
+		"zones":        func() []string { return tz.Zones },
+		"zoneName":     tz.Describe,
 		// consoleLines reads a job's output into status, subject and text.
 		"consoleLines": consoleLines,
 		"itemTally":    itemTally,
@@ -173,7 +178,7 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		},
 		"stamp": func(s string) string {
 			if t, err := time.Parse(history.TimeFormat, s); err == nil {
-				return t.UTC().Format("2006-01-02 15:04:05 UTC")
+				return stampIn(t, tz.Location())
 			}
 			return s
 		},
@@ -192,8 +197,20 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 		"join":        strings.Join,
 		"list":        func(xs ...string) []string { return xs },
 		"hypervisors": manifest.KnownHypervisors,
-		"short":       func(s string) string { return shorten(s, 8) },
-		"size":        humanSize,
+		// providerNames and proxyKinds fill the host forms' --provider and
+		// --proxy choices; a providers.json entry is accepted when typed.
+		"providerNames": func() []string {
+			specs := providers.AllSpecs("")
+			out := make([]string, 0, len(specs))
+			for n := range specs {
+				out = append(out, n)
+			}
+			sort.Strings(out)
+			return out
+		},
+		"proxyKinds": func() []string { return manifest.ProxyKinds },
+		"short":      func(s string) string { return shorten(s, 8) },
+		"size":       humanSize,
 		"resultClass": func(r string) string {
 			switch r {
 			case history.ResultOK:
@@ -316,6 +333,17 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 				return "status-azure"
 			}
 			return "status-secondary"
+		},
+		"logBadge": func(level string) string {
+			switch level {
+			case "error":
+				return "badge-bad"
+			case "warn":
+				return "badge-warn"
+			case "debug":
+				return "badge-muted"
+			}
+			return "badge-info"
 		},
 		"eventBadge": func(kind string) string {
 			switch kind {
@@ -620,12 +648,13 @@ type navItem struct {
 // a task's kind is what it does to things. The user menu's entries, written
 // out in layout.html, are "personal".
 var navKinds = map[string]string{
-	"profiles": "ssh", "hosts": "ssh", "keys": "ssh", "vms": "ssh", "naming": "ssh", "sshconfig": "ssh",
+	"profiles": "ssh", "hosts": "ssh", "keys": "ssh", "vms": "ssh", "naming": "ssh", "sshconfig": "ssh", "termius": "ssh", "structure": "ssh", "gitsign": "ssh",
 	"tokens": "tokens", "token-checklists": "tokens",
 	"audit": "security", "checklists": "security", "security": "security",
-	"history": "history", "events": "history", "snapshots": "history", "export": "history",
-	"doctor": "health", "validate": "health", "repair": "health",
-	"settings": "settings",
+	"history": "history", "events": "history", "snapshots": "history", "export": "history", "setup": "history",
+	"transfer": "history", "transfer-export": "history", "transfer-encrypted": "history", "transfer-import": "history",
+	"doctor": "health", "validate": "health", "repair": "health", "logs": "health",
+	"settings": "settings", "apitokens": "settings", "webhooks": "settings",
 	"overview": "overview",
 	// Tasks, by what they do.
 	"act-addhost": "create", "act-token": "create", "act-mint": "create",
@@ -800,10 +829,12 @@ func (s *Server) renderError(w http.ResponseWriter, r *http.Request, status int,
 }
 
 func (s *Server) renderUnauthorized(w http.ResponseWriter, r *http.Request) {
-	s.renderError(w, r, http.StatusUnauthorized, "Sign-in link required",
-		"This browser is not signed in to this server. Run `authama serve` for a sign-in link: it opens one, "+
-			"or prints it. A link works once, within 10 minutes, so an address you have already used, or an old "+
-			"one, is refused. A session ends after 8 hours without use, or 24 hours after you signed in.")
+	s.renderError(w, r, http.StatusUnauthorized, "Open authama to sign in",
+		"This browser is not signed in to this server. Open authama on this computer - double-click it, or run "+
+			"`authama` in a terminal - and it signs this browser in: it opens the web UI here with a one-time "+
+			"sign-in link. After that, this browser is remembered (Settings, Remembered browsers), so this address "+
+			"alone opens it. A link works once, within 10 minutes; one you have already used, or an old one, is refused. "+
+			"Nothing else signs a browser in: this page cannot, so another program or user on this machine cannot either.")
 }
 
 // serveAsset answers /assets/{hash}/{path...}. A stale hash is a 404, not the
@@ -901,6 +932,9 @@ func paletteItems(readOnly bool) []paletteItem {
 		{"keys", "Keys", "/keys", "key", "SSH", "key fingerprint expiry reserve", "g k", ""},
 		{"vms", "VMs", "/vms", "box", "SSH", "vm hypervisor devbox sync", "g v", ""},
 		{"sshconfig", "SSH config", "/ssh-config", "file-code", "SSH", "config render drift check", "g c", ""},
+		{"termius", "Termius import", "/termius", "server-2", "SSH", "termius import csv groups subgroups keys keychain export", "g u", ""},
+		{"structure", "Structure", "/structure", "folder", "SSH", "structure tree folder layout move loose keys drag drop watcher builder category", "g b", ""},
+		{"gitsign", "Git identities", "/git-sign", "git-compare", "SSH", "git commit sign signing signature allowed_signers email identity includeIf clone verify", "g g", ""},
 		{"snapshots", "Snapshots", "/snapshots", "archive", "History", "snapshot bundle backup restore", "g s", ""},
 		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Tokens", "token npm composer docker git netrc pypi cargo gem gradle maven yarn helm gh", "g t", ""},
 		{"audit", "Audit", "/audit", "report-search", "Security", "audit key age", "g a", ""},
@@ -908,11 +942,16 @@ func paletteItems(readOnly bool) []paletteItem {
 		{"history", "History", "/history", "history", "History", "history operations changes log", "g y", ""},
 		{"events", "Events", "/events", "file-diff", "History", "events file changes tracking", "g e", ""},
 		{"export", "Export", "/export", "file-export", "History", "export download csv json yaml php javascript markdown html filter columns", "g x", ""},
+		{"setup", "Move setup", "/setup", "stack-2", "History", "setup export import move machine migrate encrypted backup keys tokens", "g m", ""},
+		{"transfer", "Export / Import", "/transfer", "transfer", "History", "export import zip pack termius ssh config setup structure git signing allowed_signers encrypted age upload passphrase", "g f", ""},
 		{"doctor", "Doctor", "/doctor", "stethoscope", "System", "doctor checks fix", "g d", ""},
 		{"validate", "Validate", "/validate", "circle-check", "System", "validate check manifest settings keys keypair config schema", "g l", ""},
 		{"repair", "Repair", "/repair", "tool", "System", "repair fix corrupt permissions", "g r", ""},
 		{"reset", "Reset", "/reset", "restore", "System", "reset factory start again initialise init defaults settings unbind rotate every key", "g z", ""},
 		{"settings", "Settings", "/settings", "adjustments", "System", "settings theme appearance env", "g ,", ""},
+		{"logs", "Logs", "/logs", "table", "System", "logs log level retention follow tail search download sign-in debug", "g .", ""},
+		{"apitokens", "API tokens", "/api-tokens", "license", "System", "api token create revoke read programs", "g j", ""},
+		{"webhooks", "Webhooks", "/webhooks", "bolt", "System", "webhook endpoint events deliver test secret", "g q", ""},
 		{"about", "About", "/about", "info-circle", "System", "about version licences", "g i", ""},
 	}
 	if !readOnly {
@@ -926,7 +965,7 @@ func paletteItems(readOnly bool) []paletteItem {
 	}
 	return append(items,
 		paletteItem{"export-config", "Download ssh_config, every host inline", "/exports/ssh_config", "download", "Export", "export flat ssh_config", "", ""},
-		paletteItem{"export-termius", "Download the Termius CSV", "/exports/termius-hosts.csv", "download", "Export", "export termius csv", "", ""},
+		paletteItem{"export-termius", "Download the Termius CSV, grouped by profile", "/exports/termius-hosts.csv", "download", "Export", "export termius csv", "", ""},
 		paletteItem{"export-hosts", "Download the hosts as CSV", "/exports/hosts.csv", "download", "Export", "export csv hosts spreadsheet", "", ""},
 		paletteItem{"export-keys", "Download the keys as CSV", "/exports/keys.csv", "download", "Export", "export csv keys spreadsheet", "", ""},
 		paletteItem{"export-tokens", "Download the installed tokens as CSV", "/exports/tokens.csv", "download", "Export", "export csv tokens spreadsheet", "", ""},
@@ -952,4 +991,15 @@ type crumb struct {
 // panelFooter is a panel form's footer.
 type panelFooter struct {
 	Command, Label, Style, Icon string
+}
+
+// whenIn is a moment in the display zone (display.timezone, else this
+// machine's), with the zone named: 2026-11-22 15:10 EST.
+func whenIn(t time.Time, loc *time.Location) string {
+	return t.In(loc).Format("2006-01-02 15:04 MST")
+}
+
+// stampIn is whenIn to the second, for a recorded operation's start.
+func stampIn(t time.Time, loc *time.Location) string {
+	return t.In(loc).Format("2006-01-02 15:04:05 MST")
 }

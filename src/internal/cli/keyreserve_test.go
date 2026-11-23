@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/sangehq/authama/src/internal/services/change"
 )
 
 // Reserving a loose key moves it out of doctor's loose findings into an info
@@ -28,9 +30,21 @@ func TestKeyReserveLifecycle(t *testing.T) {
 	if _, err := runErr(t, "ssh", "key", "reserve", filepath.Join(t.TempDir(), "x"), "--yes"); err == nil {
 		t.Error("reserved a file outside ~/.ssh")
 	}
-	if _, err := runErr(t, "ssh", "key", "reserve", "nope", "--yes"); err == nil {
+	if out, err := runErr(t, "ssh", "key", "reserve", "nope", "--yes"); err == nil {
 		t.Error("reserved a file that does not exist")
+	} else if !strings.Contains(err.Error()+out, "no key file ~/.ssh/nope to reserve") || strings.Contains(err.Error(), "lstat") {
+		t.Errorf("a missing key should be said plainly, not as an lstat error: %v", err)
 	}
+	// ~/.ssh/ names the ssh directory this run uses, which a dev root moves
+	// away from the real home.
+	devRoot := p
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
+	if name, _, err := change.ResolveReserve(devRoot, "~/.ssh/docker-tunnel"); err != nil || name != "docker-tunnel" {
+		t.Errorf("~/.ssh/docker-tunnel under a dev root = %q, %v", name, err)
+	}
+	t.Setenv("HOME", filepath.Dir(p.SSHDir))
+	t.Setenv("USERPROFILE", filepath.Dir(p.SSHDir))
 	manifestBefore, _ := os.ReadFile(p.Manifest())
 	run(t, "ssh", "key", "reserve", "docker-tunnel", "--for", "devbox", "--note", "Docker VM, later", "--dry-run")
 	if after, _ := os.ReadFile(p.Manifest()); string(after) != string(manifestBefore) {

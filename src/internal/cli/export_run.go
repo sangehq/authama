@@ -8,6 +8,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -36,7 +37,7 @@ func newExportCmd() *cobra.Command {
 		sources, commands                   []string
 		transforms, templates, dedupe       []string
 		groupBy, aggregates                 []string
-		pivot                               string
+		pivot, termiusGroups                string
 		include, exclude, since, until      string
 		limit                               int
 		narrow, noHeader, compact, listFlds bool
@@ -68,11 +69,13 @@ func newExportCmd() *cobra.Command {
 			"the fields they write. The SSH client formats below take none.\n\n" +
 			"Hosts also go out as an SSH client imports them: --format " + strings.Join(encode.HostNames(), ", ") + ".\n" +
 			"ssh_config is the managed config of the hosts kept, byte for byte what `ssh config export --flat`\n" +
-			"writes when every host is kept; termius is the Termius CSV; hosts-csv is a generic CSV; the rest\n" +
+			"writes when every host is kept; termius is the Termius CSV, grouped by profile or, with\n" +
+			"--termius-groups, in nested groups (category/profile, profile/env, category/profile/env, or\n" +
+			"none); hosts-csv is a generic CSV; the rest\n" +
 			"are the clients' own files. Those formats write hosts in manifest order unless --sort is\n" +
 			"given, ignore --columns, leave out git hosts unless --include-git and, except ssh_config,\n" +
 			"windows-terminal and iterm2, hosts behind a ProxyCommand. remmina writes a zip of one file per\n" +
-			"host. What was left out, and what is left to do in the client, goes to stderr.\n\n" +
+			"host, as do xshell and cyberduck. What was left out, and what is left to do in the client, goes to stderr.\n\n" +
 			"The file goes to stdout, or to --out.",
 		Example: "  " + brand.Command + " export hosts --profile simtabi --env prd --format json\n" +
 			"  " + brand.Command + " export keys --columns ref=key,fingerprint,expires_on --sort expires_on --format markdown\n" +
@@ -84,7 +87,8 @@ func newExportCmd() *cobra.Command {
 			"  " + brand.Command + " export --selection sel.json --format php --out hosts.php\n" +
 			"  " + brand.Command + " export prd-hosts --format json\n" +
 			"  " + brand.Command + " export hosts --profile simtabi --format ssh_config --out simtabi.ssh_config\n" +
-			"  " + brand.Command + " export hosts --env prd --format putty --out prd.reg",
+			"  " + brand.Command + " export hosts --env prd --format putty --out prd.reg\n" +
+			"  " + brand.Command + " export hosts --format termius --termius-groups profile/env --out termius-hosts.csv",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			p, err := resolvePaths(c)
@@ -154,8 +158,14 @@ func newExportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if c.Flags().Changed("termius-groups") && f.Name != "termius" {
+				return errors.New("--termius-groups is for --format termius")
+			}
+			if err := encode.CheckTermiusGroups(termiusGroups); err != nil {
+				return fmt.Errorf("--termius-groups: %w", err)
+			}
 			if f.IsHosts() {
-				return runHostExport(c, p, ds, sel, f, out, encode.Options{IncludeGit: includeGit})
+				return runHostExport(c, p, ds, sel, f, out, encode.Options{IncludeGit: includeGit, TermiusGroups: termiusGroups})
 			}
 			res, err := selection.Run(ds, sel)
 			if err != nil {
@@ -212,7 +222,8 @@ func newExportCmd() *cobra.Command {
 	f.BoolVar(&totals, "totals", false, "with --group-by: a last row over every group; with --pivot, also a total column")
 	f.StringVar(&pivot, "pivot", "", "rows:column - a row per value of the rows fields (comma-separated), a column per value of column")
 	f.BoolVar(&includeGit, "include-git", false, "host formats: also export git hosts (user git, or a github or gitlab provider)")
-	cmd.AddCommand(newExportSelectionsCmd(), newExportScheduleCmd())
+	f.StringVar(&termiusGroups, "termius-groups", encode.TermiusGroupsProfile, "termius: the Groups column, nested by '/': "+strings.Join(encode.TermiusGroupSchemes, ", "))
+	cmd.AddCommand(newExportSelectionsCmd(), newExportScheduleCmd(), newExportPackCmd())
 	return cmd
 }
 
@@ -321,7 +332,7 @@ func runHostExport(c *cobra.Command, p paths.Paths, ds *dataset.Dataset, sel sel
 	if err != nil {
 		return err
 	}
-	data, err := encode.Bundle(f, exp)
+	data, err := encode.Bundle(f, exp, time.Now())
 	if err != nil {
 		return err
 	}

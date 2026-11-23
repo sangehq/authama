@@ -144,10 +144,20 @@ func FromEnv(get envnames.Getenv) Policy {
 }
 
 // ParseSince reads --since: a duration back from now (36h, or 7d in whole
-// days) or a point in time (a date, at local midnight, or RFC 3339).
+// days) or a point in time (a date, at the system zone's midnight, or RFC 3339).
 func ParseSince(s string, now time.Time) (time.Time, error) {
+	return ParseSinceIn(s, now, time.Local)
+}
+
+// ParseSinceIn is ParseSince with a date read at midnight in loc: the zone
+// the times beside it are shown in, so --since 2026-11-20 starts where the
+// listing's 2026-11-20 does.
+func ParseSinceIn(s string, now time.Time, loc *time.Location) (time.Time, error) {
+	if loc == nil {
+		loc = time.Local
+	}
 	s = strings.TrimSpace(s)
-	if t, err := time.ParseInLocation(time.DateOnly, s, time.Local); err == nil {
+	if t, err := time.ParseInLocation(time.DateOnly, s, loc); err == nil {
 		return t, nil
 	}
 	if t, err := time.Parse(time.RFC3339, s); err == nil {

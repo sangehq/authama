@@ -1,0 +1,139 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "SSH" $.Title "Your SSH folder as a tree: categories, profiles, their keys and hosts, and the keys found outside it. Choose a move from an item's menu, or drag the item onto a category or profile - a profile onto a category, a key or host onto another profile. You see every file that moves and each config diff before anything is written." (action "Events" "/events" "file-diff" | withTip "structure-events"))}}
+{{if not .Root}}
+<div class="card"><div class="card-body">{{template "empty" (empty "folder" "No manifest yet" "")}}</div></div>
+{{else}}
+<div class="row row-cards" data-structure-tree>
+  <div class="col-lg-8">
+    <div class="card" id="structure-tree">
+      <div class="card-header"><h2 class="card-title">{{icon "folder"}}<code class="ms-1">{{.Root}}</code></h2></div>
+      <div class="card-body">
+        <ul class="structure-tree" aria-label="SSH folder structure">
+          {{range .Groups}}
+          <li class="structure-node structure-group" data-drop="category:{{.Name}}">
+            <details open>
+              <summary><span class="structure-label">{{icon "folder"}}<span class="ms-1 fw-medium">{{if .Name}}{{.Name}}{{else}}No category{{end}}</span></span><span class="text-secondary small ms-2">{{.Dir}}/</span><span class="badge badge-muted ms-2">{{len .Profiles}} profile(s)</span></summary>
+              <ul>
+                {{range .Profiles}}{{$prof := .}}
+                <li class="structure-node structure-profile" data-drop="profile:{{.Name}}"{{if and (not $.ReadOnly) .Moves}} draggable="true" data-drag="move-profile-{{.Name}}"{{end}}>
+                  <details open>
+                    <summary><span class="structure-label">{{icon "users"}}<span class="ms-1 fw-medium">{{.Name}}</span></span><span class="text-secondary small ms-2">{{.Dir}}/</span>{{if .OnePassword}}<span class="badge badge-info ms-2">1Password</span>{{end}}</summary>
+                    {{if and (not $.ReadOnly) .Moves}}
+                    <div class="structure-move">
+                      <label class="form-label small mb-0" for="move-profile-{{.Name}}">Move profile {{.Name}}</label>
+                      <select class="form-select form-select-sm" id="move-profile-{{.Name}}" name="move" form="structure-plan" data-structure-what="profile {{.Name}}">
+                        <option value="">Stay where it is</option>
+                        {{range .Moves}}<option value="{{.Line}}" data-target="{{.Target}}">{{.Label}}</option>{{end}}
+                      </select>
+                    </div>
+                    {{end}}
+                    <ul>
+                      <li class="structure-leaf"><a class="d-inline-block py-1 text-decoration-underline" href="{{u "/profiles"}}#profile-{{.Name}}">Open profile {{.Name}}</a></li>
+                      {{range .Keys}}<li class="structure-leaf structure-item"{{if and (not $.ReadOnly) .Moves}} draggable="true" data-drag="move-k-{{$prof.Name}}-{{.Name}}"{{end}}>
+                        <span class="structure-label">{{icon "key"}}<span class="ms-1">{{.Name}}</span></span> <code class="small">{{.Path}}</code>{{if .Adopted}} <span class="badge badge-info">kept where it is</span>{{end}}{{if not .Present}} <span class="badge badge-warn">not on disk yet</span>{{end}}
+                        {{if and (not $.ReadOnly) .Moves}}<label class="visually-hidden" for="move-k-{{$prof.Name}}-{{.Name}}">Move key {{.Name}} to another profile</label><select class="form-select form-select-sm d-inline-block w-auto ms-2" id="move-k-{{$prof.Name}}-{{.Name}}" name="move" form="structure-plan" data-structure-what="key {{$prof.Name}}/{{.Name}}">
+                          <option value="">Stay in {{$prof.Name}}</option>
+                          {{range .Moves}}<option value="{{.Line}}" data-target="{{.Target}}">{{.Label}}</option>{{end}}
+                        </select>{{end}}
+                      </li>{{end}}
+                      {{range .Hosts}}<li class="structure-leaf structure-item"{{if and (not $.ReadOnly) .Moves}} draggable="true" data-drag="move-h-{{.Alias}}"{{end}}>
+                        <span class="structure-label">{{icon "server"}}<a class="ms-1 text-decoration-underline" href="{{u "/hosts"}}/{{.Alias}}">{{.Alias}}</a></span> <span class="text-secondary small">{{.Hostname}} · key {{.Key}}</span>
+                        {{if and (not $.ReadOnly) .Moves}}<label class="visually-hidden" for="move-h-{{.Alias}}">Move host {{.Alias}} to another profile</label><select class="form-select form-select-sm d-inline-block w-auto ms-2" id="move-h-{{.Alias}}" name="move" form="structure-plan" data-structure-what="host {{.Alias}}">
+                          <option value="">Stay in {{$prof.Name}}</option>
+                          {{range .Moves}}<option value="{{.Line}}" data-target="{{.Target}}">{{.Label}}</option>{{end}}
+                        </select>{{end}}
+                      </li>{{end}}
+                      {{if not (or .Keys .Hosts)}}<li class="structure-leaf text-secondary small">No keys or hosts yet</li>{{end}}
+                    </ul>
+                  </details>
+                </li>
+                {{end}}
+              </ul>
+            </details>
+          </li>
+          {{end}}
+          <li class="structure-node structure-outside">
+            <details open>
+              <summary><span class="structure-label">{{icon "alert-triangle"}}<span class="ms-1 fw-medium">Outside the layout</span></span><span class="badge {{if .Suggestions}}badge-warn{{else}}badge-ok{{end}} ms-2">{{len .Suggestions}}</span></summary>
+              <ul>
+                {{range .Suggestions}}
+                <li class="structure-node structure-key" id="suggestion-{{.ID}}"{{if and (not $.ReadOnly) .Moves}} draggable="true" data-drag="move-s-{{.ID}}"{{end}}>
+                  <div class="d-flex flex-wrap align-items-center gap-2">
+                    {{icon "key"}}<code>{{.Path}}</code><span class="badge badge-muted">{{.Kind}}</span>{{if .Profile}}<span class="badge badge-info">suggested: {{.Profile}}</span>{{end}}<span class="text-secondary small">id {{.ID}}</span>
+                  </div>
+                  <p class="text-secondary small mb-1">{{.Detail}}</p>
+                  {{range .InUse}}<p class="small mb-1">Named in <code>{{.}}</code>; that line is repointed when it moves.</p>{{end}}
+                  {{if not $.ReadOnly}}
+                  <div class="structure-move d-flex flex-wrap align-items-end gap-2">
+                    {{if .Moves}}
+                    <div>
+                      <label class="form-label small mb-0" for="move-s-{{.ID}}">Move {{.Path}}</label>
+                      <select class="form-select form-select-sm" id="move-s-{{.ID}}" name="move" form="structure-plan" data-structure-what="{{.Path}}">
+                        <option value="">Leave it</option>
+                        {{range .Moves}}<option value="{{.Line}}" data-target="{{.Target}}">{{.Label}}</option>{{end}}
+                      </select>
+                    </div>
+                    {{end}}
+                    <button type="submit" class="btn btn-sm btn-ghost-secondary" form="dismiss-{{.ID}}"{{desc "structure-dismiss"}}>{{icon "x"}}<span class="ms-1">Dismiss</span></button>
+                  </div>
+                  {{end}}
+                </li>
+                {{else}}
+                <li class="structure-leaf text-secondary">Every key is where authama expects it.</li>
+                {{end}}
+              </ul>
+            </details>
+          </li>
+        </ul>
+        <p class="text-secondary small mt-3 mb-0">A host moved to another profile takes its own key along when no other host uses it; otherwise it takes the key its new profile gives it, which <code>ssh reconcile</code> mints and you deploy. A key moves only with every host of its profile that uses it. A moved key keeps its record and deployments: it is the same key. Keys kept where they are (<code>ssh key adopt</code>) and 1Password profiles never move.</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    {{if $.ReadOnly}}
+    <div class="card mb-3"><div class="card-body"><p class="text-secondary">This server is read-only. Move keys at a terminal:</p>{{template "command_line" .ListCmd}}</div></div>
+    {{else}}
+    <form method="post" action="{{basePath}}/changes/preview" id="structure-plan" class="card mb-3" data-inline>
+      <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="structure-plan">
+      <div class="card-header"><h2 class="card-title">Moves</h2></div>
+      <div class="card-body">
+        <p class="small text-secondary mb-1" id="structure-pending-label">Chosen so far:</p>
+        <ul class="small mb-3" data-structure-pending aria-labelledby="structure-pending-label" aria-live="polite"><li class="text-secondary">Nothing yet: choose a move from an item's menu, or drag the item.</li></ul>
+        <label class="form-label" for="structure-moves">More moves, one per line</label>
+        <textarea class="form-control font-monospace small" id="structure-moves" name="moves" rows="4" spellcheck="false" autocomplete="off" placeholder="profile work category clients"></textarea>
+        <small class="form-hint"><code>key &lt;path&gt; profile &lt;profile&gt; [name &lt;key&gt;]</code>, <code>key &lt;profile&gt;/&lt;key&gt; profile &lt;profile&gt; [name &lt;key&gt;]</code>, <code>host &lt;profile&gt;/&lt;alias&gt; profile &lt;profile&gt;</code>, <code>misplaced &lt;profile&gt;/&lt;key&gt;</code>, or <code>profile &lt;name&gt; category &lt;category|-&gt;</code>; a new category is made this way.</small>
+      </div>
+      <div class="card-footer text-end">
+        <button type="submit" class="btn btn-primary"{{desc "structure-preview"}}>Preview the moves</button>
+      </div>
+    </form>
+    {{end}}
+    <div class="card mb-3" id="structure-watch">
+      <div class="card-header"><h2 class="card-title">Watching</h2></div>
+      <div class="card-body">
+        <p>While this server runs, it checks again whenever a file under <code>~/.ssh</code> or the config home changes{{if not .Checked.IsZero}} (last check {{when .Checked}}){{end}}. Nothing moves until you approve it.</p>
+        <p class="small text-secondary mb-1">To be notified when the server is not running, add the background check (every 15 minutes):</p>
+        {{template "command_line" .InstallCmd}}
+        <p class="small text-secondary mb-0">Each approved move is backed up to <code>.state/moved/</code> in the state home first and listed in <a href="{{u "/history"}}">History</a>.</p>
+      </div>
+    </div>
+    {{if .Dismissed}}
+    <div class="card" id="structure-dismissed">
+      <div class="card-header"><h2 class="card-title">Dismissed <span class="badge badge-muted ms-1">{{len .Dismissed}}</span></h2></div>
+      {{if .ShowAll}}
+      <ul class="list-group list-group-flush">
+        {{range .Dismissed}}<li class="list-group-item d-flex align-items-center gap-2"><code class="flex-grow-1">{{.Path}}</code>{{if not $.ReadOnly}}<button type="submit" class="btn btn-sm btn-ghost-secondary" form="restore-{{.ID}}"{{desc "structure-restore"}}>{{icon "restore"}}<span class="ms-1">Show again</span></button>{{end}}</li>{{end}}
+      </ul>
+      {{else}}
+      <div class="card-body"><a href="{{u "/structure?dismissed=1"}}#structure-dismissed">Show the dismissed suggestions</a></div>
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+</div>
+{{if not $.ReadOnly}}
+{{range .Suggestions}}<form method="post" action="{{basePath}}/changes/preview" id="dismiss-{{.ID}}" data-inline hidden><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="structure-dismiss"><input type="hidden" name="id" value="{{.ID}}"></form>{{end}}
+{{range .Dismissed}}<form method="post" action="{{basePath}}/changes/preview" id="restore-{{.ID}}" data-inline hidden><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="structure-dismiss"><input type="hidden" name="id" value="{{.ID}}"><input type="hidden" name="undo" value="1"></form>{{end}}
+{{end}}
+{{end}}
+{{end}}{{end}}

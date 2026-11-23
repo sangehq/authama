@@ -30,6 +30,7 @@ import (
 	"github.com/sangehq/authama/src/internal/services/notifier"
 	"github.com/sangehq/authama/src/internal/services/overview"
 	"github.com/sangehq/authama/src/internal/services/query"
+	recoversvc "github.com/sangehq/authama/src/internal/services/recover"
 	"github.com/sangehq/authama/src/internal/services/settings"
 	"github.com/sangehq/authama/src/internal/services/snapshots"
 	"github.com/sangehq/authama/src/internal/services/tokensvc"
@@ -61,7 +62,9 @@ type Engine interface {
 	Doctor() (doctor.Report, error)
 	VMs(checkDocker bool) (VMsView, error)
 	Audit(now time.Time) (AuditView, error)
-	Export(name string, includeGit bool) (string, error)
+	// Export renders a download; groups is the Termius CSV's group scheme
+	// (encode.TermiusGroupSchemes, "" for the profile), ignored otherwise.
+	Export(name string, includeGit bool, groups string) (string, error)
 	Tokens() (TokensView, error)
 
 	// Preview runs a change on a private copy of the home; Apply makes it
@@ -82,6 +85,10 @@ type SettingsView struct {
 	HasSettings              bool
 	Effective                []SettingRow
 	Problems                 []string
+	// Browsers are the remembered browsers, and RememberDays how long one is
+	// remembered (0: none is); the server fills them in.
+	Browsers     []BrowserRow
+	RememberDays int
 }
 
 // SettingRow is one setting, as `authama settings show --effective` prints it.
@@ -125,6 +132,10 @@ type KeyView struct {
 	Detail keysvc.Detail
 	// PublicKey is the key's public key line, "" when there is none to show.
 	PublicKey string
+	// Recover is `authama ssh recover <ref>`: a console snippet that re-adds
+	// the public key on a locked-out server, "" when there is no public key.
+	// It holds only the public key.
+	Recover string
 	// Revoked is the date the key was revoked, "" when it was not; DefaultDays
 	// the lifetime a key without its own inherits.
 	Revoked     string
@@ -133,7 +144,9 @@ type KeyView struct {
 	// Recency is when each thing happened to the key, how long ago, whether
 	// it is new and its pill (core/recency).
 	Recency recency.Status
-	Ops     []history.Op
+	// RecordsNotice is KeysView.RecordsNotice, for this key's page.
+	RecordsNotice string
+	Ops           []history.Op
 	// Checklist is where the key is used and what is left to rotate or
 	// revoke it; nil when it could not be worked out.
 	Checklist *checklist.Checklist
@@ -356,6 +369,9 @@ type KeysView struct {
 	Categories []string
 	// Recency is each key's recency, by its ref, for its pill.
 	Recency map[string]recency.Status
+	// RecordsNotice says why the revocation or retirement records cannot be
+	// read, which makes every pill "unknown"; "" when they can (A-BUG-06).
+	RecordsNotice string
 }
 
 // pickerData is the key picker for one bulk action.
@@ -454,7 +470,8 @@ func (e AppEngine) Keys() (KeysView, error) {
 		return KeysView{}, err
 	}
 	v := KeysView{Rows: rows, Public: map[string]string{}, KeyRoot: manifest.KeyRoot(m),
-		Recency: keysvc.Recency(m, inv, e.P.Inventory(), rows, recency.FromEnv(nil), time.Now())}
+		Recency:       keysvc.Recency(m, inv, e.P.Inventory(), rows, recency.FromEnv(nil), time.Now()),
+		RecordsNotice: keysvc.RecordsUnreadable(e.P.Inventory())}
 	for _, r := range rows {
 		if !slices.Contains(v.Profiles, r.Ref.Profile) {
 			v.Profiles = append(v.Profiles, r.Ref.Profile)
@@ -522,7 +539,11 @@ func (e AppEngine) Key(ref string) (KeyView, error) {
 			return KeyView{}, err
 		}
 		v := KeyView{Detail: d, PublicKey: publicKeyLine(d.PublicPath), DefaultDays: m.Defaults.RotateAfterDays}
+		if v.PublicKey != "" {
+			v.Recover, _ = recoversvc.Script(e.P, m, r.String())
+		}
 		v.Recency = keysvc.Recency(m, inv, e.P.Inventory(), []keysvc.Row{d.Row}, recency.FromEnv(nil), time.Now())[r.String()]
+		v.RecordsNotice = keysvc.RecordsUnreadable(e.P.Inventory())
 		if revs, err := inventory.LoadRevocations(inventory.RevokedPath(e.P.Inventory())); err == nil && d.Fingerprint != "" {
 			v.Revoked = revs[d.Fingerprint].RevokedOn
 		}
@@ -759,7 +780,7 @@ const (
 )
 
 // Export renders one of the exports for download.
-func (e AppEngine) Export(name string, includeGit bool) (string, error) {
+func (e AppEngine) Export(name string, includeGit bool, groups string) (string, error) {
 	m, err := e.manifest()
 	if err != nil {
 		return "", err
@@ -769,7 +790,7 @@ func (e AppEngine) Export(name string, includeGit bool) (string, error) {
 	case ExportFlat:
 		return renderer.RenderFlatConfig(m, ep, platform.EmitUseKeychain())
 	case ExportTermius:
-		exp, err := renderer.RenderTermiusCSV(m, ep, renderer.TermiusOptions{IncludeGit: includeGit})
+		exp, err := renderer.RenderTermiusCSV(m, ep, renderer.TermiusOptions{IncludeGit: includeGit, Groups: groups})
 		if err != nil {
 			return "", err
 		}
@@ -800,6 +821,12 @@ type TokensView struct {
 	// holds variable names only; ConfigRefused says why it is not shown
 	// otherwise. A file that holds a value never reaches a page.
 	ConfigText, ConfigRefused string
+	// Project and ConfigArg are the page's scope (?project=, ?config=): the
+	// command line's --project and --config. ScopeError says why one was
+	// not used.
+	Project, ConfigArg, ScopeError string
+	// AllTargets are every tool, for apply's --target boxes.
+	AllTargets []string
 }
 
 // TokenService is a Composer service and the kind of secret it takes.
@@ -811,23 +838,30 @@ type TokenService struct {
 // Tokens is `authama token list` and `authama token audit` as data.
 // The secrets never leave the service: Inventory is asked not to reveal them,
 // and the view drops them again in case it ever does.
-func (e AppEngine) Tokens() (TokensView, error) {
-	env := tokensvc.NewEnv(e.P, nil, nil, "")
-	v := TokensView{Items: env.Inventory("", false)}
+func (e AppEngine) Tokens() (TokensView, error) { return tokensView(e.P, "", "") }
+
+// tokensView is Tokens for a project's files (`token list|audit|status
+// --project`) and through a given token config (`--config`); both are
+// absolute paths, or "".
+func tokensView(p paths.Paths, project, config string) (TokensView, error) {
+	env := tokensvc.NewEnv(p, nil, nil, "")
+	v := TokensView{Items: env.Inventory(project, false), Project: project, ConfigArg: config, AllTargets: tokens.Targets()}
 	for i := range v.Items {
 		v.Items[i].Secret = ""
 	}
-	v.Findings, v.Failed = env.Checkup(tokens.NewSet(), "")
-	if src, err := env.FindConfig(""); err == nil {
+	v.Findings, v.Failed = env.Checkup(tokens.NewSet(), project)
+	if src, err := env.FindConfig(config); err == nil {
 		v.Config, v.Legacy = src.Path, src.Legacy
+	} else if config != "" {
+		v.ScopeError = err.Error()
 	}
-	if st, err := tokensvc.StatusOf(env, "", ""); err == nil {
+	if st, err := tokensvc.StatusOf(env, config, project); err == nil {
 		v.Status = st
 	}
-	_, err := os.Stat(e.P.Tokens())
+	_, err := os.Stat(p.Tokens())
 	v.HasConfig = err == nil
 	if v.HasConfig {
-		v.ConfigText, v.ConfigRefused = editableTokenConfig(e.P.Tokens())
+		v.ConfigText, v.ConfigRefused = editableTokenConfig(p.Tokens())
 	}
 	for _, t := range tokens.Targets() {
 		if t != tokens.Composer {

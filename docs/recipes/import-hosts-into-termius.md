@@ -3,13 +3,21 @@
 Termius's SSH-config import does not follow `Include`, so a categorized setup shows up as bare addresses with no user
 or key. Import the CSV authama writes instead.
 
+In the web UI (`authama serve`), **SSH → Termius import** does every step below on one page: pick the group scheme
+and the hosts, check the CSV as Termius will read it, download it, and see each host's key label and the command
+that copies its key ([Termius import](../tools/serve.md#termius-import)). To take the CSV together with the
+flat ssh config and the rest, tick them on **Export / Import** (the header button) or run
+`authama export pack --include termius,ssh-config --termius-groups category/profile`. At a terminal:
+
 ```bash
 authama export hosts --format termius --out ~/Downloads/termius-hosts.csv
 ```
 
 1. In Termius: **Hosts → New Host (arrow) → Import → CSV**, click **Skip download**, and choose that
    `termius-hosts.csv`. Git hosts are left out; add `--include-git` to keep them, and `--exclude <text>` to leave a
-   host out.
+   host out. Each host lands in a group named after its profile; for subgroups, add `--termius-groups profile/env`
+   (`simtabi/prd`), `category/profile` (`orgs/simtabi`) or `category/profile/env`, or `none` for no group
+   ([Nested groups](../tools/export.md#nested-groups)).
 2. **The CSV carries no SSH keys.** Termius's CSV template has no key column, so every imported host arrives with no
    key, and connecting stops at **SSH key selection**. For each host, once:
    1. `authama ssh termius keys <HOST>` copies that host's private key to the clipboard (never shown) and prints the
@@ -18,7 +26,9 @@ authama export hosts --format termius --out ~/Downloads/termius-hosts.csv
       label, click into **Private key** and paste, leave **Certificate** empty, and **Save**.
       (**Import from key file** works too; press ⌘⇧. to show the hidden `~/.ssh` folder.)
    3. Pick the new key for the host and click **Continue & Save** (or set it in the host's **SSH key** field).
-3. Clear the clipboard: `authama ssh termius keys --clear` (or copy with `--clear-after 60s` to do it automatically).
+3. A host reached through a `ProxyJump` is imported as a direct host: the export's notes name the jump host, so set
+   it as the host's **Host Chain** in Termius.
+4. Clear the clipboard: `authama ssh termius keys --clear` (or copy with `--clear-after 60s` to do it automatically).
 
 `authama ssh termius keys` with no host lists every exported host with its label and key path. `--print` writes the key to
 stdout instead of the clipboard and warns on stderr; avoid it, since the key stays in your scrollback.

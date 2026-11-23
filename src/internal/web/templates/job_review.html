@@ -27,7 +27,7 @@
       <div class="card-header"><h2 class="card-title">Keys to {{.Action}}</h2><div class="card-actions small text-secondary">{{if $.Data.Empty}}none chosen yet{{else}}{{len $.Data.Items}} chosen{{end}}</div></div>
       <div class="card-body">{{template "key_picker" .}}</div>
       <div class="card-footer d-flex flex-wrap align-items-center gap-2">
-        <span class="small text-secondary me-auto">Change the keys, then review again: the checks, steps and order below follow.</span>
+        <span class="small text-secondary me-auto">Change the keys, then review again: the checks, steps and order below follow.{{if eq .Action "rotate"}} <a href="{{basePath}}/jobs/review?action=rotate-keys&amp;failed=1"{{desc "job-pick-failed"}}>Choose the keys the last rotation left</a>.{{end}}</span>
         <button type="submit" class="btn btn-primary" data-pick-submit="{{.Action}}"{{desc "job-pick-review"}}><span class="me-1" data-pick-submit-label>Review</span>{{icon "refresh"}}</button>
       </div>
     </form>{{end}}

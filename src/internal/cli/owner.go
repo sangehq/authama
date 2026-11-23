@@ -15,6 +15,7 @@ import (
 	"github.com/sangehq/authama/src/internal/services/owner"
 	"github.com/sangehq/authama/src/internal/util/log"
 	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/tz"
 )
 
 // Audit events for the owner binding. None carries a PIN or the key.
@@ -70,7 +71,7 @@ func newOwnerStatusCmd() *cobra.Command {
 			}
 			yesNo := map[bool]string{true: "yes", false: "no"}
 			bio, why := owner.BiometricAvailable()
-			_, _ = fmt.Fprintf(out, "bound since  %s\n", cfg.Created.Local().Format("2006-01-02 15:04"))
+			_, _ = fmt.Fprintf(out, "bound since  %s\n", tz.Minute(cfg.Created))
 			_, _ = fmt.Fprintf(out, "key kept in  %s\n", cfg.Store)
 			_, _ = fmt.Fprintf(out, "PIN          %s\n", yesNo[cfg.HasPIN()])
 			_, _ = fmt.Fprintf(out, "fingerprint  %s", yesNo[cfg.Biometric])

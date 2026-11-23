@@ -14,6 +14,13 @@
 #
 set -euo pipefail
 
+# The whole script is one function, called on the last line: `curl … | bash`
+# runs lines as they arrive, so a connection cut mid-download would otherwise
+# run a truncated script. bash reads the function to its closing brace before
+# running any of it, so a cut file is a syntax error that runs nothing (audit
+# P-03).
+main() {
+
 OWNER="sangehq"
 REPO="authama"
 BINARY="authama"
@@ -214,3 +221,6 @@ fi
 info ""
 info "Settings live in ${XDG_CONFIG_HOME:-$HOME/.config}/authama (.env and authama.json, loaded at startup)."
 info "A 0.1.0 home in ~/.config/ssh-manager is copied there on the first run and kept."
+}
+
+main "$@"

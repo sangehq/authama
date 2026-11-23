@@ -163,3 +163,44 @@ func TestASignedInBrowserSpendsALinkWithoutANewSession(t *testing.T) {
 		t.Errorf("the link after a signed-in browser used it: %d", code)
 	}
 }
+
+// A new link can be asked for without sending the control key: a fresh,
+// timely challenge with a proof of the key, answered with the server's
+// proof. A wrong proof, an old challenge, a replay and a forwarded request
+// are refused (audit P-02).
+func TestANewLinkByProofNeverNeedsTheKeyOnTheWire(t *testing.T) {
+	s, _ := clockServer(t)
+	ask := func(challenge, proof, remote string, fwd bool) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(http.MethodPost, "http://"+testHost+LinkPath, nil)
+		r.RemoteAddr = remote
+		r.Header.Set(LinkChallengeHeader, challenge)
+		r.Header.Set(LinkProofHeader, proof)
+		if fwd {
+			r.Header.Set("X-Forwarded-For", "192.0.2.10")
+		}
+		return do(s, r)
+	}
+	c := LinkChallenge(s.now())
+	good := LinkCallerProof(testControl, s.opts.Instance, c)
+	if rec := ask(c, LinkCallerProof(NewToken(), s.opts.Instance, c), "127.0.0.1:5000", false); rec.Code != http.StatusForbidden {
+		t.Errorf("a proof under another key: %d", rec.Code)
+	}
+	if rec := ask(c, good, "127.0.0.1:5000", true); rec.Code != http.StatusForbidden {
+		t.Errorf("a forwarded request: %d", rec.Code)
+	}
+	rec := ask(c, good, "127.0.0.1:5000", false)
+	var reply linkReply
+	if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &reply) != nil || !strings.HasPrefix(reply.SignIn, "?token=") {
+		t.Fatalf("with a good proof: %d %s", rec.Code, rec.Body.String())
+	}
+	if reply.Proof != LinkProof(testControl, c, reply.SignIn) {
+		t.Error("the answer does not prove the server holds the key")
+	}
+	if rec := ask(c, good, "127.0.0.1:5000", false); rec.Code != http.StatusForbidden {
+		t.Errorf("the same challenge again: %d", rec.Code)
+	}
+	old := LinkChallenge(s.now().Add(-10 * time.Minute))
+	if rec := ask(old, LinkCallerProof(testControl, s.opts.Instance, old), "127.0.0.1:5000", false); rec.Code != http.StatusForbidden {
+		t.Errorf("a ten-minute-old challenge: %d", rec.Code)
+	}
+}

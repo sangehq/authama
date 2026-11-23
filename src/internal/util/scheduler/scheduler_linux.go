@@ -68,8 +68,7 @@ func installCron(command, label string) error {
 		}
 	}
 	escaped := strings.ReplaceAll(command, "%", `\%`)
-	h, m := hourMinute(jobFor(label).at)
-	kept = append(kept, fmt.Sprintf("%s %s * * * %s %s", m, h, escaped, marker))
+	kept = append(kept, cronLine(label, escaped, marker))
 	return crontabIn(strings.Join(kept, "\n") + "\n")
 }
 

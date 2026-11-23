@@ -1,0 +1,6 @@
+devbox: reached through a ProxyCommand, which WinSCP (WinSCP.ini sessions) does not run; use windows-terminal or iterm2, which go through ssh
+WinSCP reads these sections from WinSCP.ini: with WinSCP closed, append authama-winscp.ini to the WinSCP.ini beside WinSCP.exe (portable) or the one Tools > Preferences > Storage names, then start it. (Tools > Import Sites also takes the filezilla export.) Key paths are this machine's.
+WinSCP reads .ppk keys; convert each once (WinSCP offers to when you pick an OpenSSH key):
+puttygen /home/u/.ssh/profiles/internal/personal/imani_github-ed25519 -o /home/u/.ssh/profiles/internal/personal/imani_github-ed25519.ppk
+puttygen /home/u/.ssh/profiles/legacy/legacy-ed25519 -o /home/u/.ssh/profiles/legacy/legacy-ed25519.ppk
+puttygen /home/u/.ssh/profiles/orgs/simtabi/simtabi_oribi-web-ed25519 -o /home/u/.ssh/profiles/orgs/simtabi/simtabi_oribi-web-ed25519.ppk

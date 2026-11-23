@@ -132,3 +132,88 @@ func TestReplaceLocallyKeepsAPredecessorThatStillLogsIn(t *testing.T) {
 		t.Fatalf("told to evict, the replacement still failed:\n%s", out.String())
 	}
 }
+
+// A key in old/ whose fingerprint cannot be read might still log in
+// anywhere: "cannot tell" is refused like "still logs in", not evicted
+// (audit A-BUG-07).
+func TestAnUnreadablePredecessorIsCannotTell(t *testing.T) {
+	if _, err := exec.LookPath("ssh-keygen"); err != nil {
+		t.Skip("ssh-keygen not on PATH")
+	}
+	m := loadManifest(t)
+	p := paths.Paths{SSHDir: t.TempDir(), ConfigDir: t.TempDir()}
+	ref := manifest.KeyRef{Profile: "work", KeyName: "work_gh-ed25519"}
+	slot := filepath.Join(manifest.ArchiveDir(m, p.SSHDir, ref), ref.KeyName)
+	if err := os.MkdirAll(filepath.Dir(slot), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(slot+".pub", []byte("not a public key\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	live, err := PredecessorStillLogsIn(p, m, New(p, m, inventory.New(), false).ks, ref)
+	if err == nil || len(live) != 0 {
+		t.Fatalf("live %v err %v: an unreadable predecessor read as free to evict", live, err)
+	}
+}
+
+// A key in old/ with no retirement record was archived before records were
+// kept, or by a replacement that recorded nothing: where it was deployed is
+// unknown, so it is "cannot tell" - unless the inventory shows it was never
+// deployed. A local replacement now records the retirement itself, naming
+// the hosts the outgoing key was deployed to (audit A-BUG-07).
+func TestAPredecessorWithNoRetirementRecordIsCannotTell(t *testing.T) {
+	if _, err := exec.LookPath("ssh-keygen"); err != nil {
+		t.Skip("ssh-keygen not on PATH")
+	}
+	m := loadManifest(t)
+	p := paths.Paths{SSHDir: t.TempDir(), ConfigDir: t.TempDir()}
+	inv := inventory.New()
+	ref := manifest.KeyRef{Profile: "work", KeyName: "work_gh-ed25519"}
+	r := New(p, m, inv, false)
+	mk, err := r.MintRef(ref, "")
+	if err != nil || mk == nil {
+		t.Fatalf("minting the first key: %v", err)
+	}
+	// It was deployed to panel.
+	rec := inv.Keys[mk.Fingerprint]
+	rec.Deployments = []inventory.Deployment{{Target: "panel", Method: "ssh-copy-id", Verified: true}}
+	inv.Keys[mk.Fingerprint] = rec
+	if err := m.Save(p.Manifest()); err != nil {
+		t.Fatal(err)
+	}
+	if err := inv.Save(p.Inventory()); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	if replaced, _ := ReplaceLocally(p, []string{ref.String()}, false, false, &out); len(replaced) != 1 {
+		t.Fatalf("the first replacement failed:\n%s", out.String())
+	}
+	live, err := PredecessorStillLogsIn(p, m, r.ks, ref)
+	if err != nil || len(live) != 1 || live[0] != "panel" {
+		t.Fatalf("live %v err %v: the replacement did not record that the outgoing key is still on panel", live, err)
+	}
+
+	// The same key in old/ with its record gone: cannot tell.
+	if err := os.Remove(inventory.RetiredPath(p.Inventory())); err != nil {
+		t.Fatal(err)
+	}
+	if live, err := PredecessorStillLogsIn(p, m, r.ks, ref); err == nil {
+		t.Fatalf("live %v: a deployed predecessor with no retirement record read as free to evict", live)
+	}
+
+	// Known to the inventory and never deployed: nothing to keep it for.
+	inv2, err := inventory.Load(p.Inventory())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for fp, kr := range inv2.Keys {
+		kr.Deployments = nil
+		inv2.Keys[fp] = kr
+	}
+	if err := inv2.Save(p.Inventory()); err != nil {
+		t.Fatal(err)
+	}
+	if live, err := PredecessorStillLogsIn(p, m, r.ks, ref); err != nil || len(live) != 0 {
+		t.Fatalf("live %v err %v: a never-deployed predecessor was held back", live, err)
+	}
+}

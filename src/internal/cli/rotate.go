@@ -199,6 +199,11 @@ func rotateMany(c *cobra.Command, sel keysvc.Selection, allowUnverified, passphr
 	if err != nil {
 		return err
 	}
+	// A selection that names nothing is a usage error, refused before the
+	// lock so it is not recorded as a failed rotation.
+	if err := sel.Validate(); err != nil {
+		return err
+	}
 	lockForMutation(p)
 	m, err := manifest.Load(p.Manifest())
 	if err != nil {

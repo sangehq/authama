@@ -1,0 +1,2 @@
+devbox: reached through a ProxyCommand, which Tabby (an ssh-profiles.yaml beside its config.yaml) does not run; use windows-terminal or iterm2, which go through ssh
+Copy ssh-profiles.yaml next to Tabby's config.yaml (Settings > Config file > Show config file) and restart Tabby; the profiles appear in its profile list. Each names its authama group in group, which Tabby shows as a group only when one with that id exists in Settings > Profiles; otherwise it lists them as ungrouped. Key paths are this machine's.

@@ -17,6 +17,8 @@ import (
 	"github.com/sangehq/authama/src/internal/core/inventory"
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/core/providers"
+	"github.com/sangehq/authama/src/internal/core/renderer"
+	"github.com/sangehq/authama/src/internal/platform"
 	"github.com/sangehq/authama/src/internal/services/keystore"
 	"github.com/sangehq/authama/src/internal/services/opstore"
 	"github.com/sangehq/authama/src/internal/services/reconciler"
@@ -151,6 +153,9 @@ type Rotator struct {
 	// outgoing key (rotate --evict-old, and --force unless --keep-old);
 	// unset, it keeps it, and stops while a host still accepts it.
 	EvictOld bool
+	// Direct connects to each host's hostname, user and port instead of its
+	// alias through the managed config (rotate --direct).
+	Direct bool
 }
 
 // Unattended makes the rotation's deploys run with nobody to answer a prompt,
@@ -198,13 +203,14 @@ func (r *Rotator) target(h manifest.Host, profile, pubPath, pubText, identPath s
 		PubkeyPath: pubPath, PubkeyText: pubText, TokenEnv: deref(h.TokenEnv),
 		IdentityPath: identPath, KnownHosts: filepath.Join(r.p.SSHDir, "known_hosts"),
 		IdentityAgent: r.agentFor(profile, identPath), Unattended: r.unattended,
+		ConfigFile: renderer.RouteConfig(r.m, r.p.SSHDir, r.p.StateDir(), platform.EmitUseKeychain(), r.Direct),
 	}
 }
 
 func (r *Rotator) unreachable(hosts []manifest.Host) []string {
 	var msgs []string
 	for _, h := range hosts {
-		if r.provider(h).Category() != "server" {
+		if r.provider(h).Category() != "server" || (!r.Direct && !renderer.RouteDirect(nil) && renderer.HasRoute(h)) {
 			continue
 		}
 		st := netcheck.Check(h.Hostname, h.Port, h.RequiresVPN, deref(h.VPNName), deref(h.VPNURL), 4*time.Second, true)

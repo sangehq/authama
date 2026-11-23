@@ -37,7 +37,7 @@ func newSettingsCmd() *cobra.Command {
 		Args: cobra.ArbitraryArgs,
 		RunE: groupHelp,
 	}
-	cmd.AddCommand(newSettingsPathCmd(), newSettingsShowCmd(), newSettingsValidateCmd(), newSettingsInitCmd(), newSettingsSetCmd(), newSettingsUnsetCmd(), newSettingsBackupKeyCmd())
+	cmd.AddCommand(newSettingsPathCmd(), newSettingsShowCmd(), newSettingsValidateCmd(), newSettingsInitCmd(), newSettingsSetCmd(), newSettingsUnsetCmd(), newSettingsBackupKeyCmd(), newSettingsTimezoneCmd())
 	return cmd
 }
 

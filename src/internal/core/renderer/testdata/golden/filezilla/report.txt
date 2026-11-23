@@ -1,0 +1,2 @@
+devbox: reached through a ProxyCommand, which FileZilla (a Site Manager XML for File > Import) does not run; use windows-terminal or iterm2, which go through ssh
+In FileZilla, File > Import and choose authama-filezilla.xml; the sites appear in the Site Manager under their groups. Key paths are this machine's; FileZilla reads OpenSSH keys.

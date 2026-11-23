@@ -17,7 +17,7 @@ Two features in a single static binary with no runtime dependencies:
   variables, never secrets.
 
 macOS, Linux and Windows are all first-class; OpenSSH is the only requirement
-for the SSH side. `sshmgr`, the former name, is no longer built or installed.
+for the SSH side (git 2.34 or newer for commit signing). `sshmgr`, the former name, is no longer built or installed.
 Coming from sshmgr or auth-token-manager? See the [migration guide](docs/migration.md).
 
 ## Install
@@ -84,6 +84,10 @@ authama ssh vm sync --dry-run     # keep VM hosts matching their VMs (--install-
 authama ssh key reserve docker-tunnel --for devbox   # keep a loose key for later; doctor stops warning
 authama                           # on a terminal: the web UI on this machine, as authama serve
 authama serve                     # a web UI on this machine, with previewed changes
+authama setup export --encrypt --out setup.age   # keys, hosts and token values for a new machine
+authama ssh structure list        # keys outside the expected layout, and where each would go
+authama export pack --include all # every export in one zip: Termius, ssh config, setup, structure, git signing, lists
+authama ssh git sign set work --email me@work.example --dir ~/src/work   # commit and sign as a profile
 authama ssh help deploy           # help at any level: authama help, authama auth help set
 authama history                   # every change made, SSH or token
 authama events --since 24h        # every change to a tracked file, by anyone
@@ -107,6 +111,8 @@ else is in the [documentation index](#documentation).
 ### Reference
 
 - [Command reference](docs/reference/cli.md) — every command and subcommand with its flags, aliases and examples, generated from the binary (a test keeps it current), plus a "which command do I want" table.
+- [CLI and web parity](docs/reference/cli-web-parity.md): every command and flag next to the web page or control that does the same, what stays in the terminal by design, and the open gaps.
+- [Signed bundles](docs/reference/bundle-signatures.md): signing bundles and setup exports with an SSH key, and how restore and import check them.
 - [Feature catalog](docs/features.md) — every command, what it does, and how it is tested.
 - [`token`](docs/tools/tokens.md) — auth tokens: apply, set, list, show, status, copy, delete, audit, import; per tool: [Composer](docs/tools/tokens/composer.md), [npm](docs/tools/tokens/npm.md), [Docker](docs/tools/tokens/docker.md), [git](docs/tools/tokens/git.md), [netrc](docs/tools/tokens/netrc.md), [PyPI](docs/tools/tokens/pypi.md), [Cargo](docs/tools/tokens/cargo.md), [RubyGems](docs/tools/tokens/gem.md), [Gradle](docs/tools/tokens/gradle.md), [Maven](docs/tools/tokens/maven.md), [Yarn Berry](docs/tools/tokens/yarn.md), [Helm](docs/tools/tokens/helm.md), [GitHub CLI](docs/tools/tokens/gh.md).
 - [`doctor`](docs/tools/doctor.md) — what it checks (SSH and token files), `--fix`, `--json`, `--strict`.
@@ -120,20 +126,23 @@ else is in the [documentation index](#documentation).
 - [`rotate`](docs/tools/rotate.md) — zero-downtime staged rotation and rollback.
 - [`expiry`](docs/tools/expiry.md) — rotation age and scheduled reminders.
 - [`knownhosts`](docs/tools/knownhosts.md) — pinning host keys into the trust store.
-- [`git`](docs/tools/git.md) — checkouts' GitHub remotes in profile SSH, plain SSH or HTTPS mode.
+- [`git`](docs/tools/git.md) — checkouts' GitHub remotes in profile SSH, plain SSH or HTTPS mode; `git sign` to commit as each profile and sign with its SSH key; `git clone` through the profile's alias; the same from the web UI's Git identities page.
 - [`vm`](docs/tools/vm.md) — local VMs as hosts, addressed through their hypervisor; configuring hypervisors, `vm sync`, `vm adopt-key`, keeping a key for later (`key reserve`).
 - [`export`](docs/tools/export.md) — `authama export <list>`: any list (hosts, keys, profiles, tokens, history, events, snapshots, deployments), filtered, with the columns you choose, in nine formats; and a flat `ssh_config`, a Termius CSV, or your hosts for Windows Terminal, iTerm2, PuTTY, Remmina or any CSV importer.
 - [`net`](docs/tools/network.md) — reachability and VPN-gated hosts.
 - [`validate`](docs/tools/validate.md) — keypair integrity checks.
 - [`bundle`](docs/tools/bundle.md) — encrypted backup and restore.
+- [`setup`](docs/tools/setup.md) — move a setup between machines: a secrets-free document, or everything (keys and token values) passphrase-encrypted; import with a preview and a conflict policy.
+- [`ssh structure`](docs/tools/structure.md) — find keys outside the expected layout and move each into its profile once you approve it; checked by `serve` and, optionally, a background job; the web UI draws the folder as a tree with drag and drop.
 - [`history`](docs/tools/history.md) — every change authama has made, filtered by host, profile or key.
 - [`events`](docs/tools/events.md) — every change seen to a file under `~/.ssh`, the config home or a token file, by anyone.
+- [`logs`](docs/tools/logs.md) — authama's own log: commands, web actions, jobs, file changes and sign-ins, redacted; followed, filtered and exported; and the time zone every time is shown in.
 - [Read API](docs/tools/api.md) — JSON for programs at `/api/v1/` on `serve`, with API tokens; reads only, off by default.
 - [Webhooks](docs/tools/webhooks.md) — each change and file event sent to your endpoints, signed as Standard Webhooks; off by default.
 - [MCP server](docs/tools/mcp.md) — `authama mcp`, read-only tools for an AI client over stdio; off by default.
 - [`companion`](docs/tools/companion.md) — the handshake a companion tool such as sange reads: version, contract, capabilities, homes.
 - [`man`](docs/tools/man.md) — a manual page for every command, and the layout every `--help` shares.
-- [`serve`](docs/tools/serve.md) — the web UI: overview, hosts, keys, snapshots, auth tokens and history in a browser, with previewed changes.
+- [`serve`](docs/tools/serve.md) — the web UI: overview, hosts, keys, the folder structure, git identities, setup transfer, an Export / Import hub for every export and import, snapshots, auth tokens and history in a browser, with previewed changes.
 - [`recover`](docs/tools/recover.md) — break-glass when you are locked out.
 - [`tui`](docs/tools/tui.md) — the terminal menu, removed: where each of its entries went.
 
@@ -146,9 +155,12 @@ else is in the [documentation index](#documentation).
 - [Group profiles into categories](docs/recipes/group-profiles-into-categories.md) — `internal`, `clients`, `others`: one directory and one `config` file each.
 - [Keep your keys in a directory of your choosing](docs/recipes/choose-where-keys-live.md) — move `~/.ssh/profiles/` to `~/.ssh/keys/` or any name, keys and config together.
 - [Switch checkouts to profile SSH](docs/recipes/switch-git-remote-modes.md) — each owner's own key, every URL proven before it is written.
+- [Sign commits with each profile's SSH key](docs/recipes/sign-commits-with-ssh.md) — commit as the right address and sign with the right key, per directory.
 - [Use a local VM as a devbox](docs/recipes/devbox-vm.md) — reach a VM by name whatever its IP, and point Docker at it.
 - [Import your hosts into Termius](docs/recipes/import-hosts-into-termius.md) — every host with its user, then `termius keys` to paste each key into Termius's Keychain (the CSV carries no keys).
 - [Reach a server through Cloudflare Access](docs/recipes/cloudflare-access.md) — `ssh <alias>` through `cloudflared`, with no SSH port open to the internet.
+- [Move to a new machine](docs/recipes/move-to-a-new-machine.md) — keys, hosts and token values in one passphrase-encrypted file, merged with a preview.
+- [Tidy loose keys into their profiles](docs/recipes/tidy-keys-into-profiles.md) — each stray key moved where it belongs, previewed, backed up and recorded, and new ones noticed.
 - [Onboard an existing `~/.ssh`](docs/recipes/onboard-an-existing-ssh-dir.md) — bring a hand-built setup under management without regenerating anything.
 - [Rotate a key with no downtime](docs/recipes/rotate-a-key.md) — stage, verify, commit; and how to step back.
 - [Rotate or repair many keys at once](docs/recipes/rotate-many-keys.md) — a category or everything in one batch, and rebuilding `.pub` files.

@@ -2,11 +2,15 @@ package web
 
 import (
 	"context"
+	"github.com/sangehq/authama/src/internal/util/applog"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/sangehq/authama/src/internal/services/events"
 	"github.com/sangehq/authama/src/internal/services/history"
+	"github.com/sangehq/authama/src/internal/services/structure"
+	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
 // defaultEventInterval is how often a running server scans for file changes.
@@ -38,7 +42,38 @@ func (s *Server) scanEvents() {
 		return
 	}
 	p := s.opts.Engine.Home()
-	_, _ = events.Scan(p, s.opts.EventRoots(p), s.now().UTC())
+	evs, err := events.Scan(p, s.opts.EventRoots(p), s.now().UTC())
+	if err != nil {
+		applog.Warn("file scan failed", "area", "watch", "error", err)
+		return
+	}
+	for _, e := range evs {
+		applog.Info("file changed", "area", "watch", "kind", e.Kind, "file", e.Path, "where", e.Area)
+	}
+	checkStructure(&s.structureSeen, p, evs, s.now())
+}
+
+// checkStructure refreshes the structure suggestions (the structure page's
+// list) after a scan that saw a file change in ~/.ssh or the config home,
+// and once at start. It only suggests: nothing moves until the owner
+// approves it.
+//
+// A function, not a Server method: Server's method count is kept down on
+// purpose (TestNoTypeHasBecomeTheFacadeAgain).
+func checkStructure(seen *atomic.Bool, p paths.Paths, evs []events.Event, now time.Time) {
+	changed := !seen.Load()
+	for _, e := range evs {
+		if e.Area == events.AreaSSH || e.Area == events.AreaConfig {
+			changed = true
+			break
+		}
+	}
+	if !changed {
+		return
+	}
+	if _, _, err := structure.Check(p, now); err == nil {
+		seen.Store(true)
+	}
 }
 
 // EventRow is one file event, with the authama operation that made it when

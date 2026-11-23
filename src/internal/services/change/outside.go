@@ -33,6 +33,21 @@ import (
 // --create-profile or --category for a profile that does not exist yet.
 // Each spec is `<alias> <host>[:port] <user> [role]`.
 func HostApply(profile string, specs []editor.HostSpec, create bool, category string) Change {
+	return HostApplyWith(profile, specs, create, category, nil, false)
+}
+
+// HostApplyWith is HostApply with --tag (extra tags for every host in the
+// batch) and --reconcile (mint the new hosts' keys and render, as reconcile
+// does; the web never pins in a change, so it is --no-pin too).
+func HostApplyWith(profile string, specs []editor.HostSpec, create bool, category string, tags []string, reconcile bool) Change {
+	if len(tags) > 0 {
+		withTags := make([]editor.HostSpec, len(specs))
+		for i, s := range specs {
+			s.Tags = append(append([]string(nil), s.Tags...), tags...)
+			withTags[i] = s
+		}
+		specs = withTags
+	}
 	args := []string{profile}
 	for _, s := range specs {
 		line := s.Alias + " " + s.Hostname
@@ -51,9 +66,15 @@ func HostApply(profile string, specs []editor.HostSpec, create bool, category st
 	} else if create {
 		args = append(args, "--create-profile")
 	}
+	for _, t := range tags {
+		args = append(args, "--tag="+t)
+	}
+	if reconcile {
+		args = append(args, "--reconcile", "--no-pin")
+	}
 	args = append(args, "--yes")
 	return Change{
-		Command: "host apply", Args: args,
+		Command: "host apply", Args: args, Mints: reconcile,
 		Subjects: []history.Subject{{Kind: history.KindProfile, Name: profile}},
 		Run: func(p paths.Paths, out io.Writer) error {
 			if len(specs) == 0 {
@@ -74,6 +95,9 @@ func HostApply(profile string, specs []editor.HostSpec, create bool, category st
 			_, _ = fmt.Fprintln(out, editor.FormatApply(profile, !exists, res, false))
 			if err := ApplyManifestEdit(out, p); err != nil {
 				return err
+			}
+			if reconcile {
+				return Reconcile().Run(p, out)
 			}
 			if editor.AnyAdded(res) {
 				_, _ = fmt.Fprintln(out, "run reconcile to mint new hosts' keys")

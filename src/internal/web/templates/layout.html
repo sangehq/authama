@@ -64,6 +64,16 @@
             {{template "navmenuitem" (navItem . "act-mint" "/keys#mint-keys" "circle-plus" "Mint missing keys")}}
           </div>
         </div>{{end}}
+        {{/* Export / Import: every file this home goes out as, and bringing
+             a setup in. Export works on a read-only server; Import does not. */}}
+        <div class="nav-item dropdown me-3">
+          <button type="button" class="btn btn-outline-primary dropdown-toggle" id="navbar-transfer" data-bs-toggle="dropdown" aria-expanded="false"{{desc "nav-transfer"}}>{{icon "transfer"}}<span class="d-none d-sm-inline">Export / Import</span><span class="visually-hidden d-sm-none">Export / Import</span></button>
+          <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow" aria-labelledby="navbar-transfer">
+            {{template "navmenuitem" (navItem . "transfer-export" "/transfer#export" "file-zip" "Export")}}
+            {{if not .ReadOnly}}{{template "navmenuitem" (navItem . "transfer-encrypted" "/transfer#encrypted" "lock" "Encrypted export")}}
+            {{template "navmenuitem" (navItem . "transfer-import" "/transfer#import" "file-import" "Import")}}{{end}}
+          </div>
+        </div>
         {{/* The user menu is personal: who this server runs as, the tour,
              About, and Sign out. Every page is in the main menu below. */}}
         <div class="nav-item dropdown">
@@ -101,7 +111,7 @@
                    entries share an icon, and a toggle's icon is none of its
                    entries' (TestNavEntriesHaveDistinctIconsAndPages). */}}
               {{template "navlink" (navItem . "overview" "/" "layout-dashboard" "Overview")}}
-              <li class="nav-item dropdown{{if eq .Nav "profiles" "hosts" "keys" "vms" "naming" "sshconfig"}} active{{end}}">
+              <li class="nav-item dropdown{{if eq .Nav "profiles" "hosts" "keys" "vms" "naming" "sshconfig" "termius" "structure" "gitsign"}} active{{end}}">
                 <a class="nav-link dropdown-toggle" href="#navbar-ssh" id="navbar-ssh" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false" data-tour="2" data-tour-title="SSH" data-tour-text="Profiles, hosts, keys and VMs, then the naming rules and the ssh config rendered from them. Tasks holds the jobs on keys and hosts: each opens its form, and nothing runs until you review it."{{desc "nav-ssh"}}><span class="nav-link-icon nav-glyph text-{{navColour "ssh"}} d-md-none d-lg-inline-block">{{icon "terminal-2"}}</span><span class="nav-link-title">SSH</span></a>
                 <div class="dropdown-menu" aria-labelledby="navbar-ssh">
                   <div class="dropdown-menu-columns">
@@ -114,6 +124,9 @@
                       <span class="dropdown-header">Configuration</span>
                       {{template "navmenuitem" (navItem . "naming" "/naming" "tag" "Naming")}}
                       {{template "navmenuitem" (navItem . "sshconfig" "/ssh-config" "file-code" "SSH config")}}
+                      {{template "navmenuitem" (navItem . "termius" "/termius" "server-2" "Termius import")}}
+                      {{template "navmenuitem" (navItem . "structure" "/structure" "folder" "Structure")}}
+                      {{template "navmenuitem" (navItem . "gitsign" "/git-sign" "git-compare" "Git identities")}}
                     </div>
                     {{if not .ReadOnly}}<div class="dropdown-menu-column">
                       <span class="dropdown-header">Tasks</span>
@@ -145,7 +158,7 @@
                   {{template "navmenuitem" (navItem . "security" "/security" "user-shield" "Owner & PIN")}}
                 </div>
               </li>
-              <li class="nav-item dropdown{{if eq .Nav "history" "events" "snapshots" "export"}} active{{end}}">
+              <li class="nav-item dropdown{{if eq .Nav "history" "events" "snapshots" "export" "setup" "transfer"}} active{{end}}">
                 <a class="nav-link dropdown-toggle" href="#navbar-history" id="navbar-history" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false" data-tour="5" data-tour-title="History" data-tour-text="What happened: every change authama made, and every file event under ~/.ssh, the config home and the token files. Snapshots of ~/.ssh and Export are here too."{{desc "nav-history"}}><span class="nav-link-icon nav-glyph text-{{navColour "history"}} d-md-none d-lg-inline-block">{{icon "clock"}}</span><span class="nav-link-title">History</span></a>
                 <div class="dropdown-menu" aria-labelledby="navbar-history">
                   <span class="dropdown-header">Record</span>
@@ -154,17 +167,21 @@
                   <span class="dropdown-header">Backups</span>
                   {{template "navmenuitem" (navItem . "snapshots" "/snapshots" "archive" "Snapshots")}}
                   {{if not .HideExport}}{{template "navmenuitem" (navItem . "export" "/export" "file-export" "Export")}}{{end}}
+                  {{template "navmenuitem" (navItem . "setup" "/setup" "stack-2" "Move setup")}}
                 </div>
               </li>
-              <li class="nav-item dropdown{{if eq .Nav "doctor" "validate" "repair" "settings" "reset"}} active{{end}}">
+              <li class="nav-item dropdown{{if eq .Nav "doctor" "validate" "repair" "logs" "settings" "apitokens" "webhooks" "reset"}} active{{end}}">
                 <a class="nav-link dropdown-toggle" href="#navbar-system" id="navbar-system" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false"{{desc "nav-system"}}><span class="nav-link-icon nav-glyph text-{{navColour "health"}} d-md-none d-lg-inline-block">{{icon "settings"}}</span><span class="nav-link-title">System</span></a>
                 <div class="dropdown-menu" aria-labelledby="navbar-system">
                   <span class="dropdown-header">Health</span>
                   {{template "navmenuitem" (navItem . "doctor" "/doctor" "stethoscope" "Doctor")}}
                   {{template "navmenuitem" (navItem . "validate" "/validate" "circle-check" "Validate")}}
                   {{template "navmenuitem" (navItem . "repair" "/repair" "tool" "Repair")}}
+                  {{template "navmenuitem" (navItem . "logs" "/logs" "table" "Logs")}}
                   <span class="dropdown-header">Configure</span>
                   {{template "navmenuitem" (navItem . "settings" "/settings" "adjustments" "Settings")}}
+                  {{template "navmenuitem" (navItem . "apitokens" "/api-tokens" "license" "API tokens")}}
+                  {{template "navmenuitem" (navItem . "webhooks" "/webhooks" "bolt" "Webhooks")}}
                   <div class="dropdown-divider"></div>
                   {{template "navmenuitem" (navItem . "reset" "/reset" "restore" "Reset…").Destructive}}
                 </div>

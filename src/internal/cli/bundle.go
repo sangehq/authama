@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/services/bundler"
 	"github.com/sangehq/authama/src/internal/services/keystore"
@@ -15,7 +16,7 @@ import (
 )
 
 func newBundleCmd() *cobra.Command {
-	var recipient, output string
+	var recipient, output, signKey string
 	var keep int
 	cmd := &cobra.Command{
 		Use:   "bundle",
@@ -48,6 +49,11 @@ func newBundleCmd() *cobra.Command {
 			}
 			out := c.OutOrStdout()
 			_, _ = fmt.Fprintln(out, res.Format())
+			if signKey != "" {
+				if err := signWritten(c, p, res.AgePath, signKey); err != nil {
+					return fmt.Errorf("the bundle is written, but not signed: %w", err)
+				}
+			}
 			if keep > 0 {
 				for _, pruned := range pruneBundles(dest, keep) {
 					_, _ = fmt.Fprintf(out, "pruned %s\n", pruned)
@@ -59,6 +65,7 @@ func newBundleCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&recipient, "recipient", "r", "", "age recipient (else $AUTHAMA_AGE_RECIPIENT)")
 	cmd.Flags().StringVarP(&output, "output", "o", "", "destination dir (else dist/ in the state home)")
 	cmd.Flags().IntVar(&keep, "keep", 0, "after bundling, keep only the newest N bundles (0 keeps all)")
+	signFlag(cmd, &signKey)
 	return cmd
 }
 
@@ -72,8 +79,8 @@ func backupKeysBeforeDestroying(p paths.Paths, out io.Writer, skip bool) error {
 func pruneBundles(dir string, keep int) []string { return bundler.Prune(dir, keep) }
 
 func newRestoreCmd() *cobra.Command {
-	var identity string
-	var yes, allowRisky bool
+	var identity, signers string
+	var yes, allowRisky, requireSig bool
 	cmd := &cobra.Command{
 		Use:   "restore <bundle.age>",
 		Short: "Restore keys + state from an encrypted bundle (see bundle)",
@@ -82,11 +89,23 @@ func newRestoreCmd() *cobra.Command {
 			"manifest sets SSH options that could redirect or weaken connections (a ControlPath\n" +
 			"or IdentityAgent outside ~/.ssh and $XDG_RUNTIME_DIR, ForwardAgent or\n" +
 			"StrictHostKeyChecking no for every host) is refused, naming each one: a bundle does\n" +
-			"not prove who made it. Pass --allow-risky-options to restore one you made yourself.",
+			"not prove who made it. Pass --allow-risky-options to restore one you made yourself.\n\n" +
+			"A bundle written with --sign-key has a signature, <bundle>.sig, next to it. It is\n" +
+			"checked first: a bundle changed after it was signed is refused. --require-signature\n" +
+			"also refuses one that is unsigned, or signed by a key bundle_signers does not trust.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			p, err := resolvePaths(c)
 			if err != nil {
+				return err
+			}
+			if agepassIsPassphraseFile(args[0]) {
+				return fmt.Errorf("%s is a full setup export, encrypted with a passphrase: import it with `%s setup import %s`",
+					args[0], brand.Command, args[0])
+			}
+			// A signature next to the bundle is checked before it is
+			// decrypted: a changed bundle is refused, always.
+			if err := checkSignature(c, p, args[0], signers, requireSig); err != nil {
 				return err
 			}
 			lockForMutation(p)
@@ -137,6 +156,7 @@ func newRestoreCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&identity, "identity", "i", "", "age identity file (else $AUTHAMA_AGE_IDENTITY_FILE)")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the confirmation prompt")
 	cmd.Flags().BoolVar(&allowRisky, "allow-risky-options", false, "restore a bundle whose manifest sets SSH options that could redirect or weaken connections (you made it yourself)")
+	verifyFlags(cmd, &requireSig, &signers)
 	return cmd
 }
 

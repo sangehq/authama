@@ -1,0 +1,70 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "System" "API tokens" "Tokens programs use to read the API. Each reads only, and authama keeps only its hash.")}}
+{{if .Once}}{{template "once_secret" .Once}}{{end}}
+{{if .Done}}<div class="alert alert-success" role="status">{{.Done}}</div>{{end}}
+{{if .Problem}}<div class="alert alert-danger" role="alert">{{.Problem}}</div>{{end}}
+{{if not .On}}<div class="alert alert-info" role="status">The API is off. Turn on <a href="{{u "/settings#setting-api.enabled"}}">api.enabled</a> in Settings and restart <code>authama serve</code> for these tokens to work.</div>{{end}}
+<div class="row row-cards">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Tokens</h2></div>
+      {{if .Tokens}}
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <thead><tr><th scope="col">Name</th><th scope="col">Scopes</th><th scope="col">Created</th><th scope="col">Expires</th><th scope="col">Last used</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+          <tbody>
+            {{range .Tokens}}
+            <tr>
+              <td class="font-monospace">{{.Name}}{{if .Expired}} <span class="badge bg-red-lt ms-1">expired</span>{{end}}</td>
+              <td>{{.Scopes}}</td><td>{{.Created}}</td><td>{{if eq .Expires "-"}}never{{else}}{{.Expires}}{{end}}</td><td>{{.LastUsed}}</td>
+              <td class="text-end">
+                {{if not $.ReadOnly}}
+                <form method="post" action="{{u "/api-tokens/revoke"}}" class="d-inline-flex gap-2 align-items-center">
+                  <input type="hidden" name="csrf" value="{{$.CSRF}}">
+                  <input type="hidden" name="name" value="{{.Name}}">
+                  {{template "pin_field" $}}
+                  <button type="submit" class="btn btn-sm btn-outline-danger"{{desc "api-token-revoke"}}>{{icon "trash"}}<span class="ms-1">Revoke</span></button>
+                </form>
+                {{end}}
+              </td>
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+      {{else}}
+      <div class="card-body text-secondary">No API tokens yet.</div>
+      {{end}}
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Make a token</h2></div>
+      <div class="card-body">
+        {{if $.ReadOnly}}
+        <p class="text-secondary mb-1">This server is read-only. Make one at a terminal:</p>
+        {{template "command_line" "authama api token create <name> --expires 90"}}
+        {{else}}
+        <form method="post" action="{{u "/api-tokens/create"}}" autocomplete="off">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <div class="mb-2">
+            <label class="form-label" for="api-token-name">Name</label>
+            <input class="form-control" id="api-token-name" name="name" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._\-]*" aria-describedby="api-token-name-hint">
+            <small class="form-hint" id="api-token-name-hint">Letters, digits, dots, dashes and underscores; what the program is.</small>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="api-token-expires">Expires after (days)</label>
+            <input class="form-control" id="api-token-expires" name="expires" type="number" min="0" max="3650" value="90" aria-describedby="api-token-expires-hint">
+            <small class="form-hint" id="api-token-expires-hint">0 never expires.</small>
+          </div>
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            {{template "pin_field" $}}
+            <button type="submit" class="btn btn-primary"{{desc "api-token-create"}}>{{icon "key"}}<span class="ms-1">Make token</span></button>
+          </div>
+        </form>
+        {{end}}
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}{{end}}

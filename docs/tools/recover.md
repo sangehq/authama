@@ -19,6 +19,9 @@ authama ssh recover work_web1-ed25519     # copy the output, paste into the serv
 The body is computed by authama (not fragile `awk`), and the key line is escaped,
 so an arbitrary key comment can't break or inject the script.
 
+In the web UI (`authama serve`), a key's page offers the same snippet under
+**Break-glass**, with a copy button, once the key has a `.pub`.
+
 ## `authama ssh recover` - full interactive tool
 
 With no argument it prints the complete `fixkeys` recovery tool (also shipped in

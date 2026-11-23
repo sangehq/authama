@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"sort"
 	"strings"
 
@@ -24,17 +25,50 @@ import (
 // tokenEnv reads the environment the server runs in, as the CLI does.
 func tokenEnv(p paths.Paths) tokensvc.Env { return tokensvc.NewEnv(p, nil, nil, "") }
 
+// TokenScope is where a token change reads and writes, as the command line's
+// flags say: Project (--project) writes a project's auth.json or .npmrc
+// instead of the user's; Config (--config) is the token config to read
+// instead of the one discovered; Source (--source) is an env file whose
+// VAR=value lines are read after the environment; Targets (--target) keeps
+// only those tools. Every path is absolute: a server has no current
+// directory of yours.
+type TokenScope struct {
+	Project, Config, Source string
+	Targets                 []string
+}
+
+// args is the scope as the command line's flags.
+func (sc TokenScope) args() []string {
+	var a []string
+	if sc.Config != "" {
+		a = append(a, "--config", sc.Config)
+	}
+	for _, t := range sc.Targets {
+		a = append(a, "--target", t)
+	}
+	if sc.Project != "" {
+		a = append(a, "--project", sc.Project)
+	}
+	if sc.Source != "" {
+		a = append(a, "--source", sc.Source)
+	}
+	return a
+}
+
 // TokenDelete is `authama token delete <target> <host>`.
-func TokenDelete(target, host string) Change {
+func TokenDelete(target, host string) Change { return TokenDeleteIn(target, host, "") }
+
+// TokenDeleteIn is `authama token delete <target> <host> [--project dir]`.
+func TokenDeleteIn(target, host, project string) Change {
 	return Change{
-		Command: "token delete", Args: []string{target, host}, NoSnapshot: true,
+		Command: "token delete", Args: append([]string{target, host}, TokenScope{Project: project}.args()...), NoSnapshot: true,
 		Effects: func(p paths.Paths) ([]string, error) {
 			if !tokens.IsTarget(target) {
 				return nil, fmt.Errorf("unknown target %q", target)
 			}
 			env := tokenEnv(p)
 			h := tokens.CanonicalHost(target, host)
-			it, ok := env.Find(target, h, "")
+			it, ok := env.Find(target, h, project)
 			if !ok {
 				return nil, fmt.Errorf("nothing to remove — %s: %s not found", target, h)
 			}
@@ -43,7 +77,7 @@ func TokenDelete(target, host string) Change {
 		OnApply: func(p paths.Paths, out io.Writer) error {
 			env := tokenEnv(p)
 			h := tokens.CanonicalHost(target, host)
-			removed, err := env.Forget(target, h, "")
+			removed, err := env.Forget(target, h, project)
 			if err != nil {
 				return err
 			}
@@ -61,19 +95,37 @@ func TokenDelete(target, host string) Change {
 // is resolved from the server's environment and every tool's file is merged.
 // A registry docker keeps in a credential store is handled as the config's
 // _settings.docker_creds_store says, and refused when it says nothing.
-func TokenApply() Change {
-	plan := func(p paths.Paths) (tokensvc.Env, *tokens.Set, *tokens.Config, error) {
+func TokenApply() Change { return TokenApplyIn(TokenScope{}) }
+
+// TokenApplyIn is `authama token apply` with the scope's --config, --target,
+// --project and --source.
+func TokenApplyIn(sc TokenScope) Change {
+	plan := func(p paths.Paths) (tokensvc.Env, *tokens.Set, *tokens.Config, []string, error) {
 		env := tokenEnv(p)
-		cfg, _, err := env.ResolveConfig("")
+		if sc.Source != "" {
+			if err := env.LoadEnvFile(sc.Source); err != nil {
+				return env, nil, nil, nil, err
+			}
+		}
+		cfg, _, err := env.ResolveConfig(sc.Config)
 		if err != nil {
-			return env, nil, nil, err
+			return env, nil, nil, nil, err
 		}
 		set := cfg.Resolve(env.Lookup)
 		if set.Len("") == 0 {
-			return env, nil, nil, errors.New("no credentials resolved — set the env vars named in the token config " +
+			return env, nil, nil, nil, errors.New("no credentials resolved — set the env vars named in the token config " +
 				"where the server runs, or add one with `authama token set`")
 		}
-		return env, set, cfg, nil
+		var chosen []string
+		for _, t := range set.Targets() {
+			if len(sc.Targets) == 0 || slices.Contains(sc.Targets, t) {
+				chosen = append(chosen, t)
+			}
+		}
+		if len(chosen) == 0 {
+			return env, nil, nil, nil, fmt.Errorf("nothing to write for %s — no credentials resolved for it", strings.Join(sc.Targets, ", "))
+		}
+		return env, set, cfg, chosen, nil
 	}
 	mode := func(cfg *tokens.Config) (string, error) {
 		m := cfg.Setting("docker_creds_store")
@@ -87,9 +139,9 @@ func TokenApply() Change {
 		return m, nil
 	}
 	return Change{
-		Command: "token apply", NoSnapshot: true,
+		Command: "token apply", Args: sc.args(), NoSnapshot: true,
 		Effects: func(p paths.Paths) ([]string, error) {
-			env, set, cfg, err := plan(p)
+			env, set, cfg, chosen, err := plan(p)
 			if err != nil {
 				return nil, err
 			}
@@ -98,13 +150,13 @@ func TokenApply() Change {
 				return nil, err
 			}
 			var lines []string
-			for _, t := range set.Targets() {
+			for _, t := range chosen {
 				var hosts []string
 				for _, c := range set.Entries(t) {
 					hosts = append(hosts, c.Host)
 				}
 				sort.Strings(hosts)
-				line := fmt.Sprintf("merges %s credentials for %s into %s", t, strings.Join(hosts, ", "), env.TargetPath(t, ""))
+				line := fmt.Sprintf("merges %s credentials for %s into %s", t, strings.Join(hosts, ", "), env.TargetPath(t, sc.Project))
 				if t == tokens.Docker {
 					line += " (registries docker keeps in a credential store: " + m + ")"
 				}
@@ -114,7 +166,7 @@ func TokenApply() Change {
 			return lines, nil
 		},
 		OnApply: func(p paths.Paths, out io.Writer) error {
-			env, set, cfg, err := plan(p)
+			env, set, cfg, chosen, err := plan(p)
 			if err != nil {
 				return err
 			}
@@ -122,7 +174,7 @@ func TokenApply() Change {
 			if err != nil {
 				return err
 			}
-			return env.WriteAll(set, set.Targets(), "", tokensvc.FixedDockerMode(m), out, out)
+			return env.WriteAll(set, chosen, sc.Project, tokensvc.FixedDockerMode(m), out, out)
 		},
 		Run: func(paths.Paths, io.Writer) error { return nil },
 	}
@@ -136,6 +188,12 @@ func TokenApply() Change {
 // $AUTHAMA_DOCKER_CREDS_STORE, and refuses when that is unset too, since a page
 // cannot ask.
 func TokenSet(spec tokensvc.SetSpec, mode string, secret func() (string, error)) Change {
+	return TokenSetIn(spec, mode, "", secret)
+}
+
+// TokenSetIn is TokenSet writing the project's file (--project) when project
+// is set.
+func TokenSetIn(spec tokensvc.SetSpec, mode, project string, secret func() (string, error)) Change {
 	var args []string
 	if spec.Service != "" {
 		args = append(args, "--service", spec.Service)
@@ -152,6 +210,7 @@ func TokenSet(spec tokensvc.SetSpec, mode string, secret func() (string, error))
 	if mode != "" {
 		args = append(args, "--creds-store-mode", mode)
 	}
+	args = append(args, TokenScope{Project: project}.args()...)
 	dockerMode := func() (string, error) {
 		m := mode
 		if m == "" {
@@ -179,7 +238,7 @@ func TokenSet(spec tokensvc.SetSpec, mode string, secret func() (string, error))
 			env := tokenEnv(p)
 			host := tokens.CanonicalHost(plan.Target, strings.TrimSpace(spec.Server))
 			verb := "adds"
-			if _, ok := env.Find(plan.Target, host, ""); ok {
+			if _, ok := env.Find(plan.Target, host, project); ok {
 				verb = "replaces"
 			}
 			what := "token"
@@ -187,7 +246,7 @@ func TokenSet(spec tokensvc.SetSpec, mode string, secret func() (string, error))
 				what = "password for " + spec.Username
 			}
 			return []string{fmt.Sprintf("%s the %s %s for %s in %s (the secret is not shown)",
-				verb, plan.Target, what, host, env.TargetPath(plan.Target, ""))}, nil
+				verb, plan.Target, what, host, env.TargetPath(plan.Target, project))}, nil
 		},
 		OnApply: func(p paths.Paths, out io.Writer) error {
 			plan, err := spec.Check()
@@ -206,7 +265,7 @@ func TokenSet(spec tokensvc.SetSpec, mode string, secret func() (string, error))
 			if err != nil {
 				return err
 			}
-			return tokenEnv(p).WriteAll(set, []string{plan.Target}, "", tokensvc.FixedDockerMode(m), out, out)
+			return tokenEnv(p).WriteAll(set, []string{plan.Target}, project, tokensvc.FixedDockerMode(m), out, out)
 		},
 		Run: func(paths.Paths, io.Writer) error { return nil },
 	}

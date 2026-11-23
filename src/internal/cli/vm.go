@@ -73,6 +73,10 @@ func newVMListCmd() *cobra.Command {
 					continue
 				}
 				vms, err := d.List()
+				if errors.Is(err, hypervisor.ErrTimedOut) {
+					_, _ = fmt.Fprintf(out, "%-10s timed out: no answer within %s (starting, hung, or waiting for a sign-in?); its VMs are not listed\n", d.Name(), hypervisor.ListTimeout)
+					continue
+				}
 				if err != nil {
 					_, _ = fmt.Fprintf(out, "%-10s error: %v\n", d.Name(), err)
 					continue

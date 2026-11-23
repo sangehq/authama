@@ -151,6 +151,16 @@ type TermiusKey struct {
 	Agent   string // non-empty when the key lives in 1Password, not on disk
 }
 
+// TermiusKeyLabel is the label to give a host's key in Termius's Keychain:
+// the key file's name without .pub (clientco_db-01-ed25519), so the entry
+// says which file it came from. "" for a host with no key file.
+func TermiusKeyLabel(keyFile string) string {
+	if keyFile == "" {
+		return ""
+	}
+	return strings.TrimSuffix(filepath.Base(keyFile), ".pub")
+}
+
 // TermiusExport is a rendered Termius import: the CSV, the keys to attach, and
 // the hosts left out with the reason for each.
 type TermiusExport struct {
@@ -172,6 +182,9 @@ type TermiusExport struct {
 // No password is ever written: the column is part of the template and stays
 // empty.
 func RenderTermiusCSV(m *manifest.Manifest, p ExportPaths, opts TermiusOptions) (*TermiusExport, error) {
+	if err := encode.CheckTermiusGroups(opts.Groups); err != nil {
+		return nil, err
+	}
 	resolved, err := m.IterResolved()
 	if err != nil {
 		return nil, err
@@ -204,7 +217,7 @@ func RenderTermiusCSV(m *manifest.Manifest, p ExportPaths, opts TermiusOptions) 
 		if port == 0 {
 			port = 22
 		}
-		hosts = append(hosts, encode.Host{Group: rk.Profile, Alias: h.Alias, Hostname: h.Hostname, User: h.User, Port: port, Tags: h.Tags})
+		hosts = append(hosts, withPlacement(m, rk, encode.Host{Group: rk.Profile, Alias: h.Alias, Hostname: h.Hostname, User: h.User, Port: port, Tags: h.Tags}))
 		file, agent := identityFor(m, rk.Profile, rk.KeyName)
 		exp.Keys = append(exp.Keys, TermiusKey{Label: h.Alias, KeyFile: p.expand(file), Agent: p.expand(agent)})
 	}
@@ -216,7 +229,7 @@ func RenderTermiusCSV(m *manifest.Manifest, p ExportPaths, opts TermiusOptions) 
 		sort.Strings(unknown)
 		return nil, fmt.Errorf("--skip names no host: %s", strings.Join(unknown, ", "))
 	}
-	if exp.CSV, err = encode.TermiusCSV(hosts); err != nil {
+	if exp.CSV, err = encode.TermiusCSV(hosts, opts.Groups); err != nil {
 		return nil, err
 	}
 	return exp, nil
@@ -226,6 +239,29 @@ func RenderTermiusCSV(m *manifest.Manifest, p ExportPaths, opts TermiusOptions) 
 type TermiusOptions struct {
 	IncludeGit bool     // also export git hosts
 	Skip       []string // aliases to leave out
+	// Groups is the Termius export's group scheme (encode.TermiusGroupSchemes),
+	// "" for the profile alone. The other client formats ignore it.
+	Groups string
+}
+
+// withPlacement fills in what places h beyond its profile: the profile's
+// category, the environment the profile's naming rules read from the alias,
+// and a raw ProxyJump, which a client given only the address would miss.
+func withPlacement(m *manifest.Manifest, rk manifest.ResolvedKey, h encode.Host) encode.Host {
+	if p, ok := m.Profiles[rk.Profile]; ok {
+		h.Category = p.Category
+	}
+	if parts, ok := manifest.ProfileNamingRules(m, rk.Profile).Parse(rk.Host.Alias); ok {
+		h.Env = parts["env"]
+	}
+	for _, k := range rk.Host.RawOptions.Keys() {
+		if strings.EqualFold(k, "ProxyJump") {
+			if v := strings.TrimSpace(rk.Host.RawOptions.Get(k)); v != "" && !strings.EqualFold(v, "none") {
+				h.ProxyJump = v
+			}
+		}
+	}
+	return h
 }
 
 // gitProviders are the providers whose hosts are git endpoints, not shells.
