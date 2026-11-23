@@ -95,8 +95,15 @@ func ProxyCommandFor(alias string) string {
 }
 
 func proxyFor(h manifest.Host) string {
-	if h.Proxy != nil && h.Proxy.Kind == manifest.ProxyCloudflared {
-		return CloudflaredProxyCommand()
+	if h.Proxy != nil {
+		switch h.Proxy.Kind {
+		case manifest.ProxyCloudflared:
+			return CloudflaredProxyCommand()
+		case manifest.ProxyNone:
+			return "none"
+		case manifest.ProxyCommandKind:
+			return manifest.ShellJoin(h.Proxy.Command)
+		}
 	}
 	if h.VM == nil {
 		return ""
@@ -121,14 +128,20 @@ func defaultCloudflaredPath() string {
 
 // CloudflaredProxyCommand is the ProxyCommand for a Cloudflare Access host:
 // cloudflared opens the Access tunnel to %h (the HostName, which ssh
-// substitutes) after the browser sign-in Access asks for. Quoted like the VM
-// ProxyCommand; a path ssh cannot quote falls back to the bare name.
+// substitutes) after the browser sign-in Access asks for. A plain path is
+// written as it is - `/opt/homebrew/bin/cloudflared access ssh --hostname %h`,
+// the line Cloudflare documents - and one with a space or other shell syntax
+// is double-quoted like the VM ProxyCommand; a path ssh cannot quote falls
+// back to the bare name.
 func CloudflaredProxyCommand() string {
 	bin := CloudflaredPath()
 	if strings.Contains(bin, `"`) {
 		bin = "cloudflared"
 	}
-	return `"` + bin + `" access ssh --hostname %h`
+	if manifest.ShellQuote(bin) != bin {
+		bin = `"` + bin + `"`
+	}
+	return bin + " access ssh --hostname %h"
 }
 
 // ProxyBinary extracts the binary path from a ProxyCommand value authama rendered - a VM host's
@@ -140,6 +153,11 @@ func CloudflaredProxyCommand() string {
 // both are read.
 func ProxyBinary(value string) string {
 	if !strings.HasPrefix(value, `"`) {
+		// The unquoted form a plain cloudflared path renders as.
+		if bin, rest, ok := strings.Cut(value, " "); ok && rest == "access ssh --hostname %h" &&
+			manifest.IsCloudflaredAccess(append([]string{bin}, strings.Fields(rest)...)) {
+			return bin
+		}
 		return ""
 	}
 	for _, tail := range []string{`" ssh vm proxy `, `" vm proxy `, `" access ssh --hostname `} {

@@ -295,12 +295,103 @@
                   "required": [
                     "kind"
                   ],
-                  "description": "Route connections through a proxy command authama renders: cloudflared reaches the host through Cloudflare Access (ssh runs `cloudflared access ssh --hostname %h`). A host is a VM or proxied, not both.",
+                  "description": "Route connections through a proxy command authama renders: cloudflared reaches the host through Cloudflare Access (ssh runs `<cloudflared> access ssh --hostname %h`), none renders `ProxyCommand none` (connect directly, e.g. over WARP to a private address), and command runs the argv in command, each argument quoted for the shell. A host is a VM or proxied, not both, and a proxy excludes a ProxyJump.",
                   "properties": {
                     "kind": {
                       "enum": [
-                        "cloudflared"
+                        "cloudflared",
+                        "none",
+                        "command"
                       ]
+                    },
+                    "command": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1,
+                      "description": "The program and its arguments, for kind command only. % tokens are ssh's (%h, %p, %r, ...)."
+                    }
+                  }
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "uniqueItems": true,
+                  "description": "More names for the same Host block: Host <alias> <aliases...>."
+                },
+                "section": {
+                  "type": "string",
+                  "description": "A heading rendered as a comment line above the host. Hosts after it without a section of their own sit under the same heading."
+                },
+                "comment": {
+                  "type": "string",
+                  "description": "A comment rendered inside the host's block, under its Host line."
+                },
+                "variants": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "name"
+                    ],
+                    "description": "Another route to the same server, rendered as its own Host block <name>-<alias> with the host's user and key. Fields set here replace the host's.",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9][a-z0-9_]*$"
+                      },
+                      "hostname": {
+                        "type": "string"
+                      },
+                      "port": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 65535
+                      },
+                      "proxy": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "kind"
+                        ],
+                        "description": "Route connections through a proxy command authama renders: cloudflared reaches the host through Cloudflare Access (ssh runs `<cloudflared> access ssh --hostname %h`), none renders `ProxyCommand none` (connect directly, e.g. over WARP to a private address), and command runs the argv in command, each argument quoted for the shell. A host is a VM or proxied, not both, and a proxy excludes a ProxyJump.",
+                        "properties": {
+                          "kind": {
+                            "enum": [
+                              "cloudflared",
+                              "none",
+                              "command"
+                            ]
+                          },
+                          "command": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "minItems": 1,
+                            "description": "The program and its arguments, for kind command only. % tokens are ssh's (%h, %p, %r, ...)."
+                          }
+                        }
+                      },
+                      "raw_options": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": [
+                            "string",
+                            "integer"
+                          ]
+                        }
+                      },
+                      "section": {
+                        "type": "string"
+                      },
+                      "comment": {
+                        "type": "string"
+                      }
                     }
                   }
                 }

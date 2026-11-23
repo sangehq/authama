@@ -200,8 +200,9 @@ func TestTermiusCSVGitProviderAndSkip(t *testing.T) {
 	}
 }
 
-// A Cloudflare Access host renders cloudflared as its ProxyCommand, quoted like
-// the VM one, and ssh substitutes %h with the host's HostName.
+// A Cloudflare Access host renders cloudflared as its ProxyCommand - a plain
+// path as it is, the line Cloudflare documents - and ssh substitutes %h with
+// the host's HostName.
 func TestCloudflaredHostRendersItsProxyCommand(t *testing.T) {
 	prev := CloudflaredPath
 	CloudflaredPath = func() string { return "/opt/homebrew/bin/cloudflared" }
@@ -213,7 +214,7 @@ func TestCloudflaredHostRendersItsProxyCommand(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `    ProxyCommand "/opt/homebrew/bin/cloudflared" access ssh --hostname %h` + "\n"
+	want := `    ProxyCommand /opt/homebrew/bin/cloudflared access ssh --hostname %h` + "\n"
 	if !strings.Contains(out, want) {
 		t.Errorf("missing %q in:\n%s", want, out)
 	}
@@ -234,6 +235,9 @@ func TestProxyBinaryReadsBothRenderedProxies(t *testing.T) {
 		`"/usr/local/bin/authama" vm proxy devbox`:                 "/usr/local/bin/authama", // rendered before 2026-11-07
 		`"/opt/homebrew/bin/cloudflared" access ssh --hostname %h`: "/opt/homebrew/bin/cloudflared",
 		`"cloudflared" access ssh --hostname %h`:                   "cloudflared",
+		`/opt/homebrew/bin/cloudflared access ssh --hostname %h`:   "/opt/homebrew/bin/cloudflared",
+		`cloudflared access ssh --hostname %h`:                     "cloudflared",
+		`/usr/bin/nc access ssh --hostname %h`:                     "",
 		`nc %h %p`:                                                 "",
 	} {
 		if got := ProxyBinary(value); got != want {

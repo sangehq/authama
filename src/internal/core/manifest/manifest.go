@@ -221,6 +221,15 @@ type Host struct {
 	VM *VMSpec `json:"vm,omitempty"`
 	// Proxy routes connections through a proxy command, e.g. Cloudflare Access.
 	Proxy *ProxySpec `json:"proxy,omitempty"`
+	// Aliases are more names for the same Host block (Host <alias> <aliases...>).
+	Aliases []string `json:"aliases,omitempty"`
+	// Section is a heading rendered as a comment above the host; hosts after
+	// it with no section of their own sit under the same heading.
+	Section string `json:"section,omitempty"`
+	// Comment is rendered as a comment line inside the host's block.
+	Comment string `json:"comment,omitempty"`
+	// Variants are other routes to the same server (see Variant).
+	Variants []Variant `json:"variants,omitempty"`
 }
 
 func (h *Host) UnmarshalJSON(b []byte) error {
@@ -252,6 +261,10 @@ func (h Host) MarshalJSON() ([]byte, error) {
 		RawOptions  OrderedOptions `json:"raw_options"`
 		VM          *VMSpec        `json:"vm,omitempty"` // omitted when unset: older files stay byte-identical
 		Proxy       *ProxySpec     `json:"proxy,omitempty"`
+		Aliases     []string       `json:"aliases,omitempty"`
+		Section     string         `json:"section,omitempty"`
+		Comment     string         `json:"comment,omitempty"`
+		Variants    []Variant      `json:"variants,omitempty"`
 	}
 	tags := h.Tags
 	if tags == nil {
@@ -261,7 +274,7 @@ func (h Host) MarshalJSON() ([]byte, error) {
 		Alias: h.Alias, Hostname: h.Hostname, User: h.User, Port: h.Port,
 		Provider: h.Provider, TokenEnv: h.TokenEnv, KeyName: h.KeyName, Tags: tags,
 		RequiresVPN: h.RequiresVPN, VPNName: h.VPNName, VPNURL: h.VPNURL, RawOptions: h.RawOptions,
-		VM: h.VM, Proxy: h.Proxy,
+		VM: h.VM, Proxy: h.Proxy, Aliases: h.Aliases, Section: h.Section, Comment: h.Comment, Variants: h.Variants,
 	})
 }
 
@@ -773,11 +786,13 @@ func checkAliasCollisions(m *Manifest) error {
 	profiles := map[string]map[string]bool{}
 	for _, pname := range m.sortedProfileNames() {
 		for _, h := range m.Profiles[pname].Hosts {
-			count[h.Alias]++
-			if profiles[h.Alias] == nil {
-				profiles[h.Alias] = map[string]bool{}
+			for _, name := range h.Names() {
+				count[name]++
+				if profiles[name] == nil {
+					profiles[name] = map[string]bool{}
+				}
+				profiles[name][pname] = true
 			}
-			profiles[h.Alias][pname] = true
 		}
 	}
 	aliases := make([]string, 0, len(count))
@@ -1138,7 +1153,7 @@ func validateHost(name string, h Host) error {
 	if err := checkProxy(name, h); err != nil {
 		return err
 	}
-	return nil
+	return checkRoutes(name, h)
 }
 
 func (m *Manifest) sortedProfileNames() []string {
