@@ -165,6 +165,14 @@ Every command also takes the global flag:
   - [`authama ssh restore`](#authama-ssh-restore) - Restore keys + state from an encrypted bundle (see bundle)
   - [`authama ssh rollback`](#authama-ssh-rollback) - Undo a rotation: put a key's previous version back
   - [`authama ssh rotate`](#authama-ssh-rotate) - Zero-downtime staged key rotation
+  - [`authama ssh service`](#authama-ssh-service) - Manage reachability services and run read-only health checks
+    - [`authama ssh service add`](#authama-ssh-service-add) - Add a service to the catalog (defaults.services)
+    - [`authama ssh service edit`](#authama-ssh-service-edit) - Edit a catalog service
+    - [`authama ssh service health`](#authama-ssh-service-health) - Read-only health check (never starts a tunnel or changes WARP)
+    - [`authama ssh service list`](#authama-ssh-service-list) - List built-in kinds and catalog entries
+    - [`authama ssh service remove`](#authama-ssh-service-remove) - Remove a catalog service
+    - [`authama ssh service show`](#authama-ssh-service-show) - Show one service and the hosts that attach it
+    - [`authama ssh service status`](#authama-ssh-service-status) - Alias of health: read-only status of attached services
   - [`authama ssh show`](#authama-ssh-show) - Everything about a profile, host or key: files, config blocks, pins (the inventory view)
   - [`authama ssh snapshots`](#authama-ssh-snapshots) - List/restore/prune local ~/.ssh backups
     - [`authama ssh snapshots list`](#authama-ssh-snapshots-list) - List local ~/.ssh snapshots (oldest -> newest)
@@ -173,12 +181,22 @@ Every command also takes the global flag:
   - [`authama ssh structure`](#authama-ssh-structure) - Find keys outside the expected layout and move them, once you approve each move
     - [`authama ssh structure approve`](#authama-ssh-structure-approve) - Preview, then carry out, the moves you approve
     - [`authama ssh structure check`](#authama-ssh-structure-check) - Record file changes and refresh the suggestions; what the background job runs
+    - [`authama ssh structure classify`](#authama-ssh-structure-classify) - Refresh purpose and leftover-copy suggestions (writes nothing with --dry-run)
     - [`authama ssh structure dismiss`](#authama-ssh-structure-dismiss) - Hide suggestions you mean to leave as they are (--undo shows them again)
     - [`authama ssh structure install`](#authama-ssh-structure-install) - Check in the background every 15 minutes and notify about new suggestions
     - [`authama ssh structure list`](#authama-ssh-structure-list) - List the suggested moves (dismissed ones with --all)
+    - [`authama ssh structure rules`](#authama-ssh-structure-rules) - List, add, change or remove learned purpose rules
+      - [`authama ssh structure rules add`](#authama-ssh-structure-rules-add) - Add a purpose rule (auto-apply is off unless --auto is set)
+      - [`authama ssh structure rules list`](#authama-ssh-structure-rules-list) - List purpose rules
+      - [`authama ssh structure rules remove`](#authama-ssh-structure-rules-remove) - Remove a purpose rule
+      - [`authama ssh structure rules set`](#authama-ssh-structure-rules-set) - Change a rule (currently --auto / --auto=false)
     - [`authama ssh structure uninstall`](#authama-ssh-structure-uninstall) - Remove the background structure check
   - [`authama ssh termius`](#authama-ssh-termius) - Termius: the key to attach to each host
     - [`authama ssh termius keys`](#authama-ssh-termius-keys) - List the Termius key label for each host, or copy one host's private key to the clipboard
+  - [`authama ssh tool`](#authama-ssh-tool) - List and inspect tool keys (git signing, docker, …)
+    - [`authama ssh tool list`](#authama-ssh-tool-list) - List declared tool keys
+    - [`authama ssh tool show`](#authama-ssh-tool-show) - Show one tool key
+    - [`authama ssh tool status`](#authama-ssh-tool-status) - Show whether each declared tool key is present on disk
   - [`authama ssh validate`](#authama-ssh-validate) - Check keypairs parse, match, and have safe perms
   - [`authama ssh view`](#authama-ssh-view) - One host as ssh will use it: resolved config, key and deployment status (the connect view)
   - [`authama ssh vm`](#authama-ssh-vm) - Local VMs as SSH hosts: list, add, adopt a key, keep in sync, connect through the hypervisor
@@ -1952,10 +1970,12 @@ Subcommands:
 - [`restore`](#authama-ssh-restore) - Restore keys + state from an encrypted bundle (see bundle)
 - [`rollback`](#authama-ssh-rollback) - Undo a rotation: put a key's previous version back
 - [`rotate`](#authama-ssh-rotate) - Zero-downtime staged key rotation
+- [`service`](#authama-ssh-service) - Manage reachability services and run read-only health checks
 - [`show`](#authama-ssh-show) - Everything about a profile, host or key: files, config blocks, pins (the inventory view)
 - [`snapshots`](#authama-ssh-snapshots) - List/restore/prune local ~/.ssh backups
 - [`structure`](#authama-ssh-structure) - Find keys outside the expected layout and move them, once you approve each move
 - [`termius`](#authama-ssh-termius) - Termius: the key to attach to each host
+- [`tool`](#authama-ssh-tool) - List and inspect tool keys (git signing, docker, …)
 - [`validate`](#authama-ssh-validate) - Check keypairs parse, match, and have safe perms
 - [`view`](#authama-ssh-view) - One host as ssh will use it: resolved config, key and deployment status (the connect view)
 - [`vm`](#authama-ssh-vm) - Local VMs as SSH hosts: list, add, adopt a key, keep in sync, connect through the hypervisor
@@ -2612,6 +2632,7 @@ Flags:
       --proxy-jump string      connect through this jump host (ProxyJump); '' removes it
       --role string            with no <alias>: the role the generated alias names (web, db, ...)
       --section string         a heading rendered as a comment above the block; hosts after it without one sit under it ('' removes it)
+      --service stringArray    attach this reachability service (a built-in kind or a defaults.services name; repeatable)
       --tag stringArray        repeatable
       --token-env string       env var holding the provider API token (e.g. GH_TOKEN_WORK)
       --update[=true|false]    update the host if the profile has it already (create-or-update)
@@ -2721,24 +2742,26 @@ Examples:
 Flags:
 
 ```
-      --alias stringArray          add another name to the Host block (repeatable)
-      --comment string             a comment rendered inside the block, under its Host line ('' removes it)
-      --connect-timeout int        seconds ssh waits to connect (ConnectTimeout); 0 removes it
-  -H, --hostname string            host to connect to
-      --key-name string            use this key instead of the derived <profile>_<alias>-<algo> name
-      --option stringArray         any other ssh_config option as KEY=VALUE, e.g. ServerAliveInterval=30 (repeatable; checked against the keywords OpenSSH knows; KEY= removes it)
-  -p, --port int                   ssh port (default 22)
-      --provider string            deployment adapter for this host (see 'authama ssh providers')
-      --proxy string               how ssh reaches the host: cloudflared (Cloudflare Access: ssh runs '<cloudflared> access ssh --hostname %h'), none (ProxyCommand none: connect directly, e.g. over WARP), or off to remove the proxy
-      --proxy-command string       a ProxyCommand of your own, e.g. '/usr/bin/nc -X 5 -x proxy:1080 %h %p' (each argument is quoted for the shell; none and the cloudflared command become those proxies; '' removes it)
-      --proxy-jump string          connect through this jump host (ProxyJump); '' removes it
-      --remove-alias stringArray   remove one of the Host block's extra names (repeatable)
-      --section string             a heading rendered as a comment above the block; hosts after it without one sit under it ('' removes it)
-      --tag stringArray            replace the host's tags with these (repeatable); --tag '' removes them all
-      --token-env string           env var holding the provider API token (e.g. GH_TOKEN_WORK)
-      --unset-option stringArray   remove this ssh option (repeatable)
-      --untag stringArray          remove this tag (repeatable; applied after --tag; a tag the host lacks is ignored)
-  -u, --user string                ssh user
+      --alias stringArray            add another name to the Host block (repeatable)
+      --comment string               a comment rendered inside the block, under its Host line ('' removes it)
+      --connect-timeout int          seconds ssh waits to connect (ConnectTimeout); 0 removes it
+  -H, --hostname string              host to connect to
+      --key-name string              use this key instead of the derived <profile>_<alias>-<algo> name
+      --option stringArray           any other ssh_config option as KEY=VALUE, e.g. ServerAliveInterval=30 (repeatable; checked against the keywords OpenSSH knows; KEY= removes it)
+  -p, --port int                     ssh port (default 22)
+      --provider string              deployment adapter for this host (see 'authama ssh providers')
+      --proxy string                 how ssh reaches the host: cloudflared (Cloudflare Access: ssh runs '<cloudflared> access ssh --hostname %h'), none (ProxyCommand none: connect directly, e.g. over WARP), or off to remove the proxy
+      --proxy-command string         a ProxyCommand of your own, e.g. '/usr/bin/nc -X 5 -x proxy:1080 %h %p' (each argument is quoted for the shell; none and the cloudflared command become those proxies; '' removes it)
+      --proxy-jump string            connect through this jump host (ProxyJump); '' removes it
+      --remove-alias stringArray     remove one of the Host block's extra names (repeatable)
+      --remove-service stringArray   detach this reachability service (repeatable)
+      --section string               a heading rendered as a comment above the block; hosts after it without one sit under it ('' removes it)
+      --service stringArray          attach this reachability service (a built-in kind or a defaults.services name; repeatable)
+      --tag stringArray              replace the host's tags with these (repeatable); --tag '' removes them all
+      --token-env string             env var holding the provider API token (e.g. GH_TOKEN_WORK)
+      --unset-option stringArray     remove this ssh option (repeatable)
+      --untag stringArray            remove this tag (repeatable; applied after --tag; a tag the host lacks is ignored)
+  -u, --user string                  ssh user
 ```
 
 ## authama ssh host variant
@@ -2797,16 +2820,18 @@ Examples:
 Flags:
 
 ```
-      --comment string             a comment rendered inside the block, under its Host line ('' removes it)
-      --connect-timeout int        seconds ssh waits to connect (ConnectTimeout); 0 removes it
-  -H, --hostname string            the address this route connects to (the host's when unset)
-      --option stringArray         any other ssh_config option as KEY=VALUE, e.g. ServerAliveInterval=30 (repeatable; checked against the keywords OpenSSH knows; KEY= removes it)
-  -p, --port int                   the port this route connects to (the host's when unset) (default 22)
-      --proxy string               how ssh reaches the host: cloudflared (Cloudflare Access: ssh runs '<cloudflared> access ssh --hostname %h'), none (ProxyCommand none: connect directly, e.g. over WARP), or off to remove the proxy
-      --proxy-command string       a ProxyCommand of your own, e.g. '/usr/bin/nc -X 5 -x proxy:1080 %h %p' (each argument is quoted for the shell; none and the cloudflared command become those proxies; '' removes it)
-      --proxy-jump string          connect through this jump host (ProxyJump); '' removes it
-      --section string             a heading rendered as a comment above the block; hosts after it without one sit under it ('' removes it)
-      --unset-option stringArray   remove this ssh option (repeatable)
+      --comment string               a comment rendered inside the block, under its Host line ('' removes it)
+      --connect-timeout int          seconds ssh waits to connect (ConnectTimeout); 0 removes it
+  -H, --hostname string              the address this route connects to (the host's when unset)
+      --option stringArray           any other ssh_config option as KEY=VALUE, e.g. ServerAliveInterval=30 (repeatable; checked against the keywords OpenSSH knows; KEY= removes it)
+  -p, --port int                     the port this route connects to (the host's when unset) (default 22)
+      --proxy string                 how ssh reaches the host: cloudflared (Cloudflare Access: ssh runs '<cloudflared> access ssh --hostname %h'), none (ProxyCommand none: connect directly, e.g. over WARP), or off to remove the proxy
+      --proxy-command string         a ProxyCommand of your own, e.g. '/usr/bin/nc -X 5 -x proxy:1080 %h %p' (each argument is quoted for the shell; none and the cloudflared command become those proxies; '' removes it)
+      --proxy-jump string            connect through this jump host (ProxyJump); '' removes it
+      --remove-service stringArray   detach this reachability service (repeatable)
+      --section string               a heading rendered as a comment above the block; hosts after it without one sit under it ('' removes it)
+      --service stringArray          attach this reachability service (a built-in kind or a defaults.services name; repeatable)
+      --unset-option stringArray     remove this ssh option (repeatable)
 ```
 
 ## authama ssh import
@@ -3891,6 +3916,124 @@ Flags:
   -y, --yes[=true|false]                skip the confirmation prompt
 ```
 
+## authama ssh service
+
+Services are how a host is reached (Cloudflare Access, WARP, Tailscale, a bastion, …).
+They attach to hosts and route variants (`ssh host add --service`, `ssh host edit --service`),
+not to key folders. Health checks only read status; they never start a tunnel, change WARP, or open a browser.
+
+```
+authama ssh service
+```
+
+Subcommands:
+
+- [`add`](#authama-ssh-service-add) - Add a service to the catalog (defaults.services)
+- [`edit`](#authama-ssh-service-edit) - Edit a catalog service
+- [`health`](#authama-ssh-service-health) - Read-only health check (never starts a tunnel or changes WARP)
+- [`list`](#authama-ssh-service-list) - List built-in kinds and catalog entries
+- [`remove`](#authama-ssh-service-remove) - Remove a catalog service
+- [`show`](#authama-ssh-service-show) - Show one service and the hosts that attach it
+- [`status`](#authama-ssh-service-status) - Alias of health: read-only status of attached services
+
+## authama ssh service add
+
+Add a service to the catalog (defaults.services).
+
+```
+authama ssh service add <name> [flags]
+```
+
+Flags:
+
+```
+      --binary string   override the health-check binary name
+      --kind string     built-in kind (cloudflare-access, cloudflare-warp, tailscale, …)
+      --label string    a label shown in the UI
+```
+
+## authama ssh service edit
+
+Edit a catalog service.
+
+```
+authama ssh service edit <name> [flags]
+```
+
+Flags:
+
+```
+      --binary string   override the health-check binary name
+      --kind string     built-in kind
+      --label string    a label shown in the UI
+```
+
+## authama ssh service health
+
+Read-only health check (never starts a tunnel or changes WARP).
+
+```
+authama ssh service health [name] [flags]
+```
+
+Flags:
+
+```
+      --json[=true|false]   machine-readable output
+```
+
+## authama ssh service list
+
+List built-in kinds and catalog entries.
+
+```
+authama ssh service list [flags]
+```
+
+Aliases: `ls`
+
+Flags:
+
+```
+      --json[=true|false]   machine-readable output
+```
+
+## authama ssh service remove
+
+Remove a catalog service.
+
+```
+authama ssh service remove <name> [flags]
+```
+
+Flags:
+
+```
+      --yes[=true|false]   do not ask
+```
+
+## authama ssh service show
+
+Show one service and the hosts that attach it.
+
+```
+authama ssh service show <name>
+```
+
+## authama ssh service status
+
+Alias of health: read-only status of attached services.
+
+```
+authama ssh service status [name] [flags]
+```
+
+Flags:
+
+```
+      --json[=true|false]   machine-readable output
+```
+
 ## authama ssh show
 
 Everything authama knows about a profile, host or key: the files on disk, the config blocks rendered
@@ -4015,9 +4158,11 @@ Subcommands:
 
 - [`approve`](#authama-ssh-structure-approve) - Preview, then carry out, the moves you approve
 - [`check`](#authama-ssh-structure-check) - Record file changes and refresh the suggestions; what the background job runs
+- [`classify`](#authama-ssh-structure-classify) - Refresh purpose and leftover-copy suggestions (writes nothing with --dry-run)
 - [`dismiss`](#authama-ssh-structure-dismiss) - Hide suggestions you mean to leave as they are (--undo shows them again)
 - [`install`](#authama-ssh-structure-install) - Check in the background every 15 minutes and notify about new suggestions
 - [`list`](#authama-ssh-structure-list) - List the suggested moves (dismissed ones with --all)
+- [`rules`](#authama-ssh-structure-rules) - List, add, change or remove learned purpose rules
 - [`uninstall`](#authama-ssh-structure-uninstall) - Remove the background structure check
 
 ## authama ssh structure approve
@@ -4065,7 +4210,7 @@ Flags:
 
 Scans for file changes (the same scan as `authama events`), refreshes the
 suggestions and, with --notify, posts one desktop notification naming the new ones.
-It never moves anything.
+It never moves anything unless a purpose rule you enabled with --auto matches a complete suggestion (leftover deletes are never auto-applied).
 
 ```
 authama ssh structure check [flags]
@@ -4082,6 +4227,30 @@ Flags:
 ```
       --notify[=true|false]   post a desktop notification about new suggestions
   -q, --quiet[=true|false]    print nothing
+```
+
+## authama ssh structure classify
+
+Lists the purpose moves (keys that belong in tools/<tool>/) and leftover-copy
+removals authama would suggest. --dry-run only prints the plan; without it the
+suggestions are recorded like `ssh structure check`. Nothing is moved.
+
+```
+authama ssh structure classify [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh structure classify --dry-run
+  authama ssh structure classify --json
+```
+
+Flags:
+
+```
+  -n, --dry-run[=true|false]   print the plan; write nothing
+      --json[=true|false]      print the suggestions as JSON
 ```
 
 ## authama ssh structure dismiss
@@ -4154,6 +4323,87 @@ Flags:
       --json[=true|false]   print the suggestions as JSON
 ```
 
+## authama ssh structure rules
+
+List, add, change or remove learned purpose rules.
+
+```
+authama ssh structure rules
+```
+
+Subcommands:
+
+- [`add`](#authama-ssh-structure-rules-add) - Add a purpose rule (auto-apply is off unless --auto is set)
+- [`list`](#authama-ssh-structure-rules-list) - List purpose rules
+- [`remove`](#authama-ssh-structure-rules-remove) - Remove a purpose rule
+- [`set`](#authama-ssh-structure-rules-set) - Change a rule (currently --auto / --auto=false)
+
+## authama ssh structure rules add
+
+Add a purpose rule (auto-apply is off unless --auto is set).
+
+```
+authama ssh structure rules add [flags]
+```
+
+Flags:
+
+```
+      --auto[=true|false]    apply later identical suggestions automatically (off by default; still snapshotted)
+      --comment string       a regular expression matched against the .pub comment
+      --fingerprint string   a SHA256:... public-key fingerprint
+      --kind string          the tool kind (git-signing, docker, …)
+      --name string          a filename glob (git-signing, *-tunnel)
+      --profile string       limit the rule to this profile
+      --tool string          the tools/<tool>/ slug
+  -y, --yes[=true|false]     add without confirming
+```
+
+## authama ssh structure rules list
+
+List purpose rules.
+
+```
+authama ssh structure rules list [flags]
+```
+
+Aliases: `ls`
+
+Flags:
+
+```
+      --json[=true|false]   print the rules as JSON
+```
+
+## authama ssh structure rules remove
+
+Remove a purpose rule.
+
+```
+authama ssh structure rules remove <id> [flags]
+```
+
+Flags:
+
+```
+  -y, --yes[=true|false]   remove without confirming
+```
+
+## authama ssh structure rules set
+
+Change a rule (currently --auto / --auto=false).
+
+```
+authama ssh structure rules set <id> [flags]
+```
+
+Flags:
+
+```
+      --auto[=true|false]   turn auto-apply on or off
+  -y, --yes[=true|false]    change without confirming
+```
+
 ## authama ssh structure uninstall
 
 Remove the background job `ssh structure install` registered, which checks the layout and raises
@@ -4213,6 +4463,60 @@ Flags:
       --include-git[=true|false]   also list git hosts, as 'export hosts --format termius --include-git' exports them (an ALIAS finds a git host without it)
       --print[=true|false]         print the private key to stdout instead of copying it (warns on stderr)
       --skip stringArray           leave out this alias (repeatable)
+```
+
+## authama ssh tool
+
+Tool keys live under ~/.ssh/profiles/<category>/<profile>/tools/<tool>/,
+apart from host keys at the profile root. Moving a key there is `ssh structure classify`
+and approve; this command lists what the manifest already declares.
+
+```
+authama ssh tool
+```
+
+Subcommands:
+
+- [`list`](#authama-ssh-tool-list) - List declared tool keys
+- [`show`](#authama-ssh-tool-show) - Show one tool key
+- [`status`](#authama-ssh-tool-status) - Show whether each declared tool key is present on disk
+
+## authama ssh tool list
+
+List declared tool keys.
+
+```
+authama ssh tool list [flags]
+```
+
+Aliases: `ls`
+
+Flags:
+
+```
+      --json[=true|false]   machine-readable output
+```
+
+## authama ssh tool show
+
+Show one tool key.
+
+```
+authama ssh tool show <profile>/<key>
+```
+
+## authama ssh tool status
+
+Show whether each declared tool key is present on disk.
+
+```
+authama ssh tool status [flags]
+```
+
+Flags:
+
+```
+      --json[=true|false]   machine-readable output
 ```
 
 ## authama ssh validate

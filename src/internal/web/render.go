@@ -658,7 +658,7 @@ type navItem struct {
 // a task's kind is what it does to things. The user menu's entries, written
 // out in layout.html, are "personal".
 var navKinds = map[string]string{
-	"profiles": "ssh", "hosts": "ssh", "keys": "ssh", "vms": "ssh", "naming": "ssh", "sshconfig": "ssh", "termius": "ssh", "structure": "ssh", "gitsign": "ssh",
+	"profiles": "ssh", "hosts": "ssh", "keys": "ssh", "vms": "ssh", "naming": "ssh", "sshconfig": "ssh", "termius": "ssh", "structure": "ssh", "tools": "ssh", "services": "ssh", "gitsign": "ssh",
 	"tokens": "tokens", "token-checklists": "tokens",
 	"audit": "security", "checklists": "security", "security": "security",
 	"history": "history", "events": "history", "snapshots": "history", "export": "history", "setup": "history",
@@ -943,7 +943,9 @@ func paletteItems(readOnly bool) []paletteItem {
 		{"vms", "VMs", "/vms", "box", "SSH", "vm hypervisor devbox sync", "g v", ""},
 		{"sshconfig", "SSH config", "/ssh-config", "file-code", "SSH", "config render drift check", "g c", ""},
 		{"termius", "Termius import", "/termius", "server-2", "SSH", "termius import csv groups subgroups keys keychain export", "g u", ""},
-		{"structure", "Structure", "/structure", "folder", "SSH", "structure tree folder layout move loose keys drag drop watcher builder category", "g b", ""},
+		{"structure", "Structure", "/structure", "folder", "SSH", "structure tree folder layout move loose keys drag drop watcher builder category tools purpose rules", "g b", ""},
+		{"tools", "Tools", "/tools", "device-desktop", "SSH", "tool keys git docker signing ploi forge ansible", "t o", ""},
+		{"services", "Services", "/services", "activity", "SSH", "service health cloudflare access warp tailscale bastion teleport ssm", "s v", ""},
 		{"gitsign", "Git identities", "/git-sign", "git-compare", "SSH", "git commit sign signing signature allowed_signers email identity includeIf clone verify", "g g", ""},
 		{"snapshots", "Snapshots", "/snapshots", "archive", "History", "snapshot bundle backup restore", "g s", ""},
 		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Tokens", "token npm composer docker git netrc pypi cargo gem gradle maven yarn helm gh", "g t", ""},

@@ -35,6 +35,7 @@ type StructureView struct {
 	Categories  []string
 	ListCmd     string
 	InstallCmd  string
+	Rules       []structure.Rule
 }
 
 // StructureGroup is one category (Name "" is the profiles in none).
@@ -50,6 +51,7 @@ type StructureProfile struct {
 	OnePassword         bool
 	Keys                []StructureKey
 	Hosts               []StructureHost
+	Tools               []StructureToolFolder
 	Moves               []StructureOption // to another category
 }
 
@@ -73,6 +75,12 @@ type StructureHost struct {
 // category or profile it moves to (what a drop target names).
 type StructureOption struct {
 	Line, Target, Label string
+}
+
+// StructureToolFolder is tools/<tool>/ under a profile, a drop target for purpose moves.
+type StructureToolFolder struct {
+	Tool, Dir string
+	Keys      []StructureKey
 }
 
 // StructureSuggestion is one key outside the layout, with its move choices.
@@ -105,6 +113,7 @@ func (sp structurePage) view(showAll bool) (StructureView, error) {
 	v.Root = "~/.ssh/" + manifest.KeyRoot(m)
 	v.Categories = m.Categories()
 	v.Groups = structureGroups(p, m)
+	v.Rules, _ = structure.LoadRules(p)
 
 	all, checked, err := structure.Current(p)
 	if err != nil {
@@ -166,8 +175,9 @@ func structureGroups(p paths.Paths, m *manifest.Manifest) []StructureGroup {
 			if prof.Category != c {
 				continue
 			}
+			hostKeys, toolFolders := splitToolKeys(p, m, name, keysOf[name])
 			sp := StructureProfile{Name: name, Category: c, Dir: "~/.ssh/" + m.ProfileRel(name),
-				OnePassword: prof.InOnePassword(), Keys: keysOf[name], Hosts: hostsOf[name]}
+				OnePassword: prof.InOnePassword(), Keys: hostKeys, Hosts: hostsOf[name], Tools: toolFolders}
 			for _, to := range cats {
 				if to == c {
 					continue
@@ -209,12 +219,17 @@ func crossMoves(m *manifest.Manifest, from string, move func(to string) structur
 // it has one, else a move into each profile that keeps keys on disk.
 func suggestionMoves(m *manifest.Manifest, s structure.Suggestion) []StructureOption {
 	switch {
+	case s.Kind == structure.KindCopyRemove && s.Plan != "":
+		return []StructureOption{{Line: s.Plan, Target: "copy-remove", Label: "delete leftover copy (keep the managed key)"}}
 	case s.Info:
 		return nil
 	case s.Kind == structure.KindMisplaced:
 		return []StructureOption{{Line: s.Plan, Target: "profile:" + s.Profile, Label: "to " + s.To}}
 	}
 	var out []StructureOption
+	if s.Kind == structure.KindPurpose && s.Plan != "" {
+		out = append(out, StructureOption{Line: s.Plan, Target: "tool:" + s.Profile + ":" + s.Tool, Label: "into tools/" + s.Tool + "/ (suggested)"})
+	}
 	for _, name := range m.ProfileNames() {
 		if m.Profiles[name].InOnePassword() {
 			continue
@@ -225,8 +240,52 @@ func suggestionMoves(m *manifest.Manifest, s structure.Suggestion) []StructureOp
 		}
 		out = append(out, StructureOption{Line: structure.KeyLine(s.Path, name, s.Name),
 			Target: "profile:" + name, Label: label})
+		for _, tool := range manifest.BuiltinToolSlugs() {
+			if s.Kind == structure.KindPurpose && name == s.Profile && tool == s.Tool {
+				continue
+			}
+			line := "purpose " + name + "/" + purposeKeyName(s, name) + " tool " + tool
+			out = append(out, StructureOption{Line: line, Target: "tool:" + name + ":" + tool, Label: "into " + name + "/tools/" + tool + "/"})
+		}
 	}
 	return out
+}
+
+func purposeKeyName(s structure.Suggestion, profile string) string {
+	if s.Name != "" {
+		return s.Name
+	}
+	return strings.TrimSuffix(filepath.Base(s.Path), "")
+}
+
+func splitToolKeys(_ paths.Paths, m *manifest.Manifest, profile string, keys []StructureKey) ([]StructureKey, []StructureToolFolder) {
+	byTool := map[string][]StructureKey{}
+	var hostKeys []StructureKey
+	for _, k := range keys {
+		spec, ok := m.KeySpecFor(manifest.KeyRef{Profile: profile, KeyName: k.Name})
+		if ok && (spec.Role == manifest.RoleTool || spec.Tool != "") {
+			byTool[spec.Tool] = append(byTool[spec.Tool], k)
+			continue
+		}
+		hostKeys = append(hostKeys, k)
+	}
+	var folders []StructureToolFolder
+	seen := map[string]bool{}
+	for _, tool := range manifest.BuiltinToolSlugs() {
+		seen[tool] = true
+		folders = append(folders, StructureToolFolder{
+			Tool: tool, Dir: "~/.ssh/" + m.ProfileRel(profile) + "/tools/" + tool, Keys: byTool[tool],
+		})
+	}
+	for tool, ks := range byTool {
+		if seen[tool] {
+			continue
+		}
+		folders = append(folders, StructureToolFolder{
+			Tool: tool, Dir: "~/.ssh/" + m.ProfileRel(profile) + "/tools/" + tool, Keys: ks,
+		})
+	}
+	return hostKeys, folders
 }
 
 // structurePlanChange is the structure-plan action: the move selects (each
@@ -259,4 +318,41 @@ func structureDismissChange(f url.Values, errs []error) (change.Change, []error)
 		return change.Change{}, append(errs, badForm("not a suggestion id: %q", id))
 	}
 	return change.StructureDismiss(id, checked(f, "undo")), errs
+}
+
+func structureRuleAddChange(f url.Values, errs []error) (change.Change, []error) {
+	tool := strings.TrimSpace(f.Get("tool"))
+	if tool == "" {
+		return change.Change{}, append(errs, badForm("a rule needs --tool (the tools/<tool>/ slug)"))
+	}
+	r := structure.Rule{
+		Profile:     strings.TrimSpace(f.Get("profile")),
+		NameGlob:    strings.TrimSpace(f.Get("name")),
+		CommentRe:   strings.TrimSpace(f.Get("comment")),
+		Fingerprint: strings.TrimSpace(f.Get("fingerprint")),
+		Tool:        tool,
+		ToolKind:    strings.TrimSpace(f.Get("kind")),
+		AutoApply:   checked(f, "auto") || f.Get("auto") == "1",
+	}
+	if r.NameGlob == "" && r.CommentRe == "" && r.Fingerprint == "" && r.Profile == "" {
+		return change.Change{}, append(errs, badForm("a rule needs a name glob, comment, fingerprint or profile"))
+	}
+	return change.StructureRuleAdd(r), errs
+}
+
+func structureRuleAutoChange(f url.Values, errs []error) (change.Change, []error) {
+	id := strings.TrimSpace(f.Get("id"))
+	if id == "" {
+		return change.Change{}, append(errs, badForm("name the rule id"))
+	}
+	auto := f.Get("auto") != "0" && f.Get("auto") != "false" && f.Get("auto") != ""
+	return change.StructureRuleAuto(id, auto), errs
+}
+
+func structureRuleRemoveChange(f url.Values, errs []error) (change.Change, []error) {
+	id := strings.TrimSpace(f.Get("id"))
+	if id == "" {
+		return change.Change{}, append(errs, badForm("name the rule id"))
+	}
+	return change.StructureRuleRemove(id), errs
 }

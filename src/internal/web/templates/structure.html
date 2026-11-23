@@ -1,5 +1,5 @@
 {{define "content"}}{{with .Data}}
-{{template "page_header" (header "SSH" $.Title "Your SSH folder as a tree: categories, profiles, their keys and hosts, and the keys found outside it. Choose a move from an item's menu, or drag the item onto a category or profile - a profile onto a category, a key or host onto another profile. You see every file that moves and each config diff before anything is written." (action "Events" "/events" "file-diff" | withTip "structure-events"))}}
+{{template "page_header" (header "SSH" $.Title "Your SSH folder as a tree: categories, profiles, their keys and hosts, and the keys found outside it. Choose a move from an item's menu, or drag the item onto a category or profile - a profile onto a category, a key or host onto another profile. You see every file that moves and each config diff before anything is written." (action "Tools" "/tools" "device-desktop" | withTip "tools") (action "Services" "/services" "activity" | withTip "services") (action "Events" "/events" "file-diff" | withTip "structure-events"))}}
 {{if not .Root}}
 <div class="card"><div class="card-body">{{template "empty" (empty "folder" "No manifest yet" "")}}</div></div>
 {{else}}
@@ -43,7 +43,17 @@
                           {{range .Moves}}<option value="{{.Line}}" data-target="{{.Target}}">{{.Label}}</option>{{end}}
                         </select>{{end}}
                       </li>{{end}}
-                      {{if not (or .Keys .Hosts)}}<li class="structure-leaf text-secondary small">No keys or hosts yet</li>{{end}}
+                      {{range .Tools}}
+                      <li class="structure-node structure-tool" data-drop="tool:{{$prof.Name}}:{{.Tool}}">
+                        <details{{if .Keys}} open{{end}}>
+                          <summary><span class="structure-label">{{icon "folder"}}<span class="ms-1">tools/{{.Tool}}/</span></span><span class="text-secondary small ms-2">{{.Dir}}</span>{{if .Keys}}<span class="badge badge-muted ms-2">{{len .Keys}}</span>{{end}}</summary>
+                          <ul>
+                            {{range .Keys}}<li class="structure-leaf"><span class="structure-label">{{icon "key"}}<span class="ms-1">{{.Name}}</span></span> <code class="small">{{.Path}}</code>{{if not .Present}} <span class="badge badge-warn">not on disk yet</span>{{end}}</li>{{else}}<li class="structure-leaf text-secondary small">Drop a purpose key here</li>{{end}}
+                          </ul>
+                        </details>
+                      </li>
+                      {{end}}
+                      {{if not (or .Keys .Hosts .Tools)}}<li class="structure-leaf text-secondary small">No keys or hosts yet</li>{{end}}
                     </ul>
                   </details>
                 </li>
@@ -62,7 +72,15 @@
                     {{icon "key"}}<code>{{.Path}}</code><span class="badge badge-muted">{{.Kind}}</span>{{if .Profile}}<span class="badge badge-info">suggested: {{.Profile}}</span>{{end}}<span class="text-secondary small">id {{.ID}}</span>
                   </div>
                   <p class="text-secondary small mb-1">{{.Detail}}</p>
+                  {{if .Evidence}}<p class="small mb-1">Evidence{{if .Confidence}} (confidence {{printf "%.2f" .Confidence}}){{end}}: {{range $i, $e := .Evidence}}{{if $i}}; {{end}}{{$e}}{{end}}</p>{{end}}
                   {{range .InUse}}<p class="small mb-1">Named in <code>{{.}}</code>; that line is repointed when it moves.</p>{{end}}
+                  {{if and (not $.ReadOnly) (eq .Kind "purpose") .Tool}}
+                  <form method="post" action="{{basePath}}/changes/preview" class="mb-2" data-inline>
+                    <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="structure-rule-add">
+                    <input type="hidden" name="profile" value="{{.Profile}}"><input type="hidden" name="name" value="{{.Name}}"><input type="hidden" name="tool" value="{{.Tool}}"><input type="hidden" name="kind" value="{{.ToolKind}}">
+                    <button type="submit" class="btn btn-sm btn-ghost-secondary"{{desc "structure-rule-add"}}>Remember this as a rule</button>
+                  </form>
+                  {{end}}
                   {{if not $.ReadOnly}}
                   <div class="structure-move d-flex flex-wrap align-items-end gap-2">
                     {{if .Moves}}
@@ -101,7 +119,7 @@
         <ul class="small mb-3" data-structure-pending aria-labelledby="structure-pending-label" aria-live="polite"><li class="text-secondary">Nothing yet: choose a move from an item's menu, or drag the item.</li></ul>
         <label class="form-label" for="structure-moves">More moves, one per line</label>
         <textarea class="form-control font-monospace small" id="structure-moves" name="moves" rows="4" spellcheck="false" autocomplete="off" placeholder="profile work category clients"></textarea>
-        <small class="form-hint"><code>key &lt;path&gt; profile &lt;profile&gt; [name &lt;key&gt;]</code>, <code>key &lt;profile&gt;/&lt;key&gt; profile &lt;profile&gt; [name &lt;key&gt;]</code>, <code>host &lt;profile&gt;/&lt;alias&gt; profile &lt;profile&gt;</code>, <code>misplaced &lt;profile&gt;/&lt;key&gt;</code>, or <code>profile &lt;name&gt; category &lt;category|-&gt;</code>; a new category is made this way.</small>
+        <small class="form-hint"><code>key &lt;path&gt; profile &lt;profile&gt; [name &lt;key&gt;]</code>, <code>key &lt;profile&gt;/&lt;key&gt; profile &lt;profile&gt; [name &lt;key&gt;]</code>, <code>host &lt;profile&gt;/&lt;alias&gt; profile &lt;profile&gt;</code>, <code>misplaced &lt;profile&gt;/&lt;key&gt;</code>, or <code>profile &lt;name&gt; category &lt;category|-&gt;</code>, <code>purpose &lt;profile&gt;/&lt;key&gt; tool &lt;tool&gt;</code>, or <code>copy-remove &lt;path&gt;</code>. Drag a key onto a profile's <code>tools/&lt;tool&gt;/</code> folder to choose a purpose move.</small>
       </div>
       <div class="card-footer text-end">
         <button type="submit" class="btn btn-primary"{{desc "structure-preview"}}>Preview the moves</button>
@@ -115,6 +133,65 @@
         <p class="small text-secondary mb-1">To be notified when the server is not running, add the background check (every 15 minutes):</p>
         {{template "command_line" .InstallCmd}}
         <p class="small text-secondary mb-0">Each approved move is backed up to <code>.state/moved/</code> in the state home first and listed in <a href="{{u "/history"}}">History</a>.</p>
+      </div>
+    </div>
+    <div class="card mb-3" id="structure-rules">
+      <div class="card-header"><h2 class="card-title">Purpose rules</h2></div>
+      <div class="card-body">
+        <p class="small text-secondary">A remembered rule classifies matching keys into <code>tools/&lt;tool&gt;/</code>. Auto-apply is off until you enable it: then a later identical suggestion (confidence 1.0, complete plan) is applied with a snapshot and a history entry. Leftover deletes are never auto-applied. Git signing path updates go through sange.</p>
+        {{if .Rules}}
+        <ul class="list-unstyled small mb-3">
+          {{range .Rules}}
+          <li class="mb-2 d-flex flex-wrap align-items-center gap-2">
+            <code>{{.ID}}</code> → tools/{{.Tool}}/{{if .AutoApply}} <span class="badge badge-info">auto</span>{{end}}
+            {{if not $.ReadOnly}}
+            <form method="post" action="{{basePath}}/changes/preview" class="d-inline" data-inline>
+              <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="structure-rule-auto"><input type="hidden" name="id" value="{{.ID}}">
+              {{if .AutoApply}}<input type="hidden" name="auto" value="0"><button type="submit" class="btn btn-sm btn-ghost-secondary"{{desc "structure-rule-auto"}}>Disable auto</button>
+              {{else}}<input type="hidden" name="auto" value="1"><button type="submit" class="btn btn-sm btn-ghost-secondary"{{desc "structure-rule-auto"}}>Enable auto</button>{{end}}
+            </form>
+            <form method="post" action="{{basePath}}/changes/preview" class="d-inline" data-inline>
+              <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="structure-rule-remove"><input type="hidden" name="id" value="{{.ID}}">
+              <button type="submit" class="btn btn-sm btn-ghost-danger"{{desc "structure-rule-remove"}}>Remove</button>
+            </form>
+            {{end}}
+          </li>
+          {{end}}
+        </ul>
+        {{else}}<p class="small text-secondary">No rules yet. Classify a key, then remember it.</p>{{end}}
+        {{if not $.ReadOnly}}
+        <form method="post" action="{{basePath}}/changes/preview" class="mb-3" data-inline>
+          <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="structure-rule-auto">
+          <label class="form-label small" for="rule-auto-id">Enable or disable auto-apply</label>
+          <div class="d-flex gap-2 mb-2">
+            <input class="form-control form-control-sm" id="rule-auto-id" name="id" placeholder="rule id" required>
+            <select class="form-select form-select-sm w-auto" name="auto" aria-label="Auto-apply">
+              <option value="1">Enable auto</option>
+              <option value="0">Disable auto</option>
+            </select>
+            <button type="submit" class="btn btn-sm btn-outline-primary"{{desc "structure-rule-auto"}}>Preview</button>
+          </div>
+        </form>
+        <form method="post" action="{{basePath}}/changes/preview" class="mb-3" data-inline>
+          <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="structure-rule-remove">
+          <label class="form-label small" for="rule-remove-id">Remove a rule</label>
+          <div class="d-flex gap-2 mb-2">
+            <input class="form-control form-control-sm" id="rule-remove-id" name="id" placeholder="rule id" required>
+            <button type="submit" class="btn btn-sm btn-ghost-danger"{{desc "structure-rule-remove"}}>Preview remove</button>
+          </div>
+        </form>
+        <form method="post" action="{{basePath}}/changes/preview" data-inline>
+          <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="action" value="structure-rule-add">
+          <div class="row g-2">
+            <div class="col-6"><label class="form-label small" for="rule-name">Name glob</label><input class="form-control form-control-sm" id="rule-name" name="name" placeholder="git-signing"></div>
+            <div class="col-6"><label class="form-label small" for="rule-tool">Tool</label><input class="form-control form-control-sm" id="rule-tool" name="tool" placeholder="git" required></div>
+            <div class="col-6"><label class="form-label small" for="rule-profile">Profile</label><input class="form-control form-control-sm" id="rule-profile" name="profile" placeholder="optional"></div>
+            <div class="col-6"><label class="form-label small" for="rule-comment">Comment regexp</label><input class="form-control form-control-sm" id="rule-comment" name="comment" placeholder="optional"></div>
+          </div>
+          <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="rule-auto" name="auto" value="1"><label class="form-check-label small" for="rule-auto">Auto-apply later matches</label></div>
+          <button type="submit" class="btn btn-sm btn-outline-primary mt-2"{{desc "structure-rule-add"}}>Add rule</button>
+        </form>
+        {{end}}
       </div>
     </div>
     {{if .Dismissed}}

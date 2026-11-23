@@ -26,6 +26,11 @@ const (
 	ToolAnsible = "ansible"
 )
 
+// BuiltinToolSlugs are the well-known tools/<tool>/ folder names.
+func BuiltinToolSlugs() []string {
+	return []string{ToolGit, ToolDocker, ToolPloi, ToolForge, ToolAnsible}
+}
+
 // ToolKind is a more specific binding than the folder slug (git-signing vs a
 // future git-ssh tool key, which we do not move into tools/git by default).
 const (
@@ -177,6 +182,16 @@ func (s ServiceSpec) Ref() string {
 		return s.Name
 	}
 	return s.Kind
+}
+
+// CheckServiceKind reports whether kind is a built-in reachability service.
+func CheckServiceKind(kind string) error {
+	for _, k := range BuiltinServiceKinds() {
+		if kind == k {
+			return nil
+		}
+	}
+	return fmt.Errorf("service kind %q is not one of: %s", kind, strings.Join(BuiltinServiceKinds(), ", "))
 }
 
 // BuiltinServiceKinds are the kinds authama health-checks and documents.

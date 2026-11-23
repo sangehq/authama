@@ -133,6 +133,12 @@ func classifyKey(p paths.Paths, m *manifest.Manifest, profile, name, abs, commen
 	var ev []string
 	tool, kind := "", ""
 	conf := 0.0
+	fp, _ := fingerprintOfPub(abs + ".pub")
+	seed := classified{}
+	applyRules(p, profile, name, comment, fp, &seed)
+	if seed.tool != "" {
+		return seed
+	}
 	bump := func(t, k string, c float64, why string) {
 		if t == "" {
 			return

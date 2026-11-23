@@ -37,8 +37,8 @@ func newStructureCmd() *cobra.Command {
 			"`" + brand.Command + " serve` checks after every file change it sees; `install` adds\n" +
 			"a background job that checks every 15 minutes and notifies about new suggestions.",
 	}
-	cmd.AddCommand(newStructureListCmd(), newStructureCheckCmd(), newStructureApproveCmd(),
-		newStructureDismissCmd(), newStructureInstallCmd(), newStructureUninstallCmd())
+	cmd.AddCommand(newStructureListCmd(), newStructureCheckCmd(), newStructureClassifyCmd(), newStructureApproveCmd(),
+		newStructureDismissCmd(), newStructureRulesCmd(), newStructureInstallCmd(), newStructureUninstallCmd())
 	return cmd
 }
 
@@ -83,7 +83,7 @@ func newStructureCheckCmd() *cobra.Command {
 		Short: "Record file changes and refresh the suggestions; what the background job runs",
 		Long: "Scans for file changes (the same scan as `" + brand.Command + " events`), refreshes the\n" +
 			"suggestions and, with --notify, posts one desktop notification naming the new ones.\n" +
-			"It never moves anything.",
+			"It never moves anything unless a purpose rule you enabled with --auto matches a complete suggestion (leftover deletes are never auto-applied).",
 		Example: "  " + brand.Command + " ssh structure check --notify",
 		Args:    cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
@@ -98,6 +98,17 @@ func newStructureCheckCmd() *cobra.Command {
 			all, fresh, err := structure.Check(p, now)
 			if err != nil {
 				return err
+			}
+			if ids, err := change.AutoApplyRuled(p, all, c.OutOrStdout()); err != nil {
+				return err
+			} else if len(ids) > 0 {
+				all, fresh, err = structure.Check(p, now)
+				if err != nil {
+					return err
+				}
+				if !quiet {
+					say(c, "auto-applied %d purpose rule(s): %s", len(ids), strings.Join(ids, ", "))
+				}
 			}
 			if notify && len(fresh) > 0 && notifier.DesktopEnabled() {
 				if desktop.Notify(brand.Name+": keys outside the layout", notifyText(fresh)) {

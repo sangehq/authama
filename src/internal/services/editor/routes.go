@@ -37,6 +37,10 @@ type RouteFields struct {
 	UnsetOptions []string
 	Section      *string
 	Comment      *string
+	// Services names to attach (added unless ReplaceServices); RemoveServices drop names.
+	Services        []string
+	RemoveServices  []string
+	ReplaceServices bool
 }
 
 // VariantFields are a route variant's settings on top of RouteFields.
@@ -121,7 +125,43 @@ func applyRoute(h *manifest.Host, f RouteFields) error {
 	if f.Comment != nil {
 		h.Comment = strings.TrimSpace(*f.Comment)
 	}
+	h.Services = applyServices(h.Services, f)
 	return nil
+}
+
+// applyServices adds and removes reachability-service names on a host or variant.
+func applyServices(cur []string, f RouteFields) []string {
+	out := append([]string(nil), cur...)
+	if f.ReplaceServices {
+		out = append([]string(nil), f.Services...)
+		return out
+	}
+	for _, n := range f.RemoveServices {
+		kept := out[:0:0]
+		for _, x := range out {
+			if x != n {
+				kept = append(kept, x)
+			}
+		}
+		out = kept
+	}
+	for _, n := range f.Services {
+		n = strings.TrimSpace(n)
+		if n == "" {
+			continue
+		}
+		found := false
+		for _, x := range out {
+			if x == n {
+				found = true
+				break
+			}
+		}
+		if !found {
+			out = append(out, n)
+		}
+	}
+	return out
 }
 
 // applyAliases adds and removes a host's extra names.
@@ -225,6 +265,7 @@ func (r Routes) SetVariant(profile, alias, name string, f VariantFields) (create
 	if f.Comment != nil {
 		v.Comment = strings.TrimSpace(*f.Comment)
 	}
+	v.Services = applyServices(v.Services, f.RouteFields)
 	if ok {
 		for i := range host.Variants {
 			if host.Variants[i].Name == name {

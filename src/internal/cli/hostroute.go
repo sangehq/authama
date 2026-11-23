@@ -23,7 +23,7 @@ const proxyFlagHelp = "how ssh reaches the host: cloudflared (Cloudflare Access:
 type routeFlags struct {
 	proxy, proxyCommand, proxyJump, section, comment string
 	connectTimeout                                   int
-	options, unset                                   []string
+	options, unset, services, removeServices         []string
 }
 
 func (r *routeFlags) register(f *pflag.FlagSet, editing bool) {
@@ -42,15 +42,21 @@ func (r *routeFlags) register(f *pflag.FlagSet, editing bool) {
 	f.StringVar(&r.section, "section", "",
 		"a heading rendered as a comment above the block; hosts after it without one sit under it ('' removes it)")
 	f.StringVar(&r.comment, "comment", "", "a comment rendered inside the block, under its Host line ('' removes it)")
+	f.StringArrayVar(&r.services, "service", nil, "attach this reachability service (a built-in kind or a defaults.services name; repeatable)")
+	if editing {
+		f.StringArrayVar(&r.removeServices, "remove-service", nil, "detach this reachability service (repeatable)")
+	}
 }
 
 func (r *routeFlags) fields(c *cobra.Command) (editor.RouteFields, error) {
 	f := editor.RouteFields{
-		Proxy:        strPtrIf(c, "proxy", r.proxy),
-		ProxyCommand: strPtrIf(c, "proxy-command", r.proxyCommand),
-		Section:      strPtrIf(c, "section", r.section),
-		Comment:      strPtrIf(c, "comment", r.comment),
-		UnsetOptions: r.unset,
+		Proxy:          strPtrIf(c, "proxy", r.proxy),
+		ProxyCommand:   strPtrIf(c, "proxy-command", r.proxyCommand),
+		Section:        strPtrIf(c, "section", r.section),
+		Comment:        strPtrIf(c, "comment", r.comment),
+		UnsetOptions:   r.unset,
+		Services:       r.services,
+		RemoveServices: r.removeServices,
 	}
 	if c.Flags().Changed("proxy-jump") {
 		f.SetOptions = append(f.SetOptions, [2]string{"ProxyJump", r.proxyJump})

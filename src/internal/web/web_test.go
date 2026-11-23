@@ -46,6 +46,8 @@ func TestEveryPageRenders(t *testing.T) {
 		"/termius":                              "Termius import",
 		"/setup":                                "Move setup",
 		"/structure":                            "Structure",
+		"/tools":                                "Tools",
+		"/services":                             "Services",
 		"/git-sign":                             "Git identities",
 	}
 	if len(pages) < 19 {

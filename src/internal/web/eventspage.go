@@ -2,36 +2,58 @@ package web
 
 import (
 	"context"
-	"github.com/sangehq/authama/src/internal/util/applog"
+	"io"
 	"net/http"
+	"strings"
 	"sync/atomic"
 	"time"
 
+	"github.com/sangehq/authama/src/internal/services/change"
 	"github.com/sangehq/authama/src/internal/services/events"
 	"github.com/sangehq/authama/src/internal/services/history"
 	"github.com/sangehq/authama/src/internal/services/structure"
+	"github.com/sangehq/authama/src/internal/util/applog"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
-// defaultEventInterval is how often a running server scans for file changes.
+// defaultEventInterval is how often a running server does a full file scan.
 const defaultEventInterval = 30 * time.Second
 
-// watchEvents scans once at start, then every interval, until ctx ends. A
-// failed scan is tried again next time: the page says what the last one found.
+// fastEventInterval is a short poll used as the fsnotify fallback: if a
+// watch cannot be established, the server still notices ~/.ssh changes
+// quickly. Back-to-back scans within eventDebounce are skipped.
+const fastEventInterval = 2 * time.Second
+const eventDebounce = 1500 * time.Millisecond
+
+// watchEvents scans once at start, then on a short poll and a 30s full
+// scan, until ctx ends. A failed scan is tried again next time.
 func (s *Server) watchEvents(ctx context.Context) {
 	every := s.opts.EventInterval
 	if every <= 0 {
 		every = defaultEventInterval
 	}
 	s.scanEvents()
-	t := time.NewTicker(every)
-	defer t.Stop()
+	var last time.Time
+	run := func() {
+		if !last.IsZero() && time.Since(last) < eventDebounce {
+			return
+		}
+		s.scanEvents()
+		last = time.Now()
+	}
+	full := time.NewTicker(every)
+	fast := time.NewTicker(fastEventInterval)
+	defer full.Stop()
+	defer fast.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-t.C:
+		case <-full.C:
 			s.scanEvents()
+			last = time.Now()
+		case <-fast.C:
+			run()
 		}
 	}
 }
@@ -55,8 +77,9 @@ func (s *Server) scanEvents() {
 
 // checkStructure refreshes the structure suggestions (the structure page's
 // list) after a scan that saw a file change in ~/.ssh or the config home,
-// and once at start. It only suggests: nothing moves until the owner
-// approves it.
+// and once at start. Ordinary suggestions stay pending until the owner
+// approves them. Rules the owner enabled with --auto may be applied here
+// (snapshot + history); leftover copy-remove is never auto-applied.
 //
 // A function, not a Server method: Server's method count is kept down on
 // purpose (TestNoTypeHasBecomeTheFacadeAgain).
@@ -71,9 +94,17 @@ func checkStructure(seen *atomic.Bool, p paths.Paths, evs []events.Event, now ti
 	if !changed {
 		return
 	}
-	if _, _, err := structure.Check(p, now); err == nil {
-		seen.Store(true)
+	all, _, err := structure.Check(p, now)
+	if err != nil {
+		return
 	}
+	if ids, err := change.AutoApplyRuled(p, all, io.Discard); err != nil {
+		applog.Warn("auto-apply failed", "area", "structure", "error", err)
+	} else if len(ids) > 0 {
+		applog.Info("auto-applied purpose rules", "area", "structure", "ids", strings.Join(ids, ","))
+		_, _, _ = structure.Check(p, now)
+	}
+	seen.Store(true)
 }
 
 // EventRow is one file event, with the authama operation that made it when
