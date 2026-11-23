@@ -14,6 +14,7 @@ const hosts: Record<string, string> = {
 };
 const keys = [
   'work/work_hpc-ed25519',
+  'work/git-signing',
   'personal/personal_github-ed25519',
   'simtabi/simtabi_github-ed25519',
   'development/development_app-web-ed25519',
