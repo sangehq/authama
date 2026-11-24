@@ -254,3 +254,254 @@ func TestExpandMissingAndAbsolute(t *testing.T) {
 		t.Fatalf("absolute Expand = %v missing=%v", got, miss)
 	}
 }
+
+func TestTokensKeepsQuotedAndEscapedSpaces(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		in   string
+		want []string
+	}{
+		{`a b`, []string{"a", "b"}},
+		{`"my hosts.conf" other`, []string{"my hosts.conf", "other"}},
+		{`'my hosts.conf'`, []string{"my hosts.conf"}},
+		{`path\ with\ spaces`, []string{"path with spaces"}},
+		{`"mixed 'quotes'"`, []string{"mixed 'quotes'"}},
+		{"", nil},
+	}
+	for _, c := range cases {
+		got := Tokens(c.in)
+		if strings.Join(got, "|") != strings.Join(c.want, "|") {
+			t.Errorf("Tokens(%q) = %#v, want %#v", c.in, got, c.want)
+		}
+	}
+}
+
+func TestLoadQuotedIncludePathWithSpaces(t *testing.T) {
+	ssh := testSSHDir(t)
+	write(t, filepath.Join(ssh, "my hosts.conf"), "Host spaced\n  HostName spaced.example\n")
+	write(t, filepath.Join(ssh, "config"), `Include "my hosts.conf"`+"\n")
+
+	tree, err := LoadUser(ssh)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasHost(tree, "spaced") {
+		t.Fatalf("quoted Include did not load Host spaced; hosts=%v warnings=%v", hostAliases(tree), tree.Warnings)
+	}
+}
+
+func TestLoadStripsBOMAndAcceptsCRLF(t *testing.T) {
+	ssh := testSSHDir(t)
+	body := "\uFEFFHost bom\r\n  HostName bom.example\r\nInclude crlf.conf\r\n"
+	write(t, filepath.Join(ssh, "config"), body)
+	write(t, filepath.Join(ssh, "crlf.conf"), "\uFEFFHost crlf\r\n  HostName crlf.example\r\n")
+
+	tree, err := LoadUser(ssh)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasHost(tree, "bom") || !hasHost(tree, "crlf") {
+		t.Fatalf("BOM/CRLF load missed hosts: %v warnings=%v", hostAliases(tree), tree.Warnings)
+	}
+}
+
+func TestLoadDirectoryIncludeIsWarnedNotWalked(t *testing.T) {
+	ssh := testSSHDir(t)
+	if err := os.Mkdir(filepath.Join(ssh, "just-a-dir"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	write(t, filepath.Join(ssh, "just-a-dir", "hidden.conf"), "Host hidden\n  HostName hidden.example\n")
+	write(t, filepath.Join(ssh, "config"), "Include just-a-dir\nHost top\n  HostName top.example\n")
+
+	tree, err := LoadUser(ssh)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasHost(tree, "hidden") {
+		t.Fatal("Include of a directory must not walk it (OpenSSH only accepts files)")
+	}
+	if !hasHost(tree, "top") {
+		t.Fatal("Host after a directory Include should still be read")
+	}
+	var saw bool
+	for _, w := range tree.Warnings {
+		if w.Kind == WarnMissing && strings.Contains(w.Message, "just-a-dir") {
+			saw = true
+		}
+	}
+	if !saw {
+		t.Errorf("directory Include produced no missing warning: %+v", tree.Warnings)
+	}
+}
+
+func TestLoadSandboxRetargetsTildeSSH(t *testing.T) {
+	realHome := t.TempDir()
+	sandboxHome := t.TempDir()
+	realSSH := filepath.Join(realHome, ".ssh")
+	sandbox := filepath.Join(sandboxHome, ".ssh")
+	write(t, filepath.Join(realSSH, "shared.conf"), "Host realhome\n  HostName real.example\n")
+	write(t, filepath.Join(sandbox, "shared.conf"), "Host sandbox\n  HostName sandbox.example\n")
+	write(t, filepath.Join(sandbox, "config"), "Include ~/.ssh/shared.conf\n")
+	t.Setenv("HOME", realHome)
+	t.Setenv("USERPROFILE", realHome)
+
+	tree, err := LoadUser(sandbox)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasHost(tree, "realhome") {
+		t.Fatal("Include ~/.ssh/... escaped the sandbox into process $HOME/.ssh")
+	}
+	if !hasHost(tree, "sandbox") {
+		t.Fatalf("sandbox Include ~/.ssh/shared.conf should resolve under the user SSH dir; hosts=%v warnings=%v", hostAliases(tree), tree.Warnings)
+	}
+}
+
+func TestLoadSkipsOversizedFile(t *testing.T) {
+	ssh := testSSHDir(t)
+	big := filepath.Join(ssh, "huge.conf")
+	if err := os.MkdirAll(ssh, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Create(big)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Truncate(MaxConfigBytes + 1); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	write(t, filepath.Join(ssh, "config"), "Include huge.conf\nHost after\n  HostName after.example\n")
+
+	tree, err := LoadUser(ssh)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasHost(tree, "after") {
+		t.Fatal("Host after an oversized Include should still be read")
+	}
+	var saw bool
+	for _, w := range tree.Warnings {
+		if w.Kind == WarnTooLarge {
+			saw = true
+		}
+	}
+	if !saw {
+		t.Errorf("oversized file produced no too_large warning: %+v", tree.Warnings)
+	}
+}
+
+func TestExpandLineTruncatesHugeGlob(t *testing.T) {
+	ssh := testSSHDir(t)
+	dir := filepath.Join(ssh, "many")
+	if err := os.Mkdir(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	// One past the cap so expandGlob reports truncation.
+	for i := 0; i < MaxGlobMatches+1; i++ {
+		write(t, filepath.Join(dir, itoa(i)+".conf"), "Host h"+itoa(i)+"\n  HostName x.example\n")
+	}
+	files, missing, truncated := ExpandLine("many/*.conf", ssh)
+	if !truncated {
+		t.Fatal("expected truncated=true when the glob exceeds MaxGlobMatches")
+	}
+	if len(files) != MaxGlobMatches {
+		t.Errorf("got %d files, want %d", len(files), MaxGlobMatches)
+	}
+	if len(missing) != 0 {
+		t.Errorf("missing=%v, want none", missing)
+	}
+}
+
+func TestLoadDuplicateHostAcrossFiles(t *testing.T) {
+	ssh := testSSHDir(t)
+	write(t, filepath.Join(ssh, "a.conf"), "Host shared\n  HostName a.example\n")
+	write(t, filepath.Join(ssh, "b.conf"), "Host shared\n  HostName b.example\n")
+	write(t, filepath.Join(ssh, "config"), "Include a.conf\nInclude b.conf\n")
+
+	tree, err := LoadUser(ssh)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	var files []string
+	for _, h := range tree.Hosts {
+		if h.Alias == "shared" {
+			n++
+			files = append(files, h.File)
+		}
+	}
+	if n != 2 {
+		t.Fatalf("duplicate Host shared should appear once per file, got %d from %v", n, files)
+	}
+}
+
+func TestLoadMatchIncludeIsTaggedAndExecIsNotRun(t *testing.T) {
+	ssh := testSSHDir(t)
+	sentinel := filepath.Join(t.TempDir(), "ran")
+	script := filepath.Join(t.TempDir(), "marker.sh")
+	write(t, script, "#!/bin/sh\ntouch "+sentinel+"\n")
+	if err := os.Chmod(script, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	write(t, filepath.Join(ssh, "inside.conf"), "Host inside\n  HostName inside.example\n")
+	write(t, filepath.Join(ssh, "config"),
+		"Match exec \""+script+"\"\n"+
+			"Include inside.conf\n"+
+			"Host after\n  HostName after.example\n")
+
+	tree, err := LoadUser(ssh)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(sentinel); err == nil {
+		t.Fatal("Match exec was run while loading the config; authama must not execute it")
+	}
+	if !hasHost(tree, "inside") || !hasHost(tree, "after") {
+		t.Fatalf("Match Include should be listed unconditionally; hosts=%v", hostAliases(tree))
+	}
+	var tagged bool
+	var walk func(*Node)
+	walk = func(n *Node) {
+		if n == nil {
+			return
+		}
+		if strings.HasSuffix(n.Path, "inside.conf") && n.FromMatch {
+			tagged = true
+		}
+		for _, c := range n.Includes {
+			walk(c)
+		}
+	}
+	walk(tree.Root)
+	if !tagged {
+		t.Fatal("Include inside a Match should be tagged FromMatch")
+	}
+}
+
+func hasHost(tree *Tree, alias string) bool {
+	if tree == nil {
+		return false
+	}
+	for _, h := range tree.Hosts {
+		if h.Alias == alias {
+			return true
+		}
+	}
+	return false
+}
+
+func hostAliases(tree *Tree) []string {
+	if tree == nil {
+		return nil
+	}
+	var out []string
+	for _, h := range tree.Hosts {
+		if h.Alias != "" {
+			out = append(out, h.Alias)
+		}
+	}
+	return out
+}

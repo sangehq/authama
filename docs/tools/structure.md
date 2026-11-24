@@ -112,8 +112,8 @@ move is skipped unless sange is on `PATH`.
 
 ## Installing the background job
 
-The running server watches `~/.ssh` (including `profiles/`), the config home, `~/.gitconfig`, `~/.config/git` and
-`~/.docker/contexts` with fsnotify, debounced 1–2 seconds, and still does a full scan every 30 seconds. If a watch
+The running server watches `~/.ssh` (including `profiles/`), every directory an `Include` contributes (including trees outside `~/.ssh`), the config home, `~/.gitconfig`, `~/.config/git` and
+`~/.docker/contexts` with fsnotify, debounced 1–2 seconds, and still does a full scan every 30 seconds. `/` and a Windows volume root are never watched. If a watch
 cannot be established, it polls those same trees every couple of seconds. The Structure page shows **Watching** or
 **Polling**. After a scan it refreshes suggestions (and auto-applies enabled rules). When the server is not running,
 this optional job checks every 15 minutes:
@@ -156,7 +156,7 @@ the tree and the suggestions, without the menus.
 
 ## The watcher
 
-- **Inside `authama serve`.** The server watches `~/.ssh` (including `profiles/`), the config home, token files,
+- **Inside `authama serve`.** The server watches `~/.ssh` (including `profiles/`), every directory an `Include` contributes, the config home, token files,
   `~/.gitconfig`, `~/.config/git` and `~/.docker/contexts` with fsnotify (debounced 1–2s) and still scans them every
   30 seconds for the [events](events.md) log. If a watch cannot be established, a short poll is the fallback; the
   Structure page shows **Watching** or **Polling**. When a scan sees a change, it refreshes the suggestions (kept in

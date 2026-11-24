@@ -6,6 +6,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **OpenSSH Include edge cases.** Quoted and backslash-escaped Include paths
+  (names with spaces) are tokenized the way OpenSSH argv-splits them, including
+  in the importer. A UTF-8 BOM is stripped and CRLF lines are accepted.
+  `Include` of a directory is a warning (OpenSSH only reads regular files).
+  `Include ~/.ssh/...` in a sandbox (`serve --dev-root`) resolves under that
+  sandbox, not process `$HOME/.ssh`. A glob that expands to more than 4096
+  paths is truncated with a warning; a config file larger than 2 MiB is
+  skipped. The watcher never watches `/` or a Windows volume root. Includes
+  inside a `Match` are tagged `from Match` and listed unconditionally;
+  `Match exec` is never run.
+
 ### Added
 
 - **Any `~/.ssh` layout, and OpenSSH `Include`s.** authama follows every `Include` in

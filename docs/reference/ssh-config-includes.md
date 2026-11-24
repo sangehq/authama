@@ -20,6 +20,24 @@ so you can update them by hand.
 - Includes nest, including those inside a `Host` or `Match` block, up to
   OpenSSH's limit of 16 levels. A cycle or a missing file is a warning, not
   an error; the rest of the tree is still shown.
+- Paths may be quoted (`Include "my hosts.conf"`) or backslash-escaped, the
+  way OpenSSH argv-splits them, so a name with spaces is one path.
+- A UTF-8 BOM at the start of a file is ignored. CRLF line endings are
+  accepted.
+- `Include` of a directory is a warning: OpenSSH only reads regular files.
+  To pull in every file in a folder, use a glob such as `config.d/*.conf`.
+- One Include token may expand to at most 4096 paths; a larger glob is
+  truncated with a warning. A config file larger than 2 MiB is skipped with
+  a warning.
+- Includes inside a `Match` block are listed unconditionally and tagged
+  `from Match`. authama never runs `Match exec` (or any other Match
+  predicate): those apply when you `ssh`, not when the tree is read.
+- When authama is pointed at a sandbox `~/.ssh` (for example `serve --dev-root`),
+  `Include ~/.ssh/...` is resolved in that sandbox, not in the process
+  `$HOME/.ssh`.
+- The same Host alias in two files is listed twice, each with its own
+  source. `ssh config check` reports a `COLLISION` when an unmanaged file
+  redefines a managed alias.
 - Each Host is listed with the file and line it was written on, so a hand
   edit, `keep-edits`, or a check targets the right file.
 
@@ -53,7 +71,9 @@ manual follow-up.
 `authama serve` watches every directory that contributes an Included file or
 a key, including trees outside `~/.ssh` (for example `~/.orbstack/ssh` when
 `~/.ssh/config` Includes it). A new Include is picked up after the debounce
-without a restart. The 30-second poll is still the fallback.
+without a restart. `/` and a Windows volume root (`C:\`) are never watched:
+every file change on the volume would fire. The 30-second poll is still the
+fallback.
 
 ## See also
 

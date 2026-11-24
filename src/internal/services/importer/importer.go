@@ -235,6 +235,7 @@ func parseSSHConfig(text, baseDir string, seen map[string]bool) []*ParsedHost {
 // file is the path text was read from and rootLine the line of the first file
 // read that leads here (-1 when text is that file).
 func collectBlocks(text, file, baseDir string, seen map[string]bool, top bool, rootLine, depth int) ([]*block, []string) {
+	text = strings.TrimPrefix(text, "\uFEFF")
 	var blocks []*block
 	var aliases []string
 	known := map[string]bool{}
@@ -520,7 +521,7 @@ func parseIncludes(pattern, baseDir string, seen map[string]bool, rootLine, dept
 	if depth >= sshcfg.MaxIncludeDepth {
 		return nil, nil
 	}
-	for _, token := range strings.Fields(pattern) {
+	for _, token := range sshcfg.Tokens(pattern) {
 		matches, _ := sshcfg.Expand(token, baseDir)
 		for _, match := range matches {
 			abs, err := filepath.Abs(match)
@@ -534,12 +535,15 @@ func parseIncludes(pattern, baseDir string, seen map[string]bool, rootLine, dept
 			if seen[abs] || !isFile(abs) {
 				continue
 			}
+			if fi, err := os.Stat(abs); err != nil || fi.Size() > sshcfg.MaxConfigBytes {
+				continue
+			}
 			seen[abs] = true
 			b, err := os.ReadFile(abs)
 			if err != nil {
 				continue
 			}
-			bs, as := collectBlocks(string(b), reached, baseDir, seen, false, rootLine, depth+1)
+			bs, as := collectBlocks(strings.TrimPrefix(string(b), "\uFEFF"), reached, baseDir, seen, false, rootLine, depth+1)
 			blocks = append(blocks, bs...)
 			aliases = append(aliases, as...)
 		}

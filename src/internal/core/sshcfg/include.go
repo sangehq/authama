@@ -25,11 +25,13 @@ const (
 	WarnCycle      Kind = "cycle"
 	WarnDepth      Kind = "depth"
 	WarnUnreadable Kind = "unreadable"
+	WarnTruncated  Kind = "truncated"
+	WarnTooLarge   Kind = "too_large"
 )
 
 // Warning is a problem following an Include that does not stop the rest of
 // the tree from being read: a path that is not there, a cycle, a depth
-// limit, or a file that cannot be read.
+// limit, a file that cannot be read, a glob that was truncated, or a file that is too large.
 type Warning struct {
 	Kind    Kind   `json:"kind"`
 	Path    string `json:"path,omitempty"`
@@ -74,6 +76,7 @@ type Node struct {
 	Cycle         bool    `json:"cycle,omitempty"`
 	DepthExceeded bool    `json:"depth_exceeded,omitempty"`
 	Unreadable    bool    `json:"unreadable,omitempty"`
+	FromMatch     bool    `json:"from_match,omitempty"`
 	Includes      []*Node `json:"includes,omitempty"`
 	Hosts         []Host  `json:"hosts,omitempty"`
 }
@@ -131,10 +134,17 @@ func (t *Tree) read(path, parent, pattern string, line, depth int, stack map[str
 			fmt.Sprintf("Include %q at %s:%d loops back to %s and was not read again", patternOr(pattern, path), display(parent, userSSHDir), line, display(path, userSSHDir)))
 		return n
 	}
-	if !isRegular(path) {
+	st, err := os.Stat(path)
+	if err != nil || !st.Mode().IsRegular() {
 		n.Missing = true
 		t.warn(WarnMissing, path, parent, line, pattern,
 			fmt.Sprintf("Include %q at %s:%d names %s, which is not a regular file", patternOr(pattern, path), display(parent, userSSHDir), line, display(path, userSSHDir)))
+		return n
+	}
+	if st.Size() > MaxConfigBytes {
+		n.Unreadable = true
+		t.warn(WarnTooLarge, path, parent, line, pattern,
+			fmt.Sprintf("Include %q at %s:%d names %s, which is larger than %d bytes and was not read", patternOr(pattern, path), display(parent, userSSHDir), line, display(path, userSSHDir), MaxConfigBytes))
 		return n
 	}
 	body, err := os.ReadFile(path)
@@ -144,7 +154,7 @@ func (t *Tree) read(path, parent, pattern string, line, depth int, stack map[str
 			fmt.Sprintf("Include %q at %s:%d could not be read: %v", patternOr(pattern, path), display(parent, userSSHDir), line, err))
 		return n
 	}
-	text := string(body)
+	text := stripBOM(string(body))
 	n.Managed = Managed(path, userSSHDir, text)
 	stack[resolved] = true
 	n.Hosts, n.Includes = t.parseFile(path, text, userSSHDir, depth, stack)
@@ -182,7 +192,7 @@ func (t *Tree) parseFile(file, text, userSSHDir string, depth int, stack map[str
 		case "host":
 			inMatch = false
 			h := Host{
-				Patterns: argvSplit(value),
+				Patterns: Tokens(value),
 				File:     file,
 				Line:     lineNo,
 				EndLine:  lineNo,
@@ -205,7 +215,11 @@ func (t *Tree) parseFile(file, text, userSSHDir string, depth int, stack map[str
 				cur.HasInclude = true
 				cur.EndLine = lineNo
 			}
-			files, missing := ExpandLine(value, userSSHDir)
+			files, missing, truncated := ExpandLine(value, userSSHDir)
+			if truncated {
+				t.warn(WarnTruncated, file, file, lineNo, value,
+					fmt.Sprintf("Include at %s:%d expanded to more than %d paths; extra matches were skipped", display(file, userSSHDir), lineNo, MaxGlobMatches))
+			}
 			for _, tok := range missing {
 				// ExpandLine reports tokens that matched nothing; the child
 				// node below is only added for a concrete path, so name the
@@ -245,6 +259,7 @@ func (t *Tree) parseFile(file, text, userSSHDir string, depth int, stack map[str
 	// Host line ends the Match. The flag belongs on included children.
 	for _, c := range includes {
 		if inMatchAt(text, c.Line) {
+			c.FromMatch = true
 			for i := range c.Hosts {
 				c.Hosts[i].InMatch = true
 			}
@@ -273,7 +288,7 @@ func inMatchAt(text string, line int) bool {
 }
 
 func valueToken(value, matched, userSSHDir string) string {
-	for _, tok := range strings.Fields(value) {
+	for _, tok := range Tokens(value) {
 		found, _ := Expand(tok, userSSHDir)
 		for _, f := range found {
 			if f == matched {
@@ -409,6 +424,9 @@ func formatNode(b *strings.Builder, n *Node, sshDir, indent string) {
 	if n.Unreadable {
 		tags = append(tags, "unreadable")
 	}
+	if n.FromMatch {
+		tags = append(tags, "from Match")
+	}
 	if n.Line > 0 {
 		fmt.Fprintf(b, "%s%s", indent, label)
 		if n.Pattern != "" {
@@ -444,6 +462,10 @@ func (t *Tree) JSON() ([]byte, error) {
 	return json.MarshalIndent(t, "", "  ")
 }
 
+func stripBOM(s string) string {
+	return strings.TrimPrefix(s, "\uFEFF")
+}
+
 // splitKV splits a config line into a lowercased keyword and the trimmed rest,
 // the way OpenSSH's strdelim allows: `HostName=x`, `HostName = x` and
 // `HostName x` all mean the same thing.
@@ -456,8 +478,4 @@ func splitKV(line string) (string, string) {
 	rest := strings.TrimSpace(line[i:])
 	rest = strings.TrimPrefix(rest, "=")
 	return key, strings.TrimSpace(rest)
-}
-
-func argvSplit(value string) []string {
-	return strings.Fields(value)
 }

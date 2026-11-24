@@ -39,6 +39,17 @@ func ExtraRoots(p paths.Paths) []Tracked {
 	}
 }
 
+// isFilesystemRoot reports whether p is "/" or a volume root such as `C:\`.
+// Watching either is too broad (every file change on the volume would fire).
+func isFilesystemRoot(p string) bool {
+	p = filepath.Clean(p)
+	if p == string(filepath.Separator) {
+		return true
+	}
+	vol := filepath.VolumeName(p)
+	return vol != "" && p == vol+string(filepath.Separator)
+}
+
 // IncludeRoots are directories outside ~/.ssh that ~/.ssh/config Includes
 // (for example ~/.orbstack/ssh). Paths already under ~/.ssh are omitted:
 // Roots already walks that tree. Missing paths are still listed so the
@@ -52,7 +63,7 @@ func IncludeRoots(p paths.Paths) []Tracked {
 	seen := map[string]bool{}
 	for _, d := range tree.Dirs {
 		d = filepath.Clean(d)
-		if d == "" || seen[d] || within(d, p.SSHDir) {
+		if d == "" || seen[d] || within(d, p.SSHDir) || isFilesystemRoot(d) {
 			continue
 		}
 		seen[d] = true

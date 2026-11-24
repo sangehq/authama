@@ -118,3 +118,12 @@ func TestIncludeRootsNamesDirectoriesOutsideSSHDir(t *testing.T) {
 		t.Fatalf("IncludeRoots = %+v, want %s", got, outside)
 	}
 }
+
+func TestIsFilesystemRoot(t *testing.T) {
+	if !isFilesystemRoot(string(filepath.Separator)) {
+		t.Fatal("/ (or the OS separator) must be treated as a filesystem root")
+	}
+	if isFilesystemRoot(filepath.Join(string(filepath.Separator), "etc", "ssh")) {
+		t.Fatal("a directory under the root must still be watchable")
+	}
+}

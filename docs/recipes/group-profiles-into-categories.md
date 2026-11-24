@@ -27,6 +27,10 @@ Host *
     ...
 ```
 
+authama already follows Includes you have, including ones outside the managed
+tree; this recipe is how the files it writes are grouped. See
+[SSH configs in any folder layout](../reference/ssh-config-includes.md).
+
 `Match all` keeps the Includes global. Without it, a `Host` block you keep above
 the managed block would scope every category to that one host. Uncategorized
 profiles stay inline in the root config, as before.

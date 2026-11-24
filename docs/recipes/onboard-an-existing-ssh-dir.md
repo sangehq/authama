@@ -28,7 +28,10 @@ authama ssh import ~/ssh-snippets            # no top-level config: every config
 | a folder with `ssh/config` | that file, for a config home such as `~/.config` |
 | any other folder | every file named `config` or ending `.conf`, up to four levels down, in path order |
 
-Relative `Include`s resolve against the folder, as ssh resolves them against `~/.ssh`. From another
+Relative `Include`s resolve against the folder, as ssh resolves them against `~/.ssh`. Quoted paths
+with spaces, `~`, globs (including `**`), and nested Includes are followed the same way; a directory
+`Include` is skipped (use a glob such as `config.d/*.conf`). See
+[SSH configs in any folder layout](../reference/ssh-config-includes.md). From another
 machine's copy, an `IdentityFile ~/.ssh/<key>` is looked for in that copy, so its keys are adopted
 here. A key that already
 lives under `profiles/<name>/` is referenced where it is; one outside the managed
