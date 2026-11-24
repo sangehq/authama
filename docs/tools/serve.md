@@ -414,6 +414,23 @@ documentation, the source and the licences.
 | Webhooks | the endpoints, their events and how delivery stands, never a secret. **Add endpoint**, **Test**, **Turn off**/**Turn on**, **Remove** and **Deliver now**, each behind the PIN; a new endpoint's signing secret is shown once. The same as `authama webhook add`, `list`, `test`, `disable`, `enable`, `remove` and `deliver` |
 | Third-party licences | the licences of the web UI's bundled front-end assets (Tabler, Tabler Icons, Bootstrap, Popper), at `/about/licenses` |
 
+### <a name="tables"></a>Tables
+
+Every data table fits its card at any width:
+
+- **Long values wrap.** Commands, paths and hostnames break where they must; short names such as an alias
+  stay on one line.
+- **Below 1200px a table is one card per row**, each value under its column's name, so a laptop, tablet or
+  phone never scrolls a table sideways. Without JavaScript the table keeps its normal layout.
+- **Copy from any table.** Right-click a cell, or focus it and press the context-menu key or Shift+F10, for
+  **Copy this cell**, **Copy this row**, **Copy the <column> column** and **Copy the table**. Rows and the
+  table are tab-separated, so they paste into a spreadsheet as cells; only rows a search or page shows are
+  copied, an Actions column is left out, and a placeholder such as the Termius CSV's *never written*
+  password copies as empty. Selecting text first keeps the browser's own menu.
+
+`TestEveryDataTableCopiesAndStacks` fails on a template table without `data-copy-cells` and `data-stack`,
+and `e2e/web/tests/tables.spec.ts` checks every page at 1440, 1200, 1024, 768 and 375px and the copy menu.
+
 ## Changes
 
 These changes can be made from the pages:
