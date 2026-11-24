@@ -229,15 +229,12 @@ func (t *Tree) parseFile(file, text, userSSHDir string, depth int, stack map[str
 			} else if !inMatch && len(hosts) == 0 && depth == 0 {
 				// Leading options in the first file apply to every host.
 				// Later included files inherit the includer's context, so
-				// their leading lines are not a new global block.
-				if len(hosts) == 0 {
-					hosts = append(hosts, Host{Patterns: nil, File: file, Line: lineNo, EndLine: lineNo, Managed: managedFile || inManaged})
-					cur = &hosts[0]
-					cur.Options = append(cur.Options, Option{Key: keyword, Value: value, File: file, Line: lineNo})
-				}
-			} else if cur == nil && inMatch {
-				// Options under Match without a current Host are not a Host
-				// block; Includes under that Match are still followed above.
+				// their leading lines are not a new global block. Options
+				// under Match without a Host are skipped; Includes
+				// under that Match are still followed above.
+				hosts = append(hosts, Host{Patterns: nil, File: file, Line: lineNo, EndLine: lineNo, Managed: managedFile || inManaged})
+				cur = &hosts[0]
+				cur.Options = append(cur.Options, Option{Key: keyword, Value: value, File: file, Line: lineNo})
 			}
 		}
 	}
