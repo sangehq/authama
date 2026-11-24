@@ -2,6 +2,13 @@
 {{template "page_header" (header "Config & backups" "SSH config" "Every file the manifest renders into ~/.ssh, and whether the files on disk match it.")}}
 {{if .Problem}}<div class="alert alert-danger" role="alert">{{icon "alert-triangle"}}<span class="ms-1">{{.Problem}}</span></div>{{end}}
 <div class="row row-cards">
+  {{if .HandEdits}}<div class="col-12">
+    <div class="card border-warning" id="hand-edits">
+      <div class="card-header"><h2 class="card-title">{{icon "alert-triangle"}}<span class="ms-1">Edited by hand</span></h2><div class="card-actions"><span class="badge badge-warn">{{len .HandEdits}} hand edit{{if ne (len .HandEdits) 1}}s{{end}}</span></div></div>
+      <ul class="list-group list-group-flush">{{range .HandEdits}}<li class="list-group-item font-monospace small">{{.}}</li>{{end}}</ul>
+      <div class="card-footer text-secondary">A render refuses to write over these. <strong>Keep hand edits</strong> adds them to the manifest; <strong>Discard hand edits and render</strong> copies the files to the state home, then renders. The same as the <code>HAND-EDIT</code> lines of <code>authama ssh config check</code>.</div>
+    </div>
+  </div>{{end}}
   <div class="col-12">
     <div class="card">
       <div class="card-header">
@@ -12,7 +19,9 @@
       <div class="card-footer d-flex flex-wrap gap-2 align-items-center">
         <span class="text-secondary me-auto">The same as <code>authama ssh config check</code>.</span>
         {{if not $.ReadOnly}}{{template "change_open" $}}<input type="hidden" name="action" value="config-render"><button type="submit" class="btn btn-primary"{{desc "render"}}>{{icon "refresh"}}<span class="ms-1">Re-render ~/.ssh/config</span></button></form>
-        {{template "change_open" $}}<input type="hidden" name="action" value="config-adopt"><button type="submit" class="btn btn-outline-primary"{{desc "config-adopt"}}>{{icon "stack-2"}}<span class="ms-1">Adopt duplicate Host blocks</span></button></form>{{end}}
+        {{template "change_open" $}}<input type="hidden" name="action" value="config-adopt"><button type="submit" class="btn btn-outline-primary"{{desc "config-adopt"}}>{{icon "stack-2"}}<span class="ms-1">Adopt duplicate Host blocks</span></button></form>
+        {{template "change_open" $}}<input type="hidden" name="action" value="config-keep-edits"><button type="submit" class="btn btn-outline-primary"{{desc "config-keep-edits"}}>{{icon "pencil"}}<span class="ms-1">Keep hand edits</span></button></form>
+        {{template "change_open" $}}<input type="hidden" name="action" value="config-render-force"><button type="submit" class="btn btn-outline-danger"{{desc "config-render-force"}}>{{icon "trash"}}<span class="ms-1">Discard hand edits and render</span></button></form>{{end}}
         <a class="btn btn-outline-secondary" href="{{basePath}}/exports/ssh_config" download{{desc "download"}}>{{icon "download"}}<span class="ms-1">ssh_config, every host inline</span></a>
       </div>
     </div>

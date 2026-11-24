@@ -201,7 +201,7 @@ func (h Home) ssh() []Finding {
 				}})
 		}
 	}
-	svc := configsvc.New(p.SSHDir, m, h.EmitUseKeychain)
+	svc := configsvc.New(p.SSHDir, m, h.EmitUseKeychain).WithState(p.StateDir())
 	if chk, err := svc.Check(false); err == nil && !chk.BlockInSync() {
 		out = append(out, Finding{Area: SSH, Problem: "~/.ssh/config does not match the manifest",
 			Fix: "render it again (what is outside authama's block is kept)", Fixable: true,

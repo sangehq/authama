@@ -159,6 +159,7 @@ else is in the [documentation index](#documentation).
 - [Use a local VM as a devbox](docs/recipes/devbox-vm.md) — reach a VM by name whatever its IP, and point Docker at it.
 - [Import your hosts into Termius](docs/recipes/import-hosts-into-termius.md) — every host with its user, then `termius keys` to paste each key into Termius's Keychain (the CSV carries no keys).
 - [Reach a server through Cloudflare Access](docs/recipes/cloudflare-access.md) — `ssh <alias>` through `cloudflared`, with no SSH port open to the internet.
+- [Give a host more names, a proxy, and a second route](docs/recipes/host-routes.md) — extra `Host` names, `ProxyCommand none`, `ProxyJump`, any ssh option, section comments, `warp-<alias>` twins, and keeping hand edits.
 - [Move to a new machine](docs/recipes/move-to-a-new-machine.md) — keys, hosts and token values in one passphrase-encrypted file, merged with a preview.
 - [Tidy loose keys into their profiles](docs/recipes/tidy-keys-into-profiles.md) — each stray key moved where it belongs, previewed, backed up and recorded, and new ones noticed.
 - [Onboard an existing `~/.ssh`](docs/recipes/onboard-an-existing-ssh-dir.md) — bring a hand-built setup under management without regenerating anything.

@@ -8,6 +8,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Host routes.** `ssh host add|edit` take `--alias` (more names on the `Host` line; `edit --remove-alias`),
+  `--proxy none` (`ProxyCommand none`), `--proxy-command` (a quoted argv of your own), `--proxy-jump`,
+  `--connect-timeout`, `--option KEY=VALUE` for any ssh_config option OpenSSH knows (`edit --unset-option`),
+  `--section` (a heading above a group of blocks) and `--comment`; `add --update` creates or updates. `ssh host variant
+  set|remove` gives a host a second route, `<name>-<alias>` with the same user and key (a `warp-` twin on a private
+  address beside a Cloudflare Access host). The web host page edits all of it, and lists and sets variants. Exports:
+  variants are rows of their own; `ProxyCommand none` hosts are exported to Termius and the other clients. See [Give
+  a host more names, a proxy, and a second route](docs/recipes/host-routes.md).
+- **Hand edits are kept.** `ssh config render` remembers what it wrote and refuses to overwrite lines typed into a
+  managed file since; `ssh config keep-edits` (web: **SSH config › Keep hand edits**) takes them into the manifest,
+  `render --force` discards them after a backup, and `ssh config check` lists them. The web does all of it: a
+  Hand edits card on SSH config, Keep or Discard (previewed, confirmed, backup path shown) there and on a refused
+  render; host add's `--update` is a checkbox and is offered when the host exists; variants have an edit panel.
+- **Import takes in host routes.** `ssh import` (and the web importer) reads extra `Host` names as aliases,
+  `ProxyCommand none`, the Cloudflare Access command or a command of your own, other options, and the comment lines
+  above and inside a block as its section and comment, so the blocks authama writes import back the same.
+
 - **Every launch opens the browser, signed in.** Double-clicking authama, `authama` and `authama serve`
   now check the server before anything else: a stale record or a hung server (one that holds its port
   but no longer answers) is cleared, a server from an older or rebuilt binary, or on another base path
@@ -176,6 +193,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     before the preview.
 
 ### Changed
+
+- **`--proxy none` writes `ProxyCommand none`.** It used to remove the proxy; `--proxy off` does that now. A plain
+  cloudflared path is written unquoted, as Cloudflare documents it, and a render with a `PATH` that lacks cloudflared
+  looks in its usual install paths before writing the bare name.
 
 - The hosts page leads to the Termius import instead of offering three Termius downloads; the plain Termius CSV
   download stays. The palette names that download "Download the Termius CSV, grouped by profile".

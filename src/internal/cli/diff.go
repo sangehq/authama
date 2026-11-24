@@ -28,7 +28,7 @@ func newDiffCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			svc := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain())
+			svc := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).WithState(p.StateDir())
 			chk, err := svc.Check(true)
 			if err != nil {
 				return err

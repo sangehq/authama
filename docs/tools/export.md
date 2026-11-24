@@ -260,8 +260,12 @@ unchanged. `--termius-groups` is refused with any other `--format`.
 Left out, and reported on stderr:
 
 - **VM hosts** — reached only through authama's ProxyCommand, which Termius ignores;
+- **cloudflared and command proxies** — the same: a ProxyCommand Termius would not run (a host with `ProxyCommand
+  none` connects directly and stays in);
 - **git hosts** — user `git`, or a `github`/`gitlab` provider: not shells (`--include-git` adds them);
 
+A host's [route variants](../recipes/host-routes.md) are rows of their own, labelled `<name>-<alias>`, with the host's
+key; a host's extra Host names are not (a row has one label). `ConnectTimeout` and other ssh options are not carried.
 A host that reaches its server through a `ProxyJump` raw option stays in the file, since Termius can reach it through
 a jump host, but the CSV has no column for one: the notes on stderr name the jump host to set as the host's **Host
 Chain** in Termius.

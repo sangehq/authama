@@ -125,7 +125,7 @@ func sshConfigSection(p paths.Paths, m *manifest.Manifest, mErr error) ValidateS
 		s.Problems = []string{"not checked: the manifest did not load"}
 		return s
 	}
-	res, err := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).Check(true)
+	res, err := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).WithState(p.StateDir()).Check(true)
 	if err != nil {
 		s.Problems = []string{err.Error()}
 		return s

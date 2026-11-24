@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -208,9 +209,18 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 			sort.Strings(out)
 			return out
 		},
-		"proxyKinds": func() []string { return manifest.ProxyKinds },
-		"short":      func(s string) string { return shorten(s, 8) },
-		"size":       humanSize,
+		// The command kind is typed into its own field, so the choice leaves it out.
+		"proxyKinds": func() []string {
+			return slices.DeleteFunc(slices.Clone(manifest.ProxyKinds), func(k string) bool { return k == manifest.ProxyCommandKind })
+		},
+		// routeForm feeds the route_fields partial: its ids' prefix, the
+		// values an edit form starts with, and whether it is an edit.
+		"noRoute": func() RouteView { return RouteView{} },
+		"routeForm": func(prefix string, r RouteView, edit, variant bool) routeFormData {
+			return routeFormData{P: prefix, R: r, Edit: edit, Variant: variant}
+		},
+		"short": func(s string) string { return shorten(s, 8) },
+		"size":  humanSize,
 		"resultClass": func(r string) string {
 			switch r {
 			case history.ResultOK:

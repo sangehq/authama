@@ -28,7 +28,7 @@ func loadConfigService(c *cobra.Command) (paths.Paths, *manifest.Manifest, *conf
 	if err != nil {
 		return paths.Paths{}, nil, nil, err
 	}
-	return p, m, configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()), nil
+	return p, m, configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).WithState(p.StateDir()), nil
 }
 
 // migrateLegacyKnownHosts merges any known_hosts left over under profiles/*/
@@ -84,7 +84,7 @@ func newConfigCmd() *cobra.Command {
 		},
 	})
 
-	var dryRun, renderYes bool
+	var dryRun, renderYes, force bool
 	render := &cobra.Command{
 		Use:   "render",
 		Short: "Render the config files from the manifest",
@@ -111,6 +111,9 @@ func newConfigCmd() *cobra.Command {
 			if err := migrateLegacyKnownHosts(c, p, dryRun); err != nil {
 				return err
 			}
+			if force {
+				svc.Force(filepath.Join(p.StateDir(), "config-hand-edits-"+time.Now().Format("20060102-150405")))
+			}
 			res, err := svc.Write(dryRun)
 			if err != nil {
 				return err
@@ -130,11 +133,23 @@ func newConfigCmd() *cobra.Command {
 				_, _ = fmt.Fprintln(out, "config: already in sync")
 			}
 			printCollisions(out, res.Collisions)
+			if len(res.HandEdits) > 0 {
+				for _, h := range res.HandEdits {
+					_, _ = fmt.Fprintf(out, "hand edit: %s\n", h)
+				}
+				if res.Backup != "" {
+					_, _ = fmt.Fprintf(out, "discarded them; the edited files are in %s\n", res.Backup)
+				} else if dryRun && !force {
+					_, _ = fmt.Fprintln(out, "  -> a render refuses over these: "+configsvc.HandEditFix)
+				}
+			}
 			return nil
 		},
 	}
 	render.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "preview changes without writing")
 	render.Flags().BoolVarP(&renderYes, "yes", "y", false, "render without confirming (implied when there is no terminal)")
+	render.Flags().BoolVar(&force, "force", false,
+		"replace hand edits in the managed files (they are copied to the state home first)")
 	cmd.AddCommand(render)
 
 	cmd.AddCommand(&cobra.Command{
@@ -157,6 +172,7 @@ func newConfigCmd() *cobra.Command {
 	})
 
 	cmd.AddCommand(newConfigAdoptCmd())
+	cmd.AddCommand(newConfigKeepEditsCmd())
 	cmd.AddCommand(newConfigExportCmd())
 	return cmd
 }

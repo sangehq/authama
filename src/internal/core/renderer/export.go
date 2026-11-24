@@ -173,8 +173,10 @@ type TermiusExport struct {
 // row per host Termius can reach: group = profile, label = alias, tags = the
 // host's tags. Two kinds are left out and reported:
 //
-//   - VM hosts, which are reached only through authama's ProxyCommand, which
-//     Termius ignores (its docs say so), so a row would be a dead host;
+//   - VM hosts and hosts behind a cloudflared or command proxy, which are
+//     reached only through a ProxyCommand, which Termius ignores (its docs say
+//     so), so a row would be a dead host (ProxyCommand none is a direct
+//     connection and is exported);
 //   - git hosts (user git, or a github or gitlab provider), which are not
 //     shells, unless IncludeGit is set;
 //   - any alias named in Skip.
@@ -185,7 +187,7 @@ func RenderTermiusCSV(m *manifest.Manifest, p ExportPaths, opts TermiusOptions) 
 	if err := encode.CheckTermiusGroups(opts.Groups); err != nil {
 		return nil, err
 	}
-	resolved, err := m.IterResolved()
+	resolved, err := exportResolved(m)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +207,7 @@ func RenderTermiusCSV(m *manifest.Manifest, p ExportPaths, opts TermiusOptions) 
 		case h.VM != nil:
 			exp.Skipped = append(exp.Skipped, h.Alias+": a VM host is reached through a ProxyCommand, which Termius ignores")
 			continue
-		case h.Proxy != nil:
+		case proxied(h):
 			exp.Skipped = append(exp.Skipped, h.Alias+": reached through "+h.Proxy.Kind+
 				" (a ProxyCommand), which Termius ignores; connect with ssh instead")
 			continue
@@ -271,4 +273,35 @@ var gitProviders = map[string]bool{"github": true, "gitlab": true}
 // every forge uses, or a forge provider whatever user it sets.
 func isGitHost(h manifest.Host) bool {
 	return h.User == "git" || (h.Provider != nil && gitProviders[*h.Provider])
+}
+
+// exportResolved is every host an export writes a row for: each manifest
+// host, then each of its route variants as a host of its own (warp-web1,
+// with the host's user and key). A host's extra Host names are not rows: a
+// client entry has one label, the alias.
+func exportResolved(m *manifest.Manifest) ([]manifest.ResolvedKey, error) {
+	resolved, err := m.IterResolved()
+	if err != nil {
+		return nil, err
+	}
+	out := make([]manifest.ResolvedKey, 0, len(resolved))
+	var variants []manifest.ResolvedKey
+	for _, rk := range resolved {
+		out = append(out, rk)
+		for _, v := range rk.Host.Variants {
+			vh, err := manifest.VariantHostOf(m, rk.Profile, rk.Host, v)
+			if err != nil {
+				return nil, err
+			}
+			variants = append(variants, manifest.ResolvedKey{Profile: rk.Profile, Host: vh, KeyName: rk.KeyName,
+				IdentityFile: rk.IdentityFile})
+		}
+	}
+	return append(out, variants...), nil
+}
+
+// proxied reports a host ssh reaches only through a ProxyCommand: a
+// cloudflared or command proxy. ProxyCommand none connects directly.
+func proxied(h manifest.Host) bool {
+	return h.Proxy != nil && h.Proxy.Kind != manifest.ProxyNone
 }

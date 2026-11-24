@@ -134,7 +134,7 @@ type Reconciler struct {
 func New(p paths.Paths, m *manifest.Manifest, inv *inventory.Inventory, emitUseKeychain bool) *Reconciler {
 	return &Reconciler{
 		p: p, m: m, inv: inv, ks: keystore.New(), op: opstore.New(),
-		cfg: configsvc.New(p.SSHDir, m, emitUseKeychain),
+		cfg: configsvc.New(p.SSHDir, m, emitUseKeychain).WithState(p.StateDir()),
 	}
 }
 

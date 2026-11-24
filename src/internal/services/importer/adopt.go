@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -127,6 +128,9 @@ func (a *adoption) exclude(blocks []*block, b built, im *Importer) bool {
 	hosts := map[string]*resolvedHost{}
 	for i := range b.resolved {
 		hosts[b.resolved[i].h.Alias] = &b.resolved[i]
+		for _, n := range b.resolved[i].h.Aliases {
+			hosts[n] = &b.resolved[i] // another name on its Host line
+		}
 	}
 	changed := false
 	leaveAll := func(lit []string, why string) {
@@ -157,6 +161,9 @@ func (a *adoption) exclude(blocks []*block, b built, im *Importer) bool {
 		}
 		for _, l := range lit {
 			if hosts[l] == nil {
+				if why := b.unheld[l]; why != "" && a.leave(l, why) {
+					changed = true
+				}
 				// Skipped, or already left out: the block stays, so every
 				// alias it names stays with it.
 				var others []string
@@ -210,7 +217,7 @@ func setEarlier(before []*block, alias, key string) bool {
 func hostIn(m *manifest.Manifest, alias string) (manifest.Host, string) {
 	for _, pname := range m.ProfileNames() {
 		for _, h := range m.Profiles[pname].Hosts {
-			if h.Alias == alias {
+			if h.Alias == alias || slices.Contains(h.Aliases, alias) {
 				return h, pname
 			}
 		}
@@ -227,6 +234,9 @@ func (a *adoption) place(blocks []*block, b built) {
 	in := map[string]bool{}
 	for _, r := range b.resolved {
 		in[r.h.Alias] = true
+		for _, n := range r.h.Aliases {
+			in[n] = true
+		}
 	}
 	seen := map[string]bool{}
 	for _, bl := range blocks {
@@ -319,6 +329,9 @@ func (a *adoption) apply(im *Importer, m *manifest.Manifest) (string, error) {
 		}
 	}
 	svc := configsvc.New(a.editDir, m, im.emitUseKeychain)
+	if a.editDir == im.p.SSHDir {
+		svc = svc.WithState(im.p.StateDir()).Force(filepath.Join(backup, "hand-edits"))
+	}
 	rendered, err := svc.Rendered()
 	if err != nil {
 		return backup, err

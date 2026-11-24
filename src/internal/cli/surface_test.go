@@ -362,9 +362,35 @@ var goOnly = map[string]string{
 	// Cloudflare Access (3.4.0): a host reached through cloudflared, rendered by authama since
 	// raw_options may not set a ProxyCommand.
 	"host add --proxy":  "cloudflare access - route the host through cloudflared",
-	"host edit --proxy": "cloudflare access - set or remove (none) the proxy",
-	"host edit --tag":   "G7 - replace a host's tags; nothing else could take one off",
-	"host edit --untag": "G7 - remove one tag from a host",
+	"host edit --proxy": "cloudflare access - set the proxy (cloudflared, none = ProxyCommand none) or remove it (off)",
+
+	// Host routes (AT-13): extra Host names, proxies and ssh options of any
+	// kind, comments, route variants, create-or-update, and keeping hand edits
+	// made to a managed file instead of overwriting them.
+	"host add --alias":            "AT-13 - more names on the Host line (simbi-web-cf)",
+	"host add --update":           "AT-13 - create-or-update: change the host if the profile has it",
+	"host add --proxy-command":    "AT-13 - a ProxyCommand of the user's own, held as an argv and quoted",
+	"host add --proxy-jump":       "AT-13 - ProxyJump",
+	"host add --connect-timeout":  "AT-13 - ConnectTimeout",
+	"host add --option":           "AT-13 - any ssh_config option OpenSSH knows, KEY=VALUE",
+	"host add --section":          "AT-13 - a heading comment above the host's block",
+	"host add --comment":          "AT-13 - a comment inside the host's block",
+	"host edit --alias":           "AT-13 - add a name to the Host line",
+	"host edit --remove-alias":    "AT-13 - take a name off the Host line",
+	"host edit --proxy-command":   "AT-13 - set or remove ('') a ProxyCommand of the user's own",
+	"host edit --proxy-jump":      "AT-13 - set or remove ('') ProxyJump",
+	"host edit --connect-timeout": "AT-13 - set or remove (0) ConnectTimeout",
+	"host edit --option":          "AT-13 - set any ssh_config option OpenSSH knows",
+	"host edit --unset-option":    "AT-13 - remove an ssh option",
+	"host edit --section":         "AT-13 - set or remove the heading above the block",
+	"host edit --comment":         "AT-13 - set or remove the comment inside the block",
+	"host variant":                "AT-13 - route variants: warp-<alias> twins sharing the host's user and key",
+	"host variant set":            "AT-13 - create or update a route variant",
+	"host variant remove":         "AT-13 - remove a route variant",
+	"config keep-edits":           "AT-13 - take hand edits in the managed files into the manifest",
+	"config render --force":       "AT-13 - render over hand edits, after backing the files up",
+	"host edit --tag":             "G7 - replace a host's tags; nothing else could take one off",
+	"host edit --untag":           "G7 - remove one tag from a host",
 
 	// Compact host specs (unreleased): add-or-update one host or many from
 	// `<alias> <host>[:port] <user> [role]`.

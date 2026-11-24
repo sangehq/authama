@@ -445,16 +445,12 @@ type HostFields struct {
 	Untag []string
 	// VM marks the host as a local VM whose address the hypervisor supplies at connect time.
 	VM *manifest.VMSpec
-	// Proxy names a proxy kind ("cloudflared"); "none" or "" clears it. nil leaves it unchanged.
-	Proxy *string
-}
-
-// proxySpec turns a --proxy value into the manifest field: "none" or "" is no proxy.
-func proxySpec(kind string) *manifest.ProxySpec {
-	if kind == "" || kind == "none" {
-		return nil
-	}
-	return &manifest.ProxySpec{Kind: kind}
+	// PortSet says Port was asked for, not a flag's default (UpsertHost).
+	PortSet bool
+	// AddAliases and RemoveAliases change the host's extra names.
+	AddAliases, RemoveAliases []string
+	// RouteFields are the proxy, options and comments (see RouteFields).
+	RouteFields
 }
 
 // AddHost adds a host to a profile.
@@ -501,8 +497,11 @@ func addHostTo(m *manifest.Manifest, profile, alias string, f HostFields) error 
 		Provider: f.Provider, TokenEnv: f.TokenEnv, KeyName: f.KeyName, Tags: f.Tags,
 		VM: f.VM,
 	}
-	if f.Proxy != nil {
-		host.Proxy = proxySpec(*f.Proxy)
+	if err := applyAliases(&host, f.AddAliases, f.RemoveAliases); err != nil {
+		return err
+	}
+	if err := applyRoute(&host, f.RouteFields); err != nil {
+		return err
 	}
 	p := m.Profiles[profile]
 	p.Hosts = append(p.Hosts, host)
@@ -551,8 +550,11 @@ func editHostIn(m *manifest.Manifest, profile, alias string, f HostFields) error
 	if f.KeyName != nil {
 		host.KeyName = f.KeyName
 	}
-	if f.Proxy != nil {
-		host.Proxy = proxySpec(*f.Proxy)
+	if err := applyAliases(&host, f.AddAliases, f.RemoveAliases); err != nil {
+		return err
+	}
+	if err := applyRoute(&host, f.RouteFields); err != nil {
+		return err
 	}
 	if f.VM != nil {
 		vm := *f.VM
