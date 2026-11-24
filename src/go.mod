@@ -12,8 +12,9 @@ toolchain go1.27.4
 retract v0.1.6 // cached by the proxy from the pre-reset history
 
 require (
+	github.com/fsnotify/fsnotify v1.9.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
-	github.com/simtabi/go-notifykit/src v0.1.0
+	github.com/simtabi/go-notifykit/src v0.1.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
 	go.yaml.in/yaml/v3 v3.0.6

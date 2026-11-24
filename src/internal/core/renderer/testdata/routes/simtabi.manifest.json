@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "profiles": {
+    "simtabi": {
+      "category": "orgs",
+      "hosts": [
+        {"alias": "oribi-web", "hostname": "203.0.113.11", "user": "ploi"},
+        {"alias": "oribi-db-maria", "hostname": "203.0.113.12", "user": "ploi"},
+        {"alias": "oribi-db-psql", "hostname": "203.0.113.13", "user": "ploi"},
+        {
+          "alias": "simbi-prd-web-00", "hostname": "ssh-web-00.simtabi.com", "user": "ploi",
+          "aliases": ["simbi-web-cf"], "proxy": {"kind": "cloudflared"},
+          "section": "simbi prod: Cloudflare Access (works anywhere; browser login once per host)",
+          "variants": [{"name": "warp", "hostname": "10.116.0.3", "proxy": {"kind": "none"},
+            "raw_options": {"ConnectTimeout": "10"},
+            "section": "simbi prod: private IPs over Cloudflare WARP (WARP must be connected)"}]
+        },
+        {
+          "alias": "simbi-prd-db-00", "hostname": "ssh-db-00.simtabi.com", "user": "ploi",
+          "aliases": ["simbi-db-cf"], "proxy": {"kind": "cloudflared"},
+          "variants": [{"name": "warp", "hostname": "10.116.0.5", "proxy": {"kind": "none"},
+            "raw_options": {"ConnectTimeout": "10"}}]
+        }
+      ]
+    }
+  }
+}

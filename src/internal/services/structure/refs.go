@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/sangehq/authama/src/internal/core/sshcfg"
 	"github.com/sangehq/authama/src/internal/util/fs"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
@@ -56,11 +57,23 @@ func expand(p paths.Paths, v string) string {
 	return ""
 }
 
-// ConfigRefs maps each private key path a hand-written config names (its
-// .pub too, mapped to the private half) to the files naming it, as "~/.ssh/<rel>".
+// includedFiles is every ssh config file ~/.ssh/config Includes, in visit
+// order, including the root. A home with no config yields nothing.
+func includedFiles(p paths.Paths) []string {
+	tree, err := sshcfg.LoadUser(p.SSHDir)
+	if err != nil || tree == nil || len(tree.Files) == 0 {
+		return handWritten(p)
+	}
+	return tree.Files
+}
+
+// ConfigRefs maps each private key path a config names (its .pub too, mapped
+// to the private half) to the files naming it. Every file ~/.ssh/config
+// Includes is read, not only ~/.ssh/config and config.d. Paths are shown as
+// ~/.ssh/<rel> or ~/rel for a file outside ~/.ssh.
 func ConfigRefs(p paths.Paths) map[string][]string {
 	out := map[string][]string{}
-	for _, f := range handWritten(p) {
+	for _, f := range includedFiles(p) {
 		b, err := os.ReadFile(f)
 		if err != nil {
 			continue
@@ -76,7 +89,7 @@ func ConfigRefs(p paths.Paths) map[string][]string {
 				continue
 			}
 			seen[abs] = true
-			out[abs] = append(out[abs], "~/.ssh/"+relSSH(p, f))
+			out[abs] = append(out[abs], sshcfg.Display(f, p.SSHDir))
 		}
 	}
 	for k := range out {
@@ -85,8 +98,44 @@ func ConfigRefs(p paths.Paths) map[string][]string {
 	return out
 }
 
+// ManualRefs lists the Included files that name abs (or its .pub) and that
+// authama does not manage, so a key move leaves those IdentityFile lines
+// for the owner to update by hand.
+func ManualRefs(p paths.Paths, abs string) []string {
+	abs = strings.TrimSuffix(abs, ".pub")
+	var out []string
+	seen := map[string]bool{}
+	for _, f := range includedFiles(p) {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			continue
+		}
+		if sshcfg.Managed(f, p.SSHDir, string(b)) {
+			continue
+		}
+		label := sshcfg.Display(f, p.SSHDir)
+		if seen[label] {
+			continue
+		}
+		for _, ln := range strings.Split(string(b), "\n") {
+			m := identityLine.FindStringSubmatch(strings.TrimRight(ln, "\r"))
+			if m == nil {
+				continue
+			}
+			got := strings.TrimSuffix(expand(p, m[2]), ".pub")
+			if got == abs {
+				out = append(out, label)
+				seen[label] = true
+				break
+			}
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
 // rewriteRefs points every IdentityFile/CertificateFile line in the
-// hand-written configs that names oldAbs (or its .pub, or its -cert.pub) at
+// managed Included configs that names oldAbs (or its .pub, or its -cert.pub) at
 // newAbs instead, written as ~/.ssh/<rel>. It returns the files it changed
 // (as "~/.ssh/<rel>"); each keeps its mode.
 func rewriteRefs(p paths.Paths, oldAbs, newAbs string) ([]string, error) {
@@ -113,7 +162,7 @@ func rewriteDirRefs(p paths.Paths, oldDir, newDir string) ([]string, error) {
 
 func rewrite(p paths.Paths, to func(abs string) (string, bool)) ([]string, error) {
 	var changed []string
-	for _, f := range handWritten(p) {
+	for _, f := range includedFiles(p) {
 		fi, err := os.Stat(f)
 		if err != nil {
 			continue
@@ -121,6 +170,9 @@ func rewrite(p paths.Paths, to func(abs string) (string, bool)) ([]string, error
 		b, err := os.ReadFile(f)
 		if err != nil {
 			return changed, err
+		}
+		if !sshcfg.Managed(f, p.SSHDir, string(b)) {
+			continue
 		}
 		lines := strings.Split(string(b), "\n")
 		touched := false
@@ -156,7 +208,7 @@ func rewrite(p paths.Paths, to func(abs string) (string, bool)) ([]string, error
 		if err := fs.WriteTextAtomic(target, strings.Join(lines, "\n"), fi.Mode().Perm()); err != nil {
 			return changed, err
 		}
-		changed = append(changed, "~/.ssh/"+relSSH(p, f))
+		changed = append(changed, sshcfg.Display(f, p.SSHDir))
 	}
 	return changed, nil
 }

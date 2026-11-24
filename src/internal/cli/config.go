@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/sshcfg"
 	"github.com/sangehq/authama/src/internal/platform"
 	"github.com/sangehq/authama/src/internal/services/configsvc"
 	"github.com/sangehq/authama/src/internal/services/knownhosts"
@@ -28,7 +29,7 @@ func loadConfigService(c *cobra.Command) (paths.Paths, *manifest.Manifest, *conf
 	if err != nil {
 		return paths.Paths{}, nil, nil, err
 	}
-	return p, m, configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()), nil
+	return p, m, configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).WithState(p.StateDir()), nil
 }
 
 // migrateLegacyKnownHosts merges any known_hosts left over under profiles/*/
@@ -84,7 +85,7 @@ func newConfigCmd() *cobra.Command {
 		},
 	})
 
-	var dryRun, renderYes bool
+	var dryRun, renderYes, force bool
 	render := &cobra.Command{
 		Use:   "render",
 		Short: "Render the config files from the manifest",
@@ -111,6 +112,9 @@ func newConfigCmd() *cobra.Command {
 			if err := migrateLegacyKnownHosts(c, p, dryRun); err != nil {
 				return err
 			}
+			if force {
+				svc.Force(filepath.Join(p.StateDir(), "config-hand-edits-"+time.Now().Format("20060102-150405")))
+			}
 			res, err := svc.Write(dryRun)
 			if err != nil {
 				return err
@@ -130,11 +134,23 @@ func newConfigCmd() *cobra.Command {
 				_, _ = fmt.Fprintln(out, "config: already in sync")
 			}
 			printCollisions(out, res.Collisions)
+			if len(res.HandEdits) > 0 {
+				for _, h := range res.HandEdits {
+					_, _ = fmt.Fprintf(out, "hand edit: %s\n", h)
+				}
+				if res.Backup != "" {
+					_, _ = fmt.Fprintf(out, "discarded them; the edited files are in %s\n", res.Backup)
+				} else if dryRun && !force {
+					_, _ = fmt.Fprintln(out, "  -> a render refuses over these: "+configsvc.HandEditFix)
+				}
+			}
 			return nil
 		},
 	}
 	render.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "preview changes without writing")
 	render.Flags().BoolVarP(&renderYes, "yes", "y", false, "render without confirming (implied when there is no terminal)")
+	render.Flags().BoolVar(&force, "force", false,
+		"replace hand edits in the managed files (they are copied to the state home first)")
 	cmd.AddCommand(render)
 
 	cmd.AddCommand(&cobra.Command{
@@ -156,7 +172,9 @@ func newConfigCmd() *cobra.Command {
 		},
 	})
 
+	cmd.AddCommand(newConfigTreeCmd())
 	cmd.AddCommand(newConfigAdoptCmd())
+	cmd.AddCommand(newConfigKeepEditsCmd())
 	cmd.AddCommand(newConfigExportCmd())
 	return cmd
 }
@@ -223,5 +241,44 @@ func newConfigAdoptCmd() *cobra.Command {
 	}
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "show what would be removed, as a diff, without writing")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "adopt without confirming (implied when there is no terminal)")
+	return cmd
+}
+
+// newConfigTreeCmd is `ssh config tree`: the Include graph of ~/.ssh/config
+// and the source file of each Host, read-only. It never writes.
+func newConfigTreeCmd() *cobra.Command {
+	var asJSON bool
+	cmd := &cobra.Command{
+		Use:   "tree",
+		Short: "Show the Include tree of ~/.ssh/config and the source file of each host (read-only)",
+		Long: "Walks ~/.ssh/config the way ssh does for Include directives: relative paths are\n" +
+			"resolved against ~/.ssh, globs (*, ?, and ** per path segment) are expanded in\n" +
+			"lexical order, Includes nest (inside Host or Match too) up to OpenSSH's limit of 16,\n" +
+			"and a cycle or a missing file is a warning, not an error. Each Host is printed with\n" +
+			"the file and line it was written on. Authama never rewrites a file it does not\n" +
+			"manage; those files are labelled in the tree so you can see what it only reports on.",
+		Args: cobra.NoArgs,
+		RunE: func(c *cobra.Command, _ []string) error {
+			p, err := resolvePaths(c)
+			if err != nil {
+				return err
+			}
+			tree, err := sshcfg.LoadUser(p.SSHDir)
+			if err != nil {
+				return err
+			}
+			if asJSON {
+				b, err := tree.JSON()
+				if err != nil {
+					return err
+				}
+				_, _ = fmt.Fprintln(c.OutOrStdout(), string(b))
+				return nil
+			}
+			_, _ = fmt.Fprintln(c.OutOrStdout(), tree.Format())
+			return nil
+		},
+	}
+	cmd.Flags().BoolVar(&asJSON, "json", false, "print the Include tree as JSON")
 	return cmd
 }

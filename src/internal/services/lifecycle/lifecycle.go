@@ -320,7 +320,7 @@ func (s *Service) finish(res *Result, files []string, profileDir string, opt Opt
 	if err != nil {
 		return err
 	}
-	written, err := configsvc.New(s.p.SSHDir, m, s.emitUseKeychain).Write(false)
+	written, err := configsvc.New(s.p.SSHDir, m, s.emitUseKeychain).WithState(s.p.StateDir()).Write(false)
 	if err != nil {
 		return err
 	}

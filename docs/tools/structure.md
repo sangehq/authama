@@ -2,19 +2,30 @@
 
 ```sh
 authama ssh structure list [--all] [--json]          # what sits outside the layout, and the move for each
+authama ssh structure classify [--dry-run] [--json]  # purpose keys and leftover copies (dry-run by default with --dry-run)
+authama ssh structure rules list|add|set|remove      # remembered classification rules; --auto is off by default
 authama ssh structure check [--notify] [--quiet]     # scan for changes, refresh the list (the background job runs this)
 authama ssh structure approve <id>... [--profile P] [--name N] [--dry-run] [-y]
 authama ssh structure approve --plan FILE|- [--dry-run] [-y]
 authama ssh structure dismiss <id>... [--undo]
-authama ssh structure install [-y] | uninstall       # the optional background check
+authama ssh structure install [-y] | uninstall       # the optional background check (do not install until you mean to)
+authama ssh structure diagram                        # ~/.ssh drawn as a tree, each key and file labelled (also Help → SSH folder diagram)
 ```
+
+authama works with any `~/.ssh` layout: it follows every `Include` (see
+[SSH configs in any folder layout](../reference/ssh-config-includes.md)) and walks
+nested folders for keys. It still *suggests* the managed layout below; a folder
+that already groups your keys is kept, and the taxonomy is only an optional
+alternative with evidence. IdentityFile lines in files authama does not manage
+are listed as a manual follow-up, never rewritten.
 
 authama expects every key it manages in a profile's directory under the key root:
 `~/.ssh/<key root>/<profile>/<key>`, or `~/.ssh/<key root>/<category>/<profile>/<key>` for a profile in a
 category ([choose where keys live](../recipes/choose-where-keys-live.md),
 [categories](../recipes/group-profiles-into-categories.md)). The structure watcher finds what is not there and
-**suggests** a move for each. It never moves anything by itself: each move waits for you to approve it, here or on
-the web UI's structure page.
+**suggests** a move for each. Ordinary suggestions wait for you to approve them, here or on the web UI's structure
+page. A purpose rule you enable with `--auto` may be applied by `structure check` or the running server (snapshot and
+history still happen). Leftover-copy deletion is never auto-applied.
 
 ## What it finds
 
@@ -23,9 +34,13 @@ the web UI's structure page.
 | `loose` | A key pair directly in `~/.ssh` (`id_ed25519_work` and its `.pub`) | Into a profile's directory, declared in that profile. The profile is guessed from a profile name appearing in the key's file name or comment (`id_ed25519_work`, `me@work`); with no single match, approve it with `--profile`. |
 | `untracked` | A key in a profile's directory that no profile declares | Declared where it is: nothing moves. |
 | `orphan` | A key in a key-root directory no profile owns (a profile deleted by hand, a typo) | Into the profile you name with `--profile`. |
-| `misplaced` | A key a profile declares, in another directory than the manifest resolves (a profile moved into a category by hand) | To where the manifest puts it. |
+| `misplaced` | A key a profile declares, in another directory than the manifest resolves (a profile moved into a category by hand, or a tool key still in its profile's own `tools/<tool>/` folder) | To where the manifest puts it. A git signing key is also handed to `sange profile signing retarget`. |
 | `config-home` | A key pair in the config home, which holds settings and never keys | Into a profile's directory under `~/.ssh`. |
-| `copy` | A leftover copy of a key authama manages (`vm adopt-key` without `--move`) | Nothing: a note. Remove it yourself once ssh through the managed copy works. |
+| `copy` | A leftover copy of a key authama manages that is still referenced | Nothing: a note. |
+| `purpose` | A host-root key that belongs under `tools/<tool>/` (git signing, docker, …) | Into the shared `profiles/tools/<tool>/<name>`, declared under its profile. Git signing path updates are handed to `sange profile signing retarget`; authama does not write `~/.gitconfig`. |
+| `copy-remove` | A leftover copy of a managed key with no remaining references | An approved, snapshotted delete (`copy-remove`). Refused if any reference remains. |
+| `grouped` | Keys already sitting together in a folder of yours outside the key root (two or more pairs, or a config alongside them) | Nothing: the grouping is kept. The managed taxonomy is mentioned with evidence, not forced. |
+| `nested` | A lone key in a nested folder outside the key root | Into a profile's directory, the same as `loose`. |
 
 Left alone, and not listed: keys you [reserved](vm.md) (`key reserve`), keys [adopted](../recipes/onboard-an-existing-ssh-dir.md)
 where they are (`key adopt` promises never to move them), symlinks, and anything that is not a key pair. Detection
@@ -75,7 +90,42 @@ host work/gh profile personal                      # a host into another profile
 key work/deploy profile ops                        # a declared key into another profile, with the hosts that use it
 profile work category clients                      # a profile into a category: its directory moves too
 profile work category -                            # ... and out of one
+purpose personal/git-signing tool git kind git-signing
+copy-remove ~/.ssh/docker-tunnel
 ```
+
+## Purpose keys, leftover copies, and sange
+
+`ssh structure classify --dry-run` prints the same suggestions, with evidence and a confidence, without moving
+anything. Approving a `purpose` move places the key under `tools/<tool>/`, updates the manifest and inventory, and
+repoints hand-written `IdentityFile` lines. If the key is used as a git signing key, authama runs:
+
+```sh
+sange profile signing retarget --from <old.pub> --to <new.pub>
+```
+
+If sange is not on `PATH`, or the command fails, the apply still moves the key and prints that command as a handoff
+so you can run it. Authama never writes a profile's git identity or edits `~/.gitconfig` for signing. A preview
+(`approve --dry-run`, or the Structure page preview) passes `--dry-run` to sange unless the SSH directory is the
+live `~/.ssh`. The rendered `IdentityFile` for a tool key is `~/.ssh/profiles/tools/<tool>/<name>`.
+
+`ssh structure rules add --name git-signing --tool git` remembers a classification. `--auto` is off until you turn it
+on with `ssh structure rules set <id> --auto`. Auto-apply requires confidence 1.0 and a complete plan; a git-signing
+move is skipped unless sange is on `PATH`.
+
+## Installing the background job
+
+The running server watches `~/.ssh` (including `profiles/`), every directory an `Include` contributes (including trees outside `~/.ssh`), the config home, `~/.gitconfig`, `~/.config/git` and
+`~/.docker/contexts` with fsnotify, debounced 1–2 seconds, and still does a full scan every 30 seconds. `/` and a Windows volume root are never watched. If a watch
+cannot be established, it polls those same trees every couple of seconds. The Structure page shows **Watching** or
+**Polling**. After a scan it refreshes suggestions (and auto-applies enabled rules). When the server is not running,
+this optional job checks every 15 minutes:
+
+```sh
+authama ssh structure install
+```
+
+It is **not** installed for you. Only run that command when you want the launchd/systemd/Scheduled Task job.
 
 ## In the web UI
 
@@ -109,9 +159,11 @@ the tree and the suggestions, without the menus.
 
 ## The watcher
 
-- **Inside `authama serve`.** The server already scans `~/.ssh`, the config home and token files every 30 seconds
-  for the [events](events.md) log. When a scan sees a change under `~/.ssh` or the config home, it refreshes the
-  suggestions (kept in `.state/structure.json`), which the structure page shows.
+- **Inside `authama serve`.** The server watches `~/.ssh` (including `profiles/`), every directory an `Include` contributes, the config home, token files,
+  `~/.gitconfig`, `~/.config/git` and `~/.docker/contexts` with fsnotify (debounced 1–2s) and still scans them every
+  30 seconds for the [events](events.md) log. If a watch cannot be established, a short poll is the fallback; the
+  Structure page shows **Watching** or **Polling**. When a scan sees a change, it refreshes the suggestions (kept in
+  `.state/structure.json`).
 - **In the background.** `ssh structure install` registers a job that runs
   `authama ssh structure check --notify --quiet` every 15 minutes: a launchd agent (`StartInterval`) on macOS, a
   systemd user timer (`OnUnitActiveSec=15min`, or a cron line where there is no systemd) on Linux, a Scheduled Task

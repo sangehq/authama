@@ -178,7 +178,9 @@ func Notes(row keysvc.Row) []string {
 	if (row.PrivateOnDisk || (row.InOnePassword() && row.PublicOnDisk)) && !row.Recorded {
 		out = append(out, Unrecorded)
 	}
-	if !row.Wired() {
+	// A tool key (git signing, a docker tunnel) is read by its tool, never
+	// named by a host's IdentityFile, so no host is not a fault.
+	if !row.Wired() && row.Tool == "" {
 		out = append(out, Unwired)
 	}
 	return out
@@ -294,9 +296,15 @@ func (s *Service) untracked(owned map[manifest.KeyRef]bool) ([]Finding, map[mani
 		if err != nil || fi.IsDir() || skipName(base) {
 			continue
 		}
+		// The owner is the profile that declares the key where it sits (a tool
+		// key in the shared tools/<tool>/ folder included); a file no profile
+		// declares is guessed to belong to the folder it is in.
 		ref := manifest.KeyRef{
 			Profile: filepath.Base(filepath.Dir(path)),
 			KeyName: strings.TrimSuffix(base, ".pub"),
+		}
+		if loc, ok := manifest.LocateKeyPath(s.m, s.sshDir, filepath.Join(filepath.Dir(path), ref.KeyName)); ok {
+			ref.Profile = loc.Profile
 		}
 		// Ownership is by location, not by name alone: a declared key sitting in
 		// another directory than the manifest resolves is one authama cannot find,

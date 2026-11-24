@@ -1,6 +1,7 @@
 // Package events tracks the files authama is responsible for - everything
-// under ~/.ssh, the config home, and each tool's credential file - and records
-// every change to them, whoever made it: authama, an editor, ssh-keygen run by
+// under ~/.ssh, the config home, each tool's credential file, and (for serve)
+// ~/.gitconfig, ~/.config/git and ~/.docker/contexts - and records every
+// change to them, whoever made it: authama, an editor, ssh-keygen run by
 // hand, a package manager rewriting its token file.
 //
 // It never records a file's contents. Each scan keeps, per file, its size,
@@ -75,21 +76,36 @@ type Tracked struct {
 	Skip []string
 }
 
-// Roots is what a home tracks: ~/.ssh and the config home, walked, and each
-// credential file named in tokenFiles.
+// Roots is what a home tracks: ~/.ssh and the config home, walked, each
+// credential file named in tokenFiles, and the git / Docker trees a tool-key
+// move may touch. ~/.ssh/profiles is walked as part of ~/.ssh.
 func Roots(p paths.Paths, tokenFiles []string) []Tracked {
 	// authama's own state - the history, these events, snapshots, bundles, the
 	// lock - sits in the config home unless a state home is set apart; it
 	// changes on every command, so it is not tracked.
 	own := []string{p.LogDir(), p.StateDir(), p.SnapshotsDir(), p.DistDir()}
 	out := []Tracked{{Path: p.SSHDir, Area: AreaSSH, Dir: true}, {Path: p.ConfigDir, Area: AreaConfig, Dir: true, Skip: own}}
-	seen := map[string]bool{}
+	seen := map[string]bool{p.SSHDir: true, p.ConfigDir: true}
 	for _, f := range tokenFiles {
 		if f == "" || seen[f] || within(f, p.SSHDir) || within(f, p.ConfigDir) {
 			continue
 		}
 		seen[f] = true
 		out = append(out, Tracked{Path: f, Area: AreaAuth})
+	}
+	for _, r := range ExtraRoots(p) {
+		if r.Path == "" || seen[r.Path] || within(r.Path, p.SSHDir) || within(r.Path, p.ConfigDir) {
+			continue
+		}
+		seen[r.Path] = true
+		out = append(out, r)
+	}
+	for _, r := range IncludeRoots(p) {
+		if r.Path == "" || seen[r.Path] || within(r.Path, p.SSHDir) || within(r.Path, p.ConfigDir) {
+			continue
+		}
+		seen[r.Path] = true
+		out = append(out, r)
 	}
 	return out
 }

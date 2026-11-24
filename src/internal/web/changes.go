@@ -16,6 +16,7 @@ import (
 	"github.com/sangehq/authama/src/internal/core/providers"
 	"github.com/sangehq/authama/src/internal/core/tokens"
 	"github.com/sangehq/authama/src/internal/services/change"
+	"github.com/sangehq/authama/src/internal/services/configsvc"
 	"github.com/sangehq/authama/src/internal/services/editor"
 	"github.com/sangehq/authama/src/internal/services/keysvc"
 	"github.com/sangehq/authama/src/internal/services/repair"
@@ -45,31 +46,39 @@ var actionFields = map[string][]string{
 	"profile-category": {"name", "category"},
 	// host-add with no alias names the host by the naming rules from env and
 	// role (`host add <profile> --env --role`).
-	"host-add":      {"profile", "alias", "env", "role", "hostname", "user", "port", "tags", "key_name", "provider", "token_env", "proxy"},
-	"host-edit":     {"profile", "alias", "hostname", "user", "port", "tags", "key_name", "provider", "token_env", "proxy"},
-	"host-delete":   {"profile", "alias"},
-	"key-delete":    {"profile", "key"},
-	"key-reserve":   {"key", "for", "note"},
-	"key-unreserve": {"key"},
+	"host-add": {"profile", "alias", "env", "role", "hostname", "user", "port", "tags", "key_name", "provider", "token_env",
+		"update", "aliases", "proxy", "proxy_command", "proxy_jump", "connect_timeout", "options", "section", "comment", "service", "service_set", "service_extra"},
+	"host-edit": {"profile", "alias", "hostname", "user", "port", "tags", "key_name", "provider", "token_env",
+		"aliases", "proxy", "proxy_command", "proxy_jump", "connect_timeout", "options", "section", "comment", "service", "service_set", "service_extra"},
+	// host-variant-set is `host variant set`: a second route to a host.
+	"host-variant-set": {"profile", "alias", "name", "hostname", "port", "proxy", "proxy_command", "proxy_jump",
+		"connect_timeout", "options", "section", "comment", "service", "service_set", "service_extra"},
+	"host-variant-remove": {"profile", "alias", "name"},
+	"host-delete":         {"profile", "alias"},
+	"key-delete":          {"profile", "key"},
+	"key-reserve":         {"key", "for", "note"},
+	"key-unreserve":       {"key"},
 	// key-ack acknowledges one key, every key (all) or a category's.
-	"key-ack":           {"key", "all", "category"},
-	"vm-add":            {"profile", "alias", "hypervisor", "vm", "user", "key_name"},
-	"config-render":     {},
-	"config-adopt":      {},
-	"reconcile":         {},
-	"keygen":            {"target"},
-	"key-add":           {"profile", "key", "key_type", "host", "rotate_after_days"},
-	"providers-export":  {},
-	"snapshots-prune":   {"keep"},
-	"doctor-fix":        {},
-	"host-apply":        {"profile", "specs", "create", "category", "tags", "reconcile"},
-	"clean":             {"adopt"},
-	"bundle":            {"keep"},
-	"vm-docker-context": {"alias"},
-	"snapshots-restore": {"id"},
-	"notify-test":       {},
-	"audit-notify":      {},
-	"token-delete":      {"target", "host", "project"},
+	"key-ack":             {"key", "all", "category"},
+	"vm-add":              {"profile", "alias", "hypervisor", "vm", "user", "key_name"},
+	"config-render":       {},
+	"config-render-force": {},
+	"config-adopt":        {},
+	"config-keep-edits":   {},
+	"reconcile":           {},
+	"keygen":              {"target"},
+	"key-add":             {"profile", "key", "key_type", "host", "rotate_after_days"},
+	"providers-export":    {},
+	"snapshots-prune":     {"keep"},
+	"doctor-fix":          {},
+	"host-apply":          {"profile", "specs", "create", "category", "tags", "reconcile"},
+	"clean":               {"adopt"},
+	"bundle":              {"keep"},
+	"vm-docker-context":   {"alias"},
+	"snapshots-restore":   {"id"},
+	"notify-test":         {},
+	"audit-notify":        {},
+	"token-delete":        {"target", "host", "project"},
 	// token-apply takes the command line's --config, --project, --source and
 	// --target (only_<tool>, one box each).
 	"token-apply": {"config", "project", "source", "only_composer", "only_npm", "only_docker", "only_git", "only_netrc", "only_pypi",
@@ -99,8 +108,14 @@ var actionFields = map[string][]string{
 	"transfer-import-full":    {"file_ref", "pass_ref", "on_conflict"},
 	// structure-plan carries every move select (one plan line each) and
 	// the free-form plan lines; structure-dismiss hides one suggestion.
-	"structure-plan":    {"move", "moves"},
-	"structure-dismiss": {"id", "undo"},
+	"structure-plan":        {"move", "moves"},
+	"structure-dismiss":     {"id", "undo"},
+	"structure-rule-add":    {"profile", "name", "comment", "fingerprint", "tool", "kind", "auto"},
+	"structure-rule-auto":   {"id", "auto"},
+	"structure-rule-remove": {"id"},
+	"service-add":           {"name", "kind", "binary", "label"},
+	"service-edit":          {"name", "kind", "binary", "label"},
+	"service-remove":        {"name"},
 	// git-sign-set is one profile's git identity (clear removes it);
 	// git-sign-use points checkouts at a profile; git-sign-apply writes the
 	// git files from the manifest as it is.
@@ -215,35 +230,28 @@ func optionalName(f url.Values, field string) (string, error) {
 // envVarRe is an environment variable name, as --token-env takes.
 var envVarRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,127}$`)
 
-// hostExtras reads the host form's optional --key-name, --provider,
-// --token-env and --proxy. Each left empty is nil: unset on a new host,
-// unchanged on an edit. A provider must be one the catalog or providers.json
-// names, and a proxy one authama renders, or "none" to clear it.
-func hostExtras(f url.Values, h home) (keyName, provider, tokenEnv, proxy *string, err error) {
+// hostExtras reads the host form's optional --key-name, --provider and
+// --token-env. Each left empty is nil: unset on a new host, unchanged on an
+// edit. A provider must be one the catalog or providers.json names.
+func hostExtras(f url.Values, h home) (keyName, provider, tokenEnv *string, err error) {
 	if v, e := optionalName(f, "key_name"); e != nil {
-		return nil, nil, nil, nil, e
+		return nil, nil, nil, e
 	} else if v != "" {
 		keyName = &v
 	}
 	if v := strings.TrimSpace(f.Get("provider")); v != "" {
 		if _, ok := providers.AllSpecs(h.p.Providers())[v]; !ok {
-			return nil, nil, nil, nil, badForm("provider %q is not one `authama ssh providers` lists", v)
+			return nil, nil, nil, badForm("provider %q is not one `authama ssh providers` lists", v)
 		}
 		provider = &v
 	}
 	if v := strings.TrimSpace(f.Get("token_env")); v != "" {
 		if !envVarRe.MatchString(v) {
-			return nil, nil, nil, nil, badForm("token env %q is not an environment variable name", v)
+			return nil, nil, nil, badForm("token env %q is not an environment variable name", v)
 		}
 		tokenEnv = &v
 	}
-	if v := strings.TrimSpace(f.Get("proxy")); v != "" {
-		if v != "none" && !slices.Contains(manifest.ProxyKinds, v) {
-			return nil, nil, nil, nil, badForm("proxy must be none or one of %s", strings.Join(manifest.ProxyKinds, ", "))
-		}
-		proxy = &v
-	}
-	return keyName, provider, tokenEnv, proxy, nil
+	return keyName, provider, tokenEnv, nil
 }
 
 // hostSpecs parses the host apply box, one spec per line, and holds every
@@ -362,7 +370,10 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		// whole new list: an emptied box clears them.
 		in.Tags, err = tagsOf(f)
 		errs = append(errs, err)
-		in.KeyName, in.Provider, in.TokenEnv, in.Proxy, err = hostExtras(f, h)
+		in.KeyName, in.Provider, in.TokenEnv, err = hostExtras(f, h)
+		errs = append(errs, err)
+		in.AddAliases, in.RemoveAliases, in.RouteInput, err = hostRoutes(f, h, strings.TrimSpace(f.Get("profile")),
+			strings.TrimSpace(f.Get("alias")), edit)
 		errs = append(errs, err)
 		return in
 	}
@@ -443,11 +454,18 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		default:
 			alias = n("alias")
 		}
+		in.Update = checked(f, "update")
 		ch = change.HostAdd(n("profile"), alias, in)
 	case "host-edit":
 		ch = change.HostEdit(n("profile"), n("alias"), host(true))
 	case "host-delete":
 		ch = change.HostDelete(n("profile"), n("alias"))
+	case "host-variant-set":
+		in, err := variantInput(f, h)
+		errs = append(errs, err)
+		ch = change.HostVariantSet(n("profile"), n("alias"), n("name"), in)
+	case "host-variant-remove":
+		ch = change.HostVariantRemove(n("profile"), n("alias"), n("name"))
 	case "key-delete":
 		ch = change.KeyDelete(manifest.KeyRef{Profile: n("profile"), KeyName: n("key")})
 	case "vm-add":
@@ -466,8 +484,12 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch = change.VMAddWith(n("profile"), n("alias"), hv, vm, user, keyName)
 	case "config-render":
 		ch = change.ConfigRender()
+	case "config-render-force":
+		ch = change.ConfigRenderWith(true)
 	case "config-adopt":
 		ch = change.ConfigAdopt()
+	case "config-keep-edits":
+		ch = change.ConfigKeepEdits()
 	case "reconcile":
 		ch = change.Reconcile()
 	case "keygen":
@@ -752,6 +774,18 @@ func buildChange(f url.Values, h home) (change.Change, error) {
 		ch, errs = structurePlanChange(f, errs)
 	case "structure-dismiss":
 		ch, errs = structureDismissChange(f, errs)
+	case "structure-rule-add":
+		ch, errs = structureRuleAddChange(f, errs)
+	case "structure-rule-auto":
+		ch, errs = structureRuleAutoChange(f, errs)
+	case "structure-rule-remove":
+		ch, errs = structureRuleRemoveChange(f, errs)
+	case "service-add":
+		ch, errs = serviceUpsertChange(f, errs, false)
+	case "service-edit":
+		ch, errs = serviceUpsertChange(f, errs, true)
+	case "service-remove":
+		ch, errs = serviceRemoveChange(f, errs)
 	case "git-sign-set":
 		ch, errs = gitSignSetChange(f, errs)
 	case "git-sign-use":
@@ -825,6 +859,13 @@ type changePage struct {
 	Command string
 	Destroy bool // the action removes something; the button says so
 	Purge   bool // it deletes private keys too, which the page spells out
+	// HandEdits is set when a render would discard hand edits: the page
+	// offers to keep them or to discard them.
+	HandEdits bool
+	// OfferUpdate is set when host add names a host the profile has: the
+	// page offers the same form as an update.
+	OfferUpdate bool
+	Update      []formField
 }
 
 type donePage struct {
@@ -925,8 +966,11 @@ func (h pages) renderChange(w http.ResponseWriter, r *http.Request, status int, 
 	action := r.PostForm.Get("action")
 	h.s.render(w, status, "change", h.s.newView(r, "", "Review the change", changePage{
 		Plan: plan, Fields: carried(r.PostForm), Stale: stale, Command: commandLine(plan),
-		Destroy: strings.HasSuffix(action, "-delete"),
-		Purge:   action == "profile-delete" && checked(r.PostForm, "purge"),
+		Destroy:     strings.HasSuffix(action, "-delete") || action == "config-render-force",
+		Purge:       action == "profile-delete" && checked(r.PostForm, "purge"),
+		HandEdits:   strings.Contains(plan.Err, configsvc.HandEditFix),
+		OfferUpdate: action == "host-add" && strings.Contains(plan.Err, "already exists in"),
+		Update:      withUpdate(r.PostForm),
 	}))
 }
 
@@ -957,4 +1001,18 @@ func scopePath(f url.Values, field string) (string, error) {
 		return "", badForm("%s %q is not a plain full path", field, v)
 	}
 	return abs, nil
+}
+
+// withUpdate is a host add's fields again, as host add --update.
+func withUpdate(f url.Values) []formField {
+	if f.Get("action") != "host-add" {
+		return nil
+	}
+	var out []formField
+	for _, ff := range carried(f) {
+		if ff.Name != "update" {
+			out = append(out, ff)
+		}
+	}
+	return append(out, formField{"update", "1"})
 }

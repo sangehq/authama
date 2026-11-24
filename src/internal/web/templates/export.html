@@ -151,7 +151,7 @@
       {{if .Done}}<div class="alert alert-success" role="status">{{.Done}}{{if .Results}}<ul class="mb-0 mt-1">{{range .Results}}<li class="text-break">{{.}}</li>{{end}}</ul>{{end}}</div>{{end}}
       {{if .Problem}}<div class="alert alert-danger" role="alert">{{.Problem}}</div>{{end}}
       {{if .Rows}}
-      <div class="table-responsive"><table class="table table-vcenter card-table">
+      <div class="table-responsive"><table class="table table-vcenter card-table" data-copy-cells data-stack>
         <thead><tr><th scope="col">Selection</th><th scope="col">Format</th><th scope="col">File</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
         <tbody>{{range .Rows}}<tr><td>{{.Selection}}</td><td>{{.Format}}</td><td class="text-break font-monospace small">{{.File}}</td>
           <td class="text-end">{{if not $.ReadOnly}}<form method="post" action="{{u "/export/schedules/remove"}}" class="d-inline-flex gap-2 align-items-center"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="selection" value="{{.Selection}}"><input type="hidden" name="format" value="{{.Format}}">{{template "pin_field" $}}<button type="submit" class="btn btn-sm btn-outline-danger"{{desc "schedule-remove"}}>Remove</button></form>{{end}}</td></tr>{{end}}</tbody>

@@ -4,7 +4,7 @@
   <div class="card-header"><h2 class="card-title">Findings</h2>{{if .Findings}}<span class="ms-2 badge badge-warn">{{len .Findings}}</span>{{else}}<span class="ms-2 badge badge-ok">{{icon "circle-check"}}<span class="ms-1">all clear</span></span>{{end}}</div>
   {{if .Findings}}
   <div class="table-responsive" tabindex="0">
-    <table class="table table-vcenter card-table">
+    <table class="table table-vcenter card-table" data-copy-cells data-stack>
       <caption class="visually-hidden">What repair found</caption>
       <thead><tr><th scope="col">Area</th><th scope="col">Problem</th><th scope="col">Fix</th></tr></thead>
       <tbody>{{range .Findings}}<tr>

@@ -10,12 +10,14 @@ package structure
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/sshcfg"
 	"github.com/sangehq/authama/src/internal/services/keyaudit"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
@@ -28,6 +30,8 @@ const (
 	KindMisplaced  = "misplaced"   // a declared key in another directory than the manifest resolves
 	KindConfigHome = "config-home" // a key pair in the config home, where keys never belong
 	KindCopy       = "copy"        // a leftover copy of a key authama manages: nothing to move
+	KindGrouped    = "grouped"     // keys already sitting together in a folder outside the key root
+	KindNested     = "nested"      // a lone key in a nested folder outside the key root
 )
 
 // Suggestion is one thing outside the expected structure, and what approving
@@ -52,6 +56,11 @@ type Suggestion struct {
 	// Info marks a suggestion with nothing to approve: a note.
 	Info      bool `json:"info,omitempty"`
 	Dismissed bool `json:"dismissed,omitempty"`
+	// Purpose-classification fields (KindPurpose / KindCopyRemove).
+	Tool       string   `json:"tool,omitempty"`
+	ToolKind   string   `json:"tool_kind,omitempty"`
+	Confidence float64  `json:"confidence,omitempty"`
+	Evidence   []string `json:"evidence,omitempty"`
 }
 
 // ID is a suggestion's stable short id: the same file in the same state keeps
@@ -75,10 +84,15 @@ func Suggest(p paths.Paths) ([]Suggestion, error) {
 	refs := ConfigRefs(p)
 	var out []Suggestion
 	out = append(out, looseIn(p, m, refs)...)
+	out = append(out, nestedIn(p, m, refs)...)
 	out = append(out, keyTree(p, m)...)
 	out = append(out, configHome(p, m)...)
 	for i := range out {
 		out[i].ID = ID(out[i].Kind, out[i].Path)
+	}
+	out, err = Classify(p, out)
+	if err != nil {
+		return nil, err
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Path != out[j].Path {
@@ -147,12 +161,19 @@ func keyTree(p paths.Paths, m *manifest.Manifest) []Suggestion {
 			continue
 		}
 		dir := filepath.Dir(path)
-		ref := manifest.KeyRef{Profile: filepath.Base(dir), KeyName: strings.TrimSuffix(base, ".pub")}
-		priv := filepath.Join(dir, ref.KeyName)
+		name := strings.TrimSuffix(base, ".pub")
+		priv := filepath.Join(dir, name)
 		if seen[priv] {
 			continue
 		}
 		seen[priv] = true
+		loc, ok := manifest.LocateKeyPath(m, p.SSHDir, priv)
+		if !ok {
+			// A directory no profile owns: keep the old guess (the folder name).
+			loc = manifest.LocateKey{Profile: filepath.Base(dir), Name: name}
+		}
+		loc.Name = strings.TrimSuffix(loc.Name, ".pub")
+		ref := manifest.KeyRef{Profile: loc.Profile, KeyName: loc.Name}
 		rel := relSSH(p, priv)
 		expected := m.KeyPath(p.SSHDir, ref)
 		switch {
@@ -268,3 +289,82 @@ func relSSH(p paths.Paths, abs string) string {
 }
 
 func planSafe(s string) bool { return s != "" && !strings.ContainsAny(s, " \t\n\"'\\") }
+
+// nestedIn is key pairs in nested folders under ~/.ssh that are not the
+// managed key root and not loose at the top of ~/.ssh. A folder that already
+// groups several keys (or holds a config) is reported as KindGrouped: authama
+// keeps that layout and only offers the managed taxonomy as evidence, never
+// as a forced move. A lone key in an otherwise empty folder is KindNested,
+// a suggested move into a profile, the same as a loose key.
+func nestedIn(p paths.Paths, m *manifest.Manifest, refs map[string][]string) []Suggestion {
+	root := filepath.Join(p.SSHDir, manifest.KeyRoot(m))
+	pairs := sshcfg.WalkKeys(p.SSHDir, root)
+	// Group by the immediate subdirectory under ~/.ssh.
+	type bucket struct {
+		dir  string
+		keys []sshcfg.KeyPair
+	}
+	byDir := map[string]*bucket{}
+	var order []string
+	for _, k := range pairs {
+		if k.Rel == "" || !strings.Contains(k.Rel, "/") {
+			continue // top-level loose keys are looseIn's
+		}
+		dir := filepath.Dir(k.Private)
+		relDir := filepath.Dir(k.Rel)
+		b := byDir[dir]
+		if b == nil {
+			b = &bucket{dir: relDir}
+			byDir[dir] = b
+			order = append(order, dir)
+		}
+		b.keys = append(b.keys, k)
+	}
+	var out []Suggestion
+	for _, dir := range order {
+		b := byDir[dir]
+		hasConfig := fileExists(filepath.Join(dir, "config")) || globExists(filepath.Join(dir, "*.conf"))
+		grouped := len(b.keys) >= 2 || hasConfig
+		if grouped {
+			names := make([]string, 0, len(b.keys))
+			var inUse []string
+			for _, k := range b.keys {
+				names = append(names, filepath.Base(k.Private))
+				inUse = append(inUse, refs[k.Private]...)
+			}
+			detail := fmt.Sprintf("%d keys already sit together in ~/.ssh/%s (%s); authama keeps this grouping and follows IdentityFile references here. Moving them into profiles/<category>/<profile>/ is optional, not required.",
+				len(b.keys), b.dir, strings.Join(names, ", "))
+			if hasConfig {
+				detail += " The folder also has a config file."
+			}
+			s := Suggestion{Kind: KindGrouped, Path: "~/.ssh/" + b.dir, Info: true, Detail: detail, InUse: unique(inUse),
+				Evidence: []string{fmt.Sprintf("%d key pairs in ~/.ssh/%s", len(b.keys), b.dir)}}
+			if len(inUse) > 0 {
+				s.Evidence = append(s.Evidence, "IdentityFile references in "+strings.Join(unique(inUse), ", "))
+			}
+			out = append(out, s)
+			continue
+		}
+		k := b.keys[0]
+		s := Suggestion{Kind: KindNested, Path: "~/.ssh/" + k.Rel, Name: filepath.Base(k.Private),
+			InUse:  refs[k.Private],
+			Detail: "a key in ~/.ssh/" + k.Rel + " (outside the managed tree); move it into a profile's directory, or leave it if this folder is your grouping"}
+		if len(s.InUse) > 0 {
+			s.Detail += "; the IdentityFile lines naming it are rewritten only in files authama manages"
+		}
+		s.Profile = guessProfile(m, s.Name, "")
+		finishMove(&s, p, m, "~/.ssh/"+k.Rel)
+		out = append(out, s)
+	}
+	return out
+}
+
+func fileExists(path string) bool {
+	fi, err := os.Stat(path)
+	return err == nil && fi.Mode().IsRegular()
+}
+
+func globExists(pattern string) bool {
+	m, _ := filepath.Glob(pattern)
+	return len(m) > 0
+}

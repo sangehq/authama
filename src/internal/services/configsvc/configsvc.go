@@ -13,6 +13,7 @@ import (
 
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/core/renderer"
+	"github.com/sangehq/authama/src/internal/core/sshcfg"
 	"github.com/sangehq/authama/src/internal/util/fs"
 )
 
@@ -26,6 +27,11 @@ type Service struct {
 	sshDir          string
 	manifest        *manifest.Manifest
 	emitUseKeychain bool
+	// stateDir holds the render record (WithState); force and backupDir let
+	// a write replace hand edits (Force).
+	stateDir  string
+	force     bool
+	backupDir string
 }
 
 // New builds a Service. emitUseKeychain is true only on macOS.
@@ -55,6 +61,12 @@ type CheckResult struct {
 	// that define a managed alias again (`authama ssh config adopt` fixes the
 	// ones the manifest reproduces).
 	Collisions []Collision
+	// HandEdits lists what was typed into the managed files by hand, which
+	// the next render would discard (`authama ssh config keep-edits` keeps it).
+	HandEdits []HandEdit
+	// IncludeWarnings are problems following OpenSSH Include directives
+	// (a missing file, a cycle, a depth limit). They do not fail InSync.
+	IncludeWarnings []sshcfg.Warning
 }
 
 // BlockInSync reports whether every managed file on disk matches the manifest
@@ -76,7 +88,11 @@ func (r *CheckResult) InSync() bool {
 // Format renders a human report.
 func (r *CheckResult) Format() string {
 	if r.InSync() {
-		return "config: in sync with the manifest ✓"
+		msg := "config: in sync with the manifest ✓"
+		if w := formatIncludeWarnings(r.IncludeWarnings); w != "" {
+			return msg + "\n" + w
+		}
+		return msg
 	}
 	var b strings.Builder
 	for _, rel := range r.Missing {
@@ -99,6 +115,17 @@ func (r *CheckResult) Format() string {
 	}
 	for _, c := range r.Collisions {
 		fmt.Fprintf(&b, "COLLISION %s\n", c)
+	}
+	for _, h := range r.HandEdits {
+		fmt.Fprintf(&b, "HAND-EDIT %s\n", h)
+	}
+	if len(r.HandEdits) > 0 {
+		b.WriteString("config: the managed config was edited by hand - " + HandEditFix + "\n")
+		if r.BlockInSync() {
+			return strings.TrimRight(b.String(), "\n")
+		}
+		b.WriteString("config: DRIFT detected - the hand edits above")
+		return b.String()
 	}
 	if len(r.Collisions) > 0 {
 		b.WriteString("config: a host is defined both by you and by authama - " + CollisionFix + "\n")
@@ -136,6 +163,10 @@ type WriteResult struct {
 	// Render writes anyway - the managed block is right either way - and says
 	// so, with the command that resolves it.
 	Collisions []Collision
+	// HandEdits are the hand edits a dry run would refuse to discard, or a
+	// forced write discarded (copied to Backup first).
+	HandEdits []HandEdit
+	Backup    string
 }
 
 // Write renders the config to disk (or previews with dryRun), preserving foreign
@@ -147,6 +178,22 @@ func (s *Service) Write(dryRun bool) (*WriteResult, error) {
 		return nil, err
 	}
 	res := &WriteResult{DryRun: dryRun}
+	if s.stateDir != "" {
+		edits, err := s.HandEdits()
+		if err != nil {
+			return nil, err
+		}
+		res.HandEdits = edits
+		if len(edits) > 0 && !dryRun {
+			if !s.force {
+				return nil, &HandEditsError{Edits: edits}
+			}
+			if err := s.backupEdited(edits); err != nil {
+				return nil, err
+			}
+			res.Backup = s.backupDir
+		}
+	}
 	for _, rel := range sortedKeys(rendered) {
 		content := rendered[rel]
 		dest := filepath.Join(s.sshDir, filepath.FromSlash(rel))
@@ -196,6 +243,11 @@ func (s *Service) Write(dryRun bool) (*WriteResult, error) {
 			res.Pruned = append(res.Pruned, rel)
 		}
 	}
+	if !dryRun {
+		if err := s.saveRecord(rendered); err != nil {
+			return res, err
+		}
+	}
 	return res, nil
 }
 
@@ -235,12 +287,33 @@ func (s *Service) Check(validateSSH bool) (*CheckResult, error) {
 		}
 	}
 	res.Duplicates = s.findDuplicates(rendered)
+	if s.stateDir != "" {
+		if res.HandEdits, err = s.HandEdits(); err != nil {
+			return nil, err
+		}
+	}
 	if validateSSH {
 		if _, err := exec.LookPath("ssh"); err == nil {
 			res.SSHErrors = s.validateAliases()
 		}
 	}
+	if tree, err := sshcfg.LoadUser(s.sshDir); err == nil && tree != nil {
+		res.IncludeWarnings = tree.Warnings
+		res.Collisions = mergeCollisions(res.Collisions, collisionsFromTree(tree, s.sshDir, rendered))
+	}
 	return res, nil
+}
+
+func formatIncludeWarnings(ws []sshcfg.Warning) string {
+	if len(ws) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("INCLUDE warnings (the config is still readable; see `authama ssh config tree`):")
+	for _, w := range ws {
+		fmt.Fprintf(&b, "\n  %s: %s", w.Kind, w.Message)
+	}
+	return b.String()
 }
 
 // Show returns the rendered config (no alias) or `ssh -G` for one alias.

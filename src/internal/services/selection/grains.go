@@ -87,6 +87,7 @@ func rowsOf(ds *dataset.Dataset, grain string) ([]row, []string, error) {
 				"env": h.Env, "role": h.Role, "code": h.Code, "number": h.Number, "named": h.Named,
 				"requires_vpn": h.RequiresVPN, "vpn_name": h.VPNName, "vm": h.VM, "proxy": h.Proxy,
 				"token_env": h.TokenEnv, "options": opts,
+				"aliases": h.Aliases, "route": h.Route, "routes": h.Routes,
 			}
 			k, ok := keysByRef[h.KeyRef]
 			f["key.type"], f["key.fingerprint"], f["key.expires_on"], f["key.state"] = k.Type, k.Fingerprint, k.ExpiresOn, k.State

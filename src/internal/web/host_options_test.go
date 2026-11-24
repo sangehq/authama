@@ -51,10 +51,10 @@ func TestTheHostFormsCarryTheProviderAndProxyOptions(t *testing.T) {
 		}
 	}
 
-	// An edit with "none" clears the proxy; empty fields leave the rest.
-	edit := url.Values{"action": {"host-edit"}, "profile": {"work"}, "alias": {"edge"}, "proxy": {"none"}}
+	// An edit with "off" removes the proxy; empty fields leave the rest.
+	edit := url.Values{"action": {"host-edit"}, "profile": {"work"}, "alias": {"edge"}, "proxy": {"off"}}
 	rec = c.change("/changes/preview", edit)
-	if m = hashField.FindStringSubmatch(rec.Body.String()); m == nil || !strings.Contains(rec.Body.String(), "--proxy=none") {
+	if m = hashField.FindStringSubmatch(rec.Body.String()); m == nil || !strings.Contains(rec.Body.String(), "--proxy=off") {
 		t.Fatalf("edit preview:\n%.900s", rec.Body.String())
 	}
 	edit.Set("hash", m[1])

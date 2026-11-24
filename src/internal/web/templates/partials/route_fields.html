@@ -1,0 +1,28 @@
+{{define "route_fields"}}{{$p := .P}}{{$r := .R}}
+{{if not .Variant}}<div class="mb-3"><label class="form-label" for="{{$p}}-aliases">Also named</label><input class="form-control" id="{{$p}}-aliases" name="aliases" value="{{$r.Aliases}}" autocomplete="off" spellcheck="false" placeholder="web1-cf"><small class="form-hint">More names on its <code>Host</code> line, comma-separated{{if .Edit}}; a name taken out is removed{{end}}. The same as <code>--alias</code>{{if .Edit}} and <code>--remove-alias</code>{{end}}.</small></div>{{end}}
+<div class="row g-2 mb-3">
+  <div class="col-5"><label class="form-label" for="{{$p}}-proxy">Proxy</label><select class="form-select" id="{{$p}}-proxy" name="proxy"><option value="">{{if or .Edit .Variant}}Unchanged{{if $r.Proxy}} ({{$r.Proxy}}){{end}}{{else}}No proxy{{end}}</option>{{range proxyKinds}}<option value="{{.}}">{{if eq . "none"}}none - ProxyCommand none{{else if eq . "cloudflared"}}cloudflared - Cloudflare Access{{else}}{{.}}{{end}}</option>{{end}}{{if .Variant}}<option value="off">off - use the host's</option>{{else if .Edit}}<option value="off">off - remove it</option>{{end}}</select></div>
+  <div class="col-7"><label class="form-label" for="{{$p}}-proxycmd">Or a command</label><input class="form-control font-monospace" id="{{$p}}-proxycmd" name="proxy_command" value="{{$r.ProxyCommand}}" autocomplete="off" spellcheck="false" placeholder="/usr/bin/nc -X 5 -x proxy:1080 %h %p"></div>
+  <small class="form-hint">How ssh reaches it: <code>--proxy</code> (cloudflared, none for a direct connection under a broader proxy, off to remove it) or <code>--proxy-command</code>, quoted for the shell argument by argument.</small>
+</div>
+<div class="row g-2 mb-3">
+  <div class="col-8"><label class="form-label" for="{{$p}}-jump">Jump host</label><input class="form-control" id="{{$p}}-jump" name="proxy_jump" value="{{$r.ProxyJump}}" autocomplete="off" spellcheck="false" placeholder="bastion"><small class="form-hint"><code>--proxy-jump</code></small></div>
+  <div class="col-4"><label class="form-label" for="{{$p}}-timeout">Connect timeout</label><input class="form-control" id="{{$p}}-timeout" name="connect_timeout" value="{{$r.ConnectTimeout}}" inputmode="numeric" pattern="[0-9]*" placeholder="10"><small class="form-hint">seconds; <code>--connect-timeout</code></small></div>
+</div>
+<div class="mb-3"><label class="form-label" for="{{$p}}-options">Other ssh options</label><textarea class="form-control font-monospace" id="{{$p}}-options" name="options" rows="3" spellcheck="false" placeholder="ServerAliveInterval=30">{{$r.Options}}</textarea><small class="form-hint">One <code>KEY=VALUE</code> a line, any option OpenSSH knows{{if .Edit}}; a line taken out removes it{{end}}. The same as <code>--option</code>{{if .Edit}} and <code>--unset-option</code>{{end}}.</small></div>
+<div class="mb-3"><label class="form-label" for="{{$p}}-section">Section heading</label><input class="form-control" id="{{$p}}-section" name="section" value="{{$r.Section}}" autocomplete="off" placeholder="prod: Cloudflare Access"><small class="form-hint">A comment above the block; the blocks after it sit under it. <code>--section</code></small></div>
+<div class="mb-3"><label class="form-label" for="{{$p}}-comment">Comment</label><input class="form-control" id="{{$p}}-comment" name="comment" value="{{$r.Comment}}" autocomplete="off"><small class="form-hint">A comment inside the block, under its <code>Host</code> line. <code>--comment</code></small></div>
+<div>
+  <div class="form-label">Services</div>
+  <input type="hidden" name="service_set" value="1">
+  {{range $r.ServiceOptions}}
+  <label class="form-check" for="{{$p}}-svc-{{.Name}}">
+    <input class="form-check-input" type="checkbox" id="{{$p}}-svc-{{.Name}}" name="service" value="{{.Name}}"{{if .Checked}} checked{{end}}>
+    <span class="form-check-label"><code>{{.Name}}</code></span>
+  </label>
+  {{end}}
+  <label class="form-label mt-2" for="{{$p}}-svc-extra">Other services</label>
+  <input class="form-control" id="{{$p}}-svc-extra" name="service_extra" autocomplete="off" spellcheck="false" placeholder="access-prod, warp">
+  <small class="form-hint">Reachability services attached to this route. The same as <code>--service</code>{{if $.Edit}}; unchecking one is <code>--remove-service</code>{{end}}. Health is on the Services page; this does not start a tunnel or change WARP.</small>
+</div>
+{{end}}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/core/renderer"
+	"github.com/sangehq/authama/src/internal/core/sshcfg"
 	"github.com/sangehq/authama/src/internal/util/fs"
 )
 
@@ -333,6 +334,45 @@ func renderedGlobalKeywords(rendered map[string]string) map[string]bool {
 				out[kw] = true
 			}
 		}
+	}
+	return out
+}
+
+// collisionsFromTree reports Host blocks in files ~/.ssh/config Includes that
+// authama does not manage, when they name a managed alias. The blocks stay
+// where they are: adopt only edits ~/.ssh/config.
+func collisionsFromTree(tree *sshcfg.Tree, sshDir string, rendered map[string]string) []Collision {
+	if tree == nil {
+		return nil
+	}
+	managed := managedKeywords(rendered)
+	var out []Collision
+	for _, h := range tree.Hosts {
+		if h.Managed || h.Alias == "" {
+			continue
+		}
+		if filepath.Clean(h.File) == filepath.Join(sshDir, renderer.RootConfig) {
+			continue // findCollisions already covers the root file's foreign blocks
+		}
+		if _, ok := managed[h.Alias]; !ok {
+			continue
+		}
+		header := "Host " + strings.Join(h.Patterns, " ")
+		out = append(out, Collision{Alias: h.Alias, File: sshcfg.Display(h.File, sshDir), Line: h.Line, Header: header})
+	}
+	return out
+}
+
+func mergeCollisions(a, b []Collision) []Collision {
+	seen := map[string]bool{}
+	var out []Collision
+	for _, c := range append(append([]Collision{}, a...), b...) {
+		key := c.File + ":" + fmt.Sprint(c.Line) + ":" + c.Alias
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, c)
 	}
 	return out
 }

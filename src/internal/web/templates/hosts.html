@@ -8,15 +8,15 @@
   <div class="card-header"><h2 class="card-title">Hosts</h2><div class="card-actions">{{template "csv" "/exports/hosts.csv"}}</div></div>
   {{if .Data}}
   <div class="table-responsive" tabindex="0">
-    <table class="table table-vcenter card-table table-hover" id="hosts-table" data-table="hosts">
+    <table class="table table-vcenter card-table table-hover" id="hosts-table" data-table="hosts" data-copy-cells data-stack>
       <caption class="visually-hidden">Every host in the manifest, with its profile</caption>
       <thead><tr><th scope="col">Alias</th><th scope="col">Profile</th><th scope="col">Hostname</th><th scope="col">Provider</th><th scope="col">Key</th><th scope="col">Status</th><th scope="col">Tags</th><th scope="col" class="w-1" data-nosort><span class="visually-hidden">Actions</span></th></tr></thead>
       <tbody>
         {{range $g := .Data}}{{range .Rows}}
         <tr>
-          <th scope="row"><a href="{{basePath}}/hosts/{{.Alias}}" data-inline><code>{{.Alias}}</code></a></th>
+          <th scope="row"><a href="{{basePath}}/hosts/{{.Alias}}" data-inline><code>{{.Alias}}</code></a>{{if .Aliases}}<div class="small text-secondary fw-normal mt-1">also {{range $i, $a := .Aliases}}{{if $i}}, {{end}}<code>{{$a}}</code>{{end}}</div>{{end}}</th>
           <td><code>{{$g.Name}}</code></td>
-          <td class="text-break">{{.Hostname}}</td>
+          <td class="text-break">{{.Hostname}}{{if .Route}} <span class="badge badge-muted">{{.Route}}</span>{{end}}</td>
           <td>{{.ProviderLabel}}</td>
           <td class="text-break"><code>{{.KeyName}}</code></td>
           <td><span class="badge {{statusClass .Status}}">{{.Status}}</span></td>
@@ -33,6 +33,23 @@
             {{template "menu_close"}}
           </td>
         </tr>
+        {{$base := .}}{{range .Variants}}
+        <tr class="host-variant" data-variant-of="{{$base.Alias}}">
+          <th scope="row" class="ps-4"><code>{{.Alias}}</code><div class="small text-secondary fw-normal mt-1">route of <a href="{{basePath}}/hosts/{{$base.Alias}}" data-inline><code>{{$base.Alias}}</code></a></div></th>
+          <td><code>{{$g.Name}}</code></td>
+          <td class="text-break">{{.Hostname}}{{if .Route}} <span class="badge badge-muted">{{.Route}}</span>{{end}}</td>
+          <td>{{$base.ProviderLabel}}</td>
+          <td class="text-break"><code>{{$base.KeyName}}</code></td>
+          <td><span class="text-secondary small">same key</span></td>
+          <td class="text-secondary">{{orDash (join $base.Tags ", ")}}</td>
+          <td class="text-end">
+            {{template "menu_open" (printf "Actions for route %s" .Alias)}}
+              <button type="button" class="dropdown-item" data-copy="ssh {{.Alias}}"{{desc "copy-value"}}>{{icon "terminal-2"}}<span class="ms-2">Copy <code>ssh {{.Alias}}</code></span></button>
+              {{if .Hostname}}<button type="button" class="dropdown-item" data-copy="{{.Hostname}}"{{desc "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the hostname</span></button>{{end}}
+            {{template "menu_close"}}
+          </td>
+        </tr>
+        {{end}}
         {{end}}{{end}}
       </tbody>
     </table>
@@ -55,11 +72,14 @@
             <div class="col-4"><label class="form-label" for="h-port">Port</label><input class="form-control" id="h-port" name="port" type="number" min="1" max="65535" inputmode="numeric" value="22"></div>
           </div>
           <div class="mb-3"><label class="form-label" for="h-tags">Tags</label><input class="form-control" id="h-tags" name="tags" autocomplete="off" spellcheck="false" placeholder="prod, web"><small class="form-hint">Comma-separated.</small></div>
-          <details class="mb-3"><summary class="text-secondary">More options: key, provider, proxy</summary>
+          <details class="mb-3"><summary class="text-secondary">More options: key, provider</summary>
             <div class="mt-2 mb-3"><label class="form-label" for="h-keyname">Key name</label><input class="form-control" id="h-keyname" name="key_name" autocomplete="off" spellcheck="false"><small class="form-hint">Leave empty for the profile's key. The same as <code>--key-name</code>.</small></div>
             <div class="mb-3"><label class="form-label" for="h-provider">Provider</label><input class="form-control" id="h-provider" name="provider" list="h-providers" autocomplete="off" spellcheck="false"><datalist id="h-providers">{{range providerNames}}<option value="{{.}}">{{end}}</datalist><small class="form-hint">Leave empty for plain ssh (authorized_keys). The same as <code>--provider</code>.</small></div>
             <div class="mb-3"><label class="form-label" for="h-tokenenv">Token variable</label><input class="form-control" id="h-tokenenv" name="token_env" autocomplete="off" spellcheck="false" placeholder="GH_TOKEN_WORK"><small class="form-hint">The name of the environment variable that holds the provider's API token, never the token. The same as <code>--token-env</code>.</small></div>
-            <div><label class="form-label" for="h-proxy">Proxy</label><select class="form-select" id="h-proxy" name="proxy"><option value="">None</option>{{range proxyKinds}}<option value="{{.}}">{{.}}</option>{{end}}</select><small class="form-hint">The same as <code>--proxy</code>.</small></div>
+          </details>
+          <label class="form-check mb-3"><input class="form-check-input" type="checkbox" name="update" value="1"><span class="form-check-label">Update it if the profile has it already</span><small class="form-hint">Create-or-update, the same as <code>--update</code>: the fields given replace the host's.</small></label>
+          <details class="mb-3"><summary class="text-secondary">Routes: names, proxy, ssh options, comments</summary>
+            <div class="mt-2">{{template "route_fields" (routeForm "h" noRoute false false)}}</div>
           </details>
           {{template "panel_footer" (footer "authama ssh host add" "Preview" "btn-primary" "")}}
         </form>

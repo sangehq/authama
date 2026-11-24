@@ -149,7 +149,7 @@ func sshCommands() []*cobra.Command {
 		withDirectRoute(newDeployCmd()), withDirectRoute(newRotateCmd()), withDirectRoute(newRollbackCmd()), newListCmd(),
 		newViewCmd(), newShowCmd(), newCleanCmd(), newExpiryCmd(), newAuditCmd(),
 		newNotifyCmd(), newGitCmd(), newVMCmd(), newTermiusCmd(), newNamingCmd(),
-		newStructureCmd(),
+		newStructureCmd(), newToolCmd(), newServiceCmd(),
 	}
 }
 

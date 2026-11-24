@@ -10,7 +10,10 @@ entry - and keeps watching for new ones. Nothing moves until you approve it.
 authama ssh structure list
 ```
 
-Each line is a suggestion with an id, the file, and what approving it would do. A key whose name or comment names a
+Each line is a suggestion with an id, the file, and what approving it would do. Classification walks
+nested folders under `~/.ssh` (and follows `Include`s; see
+[SSH configs in any folder layout](../reference/ssh-config-includes.md)). A grouping you already have
+is kept; the managed `profiles/<category>/<profile>/` tree is only suggested with evidence. A key whose name or comment names a
 profile (`id_ed25519_work`, `me@work`) already has its profile guessed; the others say `--profile <profile>`.
 Keys you [reserved](../tools/vm.md) or adopted in place are never listed.
 
@@ -23,8 +26,8 @@ authama ssh structure approve 0e16 --profile personal --name legacy   # a profil
 ```
 
 The preview lists the key files that move, and the manifest, inventory and `~/.ssh/config` diffs. Any
-`IdentityFile ~/.ssh/id_ed25519_work` line in your own config is repointed to the new path in the same change, so
-`ssh` keeps working.
+`IdentityFile ~/.ssh/id_ed25519_work` line in a file authama manages is repointed to the new path in the same change, so
+`ssh` keeps working. A reference in an Included file authama does not manage is listed as a manual follow-up.
 
 Many at once, as a plan:
 

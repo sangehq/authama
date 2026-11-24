@@ -22,10 +22,16 @@ authama export hosts --profile simtabi --env prd --format json
 authama export keys --columns ref=key,fingerprint,expires_on --sort expires_on --format markdown
 authama export profiles --key simtabi_simbi-prd-web-00-ed25519 --narrow --format yaml
 authama export hosts --fields                              # every field a host row has
+authama export hosts --columns alias,aliases,route,routes  # extra names, how ssh reaches it, its warp-* routes
 authama export --selection sel.json --format php -o hosts.php
 authama export hosts --profile simtabi --format ssh_config -o simtabi.ssh_config
 authama export hosts --env prd --format putty -o prd.reg
 ```
+
+A host row's `aliases` are its extra names, `route` how ssh reaches it when not a plain connection (`vm`,
+`cloudflared`, `direct`, `command` or `jump <host>`), and `routes` its other routes' aliases (`warp-<alias>`). They
+are not in the default columns, so `hosts.csv` keeps its shape. A client export of chosen hosts writes each
+host's routes beside it.
 
 | Part | What it takes |
 |---|---|
@@ -260,8 +266,12 @@ unchanged. `--termius-groups` is refused with any other `--format`.
 Left out, and reported on stderr:
 
 - **VM hosts** — reached only through authama's ProxyCommand, which Termius ignores;
+- **cloudflared and command proxies** — the same: a ProxyCommand Termius would not run (a host with `ProxyCommand
+  none` connects directly and stays in);
 - **git hosts** — user `git`, or a `github`/`gitlab` provider: not shells (`--include-git` adds them);
 
+A host's [route variants](../recipes/host-routes.md) are rows of their own, labelled `<name>-<alias>`, with the host's
+key; a host's extra Host names are not (a row has one label). `ConnectTimeout` and other ssh options are not carried.
 A host that reaches its server through a `ProxyJump` raw option stays in the file, since Termius can reach it through
 a jump host, but the CSV has no column for one: the notes on stderr name the jump host to set as the host's **Host
 Chain** in Termius.

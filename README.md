@@ -17,7 +17,10 @@ Two features in a single static binary with no runtime dependencies:
   variables, never secrets.
 
 macOS, Linux and Windows are all first-class; OpenSSH is the only requirement
-for the SSH side (git 2.34 or newer for commit signing). `sshmgr`, the former name, is no longer built or installed.
+for the SSH side (git 2.34 or newer for commit signing). SSH management works
+with any `~/.ssh` layout: authama follows OpenSSH `Include`s and finds keys in
+nested folders, and it only rewrites files it manages. See [SSH configs in any
+folder layout](docs/reference/ssh-config-includes.md). `sshmgr`, the former name, is no longer built or installed.
 Coming from sshmgr or auth-token-manager? See the [migration guide](docs/migration.md).
 
 ## Install
@@ -60,6 +63,7 @@ SSH - build `~/.ssh` from the manifest, and get a key onto its target:
 authama ssh reconcile --dry-run   # preview: what would be minted, what would be written
 authama ssh reconcile             # build ~/.ssh from the manifest
 authama ssh config check          # confirm the file matches the manifest (exit != 0 on drift)
+authama ssh config tree           # every Include and the source file of each Host
 authama ssh deploy work_gh-ed25519    # ssh-copy-id, gh, glab, a REST API, or manual
 authama ssh validate                  # every keypair parses and the halves match
 ```
@@ -105,6 +109,7 @@ else is in the [documentation index](#documentation).
 - [Getting started](docs/getting-started.md) — first run, from `init` to a deployed key.
 - [Configuration](docs/configuration.md) — the manifest, profiles, hosts, `.env`, environment variables.
 - [Architecture](docs/architecture.md) — packages, key flows, and why the layout is what it is.
+- [SSH configs in any folder layout](docs/reference/ssh-config-includes.md) — OpenSSH `Include`s, keys in nested folders, and the Include tree (`ssh config tree` / the SSH config page).
 - [Migration](docs/migration.md) — from sshmgr 3.x and from auth-token-manager, with a feature-parity table.
 - [Release](docs/release.md) — the tag-driven GoReleaser flow.
 
@@ -159,6 +164,7 @@ else is in the [documentation index](#documentation).
 - [Use a local VM as a devbox](docs/recipes/devbox-vm.md) — reach a VM by name whatever its IP, and point Docker at it.
 - [Import your hosts into Termius](docs/recipes/import-hosts-into-termius.md) — every host with its user, then `termius keys` to paste each key into Termius's Keychain (the CSV carries no keys).
 - [Reach a server through Cloudflare Access](docs/recipes/cloudflare-access.md) — `ssh <alias>` through `cloudflared`, with no SSH port open to the internet.
+- [Give a host more names, a proxy, and a second route](docs/recipes/host-routes.md) — extra `Host` names, `ProxyCommand none`, `ProxyJump`, any ssh option, section comments, `warp-<alias>` twins, and keeping hand edits.
 - [Move to a new machine](docs/recipes/move-to-a-new-machine.md) — keys, hosts and token values in one passphrase-encrypted file, merged with a preview.
 - [Tidy loose keys into their profiles](docs/recipes/tidy-keys-into-profiles.md) — each stray key moved where it belongs, previewed, backed up and recorded, and new ones noticed.
 - [Onboard an existing `~/.ssh`](docs/recipes/onboard-an-existing-ssh-dir.md) — bring a hand-built setup under management without regenerating anything.

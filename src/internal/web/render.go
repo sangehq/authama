@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -208,9 +209,18 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 			sort.Strings(out)
 			return out
 		},
-		"proxyKinds": func() []string { return manifest.ProxyKinds },
-		"short":      func(s string) string { return shorten(s, 8) },
-		"size":       humanSize,
+		// The command kind is typed into its own field, so the choice leaves it out.
+		"proxyKinds": func() []string {
+			return slices.DeleteFunc(slices.Clone(manifest.ProxyKinds), func(k string) bool { return k == manifest.ProxyCommandKind })
+		},
+		// routeForm feeds the route_fields partial: its ids' prefix, the
+		// values an edit form starts with, and whether it is an edit.
+		"noRoute": func() RouteView { return RouteView{} },
+		"routeForm": func(prefix string, r RouteView, edit, variant bool) routeFormData {
+			return routeFormData{P: prefix, R: r, Edit: edit, Variant: variant}
+		},
+		"short": func(s string) string { return shorten(s, 8) },
+		"size":  humanSize,
 		"resultClass": func(r string) string {
 			switch r {
 			case history.ResultOK:
@@ -648,14 +658,15 @@ type navItem struct {
 // a task's kind is what it does to things. The user menu's entries, written
 // out in layout.html, are "personal".
 var navKinds = map[string]string{
-	"profiles": "ssh", "hosts": "ssh", "keys": "ssh", "vms": "ssh", "naming": "ssh", "sshconfig": "ssh", "termius": "ssh", "structure": "ssh", "gitsign": "ssh",
+	"profiles": "ssh", "hosts": "ssh", "keys": "ssh", "vms": "ssh", "naming": "ssh", "sshconfig": "ssh", "termius": "ssh", "structure": "ssh", "tools": "ssh", "services": "ssh", "gitsign": "ssh",
 	"tokens": "tokens", "token-checklists": "tokens",
 	"audit": "security", "checklists": "security", "security": "security",
 	"history": "history", "events": "history", "snapshots": "history", "export": "history", "setup": "history",
 	"transfer": "history", "transfer-export": "history", "transfer-encrypted": "history", "transfer-import": "history",
 	"doctor": "health", "validate": "health", "repair": "health", "logs": "health",
 	"settings": "settings", "apitokens": "settings", "webhooks": "settings",
-	"overview": "overview",
+	"overview":     "overview",
+	"integrations": "personal", "sshfolder": "personal",
 	// Tasks, by what they do.
 	"act-addhost": "create", "act-token": "create", "act-mint": "create",
 	"act-pin": "change", "act-rotate": "change",
@@ -933,7 +944,9 @@ func paletteItems(readOnly bool) []paletteItem {
 		{"vms", "VMs", "/vms", "box", "SSH", "vm hypervisor devbox sync", "g v", ""},
 		{"sshconfig", "SSH config", "/ssh-config", "file-code", "SSH", "config render drift check", "g c", ""},
 		{"termius", "Termius import", "/termius", "server-2", "SSH", "termius import csv groups subgroups keys keychain export", "g u", ""},
-		{"structure", "Structure", "/structure", "folder", "SSH", "structure tree folder layout move loose keys drag drop watcher builder category", "g b", ""},
+		{"structure", "Structure", "/structure", "folder", "SSH", "structure tree folder layout move loose keys drag drop watcher builder category tools purpose rules", "g b", ""},
+		{"tools", "Tools", "/tools", "device-desktop", "SSH", "tool keys git docker signing ploi forge ansible", "t o", ""},
+		{"services", "Services", "/services", "activity", "SSH", "service health cloudflare access warp tailscale bastion teleport ssm", "s v", ""},
 		{"gitsign", "Git identities", "/git-sign", "git-compare", "SSH", "git commit sign signing signature allowed_signers email identity includeIf clone verify", "g g", ""},
 		{"snapshots", "Snapshots", "/snapshots", "archive", "History", "snapshot bundle backup restore", "g s", ""},
 		{"tokens", "Auth tokens", "/tokens", "cloud-lock", "Tokens", "token npm composer docker git netrc pypi cargo gem gradle maven yarn helm gh", "g t", ""},
@@ -953,6 +966,8 @@ func paletteItems(readOnly bool) []paletteItem {
 		{"apitokens", "API tokens", "/api-tokens", "license", "System", "api token create revoke read programs", "g j", ""},
 		{"webhooks", "Webhooks", "/webhooks", "bolt", "System", "webhook endpoint events deliver test secret", "g q", ""},
 		{"about", "About", "/about", "info-circle", "System", "about version licences", "g i", ""},
+		{"integrations", "Tool integrations", "/integrations", "plug-connected", "Help", "help integrations tools termius iterm2 putty securecrt mobaxterm filezilla winscp cyberduck tabby ansible import warp routes", "h i", ""},
+		{"sshfolder", "SSH folder", "/ssh-folder", "binary-tree", "Help", "ssh folder tree diagram layout structure profiles tools keys files", "h f", ""},
 	}
 	if !readOnly {
 		items = append(items,

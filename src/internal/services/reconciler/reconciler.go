@@ -134,7 +134,7 @@ type Reconciler struct {
 func New(p paths.Paths, m *manifest.Manifest, inv *inventory.Inventory, emitUseKeychain bool) *Reconciler {
 	return &Reconciler{
 		p: p, m: m, inv: inv, ks: keystore.New(), op: opstore.New(),
-		cfg: configsvc.New(p.SSHDir, m, emitUseKeychain),
+		cfg: configsvc.New(p.SSHDir, m, emitUseKeychain).WithState(p.StateDir()),
 	}
 }
 
@@ -318,8 +318,22 @@ func (r *Reconciler) recordExisting(pk plannedKey) bool {
 	if err != nil {
 		return false // unreadable: key list and doctor keep reporting it
 	}
-	if _, taken := r.inv.Keys[fp]; taken {
-		return false // recorded under another path; that record is not ours to move
+	if rec, taken := r.inv.Keys[fp]; taken {
+		// Recorded under another path. When a manifest key still owns that
+		// path, the record is that key's and stays. When none does, the same
+		// key was moved (a tool key into profiles/tools/, a profile into a
+		// category): the record follows it, created date and deployments kept.
+		if r.ownsIdentity(rec.Path) {
+			return false
+		}
+		from := rec.Path
+		rec.Path, rec.Profile = r.m.IdentityFile(ref.Profile, ref.KeyName), ref.Profile
+		r.inv.Keys[fp] = rec
+		log.Audit(r.p.AuditLog(), "reconcile.relocate",
+			log.Field{Key: "key", Value: ref.KeyName},
+			log.Field{Key: "fingerprint", Value: fp},
+			log.Field{Key: "from", Value: from}, log.Field{Key: "to", Value: rec.Path})
+		return true
 	}
 	keyType := r.m.KeyTypeFor(ref)
 	if r.m.Profiles[ref.Profile].InOnePassword() {
@@ -345,6 +359,20 @@ func (r *Reconciler) recordExisting(pk plannedKey) bool {
 		log.Field{Key: "fingerprint", Value: fp},
 		log.Field{Key: "profile", Value: ref.Profile})
 	return true
+}
+
+// ownsIdentity reports whether a manifest key's IdentityFile is path.
+func (r *Reconciler) ownsIdentity(path string) bool {
+	refs, err := r.m.KeyRefs()
+	if err != nil {
+		return true // unknown: keep the record where it is
+	}
+	for _, ref := range refs {
+		if r.m.IdentityFile(ref.Profile, ref.KeyName) == path {
+			return true
+		}
+	}
+	return false
 }
 
 // RecordExisting records one key that is on disk with no inventory record (an

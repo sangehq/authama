@@ -19,15 +19,15 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 
 | | Count |
 | --- | --- |
-| Commands (runnable, not hidden, not help-only parents) | 166 |
-| Help-only parent commands left out | 26 |
-| Web | 144 |
+| Commands (runnable, not hidden, not help-only parents) | 185 |
+| Help-only parent commands left out | 30 |
+| Web | 163 |
 | Partial | 3 |
 | CLI-only by design | 19 |
 | Gap | 0 |
-| Flags on those commands | 431 |
-| Flags covered | 357 |
-| Flags CLI-only by design | 74 |
+| Flags on those commands | 496 |
+| Flags covered | 416 |
+| Flags CLI-only by design | 80 |
 | Flags with no web control | 0 |
 
 
@@ -101,10 +101,12 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `ssh bundle` | web | /snapshots: Bundle | `--keep`, `--output` (CLI), `--recipient`, `--sign-key` (CLI) | Written to the state home dist/. --sign-key stays in the terminal: ssh-keygen may ask for the key's passphrase. |
 | `ssh clean` | web | /doctor: Clean | `--adopt`, `--dry-run`, `--yes` |  |
 | `ssh config adopt` | web | /ssh-config: Adopt duplicate Host blocks | `--dry-run`, `--yes` | New in this branch. |
-| `ssh config check` | web | /ssh-config | - |  |
+| `ssh config check` | web | /ssh-config | - | HAND-EDIT lines show as the Hand edits card, with Keep and Discard. |
 | `ssh config export` | web | /ssh-config: download ssh_config | `--flat`, `--out` |  |
-| `ssh config render` | web | /ssh-config, overview: Re-render | `--dry-run`, `--yes` |  |
+| `ssh config keep-edits` | web | /ssh-config: Keep hand edits; offered on a render refused over hand edits | `--dry-run`, `--yes` | The preview is the dry run: it lists each block adopted and the manifest diff. |
+| `ssh config render` | web | /ssh-config, overview: Re-render; /ssh-config: Discard hand edits and render | `--dry-run`, `--force`, `--yes` | A render refused over hand edits lists them and offers Keep or Discard. --force is a destructive change (confirm dialog, owner PIN when set); its result names the backup. |
 | `ssh config show` | web | /ssh-config | - |  |
+| `ssh config tree` | web | /ssh-config: Include tree and host source files | `--json` | The tree follows every Include (quoted paths, globs, nested, Host/Match tagged `from Match` without running `Match exec`, cycle and depth warnings). Files authama does not manage are labelled and never rewritten. |
 | `ssh deploy` | web | key page: Deploy (job) | `--direct`, `--yes` |  |
 | `ssh diff` | web | Reconcile preview | - |  |
 | `ssh expiry` | web | /keys, /audit | - |  |
@@ -117,11 +119,13 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `ssh git sign verify` | web | /git-sign?check= | `--json`, `--number`, `--strict` (CLI) |  |
 | `ssh git status` | web | /git-sign: Remote mode (?remotes=) | `--json` | Mode and owner per checkout. |
 | `ssh git use` | web | /git-sign: Remote mode, Switch (preview) | `--dry-run`, `--json`, `--mode`, `--profile`, `--yes` | Checks with ls-remote on apply. |
-| `ssh host add` | web | /hosts: Add a host | `--env`, `--hostname`, `--key-name`, `--port`, `--provider`, `--proxy`, `--role`, `--tag`, `--token-env`, `--user` | Alias empty: generated from env and role. |
+| `ssh host add` | web | /hosts: Add a host | `--alias`, `--comment`, `--connect-timeout`, `--env`, `--hostname`, `--key-name`, `--option`, `--port`, `--provider`, `--proxy`, `--proxy-command`, `--proxy-jump`, `--role`, `--section`, `--service`, `--tag`, `--token-env`, `--update`, `--user` | Alias empty: generated from env and role. Routes under Routes. --update: the Update it if it exists box, and a preview of an alias the profile has offers the update. |
 | `ssh host apply` | web | /hosts: Add or update in bulk | `--category`, `--create-profile`, `--dry-run`, `--file` (CLI), `--host`, `--no-pin`, `--reconcile`, `--tag`, `--yes` | The web reconcile is always --no-pin; pin from /hosts. |
 | `ssh host delete` | web | host page: Delete; --revoke/--purge as a job | `--no-key-backup` (CLI), `--purge`, `--revoke`, `--yes` |  |
-| `ssh host edit` | web | host page: Edit | `--hostname`, `--key-name`, `--port`, `--provider`, `--proxy`, `--tag`, `--token-env`, `--untag`, `--user` | --key-name/--provider/--token-env/--proxy added in this branch. |
-| `ssh import` | web | /import | `--dry-run`, `--force`, `--yes` |  |
+| `ssh host edit` | web | host page: Edit | `--alias`, `--comment`, `--connect-timeout`, `--hostname`, `--key-name`, `--option`, `--port`, `--provider`, `--proxy`, `--proxy-command`, `--proxy-jump`, `--remove-alias`, `--remove-service`, `--section`, `--service`, `--tag`, `--token-env`, `--unset-option`, `--untag`, `--user` | Routes section filled in with the current values: a name or option taken out is --remove-alias/--unset-option. |
+| `ssh host variant remove` | web | host page: Route variants, remove | - | New in this branch. |
+| `ssh host variant set` | web | host page: Route variants, Add or change one | `--comment`, `--connect-timeout`, `--hostname`, `--option`, `--port`, `--proxy`, `--proxy-command`, `--proxy-jump`, `--remove-service`, `--section`, `--service`, `--unset-option` | Empty fields leave a variant's settings; unset one from the CLI or remove and set again. |
+| `ssh import` | web | /import | `--dry-run`, `--force`, `--yes` | Takes in extra Host names as aliases, ProxyCommand (cloudflared, none, a command), options, section and comment lines. |
 | `ssh key ack` | web | key page: Acknowledge; /keys: Acknowledge new keys | `--all`, `--category` |  |
 | `ssh key add` | web | /keys: Add a key | `--host`, `--passphrase` (CLI), `--rotate-after-days`, `--type` | A passphrase stays in the terminal. |
 | `ssh key adopt` | web | /structure: keep in place | `--host`, `--yes` |  |
@@ -161,12 +165,27 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `ssh snapshots list` | web | /snapshots | `--csv` |  |
 | `ssh snapshots prune` | web | /snapshots: Prune | `--keep` |  |
 | `ssh snapshots restore` | web | /snapshots/{id}: Restore | `--yes` |  |
+| `ssh service add` | web | /services: Add a catalog service | `--binary`, `--kind`, `--label` |  |
+| `ssh service edit` | web | /services: Edit a catalog service | `--binary`, `--kind`, `--label` | Dedicated edit form; the add form also updates an existing name. |
+| `ssh service health` | web | /services: Health | `--json` | Read-only; never starts a tunnel or changes WARP. |
+| `ssh service list` | web | /services | `--json` |  |
+| `ssh service remove` | web | /services: Remove | `--yes` |  |
+| `ssh service show` | web | /services: Catalog | - |  |
+| `ssh service status` | web | /services: Health | `--json` | Alias of health. |
 | `ssh structure approve` | web | /structure: drag-and-drop, Approve | `--dry-run`, `--name`, `--plan`, `--profile`, `--yes` |  |
-| `ssh structure check` | web | /structure (live watcher) | `--notify` (CLI), `--quiet` (CLI) |  |
+| `ssh structure check` | web | /structure (live watcher) | `--notify` (CLI), `--quiet` (CLI) | Auto-applies rules you enabled with --auto. |
+| `ssh structure classify` | web | /structure (suggestions, evidence) | `--dry-run`, `--json` |  |
 | `ssh structure dismiss` | web | /structure: Dismiss/Undo | `--undo` |  |
 | `ssh structure install` | CLI-only by design | - | `--yes` (CLI) | Background service; the page shows the command. |
 | `ssh structure list` | web | /structure | `--all`, `--json` |  |
+| `ssh structure rules add` | web | /structure: Purpose rules | `--auto`, `--comment`, `--fingerprint`, `--kind`, `--name`, `--profile`, `--tool`, `--yes` |  |
+| `ssh structure rules list` | web | /structure: Purpose rules | `--json` |  |
+| `ssh structure rules remove` | web | /structure: Purpose rules | `--yes` |  |
+| `ssh structure rules set` | web | /structure: Enable/disable auto | `--auto`, `--yes` |  |
 | `ssh structure uninstall` | CLI-only by design | - | - | Background service. |
+| `ssh tool list` | web | /tools: list | `--json` |  |
+| `ssh tool show` | web | /tools?show=profile/key | - | Open a row, or pass `?show=`. |
+| `ssh tool status` | web | /tools: Status | `--json` | Declared / present / missing counts and the missing list. |
 | `ssh termius keys` | web | /termius: keys | `--clear` (CLI), `--clear-after` (CLI), `--include-git`, `--print` (CLI), `--skip` |  |
 | `ssh validate` | web | /validate | - |  |
 | `ssh view` | web | host page | - |  |
@@ -210,6 +229,14 @@ None. Every command and flag is on the web, or CLI-only by design for the reason
 - `rotate --keep-old`: Take the previous key off servers, unticked.
 - `rotate --failed`: Choose the keys the last rotation left, on the rotate review.
 - `host apply --no-pin`: the web reconcile always runs with `--no-pin`; host keys are pinned from /hosts.
+- `host add --update`: Update it if the profile has it already; a preview of an alias the profile has also offers the update.
+- `host edit --remove-alias`, `--unset-option`, `host variant set --unset-option`: take the name or option out of its field; the preview shows the flag.
+- `ssh config keep-edits --dry-run`: the preview, which lists each block adopted; Make this change is `--yes`.
+- `ssh config render --force`: Discard hand edits and render, on /ssh-config or on a refused render; the backup path is in the result.
+- `host edit --remove-alias/--unset-option`: take the name or option out of the Routes fields on the Edit panel.
+- `host add|edit` and `host variant set --service` / `--remove-service`: Services checkboxes (and Other services) on the host add, edit and variant panels; unchecking one is `--remove-service`.
+- `ssh service edit`: the Edit a catalog service form on /services.
+- `ssh tool show` / `ssh tool status`: a row on /tools (`?show=profile/key`) and the Status card.
 - `knownhosts pin --all`: Pin host keys on /hosts (`knownhosts init`), which pins every host.
 - `host delete`, `profile delete --revoke/--purge`: a job, linked from the plain delete.
 

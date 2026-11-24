@@ -1,0 +1,33 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "Help" $.Title "Which of your hosts each tool gets, and the routes it leaves out. Every list is read from the file the download writes." (action "Termius import" "/termius" "server-2" | withTip "termius") (action "SSH config" "/ssh-config" "file-code" | withTip "ssh-config"))}}
+<div class="card mb-3">
+  <div class="card-body">
+    <p class="mb-2">The manifest has <strong id="int-hosts">{{.Hosts}}</strong> {{if eq .Hosts 1}}host{{else}}hosts{{end}} and <strong id="int-routes">{{.Routes}}</strong> extra {{if eq .Routes 1}}route{{else}}routes{{end}} (a variant such as <code>warp-&lt;alias&gt;</code>), all rendered into <code>{{.SSHConfig}}</code>.</p>
+    <p class="text-secondary mb-0">A tool that runs <code>ssh &lt;alias&gt;</code> gets every route, proxies included. A tool that connects on its own gets a host, port, user and key, so it leaves out a host reached through a proxy (Cloudflare Access, a VM) and gets that host's direct routes instead. No export carries a private key.</p>
+  </div>
+</div>
+<div class="row row-cards">
+  {{range .Tools}}
+  <div class="col-md-6 col-xl-4">
+    <div class="card h-100" id="tool-{{.Name}}">
+      <div class="card-header">
+        <h2 class="card-title">{{.Label}}</h2>
+        <div class="card-actions">{{if .ViaSSH}}<span class="badge badge-ok">runs ssh</span>{{else}}<span class="badge badge-muted">connects itself</span>{{end}}</div>
+      </div>
+      <div class="card-body">
+        <p class="text-secondary">{{.About}}</p>
+        <div class="mb-2"><strong>{{len .Included}}</strong> {{if eq (len .Included) 1}}host gets{{else}}hosts get{{end}} in{{if .Skipped}}, <strong>{{len .Skipped}}</strong> left out{{end}}.</div>
+        {{if .Included}}<details class="mb-2"><summary>Hosts it gets</summary><div class="mt-1">{{range $i, $a := .Included}}{{if $i}} {{end}}<code>{{$a}}</code>{{end}}</div></details>{{end}}
+        {{if .Skipped}}<details class="mb-2"><summary>Left out, and why</summary><ul class="mt-1 mb-0 ps-3 small">{{range .Skipped}}<li><code>{{.Alias}}</code>: {{.Reason}}</li>{{end}}</ul></details>{{end}}
+        {{if .Notes}}<details class="mb-2"><summary>Finishing the import</summary><ul class="mt-1 mb-0 ps-3 small">{{range .Notes}}<li>{{.}}</li>{{end}}</ul></details>{{end}}
+        <div class="small text-secondary">At a terminal: <code>{{.Command}}</code></div>
+      </div>
+      <div class="card-footer d-flex gap-2">
+        <a class="btn btn-sm btn-primary" href="{{basePath}}{{.Download}}" download{{desc "download"}}>{{icon "download"}}<span class="ms-1">Download</span></a>
+        <a class="btn btn-sm" href="{{basePath}}{{.Page}}"{{desc "open-page"}}>View details</a>
+      </div>
+    </div>
+  </div>
+  {{end}}
+</div>
+{{end}}{{end}}

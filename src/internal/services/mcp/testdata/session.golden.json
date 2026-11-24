@@ -21,7 +21,7 @@
     "result": {
       "content": [
         {
-          "text": "{\"hosts\":[{\"alias\":\"simbi-prd-web-00\",\"profile\":\"simtabi\",\"hostname\":\"203.0.113.10\",\"user\":\"ploi\",\"port\":22,\"provider\":\"server\",\"key\":\"simtabi_simbi-prd-web-00-ed25519\",\"key_ref\":\"simtabi/simtabi_simbi-prd-web-00-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"prd\",\"role\":\"web\",\"code\":\"simbi\",\"number\":\"00\",\"named\":true,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[]},{\"alias\":\"oribi-web\",\"profile\":\"simtabi\",\"hostname\":\"203.0.113.11\",\"user\":\"ploi\",\"port\":22,\"provider\":\"server\",\"key\":\"simtabi_oribi-web-ed25519\",\"key_ref\":\"simtabi/simtabi_oribi-web-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"\",\"role\":\"\",\"code\":\"\",\"number\":\"\",\"named\":false,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[]}]}",
+          "text": "{\"hosts\":[{\"alias\":\"simbi-prd-web-00\",\"profile\":\"simtabi\",\"hostname\":\"203.0.113.10\",\"user\":\"ploi\",\"port\":22,\"provider\":\"server\",\"key\":\"simtabi_simbi-prd-web-00-ed25519\",\"key_ref\":\"simtabi/simtabi_simbi-prd-web-00-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"prd\",\"role\":\"web\",\"code\":\"simbi\",\"number\":\"00\",\"named\":true,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[],\"aliases\":[],\"route\":\"\",\"routes\":[]},{\"alias\":\"oribi-web\",\"profile\":\"simtabi\",\"hostname\":\"203.0.113.11\",\"user\":\"ploi\",\"port\":22,\"provider\":\"server\",\"key\":\"simtabi_oribi-web-ed25519\",\"key_ref\":\"simtabi/simtabi_oribi-web-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"\",\"role\":\"\",\"code\":\"\",\"number\":\"\",\"named\":false,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[],\"aliases\":[],\"route\":\"\",\"routes\":[]}]}",
           "type": "text"
         }
       ],
@@ -48,7 +48,10 @@
             "token_env": "",
             "user": "ploi",
             "vm": false,
-            "vpn_name": ""
+            "vpn_name": "",
+            "aliases": [],
+            "route": "",
+            "routes": []
           },
           {
             "alias": "oribi-web",
@@ -71,7 +74,10 @@
             "token_env": "",
             "user": "ploi",
             "vm": false,
-            "vpn_name": ""
+            "vpn_name": "",
+            "aliases": [],
+            "route": "",
+            "routes": []
           }
         ]
       }
@@ -556,7 +562,7 @@
     "result": {
       "content": [
         {
-          "text": "{\"hosts\":[{\"alias\":\"gh\",\"profile\":\"work\",\"hostname\":\"github.com\",\"user\":\"git\",\"port\":22,\"provider\":\"server\",\"key\":\"work_gh-ed25519\",\"key_ref\":\"work/work_gh-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"\",\"role\":\"\",\"code\":\"\",\"number\":\"\",\"named\":false,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[]}],\"key\":{\"ref\":\"work/work_gh-ed25519\",\"profile\":\"work\",\"name\":\"work_gh-ed25519\",\"type\":\"ed25519\",\"fingerprint\":\"\",\"created\":\"\",\"expires_on\":\"\",\"rotate_after_days\":365,\"store\":\"disk\",\"on_disk\":true,\"recorded\":false,\"state\":\"no-key\",\"hosts\":[\"gh\"],\"deployments\":0,\"recency\":{\"events\":[],\"is_new\":false,\"pill\":{\"label\":\"\",\"tone\":\"\"}}}}",
+          "text": "{\"hosts\":[{\"alias\":\"gh\",\"profile\":\"work\",\"hostname\":\"github.com\",\"user\":\"git\",\"port\":22,\"provider\":\"server\",\"key\":\"work_gh-ed25519\",\"key_ref\":\"work/work_gh-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"\",\"role\":\"\",\"code\":\"\",\"number\":\"\",\"named\":false,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[],\"aliases\":[],\"route\":\"\",\"routes\":[]}],\"key\":{\"ref\":\"work/work_gh-ed25519\",\"profile\":\"work\",\"name\":\"work_gh-ed25519\",\"type\":\"ed25519\",\"fingerprint\":\"\",\"created\":\"\",\"expires_on\":\"\",\"rotate_after_days\":365,\"store\":\"disk\",\"on_disk\":true,\"recorded\":false,\"state\":\"no-key\",\"hosts\":[\"gh\"],\"deployments\":0,\"recency\":{\"events\":[],\"is_new\":false,\"pill\":{\"label\":\"\",\"tone\":\"\"}}}}",
           "type": "text"
         }
       ],
@@ -583,7 +589,10 @@
             "token_env": "",
             "user": "git",
             "vm": false,
-            "vpn_name": ""
+            "vpn_name": "",
+            "aliases": [],
+            "route": "",
+            "routes": []
           }
         ],
         "key": {
@@ -632,7 +641,7 @@
     "result": {
       "content": [
         {
-          "text": "{\"hosts\":[{\"alias\":\"simbi-prd-web-00\",\"profile\":\"simtabi\",\"hostname\":\"203.0.113.10\",\"user\":\"ploi\",\"port\":22,\"provider\":\"server\",\"key\":\"simtabi_simbi-prd-web-00-ed25519\",\"key_ref\":\"simtabi/simtabi_simbi-prd-web-00-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"prd\",\"role\":\"web\",\"code\":\"simbi\",\"number\":\"00\",\"named\":true,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[]},{\"alias\":\"oribi-web\",\"profile\":\"simtabi\",\"hostname\":\"203.0.113.11\",\"user\":\"ploi\",\"port\":22,\"provider\":\"server\",\"key\":\"simtabi_oribi-web-ed25519\",\"key_ref\":\"simtabi/simtabi_oribi-web-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"\",\"role\":\"\",\"code\":\"\",\"number\":\"\",\"named\":false,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[]},{\"alias\":\"gh\",\"profile\":\"work\",\"hostname\":\"github.com\",\"user\":\"git\",\"port\":22,\"provider\":\"server\",\"key\":\"work_gh-ed25519\",\"key_ref\":\"work/work_gh-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"\",\"role\":\"\",\"code\":\"\",\"number\":\"\",\"named\":false,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[]}]}",
+          "text": "{\"hosts\":[{\"alias\":\"simbi-prd-web-00\",\"profile\":\"simtabi\",\"hostname\":\"203.0.113.10\",\"user\":\"ploi\",\"port\":22,\"provider\":\"server\",\"key\":\"simtabi_simbi-prd-web-00-ed25519\",\"key_ref\":\"simtabi/simtabi_simbi-prd-web-00-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"prd\",\"role\":\"web\",\"code\":\"simbi\",\"number\":\"00\",\"named\":true,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[],\"aliases\":[],\"route\":\"\",\"routes\":[]},{\"alias\":\"oribi-web\",\"profile\":\"simtabi\",\"hostname\":\"203.0.113.11\",\"user\":\"ploi\",\"port\":22,\"provider\":\"server\",\"key\":\"simtabi_oribi-web-ed25519\",\"key_ref\":\"simtabi/simtabi_oribi-web-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"\",\"role\":\"\",\"code\":\"\",\"number\":\"\",\"named\":false,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[],\"aliases\":[],\"route\":\"\",\"routes\":[]},{\"alias\":\"gh\",\"profile\":\"work\",\"hostname\":\"github.com\",\"user\":\"git\",\"port\":22,\"provider\":\"server\",\"key\":\"work_gh-ed25519\",\"key_ref\":\"work/work_gh-ed25519\",\"status\":\"no-key\",\"tags\":[],\"env\":\"\",\"role\":\"\",\"code\":\"\",\"number\":\"\",\"named\":false,\"requires_vpn\":false,\"vpn_name\":\"\",\"vm\":false,\"proxy\":false,\"token_env\":\"\",\"options\":[],\"aliases\":[],\"route\":\"\",\"routes\":[]}]}",
           "type": "text"
         }
       ],
@@ -659,7 +668,10 @@
             "token_env": "",
             "user": "ploi",
             "vm": false,
-            "vpn_name": ""
+            "vpn_name": "",
+            "aliases": [],
+            "route": "",
+            "routes": []
           },
           {
             "alias": "oribi-web",
@@ -682,7 +694,10 @@
             "token_env": "",
             "user": "ploi",
             "vm": false,
-            "vpn_name": ""
+            "vpn_name": "",
+            "aliases": [],
+            "route": "",
+            "routes": []
           },
           {
             "alias": "gh",
@@ -705,7 +720,10 @@
             "token_env": "",
             "user": "git",
             "vm": false,
-            "vpn_name": ""
+            "vpn_name": "",
+            "aliases": [],
+            "route": "",
+            "routes": []
           }
         ]
       }

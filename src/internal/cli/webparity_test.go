@@ -371,6 +371,58 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 	_, _ = rand.Read(importKey)
 	_ = os.WriteFile(filepath.Join(importSrc, "legacy_key"), importKey, 0o600)
 
+	withHostService := func(p paths.Paths) {
+		r := editor.RoutesOf(editor.New(p))
+		if _, err := r.UpsertHost("work", "db", editor.HostFields{RouteFields: editor.RouteFields{Services: []string{"cloudflare-warp"}}}); err != nil {
+			panic(err)
+		}
+	}
+	withCatalogService := func(p paths.Paths) {
+		if err := editor.New(p).UpsertService(manifest.ServiceSpec{Name: "cf-prod", Kind: "cloudflare-access", Label: "Prod Access"}); err != nil {
+			panic(err)
+		}
+	}
+	// withRoutes gives db a second name, a variant and an option on both, as
+	// the route cases change them.
+	withRoutes := func(p paths.Paths) {
+		r := editor.RoutesOf(editor.New(p))
+		set := [][2]string{{"Compression", "yes"}}
+		if _, err := r.UpsertHost("work", "db", editor.HostFields{AddAliases: []string{"db-a"},
+			RouteFields: editor.RouteFields{SetOptions: set, Comment: ptr("the db box")}}); err != nil {
+			panic(err)
+		}
+		if _, err := r.SetVariant("work", "db", "warp", editor.VariantFields{Hostname: ptr("10.116.0.3"),
+			RouteFields: editor.RouteFields{Proxy: ptr("none"), SetOptions: set}}); err != nil {
+			panic(err)
+		}
+	}
+	// handEdited renders db's routes, then types a line into its managed block.
+	handEdited := func(p paths.Paths) {
+		withRoutes(p)
+		mutation.Release()
+		plan, err := change.Preview(p, change.ConfigRender())
+		if err == nil {
+			_, _, err = change.Apply(p, change.ConfigRender(), plan.Hash, 10, history.SourceWeb)
+		}
+		if err != nil {
+			panic(err)
+		}
+		edited := false
+		_ = filepath.Walk(p.SSHDir, func(path string, fi os.FileInfo, err error) error {
+			if err != nil || fi.IsDir() {
+				return nil
+			}
+			b, _ := os.ReadFile(path)
+			if s := string(b); strings.Contains(s, "Managed by authama") && strings.Contains(s, "\nHost db db-a\n") {
+				edited = os.WriteFile(path, []byte(strings.Replace(s, "\nHost db db-a\n", "\nHost db db-a\n    ServerAliveCountMax 4\n", 1)), 0o600) == nil
+			}
+			return nil
+		})
+		if !edited {
+			panic("no managed file holds Host db db-a")
+		}
+	}
+
 	cases := []struct {
 		name  string
 		cli   []string
@@ -390,6 +442,56 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 		{"host edit", []string{"ssh", "host", "edit", "work", "db", "-u", "root", "--tag", ""},
 			change.HostEdit("work", "db", change.HostInput{User: ptr("root"), Tags: &[]string{""}}), nil, nil, nil},
 		{"host delete", []string{"ssh", "host", "delete", "work", "db", "--yes"}, change.HostDelete("work", "db"), nil, nil, nil},
+		{"host add with routes", []string{"ssh", "host", "add", "work", "web", "-H", "web.example", "-u", "deploy",
+			"--alias", "web-cf", "--proxy", "cloudflared", "--connect-timeout", "10", "--option", "ServerAliveInterval=30",
+			"--section", "prod: Cloudflare Access", "--comment", "the web box"},
+			change.HostAdd("work", "web", change.HostInput{Hostname: ptr("web.example"), User: ptr("deploy"),
+				AddAliases: []string{"web-cf"}, RouteInput: change.RouteInput{Proxy: ptr("cloudflared"), ConnectTimeout: ptr(10),
+					Options: [][2]string{{"ServerAliveInterval", "30"}}, Section: ptr("prod: Cloudflare Access"), Comment: ptr("the web box")}}),
+			nil, nil, nil},
+		{"host add --update", []string{"ssh", "host", "add", "work", "db", "-H", "db2.example", "-u", "ops", "--update",
+			"--proxy-command", "nc -X 5 -x proxy:1080 %h %p"},
+			change.HostAdd("work", "db", change.HostInput{Hostname: ptr("db2.example"), User: ptr("ops"), Update: true,
+				RouteInput: change.RouteInput{ProxyCommand: ptr("nc -X 5 -x proxy:1080 %h %p")}}), nil, nil, nil},
+		{"host edit routes", []string{"ssh", "host", "edit", "work", "db", "--alias", "db-b", "--remove-alias", "db-a",
+			"--proxy-jump", "bastion", "--unset-option", "Compression", "--comment", ""},
+			change.HostEdit("work", "db", change.HostInput{AddAliases: []string{"db-b"}, RemoveAliases: []string{"db-a"},
+				RouteInput: change.RouteInput{ProxyJump: ptr("bastion"), Unset: []string{"Compression"}, Comment: ptr("")}}),
+			withRoutes, nil, nil},
+		{"host variant set", []string{"ssh", "host", "variant", "set", "work", "db", "warp", "-H", "10.116.0.3", "-p", "2222",
+			"--proxy", "none", "--connect-timeout", "10", "--option", "ServerAliveInterval=20", "--section", "prod: WARP"},
+			change.HostVariantSet("work", "db", "warp", change.VariantInput{Hostname: ptr("10.116.0.3"), Port: ptr(2222),
+				RouteInput: change.RouteInput{Proxy: ptr("none"), ConnectTimeout: ptr(10),
+					Options: [][2]string{{"ServerAliveInterval", "20"}}, Section: ptr("prod: WARP")}}), nil, nil, nil},
+		{"host variant edit", []string{"ssh", "host", "variant", "set", "work", "db", "warp", "--unset-option", "Compression",
+			"--proxy", "off"},
+			change.HostVariantSet("work", "db", "warp", change.VariantInput{RouteInput: change.RouteInput{Proxy: ptr("off"),
+				Unset: []string{"Compression"}}}), withRoutes, nil, nil},
+		{"host variant remove", []string{"ssh", "host", "variant", "remove", "work", "db", "warp"},
+			change.HostVariantRemove("work", "db", "warp"), withRoutes, nil, nil},
+		{"host add --service", []string{"ssh", "host", "add", "work", "web", "-H", "web.example", "-u", "deploy",
+			"--service", "cloudflare-access"},
+			change.HostAdd("work", "web", change.HostInput{Hostname: ptr("web.example"), User: ptr("deploy"),
+				RouteInput: change.RouteInput{Services: []string{"cloudflare-access"}}}), nil, nil, nil},
+		{"host edit --service", []string{"ssh", "host", "edit", "work", "db", "--service", "tailscale",
+			"--remove-service", "cloudflare-warp"},
+			change.HostEdit("work", "db", change.HostInput{RouteInput: change.RouteInput{Services: []string{"tailscale"},
+				RemoveServices: []string{"cloudflare-warp"}}}), withHostService, nil, nil},
+		{"host variant set --service", []string{"ssh", "host", "variant", "set", "work", "db", "warp",
+			"--service", "cloudflare-warp"},
+			change.HostVariantSet("work", "db", "warp", change.VariantInput{RouteInput: change.RouteInput{Services: []string{"cloudflare-warp"}}}),
+			withRoutes, nil, nil},
+		{"service add", []string{"ssh", "service", "add", "cf-prod", "--kind", "cloudflare-access", "--label", "Prod Access"},
+			change.ServiceUpsert(manifest.ServiceSpec{Name: "cf-prod", Kind: "cloudflare-access", Label: "Prod Access"}, false),
+			nil, nil, nil},
+		{"service edit", []string{"ssh", "service", "edit", "cf-prod", "--kind", "cloudflare-access", "--label", "Updated"},
+			change.ServiceUpsert(manifest.ServiceSpec{Name: "cf-prod", Kind: "cloudflare-access", Label: "Updated"}, true),
+			withCatalogService, nil, nil},
+		{"service remove", []string{"ssh", "service", "remove", "cf-prod", "--yes"},
+			change.ServiceRemove("cf-prod"), withCatalogService, nil, nil},
+		{"config keep-edits", []string{"ssh", "config", "keep-edits", "--yes"}, change.ConfigKeepEdits(), handEdited, nil, nil},
+		{"config render --force", []string{"ssh", "config", "render", "--force", "--yes"}, change.ConfigRenderWith(true),
+			handEdited, nil, nil},
 		{"key delete", []string{"ssh", "key", "delete", "work/spare", "--yes"},
 			change.KeyDelete(manifest.KeyRef{Profile: "work", KeyName: "spare"}), nil, nil, nil},
 		{"vm add", []string{"ssh", "vm", "add", "work", "devbox", "--hypervisor", "parallels", "--vm", "Ubuntu", "-u", "dev", "--yes"},
@@ -491,7 +593,7 @@ func TestEveryWebChangeMatchesItsCommand(t *testing.T) {
 		{"key root", []string{"ssh", "key", "root", "keys", "--yes"}, change.KeyRoot("keys", "keys"), nil, nil, nil},
 		{"key ack", []string{"ssh", "key", "ack", "work"}, change.KeyAck(keysvc.Selection{Selectors: []string{"work"}}), nil, nil, nil},
 	}
-	if len(cases) != 44 {
+	if len(cases) != 58 {
 		t.Fatalf("%d cases; every change the web offers needs one", len(cases))
 	}
 	for _, tc := range cases {

@@ -73,3 +73,6 @@ build/dist/
 
 # The dev container home (compose.yaml): token files the container writes.
 .authama-home/
+
+# Local Playwright MCP captures (agent/browser sessions). Not part of the product.
+.playwright-mcp/

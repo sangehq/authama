@@ -6,7 +6,106 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`Include` with a Windows path.** The Include tokenizer took every backslash as an escape, so
+  `Include C:\Users\me\.ssh\extra` was read as `C:Usersme.sshextra` and never followed. It now
+  escapes as OpenSSH's `argv_split` does (a quote, a backslash, or an unquoted space), keeping every
+  other backslash.
+- **The header fits narrower windows.** The full search box and the Export / Import label show from
+  1400px, as icons below that, so the top bar no longer runs past the window at 1024 to 1399px with
+  wider system fonts.
+- **`doctor` judged tool keys wrongly.** It called a tool key untracked when it sat in a folder named for its
+  tool (owner guessed from the folder name), and unwired because no host names it; a tool reads its key
+  itself. Ownership now comes from the manifest, and a tool key is not expected to be wired.
+- **`reconcile` could not record a key whose files had moved.** Its fingerprint was already recorded at the
+  old path, so it was neither recorded nor cleaned. When no manifest key owns the old path, the record now
+  follows the key, deployments kept.
+- **A tool integration's file preview can be scrolled from the keyboard.** The `<pre>` that shows the download was overflow-auto but not focusable, which axe flags as `scrollable-region-focusable`. It now has `tabindex="0"`, like the SSH config and Transfer previews.
+
+- **Route and tool-integration badges meet contrast.** The Hosts list's route label (`vm`, `cloudflared`, …) and the Tool integrations "runs ssh" / "connects itself" badges used Tabler's `-lt` colours, which axe flags at below 4.5:1. They now use the same accessible `badge-muted` and `badge-ok` classes as the rest of the UI.
+
+- **A chosen host's other routes go into a filtered export.** The Termius page and `export hosts` with a selection (`/exports/run`, `--profile`, `--tag`) read hosts from the dataset, which has no variants, so `warp-<alias>` was omitted while an unfiltered export wrote it. `ClientHosts` also treated `ProxyCommand none` as a proxy. A chosen host now brings its routes, only a real proxy is left out of clients that connect themselves, and a UTF-16 client file (PuTTY's `.reg`) is shown as text in the Transfer and Tool integrations previews.
+
+- **Structure approve of a tool key works, and a preview leaves `~/.gitconfig` alone.** After a purpose move the renderer still wrote `IdentityFile` at the profile root, so the rewritten config looked like a hand edit and approve stopped. It now writes `tools/<tool>/...`, the same path `KeyPath` uses. A preview (or any apply against a copy of `~/.ssh`) also used to run a live `sange profile signing retarget`; it now passes `--dry-run` unless the SSH directory is the live `~/.ssh`.
+
+- **The Hosts list shows every route.** It drew one row per host and left out what
+  `~/.ssh/config` renders from it: a host's extra names (`Host web web-cf`), how ssh
+  reaches it (`vm`, `cloudflared`, `direct` for `ProxyCommand none`, `jump <host>`) and its
+  other routes, such as `warp-<alias>`. Each now shows, the routes as rows under their host.
+
+- **OpenSSH Include edge cases.** Quoted and backslash-escaped Include paths
+  (names with spaces) are tokenized the way OpenSSH argv-splits them, including
+  in the importer. A UTF-8 BOM is stripped and CRLF lines are accepted.
+  `Include` of a directory is a warning (OpenSSH only reads regular files).
+  `Include ~/.ssh/...` in a sandbox (`serve --dev-root`) resolves under that
+  sandbox, not process `$HOME/.ssh`. A glob that expands to more than 4096
+  paths is truncated with a warning; a config file larger than 2 MiB is
+  skipped. The watcher never watches `/` or a Windows volume root. Includes
+  inside a `Match` are tagged `from Match` and listed unconditionally;
+  `Match exec` is never run.
+
 ### Added
+
+- **Hosts export their extra names and routes.** A host row has `aliases`, `route` (`vm`, `cloudflared`,
+  `direct`, `command`, `jump <host>`) and `routes` (`warp-<alias>`), for `export hosts --columns`, the Export
+  page and the API; `hosts.csv` keeps its default columns.
+- **Help is a menu: Tool integrations and the SSH folder diagram.** The diagram (`/ssh-folder`,
+  `authama ssh structure diagram`) draws `~/.ssh` as a tree, each key and file labelled from the manifest
+  (the hosts a key serves, the profile a tool key belongs to), with the counts.
+- **Tables copy what they show, and stack on a narrow screen.** A right-click (or the context-menu key) on a cell copies the cell, its row, its column or the visible table, tab-separated so it pastes into a spreadsheet. Below 1200px the same tables become one card per row, each cell under its column name, so they do not scroll sideways.
+
+- **Help → Tool integrations** (`/integrations`). A Help link in the main menu opens one
+  card per tool authama hands hosts to: OpenSSH, Termius and every `export hosts --format`
+  client. Each card lists the hosts and routes that tool's export writes, the ones it leaves
+  out and why, its import notes, the download and the command, all read from the export itself.
+  **View details** opens each tool's page (`/integrations/<tool>`): its hosts with hostname, port,
+  user and route, what it leaves out, and a preview of the files the download writes.
+
+- **Any `~/.ssh` layout, and OpenSSH `Include`s.** authama follows every `Include` in
+  `~/.ssh/config` (relative paths against `~/.ssh`, globs including `**`, nested and
+  `Host`/`Match` includes, cycle and depth-16 protection, missing files as warnings)
+  wherever it reads a config: import, check, classify, the structure watcher, exports,
+  the web importer, and host listing. Each Host is attributed to its source file and
+  line. Files authama does not manage are never rewritten; IdentityFile references in
+  them are listed as a manual follow-up. Key discovery walks nested folders (skipping
+  `known_hosts*`, sockets, ControlPath and agent dirs, `authorized_keys`), keeps a
+  grouping you already have, and only suggests the managed taxonomy with evidence.
+  `ssh config tree [--json]` and the Include tree on the SSH config page show the
+  graph and each host's source. The watcher watches every directory that contributes
+  an included file or a key, including trees outside `~/.ssh`. See
+  [SSH configs in any folder layout](docs/reference/ssh-config-includes.md).
+
+- **Purpose keys, tools, and services (AT-14).** Host keys stay at the profile root; tool keys live under
+  `profiles/<category>/<profile>/tools/<tool>/` (`git`, `docker`, …). `ssh structure classify` (and the Structure
+  page, with evidence and drag onto `tools/<tool>/`) suggests those moves and an approved, snapshotted delete of a
+  leftover copy that has no remaining references. Rules can be remembered; `--auto` is off by default and still
+  snapshots. When a git-signing key moves, authama calls `sange profile signing retarget` and does not write
+  `~/.gitconfig`. Services (Cloudflare Access, WARP, Tailscale, …) attach to hosts and variants (`--service`);
+  `ssh service health` and the Services page are read-only. The Tools and Services pages, `ssh tool` and
+  `ssh service`, ship with this. `authama serve` watches `~/.ssh` (including `profiles/`), the config home,
+  `~/.gitconfig`, `~/.config/git` and `~/.docker/contexts` with fsnotify (debounced 1–2s) and still does a
+  30-second full scan; the Structure page shows Watching or Polling. Host and variant forms attach
+  `--service` / `--remove-service`; the Services page adds, edits and removes catalog entries; the Tools
+  page covers `ssh tool list|show|status`. `ssh structure install` is still CLI-only and is not run for you.
+  See [structure](docs/tools/structure.md), [tools](docs/tools/tools.md) and [services](docs/tools/services.md).
+
+- **Host routes.** `ssh host add|edit` take `--alias` (more names on the `Host` line; `edit --remove-alias`),
+  `--proxy none` (`ProxyCommand none`), `--proxy-command` (a quoted argv of your own), `--proxy-jump`,
+  `--connect-timeout`, `--option KEY=VALUE` for any ssh_config option OpenSSH knows (`edit --unset-option`),
+  `--section` (a heading above a group of blocks) and `--comment`; `add --update` creates or updates. `ssh host variant
+  set|remove` gives a host a second route, `<name>-<alias>` with the same user and key (a `warp-` twin on a private
+  address beside a Cloudflare Access host). The web host page edits all of it, and lists and sets variants. Exports:
+  variants are rows of their own; `ProxyCommand none` hosts are exported to Termius and the other clients. See [Give
+  a host more names, a proxy, and a second route](docs/recipes/host-routes.md).
+- **Hand edits are kept.** `ssh config render` remembers what it wrote and refuses to overwrite lines typed into a
+  managed file since; `ssh config keep-edits` (web: **SSH config › Keep hand edits**) takes them into the manifest,
+  `render --force` discards them after a backup, and `ssh config check` lists them. The web does all of it: a
+  Hand edits card on SSH config, Keep or Discard (previewed, confirmed, backup path shown) there and on a refused
+  render; host add's `--update` is a checkbox and is offered when the host exists; variants have an edit panel.
+- **Import takes in host routes.** `ssh import` (and the web importer) reads extra `Host` names as aliases,
+  `ProxyCommand none`, the Cloudflare Access command or a command of your own, other options, and the comment lines
+  above and inside a block as its section and comment, so the blocks authama writes import back the same.
 
 - **Every launch opens the browser, signed in.** Double-clicking authama, `authama` and `authama serve`
   now check the server before anything else: a stale record or a hung server (one that holds its port
@@ -176,6 +275,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     before the preview.
 
 ### Changed
+
+- **Dependencies:** `github.com/simtabi/go-notifykit/src` 0.1.0 → 0.1.1, and the shared release workflow
+  `simtabi/.github` `go-release.yml` 0.1.1 → 0.1.3 (pinned to `f654932`), folded in from Dependabot's
+  sangehq/authama#224 and #225.
+- **Tool keys live in one shared folder, `~/.ssh/profiles/tools/<tool>/`.** A git signing key or a docker
+  tunnel key used to sit in its profile's own `tools/` folder; it now sits in the key root's `tools/`, still
+  declared under (linked to) the profile that owns it, and the Tools page, Structure and the folder diagram
+  show each with its owner. `tools` is reserved: no category or uncategorised profile may take the name, and
+  two profiles cannot declare the same tool key. A key still in the old place is offered as a `misplaced`
+  move; approving it moves both halves, repoints `IdentityFile` lines, keeps the inventory record and hands a
+  git signing key to `sange profile signing retarget`.
+- **`--proxy none` writes `ProxyCommand none`.** It used to remove the proxy; `--proxy off` does that now. A plain
+  cloudflared path is written unquoted, as Cloudflare documents it, and a render with a `PATH` that lacks cloudflared
+  looks in its usual install paths before writing the bare name.
 
 - The hosts page leads to the Termius import instead of offering three Termius downloads; the plain Termius CSV
   download stays. The palette names that download "Download the Termius CSV, grouped by profile".

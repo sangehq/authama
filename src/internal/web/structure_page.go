@@ -5,12 +5,14 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/services/change"
+	"github.com/sangehq/authama/src/internal/services/events"
 	"github.com/sangehq/authama/src/internal/services/structure"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
@@ -35,6 +37,9 @@ type StructureView struct {
 	Categories  []string
 	ListCmd     string
 	InstallCmd  string
+	Rules       []structure.Rule
+	// WatchMode is "watching" (fsnotify) or "polling" (the 2s fallback).
+	WatchMode string
 }
 
 // StructureGroup is one category (Name "" is the profiles in none).
@@ -50,6 +55,7 @@ type StructureProfile struct {
 	OnePassword         bool
 	Keys                []StructureKey
 	Hosts               []StructureHost
+	Tools               []StructureToolFolder
 	Moves               []StructureOption // to another category
 }
 
@@ -75,6 +81,15 @@ type StructureOption struct {
 	Line, Target, Label string
 }
 
+// StructureToolFolder is a tool's folder as one profile owns it: the shared
+// <key root>/tools/<tool>/ with that profile's keys in it, shown under the
+// profile so each tool key stays grouped with its owner; a drop target for
+// purpose moves.
+type StructureToolFolder struct {
+	Tool, Dir string
+	Keys      []StructureKey
+}
+
 // StructureSuggestion is one key outside the layout, with its move choices.
 type StructureSuggestion struct {
 	structure.Suggestion
@@ -92,7 +107,11 @@ func (sp structurePage) handleStructure(w http.ResponseWriter, r *http.Request) 
 
 func (sp structurePage) view(showAll bool) (StructureView, error) {
 	p := sp.s.opts.Engine.Home()
-	v := StructureView{ShowAll: showAll,
+	mode, _ := sp.s.watchMode.Load().(string)
+	if mode == "" {
+		mode = events.ModePolling
+	}
+	v := StructureView{ShowAll: showAll, WatchMode: mode,
 		ListCmd:    brand.Command + " ssh structure list",
 		InstallCmd: brand.Command + " ssh structure install"}
 	m, err := manifest.Load(p.Manifest())
@@ -104,12 +123,14 @@ func (sp structurePage) view(showAll bool) (StructureView, error) {
 	}
 	v.Root = "~/.ssh/" + manifest.KeyRoot(m)
 	v.Categories = m.Categories()
-	v.Groups = structureGroups(p, m)
+	v.Rules, _ = structure.LoadRules(p)
 
 	all, checked, err := structure.Current(p)
 	if err != nil {
+		v.Groups = structureGroups(p, m, nil)
 		return v, err
 	}
+	v.Groups = structureGroups(p, m, all)
 	v.Checked = checked
 	for _, s := range all {
 		row := StructureSuggestion{Suggestion: s, Moves: suggestionMoves(m, s)}
@@ -124,7 +145,7 @@ func (sp structurePage) view(showAll bool) (StructureView, error) {
 
 // structureGroups lays the manifest out as the tree: the profiles in no
 // category first, then each category in manifest order.
-func structureGroups(p paths.Paths, m *manifest.Manifest) []StructureGroup {
+func structureGroups(p paths.Paths, m *manifest.Manifest, suggestions []structure.Suggestion) []StructureGroup {
 	keysOf := map[string][]StructureKey{}
 	if refs, err := m.KeyRefs(); err == nil {
 		for _, ref := range refs {
@@ -166,8 +187,9 @@ func structureGroups(p paths.Paths, m *manifest.Manifest) []StructureGroup {
 			if prof.Category != c {
 				continue
 			}
+			hostKeys, toolFolders := splitToolKeys(p, m, name, keysOf[name], purposeTools(suggestions, name))
 			sp := StructureProfile{Name: name, Category: c, Dir: "~/.ssh/" + m.ProfileRel(name),
-				OnePassword: prof.InOnePassword(), Keys: keysOf[name], Hosts: hostsOf[name]}
+				OnePassword: prof.InOnePassword(), Keys: hostKeys, Hosts: hostsOf[name], Tools: toolFolders}
 			for _, to := range cats {
 				if to == c {
 					continue
@@ -209,12 +231,17 @@ func crossMoves(m *manifest.Manifest, from string, move func(to string) structur
 // it has one, else a move into each profile that keeps keys on disk.
 func suggestionMoves(m *manifest.Manifest, s structure.Suggestion) []StructureOption {
 	switch {
+	case s.Kind == structure.KindCopyRemove && s.Plan != "":
+		return []StructureOption{{Line: s.Plan, Target: "copy-remove", Label: "delete leftover copy (keep the managed key)"}}
 	case s.Info:
 		return nil
 	case s.Kind == structure.KindMisplaced:
 		return []StructureOption{{Line: s.Plan, Target: "profile:" + s.Profile, Label: "to " + s.To}}
 	}
 	var out []StructureOption
+	if s.Kind == structure.KindPurpose && s.Plan != "" {
+		out = append(out, StructureOption{Line: s.Plan, Target: "tool:" + s.Profile + ":" + s.Tool, Label: "into tools/" + s.Tool + "/ (suggested)"})
+	}
 	for _, name := range m.ProfileNames() {
 		if m.Profiles[name].InOnePassword() {
 			continue
@@ -225,8 +252,68 @@ func suggestionMoves(m *manifest.Manifest, s structure.Suggestion) []StructureOp
 		}
 		out = append(out, StructureOption{Line: structure.KeyLine(s.Path, name, s.Name),
 			Target: "profile:" + name, Label: label})
+		for _, tool := range manifest.BuiltinToolSlugs() {
+			if s.Kind == structure.KindPurpose && name == s.Profile && tool == s.Tool {
+				continue
+			}
+			line := "purpose " + name + "/" + purposeKeyName(s, name) + " tool " + tool
+			out = append(out, StructureOption{Line: line, Target: "tool:" + name + ":" + tool, Label: "into tools/" + tool + "/ (owned by " + name + ")"})
+		}
 	}
 	return out
+}
+
+func purposeKeyName(s structure.Suggestion, profile string) string {
+	if s.Name != "" {
+		return s.Name
+	}
+	return strings.TrimSuffix(filepath.Base(s.Path), "")
+}
+
+func purposeTools(suggestions []structure.Suggestion, profile string) []string {
+	var out []string
+	for _, s := range suggestions {
+		if s.Dismissed || s.Kind != structure.KindPurpose || s.Profile != profile || s.Tool == "" {
+			continue
+		}
+		if !slices.Contains(out, s.Tool) {
+			out = append(out, s.Tool)
+		}
+	}
+	return out
+}
+
+func splitToolKeys(_ paths.Paths, m *manifest.Manifest, profile string, keys []StructureKey, extra []string) ([]StructureKey, []StructureToolFolder) {
+	byTool := map[string][]StructureKey{}
+	var hostKeys []StructureKey
+	for _, k := range keys {
+		spec, ok := m.KeySpecFor(manifest.KeyRef{Profile: profile, KeyName: k.Name})
+		if ok && (spec.Role == manifest.RoleTool || spec.Tool != "") {
+			byTool[spec.Tool] = append(byTool[spec.Tool], k)
+			continue
+		}
+		hostKeys = append(hostKeys, k)
+	}
+	var folders []StructureToolFolder
+	seen := map[string]bool{}
+	for _, tool := range manifest.BuiltinToolSlugs() {
+		if len(byTool[tool]) == 0 && !slices.Contains(extra, tool) {
+			continue
+		}
+		seen[tool] = true
+		folders = append(folders, StructureToolFolder{
+			Tool: tool, Dir: "~/.ssh/" + manifest.KeyRoot(m) + "/" + manifest.ToolsDir + "/" + tool, Keys: byTool[tool],
+		})
+	}
+	for tool, ks := range byTool {
+		if seen[tool] {
+			continue
+		}
+		folders = append(folders, StructureToolFolder{
+			Tool: tool, Dir: "~/.ssh/" + manifest.KeyRoot(m) + "/" + manifest.ToolsDir + "/" + tool, Keys: ks,
+		})
+	}
+	return hostKeys, folders
 }
 
 // structurePlanChange is the structure-plan action: the move selects (each
@@ -259,4 +346,41 @@ func structureDismissChange(f url.Values, errs []error) (change.Change, []error)
 		return change.Change{}, append(errs, badForm("not a suggestion id: %q", id))
 	}
 	return change.StructureDismiss(id, checked(f, "undo")), errs
+}
+
+func structureRuleAddChange(f url.Values, errs []error) (change.Change, []error) {
+	tool := strings.TrimSpace(f.Get("tool"))
+	if tool == "" {
+		return change.Change{}, append(errs, badForm("a rule needs --tool (the tools/<tool>/ slug)"))
+	}
+	r := structure.Rule{
+		Profile:     strings.TrimSpace(f.Get("profile")),
+		NameGlob:    strings.TrimSpace(f.Get("name")),
+		CommentRe:   strings.TrimSpace(f.Get("comment")),
+		Fingerprint: strings.TrimSpace(f.Get("fingerprint")),
+		Tool:        tool,
+		ToolKind:    strings.TrimSpace(f.Get("kind")),
+		AutoApply:   checked(f, "auto") || f.Get("auto") == "1",
+	}
+	if r.NameGlob == "" && r.CommentRe == "" && r.Fingerprint == "" && r.Profile == "" {
+		return change.Change{}, append(errs, badForm("a rule needs a name glob, comment, fingerprint or profile"))
+	}
+	return change.StructureRuleAdd(r), errs
+}
+
+func structureRuleAutoChange(f url.Values, errs []error) (change.Change, []error) {
+	id := strings.TrimSpace(f.Get("id"))
+	if id == "" {
+		return change.Change{}, append(errs, badForm("name the rule id"))
+	}
+	auto := f.Get("auto") != "0" && f.Get("auto") != "false" && f.Get("auto") != ""
+	return change.StructureRuleAuto(id, auto), errs
+}
+
+func structureRuleRemoveChange(f url.Values, errs []error) (change.Change, []error) {
+	id := strings.TrimSpace(f.Get("id"))
+	if id == "" {
+		return change.Change{}, append(errs, badForm("name the rule id"))
+	}
+	return change.StructureRuleRemove(id), errs
 }

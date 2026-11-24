@@ -61,7 +61,7 @@ func RenderClientExport(m *manifest.Manifest, p ExportPaths, format string, opts
 	if !ok {
 		return nil, fmt.Errorf("unknown export %q (choose from %s)", format, strings.Join(ClientFormatNames(), ", "))
 	}
-	resolved, err := m.IterResolved()
+	resolved, err := exportResolved(m)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func RenderClientExport(m *manifest.Manifest, p ExportPaths, format string, opts
 			skipped = append(skipped, h.Alias+": --skip")
 			delete(skip, h.Alias)
 			continue
-		case !f.ViaSSH && (h.VM != nil || h.Proxy != nil):
+		case !f.ViaSSH && (h.VM != nil || proxied(h)):
 			skipped = append(skipped, h.Alias+": reached through a ProxyCommand, which "+f.Client+" does not run; use windows-terminal or iterm2, which go through ssh")
 			continue
 		case isGitHost(h) && !opts.IncludeGit:

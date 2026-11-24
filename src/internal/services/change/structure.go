@@ -70,3 +70,74 @@ func StructureDismiss(id string, undo bool) Change {
 		},
 	}
 }
+
+// StructureRuleAdd is `ssh structure rules add`.
+func StructureRuleAdd(r structure.Rule) Change {
+	args := []string{"--tool", r.Tool}
+	if r.Profile != "" {
+		args = append(args, "--profile", r.Profile)
+	}
+	if r.NameGlob != "" {
+		args = append(args, "--name", r.NameGlob)
+	}
+	if r.CommentRe != "" {
+		args = append(args, "--comment", r.CommentRe)
+	}
+	if r.Fingerprint != "" {
+		args = append(args, "--fingerprint", r.Fingerprint)
+	}
+	if r.ToolKind != "" {
+		args = append(args, "--kind", r.ToolKind)
+	}
+	if r.AutoApply {
+		args = append(args, "--auto")
+	}
+	return Change{
+		Command: "ssh structure rules add", Args: args, NoSnapshot: true,
+		Effects: func(paths.Paths) ([]string, error) {
+			return []string{"stores a purpose-classification rule in the state home; no key files move"}, nil
+		},
+		Run: func(p paths.Paths, out io.Writer) error {
+			id, err := structure.AddRule(p, r)
+			if err != nil {
+				return err
+			}
+			_, _ = io.WriteString(out, "added rule "+id+"\n")
+			return nil
+		},
+	}
+}
+
+// StructureRuleAuto is `ssh structure rules set <id> --auto`.
+func StructureRuleAuto(id string, auto bool) Change {
+	args := []string{id, "--auto"}
+	if !auto {
+		args = []string{id, "--auto=false"}
+	}
+	return Change{
+		Command: "ssh structure rules set", Args: args, NoSnapshot: true,
+		Effects: func(paths.Paths) ([]string, error) {
+			verb := "disables"
+			if auto {
+				verb = "enables"
+			}
+			return []string{verb + " auto-apply for rule " + id + " (still snapshotted when it runs)"}, nil
+		},
+		Run: func(p paths.Paths, out io.Writer) error {
+			return structure.SetRuleAuto(p, id, auto)
+		},
+	}
+}
+
+// StructureRuleRemove is `ssh structure rules remove <id>`.
+func StructureRuleRemove(id string) Change {
+	return Change{
+		Command: "ssh structure rules remove", Args: []string{id}, NoSnapshot: true,
+		Effects: func(paths.Paths) ([]string, error) {
+			return []string{"removes purpose rule " + id + "; keys already moved stay where they are"}, nil
+		},
+		Run: func(p paths.Paths, out io.Writer) error {
+			return structure.RemoveRule(p, id)
+		},
+	}
+}

@@ -74,7 +74,7 @@ func TestTheMainMenuGroupsPagesByWhatTheyAreAbout(t *testing.T) {
 		t.Fatalf("read %d menus, the pattern is not matching the menu", len(groups))
 	}
 	for group, hrefs := range map[string][]string{
-		"ssh": {"/profiles", "/hosts", "/keys", "/vms", "/naming", "/ssh-config", "/termius", "/structure", "/git-sign",
+		"ssh": {"/profiles", "/hosts", "/keys", "/vms", "/naming", "/ssh-config", "/termius", "/structure", "/tools", "/services", "/git-sign",
 			"/hosts#add-host", "/hosts#knownhosts-init", "/keys#mint-keys",
 			"/jobs/review?action=rotate-keys", "/jobs/review?action=revoke-keys", "/jobs/review?action=delete-keys"},
 		"tokens":   {"/tokens", "/checklists?show=tokens", "/tokens#add-token"},
@@ -83,6 +83,7 @@ func TestTheMainMenuGroupsPagesByWhatTheyAreAbout(t *testing.T) {
 		"system":   {"/doctor", "/validate", "/repair", "/logs", "/settings", "/api-tokens", "/webhooks", "/reset"},
 		"new":      {"/hosts#add-host", "/tokens#add-token", "/keys#mint-keys"},
 		"user":     {"/about"},
+		"help":     {"/integrations", "/ssh-folder"},
 	} {
 		if len(groups[group]) != len(hrefs) {
 			t.Errorf("menu %s holds %v, want %v", group, groups[group], hrefs)

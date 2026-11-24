@@ -78,6 +78,11 @@ type RenderHost struct {
 	// gains ControlMaster/ControlPath/ControlPersist (a VM host, vm.multiplex).
 	// A value raw_options sets for one of them wins.
 	ControlPath string
+	// Aliases are more names on the Host line; Comment a line inside the
+	// block; Section a heading above it (see writeProfile).
+	Aliases []string
+	Comment string
+	Section string
 }
 
 const identitiesOnlyKey = "IdentitiesOnly"
@@ -127,7 +132,10 @@ func profileBanner(name string) string {
 }
 
 func writeHostBlock(b *strings.Builder, h RenderHost) {
-	b.WriteString("Host " + h.Alias + "\n")
+	b.WriteString("Host " + strings.Join(append([]string{h.Alias}, h.Aliases...), " ") + "\n")
+	if h.Comment != "" {
+		b.WriteString("    # " + h.Comment + "\n")
+	}
 	b.WriteString("    HostName " + h.Hostname + "\n")
 	b.WriteString("    User " + h.User + "\n")
 	portWritten := h.Port != 0 && h.Port != 22
@@ -309,21 +317,68 @@ func hostsByProfile(m *manifest.Manifest) (map[string][]RenderHost, error) {
 	}
 	byProfile := map[string][]RenderHost{}
 	for _, rk := range resolved {
-		file, agent := identityFor(m, rk.Profile, rk.KeyName)
-		byProfile[rk.Profile] = append(byProfile[rk.Profile], RenderHost{
-			Alias:         rk.Host.Alias,
-			Hostname:      rk.Host.Hostname,
-			User:          rk.Host.User,
-			Port:          rk.Host.Port,
-			IdentityFile:  file,
-			IdentityAgent: agent,
-			KnownHosts:    m.KnownHostsFile(),
-			RawOptions:    rk.Host.RawOptions,
-			ProxyCommand:  proxyFor(rk.Host),
-			ControlPath:   controlPathFor(rk.Host),
-		})
+		byProfile[rk.Profile] = append(byProfile[rk.Profile], renderHostOf(m, rk.Profile, rk.KeyName, rk.Host))
+	}
+	// Each profile's route variants follow its hosts, one run per variant
+	// name in the order the names first appear, so every warp-* block sits
+	// together under its own heading.
+	for _, pname := range m.ProfileNames() {
+		vs, err := variantHosts(m, pname, m.Profiles[pname].Hosts)
+		if err != nil {
+			return nil, err
+		}
+		byProfile[pname] = append(byProfile[pname], vs...)
 	}
 	return byProfile, nil
+}
+
+// renderHostOf is the flat view of one manifest host with its resolved key.
+func renderHostOf(m *manifest.Manifest, profile, keyName string, h manifest.Host) RenderHost {
+	file, agent := identityFor(m, profile, keyName)
+	return RenderHost{
+		Alias:         h.Alias,
+		Aliases:       h.Aliases,
+		Hostname:      h.Hostname,
+		User:          h.User,
+		Port:          h.Port,
+		IdentityFile:  file,
+		IdentityAgent: agent,
+		KnownHosts:    m.KnownHostsFile(),
+		RawOptions:    h.RawOptions,
+		ProxyCommand:  proxyFor(h),
+		ControlPath:   controlPathFor(h),
+		Comment:       h.Comment,
+		Section:       h.Section,
+	}
+}
+
+// variantHosts renders the variants of hosts, grouped by variant name.
+func variantHosts(m *manifest.Manifest, profile string, hosts []manifest.Host) ([]RenderHost, error) {
+	var names []string
+	seen := map[string]bool{}
+	for _, h := range hosts {
+		for _, v := range h.Variants {
+			if !seen[v.Name] {
+				seen[v.Name] = true
+				names = append(names, v.Name)
+			}
+		}
+	}
+	var out []RenderHost
+	for _, name := range names {
+		for _, h := range hosts {
+			v, ok := h.Variant(name)
+			if !ok {
+				continue
+			}
+			vh, err := manifest.VariantHostOf(m, profile, h, v)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, renderHostOf(m, profile, *vh.KeyName, vh))
+		}
+	}
+	return out, nil
 }
 
 func writeProfile(b *strings.Builder, pname string, hosts []RenderHost) {
@@ -331,7 +386,15 @@ func writeProfile(b *strings.Builder, pname string, hosts []RenderHost) {
 		return
 	}
 	b.WriteString(profileBanner(pname) + "\n")
+	section := ""
 	for _, h := range hosts {
+		// A heading is written where the section changes. A host with no
+		// section of its own stays under the heading above it, so a run of
+		// hosts needs the heading set only on its first.
+		if h.Section != "" && h.Section != section {
+			b.WriteString("# " + h.Section + "\n")
+			section = h.Section
+		}
 		writeHostBlock(b, h)
 	}
 }
@@ -352,20 +415,23 @@ func RenderHostBlockFor(m *manifest.Manifest, profile string, host manifest.Host
 	if err != nil {
 		return "", err
 	}
-	file, agent := identityFor(m, profile, kname)
 	var b strings.Builder
-	writeHostBlock(&b, RenderHost{
-		Alias:         host.Alias,
-		Hostname:      host.Hostname,
-		User:          host.User,
-		Port:          host.Port,
-		IdentityFile:  file,
-		IdentityAgent: agent,
-		KnownHosts:    m.KnownHostsFile(),
-		RawOptions:    host.RawOptions,
-		ProxyCommand:  proxyFor(host),
-		ControlPath:   controlPathFor(host),
-	})
+	rh := renderHostOf(m, profile, kname, host)
+	if rh.Section != "" {
+		b.WriteString("# " + rh.Section + "\n")
+	}
+	writeHostBlock(&b, rh)
+	// The host's route variants are part of what it renders.
+	vs, err := variantHosts(m, profile, []manifest.Host{host})
+	if err != nil {
+		return "", err
+	}
+	for _, v := range vs {
+		if v.Section != "" {
+			b.WriteString("# " + v.Section + "\n")
+		}
+		writeHostBlock(&b, v)
+	}
 	return b.String(), nil
 }
 

@@ -32,6 +32,10 @@ const (
 	// profile: key <from>/<key> profile <to> [name <n>] (a key line whose
 	// source is profile/key rather than a path).
 	MoveDeclared = "declared"
+	// MovePurpose recategorises a declared key into tools/<tool>/.
+	MovePurpose = "purpose" // purpose <profile>/<key> tool <tool> [kind <k>]
+	// MoveCopyRemove deletes a leftover copy of a managed key after a backup.
+	MoveCopyRemove = "copy-remove" // copy-remove ~/.ssh/<rel>
 )
 
 // Move is one approved line of a plan.
@@ -44,6 +48,8 @@ type Move struct {
 	// From is the profile a MoveHost or MoveDeclared takes from; Key the key
 	// a MoveDeclared takes (Name is what it is called in Profile).
 	From, Key string
+	// Tool and ToolKind are set for MovePurpose.
+	Tool, ToolKind string
 }
 
 // Line is the move as a plan line.
@@ -65,6 +71,10 @@ func (mv Move) Line() string {
 			line += " name " + mv.Name
 		}
 		return line
+	case MovePurpose:
+		return PurposeLine(mv.Profile, mv.Name, mv.Tool, mv.ToolKind)
+	case MoveCopyRemove:
+		return "copy-remove " + mv.Src
 	}
 	return KeyLine(mv.Src, mv.Profile, mv.Name)
 }
@@ -151,8 +161,26 @@ func parseLine(f []string) (Move, error) {
 			c = ""
 		}
 		return Move{Kind: MoveCategory, Profile: f[1], Category: c}, nil
+	case len(f) >= 4 && f[0] == MovePurpose && f[2] == "tool":
+		prof, key, ok := strings.Cut(f[1], "/")
+		if !ok || !planName(prof) || !planName(key) || !planName(f[3]) {
+			return Move{}, errors.New("want: purpose <profile>/<key> tool <tool> [kind <kind>]")
+		}
+		mv := Move{Kind: MovePurpose, Profile: prof, Name: key, Tool: f[3]}
+		switch {
+		case len(f) == 6 && f[4] == "kind" && planName(f[5]):
+			mv.ToolKind = f[5]
+		case len(f) != 4:
+			return Move{}, errors.New("want: purpose <profile>/<key> tool <tool> [kind <kind>]")
+		}
+		return mv, nil
+	case len(f) == 2 && f[0] == MoveCopyRemove:
+		if err := checkSrc(f[1]); err != nil {
+			return Move{}, err
+		}
+		return Move{Kind: MoveCopyRemove, Src: f[1]}, nil
 	}
-	return Move{}, errors.New("not a move: want `key …`, `misplaced …`, `host …` or `profile … category …`")
+	return Move{}, errors.New("not a move: want `key …`, `misplaced …`, `host …`, `profile … category …`, `purpose …` or `copy-remove …`")
 }
 
 // isRef reports whether s is profile/name: one slash, two plain names, not a
@@ -228,8 +256,10 @@ func inside(root, path string) string {
 type Result struct {
 	Moved    []string // "src -> dest" lines
 	Declared []string // profile/key
-	Rewrote  []string // hand-written config files
+	Rewrote  []string // managed config files whose IdentityFile lines were repointed
+	Manual   []string // Included files that still name the old path and are not managed
 	Backup   string   // where the moved files were copied first ("" when none moved)
+	Handoff  []string // commands another tool must run (sange signing retarget)
 }
 
 // Apply carries out an approved plan under p: category moves first (through
@@ -265,6 +295,9 @@ func Apply(p paths.Paths, moves []Move, out io.Writer) (Result, error) {
 		audit(p, mv, "~/.ssh/"+cr.From, "~/.ssh/"+cr.To)
 	}
 	if err := applyCross(p, moves, out, &res); err != nil {
+		return res, err
+	}
+	if err := applyPurposeMoves(p, moves, out, &res); err != nil {
 		return res, err
 	}
 	m, err := manifest.Load(p.Manifest())
@@ -348,7 +381,11 @@ func Apply(p paths.Paths, moves []Move, out io.Writer) (Result, error) {
 	}
 
 	backup := BackupDir(p, time.Now())
+	var relocated []step // misplaced keys moved to where the manifest places them
 	for _, s := range steps {
+		if s.mv.Kind == MoveMisplaced && s.src != s.dest {
+			relocated = append(relocated, s)
+		}
 		if s.src != "" && s.src != s.dest {
 			if err := backupPair(p, s.src, backup); err != nil {
 				return res, fmt.Errorf("backing up %s: %w", s.mv.Line(), err)
@@ -364,6 +401,7 @@ func Apply(p paths.Paths, moves []Move, out io.Writer) (Result, error) {
 				return res, err
 			}
 			res.Rewrote = append(res.Rewrote, changed...)
+			res.Manual = append(res.Manual, ManualRefs(p, s.src)...)
 			audit(p, s.mv, from, "~/.ssh/"+relSSH(p, s.dest))
 		}
 		if s.mv.Kind == MoveKey {
@@ -373,6 +411,21 @@ func Apply(p paths.Paths, moves []Move, out io.Writer) (Result, error) {
 			res.Declared = append(res.Declared, s.mv.Profile+"/"+s.mv.Name)
 			if s.src == s.dest {
 				audit(p, s.mv, "~/.ssh/"+relSSH(p, s.src), "~/.ssh/"+relSSH(p, s.dest))
+			}
+		}
+	}
+	if len(relocated) > 0 {
+		var moved []relocation
+		for _, s := range relocated {
+			moved = append(moved, relocation{ref: manifest.KeyRef{Profile: s.mv.Profile, KeyName: s.mv.Name}, src: s.src})
+		}
+		if err := relocateRecords(p, m, moved); err != nil {
+			return res, err
+		}
+		for _, s := range relocated {
+			spec, _ := m.KeySpecFor(manifest.KeyRef{Profile: s.mv.Profile, KeyName: s.mv.Name})
+			if spec.EffectiveRole() == manifest.RoleTool && (spec.ToolKind == manifest.ToolKindGitSigning || spec.Tool == manifest.ToolGit) {
+				retargetSigning(p, s.src, s.dest, out, &res)
 			}
 		}
 	}
@@ -403,6 +456,9 @@ func Apply(p paths.Paths, moves []Move, out io.Writer) (Result, error) {
 	}
 	for _, f := range res.Rewrote {
 		_, _ = fmt.Fprintf(out, "repointed IdentityFile lines in %s\n", f)
+	}
+	for _, f := range res.Manual {
+		_, _ = fmt.Fprintf(out, "update IdentityFile by hand in %s (not an authama-managed file)\n", f)
 	}
 	return res, nil
 }
@@ -489,11 +545,55 @@ func audit(p paths.Paths, mv Move, from, to string) {
 		log.Field{Key: "from", Value: from}, log.Field{Key: "to", Value: to})
 }
 
+// relocation is a declared key moved from src to where the manifest places it.
+type relocation struct {
+	ref manifest.KeyRef
+	src string
+}
+
+// relocateRecords points each moved key's inventory record (found by its old
+// path) at the path the manifest now gives it, deployments and all: the same
+// key, so the same record.
+func relocateRecords(p paths.Paths, m *manifest.Manifest, moved []relocation) error {
+	inv, err := inventory.Load(p.Inventory())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	changed := false
+	for _, mv := range moved {
+		oldIdent := "~/.ssh/" + relSSH(p, mv.src)
+		newIdent := m.IdentityFile(mv.ref.Profile, mv.ref.KeyName)
+		for fp, rec := range inv.Keys {
+			if rec.Path == oldIdent {
+				rec.Path = newIdent
+				inv.Keys[fp] = rec
+				changed = true
+			}
+		}
+	}
+	if !changed {
+		return nil
+	}
+	return inv.Save(p.Inventory())
+}
+
 // findMisplaced is where a declared key sits when not where the manifest
 // resolves it: the first profile directory of the same name under the key
-// root holding it.
+// root holding it, or, for a tool key, the tools/<tool>/ folder an older
+// layout kept inside its profile (now in the shared <key root>/tools/).
 func findMisplaced(p paths.Paths, m *manifest.Manifest, ref manifest.KeyRef) string {
 	want := filepath.Dir(m.KeyPath(p.SSHDir, ref))
+	if spec, ok := m.KeySpecFor(ref); ok {
+		if rel := spec.ToolRel(); rel != "" {
+			legacy := filepath.Join(m.ProfileDir(p.SSHDir, ref.Profile), filepath.FromSlash(rel))
+			if fi, err := os.Lstat(legacy); err == nil && fi.Mode().IsRegular() && filepath.Dir(legacy) != want {
+				return legacy
+			}
+		}
+	}
 	for _, f := range manifest.GlobKeyTree(p.SSHDir, manifest.KeyRoot(m), ref.KeyName) {
 		f = inside(p.SSHDir, f)
 		if f != "" && filepath.Base(filepath.Dir(f)) == ref.Profile && filepath.Dir(f) != want {

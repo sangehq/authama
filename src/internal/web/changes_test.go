@@ -177,7 +177,7 @@ func TestReadOnlyServesNoChangeAndShowsNoForm(t *testing.T) {
 			t.Errorf("read-only %s: %d, want 405", path, rec.Code)
 		}
 	}
-	for _, page := range []string{"/", "/profiles", "/naming", "/import", "/hosts", "/hosts/gh", "/keys", "/snapshots", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export", "/setup", "/structure", "/git-sign"} {
+	for _, page := range []string{"/", "/profiles", "/naming", "/import", "/hosts", "/hosts/gh", "/keys", "/snapshots", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export", "/setup", "/structure", "/tools", "/services", "/git-sign"} {
 		if strings.Contains(c.get(page).Body.String(), "/changes/preview") {
 			t.Errorf("read-only %s shows a change form", page)
 		}
@@ -293,6 +293,12 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 	}
 	// A loose key gives the structure page a suggestion to move and dismiss.
 	looseKey(t, p.SSHDir, "id_stray")
+	// A route variant gives the host page its remove form.
+	hn := "10.0.0.9"
+	if _, err := editor.RoutesOf(editor.New(p)).SetVariant(hostProfile(t, p.Manifest(), "gh"), "gh", "warp",
+		editor.VariantFields{Hostname: &hn}); err != nil {
+		t.Fatal(err)
+	}
 	// A git identity whose fragment is out of date gives the git page its
 	// use and apply forms.
 	sandboxGitConfig(t)
@@ -306,7 +312,7 @@ func TestEveryFormNamesAKnownAction(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, page := range []string{"/", "/profiles", "/naming", "/import", "/hosts", "/hosts/gh", "/hosts/devbox", "/keys", "/snapshots",
-		"/snapshots/" + openable, "/keys/" + fixtureKey(t, c), "/keys/work/spare", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export", "/setup", "/structure", "/git-sign"} {
+		"/snapshots/" + openable, "/keys/" + fixtureKey(t, c), "/keys/work/spare", "/doctor", "/vms", "/audit", "/tokens", "/settings", "/ssh-config", "/export", "/setup", "/structure", "/tools", "/services", "/git-sign"} {
 		for _, m := range action.FindAllStringSubmatch(c.get(page).Body.String(), -1) {
 			seen[m[1]] = true
 			_, change := actionFields[m[1]]
@@ -422,4 +428,22 @@ func TestReconcileFromTheWebMintsTheMissingKey(t *testing.T) {
 	if b, _ := os.ReadFile(p.SSHDir + "/profiles/work/work_gh-ed25519"); !strings.Contains(string(b), privateMarker) {
 		t.Error("the private key that was already on disk was replaced")
 	}
+}
+
+// hostProfile is the profile holding alias in the test manifest.
+func hostProfile(t *testing.T, path, alias string) string {
+	t.Helper()
+	m, err := manifest.Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range m.ProfileNames() {
+		for _, h := range m.Profiles[name].Hosts {
+			if h.Alias == alias {
+				return name
+			}
+		}
+	}
+	t.Fatalf("no host %s", alias)
+	return ""
 }

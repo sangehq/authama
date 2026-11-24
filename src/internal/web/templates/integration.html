@@ -1,0 +1,49 @@
+{{define "content"}}{{with .Data}}{{with .Tool}}
+{{template "page_header" (header "Tool integrations" $.Title .About (action "All tools" "/integrations" "arrow-left" | withTip "integrations-all") (download "Download the files" .Download | withTip "download"))}}
+{{end}}
+<div class="row row-cards">
+  <div class="col-lg-8">
+    <div class="card mb-3" id="tool-hosts">
+      <div class="card-header">
+        <h2 class="card-title">Hosts it gets</h2>
+        <div class="card-actions">{{if .Tool.ViaSSH}}<span class="badge badge-ok">runs ssh</span>{{else}}<span class="badge badge-muted">connects itself</span>{{end}}</div>
+      </div>
+      {{if .Hosts}}
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table" data-copy-cells data-stack>
+          <caption class="visually-hidden">The hosts and routes this tool's export writes</caption>
+          <thead><tr><th scope="col">Alias</th><th scope="col">Hostname</th><th scope="col">Port</th><th scope="col">User</th><th scope="col">Route</th></tr></thead>
+          <tbody>
+            {{range .Hosts}}<tr><th scope="row"><code>{{.Alias}}</code></th><td class="text-break">{{.Hostname}}</td><td>{{.Port}}</td><td><code>{{.User}}</code></td><td>{{orDash .Route}}</td></tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+      {{else}}<div class="card-body text-secondary">This tool gets no host from the manifest.</div>{{end}}
+    </div>
+    {{range .Tool.Files}}
+    <div class="card mb-3">
+      <div class="card-header"><h2 class="card-title"><code>{{.Name}}</code></h2></div>
+      {{if .Binary}}<div class="card-body text-secondary">Not text: download it to see it.</div>{{else}}<div class="card-body p-0"><pre class="code-block p-3" tabindex="0">{{.Body}}</pre></div>{{end}}
+    </div>
+    {{end}}
+  </div>
+  <div class="col-lg-4">
+    <div class="card mb-3" id="tool-skipped">
+      <div class="card-header"><h2 class="card-title">Left out, and why</h2></div>
+      {{if .Tool.Skipped}}<ul class="list-group list-group-flush">{{range .Tool.Skipped}}<li class="list-group-item"><code>{{.Alias}}</code><div class="small text-secondary">{{.Reason}}</div></li>{{end}}</ul>
+      {{else}}<div class="card-body text-secondary">Nothing: every host and route goes in.</div>{{end}}
+    </div>
+    {{if .Tool.Notes}}
+    <div class="card mb-3">
+      <div class="card-header"><h2 class="card-title">Finishing the import</h2></div>
+      <ul class="list-group list-group-flush">{{range .Tool.Notes}}<li class="list-group-item small">{{.}}</li>{{end}}</ul>
+    </div>
+    {{end}}
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">At a terminal</h2></div>
+      <div class="card-body"><code>{{.Tool.Command}}</code><p class="small text-secondary mt-2 mb-0">Writes the same files. No export carries a private key.</p></div>
+    </div>
+  </div>
+</div>
+{{end}}{{end}}

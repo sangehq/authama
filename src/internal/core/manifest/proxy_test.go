@@ -23,7 +23,7 @@ func TestProxyKindsAreValidated(t *testing.T) {
 		t.Errorf("a cloudflared host was refused: %v", err)
 	}
 	if _, err := hostFrom(t, `{"alias":"a","hostname":"a.example","user":"u","proxy":{"kind":"socks"}}`); err == nil ||
-		!strings.Contains(err.Error(), "cloudflared") {
+		!strings.Contains(err.Error(), "cloudflared, none, command") {
 		t.Errorf("an unknown proxy kind should be refused, naming the known one: %v", err)
 	}
 	if _, err := hostFrom(t, `{"alias":"a","hostname":"a","user":"u","proxy":{"kind":"cloudflared"},

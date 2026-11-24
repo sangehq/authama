@@ -40,7 +40,7 @@ func ApplyManifestEdit(out io.Writer, p paths.Paths) error {
 	if err := fs.EnsureDir(p.SSHDir, perms.DirMode); err != nil {
 		return err
 	}
-	svc := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain())
+	svc := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).WithState(p.StateDir())
 	res, err := svc.Write(false)
 	if err != nil {
 		return fmt.Errorf("the manifest edit was saved, but the config could not be re-rendered "+

@@ -129,7 +129,7 @@ func TestImportDryRunMovesNothing(t *testing.T) {
 func TestABlockTheManifestCannotHoldKeepsItsHostTheUsers(t *testing.T) {
 	cfg := `Host jump
     HostName jump.example
-    ProxyCommand ssh -W %h:%p bastion
+    ProxyCommand nc %h %p | tee /tmp/log
 
 Host pair alpha*
     HostName pair.example
@@ -163,7 +163,7 @@ Host plain
 		}
 	}
 	body, _ := os.ReadFile(cfgPath)
-	for _, kept := range []string{"ProxyCommand ssh -W %h:%p bastion", "Host pair alpha*", "known_hosts_mixed"} {
+	for _, kept := range []string{"ProxyCommand nc %h %p | tee /tmp/log", "Host pair alpha*", "known_hosts_mixed"} {
 		if !strings.Contains(string(body), kept) {
 			t.Errorf("a kept block was edited, %q is gone:\n%s", kept, body)
 		}

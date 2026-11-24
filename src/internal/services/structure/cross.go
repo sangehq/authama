@@ -225,6 +225,7 @@ func applyCross(p paths.Paths, moves []Move, out io.Writer, res *Result) error {
 			return err
 		}
 		res.Rewrote = append(res.Rewrote, changed...)
+		res.Manual = append(res.Manual, ManualRefs(p, f.src)...)
 		// The same key, so the same record - deployments and all - at its
 		// new path and profile.
 		oldIdent, newIdent := old.IdentityFile(f.from.Profile, f.from.KeyName), m.IdentityFile(f.to.Profile, f.to.KeyName)

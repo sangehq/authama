@@ -43,6 +43,9 @@ type Row struct {
 	Created         string
 	ExpiresOn       string
 	Hosts           []string // aliases wiring this key, in manifest order
+	// Tool is the tool a tool key is for (git, docker, …), "" for a host key.
+	// A tool reads the key itself, so no host wiring it is expected.
+	Tool string
 	// Vault is the 1Password vault holding the private key, "" for a key on
 	// disk. When set, PrivatePath is never expected to exist.
 	Vault       string
@@ -154,12 +157,17 @@ func (s *Service) row(ref manifest.KeyRef) (Row, error) {
 	for _, h := range hosts {
 		aliases = append(aliases, h.Alias)
 	}
-	_, declared := s.m.KeySpecFor(ref)
+	spec, declared := s.m.KeySpecFor(ref)
 	priv := s.m.KeyPath(s.sshDir, ref)
 	ident := s.m.IdentityFile(ref.Profile, ref.KeyName)
 	privMode, privOK := lmode(priv)
 	pubMode, pubOK := lmode(priv + ".pub")
+	tool := ""
+	if spec.ToolRel() != "" {
+		tool = spec.Tool
+	}
 	row := Row{
+		Tool:            tool,
 		Ref:             ref,
 		Type:            s.m.KeyTypeFor(ref),
 		RotateAfterDays: s.m.RotateAfterDaysFor(ref),

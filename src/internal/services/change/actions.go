@@ -160,9 +160,15 @@ type HostInput struct {
 	Port           *int
 	Tags           *[]string
 	KeyName        *string
-	// Provider, TokenEnv and Proxy are --provider, --token-env and --proxy;
-	// nil leaves them as they are. Proxy "none" clears the proxy.
-	Provider, TokenEnv, Proxy *string
+	// Provider and TokenEnv are --provider and --token-env; nil leaves them
+	// as they are.
+	Provider, TokenEnv *string
+	// AddAliases and RemoveAliases are --alias and --remove-alias.
+	AddAliases, RemoveAliases []string
+	// RouteInput is the proxy, ssh options and comments.
+	RouteInput
+	// Update is host add --update: change the host when the profile has it.
+	Update bool
 }
 
 func (h HostInput) args() []string {
@@ -185,8 +191,15 @@ func (h HostInput) args() []string {
 	if h.TokenEnv != nil {
 		a = append(a, "--token-env="+*h.TokenEnv)
 	}
-	if h.Proxy != nil {
-		a = append(a, "--proxy="+*h.Proxy)
+	for _, x := range h.AddAliases {
+		a = append(a, "--alias="+x)
+	}
+	for _, x := range h.RemoveAliases {
+		a = append(a, "--remove-alias="+x)
+	}
+	a = append(a, h.RouteInput.args()...)
+	if h.Update {
+		a = append(a, "--update")
 	}
 	if h.Tags != nil {
 		for _, t := range *h.Tags {
@@ -210,11 +223,21 @@ func HostAdd(profile, alias string, in HostInput) Change {
 				port = *in.Port
 			}
 			f := editor.HostFields{Hostname: in.Hostname, User: in.User, Port: &port, KeyName: in.KeyName,
-				Provider: in.Provider, TokenEnv: in.TokenEnv, Proxy: in.Proxy}
+				Provider: in.Provider, TokenEnv: in.TokenEnv, AddAliases: in.AddAliases, RouteFields: in.fields()}
 			if in.Tags != nil {
 				f.Tags = *in.Tags
 			}
-			if err := editor.New(p).AddHost(profile, alias, f); err != nil {
+			if in.Update {
+				f.PortSet = in.Port != nil
+				added, err := editor.RoutesOf(editor.New(p)).UpsertHost(profile, alias, f)
+				if err != nil {
+					return err
+				}
+				if !added {
+					_, _ = fmt.Fprintf(out, "updated host %s in %s\n", alias, profile)
+					return ApplyManifestEdit(out, p)
+				}
+			} else if err := editor.New(p).AddHost(profile, alias, f); err != nil {
 				return err
 			}
 			_, _ = fmt.Fprintf(out, "added host %s to %s (run `authama ssh reconcile` to mint its "+
@@ -231,7 +254,8 @@ func HostEdit(profile, alias string, in HostInput) Change {
 		Subjects: []history.Subject{{Kind: history.KindProfile, Name: profile}, {Kind: history.KindHost, Name: alias}},
 		Run: func(p paths.Paths, out io.Writer) error {
 			f := editor.HostFields{Hostname: in.Hostname, User: in.User, Port: in.Port, KeyName: in.KeyName, SetTags: in.Tags,
-				Provider: in.Provider, TokenEnv: in.TokenEnv, Proxy: in.Proxy}
+				Provider: in.Provider, TokenEnv: in.TokenEnv, AddAliases: in.AddAliases, RemoveAliases: in.RemoveAliases,
+				RouteFields: in.fields()}
 			if err := editor.New(p).EditHost(profile, alias, f); err != nil {
 				return err
 			}
@@ -322,9 +346,18 @@ func VMAddWith(profile, alias, hypervisor, vmName, user, keyName string) Change 
 
 // ConfigRender is `authama ssh config render --yes`: migrate any legacy
 // per-profile known_hosts into the single store, then write the config.
-func ConfigRender() Change {
+func ConfigRender() Change { return ConfigRenderWith(false) }
+
+// ConfigRenderWith is `authama ssh config render --yes`, and with force
+// `--force`: lines typed into a managed file by hand are written over, after
+// the files holding them are copied to the state home, whose path it prints.
+func ConfigRenderWith(force bool) Change {
+	args := []string{"--yes"}
+	if force {
+		args = []string{"--force", "--yes"}
+	}
 	return Change{
-		Command: "config render", Args: []string{"--yes"},
+		Command: "config render", Args: args,
 		Run: func(p paths.Paths, out io.Writer) error {
 			m, err := manifest.Load(p.Manifest())
 			if err != nil {
@@ -340,9 +373,19 @@ func ConfigRender() Change {
 						rep.Merged, strings.Join(rep.Removed, ", "))
 				}
 			}
-			res, err := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).Write(false)
+			svc := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).WithState(p.StateDir())
+			if force {
+				svc.Force(filepath.Join(p.StateDir(), "config-hand-edits-"+time.Now().Format("20060102-150405")))
+			}
+			res, err := svc.Write(false)
 			if err != nil {
 				return err
+			}
+			for _, h := range res.HandEdits {
+				_, _ = fmt.Fprintf(out, "hand edit discarded: %s\n", h)
+			}
+			if res.Backup != "" {
+				_, _ = fmt.Fprintf(out, "the edited files were copied to %s first\n", res.Backup)
 			}
 			if len(res.Written) > 0 {
 				_, _ = fmt.Fprintf(out, "wrote: %s\n", strings.Join(res.Written, ", "))
@@ -371,7 +414,7 @@ func ConfigAdopt() Change {
 				return err
 			}
 			backup := filepath.Join(p.StateDir(), "config-adopt-"+time.Now().Format("20060102-150405"))
-			res, err := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).Adopt(false, backup)
+			res, err := configsvc.New(p.SSHDir, m, platform.EmitUseKeychain()).WithState(p.StateDir()).Adopt(false, backup)
 			if err != nil {
 				return err
 			}

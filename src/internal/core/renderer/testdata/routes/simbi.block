@@ -1,0 +1,31 @@
+# simbi prod: Cloudflare Access (works anywhere; browser login once per host)
+Host simbi-prd-web-00 simbi-web-cf
+    HostName ssh-web-00.simtabi.com
+    User ploi
+    IdentityFile ~/.ssh/profiles/orgs/simtabi/simtabi_simbi-prd-web-00-ed25519
+    IdentitiesOnly yes
+    ProxyCommand /opt/homebrew/bin/cloudflared access ssh --hostname %h
+
+Host simbi-prd-db-00 simbi-db-cf
+    HostName ssh-db-00.simtabi.com
+    User ploi
+    IdentityFile ~/.ssh/profiles/orgs/simtabi/simtabi_simbi-prd-db-00-ed25519
+    IdentitiesOnly yes
+    ProxyCommand /opt/homebrew/bin/cloudflared access ssh --hostname %h
+
+# simbi prod: private IPs over Cloudflare WARP (WARP must be connected)
+Host warp-simbi-prd-web-00
+    HostName 10.116.0.3
+    User ploi
+    IdentityFile ~/.ssh/profiles/orgs/simtabi/simtabi_simbi-prd-web-00-ed25519
+    IdentitiesOnly yes
+    ProxyCommand none
+    ConnectTimeout 10
+
+Host warp-simbi-prd-db-00
+    HostName 10.116.0.5
+    User ploi
+    IdentityFile ~/.ssh/profiles/orgs/simtabi/simtabi_simbi-prd-db-00-ed25519
+    IdentitiesOnly yes
+    ProxyCommand none
+    ConnectTimeout 10
