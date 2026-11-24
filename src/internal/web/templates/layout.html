@@ -23,11 +23,11 @@
       <a class="navbar-brand navbar-brand-autodark pe-0 pe-md-3" href="{{basePath}}/" aria-label="{{brandName}} home"><img class="navbar-brand-mark" src="{{asset "favicon.svg"}}" width="32" height="32" alt=""><span class="navbar-brand-text d-none d-lg-inline">{{brandName}}</span><span class="navbar-brand-text d-none d-sm-inline d-lg-none">{{brandCommand}}</span></a>
       {{if and .Authed .ReadOnly}}<span class="badge badge-muted" aria-description="This server only reads: every form that would change something is hidden">{{icon "lock"}}<span class="ms-1">read-only</span></span>{{end}}
       <div class="navbar-nav flex-row order-md-last">
-        {{if .Authed}}<div class="nav-item d-none d-lg-flex me-3">
+        {{if .Authed}}<div class="nav-item d-none d-xxl-flex me-3">
           <button type="button" class="header-search" data-bs-toggle="modal" data-bs-target="#command-palette" aria-keyshortcuts="Control+K Meta+K /" data-tour="1" data-tour-title="Search" data-tour-text="Ctrl+K (⌘K on a Mac) or / jumps to any page, form or download as you type. ? lists every shortcut."{{desc "search"}}>{{icon "search"}}<span class="header-search-text">Search pages and actions</span><kbd data-palette-hint>Ctrl K</kbd></button>
         </div>
-        <div class="nav-item d-lg-none me-2">
-          <button type="button" class="nav-link px-0" data-bs-toggle="modal" data-bs-target="#command-palette" aria-label="Search pages and actions"{{tip "search"}}>{{icon "search"}}</button>
+        <div class="nav-item d-xxl-none me-2">
+          <button type="button" class="nav-link px-0" data-bs-toggle="modal" data-bs-target="#command-palette" aria-label="Search pages and actions" data-tour="1" data-tour-title="Search" data-tour-text="Ctrl+K (⌘K on a Mac) or / jumps to any page, form or download as you type. ? lists every shortcut."{{tip "search"}}>{{icon "search"}}</button>
         </div>{{end}}
         <div class="nav-item d-none d-md-flex me-2">
           <a href="?theme=dark" class="nav-link px-0 hide-theme-dark" aria-label="Dark theme" data-tip="Dark theme" data-tip-placement="bottom">{{icon "moon"}}<span class="visually-hidden">Dark theme</span></a>
@@ -67,7 +67,7 @@
         {{/* Export / Import: every file this home goes out as, and bringing
              a setup in. Export works on a read-only server; Import does not. */}}
         <div class="nav-item dropdown me-3">
-          <button type="button" class="btn btn-outline-primary dropdown-toggle" id="navbar-transfer" data-bs-toggle="dropdown" aria-expanded="false"{{desc "nav-transfer"}}>{{icon "transfer"}}<span class="d-none d-sm-inline">Export / Import</span><span class="visually-hidden d-sm-none">Export / Import</span></button>
+          <button type="button" class="btn btn-outline-primary dropdown-toggle" id="navbar-transfer" data-bs-toggle="dropdown" aria-expanded="false"{{desc "nav-transfer"}}>{{icon "transfer"}}<span class="d-none d-xxl-inline">Export / Import</span><span class="visually-hidden d-xxl-none">Export / Import</span></button>
           <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow" aria-labelledby="navbar-transfer">
             {{template "navmenuitem" (navItem . "transfer-export" "/transfer#export" "file-zip" "Export")}}
             {{if not .ReadOnly}}{{template "navmenuitem" (navItem . "transfer-encrypted" "/transfer#encrypted" "lock" "Encrypted export")}}

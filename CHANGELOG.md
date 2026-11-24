@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`Include` with a Windows path.** The Include tokenizer took every backslash as an escape, so
+  `Include C:\Users\me\.ssh\extra` was read as `C:Usersme.sshextra` and never followed. It now
+  escapes as OpenSSH's `argv_split` does (a quote, a backslash, or an unquoted space), keeping every
+  other backslash.
+- **The header fits narrower windows.** The full search box and the Export / Import label show from
+  1400px, as icons below that, so the top bar no longer runs past the window at 1024 to 1399px with
+  wider system fonts.
 - **`doctor` judged tool keys wrongly.** It called a tool key untracked when it sat in a folder named for its
   tool (owner guessed from the folder name), and unwired because no host names it; a tool reads its key
   itself. Ownership now comes from the manifest, and a tool key is not expected to be wired.

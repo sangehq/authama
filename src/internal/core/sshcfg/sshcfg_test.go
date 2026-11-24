@@ -266,6 +266,15 @@ func TestTokensKeepsQuotedAndEscapedSpaces(t *testing.T) {
 		{`'my hosts.conf'`, []string{"my hosts.conf"}},
 		{`path\ with\ spaces`, []string{"path with spaces"}},
 		{`"mixed 'quotes'"`, []string{"mixed 'quotes'"}},
+		// OpenSSH's argv_split: a backslash escapes only a quote, a backslash
+		// or an unquoted space, and is kept before anything else, so a Windows
+		// path keeps its separators. Eating every backslash broke Includes on
+		// Windows: C:\Users\me became C:Usersme.
+		{`C:\Users\me\orb\config`, []string{`C:\Users\me\orb\config`}},
+		{`"C:\Program Files\x\config"`, []string{`C:\Program Files\x\config`}},
+		{`a\\b`, []string{`a\b`}},
+		{`say\"hi\"`, []string{`say"hi"`}},
+		{`odd\x`, []string{`odd\x`}},
 		{"", nil},
 	}
 	for _, c := range cases {

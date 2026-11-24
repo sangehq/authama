@@ -28,14 +28,15 @@ const MaxConfigBytes = 2 << 20
 // errGlobLimited is returned by expandGlob when the match cap is reached.
 var errGlobLimited = errors.New("include glob truncated")
 
-// Tokens splits an Include (or similar) value the way OpenSSH argv-splits:
-// whitespace separates tokens, double or single quotes keep spaces, and a
-// backslash escapes the next character outside single quotes.
+// Tokens splits an Include (or similar) value the way OpenSSH's argv_split
+// does: whitespace separates tokens, double or single quotes keep spaces, and
+// a backslash escapes only a quote, a backslash, or (outside quotes) a space.
+// Before any other character the backslash is kept, so a Windows path such as
+// C:\Users\me\.ssh\config keeps its separators.
 func Tokens(value string) []string {
 	var out []string
 	var b strings.Builder
 	quote := rune(0)
-	escape := false
 	flush := func() {
 		if b.Len() == 0 {
 			return
@@ -43,17 +44,22 @@ func Tokens(value string) []string {
 		out = append(out, b.String())
 		b.Reset()
 	}
-	for _, r := range value {
+	rs := []rune(value)
+	for i := 0; i < len(rs); i++ {
+		r := rs[i]
+		if r == '\\' && i+1 < len(rs) {
+			next := rs[i+1]
+			if next == '\'' || next == '"' || next == '\\' || (quote == 0 && next == ' ') {
+				b.WriteRune(next)
+				i++
+				continue
+			}
+		}
 		switch {
-		case escape:
-			b.WriteRune(r)
-			escape = false
-		case r == '\\' && quote != '\'':
-			escape = true
 		case quote != 0:
 			if r == quote {
 				quote = 0
-				break
+				continue
 			}
 			b.WriteRune(r)
 		case r == '"' || r == '\'':
@@ -63,9 +69,6 @@ func Tokens(value string) []string {
 		default:
 			b.WriteRune(r)
 		}
-	}
-	if escape {
-		b.WriteByte('\\')
 	}
 	flush()
 	return out
