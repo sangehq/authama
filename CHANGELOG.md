@@ -30,6 +30,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   card per tool authama hands hosts to: OpenSSH, Termius and every `export hosts --format`
   client. Each card lists the hosts and routes that tool's export writes, the ones it leaves
   out and why, its import notes, the download and the command, all read from the export itself.
+  **View details** opens each tool's page (`/integrations/<tool>`): its hosts with hostname, port,
+  user and route, what it leaves out, and a preview of the files the download writes.
 
 - **Any `~/.ssh` layout, and OpenSSH `Include`s.** authama follows every `Include` in
   `~/.ssh/config` (relative paths against `~/.ssh`, globs including `**`, nested and

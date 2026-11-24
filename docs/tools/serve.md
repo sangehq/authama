@@ -538,6 +538,11 @@ lists match the file its **Download** writes:
   a VM is left out of a tool that connects by itself, and its direct routes go in instead);
 - the notes on finishing the import, and the same export at a terminal.
 
+**View details** on each card opens that tool's page (`/integrations/<tool>`, for example
+`/integrations/iterm2`): every host and route it gets with its hostname, port, user and route, what it
+leaves out and why, the import notes, and a preview of each file the download writes. OpenSSH's leads
+to [SSH config](#pages) and Termius's to [Termius import](#termius-import), which already show that.
+
 A tool marked *runs ssh* reads `~/.ssh/config`, so every route works there as written. The page only
 reads; no export carries a private key.
 

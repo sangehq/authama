@@ -211,20 +211,20 @@ func (q *Query) row(pname string, host manifest.Host) (HostRow, error) {
 		Alias: host.Alias, Hostname: host.Hostname,
 		ProviderLabel: q.providerLabel(host), KeyName: kname,
 		Status: status(rec, ok), Tags: tagsOf(host),
-		Aliases: host.Aliases, Route: routeOf(host),
+		Aliases: host.Aliases, Route: RouteOf(host),
 	}
 	for _, v := range host.Variants {
 		vh, err := manifest.VariantHostOf(q.m, pname, host, v)
 		if err != nil {
 			return HostRow{}, err
 		}
-		row.Variants = append(row.Variants, VariantRow{Alias: vh.Alias, Hostname: vh.Hostname, Route: routeOf(vh)})
+		row.Variants = append(row.Variants, VariantRow{Alias: vh.Alias, Hostname: vh.Hostname, Route: RouteOf(vh)})
 	}
 	return row, nil
 }
 
-// routeOf names how ssh reaches h when it is not a plain connection.
-func routeOf(h manifest.Host) string {
+// RouteOf names how ssh reaches h when it is not a plain connection.
+func RouteOf(h manifest.Host) string {
 	if h.VM != nil {
 		return "vm" // the hypervisor supplies the address at connect time
 	}

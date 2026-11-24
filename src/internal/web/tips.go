@@ -136,6 +136,7 @@ var tips = map[string]string{
 	"job-no":                   "Answers no: the job stops here. Steps already done stay done, and History records where it stopped.",
 	"job-cancel":               "Stops the job once its current step finishes. Steps already done stay done.",
 	"open-page":                "Opens that page. Nothing changes.",
+	"integrations-all":         "Opens Tool integrations, with every tool. Nothing changes.",
 	"open-row":                 "Opens its page beside the list, with everything about it. Nothing changes.",
 	"copy-value":               "Copies this value to the clipboard. Nothing changes.",
 	"row-history":              "Shows every change made to this, newest first.",

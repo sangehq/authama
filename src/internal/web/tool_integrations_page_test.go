@@ -63,5 +63,41 @@ func TestToolIntegrationsListWhatEachExportWrites(t *testing.T) {
 	}
 	if !strings.Contains(body, `id="int-hosts">1<`) || !strings.Contains(body, `id="int-routes">1<`) {
 		t.Error("the totals are not 1 host and 1 route")
+	} // Every card leads to a page about its tool.
+	for name := range card {
+		if !strings.Contains(body, `href="/integrations/`+name+`"`) && name != "openssh" && name != "termius" {
+			t.Errorf("the %s card has no View details link", name)
+		}
+	}
+	if n := strings.Count(body, ">View details</a>"); n != len(cards) {
+		t.Errorf("%d View details links for %d cards", n, len(cards))
+	}
+
+	// A client's page lists each host it gets with its address and route,
+	// what it leaves out, and the files the download writes.
+	page := c.get("/integrations/iterm2")
+	if page.Code != 200 {
+		t.Fatalf("/integrations/iterm2: %d", page.Code)
+	}
+	pb := page.Body.String()
+	for _, want := range []string{`<code>warp-web</code></th><td class="text-break">10.0.0.3</td>`, `<td>direct</td>`, `<pre class="code-block p-3">`} {
+		if !strings.Contains(pb, want) {
+			t.Errorf("/integrations/iterm2 lacks %q", want)
+		}
+	}
+	pb = c.get("/integrations/putty").Body.String()
+	if !strings.Contains(pb, `id="tool-skipped"`) || !strings.Contains(pb, "<code>web</code><div") {
+		t.Error("PuTTY's page does not list web as left out")
+	}
+	// PuTTY's .reg is UTF-16: the preview decodes it rather than showing bytes.
+	if !strings.Contains(pb, "Windows Registry Editor") || strings.ContainsRune(pb, '\uFFFD') {
+		t.Error("PuTTY's .reg preview is not decoded text")
+	}
+	// OpenSSH and Termius have pages of their own.
+	if rec := c.get("/integrations/termius"); rec.Code != 303 || rec.Header().Get("Location") != "/termius" {
+		t.Errorf("/integrations/termius: %d to %q, want 303 to /termius", rec.Code, rec.Header().Get("Location"))
+	}
+	if rec := c.get("/integrations/nope"); rec.Code != 404 {
+		t.Errorf("/integrations/nope: %d, want 404", rec.Code)
 	}
 }
