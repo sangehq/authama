@@ -269,6 +269,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Dependencies:** `github.com/simtabi/go-notifykit/src` 0.1.0 → 0.1.1, and the shared release workflow
+  `simtabi/.github` `go-release.yml` 0.1.1 → 0.1.3 (pinned to `f654932`), folded in from Dependabot's
+  sangehq/authama#224 and #225.
 - **Tool keys live in one shared folder, `~/.ssh/profiles/tools/<tool>/`.** A git signing key or a docker
   tunnel key used to sit in its profile's own `tools/` folder; it now sits in the key root's `tools/`, still
   declared under (linked to) the profile that owns it, and the Tools page, Structure and the folder diagram

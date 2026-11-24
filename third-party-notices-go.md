@@ -702,7 +702,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## github.com/simtabi/go-notifykit/src v0.1.0
+## github.com/simtabi/go-notifykit/src v0.1.1
 
 ```text
 MIT License
