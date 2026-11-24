@@ -256,7 +256,8 @@ func inside(root, path string) string {
 type Result struct {
 	Moved    []string // "src -> dest" lines
 	Declared []string // profile/key
-	Rewrote  []string // hand-written config files
+	Rewrote  []string // managed config files whose IdentityFile lines were repointed
+	Manual   []string // Included files that still name the old path and are not managed
 	Backup   string   // where the moved files were copied first ("" when none moved)
 	Handoff  []string // commands another tool must run (sange signing retarget)
 }
@@ -396,6 +397,7 @@ func Apply(p paths.Paths, moves []Move, out io.Writer) (Result, error) {
 				return res, err
 			}
 			res.Rewrote = append(res.Rewrote, changed...)
+			res.Manual = append(res.Manual, ManualRefs(p, s.src)...)
 			audit(p, s.mv, from, "~/.ssh/"+relSSH(p, s.dest))
 		}
 		if s.mv.Kind == MoveKey {
@@ -435,6 +437,9 @@ func Apply(p paths.Paths, moves []Move, out io.Writer) (Result, error) {
 	}
 	for _, f := range res.Rewrote {
 		_, _ = fmt.Fprintf(out, "repointed IdentityFile lines in %s\n", f)
+	}
+	for _, f := range res.Manual {
+		_, _ = fmt.Fprintf(out, "update IdentityFile by hand in %s (not an authama-managed file)\n", f)
 	}
 	return res, nil
 }

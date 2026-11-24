@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sangehq/authama/src/internal/core/manifest"
+	"github.com/sangehq/authama/src/internal/core/sshcfg"
 	"github.com/sangehq/authama/src/internal/platform"
 	"github.com/sangehq/authama/src/internal/services/configsvc"
 	"github.com/sangehq/authama/src/internal/services/knownhosts"
@@ -171,6 +172,7 @@ func newConfigCmd() *cobra.Command {
 		},
 	})
 
+	cmd.AddCommand(newConfigTreeCmd())
 	cmd.AddCommand(newConfigAdoptCmd())
 	cmd.AddCommand(newConfigKeepEditsCmd())
 	cmd.AddCommand(newConfigExportCmd())
@@ -239,5 +241,44 @@ func newConfigAdoptCmd() *cobra.Command {
 	}
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "show what would be removed, as a diff, without writing")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "adopt without confirming (implied when there is no terminal)")
+	return cmd
+}
+
+// newConfigTreeCmd is `ssh config tree`: the Include graph of ~/.ssh/config
+// and the source file of each Host, read-only. It never writes.
+func newConfigTreeCmd() *cobra.Command {
+	var asJSON bool
+	cmd := &cobra.Command{
+		Use:   "tree",
+		Short: "Show the Include tree of ~/.ssh/config and the source file of each host (read-only)",
+		Long: "Walks ~/.ssh/config the way ssh does for Include directives: relative paths are\n" +
+			"resolved against ~/.ssh, globs (*, ?, and ** per path segment) are expanded in\n" +
+			"lexical order, Includes nest (inside Host or Match too) up to OpenSSH's limit of 16,\n" +
+			"and a cycle or a missing file is a warning, not an error. Each Host is printed with\n" +
+			"the file and line it was written on. Authama never rewrites a file it does not\n" +
+			"manage; those files are labelled in the tree so you can see what it only reports on.",
+		Args: cobra.NoArgs,
+		RunE: func(c *cobra.Command, _ []string) error {
+			p, err := resolvePaths(c)
+			if err != nil {
+				return err
+			}
+			tree, err := sshcfg.LoadUser(p.SSHDir)
+			if err != nil {
+				return err
+			}
+			if asJSON {
+				b, err := tree.JSON()
+				if err != nil {
+					return err
+				}
+				_, _ = fmt.Fprintln(c.OutOrStdout(), string(b))
+				return nil
+			}
+			_, _ = fmt.Fprintln(c.OutOrStdout(), tree.Format())
+			return nil
+		},
+	}
+	cmd.Flags().BoolVar(&asJSON, "json", false, "print the Include tree as JSON")
 	return cmd
 }

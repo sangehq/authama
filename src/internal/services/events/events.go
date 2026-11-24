@@ -100,6 +100,13 @@ func Roots(p paths.Paths, tokenFiles []string) []Tracked {
 		seen[r.Path] = true
 		out = append(out, r)
 	}
+	for _, r := range IncludeRoots(p) {
+		if r.Path == "" || seen[r.Path] || within(r.Path, p.SSHDir) || within(r.Path, p.ConfigDir) {
+			continue
+		}
+		seen[r.Path] = true
+		out = append(out, r)
+	}
 	return out
 }
 

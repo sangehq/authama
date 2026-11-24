@@ -388,6 +388,8 @@ var goOnly = map[string]string{
 	"host variant set":            "AT-13 - create or update a route variant",
 	"host variant remove":         "AT-13 - remove a route variant",
 	"config keep-edits":           "AT-13 - take hand edits in the managed files into the manifest",
+	"config tree":                 "any-layout - show the Include tree of ~/.ssh/config and the source file of each host",
+	"config tree --json":          "any-layout - machine-readable Include tree",
 	"config render --force":       "AT-13 - render over hand edits, after backing the files up",
 	"host edit --tag":             "G7 - replace a host's tags; nothing else could take one off",
 	"host edit --untag":           "G7 - remove one tag from a host",
