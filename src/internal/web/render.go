@@ -484,9 +484,14 @@ func funcs(a *assetSet, basePath string) template.FuncMap {
 			}
 			return navItem{Active: v.Nav == key, Href: href, Icon: icon, Label: label, Tip: pageTips[key], Kind: kind}, nil
 		},
-		// navTile is an entry's icon on its kind's colour tile.
+		// navIcon is a menu entry's icon, as Tabler's .dropdown-item-icon.
+		"navIcon": navIcon,
+		// navTile is deprecated: it forwards to navIcon (remove in v0.2.0).
 		"navTile": navTile,
-		// navColour is a kind's Tabler colour, for a menu toggle's icon.
+		// navColour is a kind's Tabler colour.
+		//
+		// Deprecated: since 2026-11-24 a menu toggle's icon is Tabler's own
+		// grey, and no template calls it. Remove in v0.2.0.
 		"navColour": func(kind string) (string, error) {
 			c, ok := kindColours[kind]
 			if !ok {
@@ -707,16 +712,25 @@ var kindColours = map[string]string{
 	"delete":   "red",
 }
 
-// navTile is icon on kind's colour tile: a small Tabler avatar tinted
-// bg-<colour>-lt. An unknown kind is an error, so a template naming one
-// fails to render.
-func navTile(kind, icon string) (template.HTML, error) {
-	c, ok := kindColours[kind]
-	if !ok {
-		return "", fmt.Errorf("no colour for menu kind %q in kindColours", kind)
+// navIcon is a menu entry's icon as Tabler draws one: a plain
+// .dropdown-item-icon beside the name, no tile. data-kind records what the
+// entry is (kindColours' keys), which the tests read. An unknown kind is an
+// error, so a template naming one fails to render.
+func navIcon(kind, icon string) (template.HTML, error) {
+	if _, ok := kindColours[kind]; !ok {
+		return "", fmt.Errorf("no menu kind %q in kindColours", kind)
 	}
-	return template.HTML(`<span class="avatar avatar-sm nav-tile bg-`+c+`-lt" data-kind="`+kind+`" aria-hidden="true">`) + iconHTML(icon) + `</span>`, nil //nolint:gosec // kind and colour come from the tables above; the icon is [a-z0-9-]
+	if !validIcon(icon) {
+		return "", fmt.Errorf("menu icon %q is not a Tabler icon name", icon)
+	}
+	return template.HTML(`<svg class="icon dropdown-item-icon nav-icon" data-kind="` + kind + `" aria-hidden="true" focusable="false"><use href="#tabler-` + icon + `"></use></svg>`), nil //nolint:gosec // kind comes from kindColours; the icon is [a-z0-9-]
 }
+
+// navTile is the menu entry's icon.
+//
+// Deprecated: since 2026-11-24 a menu entry shows Tabler's plain icon
+// (navIcon), not a colour tile; navTile forwards to it. Remove in v0.2.0.
+func navTile(kind, icon string) (template.HTML, error) { return navIcon(kind, icon) }
 
 // Destructive is the entry marked as one that deletes or starts things again,
 // for the menu to set apart: `(navItem . "reset" "/reset" "restore" "Reset…").Destructive`.

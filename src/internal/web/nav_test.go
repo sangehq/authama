@@ -49,10 +49,6 @@ func navText(inner string) string {
 // navEntries reads every entry of the main menu, New and the user menu. The
 // bell's card is left out: it previews file events and links to the full
 // list, which History › File events also opens.
-// navSubmenus are menus nested in another (Tabler's .dropend): their entries,
-// and the parent's entries after them, belong to the parent.
-var navSubmenus = map[string]string{"theme": "user"}
-
 func navEntries(t *testing.T, body string) []navEntry {
 	t.Helper()
 	top, main := headerParts(t, body)
@@ -99,11 +95,6 @@ func navEntries(t *testing.T, body string) []navEntry {
 			last = ms[len(ms)-1][1] + i
 		}
 	}
-	for i := range out {
-		if parent, ok := navSubmenus[out[i].Menu]; ok {
-			out[i].Menu = parent
-		}
-	}
 	for _, it := range navItemRe.FindAllStringSubmatch(main[:first]+main[last:], -1) {
 		if strings.Contains(it[1], "dropdown-toggle") {
 			continue
@@ -143,8 +134,8 @@ func TestNavEntriesHaveDistinctIconsAndPages(t *testing.T) {
 	sprite := string(vendorFile(t, "tabler-icons.svg"))
 	byIcon, byHref := map[string][]navEntry{}, map[string][]navEntry{}
 	for _, e := range entries {
-		if (e.Toggle && e.Menu == "user" && e.Label != "Theme") || e.Label == "Running as" {
-			continue // the user menu's toggle and its header show the initials avatar, not an icon
+		if (e.Toggle && e.Menu == "user") || e.Label == "Running as" {
+			continue // the user menu's toggle is the initials avatar, and its header is text
 		}
 		if e.Icon == "" {
 			t.Errorf("%s › %s shows no icon", e.Menu, e.Label)

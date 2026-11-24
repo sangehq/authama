@@ -9,8 +9,7 @@ import (
 )
 
 var (
-	navTileRe  = regexp.MustCompile(`class="avatar avatar-sm nav-tile bg-([a-z]+)-lt" data-kind="([a-z]+)"`)
-	navGlyphRe = regexp.MustCompile(`class="nav-link-icon nav-glyph text-([a-z]+)\b`)
+	navTileRe = regexp.MustCompile(`class="icon dropdown-item-icon nav-icon" data-kind="([a-z]+)"`)
 )
 
 // navOwnerColours is the colour the owner chose for each kind of task and for the
@@ -20,105 +19,72 @@ var navOwnerColours = map[string]string{
 	"health": "teal", "security": "purple", "history": "yellow", "settings": "secondary",
 }
 
-var navTaskKinds = map[string]bool{"create": true, "change": true, "revoke": true, "delete": true}
-
 // Every entry in the header's menus (the main menu's dropdowns, New and the
-// user menu) shows its icon on a colour tile, and the colour follows what the
-// entry is: one kind has one colour everywhere, a task's colour says what it
-// does, each menu's pages share one colour no other menu's pages use, a red
-// (destructive) entry is a delete, and each toggle's icon is its menu's colour.
+// user menu) shows Tabler's plain icon (navIcon), no colour tile (owner,
+// 2026-11-24: "maintain the same minimal icon design as ... in the tabler
+// css"), and says what kind of entry it is: one the mapping knows, a red
+// (destructive) entry is a delete, and each of the owner's task kinds is
+// read somewhere. Each menu's toggle shows its icon in Tabler's own grey.
 func TestNavColoursFollowTheMapping(t *testing.T) {
 	s, _, _ := newTestServer(t)
 	body := signIn(t, s).get("/").Body.String()
 	entries := navEntries(t, body)
 	top, main := headerParts(t, body)
 	header := top + main
+	if strings.Contains(header, "nav-tile") || regexp.MustCompile(`-lt" data-kind=`).MatchString(header) {
+		t.Error("a menu entry still shows a colour tile; entries show Tabler's plain dropdown-item-icon")
+	}
 
-	kindColour := map[string]map[string]bool{}
-	pageColours := map[string]map[string]bool{} // menu -> colours of its pages
-	tiles := 0
+	kinds := map[string]bool{}
+	icons := 0
 	for _, e := range entries {
 		if e.Toggle || e.Menu == "main" || e.Label == "Running as" {
-			continue // Running as is the account header: the initials avatar, not a tile
+			continue // Running as is the account header: text, no icon
 		}
 		m := navTileRe.FindStringSubmatch(e.inner)
 		if m == nil {
-			t.Errorf("%s › %s has no colour tile", e.Menu, e.Label)
+			t.Errorf("%s › %s has no Tabler dropdown-item-icon", e.Menu, e.Label)
 			continue
 		}
-		tiles++
-		colour, kind := m[1], m[2]
-		if want, ok := kindColours[kind]; !ok || want != colour {
-			t.Errorf("%s › %s is kind %s in %s; the mapping says %q", e.Menu, e.Label, kind, colour, want)
+		icons++
+		kind := m[1]
+		if _, ok := kindColours[kind]; !ok {
+			t.Errorf("%s › %s is kind %s, which the mapping does not know", e.Menu, e.Label, kind)
 		}
-		if kindColour[kind] == nil {
-			kindColour[kind] = map[string]bool{}
-		}
-		kindColour[kind][colour] = true
-		if want := navOwnerColours[kind]; want != "" && want != colour {
-			t.Errorf("%s › %s is a %s entry in %s, want %s", e.Menu, e.Label, kind, colour, want)
-		}
+		kinds[kind] = true
 		if strings.Contains(e.attrs, "text-danger") && kind != "delete" {
 			t.Errorf("%s › %s is red (text-danger) but its kind is %s, not delete", e.Menu, e.Label, kind)
 		}
-		// Export / Import, beside New, repeats History's export pages in
-		// History's colour, as New repeats the creates: it owns no colour.
-		// Help holds reference pages in the user menu's personal colour, so
-		// it owns none either.
-		if !navTaskKinds[kind] && e.Menu != "user" && e.Menu != "system" && e.Menu != "transfer" && e.Menu != "help" {
-			if pageColours[e.Menu] == nil {
-				pageColours[e.Menu] = map[string]bool{}
-			}
-			pageColours[e.Menu][colour] = true
-		}
 	}
-	// The floor: 6 + 6 SSH, 3 Tokens, 3 Security, 4 History, 5 System,
-	// 3 New, 4 user: 34. A reader that stopped matching reports fewer.
-	if tiles < 34 {
-		t.Fatalf("read %d colour tiles, want at least 34; the reading is not matching the menus", tiles)
-	}
-	for kind, cs := range kindColour {
-		if len(cs) != 1 {
-			t.Errorf("kind %s shows %d colours: %v", kind, len(cs), cs)
-		}
+	// The floor: 7 + 4 + 6 SSH, 3 Tokens, 3 Security, 5 History, 8 System,
+	// 3 New, 6 user: 45. A reader that stopped matching reports fewer.
+	if icons < 40 {
+		t.Fatalf("read %d menu icons, want at least 40; the reading is not matching the menus", icons)
 	}
 	for kind := range navOwnerColours {
-		if kindColour[kind] == nil {
+		if !kinds[kind] {
 			t.Errorf("no menu entry of kind %s was read; the reading is not matching", kind)
 		}
 	}
-	owner := map[string]string{}
-	for menu, cs := range pageColours {
-		if len(cs) != 1 {
-			t.Errorf("the %s menu's pages show %d colours, want one: %v", menu, len(cs), cs)
-		}
-		for c := range cs {
-			if other, ok := owner[c]; ok {
-				t.Errorf("the %s and %s menus' pages share the colour %s", menu, other, c)
-			}
-			owner[c] = menu
-		}
-	}
-	if len(pageColours) != 4 {
-		t.Errorf("read the pages of %d menus, want 4 (SSH, Tokens, Security, History)", len(pageColours))
-	}
 
-	// Each toggle's icon is its menu's colour: the pages' colour, and for
-	// System, which holds two kinds, Health's.
-	glyphs := map[string]string{"ssh": kindColours["ssh"], "tokens": kindColours["tokens"],
-		"security": kindColours["security"], "history": kindColours["history"], "system": kindColours["health"],
-		"help": kindColours["personal"]}
-	for menu, want := range glyphs {
+	// Each toggle's icon is Tabler's own grey: no colour class on it, the
+	// same for every menu (owner, 2026-11-24: "maintain same nav color as
+	// tabler does").
+	toggles := 0
+	for _, menu := range []string{"ssh", "tokens", "security", "history", "system", "help"} {
 		i := strings.Index(header, `id="navbar-`+menu+`"`)
 		if i < 0 {
 			t.Errorf("no %s toggle", menu)
 			continue
 		}
+		toggles++
 		end := strings.Index(header[i:], "</a>")
-		g := navGlyphRe.FindStringSubmatch(header[i : i+end])
-		if g == nil || g[1] != want {
-			t.Errorf("the %s toggle's icon colour = %v, want text-%s", menu, g, want)
+		if g := regexp.MustCompile(`nav-link-icon[^"]*\btext-[a-z]+`).FindString(header[i : i+end]); g != "" {
+			t.Errorf("the %s toggle's icon is coloured (%s); Tabler draws it grey", menu, g)
 		}
+	}
+	if toggles != 6 {
+		t.Fatalf("read %d toggles, want 6", toggles)
 	}
 }
 

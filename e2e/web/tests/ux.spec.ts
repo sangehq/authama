@@ -314,26 +314,23 @@ test("a key's row actions open in the side panel, and the list stays where it wa
   await expect(page).toHaveURL(/\/keys$/);
 });
 
-// Every menu's colour tiles are square, one size, and never squeezed: a tile
-// is a flex item beside a wrapping description, and without flex: none the
-// browser shrank it toward the icon's width, so tiles in one menu came out
-// narrow and of different widths, and the names beside them started at
+// Every menu's icons are Tabler's plain dropdown-item-icon: square, 20px
+// (--tblr-dropdown-item-icon-size), never squeezed, and the names beside them
+// start at one place. An icon is a flex item beside a wrapping description;
+// without flex: none the browser shrank it, and the names started at
 // different places (owner, 2026-11-16, from a screenshot of the SSH menu).
+// The colour tiles that held the icons were dropped on 2026-11-24 (owner:
+// "maintain the same minimal icon design as ... in the tabler css").
 for (const menu of ['ssh', 'tokens', 'security', 'history', 'system', 'new', 'user']) {
-  test(`the ${menu} menu's tiles are square, ${36}px, and its names line up`, async ({ page }) => {
+  test(`the ${menu} menu's icons are square, ${20}px, and its names line up`, async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/');
     await page.locator(`#navbar-${menu}`).click();
     const box = page.locator(`[aria-labelledby="navbar-${menu}"]`);
     await expect(box).toBeVisible();
-    if (menu === 'user') {
-      // Light and Dark sit in the Theme submenu: open it so they are measured too.
-      await page.locator('#navbar-theme').click();
-      await expect(page.locator('[aria-labelledby="navbar-theme"]')).toBeVisible();
-    }
     const read = await box.locator('.nav-menu-item').evaluateAll((items) =>
       items.map((it) => {
-        const tile = it.querySelector('.nav-tile')!.getBoundingClientRect();
+        const tile = it.querySelector('.nav-icon')!.getBoundingClientRect();
         const text = it.querySelector('.nav-menu-text')!.getBoundingClientRect();
         const col = it.closest('.dropdown-menu-column');
         return {
@@ -346,8 +343,8 @@ for (const menu of ['ssh', 'tokens', 'security', 'history', 'system', 'new', 'us
       }),
     );
     expect(read.length, `entries in the ${menu} menu`).toBeGreaterThanOrEqual(2);
-    const bad = read.filter((r) => r.w !== r.h || r.w < 36).map((r) => `${r.label}: ${r.w}x${r.h}`);
-    expect(bad, `squeezed or small tiles in the ${menu} menu`).toEqual([]);
+    const bad = read.filter((r) => r.w !== r.h || r.w !== 20).map((r) => `${r.label}: ${r.w}x${r.h}`);
+    expect(bad, `squeezed or resized icons in the ${menu} menu`).toEqual([]);
     for (const col of new Set(read.map((r) => r.col))) {
       const starts = new Set(read.filter((r) => r.col === col).map((r) => r.textX));
       expect([...starts], `names start at one place in column ${col} of the ${menu} menu`).toHaveLength(1);

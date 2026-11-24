@@ -82,7 +82,7 @@ func TestTheMainMenuGroupsPagesByWhatTheyAreAbout(t *testing.T) {
 		"history":  {"/history", "/events", "/snapshots", "/export", "/setup"},
 		"system":   {"/doctor", "/validate", "/repair", "/logs", "/settings", "/api-tokens", "/webhooks", "/reset"},
 		"new":      {"/hosts#add-host", "/tokens#add-token", "/keys#mint-keys"},
-		"user":     {"?theme=light", "?theme=dark", "/about"},
+		"user":     {"/about"},
 		"help":     {"/integrations", "/ssh-folder"},
 	} {
 		if len(groups[group]) != len(hrefs) {

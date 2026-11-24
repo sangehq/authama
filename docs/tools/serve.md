@@ -175,11 +175,11 @@ server only reads), a search box that opens the command palette, a theme toggle 
 bell listing the newest [file events](events.md), a **New** button for the common creates, an **Export / Import**
 button (every export in one zip, the encrypted full export, and importing a setup file; a read-only server offers
 the export only), and the user menu, named for the system user the server runs as. The user menu is personal: it opens with
-the user's initials and *Running as this user on <host>*, then a **Theme** submenu (Light or Dark, the
-one in use checked), **Take the tour**, **About authama** and **Sign out**. Under the top bar, the main
+the user's name and *Running as this user on <host>*, then **Take the tour**, **About authama** and
+**Sign out**; the light and dark theme switch is the moon or sun button beside the bell. Under the top bar, the main
 menu holds every page, one kind of thing to a menu. A menu with groups opens as one wide panel, a
-column per group, and SSH's Tasks sit in a tinted panel beside its pages; on a narrow screen the
-columns stack:
+column per group, and SSH's Tasks sit in a tinted panel beside its pages; below 992px the columns
+stack, and on a phone the main menu is a vertical list:
 
 | Menu | Holds |
 |---|---|
@@ -194,31 +194,13 @@ columns stack:
 
 Each entry has its own icon and a line under its name saying what the page shows or does; no two
 entries share an icon or open the same page, except that New repeats three entries from the Tasks.
-The icon sits on a small tile coloured by what the entry is: a menu's own pages share one colour, so
-the menu is recognisable, and a task's colour says what it does. Each menu's toggle shows its icon
-in the same colour (System's is Health's).
-
-| Kind | Colour (Tabler) | Entries |
-|---|---|---|
-| SSH pages | cyan | Profiles, Hosts, Keys, VMs, Naming, SSH config, Termius import |
-| Tokens pages | pink | Tokens, Token checklists |
-| Security | purple | Audit, Checklists, Owner & PIN |
-| History | yellow | Changes, File events, Snapshots, Export |
-| Health | teal | Doctor, Validate, Repair |
-| Settings | secondary (grey) | Settings, API tokens, Webhooks |
-| Personal (user menu) | secondary (grey) | Theme, Light, Dark, Take the tour, About, Sign out |
-| Create or add | green | Add a host, Add a token, Mint missing keys (in Tasks and New) |
-| Change | blue | Pin host keys, Rotate keys |
-| Revoke | orange | Revoke keys |
-| Delete or start again | red | Delete keys, Reset… |
-| Overview (top link) | blue | Overview's icon |
-
-The tile's icon and edge are the colour darkened in the light theme and lightened in the dark one,
-so both stay at 3:1 or more against the menu (measured at 5.4:1 or more). The current page's entry
-has a bar at its start edge, and the keyboard's focus is a ring around the entry. The header and its
-menus are set in Inter, the typeface Tabler's own documentation uses, served from the binary (the
-page loads no font from anywhere else), with Tabler's weights: medium for a menu or an entry's name,
-and Tabler's small uppercase headers over each group.
+The icons are Tabler's own menu icons: thin and grey beside the name, red for a destructive entry
+(Delete keys, Reset…) and the theme's blue for the current page, at 3:1 or more against the menu
+in both themes. The main menu's own icons are Tabler's grey too, the same for every menu. The current
+page's entry also has a bar at its start edge, and the keyboard's focus is a ring around the entry.
+The header and its menus are set in Inter, the typeface Tabler's own documentation uses, served from
+the binary (the page loads no font from anywhere else), with Tabler's weights: medium for a menu or
+an entry's name, and Tabler's small uppercase headers over each group.
 A job's entry opens its page with the form's panel already open, and nothing runs until it is
 reviewed. A read-only server shows no Tasks and no New button, and a dev sandbox leaves out Rotate
 and Revoke, which reach real servers. When export is turned off, the History menu has no Export. On

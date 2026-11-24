@@ -27,12 +27,13 @@ async function audit(page: Page, info: TestInfo, label: string, within?: string[
 
 type TileReading = { label: string; state: string; icon: number; edge: number };
 
-// tileContrast reads every colour tile in an open menu: its icon against the
-// tile, and the tile's edge against the entry behind it, as contrast ratios.
-// Colours are resolved through a canvas, which turns any CSS colour (the
-// tiles mix theirs in oklab) into sRGB bytes.
+// tileContrast reads every menu icon in an open menu (Tabler's plain
+// dropdown-item-icon) against the entry behind it, as a contrast ratio.
+// Colours are resolved through a canvas, which turns any CSS colour (oklab
+// mixes included) into sRGB bytes. edge is the same reading: an icon has no
+// tile, so its outline is the icon itself.
 async function tileContrast(page: Page, menu: string): Promise<TileReading[]> {
-  const items = page.locator(`[aria-labelledby="navbar-${menu}"] .nav-tile`);
+  const items = page.locator(`[aria-labelledby="navbar-${menu}"] .nav-icon`);
   const n = await items.count();
   const out: TileReading[] = [];
   for (const state of ['rest', 'focus'] as const) {
@@ -82,13 +83,12 @@ async function tileContrast(page: Page, menu: string): Promise<TileReading[]> {
           const behind = backdrop(el.parentElement);
           const tileBg = over(rgba(getComputedStyle(el).backgroundColor), behind);
           const icon = over(rgba(getComputedStyle(el).color), tileBg);
-          const edge = over(rgba(getComputedStyle(el).borderTopColor), behind);
           const entry = el.closest('.dropdown-item, [data-running-as]');
           return {
             label: (entry?.textContent ?? '').trim().split(/\s{2,}|\n/)[0],
             state: st,
             icon: ratio(icon, tileBg),
-            edge: ratio(edge, behind),
+            edge: ratio(icon, tileBg),
           };
         }, state),
       );
@@ -127,25 +127,20 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(page.locator('html')).toHaveAttribute('data-bs-theme', theme);
         await page.locator(`#navbar-${menu}`).click();
         await expect(page.locator(`[aria-labelledby="navbar-${menu}"]`)).toBeVisible();
-        if (menu === 'user') {
-          // The Theme submenu open too, so Light, Dark and the check are judged.
-          await page.locator('#navbar-theme').click();
-          await expect(page.locator('[aria-labelledby="navbar-theme"]')).toBeVisible();
-        }
         // The headers, which hold the menus. The page under an open menu is
         // audited with every menu closed above; checking it here judged a page
         // button the menu happened to cover as a too-small target (axe
         // target-size, "partially obscured"), which is the menu's overlap, not
         // the button's size.
         await audit(page, info, `${menu} menu on ${path} (${theme})`, ['header']);
-        // axe measures text, not an icon or the edge of its tile; WCAG 1.4.11
-        // asks 3:1 of both, so they are measured here, at rest and with the
-        // focus on each entry (its hover and focus tint behind the tile).
+        // axe measures text, not an icon; WCAG 1.4.11 asks 3:1 of it, so each
+        // menu icon is measured here, at rest and with the focus on its entry
+        // (the hover and focus tint behind it).
         const tiles = await tileContrast(page, menu);
         await info.attach(`tile contrast ${menu} (${theme})`, { body: JSON.stringify(tiles, null, 2), contentType: 'application/json' });
-        expect(tiles.length, `the ${menu} menu's colour tiles`).toBeGreaterThanOrEqual(3);
+        expect(tiles.length, `the ${menu} menu's icons`).toBeGreaterThanOrEqual(3);
         const low = tiles.filter((t) => t.icon < 3 || t.edge < 3).map((t) => `${t.label}: icon ${t.icon}, edge ${t.edge}`);
-        expect(low, `icons or tile edges under 3:1 in the ${menu} menu (${theme})`).toEqual([]);
+        expect(low, `icons under 3:1 in the ${menu} menu (${theme})`).toEqual([]);
       });
     }
 
