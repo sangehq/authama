@@ -525,7 +525,7 @@ export class CsvExport extends Component {
       box.replaceChildren(El.create("div").cls("empty py-5").append(El.create("p").cls("empty-title").text(blocked)).node);
       return;
     }
-    const table = El.create("table").cls("table table-sm table-striped table-vcenter card-table mb-0");
+    const table = El.create("table").cls("table table-sm table-striped table-vcenter card-table mb-0").attr("data-copy-cells", "").attr("data-stack", "");
     table.append(
       El.create("thead").append(El.create("tr").append(...p.header.map((h) => El.create("th").attr("scope", "col").text(h)))),
       El.create("tbody").append(
@@ -535,6 +535,7 @@ export class CsvExport extends Component {
       ),
     );
     box.replaceChildren(table.node);
+    document.dispatchEvent(new CustomEvent("authama:mount", { detail: { root: box } }));
   }
 
   /** The built-in preset this list is, or "" for one with none (the Termius CSV). */
