@@ -101,3 +101,29 @@ func TestToolIntegrationsListWhatEachExportWrites(t *testing.T) {
 		t.Errorf("/integrations/nope: %d, want 404", rec.Code)
 	}
 }
+
+// The Termius page chooses a host's routes with it: web needs cloudflared, so
+// Termius leaves it out, and its WARP route goes into the file instead. The
+// page used to say "0 of 1" and write no row for it.
+func TestTermiusPageWritesAHostsDirectRoute(t *testing.T) {
+	s, p, _ := newTestServer(t)
+	m := `{"version":1,"defaults":{"key_type":"ed25519"},"profiles":{
+	  "work":{"key_scope":"per_service","hosts":[
+	    {"alias":"web","hostname":"ssh-web.example.com","user":"deploy","proxy":{"kind":"cloudflared"},
+	     "variants":[{"name":"warp","hostname":"10.0.0.3","proxy":{"kind":"none"}}]}]}}}`
+	if err := os.WriteFile(p.Manifest(), []byte(m), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	body := signIn(t, s).get("/termius").Body.String()
+	if !strings.Contains(body, ">1 of 2 host(s) in the file<") {
+		t.Error("the Termius page does not count web's route: want 1 of 2")
+	}
+	i := strings.Index(body, `id="termius-preview"`)
+	if i < 0 {
+		t.Fatal("the Termius page has no CSV preview")
+	}
+	preview := body[i : i+strings.Index(body[i:], "</table>")]
+	if !strings.Contains(preview, ">warp-web<") || !strings.Contains(preview, ">10.0.0.3<") {
+		t.Errorf("the CSV preview does not write warp-web at 10.0.0.3:\n%s", preview)
+	}
+}

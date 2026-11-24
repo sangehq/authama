@@ -24,31 +24,16 @@ var _ encode.HostSource = Source{}
 // RenderClientExport chooses them: a host behind a ProxyCommand only for a
 // client that runs ssh, a git host only with includeGit.
 func (s Source) ClientHosts(aliases []string, client string, viaSSH, includeGit bool) ([]encode.Host, []string, error) {
-	resolved, err := s.M.IterResolved()
+	chosen, err := withRoutes(s.M, aliases)
 	if err != nil {
 		return nil, nil, err
 	}
-	byAlias := map[string]manifest.ResolvedKey{}
-	for _, rk := range resolved {
-		byAlias[rk.Host.Alias] = rk
-	}
-	var unknown []string
-	for _, a := range aliases {
-		if _, ok := byAlias[a]; !ok {
-			unknown = append(unknown, a)
-		}
-	}
-	if len(unknown) > 0 {
-		sort.Strings(unknown)
-		return nil, nil, fmt.Errorf("no host named %s", strings.Join(unknown, ", "))
-	}
 	var hosts []encode.Host
 	var skipped []string
-	for _, a := range aliases {
-		rk := byAlias[a]
+	for _, rk := range chosen {
 		h := rk.Host
 		switch {
-		case !viaSSH && (h.VM != nil || h.Proxy != nil):
+		case !viaSSH && (h.VM != nil || proxied(h)):
 			skipped = append(skipped, h.Alias+": reached through a ProxyCommand, which "+client+" does not run")
 			continue
 		case isGitHost(h) && !includeGit:
@@ -58,6 +43,50 @@ func (s Source) ClientHosts(aliases []string, client string, viaSSH, includeGit 
 		hosts = append(hosts, clientHost(s.M, s.P, rk))
 	}
 	return hosts, skipped, nil
+}
+
+// withRoutes is the hosts aliases name, in the order named, then the route
+// variants of each (warp-<alias>), as exportResolved places them: a selection
+// that keeps a host keeps the routes the config renders beside it. A variant
+// may be named itself; an alias the manifest does not have is an error.
+func withRoutes(m *manifest.Manifest, aliases []string) ([]manifest.ResolvedKey, error) {
+	all, err := exportResolved(m)
+	if err != nil {
+		return nil, err
+	}
+	byAlias := map[string]manifest.ResolvedKey{}
+	routesOf := map[string][]string{} // a host's alias -> its variants' aliases
+	for _, rk := range all {
+		byAlias[rk.Host.Alias] = rk
+		for _, v := range rk.Host.Variants {
+			routesOf[rk.Host.Alias] = append(routesOf[rk.Host.Alias], manifest.VariantAlias(v.Name, rk.Host.Alias))
+		}
+	}
+	var unknown []string
+	for _, a := range aliases {
+		if _, ok := byAlias[a]; !ok {
+			unknown = append(unknown, a)
+		}
+	}
+	if len(unknown) > 0 {
+		sort.Strings(unknown)
+		return nil, fmt.Errorf("no host named %s", strings.Join(unknown, ", "))
+	}
+	seen := map[string]bool{}
+	var out, routes []manifest.ResolvedKey
+	for _, a := range aliases {
+		if !seen[a] {
+			seen[a] = true
+			out = append(out, byAlias[a])
+		}
+		for _, r := range routesOf[a] {
+			if !seen[r] {
+				seen[r] = true
+				routes = append(routes, byAlias[r])
+			}
+		}
+	}
+	return append(out, routes...), nil
 }
 
 // SSHConfig is the flat export of the hosts named.

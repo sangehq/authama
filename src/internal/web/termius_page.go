@@ -168,12 +168,14 @@ func (t termiusPage) view(q url.Values, groups string) (TermiusView, error) {
 	if err != nil {
 		return TermiusView{}, err
 	}
-	hosts, _, err := src.ClientHosts(aliases, "Termius", false, includeGit)
+	hosts, left, err := src.ClientHosts(aliases, "Termius", false, includeGit)
 	if err != nil {
 		return TermiusView{}, err
 	}
+	// Chosen counts each host's routes (warp-<alias>) too: they go into the
+	// file beside it, so "5 of 10" would count a route written but not chosen.
 	v := TermiusView{Groups: groups, IncludeGit: includeGit, Include: sel.Where.Include, Exclude: sel.Where.Exclude,
-		Chosen: len(aliases), Written: len(hosts), Skipped: exp.Skipped,
+		Chosen: len(hosts) + len(left), Written: len(hosts), Skipped: exp.Skipped,
 		ClearCmd: brand.Command + " ssh termius keys --clear"}
 	if len(exp.Files) == 1 {
 		v.CSV = string(exp.Files[0].Data)
