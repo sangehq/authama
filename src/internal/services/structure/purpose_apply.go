@@ -38,6 +38,17 @@ func SangeRetargetArgs(from, to string) []string {
 	return []string{"profile", "signing", "retarget", "--from", from, "--to", to}
 }
 
+// isLiveUserSSHDir reports whether sshDir is this process's real ~/.ssh.
+// Previews and --dev-root sandboxes are not, so a sange retarget must not
+// write the real ~/.gitconfig for those.
+func isLiveUserSSHDir(sshDir string) bool {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return false
+	}
+	return filepath.Clean(sshDir) == filepath.Join(home, ".ssh")
+}
+
 func applyPurposeMoves(p paths.Paths, moves []Move, out io.Writer, res *Result) error {
 	var purpose, copies []Move
 	for _, mv := range moves {
@@ -158,6 +169,12 @@ func applyOnePurpose(p paths.Paths, m *manifest.Manifest, mv Move, backup string
 		// Prefer ~-form for the command the owner may re-run.
 		fromShow, toShow := "~/.ssh/"+relSSH(p, from), "~/.ssh/"+relSSH(p, to)
 		cmd := SangeRetargetArgs(fromShow, toShow)
+		// A preview runs Apply on a copy of ~/.ssh, but sange would still
+		// write the real ~/.gitconfig. Only retarget for real when this is
+		// the live user SSH dir; otherwise pass --dry-run (sange writes nothing).
+		if !isLiveUserSSHDir(p.SSHDir) {
+			cmd = append(cmd, "--dry-run")
+		}
 		msg, err := runSange(cmd...)
 		if err != nil {
 			line := "sange " + strings.Join(cmd, " ")

@@ -102,6 +102,9 @@ func TestSimSixFilesClassifyAndApply(t *testing.T) {
 	if !strings.Contains(joined, "profile signing retarget") || !strings.Contains(joined, "tools/git/git-signing.pub") {
 		t.Errorf("handoff: %s", joined)
 	}
+	if !strings.Contains(joined, "--dry-run") {
+		t.Errorf("preview/sandbox retarget must pass --dry-run so sange does not write ~/.gitconfig: %s", joined)
+	}
 	if res.Backup == "" {
 		t.Error("expected a backup")
 	}

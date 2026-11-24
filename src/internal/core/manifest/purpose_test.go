@@ -29,6 +29,12 @@ func TestKeyPathToolRole(t *testing.T) {
 	if rel := KeyRel(m, KeyRef{Profile: "imanimanyara", KeyName: "git-signing"}); rel != "profiles/personal/imanimanyara/tools/git/git-signing" {
 		t.Fatalf("key rel: %s", rel)
 	}
+	if got := m.IdentityFile("imanimanyara", "git-signing"); got != "~/.ssh/profiles/personal/imanimanyara/tools/git/git-signing" {
+		t.Fatalf("IdentityFile git-signing: %s", got)
+	}
+	if got := m.IdentityFile("imanimanyara", "docker-tunnel"); got != "~/.ssh/profiles/personal/imanimanyara/tools/docker/docker-tunnel" {
+		t.Fatalf("IdentityFile docker-tunnel: %s", got)
+	}
 	loc, ok := LocateKeyPath(m, ssh, git)
 	if !ok || loc.Profile != "imanimanyara" || loc.Tool != "git" || loc.Name != "git-signing" {
 		t.Fatalf("locate: %+v ok=%v", loc, ok)
