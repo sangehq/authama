@@ -1286,10 +1286,17 @@ func (m *Manifest) Categories() []string {
 // disk, so the renderer points ssh at its .pub instead; inventory records and
 // every other caller keep this one, so a key has the same identity in both stores.
 func (m *Manifest) IdentityFile(profileName, keyName string) string {
-	if rel := AdoptedPath(m, KeyRef{Profile: profileName, KeyName: keyName}); rel != "" {
-		return sshToken + "/" + rel
+	ref := KeyRef{Profile: profileName, KeyName: keyName}
+	if rel := AdoptedPath(m, ref); rel != "" {
+		return sshToken + "/" + filepath.ToSlash(rel)
 	}
-	return sshToken + "/" + m.ProfileRel(profileName) + "/" + keyName
+	base := sshToken + "/" + m.ProfileRel(profileName)
+	if spec, ok := m.KeySpecFor(ref); ok {
+		if rel := spec.ToolRel(); rel != "" {
+			return base + "/" + filepath.ToSlash(rel)
+		}
+	}
+	return base + "/" + keyName
 }
 
 // KeyRef names one key: the profile that owns it plus the file name inside that
