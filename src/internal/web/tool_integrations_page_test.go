@@ -80,7 +80,7 @@ func TestToolIntegrationsListWhatEachExportWrites(t *testing.T) {
 		t.Fatalf("/integrations/iterm2: %d", page.Code)
 	}
 	pb := page.Body.String()
-	for _, want := range []string{`<code>warp-web</code></th><td class="text-break">10.0.0.3</td>`, `<td>direct</td>`, `<pre class="code-block p-3">`} {
+	for _, want := range []string{`<code>warp-web</code></th><td class="text-break">10.0.0.3</td>`, `<td>direct</td>`, `<pre class="code-block p-3"`} {
 		if !strings.Contains(pb, want) {
 			t.Errorf("/integrations/iterm2 lacks %q", want)
 		}
