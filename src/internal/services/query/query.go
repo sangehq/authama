@@ -29,6 +29,22 @@ type HostRow struct {
 	KeyName       string
 	Status        string // no-key | not-deployed | needs-redeploy | deployed
 	Tags          []string
+	// Aliases are the host's extra names, rendered on its own Host line.
+	Aliases []string
+	// Route is how ssh gets there when it is not a plain connection:
+	// "cloudflared", "direct" (ProxyCommand none), "command" or "jump <host>";
+	// empty for a plain connection.
+	Route string
+	// Variants are the host's other routes, each rendered as its own block
+	// (warp-<alias>), sharing this host's user and key.
+	Variants []VariantRow
+}
+
+// VariantRow is one of a host's other routes.
+type VariantRow struct {
+	Alias    string
+	Hostname string
+	Route    string
 }
 
 // ProfileGroup is a profile and its (possibly filtered) host rows.
@@ -190,11 +206,34 @@ func (q *Query) row(pname string, host manifest.Host) (HostRow, error) {
 		return HostRow{}, err
 	}
 	rec, ok := q.byPath[q.m.IdentityFile(pname, kname)]
-	return HostRow{
+	row := HostRow{
 		Alias: host.Alias, Hostname: host.Hostname,
 		ProviderLabel: q.providerLabel(host), KeyName: kname,
 		Status: status(rec, ok), Tags: tagsOf(host),
-	}, nil
+		Aliases: host.Aliases, Route: routeOf(host),
+	}
+	for _, v := range host.Variants {
+		vh, err := manifest.VariantHostOf(q.m, pname, host, v)
+		if err != nil {
+			return HostRow{}, err
+		}
+		row.Variants = append(row.Variants, VariantRow{Alias: vh.Alias, Hostname: vh.Hostname, Route: routeOf(vh)})
+	}
+	return row, nil
+}
+
+// routeOf names how ssh reaches h when it is not a plain connection.
+func routeOf(h manifest.Host) string {
+	if h.Proxy != nil {
+		if h.Proxy.Kind == manifest.ProxyNone {
+			return "direct"
+		}
+		return h.Proxy.Kind
+	}
+	if j := h.RawOptions.Get("ProxyJump"); j != "" {
+		return "jump " + j
+	}
+	return ""
 }
 
 func (q *Query) hostDetail(pname string, host manifest.Host) (*HostDetail, error) {
