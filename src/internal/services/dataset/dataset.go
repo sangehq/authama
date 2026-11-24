@@ -111,6 +111,13 @@ type Host struct {
 	Proxy       bool     `json:"proxy"`
 	TokenEnv    string   `json:"token_env"` // the variable's name, never its value
 	Options     []Option `json:"options"`   // raw ssh_config options, in order
+	// Aliases are the host's extra names (Host <alias> <aliases…>).
+	Aliases []string `json:"aliases"`
+	// Route is how ssh reaches it when not a plain connection: vm,
+	// cloudflared, direct, command or "jump <host>"; "" for a plain one.
+	Route string `json:"route"`
+	// Routes are its other routes' aliases (warp-<alias>), each its own block.
+	Routes []string `json:"routes"`
 }
 
 // Option is one raw ssh_config option of a host.
@@ -263,7 +270,11 @@ func profileOf(m *manifest.Manifest, name string, keys int) Profile {
 func hostOf(m *manifest.Manifest, profile string, r query.HostRow, h manifest.Host) Host {
 	out := Host{Alias: r.Alias, Profile: profile, Hostname: r.Hostname, User: h.User, Port: h.Port,
 		Provider: r.ProviderLabel, Key: r.KeyName, Status: r.Status, Tags: r.Tags,
-		RequiresVPN: h.RequiresVPN, VM: h.VM != nil, Proxy: h.Proxy != nil, Options: []Option{}}
+		RequiresVPN: h.RequiresVPN, VM: h.VM != nil, Proxy: h.Proxy != nil, Options: []Option{},
+		Aliases: append([]string{}, r.Aliases...), Route: r.Route, Routes: []string{}}
+	for _, v := range r.Variants {
+		out.Routes = append(out.Routes, v.Alias)
+	}
 	if out.Tags == nil {
 		out.Tags = []string{}
 	}

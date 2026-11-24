@@ -40,6 +40,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Hosts export their extra names and routes.** A host row has `aliases`, `route` (`vm`, `cloudflared`,
+  `direct`, `command`, `jump <host>`) and `routes` (`warp-<alias>`), for `export hosts --columns`, the Export
+  page and the API; `hosts.csv` keeps its default columns.
 - **Help is a menu: Tool integrations and the SSH folder diagram.** The diagram (`/ssh-folder`,
   `authama ssh structure diagram`) draws `~/.ssh` as a tree, each key and file labelled from the manifest
   (the hosts a key serves, the profile a tool key belongs to), with the counts.

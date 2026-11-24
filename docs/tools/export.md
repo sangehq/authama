@@ -22,10 +22,16 @@ authama export hosts --profile simtabi --env prd --format json
 authama export keys --columns ref=key,fingerprint,expires_on --sort expires_on --format markdown
 authama export profiles --key simtabi_simbi-prd-web-00-ed25519 --narrow --format yaml
 authama export hosts --fields                              # every field a host row has
+authama export hosts --columns alias,aliases,route,routes  # extra names, how ssh reaches it, its warp-* routes
 authama export --selection sel.json --format php -o hosts.php
 authama export hosts --profile simtabi --format ssh_config -o simtabi.ssh_config
 authama export hosts --env prd --format putty -o prd.reg
 ```
+
+A host row's `aliases` are its extra names, `route` how ssh reaches it when not a plain connection (`vm`,
+`cloudflared`, `direct`, `command` or `jump <host>`), and `routes` its other routes' aliases (`warp-<alias>`). They
+are not in the default columns, so `hosts.csv` keeps its shape. A client export of chosen hosts writes each
+host's routes beside it.
 
 | Part | What it takes |
 |---|---|
