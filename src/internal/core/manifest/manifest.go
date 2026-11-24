@@ -230,6 +230,9 @@ type Host struct {
 	Comment string `json:"comment,omitempty"`
 	// Variants are other routes to the same server (see Variant).
 	Variants []Variant `json:"variants,omitempty"`
+	// Services are reachability dependencies this host's primary route needs
+	// (cloudflare-access, cloudflare-warp, …, or a defaults.services name).
+	Services []string `json:"services,omitempty"`
 }
 
 func (h *Host) UnmarshalJSON(b []byte) error {
@@ -265,6 +268,7 @@ func (h Host) MarshalJSON() ([]byte, error) {
 		Section     string         `json:"section,omitempty"`
 		Comment     string         `json:"comment,omitempty"`
 		Variants    []Variant      `json:"variants,omitempty"`
+		Services    []string       `json:"services,omitempty"`
 	}
 	tags := h.Tags
 	if tags == nil {
@@ -275,6 +279,7 @@ func (h Host) MarshalJSON() ([]byte, error) {
 		Provider: h.Provider, TokenEnv: h.TokenEnv, KeyName: h.KeyName, Tags: tags,
 		RequiresVPN: h.RequiresVPN, VPNName: h.VPNName, VPNURL: h.VPNURL, RawOptions: h.RawOptions,
 		VM: h.VM, Proxy: h.Proxy, Aliases: h.Aliases, Section: h.Section, Comment: h.Comment, Variants: h.Variants,
+		Services: h.Services,
 	})
 }
 
@@ -301,6 +306,13 @@ type KeySpec struct {
 	// empty keeps the key in its profile directory. Rotation archives the old
 	// pair in the profile's old/ and mints the successor at the same path.
 	Path string `json:"path,omitempty"`
+	// Role is "host" (default, empty) or "tool". A tool key lives under
+	// tools/<tool>/ in the profile directory.
+	Role string `json:"role,omitempty"`
+	// Tool is the folder slug under tools/ (git, docker, …); required for role tool.
+	Tool string `json:"tool,omitempty"`
+	// ToolKind is the binding (git-signing, docker, …); empty inherits Tool.
+	ToolKind string `json:"tool_kind,omitempty"`
 }
 
 func (k *KeySpec) UnmarshalJSON(b []byte) error {
@@ -429,6 +441,9 @@ type Defaults struct {
 	// Export holds what `authama export` keeps in the manifest: saved
 	// selections; nil when none are saved.
 	Export *ExportDefaults `json:"export,omitempty"`
+	// Services is the catalog of named reachability dependencies hosts and
+	// variants may attach (see ServiceSpec). Built-in kinds work without entries.
+	Services []ServiceSpec `json:"services,omitempty"`
 }
 
 func newDefaults() Defaults {
@@ -465,6 +480,7 @@ func (d Defaults) MarshalJSON() ([]byte, error) {
 		KeyRoot          string          `json:"key_root,omitempty"`
 		Naming           *Naming         `json:"naming,omitempty"`
 		Export           *ExportDefaults `json:"export,omitempty"`
+		Services         []ServiceSpec   `json:"services,omitempty"`
 	}
 	warn := d.WarnBeforeDays
 	if warn == nil {
@@ -474,7 +490,7 @@ func (d Defaults) MarshalJSON() ([]byte, error) {
 		KeyType: d.KeyType, KeyScope: d.KeyScope, RotateAfterDays: d.RotateAfterDays,
 		WarnBeforeDays: warn, ExpiryCheck: d.ExpiryCheck, GlobalOptions: d.GlobalOptions,
 		OnePasswordAgent: d.OnePasswordAgent, KeyComment: d.KeyComment, Git: d.Git,
-		KeyRoot: d.KeyRoot, Naming: d.Naming, Export: d.Export,
+		KeyRoot: d.KeyRoot, Naming: d.Naming, Export: d.Export, Services: d.Services,
 	})
 }
 
@@ -984,6 +1000,9 @@ func checkDeclaredKeys(profileName string, p Profile) error {
 				return fmt.Errorf("key %q in profile %q: %w", k.Name, profileName, err)
 			}
 		}
+		if err := checkKeyPurpose(profileName, k); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -1057,6 +1076,9 @@ func (m *Manifest) validate() error {
 		return err
 	}
 	if err := checkKeyStores(m); err != nil {
+		return err
+	}
+	if err := checkServices(m); err != nil {
 		return err
 	}
 	if err := checkGit(m); err != nil {
@@ -1219,7 +1241,13 @@ func (m *Manifest) KeyPath(sshDir string, ref KeyRef) string {
 	if rel := AdoptedPath(m, ref); rel != "" {
 		return filepath.Join(sshDir, filepath.FromSlash(fs.LocalRel(rel)))
 	}
-	return filepath.Join(m.ProfileDir(sshDir, ref.Profile), fs.Segment(ref.KeyName))
+	dir := m.ProfileDir(sshDir, ref.Profile)
+	if spec, ok := m.KeySpecFor(ref); ok {
+		if rel := spec.ToolRel(); rel != "" {
+			return filepath.Join(dir, filepath.FromSlash(rel))
+		}
+	}
+	return filepath.Join(dir, fs.Segment(ref.KeyName))
 }
 
 // AdoptedPath is the key's adopted path relative to ~/.ssh, or "" when the

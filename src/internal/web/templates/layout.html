@@ -111,7 +111,7 @@
                    entries share an icon, and a toggle's icon is none of its
                    entries' (TestNavEntriesHaveDistinctIconsAndPages). */}}
               {{template "navlink" (navItem . "overview" "/" "layout-dashboard" "Overview")}}
-              <li class="nav-item dropdown{{if eq .Nav "profiles" "hosts" "keys" "vms" "naming" "sshconfig" "termius" "structure" "gitsign"}} active{{end}}">
+              <li class="nav-item dropdown{{if eq .Nav "profiles" "hosts" "keys" "vms" "naming" "sshconfig" "termius" "structure" "tools" "services" "gitsign"}} active{{end}}">
                 <a class="nav-link dropdown-toggle" href="#navbar-ssh" id="navbar-ssh" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false" data-tour="2" data-tour-title="SSH" data-tour-text="Profiles, hosts, keys and VMs, then the naming rules and the ssh config rendered from them. Tasks holds the jobs on keys and hosts: each opens its form, and nothing runs until you review it."{{desc "nav-ssh"}}><span class="nav-link-icon nav-glyph text-{{navColour "ssh"}} d-md-none d-lg-inline-block">{{icon "terminal-2"}}</span><span class="nav-link-title">SSH</span></a>
                 <div class="dropdown-menu" aria-labelledby="navbar-ssh">
                   <div class="dropdown-menu-columns">
@@ -126,6 +126,8 @@
                       {{template "navmenuitem" (navItem . "sshconfig" "/ssh-config" "file-code" "SSH config")}}
                       {{template "navmenuitem" (navItem . "termius" "/termius" "server-2" "Termius import")}}
                       {{template "navmenuitem" (navItem . "structure" "/structure" "folder" "Structure")}}
+                      {{template "navmenuitem" (navItem . "tools" "/tools" "device-desktop" "Tools")}}
+                      {{template "navmenuitem" (navItem . "services" "/services" "activity" "Services")}}
                       {{template "navmenuitem" (navItem . "gitsign" "/git-sign" "git-compare" "Git identities")}}
                     </div>
                     {{if not .ReadOnly}}<div class="dropdown-menu-column">

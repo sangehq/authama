@@ -52,6 +52,11 @@ type Suggestion struct {
 	// Info marks a suggestion with nothing to approve: a note.
 	Info      bool `json:"info,omitempty"`
 	Dismissed bool `json:"dismissed,omitempty"`
+	// Purpose-classification fields (KindPurpose / KindCopyRemove).
+	Tool       string   `json:"tool,omitempty"`
+	ToolKind   string   `json:"tool_kind,omitempty"`
+	Confidence float64  `json:"confidence,omitempty"`
+	Evidence   []string `json:"evidence,omitempty"`
 }
 
 // ID is a suggestion's stable short id: the same file in the same state keeps
@@ -79,6 +84,10 @@ func Suggest(p paths.Paths) ([]Suggestion, error) {
 	out = append(out, configHome(p, m)...)
 	for i := range out {
 		out[i].ID = ID(out[i].Kind, out[i].Path)
+	}
+	out, err = Classify(p, out)
+	if err != nil {
+		return nil, err
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Path != out[j].Path {
@@ -147,12 +156,19 @@ func keyTree(p paths.Paths, m *manifest.Manifest) []Suggestion {
 			continue
 		}
 		dir := filepath.Dir(path)
-		ref := manifest.KeyRef{Profile: filepath.Base(dir), KeyName: strings.TrimSuffix(base, ".pub")}
-		priv := filepath.Join(dir, ref.KeyName)
+		name := strings.TrimSuffix(base, ".pub")
+		priv := filepath.Join(dir, name)
 		if seen[priv] {
 			continue
 		}
 		seen[priv] = true
+		loc, ok := manifest.LocateKeyPath(m, p.SSHDir, priv)
+		if !ok {
+			// A directory no profile owns: keep the old guess (the folder name).
+			loc = manifest.LocateKey{Profile: filepath.Base(dir), Name: name}
+		}
+		loc.Name = strings.TrimSuffix(loc.Name, ".pub")
+		ref := manifest.KeyRef{Profile: loc.Profile, KeyName: loc.Name}
 		rel := relSSH(p, priv)
 		expected := m.KeyPath(p.SSHDir, ref)
 		switch {

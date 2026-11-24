@@ -218,6 +218,11 @@ main:focus { outline: none; }
 .side-panel .offcanvas-body { padding-top: .5rem; }
 .side-panel[aria-busy=true] .offcanvas-body { opacity: .5; transition: opacity .15s; }
 .side-panel .page-header { margin-top: 0; }
+/* A long path in a subtitle must wrap at phone width, or the header row overflows. */
+.page-header .col { min-width: 0; }
+.page-header .page-title,
+.page-header p { overflow-wrap: anywhere; }
+
 /* The CSV dialog: a picker of tabs on the left (profiles, keys, columns,
    each a table with a select-all header), the preview on the right. */
 .csv-body { display: flex; min-height: 32rem; }

@@ -170,6 +170,31 @@
               }
             }
           }
+        },
+        "services": {
+          "type": "array",
+          "description": "Named reachability dependencies hosts and variants may attach. Built-in kinds work without an entry.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "How hosts refer to this service; empty uses kind."
+              },
+              "kind": {
+                "type": "string"
+              },
+              "binary": {
+                "type": "string",
+                "description": "Overrides the program looked up on PATH for health checks."
+              },
+              "label": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     },
@@ -391,8 +416,23 @@
                       },
                       "comment": {
                         "type": "string"
+                      },
+                      "services": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "description": "A built-in kind (cloudflare-access, cloudflare-warp, tailscale, bastion, teleport, aws-ssm, onepassword-agent, secretive, vpn) or a name from defaults.services."
+                        }
                       }
                     }
+                  }
+                },
+                "services": {
+                  "type": "array",
+                  "description": "Reachability dependencies of this host's primary route.",
+                  "items": {
+                    "type": "string",
+                    "description": "A built-in kind (cloudflare-access, cloudflare-warp, tailscale, bastion, teleport, aws-ssm, onepassword-agent, secretive, vpn) or a name from defaults.services."
                   }
                 }
               }
@@ -481,6 +521,20 @@
                 "path": {
                   "type": "string",
                   "description": "Adopt the key where it already is: the private key's path relative to ~/.ssh (forward slashes). authama never moves or deletes it."
+                },
+                "role": {
+                  "type": "string",
+                  "enum": ["host", "tool"],
+                  "description": "host (the default when omitted) keeps the key in the profile directory. tool places it at tools/<tool>/ under the profile."
+                },
+                "tool": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9-]{0,31}$",
+                  "description": "The tools/<tool>/ folder slug (git, docker, ploi, forge, ansible, or another slug). Required when role is tool."
+                },
+                "tool_kind": {
+                  "type": "string",
+                  "description": "The binding (git-signing, docker, ploi, forge, ansible, custom). Empty inherits tool."
                 }
               }
             }

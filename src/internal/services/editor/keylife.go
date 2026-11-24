@@ -170,7 +170,7 @@ func (e *Editor) RevokeKey(ref manifest.KeyRef, reason string) (RevokeResult, er
 	pub := m.KeyPath(e.p.SSHDir, ref) + ".pub"
 	kept := rec.Deployments[:0:0]
 	for _, d := range rec.Deployments {
-		if h, found := hostByAlias(m, d.Target); found && e.removeFromTarget(h, pub) {
+		if h, found := hostByAlias(m, d.Target); found && removeFromTarget(e, h, pub) {
 			res.Removed = append(res.Removed, d.Target)
 			continue
 		}

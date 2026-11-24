@@ -167,7 +167,15 @@ func TestEndToEnd(t *testing.T) {
 		if _, _, code := run("", "ssh", "config", "check"); code == 0 {
 			t.Error("a hand-edited managed block should be reported as drift")
 		}
-		mustRun(t, run, "ssh", "config", "render")
+		// render without --force keeps the hand edit (it would otherwise be
+		// discarded). --force rewrites the managed block from the manifest
+		// so later subtests start from a clean tree.
+		if _, errOut, code := run("", "ssh", "config", "render"); code == 0 {
+			t.Error("render should refuse to discard a hand-edited managed block without --force")
+		} else if !strings.Contains(errOut, "edited by hand") {
+			t.Errorf("render refused for the wrong reason:\n%s", errOut)
+		}
+		mustRun(t, run, "ssh", "config", "render", "--force")
 		mustRun(t, run, "ssh", "config", "check")
 	})
 

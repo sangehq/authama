@@ -69,9 +69,11 @@ type Options struct {
 	Settings func(paths.Paths) SettingsView
 
 	// EventRoots names the files whose changes the events page records:
-	// ~/.ssh, the config home, the tools' credential files. Nil tracks
-	// nothing. The server scans them every EventInterval while it runs, and
-	// when the events page or the overview opens.
+	// ~/.ssh (including profiles), the config home, the tools' credential
+	// files, ~/.gitconfig, ~/.config/git and ~/.docker/contexts. Nil tracks
+	// nothing. The server watches them with fsnotify (debounced 1–2s) and
+	// still scans them every EventInterval, and when the events page or the
+	// overview opens. If a watch cannot be established, a short poll is used.
 	EventRoots    func(paths.Paths) []events.Tracked
 	EventInterval time.Duration
 
@@ -126,6 +128,9 @@ type Server struct {
 	// after that a scan that saw no change in ~/.ssh or the config home
 	// leaves them as they are.
 	structureSeen atomic.Bool
+	// watchMode is events.ModeWatching or ModePolling, set by watchEvents
+	// once it has tried to start fsnotify. Empty until Serve starts.
+	watchMode atomic.Value
 }
 
 // New builds a Server. It parses every template once, so a template error is

@@ -66,13 +66,19 @@ test('the key picker chooses every key, whole profiles or single keys, and count
   }
   await group.locator('[data-pick-profile]').uncheck();
 
-  // Where no key qualifies, the picker says so rather than "none chosen": in
-  // this home every key is used by a host, so none can be deleted.
+  // Host keys stay ineligible. The seeded git-signing key is unused by any
+  // host, so it can be deleted and the picker waits for a choice.
   await page.goto('/jobs/review?action=delete-keys');
   const del = page.locator('#job-options [data-key-picker]');
   await expect(del.locator('.key-picker-key.is-ineligible').first()).toContainText('a host uses it');
-  await expect(del.locator('[data-pick-count]')).toHaveText('No key here can be deleted; each says why.');
+  const signing = del.locator('label.key-picker-key', { hasText: 'git-signing' });
+  await expect(signing).toBeVisible();
+  await expect(signing).not.toHaveClass(/is-ineligible/);
+  await expect(del.locator('[data-pick-count]')).toHaveText('No key chosen yet.');
   await expect(page.locator('#job-options [type="submit"]')).toBeDisabled();
+  await signing.click();
+  await expect(del.locator('[data-pick-count]')).toContainText('chosen');
+  await expect(page.locator('#job-options [type="submit"]')).toBeEnabled();
 });
 
 test('the key picker filters, clears, counts per profile and names what Review will act on', async ({ page }) => {

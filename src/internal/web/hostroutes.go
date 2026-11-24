@@ -25,6 +25,16 @@ type RouteView struct {
 	Options                   string // KEY=VALUE, one a line
 	Section, Comment          string
 	Variants                  []VariantView
+	// Services are currently attached; ServiceOptions is the checkbox list
+	// (built-in kinds plus any attached name that is not built in).
+	Services       []string
+	ServiceOptions []ServiceOption
+}
+
+// ServiceOption is one checkbox on a host or variant form.
+type ServiceOption struct {
+	Name    string
+	Checked bool
 }
 
 // routeFormData is what the route_fields partial is given.
@@ -62,10 +72,27 @@ func optionLines(o manifest.OrderedOptions) string {
 	return strings.TrimSuffix(b.String(), "\n")
 }
 
+func serviceOptions(cur []string) []ServiceOption {
+	seen := map[string]bool{}
+	var out []ServiceOption
+	for _, n := range manifest.BuiltinServiceKinds() {
+		out = append(out, ServiceOption{Name: n, Checked: slices.Contains(cur, n)})
+		seen[n] = true
+	}
+	for _, n := range cur {
+		if n != "" && !seen[n] {
+			out = append(out, ServiceOption{Name: n, Checked: true})
+			seen[n] = true
+		}
+	}
+	return out
+}
+
 func routeView(h manifest.Host) RouteView {
 	v := RouteView{Aliases: strings.Join(h.Aliases, ", "), ProxyJump: h.RawOptions.Get("ProxyJump"),
 		ConnectTimeout: h.RawOptions.Get("ConnectTimeout"), Options: optionLines(h.RawOptions),
-		Section: h.Section, Comment: h.Comment}
+		Section: h.Section, Comment: h.Comment, Services: append([]string(nil), h.Services...),
+		ServiceOptions: serviceOptions(h.Services)}
 	v.Proxy, v.ProxyCommand = proxyLabel(h.Proxy)
 	for _, x := range h.Variants {
 		vv := VariantView{Name: x.Name, Alias: manifest.VariantAlias(x.Name, h.Alias), Hostname: x.Hostname,
@@ -74,7 +101,7 @@ func routeView(h manifest.Host) RouteView {
 		if x.Port != 0 {
 			vv.Port = strconv.Itoa(x.Port)
 		}
-		vv.Route = routeView(manifest.Host{Proxy: x.Proxy, RawOptions: x.RawOptions, Section: x.Section, Comment: x.Comment})
+		vv.Route = routeView(manifest.Host{Proxy: x.Proxy, RawOptions: x.RawOptions, Section: x.Section, Comment: x.Comment, Services: x.Services})
 		vv.Proxy, _ = proxyLabel(x.Proxy)
 		if k, c := proxyLabel(x.Proxy); c != "" {
 			vv.Proxy = k + ": " + c
@@ -226,6 +253,45 @@ func routeInput(f url.Values, cur *manifest.Host) (change.RouteInput, error) {
 	if in.Comment, err = str("comment", curHost.Comment); err != nil {
 		return in, err
 	}
+	if _, ok := f["service_set"]; ok {
+		var selected []string
+		for _, n := range f["service"] {
+			n = strings.TrimSpace(n)
+			if n == "" {
+				continue
+			}
+			if !nameRe.MatchString(n) {
+				return in, badForm("service %q is not a name authama accepts: letters, digits, '.', '_' and '-'", n)
+			}
+			if !slices.Contains(selected, n) {
+				selected = append(selected, n)
+			}
+		}
+		if extra := strings.TrimSpace(f.Get("service_extra")); extra != "" {
+			for _, n := range strings.FieldsFunc(extra, func(r rune) bool { return r == ',' || r == ' ' || r == '	' }) {
+				if !nameRe.MatchString(n) {
+					return in, badForm("service %q is not a name authama accepts: letters, digits, '.', '_' and '-'", n)
+				}
+				if !slices.Contains(selected, n) {
+					selected = append(selected, n)
+				}
+			}
+		}
+		if cur == nil {
+			in.Services = selected
+		} else {
+			for _, n := range selected {
+				if !slices.Contains(curHost.Services, n) {
+					in.Services = append(in.Services, n)
+				}
+			}
+			for _, n := range curHost.Services {
+				if !slices.Contains(selected, n) {
+					in.RemoveServices = append(in.RemoveServices, n)
+				}
+			}
+		}
+	}
 	return in, nil
 }
 
@@ -317,6 +383,6 @@ func variantInput(f url.Values, h home) (change.VariantInput, error) {
 		}
 	}
 	in.RouteInput, err = routeInput(f, &manifest.Host{Proxy: cur.Proxy, RawOptions: cur.RawOptions,
-		Section: cur.Section, Comment: cur.Comment})
+		Section: cur.Section, Comment: cur.Comment, Services: cur.Services})
 	return in, err
 }

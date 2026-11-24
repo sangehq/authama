@@ -44,3 +44,5 @@ eb1bf5e242d3752cbdd82a68950fc200bfa58227:src/internal/cli/termius_keys_test.go:p
 f6f589a3d9e377f9dff2ef35d396c306d435f07c:src/internal/core/renderer/testdata/golden/xshell/box.xsh:generic-api-key:11
 # The first wording of the comment above quoted that line, so the scan flagged the comment in e928b86 too.
 e928b860a5b5edb773cf814e1ce0a3b43a0070c6:.gitleaksignore:generic-api-key:42
+# The same golden line was rewritten in a later commit, so the scan fingerprints that SHA too.
+d131fc92dbaf38ad156e4f3a822587112e85dc2f:src/internal/core/renderer/testdata/golden/xshell/box.xsh:generic-api-key:11

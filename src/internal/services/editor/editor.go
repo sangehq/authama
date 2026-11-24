@@ -282,10 +282,10 @@ func (e *Editor) DeleteProfile(name string, revoke bool) (DeleteResult, error) {
 		}
 	}
 	for _, host := range m.Profiles[name].Hosts {
-		e.revokeHost(m, inv, name, host, revoke, &res)
+		revokeHost(e, m, inv, name, host, revoke, &res)
 	}
 	m.DeleteProfile(name)
-	if err := e.pruneIdents(m, inv, affected, &res); err != nil {
+	if err := pruneIdents(e, m, inv, affected, &res); err != nil {
 		return DeleteResult{}, err
 	}
 	if err := e.save(m); err != nil {
@@ -403,7 +403,7 @@ func (e *Editor) DeleteKey(ref manifest.KeyRef, revoke bool) (DeleteResult, erro
 			// host it went to, and that host may still be declared.
 			pub := m.KeyPath(e.p.SSHDir, ref) + ".pub"
 			for _, d := range rec.Deployments {
-				if h, ok := hostByAlias(m, d.Target); ok && e.removeFromTarget(h, pub) {
+				if h, ok := hostByAlias(m, d.Target); ok && removeFromTarget(e, h, pub) {
 					res.Revoked = append(res.Revoked, d.Target)
 				} else {
 					res.NotRevoked = append(res.NotRevoked, d.Target)
@@ -603,11 +603,11 @@ func (e *Editor) DeleteHost(profile, alias string, revoke bool) (DeleteResult, e
 		return DeleteResult{}, err
 	}
 	affected := map[string]bool{m.IdentityFile(profile, kn): true}
-	e.revokeHost(m, inv, profile, host, revoke, &res)
+	revokeHost(e, m, inv, profile, host, revoke, &res)
 	p := m.Profiles[profile]
 	p.Hosts = append(p.Hosts[:idx], p.Hosts[idx+1:]...)
 	m.SetProfile(profile, p)
-	if err := e.pruneIdents(m, inv, affected, &res); err != nil {
+	if err := pruneIdents(e, m, inv, affected, &res); err != nil {
 		return DeleteResult{}, err
 	}
 	if err := e.save(m); err != nil {
@@ -637,7 +637,7 @@ func findHost(m *manifest.Manifest, profile, alias string) (int, manifest.Host, 
 // revokeHost drops this host's deployment entry from the inventory record and,
 // under revoke, asks the host's provider to remove the key from the target
 // first. The record itself is pruned later by pruneIdents.
-func (e *Editor) revokeHost(m *manifest.Manifest, inv *inventory.Inventory, profile string, host manifest.Host, revoke bool, res *DeleteResult) {
+func revokeHost(e *Editor, m *manifest.Manifest, inv *inventory.Inventory, profile string, host manifest.Host, revoke bool, res *DeleteResult) {
 	kn, err := m.ResolvedKeyName(profile, host)
 	if err != nil {
 		return
@@ -655,7 +655,7 @@ func (e *Editor) revokeHost(m *manifest.Manifest, inv *inventory.Inventory, prof
 			}
 		}
 		if revoke && hasDep {
-			if e.removeFromTarget(host, m.KeyPath(e.p.SSHDir, manifest.KeyRef{Profile: profile, KeyName: kn})+".pub") {
+			if removeFromTarget(e, host, m.KeyPath(e.p.SSHDir, manifest.KeyRef{Profile: profile, KeyName: kn})+".pub") {
 				res.Revoked = append(res.Revoked, host.Alias)
 			} else {
 				res.NotRevoked = append(res.NotRevoked, host.Alias)
@@ -677,7 +677,7 @@ func (e *Editor) revokeHost(m *manifest.Manifest, inv *inventory.Inventory, prof
 // through their CLIs, a cloud API by its delete path, a server by editing its
 // authorized_keys. It is best-effort and reports false when the provider
 // cannot remove keys, the call fails, or there is no public key to match.
-func (e *Editor) removeFromTarget(host manifest.Host, path string) bool {
+func removeFromTarget(e *Editor, host manifest.Host, path string) bool {
 	text, err := os.ReadFile(path)
 	if err != nil {
 		return false
@@ -718,7 +718,7 @@ func hostByAlias(m *manifest.Manifest, alias string) (manifest.Host, bool) {
 // Failing to compute the surviving set is not a licence to prune - it means we
 // cannot prove a record is unused - so the error is returned rather than
 // swallowed per host as it used to be.
-func (e *Editor) pruneIdents(m *manifest.Manifest, inv *inventory.Inventory, affected map[string]bool, res *DeleteResult) error {
+func pruneIdents(e *Editor, m *manifest.Manifest, inv *inventory.Inventory, affected map[string]bool, res *DeleteResult) error {
 	refs, err := m.KeyRefs()
 	if err != nil {
 		return err

@@ -72,6 +72,8 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /transfer", transferPage{s}.handle)
 	mux.HandleFunc("GET /transfer/pack.zip", transferPage{s}.handlePack)
 	mux.HandleFunc("GET /structure", structurePage{s}.handleStructure)
+	mux.HandleFunc("GET /tools", toolsPage{s}.handleTools)
+	mux.HandleFunc("GET /services", servicesPage{s}.handleServices)
 	mux.HandleFunc("GET /git-sign", gitSignPage{s}.handle)
 	mux.HandleFunc("GET /events", sp.handleEvents)
 	lp := logsPage{s}

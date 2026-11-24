@@ -32,6 +32,10 @@ const (
 	// profile: key <from>/<key> profile <to> [name <n>] (a key line whose
 	// source is profile/key rather than a path).
 	MoveDeclared = "declared"
+	// MovePurpose recategorises a declared key into tools/<tool>/.
+	MovePurpose = "purpose" // purpose <profile>/<key> tool <tool> [kind <k>]
+	// MoveCopyRemove deletes a leftover copy of a managed key after a backup.
+	MoveCopyRemove = "copy-remove" // copy-remove ~/.ssh/<rel>
 )
 
 // Move is one approved line of a plan.
@@ -44,6 +48,8 @@ type Move struct {
 	// From is the profile a MoveHost or MoveDeclared takes from; Key the key
 	// a MoveDeclared takes (Name is what it is called in Profile).
 	From, Key string
+	// Tool and ToolKind are set for MovePurpose.
+	Tool, ToolKind string
 }
 
 // Line is the move as a plan line.
@@ -65,6 +71,10 @@ func (mv Move) Line() string {
 			line += " name " + mv.Name
 		}
 		return line
+	case MovePurpose:
+		return PurposeLine(mv.Profile, mv.Name, mv.Tool, mv.ToolKind)
+	case MoveCopyRemove:
+		return "copy-remove " + mv.Src
 	}
 	return KeyLine(mv.Src, mv.Profile, mv.Name)
 }
@@ -151,8 +161,26 @@ func parseLine(f []string) (Move, error) {
 			c = ""
 		}
 		return Move{Kind: MoveCategory, Profile: f[1], Category: c}, nil
+	case len(f) >= 4 && f[0] == MovePurpose && f[2] == "tool":
+		prof, key, ok := strings.Cut(f[1], "/")
+		if !ok || !planName(prof) || !planName(key) || !planName(f[3]) {
+			return Move{}, errors.New("want: purpose <profile>/<key> tool <tool> [kind <kind>]")
+		}
+		mv := Move{Kind: MovePurpose, Profile: prof, Name: key, Tool: f[3]}
+		switch {
+		case len(f) == 6 && f[4] == "kind" && planName(f[5]):
+			mv.ToolKind = f[5]
+		case len(f) != 4:
+			return Move{}, errors.New("want: purpose <profile>/<key> tool <tool> [kind <kind>]")
+		}
+		return mv, nil
+	case len(f) == 2 && f[0] == MoveCopyRemove:
+		if err := checkSrc(f[1]); err != nil {
+			return Move{}, err
+		}
+		return Move{Kind: MoveCopyRemove, Src: f[1]}, nil
 	}
-	return Move{}, errors.New("not a move: want `key …`, `misplaced …`, `host …` or `profile … category …`")
+	return Move{}, errors.New("not a move: want `key …`, `misplaced …`, `host …`, `profile … category …`, `purpose …` or `copy-remove …`")
 }
 
 // isRef reports whether s is profile/name: one slash, two plain names, not a
@@ -230,6 +258,7 @@ type Result struct {
 	Declared []string // profile/key
 	Rewrote  []string // hand-written config files
 	Backup   string   // where the moved files were copied first ("" when none moved)
+	Handoff  []string // commands another tool must run (sange signing retarget)
 }
 
 // Apply carries out an approved plan under p: category moves first (through
@@ -265,6 +294,9 @@ func Apply(p paths.Paths, moves []Move, out io.Writer) (Result, error) {
 		audit(p, mv, "~/.ssh/"+cr.From, "~/.ssh/"+cr.To)
 	}
 	if err := applyCross(p, moves, out, &res); err != nil {
+		return res, err
+	}
+	if err := applyPurposeMoves(p, moves, out, &res); err != nil {
 		return res, err
 	}
 	m, err := manifest.Load(p.Manifest())

@@ -13,7 +13,7 @@
 // AUTHAMA_E2E_TOKEN (the sign-in token) and AUTHAMA_E2E_BUNDLE (the bundle's
 // file name).
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, copyFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, copyFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, isAbsolute } from 'node:path';
@@ -129,6 +129,17 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     }
 
     copyFileSync(join(repo, 'src', 'config', 'manifest.json'), join(cfg, 'manifest.json'));
+    // Declare a git-signing key on work so Structure classifies it as a
+    // purpose move into tools/git/ (an undeclared file at the profile root
+    // is only "untracked"). Reconcile mints it at the profile root.
+    const manPath = join(cfg, 'manifest.json');
+    const man = JSON.parse(readFileSync(manPath, 'utf8')) as {
+      profiles: Record<string, { keys?: { name: string; type: string }[] }>;
+    };
+    const work = man.profiles.work;
+    if (!work) throw new Error('the example manifest has no work profile');
+    work.keys = [...(work.keys ?? []), { name: 'git-signing', type: 'ed25519' }];
+    writeFileSync(manPath, JSON.stringify(man, null, 2) + '\n');
     run(env, bin, ['ssh', 'reconcile']);
     // A tokens.json, so the editor (and its JSON check) is on the tokens page.
     run(env, bin, ['token', 'init', '--target', 'npm']);

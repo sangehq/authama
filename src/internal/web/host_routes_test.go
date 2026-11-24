@@ -68,7 +68,7 @@ func TestTheHostFormsSetRoutesAsTheCLIDoes(t *testing.T) {
 
 	page := c.get("/hosts/web0").Body.String()
 	for _, want := range []string{`name="aliases" value="web0-cf"`, `ServerAliveInterval=30</textarea>`, `value="prod: Cloudflare Access"`,
-		`value="host-variant-set"`, `Unchanged (cloudflared)`} {
+		`value="host-variant-set"`, `Unchanged (cloudflared)`, `name="service_set"`, `name="service" value="cloudflare-access"`} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the host page lacks %s", want)
 		}
@@ -114,6 +114,35 @@ func TestTheHostFormsSetRoutesAsTheCLIDoes(t *testing.T) {
 	c.confirm(t, url.Values{"action": {"host-variant-remove"}, "profile": {"work"}, "alias": {"web0"}, "name": {"warp"}})
 	if h = hostIn(t, p.Manifest(), "work", "web0"); len(h.Variants) != 0 {
 		t.Errorf("the variant stayed: %+v", h.Variants)
+	}
+
+	// Services attach the same way --service / --remove-service do.
+	c.confirm(t, url.Values{"action": {"host-edit"}, "profile": {"work"}, "alias": {"web0"},
+		"service_set": {"1"}, "service": {"cloudflare-access", "tailscale"}},
+		"--service=cloudflare-access", "--service=tailscale")
+	h = hostIn(t, p.Manifest(), "work", "web0")
+	if strings.Join(h.Services, ",") != "cloudflare-access,tailscale" {
+		t.Fatalf("host edit services: %+v", h.Services)
+	}
+	c.confirm(t, url.Values{"action": {"host-edit"}, "profile": {"work"}, "alias": {"web0"},
+		"service_set": {"1"}, "service": {"cloudflare-access"}},
+		"--remove-service=tailscale")
+	h = hostIn(t, p.Manifest(), "work", "web0")
+	if strings.Join(h.Services, ",") != "cloudflare-access" {
+		t.Fatalf("host edit remove-service: %+v", h.Services)
+	}
+	c.confirm(t, url.Values{"action": {"host-variant-set"}, "profile": {"work"}, "alias": {"web0"}, "name": {"access"},
+		"service_set": {"1"}, "service": {"cloudflare-warp"}},
+		"variant set", "--service=cloudflare-warp")
+	h = hostIn(t, p.Manifest(), "work", "web0")
+	found := false
+	for _, v := range h.Variants {
+		if v.Name == "access" && strings.Join(v.Services, ",") == "cloudflare-warp" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("variant services: %+v", h.Variants)
 	}
 
 	// What the CLI refuses, the form refuses before any preview.
