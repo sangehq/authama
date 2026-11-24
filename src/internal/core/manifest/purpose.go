@@ -11,13 +11,20 @@ import (
 )
 
 // Key roles. An empty Role is a host key (the default): it lives in the
-// profile directory. A tool key lives under tools/<tool>/ in that profile.
+// profile directory. A tool key lives in the shared tools folder under the key
+// root, <key root>/tools/<tool>/, and stays declared under (linked to) the
+// profile that owns it.
 const (
 	RoleHost = "host"
 	RoleTool = "tool"
 )
 
-// Tool slugs used under profiles/<category>/<profile>/tools/<tool>/.
+// ToolsDir is the folder under the key root that holds every tool key, one
+// subfolder per tool: ~/.ssh/profiles/tools/<tool>/<key>. It is reserved, so no
+// category or uncategorised profile may take the name.
+const ToolsDir = "tools"
+
+// Tool slugs used under profiles/tools/<tool>/.
 const (
 	ToolGit     = "git"
 	ToolDocker  = "docker"
@@ -90,13 +97,50 @@ func (k KeySpec) EffectiveRole() string {
 	return k.Role
 }
 
-// ToolRel is the path of a tool key relative to its profile directory
+// ToolRel is the path of a tool key relative to the key root
 // ("tools/git/git-signing"). Empty when the key is not a tool key.
 func (k KeySpec) ToolRel() string {
 	if k.EffectiveRole() != RoleTool || k.Tool == "" {
 		return ""
 	}
-	return "tools/" + k.Tool + "/" + k.Name
+	return ToolsDir + "/" + k.Tool + "/" + k.Name
+}
+
+// ToolKeyRel is a tool key's path relative to ~/.ssh: the key root's shared
+// tools folder, whichever profile owns it ("profiles/tools/git/git-signing").
+func ToolKeyRel(m *Manifest, k KeySpec) string {
+	if rel := k.ToolRel(); rel != "" {
+		return fs.LocalRel(KeyRoot(m)) + "/" + rel
+	}
+	return ""
+}
+
+// checkToolsReserved refuses what would put another folder where the shared
+// tools folder is (a category or an uncategorised profile named tools), and
+// two profiles declaring the same tool key, which would be one file.
+func checkToolsReserved(m *Manifest) error {
+	owner := map[string]string{} // tools/<tool>/<name> -> profile
+	for _, name := range m.ProfileNames() {
+		p := m.Profiles[name]
+		if p.Category == ToolsDir {
+			return fmt.Errorf("profile %q: category %q is reserved for the shared tool keys folder (%s/%s/<tool>/)", name, ToolsDir, KeyRoot(m), ToolsDir)
+		}
+		if p.Category == "" && name == ToolsDir {
+			return fmt.Errorf("profile %q: an uncategorised profile cannot be named %q, which is reserved for the shared tool keys folder", name, ToolsDir)
+		}
+		for _, k := range p.Keys {
+			rel := k.ToolRel()
+			if rel == "" {
+				continue
+			}
+			if other, ok := owner[rel]; ok {
+				return fmt.Errorf("profiles %q and %q both declare tool key %s; tool keys share %s/%s/, so give one a distinct name (for example %s-%s)",
+					other, name, rel, KeyRoot(m), ToolsDir, name, k.Name)
+			}
+			owner[rel] = name
+		}
+	}
+	return nil
 }
 
 func checkKeyPurpose(profileName string, k KeySpec) error {
@@ -238,9 +282,12 @@ func ServiceKind(m *Manifest, name string) string {
 	return name
 }
 
-// ToolDir is the directory of a tool key under the profile: ProfileDir/tools/<tool>.
+// ToolDir is the directory of a tool's keys: <key root>/tools/<tool>, shared
+// by every profile. profile is kept for callers; the folder does not depend
+// on it.
 func ToolDir(m *Manifest, sshDir, profile, tool string) string {
-	return filepath.Join(m.ProfileDir(sshDir, profile), "tools", fs.Segment(tool))
+	_ = profile
+	return filepath.Join(sshDir, filepath.FromSlash(fs.LocalRel(KeyRoot(m))), ToolsDir, fs.Segment(tool))
 }
 
 // KeyRel is the private key's path relative to ~/.ssh, in forward slashes,
@@ -251,25 +298,43 @@ func KeyRel(m *Manifest, ref KeyRef) string {
 		if spec.Path != "" {
 			return fs.LocalRel(spec.Path)
 		}
-		if rel := spec.ToolRel(); rel != "" {
-			return base + "/" + rel
+		if rel := ToolKeyRel(m, spec); rel != "" {
+			return rel
 		}
 	}
 	return base + "/" + ref.KeyName
 }
 
 // LocateKey describes a key file under the key root: which profile it sits
-// in, and the tool slug when it is under tools/<tool>/.
+// in (for a tool key, the profile that declares it), and the tool slug when
+// it is in a tools/<tool>/ folder.
 type LocateKey struct {
 	Profile string
 	Tool    string // empty for a host key at the profile root
 	Name    string
 }
 
-// LocateKeyPath maps a private-key path under sshDir onto a profile, when
-// it sits in that profile's directory or in tools/<tool>/ beneath it.
+// LocateKeyPath maps a private-key path under sshDir onto a profile: a key in
+// the shared tools folder to the profile that declares it, else a key in a
+// profile's directory, or in the tools/<tool>/ folder an older layout kept
+// beneath it (so Structure can offer to move it to the shared folder).
 func LocateKeyPath(m *Manifest, sshDir, abs string) (LocateKey, bool) {
 	abs = filepath.Clean(abs)
+	toolsRoot := filepath.Join(sshDir, filepath.FromSlash(fs.LocalRel(KeyRoot(m))), ToolsDir)
+	if rel, err := filepath.Rel(toolsRoot, abs); err == nil && !strings.HasPrefix(rel, "..") {
+		parts := strings.Split(filepath.ToSlash(rel), "/")
+		if len(parts) != 2 || parts[0] == "old" || strings.HasPrefix(parts[0], ".") {
+			return LocateKey{}, false
+		}
+		for _, name := range m.ProfileNames() {
+			for _, k := range m.Profiles[name].Keys {
+				if k.EffectiveRole() == RoleTool && k.Tool == parts[0] && k.Name == parts[1] {
+					return LocateKey{Profile: name, Tool: parts[0], Name: parts[1]}, true
+				}
+			}
+		}
+		return LocateKey{}, false
+	}
 	for _, name := range m.ProfileNames() {
 		dir := filepath.Clean(m.ProfileDir(sshDir, name))
 		rel, err := filepath.Rel(dir, abs)

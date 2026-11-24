@@ -35,14 +35,14 @@
 <div class="card" id="tool-list">
   <div class="table-responsive">
     <table class="table table-vcenter card-table" data-copy-cells data-stack>
-      <thead><tr><th>Profile</th><th>Key</th><th>Tool</th><th>Path</th><th>On disk</th></tr></thead>
+      <thead><tr><th>Owner</th><th>Key</th><th>Tool</th><th>Path</th><th>On disk</th></tr></thead>
       <tbody>
         {{range .Rows}}
         <tr>
-          <td>{{.Profile}}</td>
+          <td>{{if .Category}}<span class="text-secondary">{{.Category}} /</span> {{end}}{{.Profile}}</td>
           <td><a href="{{u (printf "/tools?show=%s" .Ref)}}"><code>{{.Name}}</code></a></td>
           <td>{{.Tool}}{{if .Kind}} <span class="text-secondary small">{{.Kind}}</span>{{end}}</td>
-          <td><code>{{.Path}}</code></td>
+          <td class="text-break"><code>{{.Path}}</code></td>
           <td>{{if .Present}}<span class="badge badge-ok">present</span>{{else}}<span class="badge badge-warn">missing</span>{{end}}</td>
         </tr>
         {{end}}

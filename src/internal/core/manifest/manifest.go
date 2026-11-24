@@ -306,8 +306,8 @@ type KeySpec struct {
 	// empty keeps the key in its profile directory. Rotation archives the old
 	// pair in the profile's old/ and mints the successor at the same path.
 	Path string `json:"path,omitempty"`
-	// Role is "host" (default, empty) or "tool". A tool key lives under
-	// tools/<tool>/ in the profile directory.
+	// Role is "host" (default, empty) or "tool". A tool key lives in the
+	// shared <key root>/tools/<tool>/ folder, still declared under this profile.
 	Role string `json:"role,omitempty"`
 	// Tool is the folder slug under tools/ (git, docker, …); required for role tool.
 	Tool string `json:"tool,omitempty"`
@@ -1090,6 +1090,9 @@ func (m *Manifest) validate() error {
 	if err := checkReserved(m); err != nil {
 		return err
 	}
+	if err := checkToolsReserved(m); err != nil {
+		return err
+	}
 	if err := checkKeyRootFor(m); err != nil {
 		return err
 	}
@@ -1243,8 +1246,8 @@ func (m *Manifest) KeyPath(sshDir string, ref KeyRef) string {
 	}
 	dir := m.ProfileDir(sshDir, ref.Profile)
 	if spec, ok := m.KeySpecFor(ref); ok {
-		if rel := spec.ToolRel(); rel != "" {
-			return filepath.Join(dir, filepath.FromSlash(rel))
+		if rel := ToolKeyRel(m, spec); rel != "" {
+			return filepath.Join(sshDir, filepath.FromSlash(rel))
 		}
 	}
 	return filepath.Join(dir, fs.Segment(ref.KeyName))
@@ -1292,8 +1295,8 @@ func (m *Manifest) IdentityFile(profileName, keyName string) string {
 	}
 	base := sshToken + "/" + m.ProfileRel(profileName)
 	if spec, ok := m.KeySpecFor(ref); ok {
-		if rel := spec.ToolRel(); rel != "" {
-			return base + "/" + filepath.ToSlash(rel)
+		if rel := ToolKeyRel(m, spec); rel != "" {
+			return sshToken + "/" + rel
 		}
 	}
 	return base + "/" + keyName

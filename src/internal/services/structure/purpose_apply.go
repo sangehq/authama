@@ -164,33 +164,42 @@ func applyOnePurpose(p paths.Paths, m *manifest.Manifest, mv Move, backup string
 	}
 	res.Declared = append(res.Declared, mv.Profile+"/"+mv.Name)
 	if kind == manifest.ToolKindGitSigning || mv.Tool == manifest.ToolGit {
-		from := src + ".pub"
-		to := dest + ".pub"
-		// Prefer ~-form for the command the owner may re-run.
-		fromShow, toShow := "~/.ssh/"+relSSH(p, from), "~/.ssh/"+relSSH(p, to)
-		cmd := SangeRetargetArgs(fromShow, toShow)
-		// A preview runs Apply on a copy of ~/.ssh, but sange would still
-		// write the real ~/.gitconfig. Only retarget for real when this is
-		// the live user SSH dir; otherwise pass --dry-run (sange writes nothing).
-		if !isLiveUserSSHDir(p.SSHDir) {
-			cmd = append(cmd, "--dry-run")
-		}
-		msg, err := runSange(cmd...)
-		if err != nil {
-			line := "sange " + strings.Join(cmd, " ")
-			res.Handoff = append(res.Handoff, line)
-			_, _ = fmt.Fprintf(out, "sange signing retarget not applied (%v); run: %s\n", err, line)
-			if strings.TrimSpace(msg) != "" {
-				_, _ = fmt.Fprintf(out, "%s\n", strings.TrimSpace(msg))
-			}
-		} else {
-			_, _ = fmt.Fprintf(out, "sange profile signing retarget updated the signing key\n")
-			if strings.TrimSpace(msg) != "" {
-				_, _ = fmt.Fprintf(out, "%s\n", strings.TrimSpace(msg))
-			}
-		}
+		retargetSigning(p, src, dest, out, res)
 	}
 	return nil
+}
+
+// retargetSigning hands a moved git signing key to sange, which owns
+// ~/.gitconfig: `sange profile signing retarget` points user.signingkey (and
+// any includeIf file) from src's .pub to dest's. authama never writes
+// ~/.gitconfig itself; when sange is missing or fails, the command to run is
+// recorded as a handoff.
+func retargetSigning(p paths.Paths, src, dest string, out io.Writer, res *Result) {
+	from := src + ".pub"
+	to := dest + ".pub"
+	// Prefer ~-form for the command the owner may re-run.
+	fromShow, toShow := "~/.ssh/"+relSSH(p, from), "~/.ssh/"+relSSH(p, to)
+	cmd := SangeRetargetArgs(fromShow, toShow)
+	// A preview runs Apply on a copy of ~/.ssh, but sange would still
+	// write the real ~/.gitconfig. Only retarget for real when this is
+	// the live user SSH dir; otherwise pass --dry-run (sange writes nothing).
+	if !isLiveUserSSHDir(p.SSHDir) {
+		cmd = append(cmd, "--dry-run")
+	}
+	msg, err := runSange(cmd...)
+	if err != nil {
+		line := "sange " + strings.Join(cmd, " ")
+		res.Handoff = append(res.Handoff, line)
+		_, _ = fmt.Fprintf(out, "sange signing retarget not applied (%v); run: %s\n", err, line)
+		if strings.TrimSpace(msg) != "" {
+			_, _ = fmt.Fprintf(out, "%s\n", strings.TrimSpace(msg))
+		}
+	} else {
+		_, _ = fmt.Fprintf(out, "sange profile signing retarget updated the signing key\n")
+		if strings.TrimSpace(msg) != "" {
+			_, _ = fmt.Fprintf(out, "%s\n", strings.TrimSpace(msg))
+		}
+	}
 }
 
 func applyCopyRemove(p paths.Paths, m *manifest.Manifest, mv Move, backup string, out io.Writer, res *Result) error {

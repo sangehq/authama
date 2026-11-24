@@ -22,17 +22,17 @@ func TestKeyPathToolRole(t *testing.T) {
 	}
 	ssh := t.TempDir()
 	git := m.KeyPath(ssh, KeyRef{Profile: "imanimanyara", KeyName: "git-signing"})
-	want := filepath.Join(ssh, "profiles", "personal", "imanimanyara", "tools", "git", "git-signing")
+	want := filepath.Join(ssh, "profiles", "tools", "git", "git-signing")
 	if git != want {
 		t.Fatalf("git path: got %s want %s", git, want)
 	}
-	if rel := KeyRel(m, KeyRef{Profile: "imanimanyara", KeyName: "git-signing"}); rel != "profiles/personal/imanimanyara/tools/git/git-signing" {
+	if rel := KeyRel(m, KeyRef{Profile: "imanimanyara", KeyName: "git-signing"}); rel != "profiles/tools/git/git-signing" {
 		t.Fatalf("key rel: %s", rel)
 	}
-	if got := m.IdentityFile("imanimanyara", "git-signing"); got != "~/.ssh/profiles/personal/imanimanyara/tools/git/git-signing" {
+	if got := m.IdentityFile("imanimanyara", "git-signing"); got != "~/.ssh/profiles/tools/git/git-signing" {
 		t.Fatalf("IdentityFile git-signing: %s", got)
 	}
-	if got := m.IdentityFile("imanimanyara", "docker-tunnel"); got != "~/.ssh/profiles/personal/imanimanyara/tools/docker/docker-tunnel" {
+	if got := m.IdentityFile("imanimanyara", "docker-tunnel"); got != "~/.ssh/profiles/tools/docker/docker-tunnel" {
 		t.Fatalf("IdentityFile docker-tunnel: %s", got)
 	}
 	loc, ok := LocateKeyPath(m, ssh, git)

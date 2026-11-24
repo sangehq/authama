@@ -35,14 +35,14 @@ func TestSimSixFilesClassifyAndApply(t *testing.T) {
 	}
 	got := byPath(ss)
 	git := got["~/.ssh/profiles/personal/imanimanyara/git-signing"]
-	if git.Kind != KindPurpose || git.Tool != "git" || git.To != "~/.ssh/profiles/personal/imanimanyara/tools/git/git-signing" || git.Plan == "" {
+	if git.Kind != KindPurpose || git.Tool != "git" || git.To != "~/.ssh/profiles/tools/git/git-signing" || git.Plan == "" {
 		t.Fatalf("git-signing: %+v", git)
 	}
 	if git.Confidence < 0.85 {
 		t.Fatalf("git-signing confidence %v evidence %v", git.Confidence, git.Evidence)
 	}
 	dock := got["~/.ssh/profiles/personal/imanimanyara/docker-tunnel"]
-	if dock.Kind != KindPurpose || dock.Tool != "docker" || dock.To != "~/.ssh/profiles/personal/imanimanyara/tools/docker/docker-tunnel" {
+	if dock.Kind != KindPurpose || dock.Tool != "docker" || dock.To != "~/.ssh/profiles/tools/docker/docker-tunnel" {
 		t.Fatalf("docker-tunnel: %+v", dock)
 	}
 	copyS := got["~/.ssh/docker-tunnel"]
@@ -68,11 +68,13 @@ func TestSimSixFilesClassifyAndApply(t *testing.T) {
 	if err != nil {
 		t.Fatal(err, buf.String())
 	}
+	// Tool keys land in the shared ~/.ssh/profiles/tools/<tool>/ folder.
+	tools := filepath.Join(p.SSHDir, "profiles", "tools")
 	for _, want := range []string{
-		filepath.Join(prof, "tools", "git", "git-signing"),
-		filepath.Join(prof, "tools", "git", "git-signing.pub"),
-		filepath.Join(prof, "tools", "docker", "docker-tunnel"),
-		filepath.Join(prof, "tools", "docker", "docker-tunnel.pub"),
+		filepath.Join(tools, "git", "git-signing"),
+		filepath.Join(tools, "git", "git-signing.pub"),
+		filepath.Join(tools, "docker", "docker-tunnel"),
+		filepath.Join(tools, "docker", "docker-tunnel.pub"),
 	} {
 		if _, err := os.Stat(want); err != nil {
 			t.Errorf("missing %s: %v", want, err)

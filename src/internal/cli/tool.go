@@ -27,9 +27,9 @@ func newToolCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tool",
 		Short: "List and inspect tool keys (git signing, docker, …)",
-		Long: "Tool keys live under ~/.ssh/profiles/<category>/<profile>/tools/<tool>/,\n" +
-			"apart from host keys at the profile root. Moving a key there is `ssh structure classify`\n" +
-			"and approve; this command lists what the manifest already declares.",
+		Long: "Tool keys live in the shared folder ~/.ssh/profiles/tools/<tool>/, apart from host\n" +
+			"keys in each profile's folder; each stays declared under the profile that owns it. Moving a\n" +
+			"key there is `ssh structure classify` and approve; this command lists what the manifest declares.",
 	}
 	var jsonOut bool
 	list := &cobra.Command{

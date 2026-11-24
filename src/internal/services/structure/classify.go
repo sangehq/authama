@@ -103,7 +103,7 @@ func purposeSuggestions(p paths.Paths, m *manifest.Manifest) ([]Suggestion, erro
 			if c.tool == "" || c.confidence < 0.50 {
 				continue
 			}
-			to := "~/.ssh/" + m.ProfileRel(pname) + "/tools/" + c.tool + "/" + name
+			to := "~/.ssh/" + manifest.ToolKeyRel(m, manifest.KeySpec{Name: name, Role: manifest.RoleTool, Tool: c.tool})
 			s := Suggestion{
 				Kind:       KindPurpose,
 				Path:       "~/.ssh/" + manifest.KeyRel(m, ref),

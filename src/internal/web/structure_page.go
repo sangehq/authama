@@ -81,7 +81,10 @@ type StructureOption struct {
 	Line, Target, Label string
 }
 
-// StructureToolFolder is tools/<tool>/ under a profile, a drop target for purpose moves.
+// StructureToolFolder is a tool's folder as one profile owns it: the shared
+// <key root>/tools/<tool>/ with that profile's keys in it, shown under the
+// profile so each tool key stays grouped with its owner; a drop target for
+// purpose moves.
 type StructureToolFolder struct {
 	Tool, Dir string
 	Keys      []StructureKey
@@ -254,7 +257,7 @@ func suggestionMoves(m *manifest.Manifest, s structure.Suggestion) []StructureOp
 				continue
 			}
 			line := "purpose " + name + "/" + purposeKeyName(s, name) + " tool " + tool
-			out = append(out, StructureOption{Line: line, Target: "tool:" + name + ":" + tool, Label: "into " + name + "/tools/" + tool + "/"})
+			out = append(out, StructureOption{Line: line, Target: "tool:" + name + ":" + tool, Label: "into tools/" + tool + "/ (owned by " + name + ")"})
 		}
 	}
 	return out
@@ -299,7 +302,7 @@ func splitToolKeys(_ paths.Paths, m *manifest.Manifest, profile string, keys []S
 		}
 		seen[tool] = true
 		folders = append(folders, StructureToolFolder{
-			Tool: tool, Dir: "~/.ssh/" + m.ProfileRel(profile) + "/tools/" + tool, Keys: byTool[tool],
+			Tool: tool, Dir: "~/.ssh/" + manifest.KeyRoot(m) + "/" + manifest.ToolsDir + "/" + tool, Keys: byTool[tool],
 		})
 	}
 	for tool, ks := range byTool {
@@ -307,7 +310,7 @@ func splitToolKeys(_ paths.Paths, m *manifest.Manifest, profile string, keys []S
 			continue
 		}
 		folders = append(folders, StructureToolFolder{
-			Tool: tool, Dir: "~/.ssh/" + m.ProfileRel(profile) + "/tools/" + tool, Keys: ks,
+			Tool: tool, Dir: "~/.ssh/" + manifest.KeyRoot(m) + "/" + manifest.ToolsDir + "/" + tool, Keys: ks,
 		})
 	}
 	return hostKeys, folders

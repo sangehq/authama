@@ -10,7 +10,7 @@ import (
 	"github.com/sangehq/authama/src/internal/core/manifest"
 )
 
-// toolsPage is /tools: declared tool keys under tools/<tool>/.
+// toolsPage is /tools: declared tool keys in profiles/tools/<tool>/.
 type toolsPage struct{ s *Server }
 
 // ToolsView is the /tools page: list, status, and optionally one key
@@ -29,8 +29,8 @@ type ToolsView struct {
 
 // ToolRow is one declared tool key.
 type ToolRow struct {
-	Profile, Name, Tool, Kind, Path, Ref string
-	Present                              bool
+	Profile, Category, Name, Tool, Kind, Path, Ref string
+	Present                                        bool
 }
 
 func (tp toolsPage) handleTools(w http.ResponseWriter, r *http.Request) {
@@ -61,7 +61,7 @@ func (tp toolsPage) handleTools(w http.ResponseWriter, r *http.Request) {
 				_, e := os.Stat(path)
 				rel, _ := filepath.Rel(p.SSHDir, path)
 				row := ToolRow{
-					Profile: pname, Name: k.Name, Tool: k.Tool, Kind: k.ToolKind,
+					Profile: pname, Category: m.Profiles[pname].Category, Name: k.Name, Tool: k.Tool, Kind: k.ToolKind,
 					Ref:  pname + "/" + k.Name,
 					Path: "~/.ssh/" + filepath.ToSlash(rel), Present: e == nil,
 				}

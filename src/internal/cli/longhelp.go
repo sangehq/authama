@@ -242,7 +242,7 @@ var commandLong = map[string]string{
 	"ssh service health": "Read-only status of each catalog service (and built-in kinds): is the CLI present, and what does a\n" +
 		"status command report. It never starts a tunnel, changes WARP, or opens a browser.",
 	"ssh service status": "The same as `ssh service health`: a read-only status of each service.",
-	"ssh tool list": "List declared tool keys (git signing, docker, …) under profiles/<category>/<profile>/tools/<tool>/,\n" +
+	"ssh tool list": "List declared tool keys (git signing, docker, …) in the shared profiles/tools/<tool>/ folder, with their owners,\n" +
 		"and whether each file is on disk.",
 	"ssh tool show":   "Show one declared tool key, named as <profile>/<key>: its tool, kind, path and whether it is on disk.",
 	"ssh tool status": "How many declared tool keys are present on disk, and list any that are missing.",

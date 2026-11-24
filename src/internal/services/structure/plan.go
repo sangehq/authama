@@ -381,7 +381,11 @@ func Apply(p paths.Paths, moves []Move, out io.Writer) (Result, error) {
 	}
 
 	backup := BackupDir(p, time.Now())
+	var relocated []step // misplaced keys moved to where the manifest places them
 	for _, s := range steps {
+		if s.mv.Kind == MoveMisplaced && s.src != s.dest {
+			relocated = append(relocated, s)
+		}
 		if s.src != "" && s.src != s.dest {
 			if err := backupPair(p, s.src, backup); err != nil {
 				return res, fmt.Errorf("backing up %s: %w", s.mv.Line(), err)
@@ -407,6 +411,21 @@ func Apply(p paths.Paths, moves []Move, out io.Writer) (Result, error) {
 			res.Declared = append(res.Declared, s.mv.Profile+"/"+s.mv.Name)
 			if s.src == s.dest {
 				audit(p, s.mv, "~/.ssh/"+relSSH(p, s.src), "~/.ssh/"+relSSH(p, s.dest))
+			}
+		}
+	}
+	if len(relocated) > 0 {
+		var moved []relocation
+		for _, s := range relocated {
+			moved = append(moved, relocation{ref: manifest.KeyRef{Profile: s.mv.Profile, KeyName: s.mv.Name}, src: s.src})
+		}
+		if err := relocateRecords(p, m, moved); err != nil {
+			return res, err
+		}
+		for _, s := range relocated {
+			spec, _ := m.KeySpecFor(manifest.KeyRef{Profile: s.mv.Profile, KeyName: s.mv.Name})
+			if spec.EffectiveRole() == manifest.RoleTool && (spec.ToolKind == manifest.ToolKindGitSigning || spec.Tool == manifest.ToolGit) {
+				retargetSigning(p, s.src, s.dest, out, &res)
 			}
 		}
 	}
@@ -526,11 +545,55 @@ func audit(p paths.Paths, mv Move, from, to string) {
 		log.Field{Key: "from", Value: from}, log.Field{Key: "to", Value: to})
 }
 
+// relocation is a declared key moved from src to where the manifest places it.
+type relocation struct {
+	ref manifest.KeyRef
+	src string
+}
+
+// relocateRecords points each moved key's inventory record (found by its old
+// path) at the path the manifest now gives it, deployments and all: the same
+// key, so the same record.
+func relocateRecords(p paths.Paths, m *manifest.Manifest, moved []relocation) error {
+	inv, err := inventory.Load(p.Inventory())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	changed := false
+	for _, mv := range moved {
+		oldIdent := "~/.ssh/" + relSSH(p, mv.src)
+		newIdent := m.IdentityFile(mv.ref.Profile, mv.ref.KeyName)
+		for fp, rec := range inv.Keys {
+			if rec.Path == oldIdent {
+				rec.Path = newIdent
+				inv.Keys[fp] = rec
+				changed = true
+			}
+		}
+	}
+	if !changed {
+		return nil
+	}
+	return inv.Save(p.Inventory())
+}
+
 // findMisplaced is where a declared key sits when not where the manifest
 // resolves it: the first profile directory of the same name under the key
-// root holding it.
+// root holding it, or, for a tool key, the tools/<tool>/ folder an older
+// layout kept inside its profile (now in the shared <key root>/tools/).
 func findMisplaced(p paths.Paths, m *manifest.Manifest, ref manifest.KeyRef) string {
 	want := filepath.Dir(m.KeyPath(p.SSHDir, ref))
+	if spec, ok := m.KeySpecFor(ref); ok {
+		if rel := spec.ToolRel(); rel != "" {
+			legacy := filepath.Join(m.ProfileDir(p.SSHDir, ref.Profile), filepath.FromSlash(rel))
+			if fi, err := os.Lstat(legacy); err == nil && fi.Mode().IsRegular() && filepath.Dir(legacy) != want {
+				return legacy
+			}
+		}
+	}
 	for _, f := range manifest.GlobKeyTree(p.SSHDir, manifest.KeyRoot(m), ref.KeyName) {
 		f = inside(p.SSHDir, f)
 		if f != "" && filepath.Base(filepath.Dir(f)) == ref.Profile && filepath.Dir(f) != want {
