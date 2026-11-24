@@ -135,6 +135,7 @@ var tips = map[string]string{
 	"job-yes":                  "Answers yes: the job carries on with its next step.",
 	"job-no":                   "Answers no: the job stops here. Steps already done stay done, and History records where it stopped.",
 	"job-cancel":               "Stops the job once its current step finishes. Steps already done stay done.",
+	"open-page":                "Opens that page. Nothing changes.",
 	"open-row":                 "Opens its page beside the list, with everything about it. Nothing changes.",
 	"copy-value":               "Copies this value to the clipboard. Nothing changes.",
 	"row-history":              "Shows every change made to this, newest first.",
@@ -298,6 +299,7 @@ var pageTips = map[string]string{
 	"webhooks":           "Endpoints sent what authama does, signed.",
 	"reset":              "Start keys, settings, files or the owner again.",
 	"about":              "This build, this computer, and the licences.",
+	"integrations":       "Which hosts and routes Termius, iTerm2 and others get.",
 	// The token checklists: the Checklists page filtered to tokens, in the
 	// Tokens menu.
 	"token-checklists": "What is left to rotate or revoke each token.",

@@ -49,6 +49,7 @@ func TestEveryPageRenders(t *testing.T) {
 		"/tools":                                "Tools",
 		"/services":                             "Services",
 		"/git-sign":                             "Git identities",
+		"/integrations":                         "Tool integrations",
 	}
 	if len(pages) < 19 {
 		t.Fatal("the page list shrank")
