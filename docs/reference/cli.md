@@ -102,6 +102,7 @@ Every command also takes the global flag:
     - [`authama ssh config keep-edits`](#authama-ssh-config-keep-edits) - Take hand edits in the managed config into the manifest, so a render keeps them
     - [`authama ssh config render`](#authama-ssh-config-render) - Render the config files from the manifest
     - [`authama ssh config show`](#authama-ssh-config-show) - Print the rendered config, or ssh -G for one alias
+    - [`authama ssh config tree`](#authama-ssh-config-tree) - Show the Include tree of ~/.ssh/config and the source file of each host (read-only)
   - [`authama ssh deploy`](#authama-ssh-deploy) - Install a public key on its target
   - [`authama ssh diff`](#authama-ssh-diff) - Preview what reconcile would change (manifest vs. ~/.ssh)
   - [`authama ssh expiry`](#authama-ssh-expiry) - Per-key rotation-age table
@@ -2079,6 +2080,7 @@ Subcommands:
 - [`keep-edits`](#authama-ssh-config-keep-edits) - Take hand edits in the managed config into the manifest, so a render keeps them
 - [`render`](#authama-ssh-config-render) - Render the config files from the manifest
 - [`show`](#authama-ssh-config-show) - Print the rendered config, or ssh -G for one alias
+- [`tree`](#authama-ssh-config-tree) - Show the Include tree of ~/.ssh/config and the source file of each host (read-only)
 
 ## authama ssh config adopt
 
@@ -2218,6 +2220,32 @@ Examples:
 ```sh
   authama ssh config show
   authama ssh config show web1   # what ssh -G resolves for one alias
+```
+
+## authama ssh config tree
+
+Walks ~/.ssh/config the way ssh does for Include directives: relative paths are
+resolved against ~/.ssh, globs (*, ?, and ** per path segment) are expanded in
+lexical order, Includes nest (inside Host or Match too) up to OpenSSH's limit of 16,
+and a cycle or a missing file is a warning, not an error. Each Host is printed with
+the file and line it was written on. Authama never rewrites a file it does not
+manage; those files are labelled in the tree so you can see what it only reports on.
+
+```
+authama ssh config tree [flags]
+```
+
+Examples:
+
+```sh
+  authama ssh config tree   # Include files and the source of each Host
+  authama ssh config tree --json
+```
+
+Flags:
+
+```
+      --json[=true|false]   print the Include tree as JSON
 ```
 
 ## authama ssh deploy

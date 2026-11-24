@@ -19,14 +19,14 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 
 | | Count |
 | --- | --- |
-| Commands (runnable, not hidden, not help-only parents) | 184 |
+| Commands (runnable, not hidden, not help-only parents) | 185 |
 | Help-only parent commands left out | 30 |
-| Web | 162 |
+| Web | 163 |
 | Partial | 3 |
 | CLI-only by design | 19 |
 | Gap | 0 |
-| Flags on those commands | 495 |
-| Flags covered | 415 |
+| Flags on those commands | 496 |
+| Flags covered | 416 |
 | Flags CLI-only by design | 80 |
 | Flags with no web control | 0 |
 
@@ -106,6 +106,7 @@ In the flag column, a plain flag is covered by the page, `(CLI)` is CLI-only by 
 | `ssh config keep-edits` | web | /ssh-config: Keep hand edits; offered on a render refused over hand edits | `--dry-run`, `--yes` | The preview is the dry run: it lists each block adopted and the manifest diff. |
 | `ssh config render` | web | /ssh-config, overview: Re-render; /ssh-config: Discard hand edits and render | `--dry-run`, `--force`, `--yes` | A render refused over hand edits lists them and offers Keep or Discard. --force is a destructive change (confirm dialog, owner PIN when set); its result names the backup. |
 | `ssh config show` | web | /ssh-config | - |  |
+| `ssh config tree` | web | /ssh-config: Include tree and host source files | `--json` | The tree follows every Include (quoted paths, globs, nested, Host/Match tagged `from Match` without running `Match exec`, cycle and depth warnings). Files authama does not manage are labelled and never rewritten. |
 | `ssh deploy` | web | key page: Deploy (job) | `--direct`, `--yes` |  |
 | `ssh diff` | web | Reconcile preview | - |  |
 | `ssh expiry` | web | /keys, /audit | - |  |

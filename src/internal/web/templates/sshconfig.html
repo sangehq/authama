@@ -26,6 +26,33 @@
       </div>
     </div>
   </div>
+  {{if .Warnings}}<div class="col-12">
+    <div class="alert alert-warning" role="alert" id="include-warnings">
+      <div class="mb-1">{{icon "alert-triangle"}}<span class="ms-1">Include warnings</span></div>
+      <ul class="mb-0">{{range .Warnings}}<li class="font-monospace small">{{.}}</li>{{end}}</ul>
+    </div>
+  </div>{{end}}
+  <div class="col-12">
+    <div class="card" id="include-tree">
+      <div class="card-header"><h2 class="card-title">Include tree</h2></div>
+      <div class="card-body"><pre class="code-block" tabindex="0">{{if .Tree}}{{.Tree}}{{else}}No ~/.ssh/config to read.{{end}}</pre></div>
+      <div class="card-footer text-secondary">The same as <code>authama ssh config tree</code>: every file <code>~/.ssh/config</code> Includes, and the source of each Host. Files authama does not manage are listed and never rewritten.</div>
+    </div>
+  </div>
+  {{if .Hosts}}<div class="col-12">
+    <div class="card" id="host-sources">
+      <div class="card-header"><h2 class="card-title">Hosts and source files</h2></div>
+      <div class="table-responsive"><table class="table table-vcenter card-table">
+        <thead><tr><th>Host</th><th>Source</th><th>Line</th><th></th></tr></thead>
+        <tbody>{{range .Hosts}}<tr>
+          <td class="font-monospace">{{.Name}}</td>
+          <td class="font-monospace small">{{.File}}</td>
+          <td class="font-monospace">{{.Line}}</td>
+          <td>{{if .Managed}}<span class="badge badge-ok">managed</span>{{else}}<span class="badge">not managed</span>{{end}}</td>
+        </tr>{{end}}</tbody>
+      </table></div>
+    </div>
+  </div>{{end}}
   <div class="col-12">
     <div class="card">
       <div class="card-header"><h2 class="card-title">Rendered</h2></div>

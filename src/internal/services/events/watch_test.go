@@ -88,3 +88,42 @@ func drain(got <-chan struct{}) {
 		}
 	}
 }
+
+func TestIncludeRootsNamesDirectoriesOutsideSSHDir(t *testing.T) {
+	p, _ := home(t)
+	outside := filepath.Join(t.TempDir(), "orb", "ssh")
+	if err := os.MkdirAll(outside, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(outside, "config"), []byte("Host orb\n  HostName 127.0.0.1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(p.SSHDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(p.SSHDir, "config"), []byte("Include "+outside+"/config\nHost x\n  HostName x.example\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got := IncludeRoots(p)
+	found := false
+	for _, r := range got {
+		if r.Path == outside && r.Dir {
+			found = true
+		}
+		if r.Path == p.SSHDir || (len(r.Path) >= len(p.SSHDir) && r.Path[:len(p.SSHDir)] == p.SSHDir) {
+			t.Errorf("IncludeRoots should omit paths under ~/.ssh, got %s", r.Path)
+		}
+	}
+	if !found {
+		t.Fatalf("IncludeRoots = %+v, want %s", got, outside)
+	}
+}
+
+func TestIsFilesystemRoot(t *testing.T) {
+	if !isFilesystemRoot(string(filepath.Separator)) {
+		t.Fatal("/ (or the OS separator) must be treated as a filesystem root")
+	}
+	if isFilesystemRoot(filepath.Join(string(filepath.Separator), "etc", "ssh")) {
+		t.Fatal("a directory under the root must still be watchable")
+	}
+}

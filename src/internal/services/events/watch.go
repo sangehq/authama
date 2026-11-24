@@ -11,6 +11,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 
+	"github.com/sangehq/authama/src/internal/core/sshcfg"
 	"github.com/sangehq/authama/src/internal/util/paths"
 )
 
@@ -38,13 +39,57 @@ func ExtraRoots(p paths.Paths) []Tracked {
 	}
 }
 
+// isFilesystemRoot reports whether p is "/" or a volume root such as `C:\`.
+// Watching either is too broad (every file change on the volume would fire).
+func isFilesystemRoot(p string) bool {
+	p = filepath.Clean(p)
+	if p == string(filepath.Separator) {
+		return true
+	}
+	vol := filepath.VolumeName(p)
+	return vol != "" && p == vol+string(filepath.Separator)
+}
+
+// IncludeRoots are directories outside ~/.ssh that ~/.ssh/config Includes
+// (for example ~/.orbstack/ssh). Paths already under ~/.ssh are omitted:
+// Roots already walks that tree. Missing paths are still listed so the
+// watcher can wait on an ancestor.
+func IncludeRoots(p paths.Paths) []Tracked {
+	tree, err := sshcfg.LoadUser(p.SSHDir)
+	if err != nil || tree == nil {
+		return nil
+	}
+	var out []Tracked
+	seen := map[string]bool{}
+	for _, d := range tree.Dirs {
+		d = filepath.Clean(d)
+		if d == "" || seen[d] || within(d, p.SSHDir) || isFilesystemRoot(d) {
+			continue
+		}
+		seen[d] = true
+		out = append(out, Tracked{Path: d, Area: AreaSSH, Dir: true})
+	}
+	return out
+}
+
 // StartWatch starts an fsnotify watch on roots and calls onChange after
 // debounce of quiet. It returns ModeWatching when at least one path could
 // be added, or ModePolling when the watcher could not be created or no
 // path could be added. The watch runs until ctx ends. onChange must not
 // block indefinitely; it is called from the watch loop.
 func StartWatch(ctx context.Context, roots []Tracked, debounce time.Duration, onChange func()) string {
-	if onChange == nil || len(roots) == 0 {
+	return startWatch(ctx, roots, nil, debounce, onChange)
+}
+
+// StartWatchWith is StartWatch, and after every event (and at each debounce)
+// refresh is called so a new Include pointing outside ~/.ssh starts being
+// watched without a restart.
+func StartWatchWith(ctx context.Context, roots []Tracked, refresh func() []Tracked, debounce time.Duration, onChange func()) string {
+	return startWatch(ctx, roots, refresh, debounce, onChange)
+}
+
+func startWatch(ctx context.Context, roots []Tracked, refresh func() []Tracked, debounce time.Duration, onChange func()) string {
+	if onChange == nil || (len(roots) == 0 && refresh == nil) {
 		return ModePolling
 	}
 	if debounce <= 0 {
@@ -55,15 +100,23 @@ func StartWatch(ctx context.Context, roots []Tracked, debounce time.Duration, on
 		return ModePolling
 	}
 	n := addRoots(w, roots)
-	if n == 0 {
+	if n == 0 && refresh == nil {
 		_ = w.Close()
 		return ModePolling
 	}
-	go runWatch(ctx, w, roots, debounce, onChange)
+	if n == 0 && refresh != nil {
+		// roots may appear after refresh; keep the watcher anyway.
+		n += addRoots(w, refresh())
+		if n == 0 {
+			_ = w.Close()
+			return ModePolling
+		}
+	}
+	go runWatch(ctx, w, roots, refresh, debounce, onChange)
 	return ModeWatching
 }
 
-func runWatch(ctx context.Context, w *fsnotify.Watcher, roots []Tracked, debounce time.Duration, onChange func()) {
+func runWatch(ctx context.Context, w *fsnotify.Watcher, roots []Tracked, refresh func() []Tracked, debounce time.Duration, onChange func()) {
 	defer func() { _ = w.Close() }()
 	var mu sync.Mutex
 	timer := time.NewTimer(debounce)
@@ -94,6 +147,7 @@ func runWatch(ctx context.Context, w *fsnotify.Watcher, roots []Tracked, debounc
 			if ev.Name != "" && ev.Has(fsnotify.Create) {
 				mu.Lock()
 				addNew(w, ev.Name, roots)
+				roots = refreshRoots(w, roots, refresh)
 				mu.Unlock()
 			}
 			arm()
@@ -103,6 +157,9 @@ func runWatch(ctx context.Context, w *fsnotify.Watcher, roots []Tracked, debounc
 			}
 			arm()
 		case <-timer.C:
+			mu.Lock()
+			roots = refreshRoots(w, roots, refresh)
+			mu.Unlock()
 			onChange()
 		}
 	}
@@ -216,4 +273,27 @@ func skipped(path string, skip []string) bool {
 func under(path, dir string) bool {
 	rel, err := filepath.Rel(dir, path)
 	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && rel != "."
+}
+
+func refreshRoots(w *fsnotify.Watcher, roots []Tracked, refresh func() []Tracked) []Tracked {
+	if refresh == nil {
+		return roots
+	}
+	extra := refresh()
+	if len(extra) == 0 {
+		return roots
+	}
+	addRoots(w, extra)
+	seen := map[string]bool{}
+	for _, r := range roots {
+		seen[r.Path] = true
+	}
+	for _, r := range extra {
+		if r.Path == "" || seen[r.Path] {
+			continue
+		}
+		seen[r.Path] = true
+		roots = append(roots, r)
+	}
+	return roots
 }

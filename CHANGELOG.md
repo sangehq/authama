@@ -6,7 +6,34 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **OpenSSH Include edge cases.** Quoted and backslash-escaped Include paths
+  (names with spaces) are tokenized the way OpenSSH argv-splits them, including
+  in the importer. A UTF-8 BOM is stripped and CRLF lines are accepted.
+  `Include` of a directory is a warning (OpenSSH only reads regular files).
+  `Include ~/.ssh/...` in a sandbox (`serve --dev-root`) resolves under that
+  sandbox, not process `$HOME/.ssh`. A glob that expands to more than 4096
+  paths is truncated with a warning; a config file larger than 2 MiB is
+  skipped. The watcher never watches `/` or a Windows volume root. Includes
+  inside a `Match` are tagged `from Match` and listed unconditionally;
+  `Match exec` is never run.
+
 ### Added
+
+- **Any `~/.ssh` layout, and OpenSSH `Include`s.** authama follows every `Include` in
+  `~/.ssh/config` (relative paths against `~/.ssh`, globs including `**`, nested and
+  `Host`/`Match` includes, cycle and depth-16 protection, missing files as warnings)
+  wherever it reads a config: import, check, classify, the structure watcher, exports,
+  the web importer, and host listing. Each Host is attributed to its source file and
+  line. Files authama does not manage are never rewritten; IdentityFile references in
+  them are listed as a manual follow-up. Key discovery walks nested folders (skipping
+  `known_hosts*`, sockets, ControlPath and agent dirs, `authorized_keys`), keeps a
+  grouping you already have, and only suggests the managed taxonomy with evidence.
+  `ssh config tree [--json]` and the Include tree on the SSH config page show the
+  graph and each host's source. The watcher watches every directory that contributes
+  an included file or a key, including trees outside `~/.ssh`. See
+  [SSH configs in any folder layout](docs/reference/ssh-config-includes.md).
 
 - **Purpose keys, tools, and services (AT-14).** Host keys stay at the profile root; tool keys live under
   `profiles/<category>/<profile>/tools/<tool>/` (`git`, `docker`, …). `ssh structure classify` (and the Structure

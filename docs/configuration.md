@@ -46,6 +46,11 @@ Host *
 # End of authama-managed block - content outside it is preserved
 ```
 
+authama follows every `Include` when it reads your config (import, check, the
+Include tree, host listing, and the watcher), including files outside `~/.ssh`
+such as `~/.orbstack/ssh/config`. Those files are listed and never rewritten.
+See [SSH configs in any folder layout](reference/ssh-config-includes.md).
+
 To add your own static SSH directives, put them outside the managed block (above
 or below it) - they will be preserved. Do not define a managed alias there too: a
 second `Host` block for a host the manifest renders is a collision (ssh reads two

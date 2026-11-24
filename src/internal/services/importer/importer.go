@@ -20,6 +20,7 @@ import (
 	"github.com/sangehq/authama/src/internal/core/key"
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/core/renderer"
+	"github.com/sangehq/authama/src/internal/core/sshcfg"
 	"github.com/sangehq/authama/src/internal/services/keystore"
 	"github.com/sangehq/authama/src/internal/util/fs"
 	"github.com/sangehq/authama/src/internal/util/paths"
@@ -220,7 +221,7 @@ func (b *block) names(alias string) bool {
 // into every host. Match blocks are never applied: their criteria cannot be
 // evaluated at import time.
 func parseSSHConfig(text, baseDir string, seen map[string]bool) []*ParsedHost {
-	blocks, aliases := collectBlocks(text, "", baseDir, seen, true, -1)
+	blocks, aliases := collectBlocks(text, "", baseDir, seen, true, -1, 0)
 	hosts := make([]*ParsedHost, 0, len(aliases))
 	for _, alias := range aliases {
 		hosts = append(hosts, resolveHost(alias, blocks))
@@ -233,7 +234,8 @@ func parseSSHConfig(text, baseDir string, seen map[string]bool) []*ParsedHost {
 //
 // file is the path text was read from and rootLine the line of the first file
 // read that leads here (-1 when text is that file).
-func collectBlocks(text, file, baseDir string, seen map[string]bool, top bool, rootLine int) ([]*block, []string) {
+func collectBlocks(text, file, baseDir string, seen map[string]bool, top bool, rootLine, depth int) ([]*block, []string) {
+	text = strings.TrimPrefix(text, "\uFEFF")
 	var blocks []*block
 	var aliases []string
 	known := map[string]bool{}
@@ -301,7 +303,7 @@ func collectBlocks(text, file, baseDir string, seen map[string]bool, top bool, r
 			if current != nil && !current.all {
 				current.include = true
 			}
-			incBlocks, incAliases := parseIncludes(value, baseDir, seen, at)
+			incBlocks, incAliases := parseIncludes(value, baseDir, seen, at, depth)
 			blocks = append(blocks, incBlocks...)
 			for _, a := range incAliases {
 				if !known[a] {
@@ -513,17 +515,14 @@ func profileFromIdentityIn(identityFile string, roots ...string) (profile, categ
 
 // parseIncludes returns the blocks and aliases of every file an Include names,
 // in order, so they resolve together with the including file's blocks.
-func parseIncludes(pattern, baseDir string, seen map[string]bool, rootLine int) ([]*block, []string) {
+func parseIncludes(pattern, baseDir string, seen map[string]bool, rootLine, depth int) ([]*block, []string) {
 	var blocks []*block
 	var aliases []string
-	for _, token := range strings.Fields(pattern) {
-		expanded := expanduser(token)
-		full := expanded
-		if !filepath.IsAbs(expanded) {
-			full = filepath.Join(baseDir, expanded)
-		}
-		matches, _ := filepath.Glob(full)
-		sort.Strings(matches)
+	if depth >= sshcfg.MaxIncludeDepth {
+		return nil, nil
+	}
+	for _, token := range sshcfg.Tokens(pattern) {
+		matches, _ := sshcfg.Expand(token, baseDir)
 		for _, match := range matches {
 			abs, err := filepath.Abs(match)
 			if err != nil {
@@ -536,12 +535,15 @@ func parseIncludes(pattern, baseDir string, seen map[string]bool, rootLine int) 
 			if seen[abs] || !isFile(abs) {
 				continue
 			}
+			if fi, err := os.Stat(abs); err != nil || fi.Size() > sshcfg.MaxConfigBytes {
+				continue
+			}
 			seen[abs] = true
 			b, err := os.ReadFile(abs)
 			if err != nil {
 				continue
 			}
-			bs, as := collectBlocks(string(b), reached, baseDir, seen, false, rootLine)
+			bs, as := collectBlocks(strings.TrimPrefix(string(b), "\uFEFF"), reached, baseDir, seen, false, rootLine, depth+1)
 			blocks = append(blocks, bs...)
 			aliases = append(aliases, as...)
 		}
@@ -678,7 +680,7 @@ func parseSourceBlocks(src Source) ([]*ParsedHost, []*block) {
 		if err != nil {
 			continue
 		}
-		bs, as := collectBlocks(string(text), reached, src.Root, seen, true, -1)
+		bs, as := collectBlocks(string(text), reached, src.Root, seen, true, -1, 0)
 		if n == 0 {
 			for _, b := range bs {
 				b.first = true
@@ -1155,11 +1157,11 @@ func IdentityFiles(configPath string) []string {
 	if err != nil {
 		return nil
 	}
-	blocks, _ := collectBlocks(string(b), configPath, filepath.Dir(configPath), map[string]bool{}, true, -1)
+	blocks, _ := collectBlocks(string(b), configPath, filepath.Dir(configPath), map[string]bool{}, true, -1, 0)
 	var out []string
 	for _, bl := range blocks {
 		for _, o := range bl.opts {
-			if strings.EqualFold(o.Key, "IdentityFile") {
+			if strings.EqualFold(o.Key, "IdentityFile") || strings.EqualFold(o.Key, "CertificateFile") {
 				if arg := firstArg(o.Val); arg != "" {
 					out = append(out, expanduser(arg))
 				}

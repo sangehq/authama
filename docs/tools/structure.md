@@ -11,6 +11,13 @@ authama ssh structure dismiss <id>... [--undo]
 authama ssh structure install [-y] | uninstall       # the optional background check (do not install until you mean to)
 ```
 
+authama works with any `~/.ssh` layout: it follows every `Include` (see
+[SSH configs in any folder layout](../reference/ssh-config-includes.md)) and walks
+nested folders for keys. It still *suggests* the managed layout below; a folder
+that already groups your keys is kept, and the taxonomy is only an optional
+alternative with evidence. IdentityFile lines in files authama does not manage
+are listed as a manual follow-up, never rewritten.
+
 authama expects every key it manages in a profile's directory under the key root:
 `~/.ssh/<key root>/<profile>/<key>`, or `~/.ssh/<key root>/<category>/<profile>/<key>` for a profile in a
 category ([choose where keys live](../recipes/choose-where-keys-live.md),
@@ -31,6 +38,8 @@ history still happen). Leftover-copy deletion is never auto-applied.
 | `copy` | A leftover copy of a key authama manages that is still referenced | Nothing: a note. |
 | `purpose` | A host-root key that belongs under `tools/<tool>/` (git signing, docker, …) | Into `profiles/<category>/<profile>/tools/<tool>/<name>`. Git signing path updates are handed to `sange profile signing retarget`; authama does not write `~/.gitconfig`. |
 | `copy-remove` | A leftover copy of a managed key with no remaining references | An approved, snapshotted delete (`copy-remove`). Refused if any reference remains. |
+| `grouped` | Keys already sitting together in a folder of yours outside the key root (two or more pairs, or a config alongside them) | Nothing: the grouping is kept. The managed taxonomy is mentioned with evidence, not forced. |
+| `nested` | A lone key in a nested folder outside the key root | Into a profile's directory, the same as `loose`. |
 
 Left alone, and not listed: keys you [reserved](vm.md) (`key reserve`), keys [adopted](../recipes/onboard-an-existing-ssh-dir.md)
 where they are (`key adopt` promises never to move them), symlinks, and anything that is not a key pair. Detection
@@ -103,8 +112,8 @@ move is skipped unless sange is on `PATH`.
 
 ## Installing the background job
 
-The running server watches `~/.ssh` (including `profiles/`), the config home, `~/.gitconfig`, `~/.config/git` and
-`~/.docker/contexts` with fsnotify, debounced 1–2 seconds, and still does a full scan every 30 seconds. If a watch
+The running server watches `~/.ssh` (including `profiles/`), every directory an `Include` contributes (including trees outside `~/.ssh`), the config home, `~/.gitconfig`, `~/.config/git` and
+`~/.docker/contexts` with fsnotify, debounced 1–2 seconds, and still does a full scan every 30 seconds. `/` and a Windows volume root are never watched. If a watch
 cannot be established, it polls those same trees every couple of seconds. The Structure page shows **Watching** or
 **Polling**. After a scan it refreshes suggestions (and auto-applies enabled rules). When the server is not running,
 this optional job checks every 15 minutes:
@@ -147,7 +156,7 @@ the tree and the suggestions, without the menus.
 
 ## The watcher
 
-- **Inside `authama serve`.** The server watches `~/.ssh` (including `profiles/`), the config home, token files,
+- **Inside `authama serve`.** The server watches `~/.ssh` (including `profiles/`), every directory an `Include` contributes, the config home, token files,
   `~/.gitconfig`, `~/.config/git` and `~/.docker/contexts` with fsnotify (debounced 1–2s) and still scans them every
   30 seconds for the [events](events.md) log. If a watch cannot be established, a short poll is the fallback; the
   Structure page shows **Watching** or **Polling**. When a scan sees a change, it refreshes the suggestions (kept in

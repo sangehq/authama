@@ -70,6 +70,7 @@ var commandExamples = map[string][]string{
 	"ssh config render":      {"ssh config render --dry-run", "ssh config render --yes", "ssh config render --force --yes   # discard hand edits (backed up first)"},
 	"ssh config keep-edits":  {"ssh config keep-edits --dry-run", "ssh config keep-edits --yes"},
 	"ssh config show":        {"ssh config show", "ssh config show web1   # what ssh -G resolves for one alias"},
+	"ssh config tree":        {"ssh config tree   # Include files and the source of each Host", "ssh config tree --json"},
 	"ssh deploy":             {"ssh deploy work/github", "ssh deploy web1 --yes"},
 	"ssh diff":               {"ssh diff"},
 	"ssh expiry":             {"ssh expiry"},

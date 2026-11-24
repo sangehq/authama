@@ -148,6 +148,7 @@ func applyOnePurpose(p paths.Paths, m *manifest.Manifest, mv Move, backup string
 		}
 		res.Rewrote = append(res.Rewrote, changed...)
 		_, _ = fmt.Fprintf(out, "moved %s -> %s\n", from, to)
+		res.Manual = append(res.Manual, ManualRefs(p, src)...)
 		audit(p, mv, from, to)
 	}
 	res.Declared = append(res.Declared, mv.Profile+"/"+mv.Name)

@@ -37,10 +37,12 @@ func (s *Server) watchEvents(ctx context.Context) {
 	s.watchMode.Store(events.ModePolling)
 	s.scanEvents()
 	var roots []events.Tracked
+	refresh := func() []events.Tracked { return nil }
 	if s.opts.EventRoots != nil {
 		roots = s.opts.EventRoots(s.opts.Engine.Home())
+		refresh = func() []events.Tracked { return s.opts.EventRoots(s.opts.Engine.Home()) }
 	}
-	mode := events.StartWatch(ctx, roots, eventDebounce, s.scanEvents)
+	mode := events.StartWatchWith(ctx, roots, refresh, eventDebounce, s.scanEvents)
 	s.watchMode.Store(mode)
 	full := time.NewTicker(every)
 	defer full.Stop()

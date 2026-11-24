@@ -13,6 +13,7 @@ import (
 
 	"github.com/sangehq/authama/src/internal/core/manifest"
 	"github.com/sangehq/authama/src/internal/core/renderer"
+	"github.com/sangehq/authama/src/internal/core/sshcfg"
 	"github.com/sangehq/authama/src/internal/util/fs"
 )
 
@@ -63,6 +64,9 @@ type CheckResult struct {
 	// HandEdits lists what was typed into the managed files by hand, which
 	// the next render would discard (`authama ssh config keep-edits` keeps it).
 	HandEdits []HandEdit
+	// IncludeWarnings are problems following OpenSSH Include directives
+	// (a missing file, a cycle, a depth limit). They do not fail InSync.
+	IncludeWarnings []sshcfg.Warning
 }
 
 // BlockInSync reports whether every managed file on disk matches the manifest
@@ -84,7 +88,11 @@ func (r *CheckResult) InSync() bool {
 // Format renders a human report.
 func (r *CheckResult) Format() string {
 	if r.InSync() {
-		return "config: in sync with the manifest ✓"
+		msg := "config: in sync with the manifest ✓"
+		if w := formatIncludeWarnings(r.IncludeWarnings); w != "" {
+			return msg + "\n" + w
+		}
+		return msg
 	}
 	var b strings.Builder
 	for _, rel := range r.Missing {
@@ -289,7 +297,23 @@ func (s *Service) Check(validateSSH bool) (*CheckResult, error) {
 			res.SSHErrors = s.validateAliases()
 		}
 	}
+	if tree, err := sshcfg.LoadUser(s.sshDir); err == nil && tree != nil {
+		res.IncludeWarnings = tree.Warnings
+		res.Collisions = mergeCollisions(res.Collisions, collisionsFromTree(tree, s.sshDir, rendered))
+	}
 	return res, nil
+}
+
+func formatIncludeWarnings(ws []sshcfg.Warning) string {
+	if len(ws) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("INCLUDE warnings (the config is still readable; see `authama ssh config tree`):")
+	for _, w := range ws {
+		fmt.Fprintf(&b, "\n  %s: %s", w.Kind, w.Message)
+	}
+	return b.String()
 }
 
 // Show returns the rendered config (no alias) or `ssh -G` for one alias.
