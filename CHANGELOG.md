@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A tool integration's file preview can be scrolled from the keyboard.** The `<pre>` that shows the download was overflow-auto but not focusable, which axe flags as `scrollable-region-focusable`. It now has `tabindex="0"`, like the SSH config and Transfer previews.
+
 - **Route and tool-integration badges meet contrast.** The Hosts list's route label (`vm`, `cloudflared`, …) and the Tool integrations "runs ssh" / "connects itself" badges used Tabler's `-lt` colours, which axe flags at below 4.5:1. They now use the same accessible `badge-muted` and `badge-ok` classes as the rest of the UI.
 
 - **A chosen host's other routes go into a filtered export.** The Termius page and `export hosts` with a selection (`/exports/run`, `--profile`, `--tag`) read hosts from the dataset, which has no variants, so `warp-<alias>` was omitted while an unfiltered export wrote it. `ClientHosts` also treated `ProxyCommand none` as a proxy. A chosen host now brings its routes, only a real proxy is left out of clients that connect themselves, and a UTF-16 client file (PuTTY's `.reg`) is shown as text in the Transfer and Tool integrations previews.
