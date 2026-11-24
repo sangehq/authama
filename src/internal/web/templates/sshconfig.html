@@ -42,11 +42,11 @@
   {{if .Hosts}}<div class="col-12">
     <div class="card" id="host-sources">
       <div class="card-header"><h2 class="card-title">Hosts and source files</h2></div>
-      <div class="table-responsive"><table class="table table-vcenter card-table">
+      <div class="table-responsive"><table class="table table-vcenter card-table" data-copy-cells data-stack>
         <thead><tr><th>Host</th><th>Source</th><th>Line</th><th></th></tr></thead>
         <tbody>{{range .Hosts}}<tr>
           <td class="font-monospace">{{.Name}}</td>
-          <td class="font-monospace small">{{.File}}</td>
+          <td class="font-monospace small text-break">{{.File}}</td>
           <td class="font-monospace">{{.Line}}</td>
           <td>{{if .Managed}}<span class="badge badge-ok">managed</span>{{else}}<span class="badge">not managed</span>{{end}}</td>
         </tr>{{end}}</tbody>

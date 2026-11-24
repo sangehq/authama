@@ -12,7 +12,7 @@
     <div class="card h-100" id="tool-{{.Name}}">
       <div class="card-header">
         <h2 class="card-title">{{.Label}}</h2>
-        <div class="card-actions">{{if .ViaSSH}}<span class="badge bg-green-lt">runs ssh</span>{{else}}<span class="badge bg-secondary-lt">connects itself</span>{{end}}</div>
+        <div class="card-actions">{{if .ViaSSH}}<span class="badge badge-ok">runs ssh</span>{{else}}<span class="badge badge-muted">connects itself</span>{{end}}</div>
       </div>
       <div class="card-body">
         <p class="text-secondary">{{.About}}</p>

@@ -85,21 +85,13 @@ func RenderFlatConfigOf(m *manifest.Manifest, p ExportPaths, emitUseKeychain boo
 	for _, a := range aliases {
 		keep[a] = true
 	}
-	known := map[string]bool{}
-	for _, pname := range m.ProfileNames() {
-		for _, h := range m.Profiles[pname].Hosts {
-			known[h.Alias] = true
-		}
+	// A host's routes (warp-<alias>) come with it, as in the whole export.
+	chosen, err := withRoutes(m, aliases)
+	if err != nil {
+		return "", err
 	}
-	var unknown []string
-	for a := range keep {
-		if !known[a] {
-			unknown = append(unknown, a)
-		}
-	}
-	if len(unknown) > 0 {
-		sort.Strings(unknown)
-		return "", fmt.Errorf("no host named %s", strings.Join(unknown, ", "))
+	for _, rk := range chosen {
+		keep[rk.Host.Alias] = true
 	}
 	return renderFlat(m, p, emitUseKeychain, keep)
 }

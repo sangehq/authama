@@ -22,7 +22,7 @@
     {{end}}
     {{if or .KeyFiles .Tokens}}
     <div class="table-responsive">
-      <table class="table table-sm table-vcenter mb-2">
+      <table class="table table-sm table-vcenter mb-2" data-copy-cells data-stack>
         <caption class="text-secondary small">What it lays down under <em>{{.Policy}}</em>, by name only</caption>
         <thead><tr><th scope="col">Item</th><th scope="col">Name</th><th scope="col">Here</th></tr></thead>
         <tbody>

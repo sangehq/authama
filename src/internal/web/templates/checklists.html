@@ -14,7 +14,7 @@
   </div>
   {{if .Items}}
   <div class="table-responsive">
-    <table class="table table-vcenter card-table">
+    <table class="table table-vcenter card-table" data-copy-cells data-stack>
       <thead><tr><th scope="col">Item</th><th scope="col">Kind</th><th scope="col">State</th><th scope="col" class="w-25">Progress</th></tr></thead>
       <tbody>
         {{range .Items}}{{$c := .}}

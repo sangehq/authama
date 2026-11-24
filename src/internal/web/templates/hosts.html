@@ -8,7 +8,7 @@
   <div class="card-header"><h2 class="card-title">Hosts</h2><div class="card-actions">{{template "csv" "/exports/hosts.csv"}}</div></div>
   {{if .Data}}
   <div class="table-responsive" tabindex="0">
-    <table class="table table-vcenter card-table table-hover" id="hosts-table" data-table="hosts">
+    <table class="table table-vcenter card-table table-hover" id="hosts-table" data-table="hosts" data-copy-cells data-stack>
       <caption class="visually-hidden">Every host in the manifest, with its profile</caption>
       <thead><tr><th scope="col">Alias</th><th scope="col">Profile</th><th scope="col">Hostname</th><th scope="col">Provider</th><th scope="col">Key</th><th scope="col">Status</th><th scope="col">Tags</th><th scope="col" class="w-1" data-nosort><span class="visually-hidden">Actions</span></th></tr></thead>
       <tbody>
@@ -16,7 +16,7 @@
         <tr>
           <th scope="row"><a href="{{basePath}}/hosts/{{.Alias}}" data-inline><code>{{.Alias}}</code></a>{{if .Aliases}}<div class="small text-secondary fw-normal mt-1">also {{range $i, $a := .Aliases}}{{if $i}}, {{end}}<code>{{$a}}</code>{{end}}</div>{{end}}</th>
           <td><code>{{$g.Name}}</code></td>
-          <td class="text-break">{{.Hostname}}{{if .Route}} <span class="badge bg-secondary-lt">{{.Route}}</span>{{end}}</td>
+          <td class="text-break">{{.Hostname}}{{if .Route}} <span class="badge badge-muted">{{.Route}}</span>{{end}}</td>
           <td>{{.ProviderLabel}}</td>
           <td class="text-break"><code>{{.KeyName}}</code></td>
           <td><span class="badge {{statusClass .Status}}">{{.Status}}</span></td>
@@ -37,7 +37,7 @@
         <tr class="host-variant" data-variant-of="{{$base.Alias}}">
           <th scope="row" class="ps-4"><code>{{.Alias}}</code><div class="small text-secondary fw-normal mt-1">route of <a href="{{basePath}}/hosts/{{$base.Alias}}" data-inline><code>{{$base.Alias}}</code></a></div></th>
           <td><code>{{$g.Name}}</code></td>
-          <td class="text-break">{{.Hostname}}{{if .Route}} <span class="badge bg-secondary-lt">{{.Route}}</span>{{end}}</td>
+          <td class="text-break">{{.Hostname}}{{if .Route}} <span class="badge badge-muted">{{.Route}}</span>{{end}}</td>
           <td>{{$base.ProviderLabel}}</td>
           <td class="text-break"><code>{{$base.KeyName}}</code></td>
           <td><span class="text-secondary small">same key</span></td>

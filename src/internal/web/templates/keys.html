@@ -5,7 +5,7 @@
   <div class="card-header"><h2 class="card-title">Keys</h2>{{if .Data.Rows}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data.Rows}} in the manifest</span>{{template "csv" "/exports/keys.csv"}}</div>{{end}}</div>
   {{if .Data.Rows}}
   <div class="table-responsive" tabindex="0">
-    <table class="table table-vcenter card-table table-hover" id="keys-table" data-table="keys">
+    <table class="table table-vcenter card-table table-hover" id="keys-table" data-table="keys" data-copy-cells data-stack>
       <caption class="visually-hidden">Every key the manifest declares or a host uses</caption>
       <thead><tr><th scope="col">Key</th><th scope="col">Type</th><th scope="col">Fingerprint</th><th scope="col">Expires</th><th scope="col">Status</th><th scope="col">Hosts</th><th scope="col">On disk</th><th scope="col" class="w-1" data-nosort><span class="visually-hidden">Actions</span></th></tr></thead>
       <tbody>
@@ -49,7 +49,7 @@
   <div class="card-header"><h2 class="card-title">Reserved keys</h2></div>
   {{if .Data.Reserved}}
   <div class="table-responsive" tabindex="0">
-    <table class="table table-vcenter card-table">
+    <table class="table table-vcenter card-table" data-copy-cells data-stack>
       <caption class="visually-hidden">Loose keys in ~/.ssh kept on purpose</caption>
       <thead><tr><th scope="col">Key</th><th scope="col">For</th><th scope="col">Note</th><th scope="col">Since</th><th scope="col">State</th>{{if not $.ReadOnly}}<th scope="col"><span class="visually-hidden">Actions</span></th>{{end}}</tr></thead>
       <tbody>

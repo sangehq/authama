@@ -1,15 +1,11 @@
 package web
 
 import (
-	"bytes"
-	"encoding/binary"
 	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
 	"strings"
-	"unicode/utf16"
-	"unicode/utf8"
 
 	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/core/manifest"
@@ -55,29 +51,10 @@ type IntegrationFile struct {
 	Binary     bool
 }
 
-// integrationFile is data as the text a person reads. Windows tools' files are
-// UTF-16 with a byte-order mark (PuTTY's .reg, for one), which shown as bytes
-// is noise, so it is decoded; anything else that is not UTF-8 is binary.
+// integrationFile is one exported file as the text a person reads (fileText).
 func integrationFile(name string, data []byte) IntegrationFile {
-	switch {
-	case len(data) >= 2 && data[0] == 0xFF && data[1] == 0xFE:
-		return IntegrationFile{Name: name, Body: utf16Text(data[2:], binary.LittleEndian)}
-	case len(data) >= 2 && data[0] == 0xFE && data[1] == 0xFF:
-		return IntegrationFile{Name: name, Body: utf16Text(data[2:], binary.BigEndian)}
-	}
-	data = bytes.TrimPrefix(data, []byte("\xEF\xBB\xBF"))
-	if !utf8.Valid(data) {
-		return IntegrationFile{Name: name, Binary: true}
-	}
-	return IntegrationFile{Name: name, Body: string(data)}
-}
-
-func utf16Text(data []byte, order binary.ByteOrder) string {
-	units := make([]uint16, len(data)/2)
-	for i := range units {
-		units[i] = order.Uint16(data[2*i:])
-	}
-	return strings.ReplaceAll(string(utf16.Decode(units)), "\r\n", "\n")
+	text, ok := fileText(data)
+	return IntegrationFile{Name: name, Body: text, Binary: !ok}
 }
 
 // IntegrationHost is a host or route a tool gets, as ssh would reach it.

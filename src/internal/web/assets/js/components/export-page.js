@@ -1107,7 +1107,7 @@ export class ExportPage extends Component {
       });
       return tr.node;
     });
-    const table = El.create("table").cls("table table-vcenter card-table table-sm mb-0").append(
+    const table = El.create("table").cls("table table-vcenter card-table table-sm mb-0").attr("data-stack", "").append(
       El.create("thead").append(El.create("tr").append(
         El.create("th").attr("scope", "col").append(El.create("span").cls("visually-hidden").text("Reorder")),
         El.create("th").attr("scope", "col").text("#"),
@@ -1118,6 +1118,7 @@ export class ExportPage extends Component {
       El.create("tbody").append(...rows),
     );
     this.#part("columns").replaceChildren(table.node);
+    document.dispatchEvent(new CustomEvent("authama:mount", { detail: { root: this.#part("columns") } }));
     if (this.#focusHandle !== null) {
       /** @type {HTMLElement | null} */ (this.#part("columns").querySelectorAll(".export-handle")[this.#focusHandle])?.focus();
       this.#focusHandle = null;
@@ -1184,7 +1185,7 @@ export class ExportPage extends Component {
 
     const cols = this.#columns();
     const sort = this.#sel.sort?.[0];
-    const table = El.create("table").cls("table table-vcenter card-table table-striped mb-0");
+    const table = El.create("table").cls("table table-vcenter card-table table-striped mb-0").attr("data-copy-cells", "").attr("data-stack", "");
     table.append(
       El.create("thead").append(El.create("tr").append(...p.columns.map((h, i) => {
         const field = cols[i]?.field ?? h;
@@ -1201,6 +1202,8 @@ export class ExportPage extends Component {
         : [El.create("tr").append(El.create("td").attr("colspan", String(Math.max(p.columns.length, 1))).cls("text-secondary text-center py-4").text("No rows match."))])),
     );
     this.#part("preview").replaceChildren(table.node);
+    // CopyCells and StackTable mount on tables in the page; this one is new.
+    document.dispatchEvent(new CustomEvent("authama:mount", { detail: { root: this.#part("preview") } }));
   }
 
   /** Why nothing can be downloaded, or "". */

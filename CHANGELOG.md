@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Route and tool-integration badges meet contrast.** The Hosts list's route label (`vm`, `cloudflared`, …) and the Tool integrations "runs ssh" / "connects itself" badges used Tabler's `-lt` colours, which axe flags at below 4.5:1. They now use the same accessible `badge-muted` and `badge-ok` classes as the rest of the UI.
+
+- **A chosen host's other routes go into a filtered export.** The Termius page and `export hosts` with a selection (`/exports/run`, `--profile`, `--tag`) read hosts from the dataset, which has no variants, so `warp-<alias>` was omitted while an unfiltered export wrote it. `ClientHosts` also treated `ProxyCommand none` as a proxy. A chosen host now brings its routes, only a real proxy is left out of clients that connect themselves, and a UTF-16 client file (PuTTY's `.reg`) is shown as text in the Transfer and Tool integrations previews.
+
 - **Structure approve of a tool key works, and a preview leaves `~/.gitconfig` alone.** After a purpose move the renderer still wrote `IdentityFile` at the profile root, so the rewritten config looked like a hand edit and approve stopped. It now writes `tools/<tool>/...`, the same path `KeyPath` uses. A preview (or any apply against a copy of `~/.ssh`) also used to run a live `sange profile signing retarget`; it now passes `--dry-run` unless the SSH directory is the live `~/.ssh`.
 
 - **The Hosts list shows every route.** It drew one row per host and left out what
@@ -27,6 +31,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Match exec` is never run.
 
 ### Added
+
+- **Tables copy what they show, and stack on a narrow screen.** A right-click (or the context-menu key) on a cell copies the cell, its row, its column or the visible table, tab-separated so it pastes into a spreadsheet. Below 1200px the same tables become one card per row, each cell under its column name, so they do not scroll sideways.
 
 - **Help → Tool integrations** (`/integrations`). A Help link in the main menu opens one
   card per tool authama hands hosts to: OpenSSH, Termius and every `export hosts --format`

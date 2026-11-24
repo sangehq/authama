@@ -61,11 +61,11 @@
       </div>
       {{if .Rows}}
       <div class="table-responsive" tabindex="0">
-        <table class="table table-vcenter card-table" id="termius-preview">
+        <table class="table table-vcenter card-table" id="termius-preview" data-copy-cells data-stack>
           <caption class="visually-hidden">The Termius CSV, one row per host, in Termius's import template</caption>
           <thead><tr>{{range .Header}}<th scope="col">{{.}}</th>{{end}}</tr></thead>
           <tbody>
-            {{range .Rows}}<tr>{{range $i, $c := .}}{{if eq $i 0}}<td>{{if $c}}<code>{{$c}}</code>{{else}}<span class="text-secondary">(none)</span>{{end}}</td>{{else if eq $i 7}}<td><span class="text-secondary">never written</span></td>{{else}}<td class="text-break">{{$c}}</td>{{end}}{{end}}</tr>
+            {{range .Rows}}<tr>{{range $i, $c := .}}{{if eq $i 0}}<td data-copy-value="{{$c}}">{{if $c}}<code>{{$c}}</code>{{else}}<span class="text-secondary">(none)</span>{{end}}</td>{{else if eq $i 7}}<td data-copy-value=""><span class="text-secondary">never written</span></td>{{else}}<td class="text-break">{{$c}}</td>{{end}}{{end}}</tr>
             {{end}}
           </tbody>
         </table>
@@ -115,7 +115,7 @@
       <div class="card-header"><h2 class="card-title">Attach the keys</h2></div>
       {{if .Keys}}
       <div class="table-responsive" tabindex="0">
-        <table class="table table-vcenter card-table" id="termius-keys">
+        <table class="table table-vcenter card-table" id="termius-keys" data-copy-cells data-stack>
           <caption class="visually-hidden">Each host in the file with the label to give its key in Termius and the command that copies it</caption>
           <thead><tr><th scope="col">Host</th><th scope="col">Termius label</th><th scope="col">Copy the key at a terminal</th></tr></thead>
           <tbody>

@@ -14,7 +14,7 @@
     {{with .Detail}}<pre class="mb-2 text-break" tabindex="0">{{.}}</pre>{{end}}
     {{if .Keys}}
     <div class="table-responsive" tabindex="0">
-      <table class="table table-vcenter table-sm">
+      <table class="table table-vcenter table-sm" data-copy-cells data-stack>
         <caption class="visually-hidden">Each managed keypair, as ssh validate reports it</caption>
         <thead><tr><th scope="col">Key</th><th scope="col">Profile</th><th scope="col">Status</th><th scope="col">Fingerprint</th><th scope="col">Detail</th></tr></thead>
         <tbody>{{range .Keys}}

@@ -41,7 +41,7 @@
       <div class="card-header"><h2 class="card-title">Seal</h2>{{if .State.Clean}}<span class="ms-2 badge badge-ok">{{icon "circle-check"}}<span class="ms-1">matches</span></span>{{else}}<span class="ms-2 badge badge-bad">{{icon "alert-triangle"}}<span class="ms-1">changed</span></span>{{end}}</div>
       <div class="card-body">
         <p>{{if .State.Clean}}Every sealed file is as authama last left it.{{else}}{{.State.Describe}}.{{end}}</p>
-        {{if .State.Report.Findings}}<div class="table-responsive" tabindex="0"><table class="table table-sm mb-3"><thead><tr><th scope="col">File</th><th scope="col">State</th></tr></thead><tbody>{{range .State.Report.Findings}}<tr><td><code>{{.Name}}</code></td><td><span class="badge {{if eq (print .Status) "changed"}}badge-warn{{else}}badge-bad{{end}}">{{.Status}}</span></td></tr>{{end}}</tbody></table></div>{{end}}
+        {{if .State.Report.Findings}}<div class="table-responsive" tabindex="0"><table class="table table-sm mb-3" data-copy-cells data-stack><thead><tr><th scope="col">File</th><th scope="col">State</th></tr></thead><tbody>{{range .State.Report.Findings}}<tr><td><code>{{.Name}}</code></td><td><span class="badge {{if eq (print .Status) "changed"}}badge-warn{{else}}badge-bad{{end}}">{{.Status}}</span></td></tr>{{end}}</tbody></table></div>{{end}}
         <p class="text-secondary small mb-0">Sealed: {{range $i, $f := .Files}}{{if $i}}, {{end}}<code>{{$f}}</code>{{end}}.</p>
       </div>
       {{if and (not .State.Clean) (not $.ReadOnly)}}<div class="card-footer d-flex flex-wrap align-items-center gap-2">
