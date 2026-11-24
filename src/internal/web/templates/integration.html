@@ -24,7 +24,7 @@
     {{range .Tool.Files}}
     <div class="card mb-3">
       <div class="card-header"><h2 class="card-title"><code>{{.Name}}</code></h2></div>
-      {{if .Binary}}<div class="card-body text-secondary">Not text: download it to see it.</div>{{else}}<div class="card-body p-0"><pre class="code-block p-3">{{.Body}}</pre></div>{{end}}
+      {{if .Binary}}<div class="card-body text-secondary">Not text: download it to see it.</div>{{else}}<div class="card-body p-0"><pre class="code-block p-3" tabindex="0">{{.Body}}</pre></div>{{end}}
     </div>
     {{end}}
   </div>
