@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`doctor` judged tool keys wrongly.** It called a tool key untracked when it sat in a folder named for its
+  tool (owner guessed from the folder name), and unwired because no host names it; a tool reads its key
+  itself. Ownership now comes from the manifest, and a tool key is not expected to be wired.
+- **`reconcile` could not record a key whose files had moved.** Its fingerprint was already recorded at the
+  old path, so it was neither recorded nor cleaned. When no manifest key owns the old path, the record now
+  follows the key, deployments kept.
 - **A tool integration's file preview can be scrolled from the keyboard.** The `<pre>` that shows the download was overflow-auto but not focusable, which axe flags as `scrollable-region-focusable`. It now has `tabindex="0"`, like the SSH config and Transfer previews.
 
 - **Route and tool-integration badges meet contrast.** The Hosts list's route label (`vm`, `cloudflared`, …) and the Tool integrations "runs ssh" / "connects itself" badges used Tabler's `-lt` colours, which axe flags at below 4.5:1. They now use the same accessible `badge-muted` and `badge-ok` classes as the rest of the UI.
@@ -34,6 +40,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Help is a menu: Tool integrations and the SSH folder diagram.** The diagram (`/ssh-folder`,
+  `authama ssh structure diagram`) draws `~/.ssh` as a tree, each key and file labelled from the manifest
+  (the hosts a key serves, the profile a tool key belongs to), with the counts.
 - **Tables copy what they show, and stack on a narrow screen.** A right-click (or the context-menu key) on a cell copies the cell, its row, its column or the visible table, tab-separated so it pastes into a spreadsheet. Below 1200px the same tables become one card per row, each cell under its column name, so they do not scroll sideways.
 
 - **Help → Tool integrations** (`/integrations`). A Help link in the main menu opens one
@@ -257,6 +266,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Tool keys live in one shared folder, `~/.ssh/profiles/tools/<tool>/`.** A git signing key or a docker
+  tunnel key used to sit in its profile's own `tools/` folder; it now sits in the key root's `tools/`, still
+  declared under (linked to) the profile that owns it, and the Tools page, Structure and the folder diagram
+  show each with its owner. `tools` is reserved: no category or uncategorised profile may take the name, and
+  two profiles cannot declare the same tool key. A key still in the old place is offered as a `misplaced`
+  move; approving it moves both halves, repoints `IdentityFile` lines, keeps the inventory record and hands a
+  git signing key to `sange profile signing retarget`.
 - **`--proxy none` writes `ProxyCommand none`.** It used to remove the proxy; `--proxy off` does that now. A plain
   cloudflared path is written unquoted, as Cloudflare documents it, and a render with a `PATH` that lacks cloudflared
   looks in its usual install paths before writing the bare name.

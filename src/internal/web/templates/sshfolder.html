@@ -1,0 +1,15 @@
+{{define "content"}}{{with .Data}}
+{{template "page_header" (header "Help" $.Title "Your ~/.ssh as it is on disk: the files OpenSSH reads, each profile's keys and the shared tools folder, each line saying what it is." (action "Structure" "/structure" "folder" | withTip "structure") (action "Tools" "/tools" "device-desktop" | withTip "tools"))}}
+<div class="card" id="ssh-folder">
+  <div class="card-header">
+    <h2 class="card-title"><code>~/.ssh/</code></h2>
+    <div class="card-actions">{{template "copy" (copy .Text "the diagram")}}</div>
+  </div>
+  <div class="card-body p-0"><pre class="code-block code-block-full p-3 m-0" tabindex="0">{{.Text}}</pre></div>
+  <div class="card-footer d-flex flex-wrap align-items-center gap-3">
+    <span class="text-secondary small">{{.Summary}}</span>
+    <span class="ms-auto">{{template "command_line" .Command}}</span>
+  </div>
+</div>
+<p class="text-secondary small mt-3 mb-0">Dot-files, sockets and the <code>old/</code> rotation archives are left out. A key's two halves share a line as <code>name{,.pub}</code>; a tool key says which profile owns it.</p>
+{{end}}{{end}}

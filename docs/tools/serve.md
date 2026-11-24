@@ -186,7 +186,7 @@ top bar, the main menu holds every page, one kind of thing to a menu:
 | **Security** | Audit, Checklists, Owner & PIN |
 | **History** | *Record:* Changes (the history page), File events. *Backups:* Snapshots, Export |
 | **System** | *Health:* Doctor, Validate, Repair. *Configure:* Settings, API tokens, Webhooks. Then Reset…, set apart in red |
-| Help | [Tool integrations](#tool-integrations): which hosts and routes each tool gets |
+| **Help** | *Use your hosts:* [Tool integrations](#tool-integrations). *Your SSH folder:* [SSH folder diagram](#ssh-folder) |
 | **New** | Add a host, Add a token, Mint missing keys |
 
 Each entry has its own icon and a line under its name saying what the page shows or does; no two
@@ -395,7 +395,8 @@ documentation, the source and the licences.
 | VMs | the VM hosts and their VMs' state, their Docker contexts (with an on-demand engine check), the pending `ssh vm sync` plan, the enabled hypervisors and their VMs, the declared devboxes (planned ones without a VM yet), the reserved keys, the loose keys that could be adopted, and whether the daily sync is scheduled |
 | Auth tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret), each tool's file with its mode and how many entries are installed, configured and resolvable, what `token apply` would skip, and the token audit, as `authama token list`, `token status` and `token audit` print. The audit card counts what to fix, what is owner-only and what is not set up; a file others can read has a *Make it owner-only* button (a preview of `doctor --fix`), a `.gitignore` that misses secret files offers the lines to add, and the tools with no file fold into a list, each opening *Add a token* for that tool. The scope bar reads a project (`--project`) or another token config (`--config`), and set, delete and apply then write the project's files; apply also takes `--source` and `--target` |
 | SSH config | every file the manifest renders into `~/.ssh` and whether the files on disk match it, as `authama ssh config show` and `ssh config check` print |
-| Tool integrations (`/integrations`, the **Help** link) | each tool authama can hand its hosts to - OpenSSH, Termius and every `export hosts --format` client - with the hosts and routes its export writes, the ones it leaves out and why, its import notes, a download and the command: [below](#tool-integrations) |
+| SSH folder (`/ssh-folder`, Help → SSH folder diagram) | `~/.ssh` drawn as a tree, each key and file labelled from the manifest, with a copy button and the counts: [below](#ssh-folder) |
+| Tool integrations (`/integrations`, Help → Tool integrations) | each tool authama can hand its hosts to - OpenSSH, Termius and every `export hosts --format` client - with the hosts and routes its export writes, the ones it leaves out and why, its import notes, a download and the command: [below](#tool-integrations) |
 | Termius import (`/termius`) | the Termius CSV of the hosts chosen, previewed as Termius reads it, with what was left out and the key to attach to each host: [below](#termius-import) |
 | Git identities (`/git-sign`) | each profile's git identity - email, name, signing key, directories - and whether it is applied; set, change or remove one, apply, and point other checkouts at a profile, each through the preview (the manifest diff and every line of the git files). **Check a checkout** reads how it commits and its commits' signatures; **Clone through a profile** gives the URL and the `ssh git clone` command. `allowed_signers` is shown (public keys only). See [git](git.md#in-the-web-ui). **Remote mode** shows checkouts' origin modes and switches them through the preview, as `ssh git status` and `ssh git use` do |
 | Structure (`/structure`) | the SSH folder as a tree - categories, profiles, their keys (including `tools/<tool>/` folders) and hosts - and the keys found outside it, each with a move menu and evidence; drag a key onto a profile or onto `tools/<tool>/` to choose the same move. **Preview the moves**, **Dismiss**, and a purpose-rules editor (remember a rule, enable auto-apply). See [ssh structure](structure.md#in-the-web-ui) |
@@ -545,7 +546,7 @@ and the Termius CSV grouped by profile (`authama export hosts --format termius`)
 
 ### <a name="tool-integrations"></a>Tool integrations
 
-**Help** in the main menu (`/integrations`, `h i`) opens one card per tool: OpenSSH (and anything that
+**Help → Tool integrations** (`/integrations`, `h i`) opens one card per tool: OpenSSH (and anything that
 runs `ssh`, such as git, scp, rsync, VS Code Remote and JetBrains Gateway), Termius, and each client
 `authama export hosts --format` writes. Each card reads that tool's export from the manifest, so its
 lists match the file its **Download** writes:
@@ -562,6 +563,15 @@ to [SSH config](#pages) and Termius's to [Termius import](#termius-import), whic
 
 A tool marked *runs ssh* reads `~/.ssh/config`, so every route works there as written. The page only
 reads; no export carries a private key.
+
+### <a name="ssh-folder"></a>SSH folder
+
+**Help → SSH folder diagram** (`/ssh-folder`, `h f`) draws `~/.ssh` as it is on disk, as
+`authama ssh structure diagram` prints it: the files OpenSSH reads, each category's `config`, every profile's
+keys (both halves on one line as `name{,.pub}`) and the shared `tools/` folder last. Each line says what it is:
+which hosts use a key, and which profile owns a tool key (`git-signing, owned by personal/imanimanyara`). The
+counts close it (profile groups, owners, key pairs and key files, config and host files), and **Copy** takes the
+whole text. Dot-files, sockets and the `old/` rotation archives are left out. The page only reads.
 
 ### <a name="termius-import"></a>Termius import
 

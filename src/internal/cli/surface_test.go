@@ -281,6 +281,7 @@ var goOnly = map[string]string{
 	"structure":             "owner, 2026-11-22: a watcher that detects ~/.ssh changes and moves keys into the expected structure, once approved",
 	"structure list":        "owner, 2026-11-22: the suggested moves, never carried out unasked",
 	"structure check":       "owner, 2026-11-22: scan for changes and refresh suggestions; what the background job runs",
+	"structure diagram":     "owner, 2026-11-24: draw ~/.ssh as a labelled tree, as Help → SSH folder diagram shows it",
 	"structure approve":     "owner, 2026-11-22: preview then carry out approved moves, backed up and in history",
 	"structure dismiss":     "owner, 2026-11-22: hide a suggestion the owner means to leave",
 	"structure install":     "owner, 2026-11-22: the optional background check (launchd, systemd user timer, Scheduled Task)",

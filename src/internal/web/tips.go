@@ -78,7 +78,7 @@ var tips = map[string]string{
 	"structure-rule-auto":   "Turns automatic apply of this rule on or off. Auto-apply still takes a snapshot and writes history.",
 	"structure-rule-remove": "Deletes this purpose rule. Keys already moved stay where they are.",
 	"structure":             "SSH folder tree: classify and move keys into tools/<tool>/.",
-	"tools":                 "Tool keys under profiles/<category>/<profile>/tools/<tool>/.",
+	"tools":                 "Tool keys in the shared profiles/tools/<tool>/ folder.",
 	"services":              "Reachability services attached to hosts, and read-only health checks.",
 	"service-add":           "Adds a catalog service. Hosts attach it with --service; this does not start a tunnel.",
 	"service-edit":          "Updates a catalog service of the same name. This does not start a tunnel or change WARP.",
@@ -224,6 +224,7 @@ var tips = map[string]string{
 	"nav-security":             "The key audit, the retirement checklists, and the owner's PIN and seal.",
 	"nav-history":              "Changes authama made, file events, snapshots of ~/.ssh, and Export.",
 	"nav-system":               "Doctor, Validate and Repair, Settings, API tokens, Webhooks, and Reset.",
+	"nav-help":                 "Tool integrations and the SSH folder diagram.",
 	"gitremote-status":         "Read each checkout's origin and say which mode it is in; changes nothing.",
 	"gitremote-use":            "Preview pointing these checkouts' origin at the mode; the PIN confirms.",
 	"browsers-forget":          "Forget this browser: it is signed out, and needs a new sign-in link from authama.",
@@ -280,7 +281,7 @@ var pageTips = map[string]string{
 	"transfer-encrypted": "Keys and token values too, under a passphrase and your PIN.",
 	"transfer-import":    "Upload a setup, an export zip or an encrypted export.",
 	"structure":          "SSH folder tree: classify and move keys into tools/<tool>/.",
-	"tools":              "Tool keys (git, docker, …) kept under tools/<tool>/.",
+	"tools":              "Tool keys (git, docker, …) in profiles/tools/<tool>/.",
 	"services":           "Host reachability: Access, WARP, Tailscale; read-only health.",
 	"gitsign":            "Commit as each profile, and sign with its SSH key.",
 	"tokens":             "The tokens npm, Composer, Docker, git and PyPI read.",
@@ -301,6 +302,7 @@ var pageTips = map[string]string{
 	"reset":              "Start keys, settings, files or the owner again.",
 	"about":              "This build, this computer, and the licences.",
 	"integrations":       "Which hosts and routes Termius, iTerm2 and others get.",
+	"sshfolder":          "Your ~/.ssh drawn as a tree, each key and file labelled.",
 	// The token checklists: the Checklists page filtered to tokens, in the
 	// Tokens menu.
 	"token-checklists": "What is left to rotate or revoke each token.",

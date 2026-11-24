@@ -183,6 +183,7 @@ Every command also takes the global flag:
     - [`authama ssh structure approve`](#authama-ssh-structure-approve) - Preview, then carry out, the moves you approve
     - [`authama ssh structure check`](#authama-ssh-structure-check) - Record file changes and refresh the suggestions; what the background job runs
     - [`authama ssh structure classify`](#authama-ssh-structure-classify) - Refresh purpose and leftover-copy suggestions (writes nothing with --dry-run)
+    - [`authama ssh structure diagram`](#authama-ssh-structure-diagram) - Draw ~/.ssh as a tree: each folder and key, which hosts use a key, who owns a tool key
     - [`authama ssh structure dismiss`](#authama-ssh-structure-dismiss) - Hide suggestions you mean to leave as they are (--undo shows them again)
     - [`authama ssh structure install`](#authama-ssh-structure-install) - Check in the background every 15 minutes and notify about new suggestions
     - [`authama ssh structure list`](#authama-ssh-structure-list) - List the suggested moves (dismissed ones with --all)
@@ -4234,6 +4235,7 @@ Subcommands:
 - [`approve`](#authama-ssh-structure-approve) - Preview, then carry out, the moves you approve
 - [`check`](#authama-ssh-structure-check) - Record file changes and refresh the suggestions; what the background job runs
 - [`classify`](#authama-ssh-structure-classify) - Refresh purpose and leftover-copy suggestions (writes nothing with --dry-run)
+- [`diagram`](#authama-ssh-structure-diagram) - Draw ~/.ssh as a tree: each folder and key, which hosts use a key, who owns a tool key
 - [`dismiss`](#authama-ssh-structure-dismiss) - Hide suggestions you mean to leave as they are (--undo shows them again)
 - [`install`](#authama-ssh-structure-install) - Check in the background every 15 minutes and notify about new suggestions
 - [`list`](#authama-ssh-structure-list) - List the suggested moves (dismissed ones with --all)
@@ -4326,6 +4328,23 @@ Flags:
 ```
   -n, --dry-run[=true|false]   print the plan; write nothing
       --json[=true|false]      print the suggestions as JSON
+```
+
+## authama ssh structure diagram
+
+Draws ~/.ssh as it is on disk: the files OpenSSH reads, each category's config, every
+profile's keys (both halves on one line as name{,.pub}) and the shared tools/ folder, each
+line labelled from the manifest, then the counts. Dot-files, sockets and the old/ rotation
+archives are left out. It only reads.
+
+```
+authama ssh structure diagram
+```
+
+Examples:
+
+```sh
+  authama ssh structure diagram
 ```
 
 ## authama ssh structure dismiss
@@ -4574,9 +4593,9 @@ Flags:
 
 ## authama ssh tool
 
-Tool keys live under ~/.ssh/profiles/<category>/<profile>/tools/<tool>/,
-apart from host keys at the profile root. Moving a key there is `ssh structure classify`
-and approve; this command lists what the manifest already declares.
+Tool keys live in the shared folder ~/.ssh/profiles/tools/<tool>/, apart from host
+keys in each profile's folder; each stays declared under the profile that owns it. Moving a
+key there is `ssh structure classify` and approve; this command lists what the manifest declares.
 
 ```
 authama ssh tool
@@ -4590,7 +4609,7 @@ Subcommands:
 
 ## authama ssh tool list
 
-List declared tool keys (git signing, docker, …) under profiles/<category>/<profile>/tools/<tool>/,
+List declared tool keys (git signing, docker, …) in the shared profiles/tools/<tool>/ folder, with their owners,
 and whether each file is on disk.
 
 ```

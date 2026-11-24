@@ -188,7 +188,15 @@
                   {{template "navmenuitem" (navItem . "reset" "/reset" "restore" "Reset…").Destructive}}
                 </div>
               </li>
-              {{template "navlink" (navItem . "integrations" "/integrations" "help-circle" "Help")}}
+              <li class="nav-item dropdown{{if eq .Nav "integrations" "sshfolder"}} active{{end}}">
+                <a class="nav-link dropdown-toggle" href="#navbar-help" id="navbar-help" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false"{{desc "nav-help"}}><span class="nav-link-icon nav-glyph text-{{navColour "personal"}} d-md-none d-lg-inline-block">{{icon "help-circle"}}</span><span class="nav-link-title">Help</span></a>
+                <div class="dropdown-menu" aria-labelledby="navbar-help">
+                  <span class="dropdown-header">Use your hosts</span>
+                  {{template "navmenuitem" (navItem . "integrations" "/integrations" "plug-connected" "Tool integrations")}}
+                  <span class="dropdown-header">Your SSH folder</span>
+                  {{template "navmenuitem" (navItem . "sshfolder" "/ssh-folder" "binary-tree" "SSH folder diagram")}}
+                </div>
+              </li>
             </ul>
           </nav>
         </div>

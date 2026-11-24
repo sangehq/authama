@@ -38,8 +38,34 @@ func newStructureCmd() *cobra.Command {
 			"a background job that checks every 15 minutes and notifies about new suggestions.",
 	}
 	cmd.AddCommand(newStructureListCmd(), newStructureCheckCmd(), newStructureClassifyCmd(), newStructureApproveCmd(),
-		newStructureDismissCmd(), newStructureRulesCmd(), newStructureInstallCmd(), newStructureUninstallCmd())
+		newStructureDismissCmd(), newStructureRulesCmd(), newStructureInstallCmd(), newStructureUninstallCmd(),
+		newStructureDiagramCmd())
 	return cmd
+}
+
+func newStructureDiagramCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "diagram",
+		Short: "Draw ~/.ssh as a tree: each folder and key, which hosts use a key, who owns a tool key",
+		Long: "Draws ~/.ssh as it is on disk: the files OpenSSH reads, each category's config, every\n" +
+			"profile's keys (both halves on one line as name{,.pub}) and the shared tools/ folder, each\n" +
+			"line labelled from the manifest, then the counts. Dot-files, sockets and the old/ rotation\n" +
+			"archives are left out. It only reads.",
+		Example: "  " + brand.Command + " ssh structure diagram",
+		Args:    cobra.NoArgs,
+		RunE: func(c *cobra.Command, _ []string) error {
+			p, err := resolvePaths(c)
+			if err != nil {
+				return err
+			}
+			d, err := structure.Diagram(p)
+			if err != nil {
+				return err
+			}
+			_, err = fmt.Fprint(c.OutOrStdout(), d.String())
+			return err
+		},
+	}
 }
 
 func newStructureListCmd() *cobra.Command {

@@ -63,7 +63,9 @@ func TestNavColoursFollowTheMapping(t *testing.T) {
 		}
 		// Export / Import, beside New, repeats History's export pages in
 		// History's colour, as New repeats the creates: it owns no colour.
-		if !navTaskKinds[kind] && e.Menu != "user" && e.Menu != "system" && e.Menu != "transfer" {
+		// Help holds reference pages in the user menu's personal colour, so
+		// it owns none either.
+		if !navTaskKinds[kind] && e.Menu != "user" && e.Menu != "system" && e.Menu != "transfer" && e.Menu != "help" {
 			if pageColours[e.Menu] == nil {
 				pageColours[e.Menu] = map[string]bool{}
 			}
@@ -104,7 +106,8 @@ func TestNavColoursFollowTheMapping(t *testing.T) {
 	// Each toggle's icon is its menu's colour: the pages' colour, and for
 	// System, which holds two kinds, Health's.
 	glyphs := map[string]string{"ssh": kindColours["ssh"], "tokens": kindColours["tokens"],
-		"security": kindColours["security"], "history": kindColours["history"], "system": kindColours["health"]}
+		"security": kindColours["security"], "history": kindColours["history"], "system": kindColours["health"],
+		"help": kindColours["personal"]}
 	for menu, want := range glyphs {
 		i := strings.Index(header, `id="navbar-`+menu+`"`)
 		if i < 0 {

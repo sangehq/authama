@@ -666,7 +666,7 @@ var navKinds = map[string]string{
 	"doctor": "health", "validate": "health", "repair": "health", "logs": "health",
 	"settings": "settings", "apitokens": "settings", "webhooks": "settings",
 	"overview":     "overview",
-	"integrations": "personal",
+	"integrations": "personal", "sshfolder": "personal",
 	// Tasks, by what they do.
 	"act-addhost": "create", "act-token": "create", "act-mint": "create",
 	"act-pin": "change", "act-rotate": "change",
@@ -966,7 +966,8 @@ func paletteItems(readOnly bool) []paletteItem {
 		{"apitokens", "API tokens", "/api-tokens", "license", "System", "api token create revoke read programs", "g j", ""},
 		{"webhooks", "Webhooks", "/webhooks", "bolt", "System", "webhook endpoint events deliver test secret", "g q", ""},
 		{"about", "About", "/about", "info-circle", "System", "about version licences", "g i", ""},
-		{"integrations", "Tool integrations", "/integrations", "help-circle", "Help", "help integrations tools termius iterm2 putty securecrt mobaxterm filezilla winscp cyberduck tabby ansible import warp routes", "h i", ""},
+		{"integrations", "Tool integrations", "/integrations", "plug-connected", "Help", "help integrations tools termius iterm2 putty securecrt mobaxterm filezilla winscp cyberduck tabby ansible import warp routes", "h i", ""},
+		{"sshfolder", "SSH folder", "/ssh-folder", "binary-tree", "Help", "ssh folder tree diagram layout structure profiles tools keys files", "h f", ""},
 	}
 	if !readOnly {
 		items = append(items,

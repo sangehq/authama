@@ -52,6 +52,8 @@ main:focus { outline: none; }
 /* authama */
 .row-attention th, .row-attention td { background: color-mix(in srgb, var(--tblr-warning) 8%, transparent); }
 .code-block { white-space: pre; overflow: auto; max-height: 32rem; font-size: .8125rem; margin: 0; }
+/* A diagram read whole (the SSH folder): no height cap, so nothing hides below a scroll. */
+.code-block-full { max-height: none; }
 .code-block:focus-visible, .diff-wrap:focus-visible { outline: 2px solid var(--tblr-primary); outline-offset: 2px; }
 /* A diff is a table: old and new line numbers, then the line in its file's
    syntax. Added and removed lines are tinted; the numbers never wrap or get

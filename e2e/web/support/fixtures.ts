@@ -20,6 +20,7 @@ export const pages: { path: string; heading: string }[] = [
   { path: '/ssh-config', heading: 'SSH config' },
   { path: '/termius', heading: 'Termius import' },
   { path: '/integrations', heading: 'Tool integrations' },
+  { path: '/ssh-folder', heading: 'SSH folder' },
   { path: '/integrations/iterm2', heading: 'iTerm2' },
   { path: '/integrations/putty', heading: 'PuTTY and KiTTY' },
   { path: '/structure', heading: 'Structure' },

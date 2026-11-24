@@ -69,6 +69,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /termius", termiusPage{s}.handleTermius)
 	mux.HandleFunc("GET /integrations", toolIntegrationsPage{s}.handle)
 	mux.HandleFunc("GET /integrations/{tool}", toolIntegrationsPage{s}.handleTool)
+	mux.HandleFunc("GET /ssh-folder", sshFolderPage{s}.handle)
 	mux.HandleFunc("GET /setup", setupPage{s}.handleSetup)
 	mux.HandleFunc("GET /setup/export.json", setupPage{s}.handleExport)
 	mux.HandleFunc("GET /transfer", transferPage{s}.handle)

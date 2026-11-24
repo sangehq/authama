@@ -83,6 +83,7 @@ func TestTheMainMenuGroupsPagesByWhatTheyAreAbout(t *testing.T) {
 		"system":   {"/doctor", "/validate", "/repair", "/logs", "/settings", "/api-tokens", "/webhooks", "/reset"},
 		"new":      {"/hosts#add-host", "/tokens#add-token", "/keys#mint-keys"},
 		"user":     {"/about"},
+		"help":     {"/integrations", "/ssh-folder"},
 	} {
 		if len(groups[group]) != len(hrefs) {
 			t.Errorf("menu %s holds %v, want %v", group, groups[group], hrefs)
