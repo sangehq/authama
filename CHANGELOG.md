@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Structure approve of a tool key works, and a preview leaves `~/.gitconfig` alone.** After a purpose move the renderer still wrote `IdentityFile` at the profile root, so the rewritten config looked like a hand edit and approve stopped. It now writes `tools/<tool>/...`, the same path `KeyPath` uses. A preview (or any apply against a copy of `~/.ssh`) also used to run a live `sange profile signing retarget`; it now passes `--dry-run` unless the SSH directory is the live `~/.ssh`.
+
 - **The Hosts list shows every route.** It drew one row per host and left out what
   `~/.ssh/config` renders from it: a host's extra names (`Host web web-cf`), how ssh
   reaches it (`vm`, `cloudflared`, `direct` for `ProxyCommand none`, `jump <host>`) and its
