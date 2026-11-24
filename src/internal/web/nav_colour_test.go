@@ -38,8 +38,8 @@ func TestNavColoursFollowTheMapping(t *testing.T) {
 	pageColours := map[string]map[string]bool{} // menu -> colours of its pages
 	tiles := 0
 	for _, e := range entries {
-		if e.Toggle || e.Menu == "main" {
-			continue
+		if e.Toggle || e.Menu == "main" || e.Label == "Running as" {
+			continue // Running as is the account header: the initials avatar, not a tile
 		}
 		m := navTileRe.FindStringSubmatch(e.inner)
 		if m == nil {

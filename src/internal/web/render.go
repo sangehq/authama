@@ -60,22 +60,9 @@ func loadAssets() (*assetSet, error) {
 	// so app.js and everything under js/ share one fingerprint, taken over
 	// all of them: a relative import lands under the same /assets/<hash>/ and
 	// still finds its file, and any change to any module moves them all.
-	group := sha256.New()
-	var mods []string
-	for name := range a.files {
-		if isModule(name) {
-			mods = append(mods, name)
-		}
-	}
-	sort.Strings(mods)
-	for _, name := range mods {
-		group.Write([]byte(name))
-		group.Write(a.files[name])
-	}
-	modHash := hex.EncodeToString(group.Sum(nil))[:12]
-	for _, name := range mods {
-		a.hashes[name] = modHash
-	}
+	// app.css and the fonts it names in @font-face share one the same way.
+	a.shareHash(isModule)
+	a.shareHash(isStyle)
 	sprite, ok := a.files["vendor/tabler-icons.svg"]
 	if !ok {
 		return nil, fmt.Errorf("web: the icon sprite is not embedded")
@@ -86,8 +73,34 @@ func loadAssets() (*assetSet, error) {
 	return a, nil
 }
 
+// shareHash gives every asset in a group one fingerprint, taken over all of
+// their names and bytes, so files in it can refer to each other by relative
+// path.
+func (a *assetSet) shareHash(in func(string) bool) {
+	group := sha256.New()
+	var names []string
+	for name := range a.files {
+		if in(name) {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		group.Write([]byte(name))
+		group.Write(a.files[name])
+	}
+	h := hex.EncodeToString(group.Sum(nil))[:12]
+	for _, name := range names {
+		a.hashes[name] = h
+	}
+}
+
 // isModule reports whether an asset is one of the UI's ES modules.
 func isModule(name string) bool { return name == "app.js" || strings.HasPrefix(name, "js/") }
+
+// isStyle reports app.css and the vendored fonts its @font-face rules load
+// by relative URL.
+func isStyle(name string) bool { return name == "app.css" || strings.HasPrefix(name, "vendor/fonts/") }
 
 // url returns the fingerprinted URL of an asset. Asking for one that does not
 // exist fails the template, which the page tests turn into a failure rather
@@ -864,6 +877,8 @@ func (s *Server) serveAsset(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
 	case ".svg":
 		w.Header().Set("Content-Type", "image/svg+xml")
+	case ".woff2":
+		w.Header().Set("Content-Type", "font/woff2")
 	default:
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	}

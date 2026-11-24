@@ -175,17 +175,20 @@ server only reads), a search box that opens the command palette, a theme toggle 
 bell listing the newest [file events](events.md), a **New** button for the common creates, an **Export / Import**
 button (every export in one zip, the encrypted full export, and importing a setup file; a read-only server offers
 the export only), and the user menu, named for the system user the server runs as. The user menu is personal: it opens with
-*Running as <user> on <host>*, then **Take the tour**, **About authama** and **Sign out**. Under the
-top bar, the main menu holds every page, one kind of thing to a menu:
+the user's initials and *Running as this user on <host>*, then a **Theme** submenu (Light or Dark, the
+one in use checked), **Take the tour**, **About authama** and **Sign out**. Under the top bar, the main
+menu holds every page, one kind of thing to a menu. A menu with groups opens as one wide panel, a
+column per group, and SSH's Tasks sit in a tinted panel beside its pages; on a narrow screen the
+columns stack:
 
 | Menu | Holds |
 |---|---|
 | Overview | What needs attention, counts, and Get started for a new home |
-| **SSH** | *Inventory:* Profiles, Hosts, Keys, VMs. *Configuration:* Naming, SSH config, Termius import. *Tasks:* Add a host, Pin host keys, Mint missing keys, Rotate keys, Revoke keys, Delete keys |
+| **SSH** | *Inventory:* Profiles, Hosts, Keys, VMs, Tools, Services, Git identities. *Configuration:* Naming, SSH config, Termius import, Structure. *Tasks:* Add a host, Pin host keys, Mint missing keys, Rotate keys, Revoke keys, Delete keys |
 | **Tokens** | Tokens, Token checklists (the Checklists page filtered to tokens). *Tasks:* Add a token |
 | **Security** | Audit, Checklists, Owner & PIN |
-| **History** | *Record:* Changes (the history page), File events. *Backups:* Snapshots, Export |
-| **System** | *Health:* Doctor, Validate, Repair. *Configure:* Settings, API tokens, Webhooks. Then Reset…, set apart in red |
+| **History** | *Record:* Changes (the history page), File events. *Backups:* Snapshots, Export, Move setup |
+| **System** | *Health:* Doctor, Validate, Repair, Logs. *Configure:* Settings, API tokens, Webhooks. Then Reset…, set apart in red |
 | **Help** | *Use your hosts:* [Tool integrations](#tool-integrations). *Your SSH folder:* [SSH folder diagram](#ssh-folder) |
 | **New** | Add a host, Add a token, Mint missing keys |
 
@@ -203,7 +206,7 @@ in the same colour (System's is Health's).
 | History | yellow | Changes, File events, Snapshots, Export |
 | Health | teal | Doctor, Validate, Repair |
 | Settings | secondary (grey) | Settings, API tokens, Webhooks |
-| Personal (user menu) | secondary (grey) | Running as, Take the tour, About, Sign out |
+| Personal (user menu) | secondary (grey) | Theme, Light, Dark, Take the tour, About, Sign out |
 | Create or add | green | Add a host, Add a token, Mint missing keys (in Tasks and New) |
 | Change | blue | Pin host keys, Rotate keys |
 | Revoke | orange | Revoke keys |
@@ -212,7 +215,10 @@ in the same colour (System's is Health's).
 
 The tile's icon and edge are the colour darkened in the light theme and lightened in the dark one,
 so both stay at 3:1 or more against the menu (measured at 5.4:1 or more). The current page's entry
-has a bar at its start edge, and the keyboard's focus is a ring around the entry.
+has a bar at its start edge, and the keyboard's focus is a ring around the entry. The header and its
+menus are set in Inter, the typeface Tabler's own documentation uses, served from the binary (the
+page loads no font from anywhere else), with Tabler's weights: medium for a menu or an entry's name,
+and Tabler's small uppercase headers over each group.
 A job's entry opens its page with the form's panel already open, and nothing runs until it is
 reviewed. A read-only server shows no Tasks and no New button, and a dev sandbox leaves out Rotate
 and Revoke, which reach real servers. When export is turned off, the History menu has no Export. On

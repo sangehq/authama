@@ -361,11 +361,11 @@ func TestNoticesMatchTheEmbeddedLicences(t *testing.T) {
 		t.Fatal(err)
 	}
 	texts := map[string][]byte{}
-	for _, f := range []string{"tabler.txt", "tabler-icons.txt", "bootstrap.txt", "popper.txt"} {
+	for _, f := range []string{"tabler.txt", "tabler-icons.txt", "bootstrap.txt", "popper.txt", "inter.txt"} {
 		texts[f] = vendorFile(t, "LICENSES/"+f)
 	}
 	ls := tabler.Licences(vers, texts)
-	if len(ls) != 4 {
+	if len(ls) != 5 {
 		t.Fatalf("%d licences", len(ls))
 	}
 	root, err := os.ReadFile(filepath.Join("..", "..", "..", "third-party-notices.md"))

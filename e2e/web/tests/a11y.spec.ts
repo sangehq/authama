@@ -127,6 +127,11 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(page.locator('html')).toHaveAttribute('data-bs-theme', theme);
         await page.locator(`#navbar-${menu}`).click();
         await expect(page.locator(`[aria-labelledby="navbar-${menu}"]`)).toBeVisible();
+        if (menu === 'user') {
+          // The Theme submenu open too, so Light, Dark and the check are judged.
+          await page.locator('#navbar-theme').click();
+          await expect(page.locator('[aria-labelledby="navbar-theme"]')).toBeVisible();
+        }
         // The headers, which hold the menus. The page under an open menu is
         // audited with every menu closed above; checking it here judged a page
         // button the menu happened to cover as a too-small target (axe

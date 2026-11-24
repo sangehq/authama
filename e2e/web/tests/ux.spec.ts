@@ -326,6 +326,11 @@ for (const menu of ['ssh', 'tokens', 'security', 'history', 'system', 'new', 'us
     await page.locator(`#navbar-${menu}`).click();
     const box = page.locator(`[aria-labelledby="navbar-${menu}"]`);
     await expect(box).toBeVisible();
+    if (menu === 'user') {
+      // Light and Dark sit in the Theme submenu: open it so they are measured too.
+      await page.locator('#navbar-theme').click();
+      await expect(page.locator('[aria-labelledby="navbar-theme"]')).toBeVisible();
+    }
     const read = await box.locator('.nav-menu-item').evaluateAll((items) =>
       items.map((it) => {
         const tile = it.querySelector('.nav-tile')!.getBoundingClientRect();

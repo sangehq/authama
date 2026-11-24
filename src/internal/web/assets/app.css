@@ -305,6 +305,71 @@ main:focus { outline: none; }
 }
 
 
+/* Navigation typography. Tabler's own documentation sets its sans-serif to
+   Inter; the navs do the same, self-hosted (the CSP allows fonts from 'self'
+   only) from the vendored @fontsource-variable/inter, with Tabler's system
+   stack behind it. app.css and vendor/fonts/ share one fingerprint
+   (loadAssets), so these relative URLs resolve. Weights and sizes are
+   Tabler's tokens: medium for a link or an entry's name, the h5 size for a
+   description, and Tabler's own uppercase .dropdown-header for a column. */
+@font-face {
+  font-family: "Inter Variable"; font-style: normal; font-display: swap; font-weight: 100 900;
+  src: url("vendor/fonts/inter-latin-wght-normal.woff2") format("woff2-variations"), url("vendor/fonts/inter-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter Variable"; font-style: normal; font-display: swap; font-weight: 100 900;
+  src: url("vendor/fonts/inter-latin-ext-wght-normal.woff2") format("woff2-variations"), url("vendor/fonts/inter-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+.navbar {
+  font-family: "Inter Variable", var(--tblr-font-sans-serif);
+  font-feature-settings: "cv03", "cv04", "cv11";
+}
+.navbar .nav-link-title, .navbar-brand-text { font-weight: var(--tblr-font-weight-medium); letter-spacing: -.005em; }
+.navbar .nav-menu-text > .d-block:first-child, .navbar .nav-menu-item > .nav-menu-text:only-child { font-weight: var(--tblr-font-weight-medium); }
+.navbar .nav-menu-desc { font-size: var(--tblr-font-size-h5); }
+
+/* Menus with columns (SSH, History, System) open as one wide panel, as in
+   Tabler's multi-column dropdown; the SSH menu's Tasks column is a tinted
+   side panel, set apart from the pages. */
+.navbar .nav-mega { padding-block: 0; }
+.navbar .nav-mega > .dropdown-menu-columns { gap: 0; }
+.navbar .nav-mega .dropdown-menu-column { padding-block: .25rem .5rem; }
+.navbar .nav-mega > .dropdown-divider { margin-top: 0; }
+/* Side by side from 992px; below that the columns stack, so a panel is one
+   column wide and stays inside the window. History and System sit right of
+   the middle, so below 1400px they open from their toggle's end edge
+   (dropdown-menu-end) instead of running past the window's. */
+@media (min-width: 992px) {
+  .navbar .nav-mega .dropdown-menu-column + .dropdown-menu-column { border-inline-start: var(--tblr-border-width) solid var(--tblr-border-color-translucent); }
+}
+@media (max-width: 991.98px) {
+  .navbar .nav-mega .dropdown-menu-columns { flex-direction: column; }
+  .navbar .nav-mega .dropdown-menu-column + .dropdown-menu-column { border-top: var(--tblr-border-width) solid var(--tblr-border-color-translucent); }
+}
+.navbar .nav-menu-aside { background: var(--tblr-bg-surface-secondary); }
+@media (min-width: 768px) {
+  .navbar .nav-menu-aside { border-start-end-radius: var(--tblr-dropdown-border-radius); border-end-end-radius: var(--tblr-dropdown-border-radius); }
+}
+
+/* The account menu: an avatar header saying who the server runs as, then a
+   Theme submenu (Tabler's .dropstart, opening toward the window) whose
+   current choice carries a check. */
+.navbar .nav-account { min-width: 17rem; }
+.nav-account-head { display: flex; align-items: center; gap: .75rem; padding: .5rem var(--tblr-dropdown-item-padding-x, .75rem); max-width: 22rem; }
+.nav-account-who { min-width: 0; }
+.navbar .nav-account .dropstart > .dropdown-toggle::before { order: 3; margin-inline-start: auto; }
+/* On a phone there is no room beside the menu: Light and Dark open under
+   Theme, indented, inside the menu. */
+@media (max-width: 575.98px) {
+  .navbar .nav-account .dropstart > .dropdown-menu { position: static; margin: 0; border: 0; box-shadow: none; padding-inline-start: 1.5rem; }
+  .navbar .nav-account .dropstart > .dropdown-toggle::before { transform: rotate(-45deg); }
+}
+.navbar .nav-theme-item { min-width: 11rem; }
+.nav-theme-check { color: var(--tblr-primary); }
+[data-bs-theme="dark"] .nav-theme-check { color: color-mix(in oklab, var(--tblr-primary) 65%, white); }
+
 /* Navigation menus: each entry's description sits under its name, so the menu
    is read without hovering; the width keeps lines short. */
 .nav-menu-item { display: flex; align-items: center; gap: .875rem; padding-block: .5rem; white-space: normal; min-width: 16rem; max-width: 22rem; }
@@ -379,6 +444,7 @@ main:focus { outline: none; }
 /* Header logo mark: the favicon itself, so the tab and the header read as one product. */
 .navbar-brand-mark { width: 2rem; height: 2rem; flex: none; }
 .navbar-brand-text { margin-left: .625rem; font-weight: 600; white-space: nowrap; }
+.navbar .navbar-brand-text { font-weight: var(--tblr-font-weight-semibold, 600); }
 
 /* Checklists: one step a row, its mark, what it is, and its command or link;
    a step ticked by hand has its button at the end. */

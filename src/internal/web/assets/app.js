@@ -8,6 +8,7 @@ import { Ui } from "./js/core/ui.js";
 import { DataTable } from "./js/components/data-table.js";
 import { CopyCells } from "./js/components/copy-cells.js";
 import { StackTable } from "./js/components/stack-table.js";
+import { Submenu } from "./js/components/submenu.js";
 import { AutoSubmit, ConfirmAction, CopyText, JobStream, ThemeChoice, Tip } from "./js/components/behaviours.js";
 import { CommandPalette, PanelFromHash } from "./js/components/palette.js";
 import { Shortcuts } from "./js/components/shortcuts.js";
@@ -38,6 +39,7 @@ App.create()
   .use(DataTable)
   .use(CopyCells)
   .use(StackTable)
+  .use(Submenu)
   .use(ConfirmAction)
   .use(AutoSubmit)
   .use(JobStream)

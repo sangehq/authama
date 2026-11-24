@@ -6,6 +6,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Redesigned header menus.** SSH opens as one wide panel with Inventory, Configuration and Tasks
+  columns, Tasks in a tinted side panel; History and System show their groups side by side. The user
+  menu opens with the user's initials and where the server runs, and gains a **Theme** submenu (Light
+  or Dark, the current one checked). Every page stays in the menu it was in.
+- **The header and its menus use Inter**, the typeface Tabler's documentation uses, with Tabler's
+  weights and header style. The font is vendored from `@fontsource-variable/inter` 5.3.0 (SIL Open
+  Font License 1.1) by `make tabler-vendor`, pinned in `TABLER_VERSION`, and served from the binary;
+  `third-party-notices.md` carries its licence.
+
 ### Fixed
 
 - **`Include` with a Windows path.** The Include tokenizer took every backslash as an escape, so

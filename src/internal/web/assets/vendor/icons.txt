@@ -37,6 +37,7 @@ lock
 lock-open
 map-pin
 moon
+palette
 pencil
 player-play
 plus
