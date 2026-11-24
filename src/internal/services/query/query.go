@@ -32,7 +32,8 @@ type HostRow struct {
 	// Aliases are the host's extra names, rendered on its own Host line.
 	Aliases []string
 	// Route is how ssh gets there when it is not a plain connection:
-	// "cloudflared", "direct" (ProxyCommand none), "command" or "jump <host>";
+	// "vm", "cloudflared", "direct" (ProxyCommand none), "command" or
+	// "jump <host>";
 	// empty for a plain connection.
 	Route string
 	// Variants are the host's other routes, each rendered as its own block
@@ -224,6 +225,9 @@ func (q *Query) row(pname string, host manifest.Host) (HostRow, error) {
 
 // routeOf names how ssh reaches h when it is not a plain connection.
 func routeOf(h manifest.Host) string {
+	if h.VM != nil {
+		return "vm" // the hypervisor supplies the address at connect time
+	}
 	if h.Proxy != nil {
 		if h.Proxy.Kind == manifest.ProxyNone {
 			return "direct"

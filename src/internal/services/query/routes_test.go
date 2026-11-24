@@ -20,7 +20,8 @@ const routedManifest = `{
        "proxy": {"kind": "cloudflared"}, "aliases": ["web-cf"],
        "variants": [{"name": "warp", "hostname": "10.0.0.3", "proxy": {"kind": "none"}}]},
       {"alias": "plain", "hostname": "203.0.113.9", "user": "deploy"},
-      {"alias": "jumped", "hostname": "10.0.0.9", "user": "deploy", "raw_options": {"ProxyJump": "bastion"}}
+      {"alias": "jumped", "hostname": "10.0.0.9", "user": "deploy", "raw_options": {"ProxyJump": "bastion"}},
+      {"alias": "devbox", "hostname": "devbox", "user": "dev", "vm": {"hypervisor": "incus", "name": "devbox"}}
     ]}
   }
 }`
@@ -41,8 +42,8 @@ func routedRows(t *testing.T) map[string]HostRow {
 			rows[r.Alias] = r
 		}
 	}
-	if len(rows) != 3 {
-		t.Fatalf("got %d rows, want 3 (one per manifest host; variants are not rows)", len(rows))
+	if len(rows) != 4 {
+		t.Fatalf("got %d rows, want 4 (one per manifest host; variants are not rows)", len(rows))
 	}
 	return rows
 }
@@ -71,5 +72,8 @@ func TestHostRowRouteForPlainAndJumpHosts(t *testing.T) {
 	}
 	if r := rows["jumped"]; r.Route != "jump bastion" {
 		t.Fatalf("jumped Route = %q, want %q", r.Route, "jump bastion")
+	}
+	if r := rows["devbox"]; r.Route != "vm" {
+		t.Fatalf("devbox Route = %q, want vm", r.Route)
 	}
 }
