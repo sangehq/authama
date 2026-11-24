@@ -665,7 +665,8 @@ var navKinds = map[string]string{
 	"transfer": "history", "transfer-export": "history", "transfer-encrypted": "history", "transfer-import": "history",
 	"doctor": "health", "validate": "health", "repair": "health", "logs": "health",
 	"settings": "settings", "apitokens": "settings", "webhooks": "settings",
-	"overview": "overview",
+	"overview":     "overview",
+	"integrations": "personal",
 	// Tasks, by what they do.
 	"act-addhost": "create", "act-token": "create", "act-mint": "create",
 	"act-pin": "change", "act-rotate": "change",
@@ -965,6 +966,7 @@ func paletteItems(readOnly bool) []paletteItem {
 		{"apitokens", "API tokens", "/api-tokens", "license", "System", "api token create revoke read programs", "g j", ""},
 		{"webhooks", "Webhooks", "/webhooks", "bolt", "System", "webhook endpoint events deliver test secret", "g q", ""},
 		{"about", "About", "/about", "info-circle", "System", "about version licences", "g i", ""},
+		{"integrations", "Tool integrations", "/integrations", "help-circle", "Help", "help integrations tools termius iterm2 putty securecrt mobaxterm filezilla winscp cyberduck tabby ansible import warp routes", "h i", ""},
 	}
 	if !readOnly {
 		items = append(items,

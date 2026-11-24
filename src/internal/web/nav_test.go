@@ -64,6 +64,13 @@ func navEntries(t *testing.T, body string) []navEntry {
 				end = menus[n+1][0]
 			}
 			region, menu := part[m[1]:end], part[m[2]:m[3]]
+			if part == main {
+				// A main-menu dropdown ends at its own </li> (its entries are <a>s):
+				// a top-level link after the last one, such as Help, is not in it.
+				if i := strings.Index(region, "</li>"); i >= 0 {
+					region = region[:i]
+				}
+			}
 			for _, it := range navItemRe.FindAllStringSubmatch(region, -1) {
 				if strings.Contains(it[1], `id="navbar-`) {
 					continue // the next menu's toggle, read above
@@ -79,12 +86,16 @@ func navEntries(t *testing.T, body string) []navEntry {
 			}
 		}
 	}
-	// The main menu's own links, outside any dropdown: Overview.
-	first := len(main)
-	if m := navMenuRe.FindStringIndex(main); m != nil {
-		first = m[0]
+	// The main menu's own links, outside any dropdown: Overview before the
+	// first menu, and Help after the last one.
+	first, last := len(main), len(main)
+	if ms := navMenuRe.FindAllStringIndex(main, -1); ms != nil {
+		first = ms[0][0]
+		if i := strings.Index(main[ms[len(ms)-1][1]:], "</li>"); i >= 0 {
+			last = ms[len(ms)-1][1] + i
+		}
 	}
-	for _, it := range navItemRe.FindAllStringSubmatch(main[:first], -1) {
+	for _, it := range navItemRe.FindAllStringSubmatch(main[:first]+main[last:], -1) {
 		if strings.Contains(it[1], "dropdown-toggle") {
 			continue
 		}

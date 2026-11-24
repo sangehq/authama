@@ -186,6 +186,7 @@ top bar, the main menu holds every page, one kind of thing to a menu:
 | **Security** | Audit, Checklists, Owner & PIN |
 | **History** | *Record:* Changes (the history page), File events. *Backups:* Snapshots, Export |
 | **System** | *Health:* Doctor, Validate, Repair. *Configure:* Settings, API tokens, Webhooks. Then Reset…, set apart in red |
+| Help | [Tool integrations](#tool-integrations): which hosts and routes each tool gets |
 | **New** | Add a host, Add a token, Mint missing keys |
 
 Each entry has its own icon and a line under its name saying what the page shows or does; no two
@@ -387,13 +388,14 @@ documentation, the source and the licences.
 |---|---|
 | Overview | the state rows (`overview.Rows`), each problem with the command that fixes it and a button that previews the fix or opens the page that makes it (`init` and `migrate` stay CLI-only); counts; key health, auth tokens and snapshots; quick actions; hosts by profile; the newest file events; keys due for rotation; recent changes |
 | Profiles | each profile's category, key scope, key store, and host and key counts. **Add** takes a code (`--code`); **Delete, revoking or purging…** runs `ssh profile delete --revoke/--purge` as a job |
-| Hosts | every host by profile. **Add a host** generates the alias from an environment and role when it is left empty (`--env`, `--role`); **Add a VM host** takes a key name (`--key-name`); **Add hosts in bulk** takes tags and can reconcile after (`--tag`, `--reconcile`, always `--no-pin`). A host's page shows its manifest entry, its deployments, the block rendered into `~/.ssh/config`, and the host keys pinned for it; its Delete links to `ssh host delete --revoke/--purge` as a job |
+| Hosts | every host by profile, with its extra names, how ssh reaches it (`vm`, `cloudflared`, `direct`, `jump <host>`) and each of its other routes (a variant such as `warp-<alias>`) as a row under it. **Add a host** generates the alias from an environment and role when it is left empty (`--env`, `--role`); **Add a VM host** takes a key name (`--key-name`); **Add hosts in bulk** takes tags and can reconcile after (`--tag`, `--reconcile`, always `--no-pin`). A host's page shows its manifest entry, its deployments, the block rendered into `~/.ssh/config`, and the host keys pinned for it; its Delete links to `ssh host delete --revoke/--purge` as a job |
 | Keys | every key with its fingerprint and expiry, and the reserved keys (loose keys kept on purpose). A key's page shows its public key and fingerprint, each with a copy button, where the key is deployed and every operation that touched it. A `.pub` that is not a single public key line is not shown |
 | Snapshots | every snapshot. A snapshot's page diffs it against `~/.ssh` now or against another snapshot |
 | History | the [`history`](history.md), filtered the same way. An operation's page shows its events and the manifest before and after |
 | VMs | the VM hosts and their VMs' state, their Docker contexts (with an on-demand engine check), the pending `ssh vm sync` plan, the enabled hypervisors and their VMs, the declared devboxes (planned ones without a VM yet), the reserved keys, the loose keys that could be adopted, and whether the daily sync is scheduled |
 | Auth tokens | the installed auth tokens (tool, host, user, whether a secret is set, file - never the secret), each tool's file with its mode and how many entries are installed, configured and resolvable, what `token apply` would skip, and the token audit, as `authama token list`, `token status` and `token audit` print. The audit card counts what to fix, what is owner-only and what is not set up; a file others can read has a *Make it owner-only* button (a preview of `doctor --fix`), a `.gitignore` that misses secret files offers the lines to add, and the tools with no file fold into a list, each opening *Add a token* for that tool. The scope bar reads a project (`--project`) or another token config (`--config`), and set, delete and apply then write the project's files; apply also takes `--source` and `--target` |
 | SSH config | every file the manifest renders into `~/.ssh` and whether the files on disk match it, as `authama ssh config show` and `ssh config check` print |
+| Tool integrations (`/integrations`, the **Help** link) | each tool authama can hand its hosts to - OpenSSH, Termius and every `export hosts --format` client - with the hosts and routes its export writes, the ones it leaves out and why, its import notes, a download and the command: [below](#tool-integrations) |
 | Termius import (`/termius`) | the Termius CSV of the hosts chosen, previewed as Termius reads it, with what was left out and the key to attach to each host: [below](#termius-import) |
 | Git identities (`/git-sign`) | each profile's git identity - email, name, signing key, directories - and whether it is applied; set, change or remove one, apply, and point other checkouts at a profile, each through the preview (the manifest diff and every line of the git files). **Check a checkout** reads how it commits and its commits' signatures; **Clone through a profile** gives the URL and the `ssh git clone` command. `allowed_signers` is shown (public keys only). See [git](git.md#in-the-web-ui). **Remote mode** shows checkouts' origin modes and switches them through the preview, as `ssh git status` and `ssh git use` do |
 | Structure (`/structure`) | the SSH folder as a tree - categories, profiles, their keys (including `tools/<tool>/` folders) and hosts - and the keys found outside it, each with a move menu and evidence; drag a key onto a profile or onto `tools/<tool>/` to choose the same move. **Preview the moves**, **Dismiss**, and a purpose-rules editor (remember a rule, enable auto-apply). See [ssh structure](structure.md#in-the-web-ui) |
@@ -523,6 +525,26 @@ is refused here, as its page refuses to open it.
 and the Termius CSV grouped by profile (`authama export hosts --format termius`) as downloads, and leads to the
 [Termius import](#termius-import) for everything else. `/exports/termius-hosts.csv` also takes `?include_git=1` and
 `?termius_groups=` (any `--termius-groups` value). Nothing is written to the home, so `--read-only` keeps them.
+
+### <a name="tool-integrations"></a>Tool integrations
+
+**Help** in the main menu (`/integrations`, `h i`) opens one card per tool: OpenSSH (and anything that
+runs `ssh`, such as git, scp, rsync, VS Code Remote and JetBrains Gateway), Termius, and each client
+`authama export hosts --format` writes. Each card reads that tool's export from the manifest, so its
+lists match the file its **Download** writes:
+
+- the hosts and routes it gets, variants such as `warp-<alias>` included;
+- the ones it leaves out, with the reason the export gives (a host reached through Cloudflare Access or
+  a VM is left out of a tool that connects by itself, and its direct routes go in instead);
+- the notes on finishing the import, and the same export at a terminal.
+
+**View details** on each card opens that tool's page (`/integrations/<tool>`, for example
+`/integrations/iterm2`): every host and route it gets with its hostname, port, user and route, what it
+leaves out and why, the import notes, and a preview of each file the download writes. OpenSSH's leads
+to [SSH config](#pages) and Termius's to [Termius import](#termius-import), which already show that.
+
+A tool marked *runs ssh* reads `~/.ssh/config`, so every route works there as written. The page only
+reads; no export carries a private key.
 
 ### <a name="termius-import"></a>Termius import
 

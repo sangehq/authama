@@ -14,9 +14,9 @@
       <tbody>
         {{range $g := .Data}}{{range .Rows}}
         <tr>
-          <th scope="row"><a href="{{basePath}}/hosts/{{.Alias}}" data-inline><code>{{.Alias}}</code></a></th>
+          <th scope="row"><a href="{{basePath}}/hosts/{{.Alias}}" data-inline><code>{{.Alias}}</code></a>{{if .Aliases}}<div class="small text-secondary fw-normal mt-1">also {{range $i, $a := .Aliases}}{{if $i}}, {{end}}<code>{{$a}}</code>{{end}}</div>{{end}}</th>
           <td><code>{{$g.Name}}</code></td>
-          <td class="text-break">{{.Hostname}}</td>
+          <td class="text-break">{{.Hostname}}{{if .Route}} <span class="badge bg-secondary-lt">{{.Route}}</span>{{end}}</td>
           <td>{{.ProviderLabel}}</td>
           <td class="text-break"><code>{{.KeyName}}</code></td>
           <td><span class="badge {{statusClass .Status}}">{{.Status}}</span></td>
@@ -33,6 +33,23 @@
             {{template "menu_close"}}
           </td>
         </tr>
+        {{$base := .}}{{range .Variants}}
+        <tr class="host-variant" data-variant-of="{{$base.Alias}}">
+          <th scope="row" class="ps-4"><code>{{.Alias}}</code><div class="small text-secondary fw-normal mt-1">route of <a href="{{basePath}}/hosts/{{$base.Alias}}" data-inline><code>{{$base.Alias}}</code></a></div></th>
+          <td><code>{{$g.Name}}</code></td>
+          <td class="text-break">{{.Hostname}}{{if .Route}} <span class="badge bg-secondary-lt">{{.Route}}</span>{{end}}</td>
+          <td>{{$base.ProviderLabel}}</td>
+          <td class="text-break"><code>{{$base.KeyName}}</code></td>
+          <td><span class="text-secondary small">same key</span></td>
+          <td class="text-secondary">{{orDash (join $base.Tags ", ")}}</td>
+          <td class="text-end">
+            {{template "menu_open" (printf "Actions for route %s" .Alias)}}
+              <button type="button" class="dropdown-item" data-copy="ssh {{.Alias}}"{{desc "copy-value"}}>{{icon "terminal-2"}}<span class="ms-2">Copy <code>ssh {{.Alias}}</code></span></button>
+              {{if .Hostname}}<button type="button" class="dropdown-item" data-copy="{{.Hostname}}"{{desc "copy-value"}}>{{icon "copy"}}<span class="ms-2">Copy the hostname</span></button>{{end}}
+            {{template "menu_close"}}
+          </td>
+        </tr>
+        {{end}}
         {{end}}{{end}}
       </tbody>
     </table>

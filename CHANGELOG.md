@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The Hosts list shows every route.** It drew one row per host and left out what
+  `~/.ssh/config` renders from it: a host's extra names (`Host web web-cf`), how ssh
+  reaches it (`vm`, `cloudflared`, `direct` for `ProxyCommand none`, `jump <host>`) and its
+  other routes, such as `warp-<alias>`. Each now shows, the routes as rows under their host.
+
 - **OpenSSH Include edge cases.** Quoted and backslash-escaped Include paths
   (names with spaces) are tokenized the way OpenSSH argv-splits them, including
   in the importer. A UTF-8 BOM is stripped and CRLF lines are accepted.
@@ -20,6 +25,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Match exec` is never run.
 
 ### Added
+
+- **Help → Tool integrations** (`/integrations`). A Help link in the main menu opens one
+  card per tool authama hands hosts to: OpenSSH, Termius and every `export hosts --format`
+  client. Each card lists the hosts and routes that tool's export writes, the ones it leaves
+  out and why, its import notes, the download and the command, all read from the export itself.
+  **View details** opens each tool's page (`/integrations/<tool>`): its hosts with hostname, port,
+  user and route, what it leaves out, and a preview of the files the download writes.
 
 - **Any `~/.ssh` layout, and OpenSSH `Include`s.** authama follows every `Include` in
   `~/.ssh/config` (relative paths against `~/.ssh`, globs including `**`, nested and
