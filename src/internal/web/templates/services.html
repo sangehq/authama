@@ -7,7 +7,7 @@
       <div class="card-body p-0">
         {{if .Reports}}
         <div class="table-responsive">
-          <table class="table table-vcenter card-table">
+          <table class="table table-vcenter card-table" data-copy-cells data-stack>
             <thead><tr><th>Service</th><th>Kind</th><th>Status</th><th>Detail</th></tr></thead>
             <tbody>
               {{range .Reports}}
@@ -29,7 +29,7 @@
       <div class="card-header"><h2 class="card-title">Attached to hosts</h2></div>
       {{if .Attached}}
       <div class="table-responsive">
-        <table class="table table-vcenter card-table">
+        <table class="table table-vcenter card-table" data-copy-cells data-stack>
           <thead><tr><th>Host</th><th>Service</th></tr></thead>
           <tbody>
             {{range .Attached}}

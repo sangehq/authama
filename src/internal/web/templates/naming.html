@@ -27,7 +27,7 @@
       <div class="card-header"><h2 class="card-title">Check</h2><div class="card-actions text-secondary small">{{.Servers}} server(s) checked</div></div>
       {{if .Violations}}
       <div class="table-responsive" tabindex="0">
-        <table class="table table-vcenter card-table" id="naming-check-table">
+        <table class="table table-vcenter card-table" id="naming-check-table" data-copy-cells data-stack>
           <caption class="visually-hidden">Servers whose alias breaks the naming rules</caption>
           <thead><tr><th scope="col">Profile</th><th scope="col">What is wrong</th></tr></thead>
           <tbody>
@@ -47,7 +47,7 @@
   <div class="card-header"><h2 class="card-title">Profiles</h2>{{if .Profiles}}<div class="card-actions text-secondary small">{{len .Profiles}} in the manifest</div>{{end}}</div>
   {{if .Profiles}}
   <div class="table-responsive" tabindex="0">
-    <table class="table table-vcenter card-table table-hover" id="naming-profiles-table">
+    <table class="table table-vcenter card-table table-hover" id="naming-profiles-table" data-copy-cells data-stack>
       <caption class="visually-hidden">Each profile's code and the naming rules its servers follow</caption>
       <thead><tr><th scope="col">Profile</th><th scope="col">Code</th><th scope="col">Alias</th><th scope="col">Key name</th><th scope="col">Rules</th>{{if not $.ReadOnly}}<th scope="col" class="w-1"><span class="visually-hidden">Actions</span></th>{{end}}</tr></thead>
       <tbody>

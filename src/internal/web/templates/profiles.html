@@ -8,7 +8,7 @@
   <div class="card-header"><h2 class="card-title">Profiles</h2>{{if .Data}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data}} in the manifest</span>{{template "csv" "/exports/profiles.csv"}}</div>{{end}}</div>
   {{if .Data}}
   <div class="table-responsive" tabindex="0">
-    <table class="table table-vcenter card-table table-hover" id="profiles-table" data-table="profiles">
+    <table class="table table-vcenter card-table table-hover" id="profiles-table" data-table="profiles" data-copy-cells data-stack>
       <caption class="visually-hidden">Every profile in the manifest</caption>
       <thead><tr><th scope="col">Profile</th><th scope="col">Category</th><th scope="col">Key scope</th><th scope="col">Key store</th><th scope="col">Key comment</th><th scope="col">Hosts</th><th scope="col">Keys</th><th scope="col" data-nosort><span class="visually-hidden">Actions</span></th></tr></thead>
       <tbody>

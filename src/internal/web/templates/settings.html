@@ -22,7 +22,7 @@
     {{else}}<p class="text-secondary mb-0">Browsers are not remembered (<code>web.remember_days</code> is 0): each needs a sign-in link from <code>authama</code>.</p>{{end}}
   </div>
   {{if .Browsers}}
-  <div class="table-responsive"><table class="table table-vcenter card-table">
+  <div class="table-responsive"><table class="table table-vcenter card-table" data-copy-cells data-stack>
     <thead><tr><th>Browser</th><th>Signed in</th><th>Last used</th><th>Remembered until</th><th></th></tr></thead>
     <tbody>{{range .Browsers}}<tr data-browser="{{.ID}}">
       <td>{{.Label}}{{if .This}} <span class="badge badge-info ms-1">this browser</span>{{end}}</td>

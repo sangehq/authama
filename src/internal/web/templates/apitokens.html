@@ -10,7 +10,7 @@
       <div class="card-header"><h2 class="card-title">Tokens</h2></div>
       {{if .Tokens}}
       <div class="table-responsive">
-        <table class="table table-vcenter card-table">
+        <table class="table table-vcenter card-table" data-copy-cells data-stack>
           <thead><tr><th scope="col">Name</th><th scope="col">Scopes</th><th scope="col">Created</th><th scope="col">Expires</th><th scope="col">Last used</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
           <tbody>
             {{range .Tokens}}

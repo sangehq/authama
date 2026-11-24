@@ -6,11 +6,11 @@
     <div class="card mb-3" id="tool-hosts">
       <div class="card-header">
         <h2 class="card-title">Hosts it gets</h2>
-        <div class="card-actions">{{if .Tool.ViaSSH}}<span class="badge bg-green-lt">runs ssh</span>{{else}}<span class="badge bg-secondary-lt">connects itself</span>{{end}}</div>
+        <div class="card-actions">{{if .Tool.ViaSSH}}<span class="badge badge-ok">runs ssh</span>{{else}}<span class="badge badge-muted">connects itself</span>{{end}}</div>
       </div>
       {{if .Hosts}}
       <div class="table-responsive">
-        <table class="table table-vcenter card-table">
+        <table class="table table-vcenter card-table" data-copy-cells data-stack>
           <caption class="visually-hidden">The hosts and routes this tool's export writes</caption>
           <thead><tr><th scope="col">Alias</th><th scope="col">Hostname</th><th scope="col">Port</th><th scope="col">User</th><th scope="col">Route</th></tr></thead>
           <tbody>

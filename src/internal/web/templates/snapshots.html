@@ -5,7 +5,7 @@
   <div class="card-header"><h2 class="card-title">Snapshots</h2>{{if .Data.Snapshots}}<div class="card-actions d-flex align-items-center gap-2"><span class="text-secondary small">{{len .Data.Snapshots}}, newest first</span>{{template "csv" "/exports/snapshots.csv"}}</div>{{end}}</div>
   {{if .Data.Snapshots}}
   <div class="table-responsive" tabindex="0">
-    <table class="table table-vcenter card-table table-hover" data-table="snapshots">
+    <table class="table table-vcenter card-table table-hover" data-table="snapshots" data-copy-cells data-stack>
       <caption class="visually-hidden">Snapshots, newest first</caption>
       <thead><tr><th scope="col">Snapshot</th><th scope="col">Taken</th><th scope="col">Size</th><th scope="col" class="w-1" data-nosort><span class="visually-hidden">Actions</span></th></tr></thead>
       <tbody>
@@ -40,7 +40,7 @@
 <div class="card mt-3">
   <div class="card-header"><h2 class="card-title">Bundles in <code>dist/</code></h2></div>
   <div class="table-responsive" tabindex="0">
-    <table class="table table-vcenter card-table">
+    <table class="table table-vcenter card-table" data-copy-cells data-stack>
       <caption class="visually-hidden">Encrypted bundles, newest first</caption>
       <thead><tr><th scope="col">Bundle</th><th scope="col">Written</th><th scope="col">Size</th><th scope="col" class="w-1"><span class="visually-hidden">Actions</span></th></tr></thead>
       <tbody>

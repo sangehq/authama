@@ -5,7 +5,7 @@
   <div class="card-header"><h2 class="card-title">VM hosts</h2></div>
   {{if .Hosts}}
   <div class="table-responsive" tabindex="0">
-    <table class="table table-vcenter card-table">
+    <table class="table table-vcenter card-table" data-copy-cells data-stack>
       <caption class="visually-hidden">VM hosts and their state</caption>
       <thead><tr><th scope="col">Alias</th><th scope="col">Profile</th><th scope="col">Hypervisor</th><th scope="col">VM</th><th scope="col">State</th><th scope="col">Note</th></tr></thead>
       <tbody>
@@ -32,7 +32,7 @@
   <div class="card-body text-secondary">The docker CLI is not installed, so authama manages no Docker contexts.</div>
   {{else if .Contexts}}
   <div class="table-responsive" tabindex="0">
-    <table class="table table-vcenter card-table" id="docker-contexts-table">
+    <table class="table table-vcenter card-table" id="docker-contexts-table" data-copy-cells data-stack>
       <caption class="visually-hidden">Docker contexts of VM hosts</caption>
       <thead><tr><th scope="col">Context</th><th scope="col">Endpoint</th><th scope="col">VM</th><th scope="col">Engine</th><th scope="col">What to do</th></tr></thead>
       <tbody>
@@ -73,7 +73,7 @@
     <div class="card">
       <div class="card-header"><h2 class="card-title">Hypervisors</h2></div>
       <div class="table-responsive" tabindex="0">
-        <table class="table table-vcenter card-table">
+        <table class="table table-vcenter card-table" data-copy-cells data-stack>
           <caption class="visually-hidden">Hypervisor drivers</caption>
           <thead><tr><th scope="col">Name</th><th scope="col">Driver</th><th scope="col">Status</th><th scope="col">VMs</th></tr></thead>
           <tbody>
@@ -99,7 +99,7 @@
       <div class="card-header"><h2 class="card-title">Declared devboxes</h2></div>
       {{if .Devboxes}}
       <div class="table-responsive" tabindex="0">
-        <table class="table table-vcenter card-table">
+        <table class="table table-vcenter card-table" data-copy-cells data-stack>
           <caption class="visually-hidden">Devboxes declared in authama.json</caption>
           <thead><tr><th scope="col">Alias</th><th scope="col">Profile</th><th scope="col">VM</th><th scope="col">User</th><th scope="col">Key</th></tr></thead>
           <tbody>

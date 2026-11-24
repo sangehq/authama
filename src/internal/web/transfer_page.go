@@ -14,7 +14,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/services/bundler"
@@ -175,13 +174,14 @@ func (tp transferPage) render(w http.ResponseWriter, r *http.Request, status int
 }
 
 // previewFile is a file's first lines. A zip member that is not text shows
-// its size alone.
+// its size alone; a UTF-16 one (PuTTY's .reg) is decoded first (fileText).
 func previewFile(f transfer.File) TransferFile {
 	tf := TransferFile{Name: f.Name, Size: len(f.Body)}
-	if !utf8.Valid(f.Body) {
+	text, ok := fileText(f.Body)
+	if !ok {
 		return tf
 	}
-	lines := strings.Split(strings.TrimRight(string(f.Body), "\n"), "\n")
+	lines := strings.Split(strings.TrimRight(text, "\n"), "\n")
 	tf.Lines = len(lines)
 	if len(lines) > transferPreviewLines {
 		lines, tf.More = lines[:transferPreviewLines], true
