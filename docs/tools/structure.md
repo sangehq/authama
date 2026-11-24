@@ -104,7 +104,9 @@ sange profile signing retarget --from <old.pub> --to <new.pub>
 ```
 
 If sange is not on `PATH`, or the command fails, the apply still moves the key and prints that command as a handoff
-so you can run it. Authama never writes a profile's git identity or edits `~/.gitconfig` for signing.
+so you can run it. Authama never writes a profile's git identity or edits `~/.gitconfig` for signing. A preview
+(`approve --dry-run`, or the Structure page preview) passes `--dry-run` to sange unless the SSH directory is the
+live `~/.ssh`. The rendered `IdentityFile` for a tool key is `tools/<tool>/<name>`.
 
 `ssh structure rules add --name git-signing --tool git` remembers a classification. `--auto` is off until you turn it
 on with `ssh structure rules set <id> --auto`. Auto-apply requires confidence 1.0 and a complete plan; a git-signing
