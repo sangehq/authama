@@ -216,7 +216,8 @@ Settings: `vm.prune_gone` (`AUTHAMA_VM_PRUNE_GONE`, default `true`; off, a gone 
 default `true`; see [Shared connections](#shared-connections)).
 
 Backups: before any change, sync snapshots `~/.ssh` and copies the manifest to
-`<state home>/backups/vmsync/`; an exported Docker context goes there too. Private keys are never read,
+`<state home>/backups/vmsync/`, named to the second (a second sync in the same second adds `-2`);
+an exported Docker context goes there too. Private keys are never read,
 moved or deleted. `authama doctor --fix` runs the same sync.
 
 ## `authama ssh vm adopt-key [<key> [<profile> [<alias>]]]`
