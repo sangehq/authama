@@ -67,6 +67,8 @@ func (f fakeRegistry) publish(t *testing.T, pkg, version string, files map[strin
 	f[Registry+"/"+escape(pkg)] = p
 }
 
+const ofl = "SIL OPEN FONT LICENSE Version 1.1\n"
+
 const mit = "MIT License\n\nPermission is hereby granted, free of charge...\n"
 
 func fakeTabler(t *testing.T, coreVersion string) fakeRegistry {
@@ -86,6 +88,11 @@ func fakeTabler(t *testing.T, coreVersion string) fakeRegistry {
 	}, nil)
 	f.publish(t, PkgBootstrap, "5.3.8", map[string]string{"package/LICENSE": mit}, nil)
 	f.publish(t, PkgPopper, "2.11.8", map[string]string{"package/LICENSE.md": mit}, nil)
+	f.publish(t, PkgInter, "5.3.0", map[string]string{
+		"package/LICENSE": ofl,
+		"package/files/inter-latin-wght-normal.woff2":     "wOF2latin",
+		"package/files/inter-latin-ext-wght-normal.woff2": "wOF2latinext",
+	}, nil)
 	f[CoreLicenceURL(coreVersion)] = []byte(mit)
 	return f
 }
@@ -117,7 +124,7 @@ func TestRunLatestVendorsEverythingTogether(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if parsed[PkgCore] != "1.7.1" || parsed[PkgBootstrap] != "5.3.8" || parsed[PkgPopper] != "2.11.8" {
+	if parsed[PkgCore] != "1.7.1" || parsed[PkgBootstrap] != "5.3.8" || parsed[PkgPopper] != "2.11.8" || parsed[PkgInter] != "5.3.0" {
 		t.Fatalf("pinned %v", parsed)
 	}
 	sprite, _ := os.ReadFile(filepath.Join(assets, "tabler-icons.svg"))
@@ -125,13 +132,14 @@ func TestRunLatestVendorsEverythingTogether(t *testing.T) {
 		t.Errorf("subset is wrong:\n%s", sprite)
 	}
 	manifest, _ := os.ReadFile(filepath.Join(assets, "MANIFEST.sha256"))
-	for _, want := range []string{"tabler/tabler.min.css", "LICENSES/popper.txt", VersionFile, "icons.txt", "tabler-icons.svg"} {
+	for _, want := range []string{"tabler/tabler.min.css", "LICENSES/popper.txt", "LICENSES/inter.txt", "fonts/inter-latin-wght-normal.woff2", "fonts/inter-latin-ext-wght-normal.woff2", VersionFile, "icons.txt", "tabler-icons.svg"} {
 		if !strings.Contains(string(manifest), "  "+want+"\n") {
 			t.Errorf("manifest lacks %s", want)
 		}
 	}
 	notices, _ := os.ReadFile(filepath.Join(v.Root, "third-party-notices.md"))
-	if !strings.Contains(string(notices), "## @tabler/core 1.7.1") || strings.Count(string(notices), "Permission is hereby granted") != 4 {
+	if !strings.Contains(string(notices), "## @tabler/core 1.7.1") || strings.Count(string(notices), "Permission is hereby granted") != 4 ||
+		!strings.Contains(string(notices), "## @fontsource-variable/inter 5.3.0") || !strings.Contains(string(notices), "SIL OPEN FONT LICENSE") {
 		t.Errorf("notices:\n%s", notices)
 	}
 	if _, err := os.Stat(filepath.Join(v.Root, "escape")); err == nil {
@@ -161,6 +169,16 @@ func TestRunRefusesATamperedTarball(t *testing.T) {
 	}
 }
 
+func TestRunRefusesAMissingFont(t *testing.T) {
+	v, _ := vendorDir(t)
+	f := fakeTabler(t, "1.7.1")
+	f.publish(t, PkgInter, "5.3.0", map[string]string{"package/LICENSE": ofl}, nil)
+	v.Fetch = f
+	if err := v.Run(true); err == nil || !strings.Contains(err.Error(), "inter-latin-wght-normal.woff2") {
+		t.Fatalf("a release without the fonts was accepted: %v", err)
+	}
+}
+
 func TestRunRefusesAMissingIcon(t *testing.T) {
 	v, assets := vendorDir(t)
 	if err := os.WriteFile(filepath.Join(assets, "icons.txt"), []byte("check\ngone-upstream\n"), 0o644); err != nil {
@@ -174,7 +192,7 @@ func TestRunRefusesAMissingIcon(t *testing.T) {
 
 func TestRunPinnedRefusesABootstrapMismatch(t *testing.T) {
 	v, assets := vendorDir(t)
-	pin := Versions{PkgCore: "1.7.1", PkgIcons: "3.49.0", PkgBootstrap: "5.3.7", PkgPopper: "2.11.8"}
+	pin := Versions{PkgCore: "1.7.1", PkgIcons: "3.49.0", PkgBootstrap: "5.3.7", PkgPopper: "2.11.8", PkgInter: "5.3.0"}
 	if err := os.WriteFile(filepath.Join(assets, VersionFile), pin.Format(), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -191,9 +209,9 @@ func TestParseVersions(t *testing.T) {
 	if _, err := ParseVersions([]byte("@tabler/core\n")); err == nil {
 		t.Error("a line without a version parsed")
 	}
-	v := Versions{PkgCore: "1", PkgIcons: "2", PkgBootstrap: "3", PkgPopper: "4"}
+	v := Versions{PkgCore: "1", PkgIcons: "2", PkgBootstrap: "3", PkgPopper: "4", PkgInter: "5"}
 	got, err := ParseVersions(v.Format())
-	if err != nil || len(got) != 4 || got[PkgPopper] != "4" {
+	if err != nil || len(got) != 5 || got[PkgPopper] != "4" {
 		t.Fatalf("round trip %v %v", got, err)
 	}
 }
@@ -212,7 +230,7 @@ func TestSameMajor(t *testing.T) {
 func TestCheckReportsAPinBehindTheRegistry(t *testing.T) {
 	v, assets := vendorDir(t)
 	v.Fetch = fakeTabler(t, "1.7.1")
-	pin := Versions{PkgCore: "1.7.0", PkgIcons: "3.49.0", PkgBootstrap: "5.3.8", PkgPopper: "2.11.8"}
+	pin := Versions{PkgCore: "1.7.0", PkgIcons: "3.49.0", PkgBootstrap: "5.3.8", PkgPopper: "2.11.8", PkgInter: "5.3.0"}
 	if err := os.WriteFile(filepath.Join(assets, VersionFile), pin.Format(), 0o644); err != nil {
 		t.Fatal(err)
 	}

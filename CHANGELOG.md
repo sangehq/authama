@@ -6,8 +6,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Redesigned header menus.** SSH opens as one wide panel with Inventory, Configuration and Tasks
+  columns, Tasks in a tinted side panel; History and System show their groups side by side, and stack
+  below 992px. The user menu opens with the user's name and where the server runs, without repeating
+  the toggle's avatar. Every page stays in the menu it was in.
+- **Menu entries show Tabler's plain icons.** The coloured tile behind each entry's icon is gone; an
+  entry shows Tabler's thin grey `dropdown-item-icon` beside its name, red for a destructive entry and
+  blue for the current page, as Tabler's own menus do. The main menu's icons are Tabler's grey too,
+  instead of one colour per menu.
+- **The header and its menus use Inter**, the typeface Tabler's documentation uses, with Tabler's
+  weights and header style. The font is vendored from `@fontsource-variable/inter` 5.3.0 (SIL Open
+  Font License 1.1) by `make tabler-vendor`, pinned in `TABLER_VERSION`, and served from the binary;
+  `third-party-notices.md` carries its licence.
+
 ### Fixed
 
+- **Header menus on a phone.** Each row of the vertical menu spans the width with its chevron at the
+  end, so the chevrons line up, and a group's header (Tasks) lines up with the entries under it.
+- **System's Reset… is highlighted across the whole menu** when pointed at, not only its first 22rem.
 - **`Include` with a Windows path.** The Include tokenizer took every backslash as an escape, so
   `Include C:\Users\me\.ssh\extra` was read as `C:Usersme.sshextra` and never followed. It now
   escapes as OpenSSH's `argv_split` does (a quote, a backslash, or an unquoted space), keeping every

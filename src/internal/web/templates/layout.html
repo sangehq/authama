@@ -82,13 +82,16 @@
             <span class="d-none d-xxl-inline ps-2 align-self-center">{{if .User}}{{.User}}{{else}}{{brandCommand}}{{end}}</span>
             <span class="visually-hidden">: account menu</span>
           </a>
-          <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow" aria-labelledby="navbar-user">
-            <div class="px-3 py-2 small text-secondary text-wrap d-flex align-items-center gap-2" data-running-as>{{navTile "personal" "user-circle"}}<span>Running as <strong class="text-body">{{if .User}}{{.User}}{{else}}this machine's user{{end}}</strong>{{if .Host}} on <strong class="text-body">{{.Host}}</strong>{{end}}</span></div>
+          <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow nav-account" aria-labelledby="navbar-user">
+            <div class="nav-account-head" data-running-as>
+              <span class="d-block text-body fw-medium text-truncate">{{if .User}}{{.User}}{{else}}this machine's user{{end}}</span>
+              <span class="d-block small text-secondary text-wrap">Running as this user{{if .Host}} on <strong class="text-body">{{.Host}}</strong>{{end}}</span>
+            </div>
             <div class="dropdown-divider"></div>
-            <button type="button" class="dropdown-item nav-menu-item" data-tour-start{{if eq .Nav "overview"}} data-tour-start-auto="true"{{end}}{{desc "tour"}}>{{navTile "personal" "route"}}<span class="nav-menu-text">Take the tour</span></button>
-            <a href="{{basePath}}/about" class="dropdown-item nav-menu-item{{if eq .Nav "about"}} active{{end}}"{{if eq .Nav "about"}} aria-current="page"{{end}}{{desc "menu-about"}}>{{navTile "personal" "info-circle"}}<span class="nav-menu-text">About {{brandCommand}}</span></a>
+            <button type="button" class="dropdown-item nav-menu-item" data-tour-start{{if eq .Nav "overview"}} data-tour-start-auto="true"{{end}}{{desc "tour"}}>{{navIcon "personal" "route"}}<span class="nav-menu-text">Take the tour</span></button>
+            <a href="{{basePath}}/about" class="dropdown-item nav-menu-item{{if eq .Nav "about"}} active{{end}}"{{if eq .Nav "about"}} aria-current="page"{{end}}{{desc "menu-about"}}>{{navIcon "personal" "info-circle"}}<span class="nav-menu-text">About {{brandCommand}}</span></a>
             <div class="dropdown-divider"></div>
-            <form method="post" action="{{basePath}}/signout" class="m-0"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit" class="dropdown-item nav-menu-item"{{desc "menu-signout"}}>{{navTile "personal" "logout"}}<span class="nav-menu-text">Sign out</span></button></form>
+            <form method="post" action="{{basePath}}/signout" class="m-0"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit" class="dropdown-item nav-menu-item"{{desc "menu-signout"}}>{{navIcon "personal" "logout"}}<span class="nav-menu-text">Sign out</span></button></form>
           </div>
         </div>
         {{end}}
@@ -112,8 +115,8 @@
                    entries' (TestNavEntriesHaveDistinctIconsAndPages). */}}
               {{template "navlink" (navItem . "overview" "/" "layout-dashboard" "Overview")}}
               <li class="nav-item dropdown{{if eq .Nav "profiles" "hosts" "keys" "vms" "naming" "sshconfig" "termius" "structure" "tools" "services" "gitsign"}} active{{end}}">
-                <a class="nav-link dropdown-toggle" href="#navbar-ssh" id="navbar-ssh" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false" data-tour="2" data-tour-title="SSH" data-tour-text="Profiles, hosts, keys and VMs, then the naming rules and the ssh config rendered from them. Tasks holds the jobs on keys and hosts: each opens its form, and nothing runs until you review it."{{desc "nav-ssh"}}><span class="nav-link-icon nav-glyph text-{{navColour "ssh"}} d-md-none d-lg-inline-block">{{icon "terminal-2"}}</span><span class="nav-link-title">SSH</span></a>
-                <div class="dropdown-menu" aria-labelledby="navbar-ssh">
+                <a class="nav-link dropdown-toggle" href="#navbar-ssh" id="navbar-ssh" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false" data-tour="2" data-tour-title="SSH" data-tour-text="Profiles, hosts, keys and VMs, then the naming rules and the ssh config rendered from them. Tasks holds the jobs on keys and hosts: each opens its form, and nothing runs until you review it."{{desc "nav-ssh"}}><span class="nav-link-icon nav-glyph d-md-none d-lg-inline-block">{{icon "terminal-2"}}</span><span class="nav-link-title">SSH</span></a>
+                <div class="dropdown-menu nav-mega" aria-labelledby="navbar-ssh">
                   <div class="dropdown-menu-columns">
                     <div class="dropdown-menu-column">
                       <span class="dropdown-header">Inventory</span>
@@ -121,16 +124,18 @@
                       {{template "navmenuitem" (navItem . "hosts" "/hosts" "server" "Hosts")}}
                       {{template "navmenuitem" (navItem . "keys" "/keys" "key" "Keys")}}
                       {{template "navmenuitem" (navItem . "vms" "/vms" "box" "VMs")}}
+                      {{template "navmenuitem" (navItem . "tools" "/tools" "device-desktop" "Tools")}}
+                      {{template "navmenuitem" (navItem . "services" "/services" "activity" "Services")}}
+                      {{template "navmenuitem" (navItem . "gitsign" "/git-sign" "git-compare" "Git identities")}}
+                    </div>
+                    <div class="dropdown-menu-column">
                       <span class="dropdown-header">Configuration</span>
                       {{template "navmenuitem" (navItem . "naming" "/naming" "tag" "Naming")}}
                       {{template "navmenuitem" (navItem . "sshconfig" "/ssh-config" "file-code" "SSH config")}}
                       {{template "navmenuitem" (navItem . "termius" "/termius" "server-2" "Termius import")}}
                       {{template "navmenuitem" (navItem . "structure" "/structure" "folder" "Structure")}}
-                      {{template "navmenuitem" (navItem . "tools" "/tools" "device-desktop" "Tools")}}
-                      {{template "navmenuitem" (navItem . "services" "/services" "activity" "Services")}}
-                      {{template "navmenuitem" (navItem . "gitsign" "/git-sign" "git-compare" "Git identities")}}
                     </div>
-                    {{if not .ReadOnly}}<div class="dropdown-menu-column">
+                    {{if not .ReadOnly}}<div class="dropdown-menu-column nav-menu-aside">
                       <span class="dropdown-header">Tasks</span>
                       {{template "navmenuitem" (navItem . "act-addhost" "/hosts#add-host" "device-desktop-plus" "Add a host")}}
                       {{template "navmenuitem" (navItem . "act-pin" "/hosts#knownhosts-init" "fingerprint" "Pin host keys")}}
@@ -143,7 +148,7 @@
                 </div>
               </li>
               <li class="nav-item dropdown{{if eq .Nav "tokens" "token-checklists"}} active{{end}}">
-                <a class="nav-link dropdown-toggle" href="#navbar-tokens" id="navbar-tokens" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false" data-tour="3" data-tour-title="Tokens" data-tour-text="The tokens npm, Composer, Docker, git, PyPI and the rest read, what is left to retire each one, and Add a token."{{desc "nav-tokens"}}><span class="nav-link-icon nav-glyph text-{{navColour "tokens"}} d-md-none d-lg-inline-block">{{icon "password"}}</span><span class="nav-link-title">Tokens</span></a>
+                <a class="nav-link dropdown-toggle" href="#navbar-tokens" id="navbar-tokens" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false" data-tour="3" data-tour-title="Tokens" data-tour-text="The tokens npm, Composer, Docker, git, PyPI and the rest read, what is left to retire each one, and Add a token."{{desc "nav-tokens"}}><span class="nav-link-icon nav-glyph d-md-none d-lg-inline-block">{{icon "password"}}</span><span class="nav-link-title">Tokens</span></a>
                 <div class="dropdown-menu" aria-labelledby="navbar-tokens">
                   {{template "navmenuitem" (navItem . "tokens" "/tokens" "cloud-lock" "Tokens")}}
                   {{template "navmenuitem" (navItem . "token-checklists" "/checklists?show=tokens" "checklist" "Token checklists")}}
@@ -153,7 +158,7 @@
                 </div>
               </li>
               <li class="nav-item dropdown{{if eq .Nav "audit" "checklists" "security"}} active{{end}}">
-                <a class="nav-link dropdown-toggle" href="#navbar-security" id="navbar-security" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false" data-tour="4" data-tour-title="Security" data-tour-text="The key audit, the checklists for retiring a key or token completely, and the PIN and seal that bind this home to you."{{desc "nav-security"}}><span class="nav-link-icon nav-glyph text-{{navColour "security"}} d-md-none d-lg-inline-block">{{icon "shield"}}</span><span class="nav-link-title">Security</span></a>
+                <a class="nav-link dropdown-toggle" href="#navbar-security" id="navbar-security" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false" data-tour="4" data-tour-title="Security" data-tour-text="The key audit, the checklists for retiring a key or token completely, and the PIN and seal that bind this home to you."{{desc "nav-security"}}><span class="nav-link-icon nav-glyph d-md-none d-lg-inline-block">{{icon "shield"}}</span><span class="nav-link-title">Security</span></a>
                 <div class="dropdown-menu" aria-labelledby="navbar-security">
                   {{template "navmenuitem" (navItem . "audit" "/audit" "report-search" "Audit")}}
                   {{template "navmenuitem" (navItem . "checklists" "/checklists" "list-check" "Checklists")}}
@@ -161,35 +166,47 @@
                 </div>
               </li>
               <li class="nav-item dropdown{{if eq .Nav "history" "events" "snapshots" "export" "setup" "transfer"}} active{{end}}">
-                <a class="nav-link dropdown-toggle" href="#navbar-history" id="navbar-history" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false" data-tour="5" data-tour-title="History" data-tour-text="What happened: every change authama made, and every file event under ~/.ssh, the config home and the token files. Snapshots of ~/.ssh and Export are here too."{{desc "nav-history"}}><span class="nav-link-icon nav-glyph text-{{navColour "history"}} d-md-none d-lg-inline-block">{{icon "clock"}}</span><span class="nav-link-title">History</span></a>
-                <div class="dropdown-menu" aria-labelledby="navbar-history">
-                  <span class="dropdown-header">Record</span>
-                  {{template "navmenuitem" (navItem . "history" "/history" "history" "Changes")}}
-                  {{template "navmenuitem" (navItem . "events" "/events" "file-diff" "File events")}}
-                  <span class="dropdown-header">Backups</span>
-                  {{template "navmenuitem" (navItem . "snapshots" "/snapshots" "archive" "Snapshots")}}
-                  {{if not .HideExport}}{{template "navmenuitem" (navItem . "export" "/export" "file-export" "Export")}}{{end}}
-                  {{template "navmenuitem" (navItem . "setup" "/setup" "stack-2" "Move setup")}}
+                <a class="nav-link dropdown-toggle" href="#navbar-history" id="navbar-history" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false" data-tour="5" data-tour-title="History" data-tour-text="What happened: every change authama made, and every file event under ~/.ssh, the config home and the token files. Snapshots of ~/.ssh and Export are here too."{{desc "nav-history"}}><span class="nav-link-icon nav-glyph d-md-none d-lg-inline-block">{{icon "clock"}}</span><span class="nav-link-title">History</span></a>
+                <div class="dropdown-menu dropdown-menu-end dropdown-menu-xxl-start nav-mega" aria-labelledby="navbar-history">
+                  <div class="dropdown-menu-columns">
+                    <div class="dropdown-menu-column">
+                      <span class="dropdown-header">Record</span>
+                      {{template "navmenuitem" (navItem . "history" "/history" "history" "Changes")}}
+                      {{template "navmenuitem" (navItem . "events" "/events" "file-diff" "File events")}}
+                    </div>
+                    <div class="dropdown-menu-column">
+                      <span class="dropdown-header">Backups</span>
+                      {{template "navmenuitem" (navItem . "snapshots" "/snapshots" "archive" "Snapshots")}}
+                      {{if not .HideExport}}{{template "navmenuitem" (navItem . "export" "/export" "file-export" "Export")}}{{end}}
+                      {{template "navmenuitem" (navItem . "setup" "/setup" "stack-2" "Move setup")}}
+                    </div>
+                  </div>
                 </div>
               </li>
               <li class="nav-item dropdown{{if eq .Nav "doctor" "validate" "repair" "logs" "settings" "apitokens" "webhooks" "reset"}} active{{end}}">
-                <a class="nav-link dropdown-toggle" href="#navbar-system" id="navbar-system" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false"{{desc "nav-system"}}><span class="nav-link-icon nav-glyph text-{{navColour "health"}} d-md-none d-lg-inline-block">{{icon "settings"}}</span><span class="nav-link-title">System</span></a>
-                <div class="dropdown-menu" aria-labelledby="navbar-system">
-                  <span class="dropdown-header">Health</span>
-                  {{template "navmenuitem" (navItem . "doctor" "/doctor" "stethoscope" "Doctor")}}
-                  {{template "navmenuitem" (navItem . "validate" "/validate" "circle-check" "Validate")}}
-                  {{template "navmenuitem" (navItem . "repair" "/repair" "tool" "Repair")}}
-                  {{template "navmenuitem" (navItem . "logs" "/logs" "table" "Logs")}}
-                  <span class="dropdown-header">Configure</span>
-                  {{template "navmenuitem" (navItem . "settings" "/settings" "adjustments" "Settings")}}
-                  {{template "navmenuitem" (navItem . "apitokens" "/api-tokens" "license" "API tokens")}}
-                  {{template "navmenuitem" (navItem . "webhooks" "/webhooks" "bolt" "Webhooks")}}
+                <a class="nav-link dropdown-toggle" href="#navbar-system" id="navbar-system" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false"{{desc "nav-system"}}><span class="nav-link-icon nav-glyph d-md-none d-lg-inline-block">{{icon "settings"}}</span><span class="nav-link-title">System</span></a>
+                <div class="dropdown-menu dropdown-menu-end dropdown-menu-xxl-start nav-mega" aria-labelledby="navbar-system">
+                  <div class="dropdown-menu-columns">
+                    <div class="dropdown-menu-column">
+                      <span class="dropdown-header">Health</span>
+                      {{template "navmenuitem" (navItem . "doctor" "/doctor" "stethoscope" "Doctor")}}
+                      {{template "navmenuitem" (navItem . "validate" "/validate" "circle-check" "Validate")}}
+                      {{template "navmenuitem" (navItem . "repair" "/repair" "tool" "Repair")}}
+                      {{template "navmenuitem" (navItem . "logs" "/logs" "table" "Logs")}}
+                    </div>
+                    <div class="dropdown-menu-column">
+                      <span class="dropdown-header">Configure</span>
+                      {{template "navmenuitem" (navItem . "settings" "/settings" "adjustments" "Settings")}}
+                      {{template "navmenuitem" (navItem . "apitokens" "/api-tokens" "license" "API tokens")}}
+                      {{template "navmenuitem" (navItem . "webhooks" "/webhooks" "bolt" "Webhooks")}}
+                    </div>
+                  </div>
                   <div class="dropdown-divider"></div>
                   {{template "navmenuitem" (navItem . "reset" "/reset" "restore" "Reset…").Destructive}}
                 </div>
               </li>
               <li class="nav-item dropdown{{if eq .Nav "integrations" "sshfolder"}} active{{end}}">
-                <a class="nav-link dropdown-toggle" href="#navbar-help" id="navbar-help" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false"{{desc "nav-help"}}><span class="nav-link-icon nav-glyph text-{{navColour "personal"}} d-md-none d-lg-inline-block">{{icon "help-circle"}}</span><span class="nav-link-title">Help</span></a>
+                <a class="nav-link dropdown-toggle" href="#navbar-help" id="navbar-help" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false"{{desc "nav-help"}}><span class="nav-link-icon nav-glyph d-md-none d-lg-inline-block">{{icon "help-circle"}}</span><span class="nav-link-title">Help</span></a>
                 <div class="dropdown-menu" aria-labelledby="navbar-help">
                   <span class="dropdown-header">Use your hosts</span>
                   {{template "navmenuitem" (navItem . "integrations" "/integrations" "plug-connected" "Tool integrations")}}

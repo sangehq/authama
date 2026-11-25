@@ -84,7 +84,7 @@ func isBinary(name string) bool {
 		return true
 	}
 	switch strings.ToLower(filepath.Ext(name)) {
-	case ".png", ".age", ".gz", ".zip", ".ico":
+	case ".png", ".age", ".gz", ".zip", ".ico", ".woff2":
 		return true
 	}
 	return false

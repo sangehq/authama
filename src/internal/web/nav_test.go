@@ -134,8 +134,8 @@ func TestNavEntriesHaveDistinctIconsAndPages(t *testing.T) {
 	sprite := string(vendorFile(t, "tabler-icons.svg"))
 	byIcon, byHref := map[string][]navEntry{}, map[string][]navEntry{}
 	for _, e := range entries {
-		if e.Toggle && e.Menu == "user" {
-			continue // the user menu's toggle is the initials avatar, not an icon
+		if (e.Toggle && e.Menu == "user") || e.Label == "Running as" {
+			continue // the user menu's toggle is the initials avatar, and its header is text
 		}
 		if e.Icon == "" {
 			t.Errorf("%s › %s shows no icon", e.Menu, e.Label)

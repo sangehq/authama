@@ -305,13 +305,78 @@ main:focus { outline: none; }
 }
 
 
+/* Navigation typography. Tabler's own documentation sets its sans-serif to
+   Inter; the navs do the same, self-hosted (the CSP allows fonts from 'self'
+   only) from the vendored @fontsource-variable/inter, with Tabler's system
+   stack behind it. app.css and vendor/fonts/ share one fingerprint
+   (loadAssets), so these relative URLs resolve. Weights and sizes are
+   Tabler's tokens: medium for a link or an entry's name, the h5 size for a
+   description, and Tabler's own uppercase .dropdown-header for a column. */
+@font-face {
+  font-family: "Inter Variable"; font-style: normal; font-display: swap; font-weight: 100 900;
+  src: url("vendor/fonts/inter-latin-wght-normal.woff2") format("woff2-variations"), url("vendor/fonts/inter-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter Variable"; font-style: normal; font-display: swap; font-weight: 100 900;
+  src: url("vendor/fonts/inter-latin-ext-wght-normal.woff2") format("woff2-variations"), url("vendor/fonts/inter-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+.navbar {
+  font-family: "Inter Variable", var(--tblr-font-sans-serif);
+  font-feature-settings: "cv03", "cv04", "cv11";
+}
+.navbar .nav-link-title, .navbar-brand-text { font-weight: var(--tblr-font-weight-medium); letter-spacing: -.005em; }
+.navbar .nav-menu-text > .d-block:first-child, .navbar .nav-menu-item > .nav-menu-text:only-child { font-weight: var(--tblr-font-weight-medium); }
+.navbar .nav-menu-desc { font-size: var(--tblr-font-size-h5); }
+
+/* Menus with columns (SSH, History, System) open as one wide panel, as in
+   Tabler's multi-column dropdown; the SSH menu's Tasks column is a tinted
+   side panel, set apart from the pages. */
+.navbar .nav-mega { padding-block: 0; }
+.navbar .nav-mega > .dropdown-menu-columns { gap: 0; }
+.navbar .nav-mega .dropdown-menu-column { padding-block: .25rem .5rem; }
+.navbar .nav-mega > .dropdown-divider { margin-top: 0; }
+/* Below 768px the main menu is Tabler's vertical list: each row spans the
+   width with its chevron at the end, and a group's header lines up with the
+   entries under it (Tabler's own item indent), not with the menu's edge. */
+@media (max-width: 767.98px) {
+  .navbar-collapse nav[aria-label="Main"] > .navbar-nav { width: 100%; }
+  .navbar-collapse .navbar-nav .nav-link.dropdown-toggle::after { margin-inline-start: auto; }
+  .navbar-collapse .dropdown-menu .dropdown-header {
+    padding-inline-start: calc(var(--tblr-sidebar-nav-padding-x) + var(--tblr-nav-link-icon-width) + var(--tblr-nav-link-icon-margin-end));
+  }
+}
+/* An entry under the columns (System's Reset…) spans the panel, so its hover
+   tint reaches both edges; the 22rem cap is for entries in a column. */
+.navbar .nav-mega > .nav-menu-item { max-width: none; }
+/* Side by side from 992px; below that the columns stack, so a panel is one
+   column wide and stays inside the window. History and System sit right of
+   the middle, so below 1400px they open from their toggle's end edge
+   (dropdown-menu-end) instead of running past the window's. */
+@media (min-width: 992px) {
+  .navbar .nav-mega .dropdown-menu-column + .dropdown-menu-column { border-inline-start: var(--tblr-border-width) solid var(--tblr-border-color-translucent); }
+}
+@media (max-width: 991.98px) {
+  .navbar .nav-mega .dropdown-menu-columns { flex-direction: column; }
+  .navbar .nav-mega .dropdown-menu-column + .dropdown-menu-column { border-top: var(--tblr-border-width) solid var(--tblr-border-color-translucent); }
+}
+.navbar .nav-menu-aside { background: var(--tblr-bg-surface-secondary); }
+@media (min-width: 768px) {
+  .navbar .nav-menu-aside { border-start-end-radius: var(--tblr-dropdown-border-radius); border-end-end-radius: var(--tblr-dropdown-border-radius); }
+}
+
+/* The account menu opens with who the server runs as, and where; the
+   initials avatar is on the toggle only, not repeated inside. */
+.navbar .nav-account { min-width: 16rem; }
+.nav-account-head { padding: .5rem var(--tblr-dropdown-item-padding-x, .75rem); max-width: 22rem; }
+
 /* Navigation menus: each entry's description sits under its name, so the menu
    is read without hovering; the width keeps lines short. */
 .nav-menu-item { display: flex; align-items: center; gap: .875rem; padding-block: .5rem; white-space: normal; min-width: 16rem; max-width: 22rem; }
 .nav-menu-text { flex: 1 1 auto; min-width: 0; }
-.nav-menu-item > .icon { margin-top: .125rem; flex: none; }
-/* Tabler sets min-width 0 on an item in a menu column; the SSH menu's columns
-   keep the entries' width so a description wraps to two lines, not four. */
+/* Tabler sets min-width 0 on an item in a menu column; the columns keep the
+   entries' width so a description wraps to two lines, not four. */
 .dropdown-menu-column .nav-menu-item { min-width: 16rem; }
 .nav-menu-desc { line-height: 1.35; color: var(--tblr-secondary); }
 /* Contrast on a menu entry's tint. Measured from Tabler 1.7.1's tokens, its
@@ -327,43 +392,19 @@ main:focus { outline: none; }
 [data-bs-theme="dark"] .nav-menu-item.text-danger { color: color-mix(in oklab, var(--tblr-danger) 65%, white) !important; }
 [data-bs-theme="dark"] .navbar .dropdown-item.active { color: color-mix(in oklab, var(--tblr-primary) 65%, white); }
 
-/* Menu colour tiles (nav-redesign.md, "Colour"). Each entry's icon sits on a
-   Tabler avatar tinted bg-<colour>-lt, the colour saying what kind of entry it
-   is: a menu's own pages share one, and a task's colour says what it does
-   (create green, change blue, revoke orange, delete red). Tabler's own
-   foreground for a tint is the base colour, which is under 3:1 on white for
-   green, yellow, teal, cyan and orange (yellow 2.1:1), so the icon and the
-   tile's edge take the colour mixed toward black in the light theme and
-   toward white in the dark one. Tabler has no class for that; --nav-c carries
-   the tint's colour to the mix. Measured in both themes by the a11y e2e spec
-   (icon and edge 3:1 or more, at rest and focused). */
-.nav-tile, .nav-glyph { --nav-c: var(--tblr-secondary); }
-:is(.nav-tile.bg-blue-lt, .nav-glyph.text-blue) { --nav-c: var(--tblr-blue); }
-:is(.nav-tile.bg-cyan-lt, .nav-glyph.text-cyan) { --nav-c: var(--tblr-cyan); }
-:is(.nav-tile.bg-teal-lt, .nav-glyph.text-teal) { --nav-c: var(--tblr-teal); }
-:is(.nav-tile.bg-green-lt, .nav-glyph.text-green) { --nav-c: var(--tblr-green); }
-:is(.nav-tile.bg-yellow-lt, .nav-glyph.text-yellow) { --nav-c: var(--tblr-yellow); }
-:is(.nav-tile.bg-orange-lt, .nav-glyph.text-orange) { --nav-c: var(--tblr-orange); }
-:is(.nav-tile.bg-red-lt, .nav-glyph.text-red) { --nav-c: var(--tblr-red); }
-:is(.nav-tile.bg-pink-lt, .nav-glyph.text-pink) { --nav-c: var(--tblr-pink); }
-:is(.nav-tile.bg-purple-lt, .nav-glyph.text-purple) { --nav-c: var(--tblr-purple); }
-/* A tile is a flex item beside a description that wraps, and an avatar's
-   min-width is its content's: without flex: none the browser shrank tiles
-   toward the icon's width, each to a different width, so the names beside
-   them started at different places. 2.25rem square, the icon 1.375rem. */
-.navbar .nav-tile {
-  --tblr-avatar-size: 2.25rem; --tblr-avatar-icon-size: 1.375rem;
-  flex: none; width: var(--tblr-avatar-size); height: var(--tblr-avatar-size);
-  margin: 0; border: 1px solid; border-radius: var(--tblr-border-radius);
-  color: color-mix(in oklab, var(--nav-c) 62%, black) !important;
-  border-color: color-mix(in oklab, var(--nav-c) 62%, black) !important;
-}
-.navbar .nav-glyph { color: color-mix(in oklab, var(--nav-c) 62%, black) !important; }
-[data-bs-theme="dark"] .navbar .nav-tile {
-  color: color-mix(in oklab, var(--nav-c) 55%, white) !important;
-  border-color: color-mix(in oklab, var(--nav-c) 55%, white) !important;
-}
-[data-bs-theme="dark"] .navbar .nav-glyph { color: color-mix(in oklab, var(--nav-c) 55%, white) !important; }
+/* Menu icons, as Tabler draws them (preview.tabler.io): a plain
+   .dropdown-item-icon beside the name, no tile, border or background. The
+   grey is Tabler's --tblr-secondary rather than its lighter tertiary, so an
+   icon keeps 3:1 against the menu (WCAG 1.4.11; the a11y e2e spec measures
+   it); a destructive entry's icon is its red, the current entry's its blue.
+   It lines up with the name's first line, above a wrapping description.
+   A toggle's icon is Tabler's own grey (.nav-link-icon: the link colour at
+   50%, 80% under the pointer), the same for every menu, as Tabler draws it. */
+.navbar { --tblr-dropdown-item-icon-color: var(--tblr-secondary); }
+.navbar .nav-menu-item { align-items: flex-start; gap: .625rem; }
+.navbar .nav-menu-item > .nav-icon { flex: none; margin: .0625rem 0 0; stroke-width: 1.75; }
+.navbar .nav-menu-item:is(.active, :hover, :focus) > .nav-icon { color: currentColor; }
+.navbar .nav-menu-item.text-danger > .nav-icon { color: currentColor; }
 
 /* The current page's entry: Tabler's active tint, plus a bar at its start
    edge so it reads as "you are here" without relying on the tint alone. The
@@ -373,12 +414,13 @@ main:focus { outline: none; }
 .navbar .nav-menu-item:focus-visible { outline: 2px solid var(--tblr-primary); outline-offset: -2px; }
 [data-bs-theme="dark"] .navbar .nav-menu-item.active { box-shadow: inset 3px 0 0 color-mix(in oklab, var(--tblr-primary) 65%, white); }
 [data-bs-theme="dark"] .navbar .nav-menu-item:focus-visible { outline-color: color-mix(in oklab, var(--tblr-primary) 65%, white); }
-/* A column's header lines up with the tiles' edge, with room above it. */
+/* A column's header lines up with the icons' edge, with room above it. */
 .navbar .dropdown-menu .dropdown-header { padding-top: .75rem; }
 
 /* Header logo mark: the favicon itself, so the tab and the header read as one product. */
 .navbar-brand-mark { width: 2rem; height: 2rem; flex: none; }
 .navbar-brand-text { margin-left: .625rem; font-weight: 600; white-space: nowrap; }
+.navbar .navbar-brand-text { font-weight: var(--tblr-font-weight-semibold, 600); }
 
 /* Checklists: one step a row, its mark, what it is, and its command or link;
    a step ticked by hand has its button at the end. */
