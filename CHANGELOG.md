@@ -23,6 +23,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   weights and header style. The font is vendored from `@fontsource-variable/inter` 5.3.0 (SIL Open
   Font License 1.1) by `make tabler-vendor`, pinned in `TABLER_VERSION`, and served from the binary;
   `third-party-notices.md` carries its licence.
+- **The web UI vendors Tabler 1.7.5 and Tabler Icons 3.51.0** (from 1.7.1 and 3.49.0), the same set
+  sange and imprimatur ship, so the three sange-family projects use one Tabler. Bootstrap stays 5.3.8,
+  the version `tabler.min.js` 1.7.5 bundles; Popper 2.11.8 and Inter 5.3.0 are unchanged.
+  `third-party-notices.md` names the new versions.
+- **The test suite checks that the Tabler set matches sange's and imprimatur's.** When their
+  checkouts sit beside this one, `TestTablerPinsMatchSange` and `TestTablerPinsMatchImprimatur` read
+  sange's `src/internal/web/vendor.md` and imprimatur's `TABLER_VERSION` from each one's
+  `origin/main` and fail on any difference (sange's Bootstrap 5.3.9 excepted). Where a checkout is
+  missing, as in CI, they skip and say why.
 
 ### Fixed
 
