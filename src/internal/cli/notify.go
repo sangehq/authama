@@ -22,33 +22,8 @@ func newNotifyCmd() *cobra.Command {
 		Use:   "notify",
 		Short: "Manage the scheduled expiry notifier and desktop notifications",
 	}
-	for _, v := range []struct{ verb, short string }{
-		{"send", "Show a desktop notification from this process"},
-		{"ping", "Hand a notification to the running web UI (authama serve), which shows it"},
-	} {
-		verb := v.verb
-		cmd.AddCommand(&cobra.Command{
-			Use:   verb + " [-title T] [-subtitle S] [-body B] [-icon PATH] [-open URL|PATH] [-group G] [-level info|warn|alert] [-sound] [-json]",
-			Short: v.short,
-			Long: v.short + ".\n\n" +
-				"The flags are go-notifykit's, written with one dash: -title (or -message) is the first\n" +
-				"line, -subtitle the second, -body (or -description) the text under them; -icon is\n" +
-				"an absolute path to a PNG, JPEG or GIF; -open is a local http(s) URL or a program\n" +
-				"to run on click; -group replaces an earlier notification in the group; -level is\n" +
-				"info, warn or alert; -sound plays the default sound; -json reads one notification\n" +
-				"as JSON from stdin instead.",
-			Example:            "  " + brand.Command + " ssh notify " + verb + " -title \"Keys rotated\" -body \"3 keys\" -level info",
-			DisableFlagParsing: true,
-			RunE: func(c *cobra.Command, args []string) error {
-				// Flag parsing is off so notifykit reads its own flags; --help
-				// still means help here, never a notification.
-				if slices.ContainsFunc(args, func(a string) bool { return a == "-h" || a == "--help" || a == "-help" }) {
-					return c.Help()
-				}
-				return runNotifykit(c, append([]string{verb}, args...))
-			},
-		})
-	}
+	cmd.AddCommand(newNotifykitVerbCmd("send", "Show a desktop notification from this process"))
+	cmd.AddCommand(newNotifykitVerbCmd("ping", "Hand a notification to the running web UI (authama serve), which shows it"))
 	// doctor takes no flags, so cobra parses them: an unknown one is refused
 	// instead of being ignored, and its help does not list send's flags.
 	cmd.AddCommand(&cobra.Command{
@@ -135,4 +110,30 @@ func runNotifykit(c *cobra.Command, args []string) error {
 		return errNotClean
 	}
 	return nil
+}
+
+// newNotifykitVerbCmd is a notify verb whose flags go-notifykit reads itself:
+// send shows the notification from this process, ping hands it to `serve`.
+func newNotifykitVerbCmd(verb, short string) *cobra.Command {
+	return &cobra.Command{
+		Use:   verb + " [-title T] [-subtitle S] [-body B] [-icon PATH] [-open URL|PATH] [-group G] [-level info|warn|alert] [-sound] [-json]",
+		Short: short,
+		Long: short + ".\n\n" +
+			"The flags are go-notifykit's, written with one dash: -title (or -message) is the first\n" +
+			"line, -subtitle the second, -body (or -description) the text under them; -icon is\n" +
+			"an absolute path to a PNG, JPEG or GIF; -open is a local http(s) URL or a program\n" +
+			"to run on click; -group replaces an earlier notification in the group; -level is\n" +
+			"info, warn or alert; -sound plays the default sound; -json reads one notification\n" +
+			"as JSON from stdin instead.",
+		Example:            "  " + brand.Command + " ssh notify " + verb + " -title \"Keys rotated\" -body \"3 keys\" -level info",
+		DisableFlagParsing: true,
+		RunE: func(c *cobra.Command, args []string) error {
+			// Flag parsing is off so notifykit reads its own flags; --help
+			// still means help here, never a notification.
+			if slices.ContainsFunc(args, func(a string) bool { return a == "-h" || a == "--help" || a == "-help" }) {
+				return c.Help()
+			}
+			return runNotifykit(c, append([]string{verb}, args...))
+		},
+	}
 }

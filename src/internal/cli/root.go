@@ -127,10 +127,8 @@ func newRootCmd() *cobra.Command {
 	// `ssh` spelling, but a config not yet re-rendered, or a job not yet
 	// reinstalled, still calls these. Every other top-level SSH verb was removed
 	// on 2026-11-07.
-	for _, c := range []*cobra.Command{newVMCmd(), newAuditCmd()} {
-		c.Hidden = true
-		root.AddCommand(c)
-	}
+	root.AddCommand(hidden(newVMCmd()))
+	root.AddCommand(hidden(newAuditCmd()))
 	applyExamples(root, "")
 	applyLong(root, "")
 	addGroupHelp(root)
@@ -281,4 +279,10 @@ func unknownCommand(c *cobra.Command, word string) error {
 	}
 	return errors.New(msg + "\n\nRun '" + c.CommandPath() + " --help' for the commands this build has (" +
 		brand.Command + " version names it).")
+}
+
+// hidden marks c hidden from help and completion, and returns it.
+func hidden(c *cobra.Command) *cobra.Command {
+	c.Hidden = true
+	return c
 }
