@@ -45,6 +45,9 @@ info() { printf '%s\n' "$*" >&2; }
 case "$(uname -s)" in
   Darwin) os="macos" ;;
   Linux)  os="linux" ;;
+  FreeBSD) os="freebsd" ;;
+  OpenBSD) os="openbsd" ;;
+  NetBSD)  os="netbsd" ;;
   *) err "unsupported OS $(uname -s). On Windows, use the PowerShell installer or the .zip from the releases page." ;;
 esac
 
@@ -61,6 +64,10 @@ esac
 if [ "$os" = "macos" ] && [ "$arch" != "amd64" ] && [ "$arch" != "arm64" ]; then
   err "unsupported macOS architecture $(uname -m)."
 fi
+case "$os/$arch" in
+  freebsd/amd64|freebsd/arm64|openbsd/amd64|openbsd/arm64|netbsd/amd64|linux/*|macos/*) ;;
+  *) err "no release binary for $os on $(uname -m)." ;;
+esac
 
 # Every request retries a transient answer (408, 429, 5xx, a timeout) with
 # backoff: GitHub's release CDN answers 504 for minutes at a time, and on

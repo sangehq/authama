@@ -105,6 +105,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Release binaries for FreeBSD, OpenBSD and NetBSD.** freebsd and openbsd on amd64 and arm64, and
+  netbsd on amd64 (the SQLite driver does not build for netbsd/arm64), from GoReleaser and
+  `make cross`; `install.sh` recognises the three. They are compiled on every build but not run in
+  CI.
 - **`owner pin set` reads from stdin when it is not run at a terminal**, one line each: the current
   PIN first when one is set, then the new one, as the key passphrases are read. At a terminal it
   still asks twice, hidden. `owner pin reset` stays terminal-only.

@@ -13,3 +13,10 @@ darwin arm64
 windows amd64
 windows 386
 windows arm64
+# The BSDs, 64-bit only. netbsd/arm64 is left out: the SQLite driver
+# (modernc.org/libc) does not build there.
+freebsd amd64
+freebsd arm64
+openbsd amd64
+openbsd arm64
+netbsd amd64
