@@ -29,6 +29,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and exited 0; `ssh config check` called it "not on disk". Pinning a host key did the same to an
   unreadable `known_hosts`, keeping only the new pins. Both now stop with the read error and
   change nothing; only a file that does not exist counts as absent.
+- **`serve` no longer holds the lock after it auto-applies a purpose rule.** The web watcher's
+  auto-apply took the advisory lock and never gave it back, so once a rule enabled with `--auto`
+  had moved a key, every `authama` command that changes something waited on `serve` until it
+  stopped. It now waits its turn behind a web job like any other change, runs as one recorded
+  operation, and releases the lock when it is done.
 - **Header menus on a phone.** Each row of the vertical menu spans the width with its chevron at the
   end, so the chevrons line up, and a group's header (Tasks) lines up with the entries under it.
 - **System's Reset… is highlighted across the whole menu** when pointed at, not only its first 22rem.
