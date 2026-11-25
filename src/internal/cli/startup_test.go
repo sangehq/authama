@@ -40,6 +40,11 @@ func withStartup(t *testing.T) (home string) {
 	runStartup = true
 	t.Cleanup(func() {
 		runStartup = false
+		// What start-up read belongs to this test's home; leaving it behind
+		// handed it to every later test (F-21).
+		startupMu.Lock()
+		lastStart = nil
+		startupMu.Unlock()
 		applog.Configure(applog.Config{})
 		_ = tz.Set("")
 	})
