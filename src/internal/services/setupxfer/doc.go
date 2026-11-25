@@ -302,6 +302,46 @@ func (d Doc) riskyContent() []manifest.RiskyOption {
 				}
 			}
 		}
+		r = append(r, riskySettings(top)...)
+	}
+	return r
+}
+
+// riskySetting is a setting whose value, set by someone else, sends backups to
+// their key, hides what happened, re-trusts a changed host key, or opens
+// authama to other programs. risky reports whether value (as the document
+// spells it) is such a value; a value matching the default is never risky.
+type riskySetting struct {
+	section, name, why string
+	risky              func(value string) bool
+}
+
+var riskySettingList = []riskySetting{
+	{"backup", "age_recipient", "encrypts your key backups to this recipient", func(v string) bool { return v != "" }},
+	{"history", "enabled", "turns off the record of what authama changes", func(v string) bool { return v == "false" }},
+	{"vm", "repin_changed", "trusts a VM's changed host key without asking", func(v string) bool { return v == "true" }},
+	{"api", "enabled", "opens the HTTP API", func(v string) bool { return v == "true" }},
+	{"mcp", "enabled", "opens the MCP server", func(v string) bool { return v == "true" }},
+	{"webhooks", "enabled", "sends events to webhook endpoints", func(v string) bool { return v == "true" }},
+	{"webhooks", "allow_private", "lets webhooks reach private addresses", func(v string) bool { return v == "true" }},
+	{"webhooks", "include_details", "puts error text and subjects in webhook events", func(v string) bool { return v == "true" }},
+}
+
+func riskySettings(top map[string]json.RawMessage) []manifest.RiskyOption {
+	var r []manifest.RiskyOption
+	for _, rs := range riskySettingList {
+		var section map[string]any
+		if json.Unmarshal(top[rs.section], &section) != nil {
+			continue
+		}
+		raw, ok := section[rs.name]
+		if !ok || raw == nil {
+			continue
+		}
+		v := strings.TrimSpace(fmt.Sprint(raw))
+		if rs.risky(v) {
+			r = append(r, manifest.RiskyOption{Where: "settings " + rs.section, Key: rs.name, Value: v, Why: rs.why})
+		}
 	}
 	return r
 }

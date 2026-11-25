@@ -22,6 +22,8 @@ interpreter to keep current.
 The auth-token side needs nothing: it writes the tools' files itself.
 
 macOS, Linux and Windows are all first-class, each validated on its own CI runner.
+FreeBSD and OpenBSD (amd64 and arm64) and NetBSD (amd64) get release binaries too. They
+are cross-compiled and type-checked on every build, but no CI runner runs them.
 
 ## Install
 

@@ -39,8 +39,10 @@ const (
 	TokensCatalog    = "AUTHAMA_TOKENS_CATALOG"
 	DockerCredsStore = "AUTHAMA_DOCKER_CREDS_STORE"
 	Notifications    = "AUTHAMA_NOTIFICATIONS"
-	AskpassMode      = "AUTHAMA_ASKPASS_MODE"
-	AskpassSecret    = "AUTHAMA_ASKPASS_SECRET"
+	// AskpassMode and AskpassSecret are set by authama for the copy of itself
+	// it runs as ssh-keygen's askpass helper (util/askpass), never by a user.
+	AskpassMode   = "AUTHAMA_ASKPASS_MODE"
+	AskpassSecret = "AUTHAMA_ASKPASS_SECRET"
 	// HelloCheck asks the Windows Hello script for availability only; set by
 	// authama for the powershell.exe it runs, never by a user.
 	HelloCheck     = "AUTHAMA_HELLO_CHECK"

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -278,7 +279,9 @@ func newOwnerPINCmd() *cobra.Command {
 		Short: "Set a PIN, or change the one set (asks for it first)",
 		Long: "A PIN is at least 6 characters: digits, or a passphrase of up to 128. A run such\n" +
 			"as 123456 or one repeated character is refused. It is stored only as a salted\n" +
-			"Argon2id hash.",
+			"Argon2id hash.\n\n" +
+			"At a terminal it asks for the PIN twice. Otherwise it reads it from stdin, one\n" +
+			"line: the current PIN first when one is set, then the new one.",
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			p, err := resolvePaths(c)
@@ -294,11 +297,11 @@ func newOwnerPINCmd() *cobra.Command {
 			}
 			current := ""
 			if cfg.HasPIN() {
-				if current, err = platform.ReadSecret("current PIN: "); err != nil {
+				if current, err = readPIN(c.InOrStdin(), "current PIN: "); err != nil {
 					return err
 				}
 			}
-			next, err := readNewPIN()
+			next, err := readNewPIN(c.InOrStdin())
 			if err != nil {
 				return err
 			}
@@ -330,7 +333,7 @@ func newOwnerPINCmd() *cobra.Command {
 			if err := confirmOrAbort(c, "Reset the PIN for "+p.ConfigDir+"?", false); err != nil {
 				return err
 			}
-			next, err := readNewPIN()
+			next, err := readNewPIN(c.InOrStdin())
 			if err != nil {
 				return err
 			}
@@ -402,7 +405,21 @@ func newOwnerBiometricCmd() *cobra.Command {
 	}
 }
 
-func readNewPIN() (string, error) {
+// readPIN reads a PIN: a hidden prompt at a terminal, else one line of in, as
+// the key passphrases are read, so a script can set or change the PIN.
+func readPIN(in io.Reader, prompt string) (string, error) {
+	if !platform.StdinIsTerminal() {
+		return platform.ReadLine(in)
+	}
+	return platform.ReadSecret(prompt)
+}
+
+// readNewPIN reads the new PIN: twice at a terminal, to catch a typing slip;
+// once from in otherwise.
+func readNewPIN(in io.Reader) (string, error) {
+	if !platform.StdinIsTerminal() {
+		return platform.ReadLine(in)
+	}
 	next, err := platform.ReadSecret("new PIN: ")
 	if err != nil {
 		return "", err

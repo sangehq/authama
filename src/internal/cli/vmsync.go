@@ -24,9 +24,10 @@ import (
 	"github.com/sangehq/authama/src/internal/util/scheduler"
 )
 
-// vmConfig is authama.json's hypervisors and devboxes, as start-up read them.
+// vmConfig is authama.json's hypervisors and devboxes, as start-up read them
+// for this home; start-up's reading of another home's file is never used.
 func vmConfig(p paths.Paths) settings.VMConfig {
-	if st := currentStartup(); st != nil && st.Settings != nil {
+	if st := currentStartup(); st != nil && st.Settings != nil && st.Paths.SettingsFile() == p.SettingsFile() {
 		return st.Settings.VM
 	}
 	cfg, _ := settings.LoadVMConfig(p.SettingsFile())

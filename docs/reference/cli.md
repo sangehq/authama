@@ -1375,6 +1375,9 @@ A PIN is at least 6 characters: digits, or a passphrase of up to 128. A run such
 as 123456 or one repeated character is refused. It is stored only as a salted
 Argon2id hash.
 
+At a terminal it asks for the PIN twice. Otherwise it reads it from stdin, one
+line: the current PIN first when one is set, then the new one.
+
 ```
 authama owner pin set
 ```
@@ -1928,7 +1931,7 @@ Examples:
 Flags:
 
 ```
-      --allow-risky-options[=true|false]   import a document that sets SSH options that could redirect or weaken connections, providers that send a token to another host, or custom hypervisor commands (you made it yourself)
+      --allow-risky-options[=true|false]   import a document that sets SSH options that could redirect or weaken connections, providers that send a token to another host, custom hypervisor commands, token values that run a command (cmd:, op://), or settings that redirect backups, stop the history or open the API, MCP or webhooks (you made it yourself)
       --dry-run[=true|false]               show what the import would add, keep and replace; write nothing
       --on-conflict string                 what differs from this home: keep (leave it), replace (take the import's, keeping a copy), fail (write nothing) (default "keep")
       --passphrase-file string             an encrypted export: read its passphrase from this owner-only file instead of asking
@@ -3838,8 +3841,9 @@ StrictHostKeyChecking no for every host) is refused, naming each one: a bundle d
 not prove who made it. Pass --allow-risky-options to restore one you made yourself.
 
 A bundle written with --sign-key has a signature, <bundle>.sig, next to it. It is
-checked first: a bundle changed after it was signed is refused. --require-signature
-also refuses one that is unsigned, or signed by a key bundle_signers does not trust.
+checked first: a bundle changed after it was signed is refused. An unsigned bundle, or
+one signed by a key bundle_signers does not trust, is restored with a warning, which
+the question repeats; --require-signature refuses it instead.
 
 ```
 authama ssh restore <bundle.age> [flags]

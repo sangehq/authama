@@ -104,7 +104,7 @@ func checkStructure(seen *atomic.Bool, p paths.Paths, evs []events.Event, now ti
 	if err != nil {
 		return
 	}
-	if ids, err := change.AutoApplyRuled(p, all, io.Discard); err != nil {
+	if ids, err := change.AutoApplyForServer(p, all, io.Discard, history.SourceWeb); err != nil {
 		applog.Warn("auto-apply failed", "area", "structure", "error", err)
 	} else if len(ids) > 0 {
 		applog.Info("auto-applied purpose rules", "area", "structure", "ids", strings.Join(ids, ","))

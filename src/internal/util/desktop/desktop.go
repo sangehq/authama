@@ -123,7 +123,12 @@ func appleQuote(s string) string {
 	return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(s) + `"`
 }
 
-// psQuote quotes a string as a PowerShell single-quoted literal (doubling quotes).
+// psQuote quotes a string as a PowerShell single-quoted literal. PowerShell
+// takes the typographic single quotes (U+2018-U+201B) as quotes too, so each
+// is doubled like the ASCII one; left single, one would end the literal.
 func psQuote(s string) string {
-	return "'" + strings.ReplaceAll(s, "'", "''") + "'"
+	return "'" + psQuoteDoubler.Replace(s) + "'"
 }
+
+var psQuoteDoubler = strings.NewReplacer(
+	"'", "''", "\u2018", "\u2018\u2018", "\u2019", "\u2019\u2019", "\u201A", "\u201A\u201A", "\u201B", "\u201B\u201B")

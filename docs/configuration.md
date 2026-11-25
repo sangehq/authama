@@ -59,10 +59,13 @@ manifest already says the same thing. `authama ssh import` of this machine's con
 moves each block it imports into the manifest, so onboarding never leaves one. `~/.ssh/config` is also snapshotted before
 every mutating command, so a render is always reversible via `snapshots restore`.
 When `~/.ssh/config` is a link to a file kept elsewhere (a dotfiles repository), a
-restore writes the snapshot's text into the file the link points at and leaves the
-link in place, as a render does. Only `config` is written through, and only when its
-link leads to a file that exists; anything else in `~/.ssh` that is a link is
-replaced by a plain file.
+snapshot keeps the content of the file it points at, and a restore writes that text
+back into the file and leaves the link in place, as a render does. Only `config` is
+written through by a restore, and only when its link leads to a file that exists;
+anything else in `~/.ssh` that is a link is replaced by a plain file. Pinning host
+keys writes a linked `known_hosts` through its link the same way, and setting a token
+does so for a linked `~/.npmrc`, `~/.netrc` or Docker config; a link to nothing is
+refused rather than replaced.
 
 ## Multiple identities on one host: prefix aliases to avoid collisions
 
@@ -800,8 +803,10 @@ A value starting `op://` is read with `op read`, the whole reference as one
 argument, so item and field names may contain spaces.
 
 The command runs once per process (memoized) via the argv-only subprocess
-chokepoint - no shell, no injection. A failed/empty/timed-out command yields no
-token (the provider falls back to the manual paste path). Note: a literal token
+chokepoint - no shell, no injection. A command that has not answered within two
+minutes (a password manager waiting on a prompt nobody sees) is stopped, with any
+program it started. A failed/empty/timed-out command yields no token (the provider
+falls back to the manual paste path). Note: a literal token
 that itself begins with `cmd:` would be treated as a command - real OAuth/PAT
 tokens never do, but if needed, fetch such a value via `cmd:` instead.
 

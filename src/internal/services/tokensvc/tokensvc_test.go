@@ -691,3 +691,42 @@ func TestOwnerOnlyAndPermsOnWindows(t *testing.T) {
 		t.Error("an absent file must not pass")
 	}
 }
+
+// A credential file linked in from elsewhere (~/.npmrc -> a dotfiles copy) is
+// written through its link: replacing the link with a regular file cut the
+// dotfiles copy off without a word (audit F-17, 2026-11-25).
+func TestWriteSecretWritesThroughALink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on Windows")
+	}
+	dir := t.TempDir()
+	real := filepath.Join(dir, "dotfiles", "npmrc")
+	if err := os.MkdirAll(filepath.Dir(real), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(real, []byte("color=false\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, ".npmrc")
+	if err := os.Symlink(real, link); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := (Env{}).writeSecret(link, "color=true"); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Lstat(link); err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("the link was replaced by a regular file (%v)", err)
+	}
+	if got, _ := os.ReadFile(real); string(got) != "color=true\n" {
+		t.Errorf("the linked file holds %q", got)
+	}
+
+	// A link to nothing is refused rather than replaced.
+	dangling := filepath.Join(dir, ".netrc")
+	if err := os.Symlink(filepath.Join(dir, "missing"), dangling); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := (Env{}).writeSecret(dangling, "machine x"); err == nil {
+		t.Error("a write through a dangling link succeeded")
+	}
+}

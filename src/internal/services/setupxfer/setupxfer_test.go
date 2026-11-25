@@ -343,3 +343,44 @@ func TestFullExportRoundTrip(t *testing.T) {
 		}
 	}
 }
+
+// A token value of cmd:<command> or op://... is run, not sent: whoever made the
+// export chooses a command authama runs on the first provider call. A document
+// does not prove who made it, so an export carrying one is risky, the same as
+// a hypervisor command (audit F-12, 2026-11-25). A literal value is not.
+func TestFullExportFlagsTokenValuesThatRunACommand(t *testing.T) {
+	for _, tc := range []struct {
+		value string
+		risky bool
+	}{
+		{"cmd:touch " + filepath.Join(t.TempDir(), "never"), true},
+		{"op://Private/GitHub/token", true},
+		{secret(t), false},
+	} {
+		src := home(t)
+		withProfiles(t, src, "work")
+		write(t, src.Tokens(), tokensJSON)
+		t.Setenv("GH_TOKEN_TEST", tc.value)
+		pass := []byte(secret(t))
+		out := filepath.Join(t.TempDir(), "setup.age")
+		if _, err := WriteFull(src, out, pass, "test", time.Now(), os.LookupEnv); err != nil {
+			t.Fatal(err)
+		}
+		f, err := OpenFull(home(t), out, pass, "", false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []string
+		for _, r := range f.Risky() {
+			got = append(got, r.String())
+		}
+		all := strings.Join(got, "\n")
+		flagged := strings.Contains(all, "GH_TOKEN_TEST")
+		if flagged != tc.risky {
+			t.Errorf("value %q: flagged=%v, want %v:\n%s", tc.value[:4], flagged, tc.risky, all)
+		}
+		if tc.risky && !strings.Contains(all, tc.value) {
+			t.Errorf("the risky item does not show the command it would run:\n%s", all)
+		}
+	}
+}

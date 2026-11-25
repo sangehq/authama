@@ -13,6 +13,10 @@ The names in the store are **hashed** (`HashKnownHosts`), so the file is not a
 readable list of every host you connect to, and it is mode 0600 rather than the
 conventional 0644 for the same reason.
 
+A `known_hosts` that is a link to a file kept elsewhere (a dotfiles repository) is written
+through its link, and one that exists but cannot be read is left untouched: pinning stops
+with the read error rather than rewriting it with only the new keys.
+
 ## Host keys must be trusted before the first connection
 
 Until a host's key is in `known_hosts`, a **non-interactive**

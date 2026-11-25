@@ -194,3 +194,48 @@ func TestRestoreByIDReportsWhatItCannotFind(t *testing.T) {
 		t.Error("an id matching no snapshot should error, not fall back to the latest")
 	}
 }
+
+// A ~/.ssh/config kept in a dotfiles repository and linked in was left out of
+// every snapshot, so the restore that writes a linked config back through its
+// link had nothing to write (audit F-16, 2026-11-25).
+func TestASnapshotKeepsALinkedConfigsContent(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on Windows")
+	}
+	base := t.TempDir()
+	ssh := filepath.Join(base, ".ssh")
+	dot := filepath.Join(base, "dotfiles")
+	for _, d := range []string{ssh, dot} {
+		if err := os.MkdirAll(d, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	const body = "Host linked\n    HostName linked.example\n"
+	real := filepath.Join(dot, "ssh_config")
+	if err := os.WriteFile(real, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(real, filepath.Join(ssh, "config")); err != nil {
+		t.Fatal(err)
+	}
+	snap, err := Take(ssh, filepath.Join(base, "snaps"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(real, []byte("Host clobbered\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := Restore(snap, ssh); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(real)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != body {
+		t.Errorf("the linked config was not restored: %q", got)
+	}
+	if fi, err := os.Lstat(filepath.Join(ssh, "config")); err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Errorf("the restore replaced the link itself (%v)", err)
+	}
+}

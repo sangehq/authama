@@ -58,6 +58,19 @@ when CI cannot: a runner outage, a fork without Actions, or no network. Run `lin
 build-tagged file: a single golangci-lint run analyses one GOOS and reports
 everything the others reference as dead code.
 
+Three habits that each caught a real defect in the 2026-11-25 audit:
+
+- **Run the suite shuffled and repeated** now and then:
+  `go -C src test -count=2 -shuffle=on ./...`. A test that leaves a lock, a history
+  scope or a process-wide cache behind passes alone and fails in another order; print
+  the seed it reports and re-run with `-shuffle=<seed>` to reproduce.
+- **Try a fix against a throwaway home, and fail closed.** `H=$(mktemp -d) || exit 1`,
+  then set `HOME`, `XDG_CONFIG_HOME` and `XDG_STATE_HOME` under it. If the temp
+  directory cannot be made, an empty `HOME` sends authama to your real `~/.ssh`.
+- **When a function starts returning an error, lint, not vet.** `go vet` does not report
+  an ignored return value; golangci-lint's errcheck does, and found a caller that vet and
+  the tests passed.
+
 ### The web UI in a browser
 
 `make e2e-web` builds the binary and runs `e2e/web/`, Playwright tests for
@@ -204,4 +217,6 @@ removing one that the baseline lists means the test fails, which is the point.
   (`gh workflow run ci.yml --repo sangehq/authama --ref <branch>`), because
   GitHub's macOS runners went unscheduled for days and a required macOS leg
   blocked every merge. A `test (macos-latest)` leg that fails after about 15
-  minutes with no step run never got a runner; `requeue.yml` re-runs it once.
+  minutes with no step run never got a runner. Nothing re-runs it on its own:
+  re-run it by hand (`gh run rerun <run-id> --failed`) when you mean to, since
+  every re-run is a CI run.

@@ -184,3 +184,25 @@ func TestTheMacAppBundleIDIsTheAppID(t *testing.T) {
 		t.Fatalf("macos-app.sh bundle ids %v, want exactly one, %q", ids, AppID)
 	}
 }
+
+// PowerShell ends a single-quoted literal at any of its single quotes,
+// typographic ones (U+2018-U+201B) included, so each must be doubled like an
+// ASCII quote, or a title containing one runs the rest as code (audit F-14,
+// 2026-11-25).
+func TestPSQuoteDoublesTypographicQuotes(t *testing.T) {
+	for _, q := range []rune{'‘', '’', '‚', '‛'} {
+		in := "it" + string(q) + "; Remove-Item x; " + string(q)
+		got := []rune(psQuote(in))
+		body := got[1 : len(got)-1]
+		for i := 0; i < len(body); i++ {
+			if body[i] != q {
+				continue
+			}
+			if i+1 >= len(body) || body[i+1] != q {
+				t.Errorf("psQuote(%q) = %s: a lone %U closes the literal", in, string(got), q)
+				break
+			}
+			i++
+		}
+	}
+}

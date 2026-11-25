@@ -60,6 +60,21 @@ func (r Result) String() string {
 	return "signature: none"
 }
 
+// Warning says, for a file r was checked for, that nothing shows who made it
+// and what to do, or "" when a trusted signer signed it. Restoring a bundle or
+// full export puts keys and settings in place, so the owner is told first.
+func (r Result) Warning(file string) string {
+	why := "is not signed"
+	switch r.Status {
+	case Trusted:
+		return ""
+	case Untrusted:
+		why = "is signed by a key you do not trust"
+	}
+	return fmt.Sprintf("warning: %s %s, so nothing shows who made it: restore it only if you made it "+
+		"yourself (--require-signature refuses such a file; sign bundles with --sign-key)", filepath.Base(file), why)
+}
+
 var keygen = "ssh-keygen"
 
 var fingerprintRe = regexp.MustCompile(`(SHA256:[A-Za-z0-9+/=]+)`)

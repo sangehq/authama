@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/sangehq/authama/src/internal/brand"
 	"github.com/sangehq/authama/src/internal/core/manifest"
@@ -21,8 +22,12 @@ import (
 
 // heldLock keeps the acquired advisory lock alive for the rest of the process so
 // the OS doesn't release it (and GC doesn't close the fd) before the mutation
-// finishes; a short-lived CLI command releases it on exit.
-var heldLock func()
+// finishes; a short-lived CLI command releases it on exit. heldMu guards it:
+// the web server takes and releases the lock from more than one goroutine.
+var (
+	heldMu   sync.Mutex
+	heldLock func()
+)
 
 // SnapshotBeforeMutation is the native mutation guard (mirrors the Facade's
 // _mutating): take the advisory lock so concurrent commands serialize, sweep crash
@@ -61,6 +66,7 @@ func SnapshotBeforeMutation(p paths.Paths, retain int) string {
 // for had written. SnapshotBeforeMutation calls it too, so a command that
 // forgets still holds the lock while it mutates.
 func LockForMutation(p paths.Paths) {
+	heldMu.Lock()
 	if heldLock == nil {
 		rel, err := lock.Acquire(p.LockFile())
 		if err != nil {
@@ -75,6 +81,7 @@ func LockForMutation(p paths.Paths) {
 			heldLock = rel
 		}
 	}
+	heldMu.Unlock()
 	checkSeal(p)
 	opening(p)
 }
@@ -94,12 +101,18 @@ func checkSeal(p paths.Paths) {
 }
 
 // Held reports whether this process holds the advisory lock.
-func Held() bool { return heldLock != nil }
+func Held() bool {
+	heldMu.Lock()
+	defer heldMu.Unlock()
+	return heldLock != nil
+}
 
 // Release gives up the lock this process holds, if any. A CLI command never
 // needs to - exiting releases it - but a test that runs many commands in one
 // process does, and so does a long-lived server between operations.
 func Release() {
+	heldMu.Lock()
+	defer heldMu.Unlock()
 	if heldLock != nil {
 		heldLock()
 		heldLock = nil

@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sangehq/authama/src/internal/util/testcred"
 )
@@ -26,6 +27,7 @@ func TestResolvePlainAndEmpty(t *testing.T) {
 }
 
 func TestResolveCmd(t *testing.T) {
+	freshCache(t)
 	// echo is portable enough for the test; trimmed stdout is the secret.
 	if got := Resolve("cmd:echo  hunter2 "); got != "hunter2" {
 		t.Errorf("cmd: secret = %q want hunter2", got)
@@ -76,6 +78,7 @@ func stubCommand(t *testing.T, name, body string) string {
 // metacharacters in it stay inert. Routing this through `sh -c` would turn a
 // config file into arbitrary command execution.
 func TestACmdSecretIsExecutedAsArgvNotThroughAShell(t *testing.T) {
+	freshCache(t)
 	log := stubCommand(t, "pass", "printf 'the-token\\n'\n")
 	canary := filepath.Join(t.TempDir(), "shell-ran")
 
@@ -103,6 +106,7 @@ func TestACmdSecretIsExecutedAsArgvNotThroughAShell(t *testing.T) {
 // token, and a rejected request looks nothing like "your password manager is
 // locked".
 func TestAFailedLookupYieldsNothingRatherThanTheRawValue(t *testing.T) {
+	freshCache(t)
 	const raw = "cmd:definitely-not-a-real-command-9d3f"
 	got := Resolve(raw)
 	if got == raw {
@@ -119,6 +123,7 @@ func TestAFailedLookupYieldsNothingRatherThanTheRawValue(t *testing.T) {
 // TUI, which is long-lived. Successes are memoized, since re-running the command
 // means re-prompting.
 func TestOnlySuccessfulLookupsAreMemoized(t *testing.T) {
+	freshCache(t)
 	dir := t.TempDir()
 	flag := filepath.Join(dir, "unlocked")
 	counter := filepath.Join(dir, "runs")
@@ -166,6 +171,7 @@ func runCount(t *testing.T, path string) int {
 // A 1Password secret reference is read with `op read`, the whole reference as
 // one argument even when an item or field name has a space in it.
 func TestAnOpReferenceIsReadThroughOp(t *testing.T) {
+	freshCache(t)
 	log := stubCommand(t, "op", "printf 'bot-token\\n'\n")
 	ref := "op://Simtabi/simtabi-bot github/token"
 
@@ -178,5 +184,39 @@ func TestAnOpReferenceIsReadThroughOp(t *testing.T) {
 	}
 	if want := "[read][" + ref + "]"; !strings.Contains(strings.ReplaceAll(string(argv), "\n", ""), want) {
 		t.Errorf("argv = %q, want %s", argv, want)
+	}
+}
+
+// freshCache empties the process-wide memo before and after a test. Resolve
+// memoizes per process, so without it a repeated or shuffled run (-count=2)
+// found the first run's results already cached and the memoization tests
+// failed on a cache they had not filled.
+func freshCache(t *testing.T) {
+	t.Helper()
+	cache.Clear()
+	t.Cleanup(cache.Clear)
+}
+
+// A secret command that never answers (a password manager waiting on a prompt
+// nobody sees, in the web server) used to hang its caller for good. It now
+// gives up after cmdTimeout and resolves to nothing, like any failed lookup.
+func TestASecretCommandThatHangsTimesOut(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses sleep")
+	}
+	freshCache(t)
+	defer func(d time.Duration) { cmdTimeout = d }(cmdTimeout)
+	cmdTimeout = 200 * time.Millisecond
+	start := time.Now()
+	if got := Resolve("cmd:sleep 30"); got != "" {
+		t.Errorf("a timed-out command resolved to %q", got)
+	}
+	// A wrapper whose child keeps stdout open: killing the wrapper alone left
+	// Output waiting on the pipe until the child exited (review, 2026-11-25).
+	if got := Resolve(`cmd:sh -c "sleep 30 & sleep 30"`); got != "" {
+		t.Errorf("a timed-out wrapper resolved to %q", got)
+	}
+	if took := time.Since(start); took > 5*time.Second {
+		t.Errorf("Resolve waited %v for a command past its timeout", took)
 	}
 }

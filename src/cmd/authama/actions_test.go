@@ -100,8 +100,9 @@ func actionProblems(t *testing.T, dir string) ([]string, int) {
 // sweep elsewhere: nothing in this repository did (review R-GAP-09).
 func TestWorkflowsFollowTheActionsRules(t *testing.T) {
 	problems, n := actionProblems(t, filepath.Join(repoTop(t), ".github", "workflows"))
-	// Five: ci, codeql, keepalive, release and requeue. deploy-key-probe.yml went
-	// with the withdrawn channels' keys (2026-11-16).
+	// Five: ci, codeql, keepalive, release and release-window. deploy-key-probe.yml
+	// went with the withdrawn channels' keys (2026-11-16), and requeue.yml was
+	// retired on 2026-11-25 (re-runs are asked for, not automatic).
 	if n < 5 {
 		t.Fatalf("read %d workflow files; the glob is not finding them", n)
 	}

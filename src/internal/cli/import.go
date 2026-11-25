@@ -79,7 +79,9 @@ func newImportCmd() *cobra.Command {
 				if !force {
 					return change.ErrImportWouldReplace
 				}
-				backupImportTargets(p)
+				if err := backupImportTargets(p); err != nil {
+					return err
+				}
 			}
 			res, err := imp.Run(configPath, false)
 			if err != nil {
@@ -99,4 +101,4 @@ func newImportCmd() *cobra.Command {
 //
 // Deprecated: use importer.BackupTargets, which the web's import shares. This
 // forwards to it and stays until at least v1.0.0.
-func backupImportTargets(p paths.Paths) { importer.BackupTargets(p) }
+func backupImportTargets(p paths.Paths) error { return importer.BackupTargets(p) }

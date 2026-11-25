@@ -15,6 +15,7 @@ import (
 	"github.com/sangehq/authama/src/internal/services/bundler"
 	"github.com/sangehq/authama/src/internal/services/settings"
 	"github.com/sangehq/authama/src/internal/util/paths"
+	"github.com/sangehq/authama/src/internal/util/secrets"
 )
 
 // FullResult is a full export written.
@@ -115,7 +116,22 @@ func OpenFull(p paths.Paths, path string, passphrase []byte, replacedDir string,
 // checks them), its providers that send a token elsewhere, and its custom
 // hypervisor commands.
 func (f *Full) Risky() []manifest.RiskyOption {
-	return append(f.opened.Risky(), f.Doc.riskyContent()...)
+	return append(append(f.opened.Risky(), f.Doc.riskyContent()...), riskyEnv(f.Env)...)
+}
+
+// riskyEnv names the token values that run a command when used (cmd:, op://):
+// the export's maker chose that command, and authama runs it on the first
+// provider call that reads the token. A literal value is only ever sent.
+func riskyEnv(env string) []manifest.RiskyOption {
+	pairs, _ := settings.ParseDotenv(strings.NewReader(env))
+	var r []manifest.RiskyOption
+	for _, p := range pairs {
+		if secrets.Runs(p.Value) {
+			r = append(r, manifest.RiskyOption{Where: ".env", Key: p.Key, Value: p.Value,
+				Why: "authama runs this command to read the token"})
+		}
+	}
+	return r
 }
 
 // KeyItems lists the key files the export would lay down, settled by policy.

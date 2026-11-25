@@ -206,7 +206,9 @@ func newSetupImportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := checkSignature(c, p, args[0], signers, requireSig); err != nil {
+			// A full export carries keys and token values, so an unproven
+			// one is named; a plain setup document is shared on purpose.
+			if _, err := checkSignature(c, p, args[0], signers, requireSig, agepass.IsAge(head)); err != nil {
 				return err
 			}
 			if agepass.IsAge(head) {
@@ -259,7 +261,7 @@ func newSetupImportCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "show what the import would add, keep and replace; write nothing")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "import without confirming (implied when there is no terminal)")
 	cmd.Flags().StringVar(&passFile, "passphrase-file", "", "an encrypted export: read its passphrase from this owner-only file instead of asking")
-	cmd.Flags().BoolVar(&allowRisky, "allow-risky-options", false, "import a document that sets SSH options that could redirect or weaken connections, providers that send a token to another host, or custom hypervisor commands (you made it yourself)")
+	cmd.Flags().BoolVar(&allowRisky, "allow-risky-options", false, "import a document that sets SSH options that could redirect or weaken connections, providers that send a token to another host, custom hypervisor commands, token values that run a command (cmd:, op://), or settings that redirect backups, stop the history or open the API, MCP or webhooks (you made it yourself)")
 	verifyFlags(cmd, &requireSig, &signers)
 	return cmd
 }

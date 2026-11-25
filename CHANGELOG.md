@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **`requeue.yml` is retired.** It re-ran a CI run once on its own when GitHub never gave a job a runner.
+  That cause went when macOS left the pull-request matrix, and a re-run is now something you ask for
+  (`gh run rerun <run-id> --failed`), since each one is a CI run.
 - **Redesigned header menus.** SSH opens as one wide panel with Inventory, Configuration and Tasks
   columns, Tasks in a tinted side panel; History and System show their groups side by side, and stack
   below 992px. The user menu opens with the user's name and where the server runs, without repeating
@@ -23,6 +26,43 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **An unreadable `~/.ssh/config` or `known_hosts` is no longer overwritten.** A config that
+  exists but cannot be read (mode 000, or root-owned after `sudo`) was taken as missing, so
+  `ssh config render` replaced it with only the managed block, dropping every hand-written `Host`,
+  and exited 0; `ssh config check` called it "not on disk". Pinning a host key did the same to an
+  unreadable `known_hosts`, keeping only the new pins. Both now stop with the read error and
+  change nothing; only a file that does not exist counts as absent.
+- **`serve` no longer holds the lock after it auto-applies a purpose rule.** The web watcher's
+  auto-apply took the advisory lock and never gave it back, so once a rule enabled with `--auto`
+  had moved a key, every `authama` command that changes something waited on `serve` until it
+  stopped. It now waits its turn behind a web job like any other change, runs as one recorded
+  operation, and releases the lock when it is done.
+- **Snapshots keep a linked `~/.ssh/config`.** A config kept in a dotfiles repository and linked into
+  `~/.ssh` was skipped like any link, so the snapshot taken before a change held no config and a
+  restore could not put it back. The root config's link target is now archived as `config`, and a
+  restore writes it back through the link as before.
+- **Setting a token or pinning a host keeps a linked `~/.npmrc`, `~/.netrc`, Docker config or
+  `~/.ssh/known_hosts`.** The atomic write renamed over the link, so the link became a regular file
+  and the dotfiles copy it pointed at stopped changing. These files are now written through their
+  link, as the ssh config already was; a link to nothing is refused.
+- **A `cmd:` or `op://` token that never answers no longer hangs authama.** A secret command waiting
+  on a prompt nobody sees (a password manager in front of `serve`) held its caller for good. It now
+  gives up after two minutes and the token reads as missing, like any failed lookup.
+- **A replacing `import` stops when its backup fails, and never shares a backup.** The manifest and
+  inventory copy it promises before replacing them ignored every error, so an import could go ahead
+  with no copy made; and two imports in the same second wrote into one backup directory, the second
+  overwriting the first's copy. It now stops with the reason and changes nothing, and each backup
+  gets a directory of its own, including the `ssh/` copies of the hand-written files it edits.
+- **Two `ssh vm sync` runs in the same second keep both backups.** The manifest backup was named to
+  the second, so the second run overwrote the first's copy; it now takes the next free name.
+- **On Windows, owner-only permissions name your account by its SID.** The `icacls` grant used
+  `%USERNAME%`, which any program can set, which can mean a local or a domain account, and which
+  stops matching when an account is renamed. It now grants to the account's SID, falling back to
+  the name only when Windows reports none.
+- **The Windows fallback notifier quotes typographic quotes.** PowerShell ends a single-quoted
+  string at `‘ ’ ‚ ‛` as well as `'`, and only the ASCII one was doubled, so a notification
+  title holding a curly quote could break out of the string. It applies only when go-notifykit
+  cannot start.
 - **Header menus on a phone.** Each row of the vertical menu spans the width with its chevron at the
   end, so the chevrons line up, and a group's header (Tasks) lines up with the entries under it.
 - **System's Reset… is highlighted across the whole menu** when pointed at, not only its first 22rem.
@@ -65,6 +105,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Release binaries for FreeBSD, OpenBSD and NetBSD.** freebsd and openbsd on amd64 and arm64, and
+  netbsd on amd64 (the SQLite driver does not build for netbsd/arm64), from GoReleaser and
+  `make cross`; `install.sh` recognises the three. They are compiled on every build but not run in
+  CI.
+- **`owner pin set` reads from stdin when it is not run at a terminal**, one line each: the current
+  PIN first when one is set, then the new one, as the key passphrases are read. At a terminal it
+  still asks twice, hidden. `owner pin reset` stays terminal-only.
 - **Hosts export their extra names and routes.** A host row has `aliases`, `route` (`vm`, `cloudflared`,
   `direct`, `command`, `jump <host>`) and `routes` (`warp-<alias>`), for `export hosts --columns`, the Export
   page and the API; `hosts.csv` keeps its default columns.
@@ -449,6 +496,21 @@ Things that work differently after this release, and what to do if one affects y
 
 ### Security
 
+- **A full export can no longer plant a command in your tokens.** A token value of `cmd:<command>`
+  or `op://...` is run, not sent, when a provider reads it, and `setup import` of a full export laid
+  such values into `.env` without a word: whoever made the export chose a command authama would run.
+  These values are now risky like custom hypervisor commands, so the import is refused, naming each
+  variable and its command, unless you pass `--allow-risky-options` for an export you made yourself;
+  the web UI refuses it and points to that command. Literal token values import as before.
+- **Restoring an unsigned bundle now says so.** A bundle or full export with no signature, or one signed
+  by a key no `bundle_signers` line trusts, restored without a word, though it proves nothing about
+  who made it. `ssh restore` and `setup import` of a full export now warn, and `ssh restore` repeats
+  it in its question; `--require-signature` still refuses such a file outright.
+- **A setup document can no longer quietly turn off your safeguards.** Importing settings merged every
+  section but paths, so a document could set `backup.age_recipient` (your key backups encrypted to
+  someone else), turn `history.enabled` off, turn `vm.repin_changed` on, or open the API, MCP or
+  webhooks, and none of it was called risky. Each is now listed and refused like a hypervisor command
+  unless you pass `--allow-risky-options`; values matching the defaults are not flagged.
 - **Paths, commands and responses from a web form or an uploaded document are guarded where they are used**
   (CodeQL's 98 alerts on the combined PR). Every profile, key, category and key-root path the manifest builds goes
   through one set of guards in `util/fs` (`Segment`, `LocalRel`, `Within`, `AbsDir`), so a name that skipped

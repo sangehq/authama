@@ -42,7 +42,7 @@ func SSHImport(real paths.Paths, source string, replace bool) Change {
 		},
 		OnApply: func(p paths.Paths, _ io.Writer) error {
 			if replace && hasProfiles(p) {
-				importer.BackupTargets(p)
+				return importer.BackupTargets(p)
 			}
 			return nil
 		},

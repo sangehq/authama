@@ -225,7 +225,7 @@ jobs:
     # The tests themselves run on macOS in the scheduled leg above.
     name: darwin cross-check
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
@@ -243,6 +243,27 @@ jobs:
             GOOS=darwin GOARCH=$arch CGO_ENABLED=0 go vet ./...
             echo "darwin/$arch: build and vet clean"
           done
+      # vet type-checks the *_darwin.go files; lint reads them too, which no
+      # Linux or Windows leg does. Same pin and retry as the test job's lint.
+      - name: Lint for darwin
+        id: lint
+        continue-on-error: true
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        env:
+          GOOS: darwin
+          CGO_ENABLED: "0"
+        with:
+          version: v2.15.0
+          working-directory: src
+      - name: Lint for darwin (second attempt)
+        if: steps.lint.outcome == 'failure'
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        env:
+          GOOS: darwin
+          CGO_ENABLED: "0"
+        with:
+          version: v2.15.0
+          working-directory: src
 
   web-e2e:
     # Draft pull requests run nothing; marking one ready starts the run.
@@ -345,8 +366,7 @@ jobs:
             src/scripts/install.sh \
             src/scripts/build-all.sh \
             src/scripts/extract-changelog.sh \
-            src/internal/services/recover/fixkeys.sh \
-            .github/scripts/requeue-stranded.sh
+            src/internal/services/recover/fixkeys.sh
       - name: a cut install.sh runs nothing
         # `curl … | bash` runs what has arrived; the body is one function
         # called on the last line, so every cut inside it must fail to parse
