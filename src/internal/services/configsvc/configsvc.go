@@ -538,11 +538,7 @@ func WriteConfigFile(dest, content string) error {
 }
 
 func writeTarget(dest string) (string, error) {
-	fi, err := os.Lstat(dest)
-	if err != nil || fi.Mode()&os.ModeSymlink == 0 {
-		return dest, nil
-	}
-	real, err := filepath.EvalSymlinks(dest)
+	real, err := fs.LinkTarget(dest)
 	if err != nil {
 		return "", fmt.Errorf("%s is a link to a file that does not exist (%v): restore the file it points at, or remove the link, then render again", dest, err)
 	}

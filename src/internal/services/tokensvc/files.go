@@ -38,6 +38,13 @@ func (e Env) writeSecret(path, text string) ([]string, error) {
 	if !strings.HasSuffix(text, "\n") {
 		text += "\n"
 	}
+	// A credential file linked in from elsewhere is written through its link,
+	// not replaced by a regular file.
+	target, err := fs.LinkTarget(path)
+	if err != nil {
+		return nil, fmt.Errorf("%s is a link to a file that does not exist: restore the file it points at, or remove the link: %w", path, err)
+	}
+	path = target
 	if err := fs.WriteTextAtomic(path, text, SecretMode); err != nil {
 		return nil, err
 	}

@@ -162,3 +162,52 @@ func TestAddRefusesAnUnreadableKnownHosts(t *testing.T) {
 		t.Errorf("known_hosts changed:\nbefore %q\nafter  %q", before, after)
 	}
 }
+
+// A known_hosts linked in from a dotfiles repository is written through its
+// link, as the ssh config and credential files are: pinning a host used to
+// replace the link with a regular file (review, 2026-11-25).
+func TestPinningWritesThroughALinkedKnownHosts(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on Windows")
+	}
+	base := t.TempDir()
+	ssh := filepath.Join(base, ".ssh")
+	real := filepath.Join(base, "dotfiles", "known_hosts")
+	for _, d := range []string{ssh, filepath.Dir(real)} {
+		if err := os.MkdirAll(d, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(real, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	s := New(ssh)
+	if err := os.Symlink(real, s.Path()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Add([]string{"github.com ssh-ed25519 AAAA"}); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Lstat(s.Path()); err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("the link was replaced by a regular file (%v)", err)
+	}
+	if b, _ := os.ReadFile(real); !strings.Contains(string(b), "ssh-ed25519 AAAA") {
+		t.Errorf("the linked file did not get the pin: %q", b)
+	}
+
+	// A link to nothing is refused, not replaced.
+	ssh2 := filepath.Join(base, "other")
+	if err := os.MkdirAll(ssh2, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	s2 := New(ssh2)
+	if err := os.Symlink(filepath.Join(base, "missing"), s2.Path()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s2.Ensure(); err == nil {
+		t.Error("Ensure replaced a dangling known_hosts link")
+	}
+}

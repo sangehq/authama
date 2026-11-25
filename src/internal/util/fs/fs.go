@@ -24,6 +24,19 @@ func EnsureDir(path string, mode os.FileMode) error {
 	return os.Chmod(path, mode)
 }
 
+// LinkTarget is the file a write to path should replace: path itself, or, when
+// path is a symlink, the file it points at. WriteTextAtomic renames over its
+// target, so writing to the link would replace the link with a regular file and
+// cut off the file it pointed at (a dotfiles copy). A link to nothing is an
+// error rather than something to replace.
+func LinkTarget(path string) (string, error) {
+	fi, err := os.Lstat(path)
+	if err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		return path, nil
+	}
+	return filepath.EvalSymlinks(path)
+}
+
 // WriteTextAtomic writes text to path via a temp file + rename, then chmods it.
 func WriteTextAtomic(path, text string, mode os.FileMode) error {
 	dir := filepath.Dir(path)

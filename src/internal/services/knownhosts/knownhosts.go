@@ -114,10 +114,24 @@ func (s *Service) Ensure() (bool, error) {
 	if fi, err := os.Stat(path); err == nil && fi.Mode().IsRegular() {
 		return false, nil
 	}
-	if err := fs.WriteTextAtomic(path, "", knownHostsMode); err != nil {
+	if err := writeKnownHosts(path, ""); err != nil {
 		return false, err
 	}
-	return true, perms.SetPerms(path, knownHostsMode)
+	return true, nil
+}
+
+// writeKnownHosts writes body to path atomically and owner-only, through a
+// symlink rather than over it: a known_hosts linked in from a dotfiles copy
+// stays linked. A link to nothing is refused rather than replaced.
+func writeKnownHosts(path, body string) error {
+	target, err := fs.LinkTarget(path)
+	if err != nil {
+		return fmt.Errorf("%s is a link to a file that does not exist: restore the file it points at, or remove the link: %w", path, err)
+	}
+	if err := fs.WriteTextAtomic(target, body, knownHostsMode); err != nil {
+		return err
+	}
+	return perms.SetPerms(target, knownHostsMode)
 }
 
 // Add appends confirmed host-key lines to the trust store, deduped, atomically.
@@ -201,10 +215,7 @@ func (s *Service) Add(lines []string) (int, error) {
 		return 0, nil
 	}
 	body := strings.TrimSpace(strings.Join(append(existing, fresh...), "\n")) + "\n"
-	if err := fs.WriteTextAtomic(path, body, knownHostsMode); err != nil {
-		return 0, err
-	}
-	if err := perms.SetPerms(path, knownHostsMode); err != nil {
+	if err := writeKnownHosts(path, body); err != nil {
 		return 0, err
 	}
 	return len(fresh), nil
@@ -819,8 +830,5 @@ func (s *Service) rewrite(path string, lines []string) error {
 	if len(lines) > 0 {
 		body = strings.TrimSpace(strings.Join(lines, "\n")) + "\n"
 	}
-	if err := fs.WriteTextAtomic(path, body, knownHostsMode); err != nil {
-		return err
-	}
-	return perms.SetPerms(path, knownHostsMode)
+	return writeKnownHosts(path, body)
 }
