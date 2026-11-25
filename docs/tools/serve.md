@@ -104,9 +104,22 @@ no "sign me in" button: anything that page could do, an attacker's page could do
 needs something only you have: a link from a launch you ran (proved by the control key in your
 owner-only state home), or the cookie that link left in your browser.
 
-If port 7822 is taken, `serve` uses the next free port and says which. If all twenty from 7822 up are
-taken, it uses any free port the system offers. `--port` pins a port and fails when that port is
-taken.
+If port 7822 is taken, `serve` uses a port the OS picks and says what holds 7822. It does not try
+7823 and up: the sange-family tools have fixed ports side by side (sange 7821, authama 7822,
+imprimatur 7823), and the OS picks from its ephemeral range (49152 and up on macOS and Windows, 32768
+and up on Linux), which holds none of them. `--port` pins a port and fails when that port is taken,
+naming what holds it.
+
+To name what holds a taken port, `serve` asks its `/healthz`: imprimatur answers with its name,
+another authama with its own, and sange with `ok`. Anything else is another program, and the
+message gives the command that shows its process:
+
+```text
+port 7822 is in use by imprimatur (see its process with `lsof -nP -iTCP:7822 -sTCP:LISTEN`); listening on 52114 instead
+```
+
+`serve --stop-all` still probes 7822 to 7841, where servers from earlier builds may be, and the
+port this home's server recorded.
 
 ### One server per home
 
@@ -161,7 +174,7 @@ also an environment variable; `--addr` and `--port` on the command line win over
 | Setting | Variable | What it does |
 |---|---|---|
 | `web.addr` | `AUTHAMA_WEB_ADDR` | The address to listen on. A non-loopback one still needs `--allow-remote`. |
-| `web.port` | `AUTHAMA_WEB_PORT` | The port to try first. When it is taken the next free one is used, as with the default; only `--port` turns a taken port into an error. |
+| `web.port` | `AUTHAMA_WEB_PORT` | The port to try first. When it is taken a port the OS picks is used, as with the default; only `--port` turns a taken port into an error. |
 | `web.base_path` | `AUTHAMA_WEB_BASE_PATH` | A path to serve the UI under, such as `/authama`, so it can sit behind a reverse proxy beside other sites: `http://127.0.0.1:7900/authama/`. |
 
 With a base path every link, form, asset, redirect and the session cookie carry it; `/` sends you to

@@ -88,8 +88,8 @@ func newServeCmd() *cobra.Command {
 			"and confirming makes it only if nothing moved since. The lock is held only while\n" +
 			"a change is checked and made, so a running server does not hold up a command.\n" +
 			"--read-only serves no change at all.\n\n" +
-			"Listens on 127.0.0.1, port " + strconv.Itoa(web.DefaultPort) + " by default. If that port is taken it takes the\n" +
-			"next free one and prints the address it bound; --port pins a port and fails if it\n" +
+			"Listens on 127.0.0.1, port " + strconv.Itoa(web.DefaultPort) + " by default. If that port is taken it takes a\n" +
+			"port the OS picks, says what holds it, and prints the address it bound; --port pins a port and fails if it\n" +
 			"is taken. Every launch opens the default browser with a one-time link that signs\n" +
 			"it in, and the browser is remembered for web.remember_days (`serve browsers`);\n" +
 			"--no-open, an SSH session or no desktop prints the address instead.\n\n" +
@@ -106,7 +106,7 @@ func newServeCmd() *cobra.Command {
 			"default up is taken, any free port is used.\n\n" +
 			"web.addr, web.port and web.base_path in authama.json (or AUTHAMA_WEB_ADDR,\n" +
 			"AUTHAMA_WEB_PORT, AUTHAMA_WEB_BASE_PATH) change the defaults: a configured port\n" +
-			"falls back to the next free one like the default, and web.base_path serves the\n" +
+			"falls back to a port the OS picks like the default, and web.base_path serves the\n" +
 			"UI under a path such as /authama, for a reverse proxy. --addr and --port win.\n\n" +
 			"A non-loopback --addr is refused unless --allow-remote is passed. Prefer an SSH\n" +
 			"tunnel: ssh -L " + strconv.Itoa(web.DefaultPort) + ":127.0.0.1:" + strconv.Itoa(web.DefaultPort) + " <host>.",
@@ -244,6 +244,9 @@ func newServeCmd() *cobra.Command {
 			}
 			ln, err := web.Listen(serveListen, host, pinnedPort, pinned || handoff != nil, web.DefaultPortAttempts)
 			if err != nil {
+				if pinnedPort != 0 && web.IsAddrInUse(err) {
+					return fmt.Errorf("%w; %s", err, web.PortTakenHint(net.JoinHostPort(displayHost(host), strconv.Itoa(pinnedPort))))
+				}
 				return err
 			}
 			bound := ln.Addr().(*net.TCPAddr).Port
@@ -311,7 +314,7 @@ func newServeCmd() *cobra.Command {
 				defer removeServeRecord(p, instance)
 			}
 			if bound != pinnedPort && pinnedPort != 0 {
-				_, _ = fmt.Fprintf(out, "port %d is in use; listening on %d instead\n", pinnedPort, bound)
+				_, _ = fmt.Fprintf(out, "%s; listening on %d instead\n", web.PortTakenHint(net.JoinHostPort(displayHost(host), strconv.Itoa(pinnedPort))), bound)
 			}
 			_, _ = fmt.Fprintf(out, "%s web UI: %s\n", brand.Name, url)
 			_, _ = fmt.Fprintf(out, "the link signs in once, within %d minutes; run `%s serve` again for another\n",
@@ -363,7 +366,7 @@ func newServeCmd() *cobra.Command {
 	}
 	f := cmd.Flags()
 	f.StringVar(&addr, "addr", "127.0.0.1", "address to listen on, host or host:port (a port here pins it, like --port)")
-	f.IntVar(&port, "port", web.DefaultPort, "port to listen on; when not given and the default is taken, the next free port is used")
+	f.IntVar(&port, "port", web.DefaultPort, "port to listen on; when not given and the default is taken, a port the OS picks is used")
 	f.BoolVar(&allowRemote, "allow-remote", false, "allow a non-loopback --addr (plain HTTP; prefer an SSH tunnel)")
 	f.StringArrayVar(&allowHosts, "allow-host", nil, "extra Host header to accept, e.g. the name a proxy on this machine forwards as; it widens the DNS-rebinding check, so name only hosts you control (repeatable)")
 	f.BoolVar(&readOnly, "read-only", false, "serve no route that changes anything, and show no form")

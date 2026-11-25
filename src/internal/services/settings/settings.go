@@ -140,7 +140,7 @@ var Specs = []Spec{
 	{Section: "web", Name: "addr", Env: envnames.WebAddr, Kind: KindString, Default: "127.0.0.1",
 		Doc: "The address `serve` listens on. A non-loopback address still needs --allow-remote."},
 	{Section: "web", Name: "port", Env: envnames.WebPort, Kind: KindInt, Min: 1, Default: "7822",
-		Doc: "The port `serve` listens on first. When it is taken the next free one is used, as with the default; only --port makes a taken port an error."},
+		Doc: "The port `serve` listens on first. When it is taken a port the OS picks is used, as with the default; only --port makes a taken port an error."},
 	{Section: "web", Name: "base_path", Env: envnames.WebBasePath, Kind: KindString, Default: "/",
 		Doc: "A path the web UI is served under, such as /authama, so it can sit behind a reverse proxy beside other sites. Every link, form and redirect carries it."},
 	{Section: "web", Name: "menu_export", Env: envnames.WebMenuExport, Kind: KindBool, Default: "true",
