@@ -41,6 +41,9 @@ var (
 		return signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
 	}
 	serveNotifications = listenForNotifications
+	// servePortTakenHint names what holds a taken port; it asks the port's
+	// /healthz, so tests replace it rather than probe this machine's ports.
+	servePortTakenHint = web.PortTakenHint
 )
 
 // listenForNotifications lets other programs and scripts show a notification
@@ -245,7 +248,7 @@ func newServeCmd() *cobra.Command {
 			ln, err := web.Listen(serveListen, host, pinnedPort, pinned || handoff != nil, web.DefaultPortAttempts)
 			if err != nil {
 				if pinnedPort != 0 && web.IsAddrInUse(err) {
-					return fmt.Errorf("%w; %s", err, web.PortTakenHint(net.JoinHostPort(displayHost(host), strconv.Itoa(pinnedPort))))
+					return fmt.Errorf("%w; %s", err, servePortTakenHint(net.JoinHostPort(displayHost(host), strconv.Itoa(pinnedPort))))
 				}
 				return err
 			}
@@ -314,7 +317,7 @@ func newServeCmd() *cobra.Command {
 				defer removeServeRecord(p, instance)
 			}
 			if bound != pinnedPort && pinnedPort != 0 {
-				_, _ = fmt.Fprintf(out, "%s; listening on %d instead\n", web.PortTakenHint(net.JoinHostPort(displayHost(host), strconv.Itoa(pinnedPort))), bound)
+				_, _ = fmt.Fprintf(out, "%s; listening on %d instead\n", servePortTakenHint(net.JoinHostPort(displayHost(host), strconv.Itoa(pinnedPort))), bound)
 			}
 			_, _ = fmt.Fprintf(out, "%s web UI: %s\n", brand.Name, url)
 			_, _ = fmt.Fprintf(out, "the link signs in once, within %d minutes; run `%s serve` again for another\n",
