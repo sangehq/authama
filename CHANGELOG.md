@@ -102,6 +102,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`owner pin set` reads from stdin when it is not run at a terminal**, one line each: the current
+  PIN first when one is set, then the new one, as the key passphrases are read. At a terminal it
+  still asks twice, hidden. `owner pin reset` stays terminal-only.
 - **Hosts export their extra names and routes.** A host row has `aliases`, `route` (`vm`, `cloudflared`,
   `direct`, `command`, `jump <host>`) and `routes` (`warp-<alias>`), for `export hosts --columns`, the Export
   page and the API; `hosts.csv` keeps its default columns.

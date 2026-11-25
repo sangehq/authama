@@ -14,7 +14,7 @@ It is off until you run `authama owner init`. A home that is never bound behaves
 | `authama owner status` | whether the home is bound, where the key is, whether a PIN and fingerprint unlock are on, and the seal's state |
 | `authama owner verify` | checks the files against the seal and names each one changed, removed or added; exits non-zero if any |
 | `authama owner reseal` | accepts the files as they are now, after a change you made yourself |
-| `authama owner pin set` | sets a PIN, or changes it (asks for the current one first) |
+| `authama owner pin set` | sets a PIN, or changes it (asks for the current one first); without a terminal it reads them from stdin, one per line |
 | `authama owner pin reset` | replaces a forgotten PIN without the old one, by proving the OS account |
 | `authama owner pin remove` | turns the PIN off (asks for it first) |
 | `authama owner fingerprint on\|off` | lets a fingerprint stand in for the PIN at the terminal (Linux, fprintd) |

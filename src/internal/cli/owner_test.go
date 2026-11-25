@@ -79,3 +79,31 @@ func TestWithoutAPINNothingIsGated(t *testing.T) {
 	ownerHome(t)
 	run(t, "ssh", "profile", "delete", "work", "--yes")
 }
+
+// owner pin set reads its PINs from stdin, one per line, when stdin is not a
+// terminal, as the key passphrases do: the current PIN first when one is set,
+// then the new one. The CLI had no test because the PIN could only be typed.
+func TestOwnerPINSetReadsStdinWhenNotATerminal(t *testing.T) {
+	ownerHome(t)
+	p, _ := resolvePaths(nil)
+	first, second := testcred.Secret("first"), testcred.Secret("second")
+	if first == second {
+		t.Fatal("two generated PINs are equal")
+	}
+	if out, err := runIn(t, first+"\n", "owner", "pin", "set"); err != nil {
+		t.Fatalf("setting a PIN from stdin: %v\n%s", err, out)
+	}
+	if err := owner.CheckPIN(p, first, time.Now()); err != nil {
+		t.Fatalf("the PIN read from stdin was not set: %v", err)
+	}
+	// Changing it needs the current PIN, so a wrong one is refused.
+	if _, err := runIn(t, second+"\n"+second+"\n", "owner", "pin", "set"); err == nil {
+		t.Error("a PIN was changed without the current one")
+	}
+	if out, err := runIn(t, first+"\n"+second+"\n", "owner", "pin", "set"); err != nil {
+		t.Fatalf("changing the PIN from stdin: %v\n%s", err, out)
+	}
+	if err := owner.CheckPIN(p, second, time.Now()); err != nil {
+		t.Errorf("the changed PIN was not set: %v", err)
+	}
+}

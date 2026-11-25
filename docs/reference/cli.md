@@ -1375,6 +1375,9 @@ A PIN is at least 6 characters: digits, or a passphrase of up to 128. A run such
 as 123456 or one repeated character is refused. It is stored only as a salted
 Argon2id hash.
 
+At a terminal it asks for the PIN twice. Otherwise it reads it from stdin, one
+line: the current PIN first when one is set, then the new one.
+
 ```
 authama owner pin set
 ```
