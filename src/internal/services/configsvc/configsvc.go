@@ -4,6 +4,7 @@
 package configsvc
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -197,7 +198,10 @@ func (s *Service) Write(dryRun bool) (*WriteResult, error) {
 	for _, rel := range sortedKeys(rendered) {
 		content := rendered[rel]
 		dest := filepath.Join(s.sshDir, filepath.FromSlash(rel))
-		current, exists := readFile(dest)
+		current, exists, err := readExisting(dest)
+		if err != nil {
+			return nil, err
+		}
 		target := content
 		if rel == renderer.RootConfig {
 			if exists {
@@ -264,7 +268,10 @@ func (s *Service) Check(validateSSH bool) (*CheckResult, error) {
 	for _, rel := range s.renderedOrder(rendered) {
 		content := rendered[rel]
 		dest := filepath.Join(s.sshDir, filepath.FromSlash(rel))
-		current, exists := readFile(dest)
+		current, exists, err := readExisting(dest)
+		if err != nil {
+			return nil, err
+		}
 		if !exists {
 			res.Missing = append(res.Missing, rel)
 			continue
@@ -421,12 +428,26 @@ func (s *Service) renderedOrder(rendered map[string]string) []string {
 	return order
 }
 
+// readFile reports a file's content and whether it could be read; any error
+// counts as absent. Use it only where a wrong "absent" cannot cost a file:
+// Write and Check call readExisting.
 func readFile(path string) (content string, exists bool) {
+	content, exists, _ = readExisting(path)
+	return content, exists
+}
+
+// readExisting is readFile for Write and Check: only a file that does not exist
+// is absent, and any other error (a mode 000 or root-owned config) is returned,
+// so a render never replaces content it could not read.
+func readExisting(path string) (content string, exists bool, err error) {
 	b, err := os.ReadFile(path)
-	if err != nil {
-		return "", false
+	if errors.Is(err, os.ErrNotExist) {
+		return "", false, nil
 	}
-	return string(b), true
+	if err != nil {
+		return "", false, err
+	}
+	return string(b), true, nil
 }
 
 func sortedKeys(m map[string]string) []string {

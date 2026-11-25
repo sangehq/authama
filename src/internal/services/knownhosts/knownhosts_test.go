@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -122,5 +123,42 @@ func TestAutoPinDisabledAndAlreadyTrusted(t *testing.T) {
 	on := func(string) string { return "" }
 	if got := s.AutoPin(&m, nil, on); len(got) != 0 {
 		t.Errorf("already-trusted host should not be re-pinned, got %v", got)
+	}
+}
+
+// A known_hosts that exists but cannot be read is not an empty one: Add used to
+// rewrite it with only the new pins, dropping every host already trusted
+// (audit F-15, 2026-11-25).
+func TestAddRefusesAnUnreadableKnownHosts(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("mode 000 does not stop the owner reading a file on Windows")
+	}
+	if os.Geteuid() == 0 {
+		t.Skip("root reads a mode 000 file")
+	}
+	s := New(t.TempDir())
+	if _, err := s.Add([]string{"github.com ssh-ed25519 AAAA"}); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(s.Path())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(s.Path(), 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(s.Path(), 0o600) })
+	if _, err := s.Add([]string{"gitlab.com ssh-ed25519 CCCC"}); err == nil {
+		t.Error("Add over an unreadable known_hosts succeeded; it must refuse")
+	}
+	if err := os.Chmod(s.Path(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	after, err := os.ReadFile(s.Path())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(before) {
+		t.Errorf("known_hosts changed:\nbefore %q\nafter  %q", before, after)
 	}
 }

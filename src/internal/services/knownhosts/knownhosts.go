@@ -14,6 +14,7 @@ package knownhosts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -131,8 +132,13 @@ func (s *Service) Ensure() (bool, error) {
 func (s *Service) Add(lines []string) (int, error) {
 	path := s.Path()
 	var existing []string
-	if b, err := os.ReadFile(path); err == nil {
+	// Only a missing file starts empty: rewriting one that could not be read
+	// would drop every host already trusted.
+	switch b, err := os.ReadFile(path); {
+	case err == nil:
 		existing = splitNonEmptyTrailing(string(b))
+	case !errors.Is(err, os.ErrNotExist):
+		return 0, err
 	}
 	pinned := parseAll(existing)
 	// verbatimRaw catches exact-text duplicates (including comments); keyed

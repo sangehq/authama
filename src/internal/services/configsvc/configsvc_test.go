@@ -208,6 +208,46 @@ func TestWritePreservesForeignContent(t *testing.T) {
 	}
 }
 
+// A config that exists but cannot be read is not a missing one. Rendering over
+// it as if it were empty threw away every hand-written Host in it, with exit 0
+// and no snapshot (audit F-15, 2026-11-25), and Check called it "not on disk".
+func TestAnUnreadableConfigIsNeitherOverwrittenNorMissing(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("mode 000 does not stop the owner reading a file on Windows")
+	}
+	if os.Geteuid() == 0 {
+		t.Skip("root reads a mode 000 file")
+	}
+	ssh := t.TempDir()
+	path := filepath.Join(ssh, "config")
+	const foreign = "Host foreign\n    HostName foreign.example\n"
+	if err := os.WriteFile(path, []byte(foreign), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(path, 0o600) })
+
+	svc := New(ssh, load(t, manifestJSON), false)
+	if _, err := svc.Write(false); err == nil {
+		t.Error("Write over an unreadable config succeeded; it must refuse")
+	}
+	if _, err := svc.Check(false); err == nil {
+		t.Error("Check called an unreadable config missing; it must say it cannot read it")
+	}
+	if err := os.Chmod(path, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(body) != foreign {
+		t.Errorf("the unreadable config was changed:\n%s", body)
+	}
+}
+
 // A config edited by hand is drift, and Check has to show what changed - the
 // user needs to see it before `config render` overwrites their edit.
 func TestCheckReportsDriftWithADiff(t *testing.T) {
