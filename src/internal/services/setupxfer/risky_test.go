@@ -47,3 +47,41 @@ func TestOnlyTokenNamesKeepsTheSetupsTokens(t *testing.T) {
 		t.Errorf("skipped %v", skipped)
 	}
 }
+
+// Settings that send backups to another key, hide what happened, re-trust a
+// changed host key, or open authama to other programs are risky in a document
+// that does not prove who made it (audit F-13, 2026-11-25). Values matching the
+// defaults are not.
+func TestRiskyNamesSettingsThatWeakenOrRedirect(t *testing.T) {
+	d := Doc{Settings: json.RawMessage(`{
+	  "backup":{"age_recipient":"age1planted","snapshot_retain":5},
+	  "history":{"enabled":false},
+	  "vm":{"repin_changed":true},
+	  "api":{"enabled":true},
+	  "mcp":{"enabled":"true"},
+	  "webhooks":{"enabled":true,"allow_private":true,"include_details":true},
+	  "ssh":{"auto_pin":true}}`)}
+	var got []string
+	for _, r := range d.Risky() {
+		got = append(got, r.Where+" "+r.Key+" "+r.Value)
+	}
+	all := strings.Join(got, "\n")
+	for _, want := range []string{
+		"settings backup age_recipient age1planted", "settings history enabled false", "settings vm repin_changed true",
+		"settings api enabled true", "settings mcp enabled true", "settings webhooks enabled true",
+		"settings webhooks allow_private true", "settings webhooks include_details true",
+	} {
+		if !strings.Contains(all, want) {
+			t.Errorf("Risky misses %q:\n%s", want, all)
+		}
+	}
+	for _, not := range []string{"snapshot_retain", "auto_pin"} {
+		if strings.Contains(all, not) {
+			t.Errorf("Risky flags %s, which weakens nothing:\n%s", not, all)
+		}
+	}
+	safe := Doc{Settings: json.RawMessage(`{"history":{"enabled":true},"api":{"enabled":false},"backup":{"age_recipient":""}}`)}
+	if r := safe.Risky(); len(r) != 0 {
+		t.Errorf("default values are risky: %v", r)
+	}
+}

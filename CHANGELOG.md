@@ -466,6 +466,11 @@ Things that work differently after this release, and what to do if one affects y
   These values are now risky like custom hypervisor commands, so the import is refused, naming each
   variable and its command, unless you pass `--allow-risky-options` for an export you made yourself;
   the web UI refuses it and points to that command. Literal token values import as before.
+- **A setup document can no longer quietly turn off your safeguards.** Importing settings merged every
+  section but paths, so a document could set `backup.age_recipient` (your key backups encrypted to
+  someone else), turn `history.enabled` off, turn `vm.repin_changed` on, or open the API, MCP or
+  webhooks, and none of it was called risky. Each is now listed and refused like a hypervisor command
+  unless you pass `--allow-risky-options`; values matching the defaults are not flagged.
 - **Paths, commands and responses from a web form or an uploaded document are guarded where they are used**
   (CodeQL's 98 alerts on the combined PR). Every profile, key, category and key-root path the manifest builds goes
   through one set of guards in `util/fs` (`Segment`, `LocalRel`, `Within`, `AbsDir`), so a name that skipped
