@@ -206,7 +206,9 @@ func newSetupImportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := checkSignature(c, p, args[0], signers, requireSig); err != nil {
+			// A full export carries keys and token values, so an unproven
+			// one is named; a plain setup document is shared on purpose.
+			if _, err := checkSignature(c, p, args[0], signers, requireSig, agepass.IsAge(head)); err != nil {
 				return err
 			}
 			if agepass.IsAge(head) {

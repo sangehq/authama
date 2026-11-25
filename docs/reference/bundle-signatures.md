@@ -51,7 +51,9 @@ authama setup import setup.age --require-signature
 ```
 
 Copy the `.sig` with the file. A bundle without its `.sig` restores as unsigned, and only `--require-signature`
-refuses it.
+refuses it. `ssh restore` and `setup import` of a full export warn when a file is unsigned, or signed by a key
+no `bundle_signers` line trusts, and `ssh restore` repeats the warning in its question; the web UI's restore job
+prints it too. A plain setup document is not warned about.
 
 ## Code
 

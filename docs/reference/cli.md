@@ -3841,8 +3841,9 @@ StrictHostKeyChecking no for every host) is refused, naming each one: a bundle d
 not prove who made it. Pass --allow-risky-options to restore one you made yourself.
 
 A bundle written with --sign-key has a signature, <bundle>.sig, next to it. It is
-checked first: a bundle changed after it was signed is refused. --require-signature
-also refuses one that is unsigned, or signed by a key bundle_signers does not trust.
+checked first: a bundle changed after it was signed is refused. An unsigned bundle, or
+one signed by a key bundle_signers does not trust, is restored with a warning, which
+the question repeats; --require-signature refuses it instead.
 
 ```
 authama ssh restore <bundle.age> [flags]

@@ -64,8 +64,11 @@ func signerName(pub string) string {
 }
 
 // checkSignature checks path's signature, if any, before it is read,
-// printing what it found when there is a signature or one is required.
-func checkSignature(c *cobra.Command, p paths.Paths, path, signers string, require bool) error {
+// printing what it found when there is a signature or one is required. With
+// warnUnproven it also warns when nothing shows who made the file (unsigned,
+// or signed by a key no bundle_signers line trusts): a bundle or full export
+// carries keys and settings, and the owner should know before restoring it.
+func checkSignature(c *cobra.Command, p paths.Paths, path, signers string, require, warnUnproven bool) (bundlesig.Result, error) {
 	if signers == "" {
 		signers = bundlesig.SignersPath(p)
 	} else {
@@ -73,12 +76,15 @@ func checkSignature(c *cobra.Command, p paths.Paths, path, signers string, requi
 	}
 	res, err := bundlesig.Check(path, bundlesig.Options{Signers: signers, Require: require})
 	if err != nil {
-		return fmt.Errorf("%s: %w", filepath.Base(path), err)
+		return res, fmt.Errorf("%s: %w", filepath.Base(path), err)
 	}
 	if res.Status != bundlesig.Unsigned {
 		_, _ = fmt.Fprintln(c.ErrOrStderr(), res.String())
 	}
-	return nil
+	if w := res.Warning(path); warnUnproven && w != "" {
+		_, _ = fmt.Fprintln(c.ErrOrStderr(), w)
+	}
+	return res, nil
 }
 
 // expandTilde reads a leading ~/ as the home directory, for a path given as

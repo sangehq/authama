@@ -91,8 +91,9 @@ func newRestoreCmd() *cobra.Command {
 			"StrictHostKeyChecking no for every host) is refused, naming each one: a bundle does\n" +
 			"not prove who made it. Pass --allow-risky-options to restore one you made yourself.\n\n" +
 			"A bundle written with --sign-key has a signature, <bundle>.sig, next to it. It is\n" +
-			"checked first: a bundle changed after it was signed is refused. --require-signature\n" +
-			"also refuses one that is unsigned, or signed by a key bundle_signers does not trust.",
+			"checked first: a bundle changed after it was signed is refused. An unsigned bundle, or\n" +
+			"one signed by a key bundle_signers does not trust, is restored with a warning, which\n" +
+			"the question repeats; --require-signature refuses it instead.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			p, err := resolvePaths(c)
@@ -105,7 +106,8 @@ func newRestoreCmd() *cobra.Command {
 			}
 			// A signature next to the bundle is checked before it is
 			// decrypted: a changed bundle is refused, always.
-			if err := checkSignature(c, p, args[0], signers, requireSig); err != nil {
+			sig, err := checkSignature(c, p, args[0], signers, requireSig, true)
+			if err != nil {
 				return err
 			}
 			lockForMutation(p)
@@ -127,6 +129,9 @@ func newRestoreCmd() *cobra.Command {
 				return err
 			}
 			question := "Restore ~/.ssh from this bundle? Every file it replaces with different content, private keys included, is kept first in the state home's replaced/ folder"
+			if w := sig.Warning(args[0]); w != "" {
+				question += "\n" + w
+			}
 			if risky := opened.Risky(); len(risky) > 0 {
 				if !allowRisky {
 					return bundler.RiskyError(risky)

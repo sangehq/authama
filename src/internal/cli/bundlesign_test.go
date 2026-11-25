@@ -52,3 +52,32 @@ func TestASignedExportIsCheckedOnImport(t *testing.T) {
 		t.Fatalf("a changed export: %v", err)
 	}
 }
+
+// An unsigned bundle or full export restored silently, so nothing told the
+// owner that it does not prove who made it (F-02, 2026-11-25). It now warns;
+// a plain setup document, which is shared on purpose, does not.
+func TestAnUnsignedBundleIsNamedAsUnproven(t *testing.T) {
+	p := editHome(t)
+	bundle := filepath.Join(t.TempDir(), "backup.age")
+	if err := os.WriteFile(bundle, []byte("age-encryption.org/v1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		warn bool
+		want bool
+	}{{true, true}, {false, false}} {
+		c := newRootCmd()
+		var errOut strings.Builder
+		c.SetErr(&errOut)
+		res, err := checkSignature(c, p, bundle, "", false, tc.warn)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.Status != bundlesig.Unsigned {
+			t.Fatalf("status %s", res.Status)
+		}
+		if got := strings.Contains(errOut.String(), "not signed"); got != tc.want {
+			t.Errorf("warn=%v: warning shown=%v:\n%s", tc.warn, got, errOut.String())
+		}
+	}
+}

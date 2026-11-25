@@ -618,6 +618,9 @@ func bundleRestoreJob(j *jobs.Job, p paths.Paths, retain int, path string, requi
 		return err
 	}
 	_, _ = fmt.Fprintln(j, sig.String())
+	if w := sig.Warning(path); w != "" {
+		_, _ = fmt.Fprintln(j, w)
+	}
 	ident := envnames.Get(nil, envnames.AgeIdentityFile)
 	if ident == "" {
 		return errors.New("AUTHAMA_AGE_IDENTITY_FILE is not set where authama serve runs; restore from a terminal " +

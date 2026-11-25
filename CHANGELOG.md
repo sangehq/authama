@@ -495,6 +495,10 @@ Things that work differently after this release, and what to do if one affects y
   These values are now risky like custom hypervisor commands, so the import is refused, naming each
   variable and its command, unless you pass `--allow-risky-options` for an export you made yourself;
   the web UI refuses it and points to that command. Literal token values import as before.
+- **Restoring an unsigned bundle now says so.** A bundle or full export with no signature, or one signed
+  by a key no `bundle_signers` line trusts, restored without a word, though it proves nothing about
+  who made it. `ssh restore` and `setup import` of a full export now warn, and `ssh restore` repeats
+  it in its question; `--require-signature` still refuses such a file outright.
 - **A setup document can no longer quietly turn off your safeguards.** Importing settings merged every
   section but paths, so a document could set `backup.age_recipient` (your key backups encrypted to
   someone else), turn `history.enabled` off, turn `vm.repin_changed` on, or open the API, MCP or
