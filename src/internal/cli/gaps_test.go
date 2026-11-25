@@ -3,6 +3,8 @@ package cli
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -155,5 +157,78 @@ func TestWebhookAddRefusesPrivateTargetsAndHidesTheSecret(t *testing.T) {
 	run(t, "webhook", "remove", "ops")
 	if list := run(t, "webhook", "list"); strings.Contains(list, "ops") {
 		t.Errorf("a removed webhook is still listed:\n%s", list)
+	}
+}
+
+// checklist tick and untick change only the steps a person does by hand; a
+// step authama works out from disk cannot be ticked.
+func TestChecklistTicksOnlyManualSteps(t *testing.T) {
+	needBin(t, "ssh-keygen")
+	editHome(t)
+	run(t, "ssh", "profile", "add", "work")
+	run(t, "ssh", "host", "add", "work", "gh", "-H", "github.com", "-u", "git")
+	run(t, "ssh", "reconcile", "--yes")
+	const item = "work/work_gh-ed25519"
+	state := func(step string) string {
+		t.Helper()
+		var d struct {
+			Steps []struct{ ID, State string } `json:"steps"`
+		}
+		if err := json.Unmarshal([]byte(run(t, "checklist", "show", item, "--json")), &d); err != nil {
+			t.Fatal(err)
+		}
+		for _, s := range d.Steps {
+			if s.ID == step {
+				return s.State
+			}
+		}
+		t.Fatalf("no step %q in %s's checklist", step, item)
+		return ""
+	}
+	if got := state("copies"); got == "done" {
+		t.Fatalf("copies starts %q; want it open", got)
+	}
+	run(t, "checklist", "tick", item, "copies")
+	if got := state("copies"); got != "done" {
+		t.Errorf("after tick, copies is %q", got)
+	}
+	run(t, "checklist", "untick", item, "copies")
+	if got := state("copies"); got == "done" {
+		t.Errorf("after untick, copies is still done")
+	}
+	if _, err := runErr(t, "checklist", "tick", item, "target:gh"); err == nil {
+		t.Error("a step authama works out (target:gh) was ticked by hand")
+	}
+}
+
+// ssh git use rewrites the repository's origin for real, not only in a dry
+// run. It proves the new URL with ls-remote first, so the test answers that
+// over a stand-in ssh (GIT_SSH_COMMAND, which authama respects) serving a
+// local bare repository; origin still records the real URL.
+func TestGitUseRewritesTheOrigin(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the stand-in ssh is a shell script")
+	}
+	editHome(t)
+	run(t, "ssh", "profile", "add", "imanimanyara")
+	run(t, "ssh", "host", "add", "imanimanyara", "github-imanimanyara", "-H", "github.com", "-u", "git")
+	repo := gitRepo(t, "https://github.com/simtabi/pheg.git")
+	bare := filepath.Join(t.TempDir(), "pheg.git")
+	if out, err := exec.Command("git", "init", "-q", "--bare", bare).CombinedOutput(); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	fakeSSH := filepath.Join(t.TempDir(), "ssh")
+	if err := os.WriteFile(fakeSSH, []byte("#!/bin/sh\nexec git-upload-pack '"+bare+"'\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GIT_SSH_COMMAND", fakeSSH)
+
+	run(t, "ssh", "git", "use", "profile", repo)
+	got, err := exec.Command("git", "-C", repo, "remote", "get-url", "origin").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "git@github-imanimanyara:simtabi/pheg.git"; strings.TrimSpace(string(got)) != want {
+		t.Errorf("origin = %s, want %s", strings.TrimSpace(string(got)), want)
 	}
 }
