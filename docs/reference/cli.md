@@ -1928,7 +1928,7 @@ Examples:
 Flags:
 
 ```
-      --allow-risky-options[=true|false]   import a document that sets SSH options that could redirect or weaken connections, providers that send a token to another host, or custom hypervisor commands (you made it yourself)
+      --allow-risky-options[=true|false]   import a document that sets SSH options that could redirect or weaken connections, providers that send a token to another host, custom hypervisor commands, or token values that run a command (cmd:, op://) (you made it yourself)
       --dry-run[=true|false]               show what the import would add, keep and replace; write nothing
       --on-conflict string                 what differs from this home: keep (leave it), replace (take the import's, keeping a copy), fail (write nothing) (default "keep")
       --passphrase-file string             an encrypted export: read its passphrase from this owner-only file instead of asking

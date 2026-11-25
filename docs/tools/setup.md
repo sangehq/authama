@@ -117,7 +117,9 @@ The same goes for settings that declare custom hypervisor commands (authama runs
 a `providers.json` that would send a token to a host this build's catalog does not; the refusal names each command
 and host. A full export's `.env` brings only the variables the setup reads tokens from; any other name, and any that
 changes how programs run (`GIT_*`, `SSH_*`, `LD_*`, `DYLD_*`, `AUTHAMA_*`, `PATH`, proxies), is listed as not
-imported.
+imported. A token value that runs a command when it is read (`cmd:<command>`, or an `op://` reference read with
+`op read`) is refused the same way, naming the variable and the command: your own export carries yours, so pass
+`--allow-risky-options` for it at a terminal.
 A signature does: `setup export --out FILE --sign-key KEY` writes `FILE.sig`, and `setup import` checks it,
 refusing a file changed after it was signed (`--require-signature` and `--signers` as for `ssh restore`; see
 [signed bundles](../reference/bundle-signatures.md)).

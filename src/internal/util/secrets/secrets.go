@@ -25,6 +25,12 @@ const (
 // long-running one such as the web server.
 var cache sync.Map // command -> resolved secret (successes only)
 
+// Runs reports whether Resolve would run a command for raw (cmd:<command> or
+// an op:// reference) rather than return it as the secret itself.
+func Runs(raw string) bool {
+	return strings.HasPrefix(raw, cmdPrefix) || strings.HasPrefix(raw, opPrefix)
+}
+
 // Resolve returns the secret for a token value: cmd:<command> runs the command
 // (memoized), anything else is returned unchanged; "" stays "".
 func Resolve(raw string) string {

@@ -460,6 +460,12 @@ Things that work differently after this release, and what to do if one affects y
 
 ### Security
 
+- **A full export can no longer plant a command in your tokens.** A token value of `cmd:<command>`
+  or `op://...` is run, not sent, when a provider reads it, and `setup import` of a full export laid
+  such values into `.env` without a word: whoever made the export chose a command authama would run.
+  These values are now risky like custom hypervisor commands, so the import is refused, naming each
+  variable and its command, unless you pass `--allow-risky-options` for an export you made yourself;
+  the web UI refuses it and points to that command. Literal token values import as before.
 - **Paths, commands and responses from a web form or an uploaded document are guarded where they are used**
   (CodeQL's 98 alerts on the combined PR). Every profile, key, category and key-root path the manifest builds goes
   through one set of guards in `util/fs` (`Segment`, `LocalRel`, `Within`, `AbsDir`), so a name that skipped
