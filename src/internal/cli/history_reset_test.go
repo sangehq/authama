@@ -18,8 +18,14 @@ func TestHistoryResetNeedsTheWordAndKeepsTheHistory(t *testing.T) {
 	if _, err := os.Stat(p.HistoryDB()); err != nil {
 		t.Fatalf("a change recorded no history: %v", err)
 	}
-	if _, err := runErr(t, "history", "reset", "--confirm", "yes"); err == nil {
+	out, err := runErr(t, "history", "reset", "--confirm", "yes")
+	if err == nil {
 		t.Fatal("history reset went on without the word")
+	}
+	// A refusal says nothing moved, so it must not print the moves either:
+	// it used to list "move ... -> ..." and then refuse (2026-11-25).
+	if strings.Contains(out, "move ") {
+		t.Errorf("a refused reset printed its moves:\n%s", out)
 	}
 	if _, err := os.Stat(p.HistoryDB()); err != nil {
 		t.Fatalf("a refused reset moved the history: %v", err)

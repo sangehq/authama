@@ -26,6 +26,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A refused `history reset` no longer lists moves it does not make.** With a wrong `--confirm` word,
+  or no terminal to ask on, it printed each `move ... -> ...` and then refused; it now refuses first.
 - **An unreadable `~/.ssh/config` or `known_hosts` is no longer overwritten.** A config that
   exists but cannot be read (mode 000, or root-owned after `sudo`) was taken as missing, so
   `ssh config render` replaced it with only the managed block, dropping every hand-written `Host`,
