@@ -124,3 +124,20 @@ func contains(argv []string, want string) bool {
 	}
 	return false
 }
+
+// The grant names the account by its SID when Windows reports one, not by
+// %USERNAME%: an environment variable is anyone's to set, a name can be
+// ambiguous between a local and a domain account, and a renamed account keeps
+// its SID (audit F-01 / P-04, 2026-11-25). icacls reads "*S-1-..." as a SID.
+func TestACLOwnerIsTheAccountsSIDWhenThereIsOne(t *testing.T) {
+	const sid = "S-1-5-21-1004336348-1177238915-682003330-1001"
+	current := func() (*user.User, error) { return &user.User{Uid: sid, Username: `DOMAIN\me`}, nil }
+	if got := aclOwner(func(string) string { return "planted" }, current); got != "*"+sid {
+		t.Errorf("owner = %q, want *%s", got, sid)
+	}
+	// A Uid that is not a SID (a Unix uid) falls back to the name as before.
+	unix := func() (*user.User, error) { return &user.User{Uid: "501", Username: "me"}, nil }
+	if got := aclOwner(func(string) string { return "" }, unix); got != "me" {
+		t.Errorf("owner = %q, want the user name for a non-SID uid", got)
+	}
+}

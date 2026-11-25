@@ -2,6 +2,7 @@ package perms
 
 import (
 	"os/user"
+	"strings"
 )
 
 // The Windows ACL rules, kept out of the build-tagged file that runs them.
@@ -18,13 +19,21 @@ import (
 // v1's windows layer (_BROAD_PRINCIPALS).
 var broadPrincipals = []string{"Everyone", "Authenticated Users", "Users", `BUILTIN\Users`}
 
-// aclOwner is the account an ACL is granted to: %USERNAME% when set, else the
-// current user. getenv and current are injected so the fallback is testable.
+// aclOwner is the account an ACL is granted to: the current user's SID, as
+// icacls spells one (*S-1-...), when Windows reports it; else %USERNAME% when
+// set, else the current user's name. The SID comes first because a variable
+// is anyone's to set, a name can be ambiguous between a local and a domain
+// account, and a renamed account keeps its SID (P-04). getenv and current are
+// injected so every fallback is testable.
 func aclOwner(getenv func(string) string, current func() (*user.User, error)) string {
+	cu, err := current()
+	if err == nil && strings.HasPrefix(cu.Uid, "S-1-") {
+		return "*" + cu.Uid
+	}
 	if u := getenv("USERNAME"); u != "" {
 		return u
 	}
-	if cu, err := current(); err == nil {
+	if err == nil {
 		return cu.Username
 	}
 	return ""
