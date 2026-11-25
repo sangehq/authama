@@ -209,7 +209,18 @@ func writeTarGz(w io.Writer, sshDir string) error {
 		if err != nil {
 			return err
 		}
-		if !fi.IsDir() && (!fi.Mode().IsRegular() || !archivable(fi.Name())) {
+		// The root config linked in from elsewhere (a dotfiles repository) is
+		// the one link kept: its content is archived as config, and a restore
+		// writes it back through the link (linkedConfig decides both).
+		src := p
+		if fi.Mode()&os.ModeSymlink != 0 && p == filepath.Join(root, "config") {
+			if real := linkedConfig(root, "config"); real != "" {
+				if rfi, err := os.Stat(real); err == nil {
+					fi, src = rfi, real
+				}
+			}
+		}
+		if !fi.IsDir() && (!fi.Mode().IsRegular() || !archivable(filepath.Base(p))) {
 			return nil
 		}
 		rel, err := filepath.Rel(root, p)
@@ -232,7 +243,7 @@ func writeTarGz(w io.Writer, sshDir string) error {
 			return err
 		}
 		if fi.Mode().IsRegular() {
-			src, err := os.Open(p)
+			src, err := os.Open(src)
 			if err != nil {
 				return err
 			}

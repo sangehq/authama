@@ -34,6 +34,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   had moved a key, every `authama` command that changes something waited on `serve` until it
   stopped. It now waits its turn behind a web job like any other change, runs as one recorded
   operation, and releases the lock when it is done.
+- **Snapshots keep a linked `~/.ssh/config`.** A config kept in a dotfiles repository and linked into
+  `~/.ssh` was skipped like any link, so the snapshot taken before a change held no config and a
+  restore could not put it back. The root config's link target is now archived as `config`, and a
+  restore writes it back through the link as before.
 - **Header menus on a phone.** Each row of the vertical menu spans the width with its chevron at the
   end, so the chevrons line up, and a group's header (Tasks) lines up with the entries under it.
 - **System's Reset… is highlighted across the whole menu** when pointed at, not only its first 22rem.
