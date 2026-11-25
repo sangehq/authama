@@ -14,9 +14,8 @@ const DefaultPort = 7822
 
 // DefaultPortAttempts is how many ports from DefaultPort up `serve --stop-all`
 // probes for a running web UI. Builds before the OS-picked fallback took the
-// next free port in that range, so their servers can still be there.
-//
-// Deprecated: Listen no longer scans upward; it is kept for the probe above.
+// next free port in that range, so their servers can still be there. Listen
+// no longer scans upward; this is the probe's width only.
 const DefaultPortAttempts = 20
 
 // ListenFunc is net.Listen's signature, injectable so the port fallback can be
@@ -36,8 +35,9 @@ type ListenFunc func(network, address string) (net.Listener, error)
 // leave whatever they pointed at this port talking to something else. Any
 // error other than "address in use" is returned at once.
 //
-// attempts is no longer used beyond attempts < 1 meaning one try with no
-// fallback; it stays so callers compile. Deprecated: pass any value.
+// attempts no longer counts ports: attempts < 1 means one try with no
+// fallback, and any other value takes the OS-picked fallback. The parameter
+// stays so callers compile.
 func Listen(listen ListenFunc, host string, port int, pinned bool, attempts int) (net.Listener, error) {
 	if listen == nil {
 		listen = net.Listen
