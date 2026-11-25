@@ -41,7 +41,7 @@ func (s *Syncer) BackupManifest() (string, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", err
 	}
-	stamp := time.Now().UTC().Format("20060102T150405Z")
+	stamp := freeStamp(dir, time.Now().UTC().Format("20060102T150405Z"))
 	var first string
 	for _, src := range []string{s.P.Manifest(), s.P.Inventory()} {
 		b, err := os.ReadFile(src)
@@ -61,6 +61,27 @@ func (s *Syncer) BackupManifest() (string, error) {
 		}
 	}
 	return first, nil
+}
+
+// freeStamp is stamp, or stamp-2, stamp-3, ... when a backup already uses it:
+// two syncs in the same second must not overwrite the earlier copy. Only a
+// file that is there counts as taken; a name that cannot be checked (an
+// unsearchable directory) is left for the write to fail on, with its error,
+// rather than counted past for good.
+func freeStamp(dir, stamp string) string {
+	taken := func(st string) bool {
+		for _, base := range []string{"manifest", "inventory"} {
+			if _, err := os.Lstat(filepath.Join(dir, base+"-"+st+".json")); err == nil {
+				return true
+			}
+		}
+		return false
+	}
+	free := stamp
+	for n := 2; taken(free); n++ {
+		free = fmt.Sprintf("%s-%d", stamp, n)
+	}
+	return free
 }
 
 // ApplyManifest makes the plan's manifest steps: removing gone hosts, adding

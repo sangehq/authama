@@ -4,8 +4,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sangehq/authama/src/internal/core/hypervisor"
 	"github.com/sangehq/authama/src/internal/core/manifest"
@@ -224,5 +226,51 @@ func TestApplyBacksUpAndIsIdempotent(t *testing.T) {
 	}
 	if !again.Empty() {
 		t.Errorf("a second sync still has work: %v", again.Lines())
+	}
+}
+
+// Two syncs in the same second named their backups alike, so the second
+// overwrote the first: the copy taken before the first sync changed anything
+// was lost (audit F-20, 2026-11-25). The first stamp's files are made by hand,
+// so the test does not depend on two calls landing in one second.
+func TestFreeStampSkipsAStampAlreadyTaken(t *testing.T) {
+	dir := t.TempDir()
+	const stamp = "20261125T120000Z"
+	if got := freeStamp(dir, stamp); got != stamp {
+		t.Fatalf("a free stamp became %q", got)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "inventory-"+stamp+".json"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := freeStamp(dir, stamp); got != stamp+"-2" {
+		t.Errorf("a taken stamp became %q, want %s-2", got, stamp)
+	}
+}
+
+// A backup directory that cannot be searched answers every name with an error.
+// freeStamp counted that as taken and counted on for good; the backup must
+// fail instead (review, 2026-11-25).
+func TestBackupIntoAnUnsearchableDirectoryFails(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs POSIX modes enforced")
+	}
+	s, _, _ := newTestSyncer(t)
+	dir := s.BackupDir()
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+	done := make(chan error, 1)
+	go func() { _, err := s.BackupManifest(); done <- err }()
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Error("a backup into an unsearchable directory succeeded")
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("BackupManifest is still looping over stamps")
 	}
 }
