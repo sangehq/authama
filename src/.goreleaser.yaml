@@ -114,7 +114,7 @@ nfpms:
     conflicts: [sshmgr]
     vendor: Simtabi LLC
     homepage: "https://github.com/sangehq/authama"
-    maintainer: "Imani Manyara <imani@simtabi.com>"
+    maintainer: "Imani Manyara <opensource@simtabi.com>"
     description: "Authentication Access Manager: SSH keys and config, and auth tokens for Composer, npm, Docker, git and netrc."
     license: MIT
     formats: [deb, rpm, apk]
