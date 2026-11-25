@@ -366,8 +366,7 @@ jobs:
             src/scripts/install.sh \
             src/scripts/build-all.sh \
             src/scripts/extract-changelog.sh \
-            src/internal/services/recover/fixkeys.sh \
-            .github/scripts/requeue-stranded.sh
+            src/internal/services/recover/fixkeys.sh
       - name: a cut install.sh runs nothing
         # `curl … | bash` runs what has arrived; the body is one function
         # called on the last line, so every cut inside it must fail to parse

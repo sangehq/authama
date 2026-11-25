@@ -217,4 +217,6 @@ removing one that the baseline lists means the test fails, which is the point.
   (`gh workflow run ci.yml --repo sangehq/authama --ref <branch>`), because
   GitHub's macOS runners went unscheduled for days and a required macOS leg
   blocked every merge. A `test (macos-latest)` leg that fails after about 15
-  minutes with no step run never got a runner; `requeue.yml` re-runs it once.
+  minutes with no step run never got a runner. Nothing re-runs it on its own:
+  re-run it by hand (`gh run rerun <run-id> --failed`) when you mean to, since
+  every re-run is a CI run.

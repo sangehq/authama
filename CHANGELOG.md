@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **`requeue.yml` is retired.** It re-ran a CI run once on its own when GitHub never gave a job a runner.
+  That cause went when macOS left the pull-request matrix, and a re-run is now something you ask for
+  (`gh run rerun <run-id> --failed`), since each one is a CI run.
 - **Redesigned header menus.** SSH opens as one wide panel with Inventory, Configuration and Tasks
   columns, Tasks in a tinted side panel; History and System show their groups side by side, and stack
   below 992px. The user menu opens with the user's name and where the server runs, without repeating
