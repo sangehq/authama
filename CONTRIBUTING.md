@@ -67,6 +67,9 @@ Three habits that each caught a real defect in the 2026-11-25 audit:
 - **Try a fix against a throwaway home, and fail closed.** `H=$(mktemp -d) || exit 1`,
   then set `HOME`, `XDG_CONFIG_HOME` and `XDG_STATE_HOME` under it. If the temp
   directory cannot be made, an empty `HOME` sends authama to your real `~/.ssh`.
+- **The real macOS Keychain is tested only when you ask.** Every owner test uses a
+  stand-in store; `AUTHAMA_TEST_KEYCHAIN=1 go -C src test -run TestTheKeychainStore ./internal/services/owner/`
+  saves, reads and removes one item in your login keychain, under a temp directory's name.
 - **When a function starts returning an error, lint, not vet.** `go vet` does not report
   an ignored return value; golangci-lint's errcheck does, and found a caller that vet and
   the tests passed.
