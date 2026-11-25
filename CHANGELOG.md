@@ -42,6 +42,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `~/.ssh/known_hosts`.** The atomic write renamed over the link, so the link became a regular file
   and the dotfiles copy it pointed at stopped changing. These files are now written through their
   link, as the ssh config already was; a link to nothing is refused.
+- **A `cmd:` or `op://` token that never answers no longer hangs authama.** A secret command waiting
+  on a prompt nobody sees (a password manager in front of `serve`) held its caller for good. It now
+  gives up after two minutes and the token reads as missing, like any failed lookup.
 - **Header menus on a phone.** Each row of the vertical menu spans the width with its chevron at the
   end, so the chevrons line up, and a group's header (Tasks) lines up with the entries under it.
 - **System's Reset… is highlighted across the whole menu** when pointed at, not only its first 22rem.

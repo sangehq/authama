@@ -6,9 +6,11 @@
 package secrets
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
@@ -59,12 +61,24 @@ func Resolve(raw string) string {
 	return out
 }
 
+// cmdTimeout bounds a secret command. It is long enough for a person to answer
+// a password manager's unlock prompt, and short enough that one nobody sees
+// (in the web server) does not hang its caller for good.
+var cmdTimeout = 2 * time.Minute
+
 func runCmdSecret(command string) string {
 	argv := shlexSplit(command)
 	if len(argv) == 0 {
 		return ""
 	}
-	out, err := exec.Command(argv[0], argv[1:]...).Output()
+	ctx, cancel := context.WithTimeout(context.Background(), cmdTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	// The context kills only the command itself; a child of it (a wrapper's
+	// helper) can hold stdout open, and Output would wait on the pipe for as
+	// long as it lives. WaitDelay stops waiting shortly after the kill.
+	cmd.WaitDelay = 2 * time.Second
+	out, err := cmd.Output()
 	if err != nil {
 		return ""
 	}

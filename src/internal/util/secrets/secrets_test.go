@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sangehq/authama/src/internal/util/testcred"
 )
@@ -194,4 +195,28 @@ func freshCache(t *testing.T) {
 	t.Helper()
 	cache.Clear()
 	t.Cleanup(cache.Clear)
+}
+
+// A secret command that never answers (a password manager waiting on a prompt
+// nobody sees, in the web server) used to hang its caller for good. It now
+// gives up after cmdTimeout and resolves to nothing, like any failed lookup.
+func TestASecretCommandThatHangsTimesOut(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses sleep")
+	}
+	freshCache(t)
+	defer func(d time.Duration) { cmdTimeout = d }(cmdTimeout)
+	cmdTimeout = 200 * time.Millisecond
+	start := time.Now()
+	if got := Resolve("cmd:sleep 30"); got != "" {
+		t.Errorf("a timed-out command resolved to %q", got)
+	}
+	// A wrapper whose child keeps stdout open: killing the wrapper alone left
+	// Output waiting on the pipe until the child exited (review, 2026-11-25).
+	if got := Resolve(`cmd:sh -c "sleep 30 & sleep 30"`); got != "" {
+		t.Errorf("a timed-out wrapper resolved to %q", got)
+	}
+	if took := time.Since(start); took > 5*time.Second {
+		t.Errorf("Resolve waited %v for a command past its timeout", took)
+	}
 }
