@@ -45,6 +45,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **A `cmd:` or `op://` token that never answers no longer hangs authama.** A secret command waiting
   on a prompt nobody sees (a password manager in front of `serve`) held its caller for good. It now
   gives up after two minutes and the token reads as missing, like any failed lookup.
+- **A replacing `import` stops when its backup fails, and never shares a backup.** The manifest and
+  inventory copy it promises before replacing them ignored every error, so an import could go ahead
+  with no copy made; and two imports in the same second wrote into one backup directory, the second
+  overwriting the first's copy. It now stops with the reason and changes nothing, and each backup
+  gets a directory of its own.
+- **Two `ssh vm sync` runs in the same second keep both backups.** The manifest backup was named to
+  the second, so the second run overwrote the first's copy; it now takes the next free name.
+- **On Windows, owner-only permissions name your account by its SID.** The `icacls` grant used
+  `%USERNAME%`, which any program can set, which can mean a local or a domain account, and which
+  stops matching when an account is renamed. It now grants to the account's SID, falling back to
+  the name only when Windows reports none.
+- **The Windows fallback notifier quotes typographic quotes.** PowerShell ends a single-quoted
+  string at `‘ ’ ‚ ‛` as well as `'`, and only the ASCII one was doubled, so a notification
+  title holding a curly quote could break out of the string. It applies only when go-notifykit
+  cannot start.
 - **Header menus on a phone.** Each row of the vertical menu spans the width with its chevron at the
   end, so the chevrons line up, and a group's header (Tasks) lines up with the entries under it.
 - **System's Reset… is highlighted across the whole menu** when pointed at, not only its first 22rem.
