@@ -3,8 +3,9 @@
 Binaries ship on the GitHub release, and nowhere else. A pushed `vX.Y.Z` tag, or a
 dispatch naming one, runs `release.yml`, which builds a static binary per OS/arch and
 attaches them, with archives, Linux packages, checksums and a provenance attestation,
-to that tag's GitHub Release. v0.1.0 (2026-11-14) is the first release under `sangehq/authama`;
-users who prefer can still build from source ([installation](installation.md#install)).
+to that tag's GitHub Release. v0.1.0 is the first release under `sangehq/authama`: first tagged
+2026-11-14 and last re-tagged 2026-11-17, the date the CHANGELOG gives it. Users who prefer can
+still build from source ([installation](installation.md#install)).
 
 ```bash
 git push origin v0.1.1                                            # builds and publishes v0.1.1
