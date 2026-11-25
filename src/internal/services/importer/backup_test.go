@@ -80,3 +80,34 @@ func TestBackupTargetsNeverReusesABackupDirectory(t *testing.T) {
 		t.Errorf("backups holding the manifest: %v", all)
 	}
 }
+
+// The hand-written files an import edits are copied to import-backup-<time>/ssh,
+// beside the manifest copy of the same import. Two imports in the same second
+// wrote their copies into one ssh folder, the second overwriting the first
+// (F-23, 2026-11-25). The ssh folder is now claimed exclusively; an import's
+// own manifest backup directory, which has no ssh folder yet, is still used.
+func TestSSHBackupDirIsClaimedOnce(t *testing.T) {
+	state := t.TempDir()
+	const name = "import-backup-20261125-120000"
+	// This import's manifest backup: no ssh folder yet, so it is the one used.
+	if err := os.MkdirAll(filepath.Join(state, name), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	first, err := newSSHBackupDir(state, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first != filepath.Join(state, name, "ssh") {
+		t.Errorf("first = %s, want the import's own backup's ssh folder", first)
+	}
+	second, err := newSSHBackupDir(state, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second == first {
+		t.Fatalf("a second import in the same second reused %s", first)
+	}
+	if second != filepath.Join(state, name+"-2", "ssh") {
+		t.Errorf("second = %s, want %s-2/ssh", second, name)
+	}
+}

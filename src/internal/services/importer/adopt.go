@@ -298,7 +298,10 @@ func (a *adoption) apply(im *Importer, m *manifest.Manifest) (string, error) {
 	if !a.live || len(a.remove) == 0 {
 		return "", nil
 	}
-	backup := filepath.Join(im.p.StateDir(), "import-backup-"+time.Now().Format("20060102-150405"), "ssh")
+	backup, err := newSSHBackupDir(im.p.StateDir(), "import-backup-"+time.Now().Format("20060102-150405"))
+	if err != nil {
+		return "", fmt.Errorf("could not make a backup folder, so nothing was edited: %w", err)
+	}
 	edits := map[string]string{}
 	for file, ranges := range a.remove {
 		dst := a.editPath(file)

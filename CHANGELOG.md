@@ -49,7 +49,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   inventory copy it promises before replacing them ignored every error, so an import could go ahead
   with no copy made; and two imports in the same second wrote into one backup directory, the second
   overwriting the first's copy. It now stops with the reason and changes nothing, and each backup
-  gets a directory of its own.
+  gets a directory of its own, including the `ssh/` copies of the hand-written files it edits.
 - **Two `ssh vm sync` runs in the same second keep both backups.** The manifest backup was named to
   the second, so the second run overwrote the first's copy; it now takes the next free name.
 - **On Windows, owner-only permissions name your account by its SID.** The `icacls` grant used

@@ -57,6 +57,29 @@ func newBackupDir(parent, name string) (string, error) {
 	}
 }
 
+// newSSHBackupDir claims the ssh folder an import copies the files it edits
+// into: parent/name/ssh beside the same import's manifest copy, or
+// name-2/ssh, name-3/ssh, ... when an earlier import already claimed it. The
+// ssh folder is made exclusively, so two imports never share one.
+func newSSHBackupDir(parent, name string) (string, error) {
+	dir := name
+	for n := 2; ; n++ {
+		base := filepath.Join(parent, dir)
+		if err := os.MkdirAll(base, homeperms.DirMode); err != nil {
+			return "", err
+		}
+		ssh := filepath.Join(base, "ssh")
+		err := os.Mkdir(ssh, homeperms.DirMode)
+		if err == nil {
+			return ssh, nil
+		}
+		if !errors.Is(err, os.ErrExist) {
+			return "", err
+		}
+		dir = fmt.Sprintf("%s-%d", name, n)
+	}
+}
+
 func copyToBackup(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
