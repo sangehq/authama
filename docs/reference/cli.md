@@ -1513,8 +1513,8 @@ and confirming makes it only if nothing moved since. The lock is held only while
 a change is checked and made, so a running server does not hold up a command.
 --read-only serves no change at all.
 
-Listens on 127.0.0.1, port 7822 by default. If that port is taken it takes the
-next free one and prints the address it bound; --port pins a port and fails if it
+Listens on 127.0.0.1, port 7822 by default. If that port is taken it takes a
+port the OS picks, says what holds it, and prints the address it bound; --port pins a port and fails if it
 is taken. Every launch opens the default browser with a one-time link that signs
 it in, and the browser is remembered for web.remember_days (`serve browsers`);
 --no-open, an SSH session or no desktop prints the address instead.
@@ -1533,7 +1533,7 @@ default up is taken, any free port is used.
 
 web.addr, web.port and web.base_path in authama.json (or AUTHAMA_WEB_ADDR,
 AUTHAMA_WEB_PORT, AUTHAMA_WEB_BASE_PATH) change the defaults: a configured port
-falls back to the next free one like the default, and web.base_path serves the
+falls back to a port the OS picks like the default, and web.base_path serves the
 UI under a path such as /authama, for a reverse proxy. --addr and --port win.
 
 A non-loopback --addr is refused unless --allow-remote is passed. Prefer an SSH
@@ -1563,7 +1563,7 @@ Flags:
       --allow-remote[=true|false]   allow a non-loopback --addr (plain HTTP; prefer an SSH tunnel)
       --new[=true|false]            start another server even when one is already running for this home
       --no-open[=true|false]        do not open a browser
-      --port int                    port to listen on; when not given and the default is taken, the next free port is used (default 7822)
+      --port int                    port to listen on; when not given and the default is taken, a port the OS picks is used (default 7822)
       --read-only[=true|false]      serve no route that changes anything, and show no form
       --restart[=true|false]        stop every authama web UI found, then start a fresh one: how to load a new build
       --status[=true|false]         say whether a server is running for this home, and its address

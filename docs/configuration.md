@@ -735,7 +735,7 @@ every setting stays at its default until you add it.
 | `vm.prune_gone` | `AUTHAMA_VM_PRUNE_GONE` | `true` (`ssh vm sync` removes the host of a VM that is gone) |
 | `vm.repin_changed` | `AUTHAMA_VM_REPIN` | `false` (`ssh vm sync` reports a changed guest host key) |
 | `web.addr` | `AUTHAMA_WEB_ADDR` | `127.0.0.1` (a non-loopback address still needs `--allow-remote`) |
-| `web.port` | `AUTHAMA_WEB_PORT` | `7822` (the next free port is used when it is taken; only `--port` makes that an error) |
+| `web.port` | `AUTHAMA_WEB_PORT` | `7822` (a port the OS picks is used when it is taken; only `--port` makes that an error) |
 | `web.menu_export` | `AUTHAMA_WEB_MENU_EXPORT` | `true` (show Export in the menu; off hides the item, and the page and each list's download stay) |
 | `api.enabled` | `AUTHAMA_API` | `false` (serve the read API at `/api/v1/` for API tokens; see [read API](tools/api.md)) |
 | `events.source` | `AUTHAMA_EVENTS_SOURCE` | `sange.sh` (the base of each event's `source`: `sange.sh` gives `https://sange.sh/authama/install/<id>`, `simtabi.com` gives `https://simtabi.com/sange/authama/install/<id>`; any other value is refused; see [the event identity](tools/api.md#event-identity)) |

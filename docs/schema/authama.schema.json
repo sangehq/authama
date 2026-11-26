@@ -436,7 +436,7 @@
         },
         "port": {
           "default": 7822,
-          "description": "The port `serve` listens on first. When it is taken the next free one is used, as with the default; only --port makes a taken port an error. Sets $AUTHAMA_WEB_PORT. Default: 7822.",
+          "description": "The port `serve` listens on first. When it is taken a port the OS picks is used, as with the default; only --port makes a taken port an error. Sets $AUTHAMA_WEB_PORT. Default: 7822.",
           "minimum": 1,
           "type": "integer"
         },

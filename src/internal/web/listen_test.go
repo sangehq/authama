@@ -27,10 +27,13 @@ func busyUntil(free map[string]bool, asked *[]string) ListenFunc {
 	}
 }
 
-func TestListenTakesTheNextFreePort(t *testing.T) {
+// A taken default port moves straight to a port the OS picks, never to the
+// ports above it: 7823 is imprimatur's fixed port and 7821 sange's, and the OS
+// hands out ports from its ephemeral range, which holds none of them.
+func TestListenMovesATakenPortToAnOSPickedOne(t *testing.T) {
 	var asked []string
-	ln, err := Listen(busyUntil(map[string]bool{"127.0.0.1:7824": true}, &asked), "127.0.0.1", 7822, false, 20)
-	if err != nil || ln.Addr().(*net.TCPAddr).Port != 7824 || len(asked) != 3 {
+	ln, err := Listen(busyUntil(map[string]bool{"127.0.0.1:7823": true, "127.0.0.1:0": true}, &asked), "127.0.0.1", 7822, false, 20)
+	if err != nil || ln.Addr().(*net.TCPAddr).Port != 54321 || strings.Join(asked, ",") != "127.0.0.1:7822,127.0.0.1:0" {
 		t.Fatalf("got %v %v after %v", ln, err, asked)
 	}
 }
@@ -43,7 +46,7 @@ func TestListenFallsBackToAnyFreePortWhenTheRangeIsFull(t *testing.T) {
 	if err != nil {
 		t.Fatalf("a full range failed: %v (asked %v)", err, asked)
 	}
-	if got := ln.Addr().(*net.TCPAddr).Port; got != 54321 || asked[len(asked)-1] != "127.0.0.1:0" || len(asked) != 21 {
+	if got := ln.Addr().(*net.TCPAddr).Port; got != 54321 || asked[len(asked)-1] != "127.0.0.1:0" || len(asked) != 2 {
 		t.Fatalf("bound %d after %v", got, asked)
 	}
 }

@@ -53,6 +53,11 @@ func fakeServe(t *testing.T, taken ...int) (*[]string, context.CancelFunc) {
 	ctx, cancel := context.WithCancel(context.Background())
 	prevListen, prevBrowser, prevCtx, prevNotify := serveListen, serveBrowser, serveContext, serveNotifications
 	prevHung, prevReap, prevStop, prevInteractive, prevExe := serveHung, serveReap, serveStop, serveInteractive, serveProcessExe
+	prevHint := servePortTakenHint
+	servePortTakenHint = func(addr string) string {
+		_, port, _ := net.SplitHostPort(addr)
+		return "port " + port + " is in use by another program"
+	}
 	serveNotifications = func(context.Context, io.Writer) {}
 	// Nothing here reaches a real process or port: a recorded pid is made up.
 	serveHung = func(*serveRecord) bool { return false }
@@ -68,6 +73,9 @@ func fakeServe(t *testing.T, taken ...int) (*[]string, context.CancelFunc) {
 		if busy[p] {
 			return nil, &net.OpError{Op: "listen", Net: "tcp", Err: &os.SyscallError{Syscall: "bind", Err: syscall.EADDRINUSE}}
 		}
+		if p == 0 {
+			p = osPickedPort // what the OS would hand out from its ephemeral range
+		}
 		return &blockingListener{addr: &net.TCPAddr{IP: net.ParseIP(host), Port: p}, closed: make(chan struct{})}, nil
 	}
 	serveBrowser = func(string, string) (func(), error) { return func() {}, errors.New("no browser in tests") }
@@ -75,6 +83,7 @@ func fakeServe(t *testing.T, taken ...int) (*[]string, context.CancelFunc) {
 	t.Cleanup(func() {
 		serveListen, serveBrowser, serveContext, serveNotifications = prevListen, prevBrowser, prevCtx, prevNotify
 		serveHung, serveReap, serveStop, serveInteractive, serveProcessExe = prevHung, prevReap, prevStop, prevInteractive, prevExe
+		servePortTakenHint = prevHint
 		cancel()
 	})
 	return &tried, cancel
@@ -131,7 +140,12 @@ func runServe(t *testing.T, stop context.CancelFunc, args ...string) (string, er
 
 var printedURL = regexp.MustCompile(`http://127\.0\.0\.1:(\d+)/\?token=[A-Za-z0-9_-]{43}`)
 
-func TestServeTakesTheNextFreePortAndSaysSo(t *testing.T) {
+// osPickedPort is the port the fake listener hands out for ":0".
+const osPickedPort = 54321
+
+// A taken default port moves to a port the OS picks, never to 7823 and up
+// (imprimatur's fixed port and beyond), and serve names what holds it.
+func TestServeTakesAnOSPickedPortAndSaysSo(t *testing.T) {
 	editHome(t)
 	tried, stop := fakeServe(t, 7822)
 	out, err := runServe(t, stop)
@@ -139,13 +153,13 @@ func TestServeTakesTheNextFreePortAndSaysSo(t *testing.T) {
 		t.Fatalf("%v\n%s", err, out)
 	}
 	m := printedURL.FindStringSubmatch(out)
-	if m == nil || m[1] != "7823" {
+	if m == nil || m[1] != "54321" {
 		t.Fatalf("printed address is not the bound one:\n%s", out)
 	}
-	if !strings.Contains(out, "port 7822 is in use; listening on 7823 instead") || !strings.Contains(out, "previewed") {
+	if !strings.Contains(out, "port 7822 is in use by another program; listening on 54321 instead") || !strings.Contains(out, "previewed") {
 		t.Errorf("the fallback or the read-only note was not announced:\n%s", out)
 	}
-	if strings.Join(*tried, " ") != "127.0.0.1:7822 127.0.0.1:7823" {
+	if strings.Join(*tried, " ") != "127.0.0.1:7822 127.0.0.1:0" {
 		t.Errorf("tried %v", *tried)
 	}
 }
@@ -154,7 +168,7 @@ func TestServePinnedPortFailsLoudly(t *testing.T) {
 	editHome(t)
 	tried, stop := fakeServe(t, 9000)
 	out, err := runServe(t, stop, "--port", "9000")
-	if err == nil || !strings.Contains(err.Error(), "port 9000 is already in use") {
+	if err == nil || !strings.Contains(err.Error(), "port 9000 is already in use") || !strings.Contains(err.Error(), "port 9000 is in use by another program") {
 		t.Fatalf("err %v:\n%s", err, out)
 	}
 	if len(*tried) != 1 {
@@ -241,10 +255,10 @@ func TestServeFollowsTheWebSettings(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v\n%s", err, out)
 	}
-	if !regexp.MustCompile(`http://127\.0\.0\.1:9101/authama/\?token=[A-Za-z0-9_-]{43}`).MatchString(out) {
+	if !regexp.MustCompile(`http://127\.0\.0\.1:54321/authama/\?token=[A-Za-z0-9_-]{43}`).MatchString(out) {
 		t.Fatalf("the printed address is not on the configured port and path:\n%s", out)
 	}
-	if strings.Join(*tried, " ") != "127.0.0.1:9100 127.0.0.1:9101" {
+	if strings.Join(*tried, " ") != "127.0.0.1:9100 127.0.0.1:0" {
 		t.Errorf("tried %v", *tried)
 	}
 

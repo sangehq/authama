@@ -12,7 +12,10 @@ import (
 // DefaultPort is where serve listens unless told otherwise.
 const DefaultPort = 7822
 
-// DefaultPortAttempts bounds how far past a taken default port Listen looks.
+// DefaultPortAttempts is how many ports from DefaultPort up `serve --stop-all`
+// probes for a running web UI. Builds before the OS-picked fallback took the
+// next free port in that range, so their servers can still be there. Listen
+// no longer scans upward; this is the probe's width only.
 const DefaultPortAttempts = 20
 
 // ListenFunc is net.Listen's signature, injectable so the port fallback can be
@@ -21,49 +24,43 @@ type ListenFunc func(network, address string) (net.Listener, error)
 
 // Listen binds host:port.
 //
-// When pinned is false and the port is in use, it tries the next port up, up
-// to attempts ports in all, and returns the first that binds: the default
-// port being taken by another process is ordinary, and the caller prints the
-// URL actually bound. When pinned is true -- the user asked for this port --
-// a taken port is an error, because silently serving elsewhere would leave
-// whatever they pointed at this port talking to something else. Any error
-// other than "address in use" stops the search at once.
+// When pinned is false and the port is in use, it asks the OS for any free
+// port and returns that: the default port being taken by another process is
+// ordinary, and the caller prints the URL actually bound. It does not try the
+// ports above: the sange-family tools have fixed ports side by side (sange
+// 7821, authama 7822, imprimatur 7823), and a port the OS picks comes from its
+// ephemeral range (49152 and up on macOS and Windows, 32768 and up on Linux),
+// which holds none of them. When pinned is true -- the user asked for this
+// port -- a taken port is an error, because silently serving elsewhere would
+// leave whatever they pointed at this port talking to something else. Any
+// error other than "address in use" is returned at once.
+//
+// attempts no longer counts ports: attempts < 1 means one try with no
+// fallback, and any other value takes the OS-picked fallback. The parameter
+// stays so callers compile.
 func Listen(listen ListenFunc, host string, port int, pinned bool, attempts int) (net.Listener, error) {
 	if listen == nil {
 		listen = net.Listen
 	}
-	if attempts < 1 || pinned || port == 0 {
-		attempts = 1
+	ln, err := listen("tcp", net.JoinHostPort(host, strconv.Itoa(port)))
+	if err == nil {
+		return ln, nil
 	}
-	var first error
-	for i := 0; i < attempts; i++ {
-		p := port + i
-		if p > 65535 {
-			break
-		}
-		ln, err := listen("tcp", net.JoinHostPort(host, strconv.Itoa(p)))
-		if err == nil {
-			return ln, nil
-		}
-		if first == nil {
-			first = err
-		}
-		if !IsAddrInUse(err) {
-			return nil, err
-		}
-		if pinned {
-			return nil, fmt.Errorf("port %d is already in use; pick another with --port, or omit --port to take the next free one: %w", p, err)
-		}
+	if !IsAddrInUse(err) {
+		return nil, err
 	}
-	// Every port in the range is taken. Rather than fail, ask the OS for any
-	// free port: the caller prints the address actually bound, so nothing is
-	// lost but a memorable number. Only an unpinned search gets here.
-	if attempts > 1 {
-		if ln, err := listen("tcp", net.JoinHostPort(host, "0")); err == nil {
-			return ln, nil
-		}
+	if pinned {
+		return nil, fmt.Errorf("port %d is already in use; pick another with --port, or omit --port to take a free one: %w", port, err)
 	}
-	return nil, fmt.Errorf("ports %d-%d are all in use: %w", port, port+attempts-1, first)
+	if port == 0 || attempts < 1 {
+		return nil, fmt.Errorf("port %d is in use: %w", port, err)
+	}
+	// Ask the OS for any free port: the caller prints the address actually
+	// bound, so nothing is lost but a memorable number.
+	if ln, anyErr := listen("tcp", net.JoinHostPort(host, "0")); anyErr == nil {
+		return ln, nil
+	}
+	return nil, fmt.Errorf("port %d is in use and no free port was given: %w", port, err)
 }
 
 // IsAddrInUse reports whether a listen error means the port is taken.
